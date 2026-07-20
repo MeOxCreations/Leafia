@@ -1,0 +1,3 @@
+# Normalise les fins de ligne : LF dans le depot, peu importe l'OS.
+# Sans ca, chaque commit sur Windows affiche des warnings CRLF et pollue les diffs.
+* text=auto eol=lf

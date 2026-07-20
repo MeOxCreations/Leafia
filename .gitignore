@@ -1,0 +1,11 @@
+sourcemap.json
+Packages/
+ServerPackages/
+DevPackages/
+*.rbxl
+*.rbxlx
+*.rbxl.lock
+*.rbxlx.lock
+
+# Reglages Claude Code locaux a la machine (permissions), pas a partager.
+.claude/settings.local.json
