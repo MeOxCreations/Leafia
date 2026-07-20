@@ -580,6 +580,20 @@ function ToolService.setToolAnimationsPlaying(player: Player, playing: boolean, 
 	end
 end
 
+-- Regle la vitesse de lecture des animations de l'outil (lames, bloc moteur). Sert a l'accelerateur : le
+-- meme geste anime, joue plus ou moins vite selon que le joueur pousse ou non.
+function ToolService.setToolAnimationSpeed(player: Player, speed: number)
+	local current = held[player]
+	if not current then
+		return
+	end
+	for _, track in pairs(current.toolTracks) do
+		if track.IsPlaying then
+			track:AdjustSpeed(speed)
+		end
+	end
+end
+
 -- Joue un son de l'outil. `Play` sur un son deja en cours le relance depuis le debut, ce qui est le
 -- comportement voulu : deux tirages rapproches ne doivent pas se superposer.
 function ToolService.playSound(player: Player, soundName: string?, looped: boolean?)

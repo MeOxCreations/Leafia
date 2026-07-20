@@ -7,6 +7,8 @@
 --                                                                              |
 --                                                            Nieme tirage --> Running
 --
+--   Running : moteur en marche. Clic MAINTENU accelere les lames (SetThrottle), relachement les ralentit.
+--
 --   Preparing : PrepareToLaunchAnimation joue en entier
 --   Ready     : TryLaunchAnimation FIGEE a sa premiere frame, la posture "pret a tirer"
 --   Pulling   : la MEME piste, relancee a vitesse normale
@@ -19,6 +21,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local ToolService = require(script.Parent.ToolService)
@@ -48,10 +51,17 @@ type State = "Idle" | "Preparing" | "Ready" | "Pulling" | "Running"
 local states: { [Player]: State } = {}
 local lastActivate: { [Player]: number } = {}
 local pullCounts: { [Player]: number } = {}
+-- Accelerateur des lames. `throttle` = le joueur maintient-il le clic. `bladeSpeed` = vitesse actuelle des
+-- lames, qui suit `throttle` progressivement (voir la boucle Heartbeat). Deux tables plutot qu'une valeur
+-- cible atteinte d'un coup : c'est la MONTEE progressive qui fait l'effet, pas la vitesse finale.
+local throttle: { [Player]: boolean } = {}
+local bladeSpeed: { [Player]: number } = {}
 
 local function reset(player: Player)
 	states[player] = nil
 	lastActivate[player] = nil
+	throttle[player] = nil
+	bladeSpeed[player] = nil
 	-- Ranger l'outil remet le compteur a zero : il faudra relancer le moteur. C'est voulu, le rituel fait
 	-- partie du jeu.
 	pullCounts[player] = nil
@@ -151,6 +161,12 @@ local function pull(player: Player)
 			-- Le moteur part sur la MEME frame que la butee, comme l'a-coup. On ne coupe pas les animations de
 			-- l'outil : elles passent d'un soubresaut a un regime continu sans rupture.
 			ToolService.playSound(player, config.startSound)
+
+			-- La pose de travail est lancee ICI, pas a la fin du tirage. Le tirage (Action2) la masque encore,
+			-- donc elle monte a plein poids DERRIERE, invisible. Quand le tirage s'efface a sa fin naturelle,
+			-- elle est deja la : plus de trou d'animation ou la pose par defaut de Roblox apparaissait le temps
+			-- d'un fondu. C'est la couche du dessous posee A L'AVANCE, comme la regle le veut.
+			ToolService.setHoldAnimation(player, config.runHoldAnimation or config.holdAnimation)
 			return
 		end
 
@@ -176,17 +192,17 @@ local function pull(player: Player)
 		end
 
 		if success then
-			-- Le moteur tourne : la corde n'a plus rien a faire dehors, et l'outil revient dans la main qui
-			-- travaille. Le lanceur d'abord, la main ensuite : dans l'autre ordre, la poignee reste une frame
-			-- accrochee a une main qui tient deja l'outil, et la corde se plie.
+			-- Le moteur tourne : la corde n'a plus rien a faire dehors, on la rend a l'outil.
+			-- L'outil, LUI, reste dans la main gauche : une fois lance, on tient le taille-haie a deux mains
+			-- pour couper, on ne le repasse pas a droite. C'est ReadyToCutAnimation qui place le bras droit.
 			ToolService.setLauncherHand(player, nil)
-			ToolService.setHand(player, config.handPart)
 			-- Le ronronnement demarre ici, pas au marqueur : le son de lancement a eu le temps de poser son
 			-- "vroum" seul, et il continue de jouer par-dessus le regime etabli.
 			ToolService.playSound(player, config.runSound, true)
-			-- Le joueur change de posture : il tient un outil qui tourne, pas un outil mort. Le fondu de
-			-- setHoldAnimation lie l'idle a la pose de travail au lieu d'un saut sec.
-			ToolService.setHoldAnimation(player, config.runHoldAnimation or config.holdAnimation)
+			-- La pose de travail a deja ete lancee au marqueur, sous le tirage. Ici il ne reste qu'a acter
+			-- l'etat et poser la vitesse de lames au ralenti : la boucle Heartbeat prend le relais ensuite.
+			bladeSpeed[player] = config.bladeIdleSpeed
+			ToolService.setToolAnimationSpeed(player, config.bladeIdleSpeed)
 			states[player] = "Running"
 		else
 			-- enterReady accepte l'etat "Pulling", donc pas besoin de mentir sur l'etat pour passer sa garde.
@@ -255,7 +271,8 @@ local function activate(player: Player)
 
 	local state = states[player] or "Idle"
 	if state == "Running" then
-		-- La coupe viendra ici. Le moteur tourne deja, il n'y a plus rien a demarrer.
+		-- Moteur en marche : le clic ne demarre plus rien, il accelere les lames. Ca ne passe pas par ici mais
+		-- par SetThrottle, qui gere le maintien du clic (presse ET relache).
 		return
 	elseif state == "Ready" then
 		pull(player)
@@ -266,6 +283,46 @@ local function activate(player: Player)
 	end
 	-- Preparing et Pulling : un geste est en cours, on ignore. Empiler deux gestes donne un bras qui tremble
 	-- au lieu d'un joueur qui insiste.
+end
+
+-- Le client dit s'il maintient le clic. On ne fait que noter l'intention : c'est la boucle Heartbeat qui la
+-- traduit en vitesse, progressivement. Le throttle n'a d'effet qu'en Running ; note dans les autres etats, il
+-- ne sert a rien mais ne gene pas.
+local function setThrottle(player: Player, wants: boolean)
+	-- Validation : le client ment toujours. On n'accepte qu'un vrai booleen.
+	if typeof(wants) ~= "boolean" then
+		return
+	end
+	throttle[player] = wants
+end
+
+-- Fait suivre la vitesse des lames a l'intention du joueur, un cran par frame. Une seule boucle pour tous les
+-- joueurs : pas une connexion par personne. Elle ne touche qu'aux joueurs en Running, donc elle ne coute rien
+-- quand personne ne taille.
+local function stepBlades(dt: number)
+	for player, state in pairs(states) do
+		if state == "Running" then
+			local currentHeld = ToolService.getHeld(player)
+			if currentHeld then
+				local config = currentHeld.config
+				local target = if throttle[player] then config.bladeMaxSpeed else config.bladeIdleSpeed
+				local speed = bladeSpeed[player] or config.bladeIdleSpeed
+
+				-- Montee et descente ont des vitesses differentes : la lame prend son elan lentement mais
+				-- retombe plus vite, ce qui rend le relachement franc sans rendre l'acceleration brutale.
+				local rate = if target > speed then config.bladeAccel else config.bladeDecel
+				local step = rate * dt
+				if math.abs(target - speed) <= step then
+					speed = target
+				else
+					speed += if target > speed then step else -step
+				end
+
+				bladeSpeed[player] = speed
+				ToolService.setToolAnimationSpeed(player, speed)
+			end
+		end
+	end
 end
 
 function ToolStartService.init()
@@ -284,6 +341,15 @@ function ToolStartService.init()
 	else
 		warn("[ToolStartService] Remote Tool/ActivateTool introuvable")
 	end
+
+	local throttleRemote = RemoteSetup.getRemote("SetThrottle", "Tool")
+	if throttleRemote and throttleRemote:IsA("RemoteEvent") then
+		throttleRemote.OnServerEvent:Connect(setThrottle)
+	else
+		warn("[ToolStartService] Remote Tool/SetThrottle introuvable")
+	end
+
+	RunService.Heartbeat:Connect(stepBlades)
 
 	Players.PlayerRemoving:Connect(reset)
 end

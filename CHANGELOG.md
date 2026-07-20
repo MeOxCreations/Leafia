@@ -958,6 +958,134 @@ en marche, le joueur ne tient plus l'outil comme un objet mort.
 est donc posee SOUS le tirage qui finit sa course, et apparait toute seule quand celui-ci s'efface. Aucune
 frame ou le joueur retombe en idle.
 
+## 0.0.45 — L'outil reste dans la main gauche apres demarrage
+
+Correction : au demarrage reussi, l'outil revenait dans la main droite. Il doit RESTER a gauche.
+
+Une fois le moteur lance, on tient le taille-haie a deux mains pour couper. Le `setHand(handPart)` du succes
+est supprime ; seule la corde (`setLauncherHand(nil)`) rentre. C'est `ReadyToCutAnimation` qui place le bras
+droit sur l'outil, comme toute prise a deux mains (illusion d'animation, cf 0.0.23).
+
+## 0.0.46 — Fix : trou d'animation au demarrage
+
+Symptome : au demarrage reussi, ~0.3 s sans animation avant que `ReadyToCutAnimation` apparaisse.
+
+Cause : la pose de travail etait lancee dans le callback `Stopped` du tirage, donc APRES sa disparition, avec
+un fondu de 0.25 s. Pendant ce fondu elle montait de zero, et la pose par defaut de Roblox passait a travers.
+Le commentaire de 0.0.44 decrivait le bon comportement ("posee sous le tirage") mais le code ne le faisait
+pas : il la posait apres, pas dessous.
+
+Correction : `setHoldAnimation(runHold)` deplace de `Stopped` vers le marqueur `TryLaunchEvent`. La le tirage
+(Action2) masque encore la pose (Action), qui monte a plein poids DERRIERE. Quand le tirage s'efface a sa fin
+naturelle, elle est deja la. Le `Stopped` ne fait plus qu'acter l'etat `Running` et rentrer la corde.
+
+Lecon : **poser la couche du dessous A L'AVANCE, pas au moment ou celle du dessus s'en va.** Un fondu qui part
+de zero laisse toujours voir ce qu'il y a en dessous. La regle etait juste ; c'est le MOMENT de l'appel qui
+etait faux.
+
+## 0.0.47 — Accelerateur des lames (debut de la coupe)
+
+Moteur en marche, les lames tournent lentement. Clic MAINTENU = elles accelerent progressivement ; relachement
+= elles ralentissent. C'est le premier morceau du geste de coupe : lame lente = ralenti, lame rapide = ca
+taille.
+
+- `ToolConfigs` : `bladeIdleSpeed` (0.35), `bladeMaxSpeed` (1.6), `bladeAccel` (1.6/s), `bladeDecel` (2.8/s).
+- Remote `Tool/SetThrottle`, un booleen valide cote serveur.
+- `ToolService.setToolAnimationSpeed(player, speed)` : `AdjustSpeed` sur les pistes de l'outil.
+
+### La vitesse est pilotee cote SERVEUR
+
+Les animations de l'outil tournent sur son Animator serveur, donc `AdjustSpeed` s'y replique a tout le monde.
+Le client ne fait qu'envoyer son intention (clic tenu ou non) ; c'est le serveur qui traduit en vitesse.
+
+### Une rampe, pas un interrupteur
+
+`throttle` (intention) et `bladeSpeed` (vitesse reelle) sont deux choses distinctes. Une seule boucle
+`Heartbeat` fait suivre la seconde a la premiere, un cran par frame. **C'est la MONTEE progressive qui fait
+l'effet, pas la vitesse finale** : un interrupteur on/off n'aurait aucune sensation de moteur qui monte en
+regime.
+
+- Montee (`bladeAccel`) plus lente que descente (`bladeDecel`) : la lame prend son elan doucement mais retombe
+  franc au relachement.
+- UNE boucle pour tous les joueurs, pas une connexion par personne. Elle ne touche qu'aux joueurs en `Running`,
+  donc elle ne coute rien quand personne ne taille.
+
+### Le clic sert a deux choses, le client ne tranche pas
+
+Le client ne connait pas l'etat de l'outil. Au clic il envoie les DEUX signaux (`ActivateTool` pour les
+tirages, `SetThrottle(true)` pour l'accelerateur) et le serveur ignore celui qui ne s'applique pas a son etat
+courant. Le client ne decide jamais, il rapporte.
+
+## 0.0.48 — Saut plus court, animation d'atterrissage, FOV au mouvement
+
+Trois reglages independants.
+
+### Saut
+
+`CharacterConfigs.JUMP_HEIGHT` : 7.2 -> 4.5. Le saut par defaut de Roblox est trop haut pour un jeu au sol.
+
+### Animation d'atterrissage
+
+`CharacterConfigs.LANDING_ANIMATION_ID`. Jouee cote serveur (donc repliquee) sur `Humanoid.StateChanged` ==
+`Landed`. On utilise l'etat que Roblox connait deja plutot que de redeviner le contact au sol par la vitesse
+verticale.
+
+Elle ne cle que les jambes et les pieds : en priorite `Action`, elle passe au-dessus de la marche mais laisse
+les bras a la pose de l'outil (elle aussi en `Action`, sur d'autres os). Deux animations `Action` sur des os
+DIFFERENTS se composent au lieu de se battre.
+
+### FOV au mouvement
+
+La vue s'elargit doucement quand le joueur marche (`70 -> 76`), revient au repos a l'arret.
+
+- `Client/CameraController.luau` decide la cible selon la vitesse HORIZONTALE (un saut ou une chute n'elargit
+  pas la vue). Il ne touche jamais `FieldOfView`, il passe par `CameraEffects`.
+- **`CameraEffects` refondu : un SEUL ecrivain de `FieldOfView`.** Deux sources l'influencent, le fond (repos
+  vs mouvement) et l'a-coup du tirage. Chacune alimente une variable, une seule boucle `RenderStepped` compose
+  `FieldOfView = fond + a-coup`. Sans ca, les deux se battraient chaque frame.
+- Lerp exponentiel avec `dt` dans le facteur : meme douceur a 30 et a 60 FPS. C'est ce lerp lent qui fait le
+  "recule lentement".
+- `PunchFov` ne prend plus de duree : l'a-coup est un impact qui revient a zero tout seul dans la boucle.
+
+## 0.0.49 — Sprint (Shift) + plongee d'atterrissage
+
+### Sprint
+
+Shift maintenu : le personnage accelere (`SPRINT_SPEED` 17), le FOV s'elargit un cran de plus (`76 -> 80`), et
+la camera prend un LEGER bob vertical, cadence des foulees.
+
+- Vitesse cote SERVEUR : remote `Character/SetSprint`, booleen valide. Le client rapporte l'input, le serveur
+  fixe le `WalkSpeed`. On relit la config a chaque fois, aucun etat a resynchroniser au respawn.
+- FOV et bob cote client, decides dans `CameraController` selon la vitesse reelle : le sprint n'agit que si le
+  joueur BOUGE (Shift a l'arret ne fait rien).
+
+### Plongee d'atterrissage
+
+A la reception au sol, la camera descend puis remonte en douceur, comme des genoux qui encaissent. Detectee
+sur `Humanoid.StateChanged == Landed`, cote client (effet local).
+
+### CameraEffects : un seul ecrivain, deux proprietes composees
+
+Le module compose maintenant les DEUX proprietes de camera dans sa boucle unique :
+
+```
+FieldOfView  = fond + a-coup
+CameraOffset = secousse + bob + plongee
+```
+
+Chaque source (mouvement, tirage, sprint, atterrissage) alimente une variable ; la boucle additionne. C'est ce
+qui permet d'empiler quatre effets sans qu'ils se battent : au demarrage moteur en sprintant, un tirage peut
+secouer la camera pendant que le bob tourne et que le FOV est deja elargi, tout se cumule proprement.
+
+- `SetBob(amplitude, frequency)` : oscillation continue, amplitude lerpee pour un fondu doux a l'allumage et a
+  l'extinction. `math.abs(sin)` pour une foulee (rebond vers le haut) et non un roulis de bateau.
+- `LandDip(depth)` : impulsion vers le bas qui remonte vers zero. Remplace au lieu d'additionner, deux
+  receptions rapprochees ne cumulent pas.
+
+### Reglages (tous TRES legers, comme demande)
+
+`SPRINT_BOB_AMPLITUDE` 0.12 stud, `LAND_DIP_DEPTH` 0.6 stud, `SPRINT_FOV` 80. Dans `CameraController`.
+
 ### Note
 
 Ecart assume avec la regle d'or : c'est de l'habillage, pose avant validation du geste de taille. A ne pas

@@ -76,6 +76,13 @@ export type ToolConfig = {
 	-- Ronronnement du moteur en marche, joue en BOUCLE. Il demarre apres le son de lancement, qui continue de
 	-- jouer par-dessus : le "vroum" se superpose au regime etabli, comme dans la realite.
 	runSound: string?,
+	-- Accelerateur des lames, une fois le moteur en marche. La vitesse de l'animation monte quand le joueur
+	-- maintient le clic, redescend au relachement. C'est le debut de la coupe : lame lente = ralenti, lame
+	-- rapide = ca taille.
+	bladeIdleSpeed: number, -- vitesse au repos, moteur allume mais joueur passif
+	bladeMaxSpeed: number, -- vitesse a fond, clic maintenu
+	bladeAccel: number, -- gain de vitesse par seconde en montee (progressif = petit)
+	bladeDecel: number, -- perte de vitesse par seconde au relachement
 	-- Nombre de tirages avant que le moteur demarre. C'est une CARACTERISTIQUE de l'outil, pas une constante
 	-- du jeu : un outil pourri en demandera 4, un outil pro partira au premier. Le joueur ressentira son
 	-- upgrade dans ses mains au lieu de le lire dans un menu.
@@ -134,6 +141,10 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		pullSound = "TryLaunchSound",
 		startSound = "StartFirstSound",
 		runSound = "IdleSound",
+		bladeIdleSpeed = 0.35,
+		bladeMaxSpeed = 1.6,
+		bladeAccel = 1.6,
+		bladeDecel = 2.8,
 		pullsToStart = 3,
 		holdPriority = Enum.AnimationPriority.Action,
 	},

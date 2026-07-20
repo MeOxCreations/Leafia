@@ -125,7 +125,7 @@ local function onToolAdded(character: Model, child: Instance)
 		-- Les FX ne se declenchent QUE pour le porteur. Secouer la camera d'un voisin parce qu'un autre joueur
 		-- demarre son moteur serait absurde, et injouable sur un serveur rempli.
 		CameraEffects.Shake(config.pullShakeIntensity, config.pullShakeDuration)
-		CameraEffects.PunchFov(config.pullFovPunch, config.pullShakeDuration)
+		CameraEffects.PunchFov(config.pullFovPunch)
 	end)
 end
 
@@ -155,6 +155,12 @@ function ToolController.init()
 	end
 
 	local activateRemote = RemoteSetup.getRemote("ActivateTool", "Tool")
+	local throttleRemote = RemoteSetup.getRemote("SetThrottle", "Tool")
+
+	local function isPrimaryClick(input: InputObject): boolean
+		return input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch
+	end
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 		-- gameProcessed est vrai quand le joueur tape dans le chat ou clique dans une interface. Sans ce test,
@@ -165,10 +171,26 @@ function ToolController.init()
 
 		if input.KeyCode == TOGGLE_KEY then
 			toggleRemote:FireServer()
-		elseif input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		elseif isPrimaryClick(input) then
+			-- Le clic sert a deux choses selon l'etat, mais le CLIENT ne connait pas l'etat : il envoie les
+			-- deux signaux et laisse le serveur trancher. ActivateTool fait avancer le demarrage (tirages) ;
+			-- SetThrottle(true) accelere les lames une fois le moteur en marche. Le serveur ignore celui qui
+			-- ne s'applique pas a son etat courant.
 			if activateRemote and activateRemote:IsA("RemoteEvent") then
 				activateRemote:FireServer()
 			end
+			if throttleRemote and throttleRemote:IsA("RemoteEvent") then
+				throttleRemote:FireServer(true)
+			end
+		end
+	end)
+
+	-- Relachement du clic : on coupe l'accelerateur. InputEnded n'a pas de gameProcessed fiable a filtrer ici,
+	-- et de toute facon relacher ne declenche jamais une action indesirable, au pire ca coupe une acceleration
+	-- que le serveur ignorait deja.
+	UserInputService.InputEnded:Connect(function(input: InputObject)
+		if isPrimaryClick(input) and throttleRemote and throttleRemote:IsA("RemoteEvent") then
+			throttleRemote:FireServer(false)
 		end
 	end)
 end

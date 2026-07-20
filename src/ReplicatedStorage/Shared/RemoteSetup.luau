@@ -20,6 +20,12 @@ local REMOTES: { { any } } = {
 	-- Clic gauche. Aucun argument : le serveur connait deja l'etat de l'outil, donc il n'y a rien a valider et
 	-- rien a falsifier.
 	{ "ActivateTool", E, "Tool" },
+	-- Accelerateur des lames : le client dit s'il maintient le clic. UN argument booleen, valide cote serveur.
+	{ "SetThrottle", E, "Tool" },
+
+	-- [ CHARACTER ] --
+	-- Sprint : le client dit s'il maintient Shift. UN argument booleen, valide cote serveur.
+	{ "SetSprint", E, "Character" },
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder
