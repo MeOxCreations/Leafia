@@ -42,6 +42,12 @@ local bobFrequency = 0
 local bobPhase = 0
 local BOB_LERP_SPEED = 6
 
+-- Dernier decalage compose, garde pour les cameras SCRIPTEES. Humanoid.CameraOffset n'est applique que par
+-- les scripts de camera par defaut de Roblox : des qu'une feature passe la camera en Scriptable, il est
+-- ignore. Une camera scriptee doit donc venir chercher cette valeur et l'appliquer elle-meme, sinon secousses
+-- et plongees disparaissent exactement la ou on en a le plus besoin.
+local composedOffset = Vector3.zero
+
 -- ===== Plongee d'atterrissage (RESSORT) =====
 -- Un simple decalage qui revient a zero donnait un "TAC" : la descente etait instantanee, seule la remontee
 -- etait douce. Ici c'est un ressort amorti. A la reception on donne une IMPULSION de vitesse vers le bas ; le
@@ -118,6 +124,12 @@ function CameraEffects.Shake(intensity: number, duration: number)
 	end)
 end
 
+-- Decalage compose (secousse + bob + plongee), en repere CAMERA. A appliquer soi-meme quand on pilote une
+-- camera Scriptable : Roblox n'applique Humanoid.CameraOffset que sur sa camera par defaut.
+function CameraEffects.GetOffset(): Vector3
+	return composedOffset
+end
+
 function CameraEffects.init()
 	RunService.RenderStepped:Connect(function(dt: number)
 		-- dt dans chaque facteur de lerp -> meme vitesse quel que soit le framerate.
@@ -140,10 +152,12 @@ function CameraEffects.init()
 		dipVel += dipForce * dt
 		dipPos += dipVel * dt
 
+		-- L'ECRITURE UNIQUE : secousse, bob et plongee reunis ici, nulle part ailleurs.
+		composedOffset = shakeOffset + Vector3.new(0, bobY + dipPos, 0)
+
 		local humanoid = getHumanoid()
 		if humanoid then
-			-- L'ECRITURE UNIQUE : secousse, bob et plongee reunis ici, nulle part ailleurs.
-			humanoid.CameraOffset = shakeOffset + Vector3.new(0, bobY + dipPos, 0)
+			humanoid.CameraOffset = composedOffset
 		end
 	end)
 end

@@ -25,6 +25,9 @@ local RunService = game:GetService("RunService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
+-- Uniquement pour le NOM de l'attribut. On lit l'attribut pose sur le personnage plutot que d'appeler
+-- HedgeService : une config partagee ne cree pas de dependance entre deux services.
+local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local ToolService = require(script.Parent.ToolService)
 
 local ToolStartService = {}
@@ -42,6 +45,17 @@ local MARKER_PULL = "TryLaunchEvent"
 -- Meme principe que LeafiaTool : pas de remote dans le sens serveur -> client, l'attribut se replique seul.
 local PULL_TICK_ATTRIBUTE = "LeafiaPullTick"
 
+-- Accelerateur en cours, pose sur le PERSONNAGE et non sur l'outil.
+--
+-- Deux controllers clients differents en ont besoin (camera de travail et champ de vision), et le personnage
+-- est le seul objet que les deux tiennent deja. Le poser sur l'outil obligerait chacun a aller le chercher.
+local THROTTLE_ATTRIBUTE = "LeafiaThrottle"
+
+-- Moteur en marche, pose sur le PERSONNAGE. Different de LeafiaThrottle : celui-ci dit "le moteur tourne",
+-- l'autre dit "le joueur appuie". On peut avoir le moteur en marche sans accelerer, et c'est justement l'etat
+-- ou le joueur vise sa hauteur de coupe.
+local ENGINE_ATTRIBUTE = "LeafiaEngine"
+
 -- On ne previent qu'UNE FOIS par animation. Un message a chaque tirage noierait la console, ce qui revient a
 -- ne rien dire.
 local warnedMissingMarker: { [string]: boolean } = {}
@@ -57,6 +71,12 @@ local pullCounts: { [Player]: number } = {}
 -- cible atteinte d'un coup : c'est la MONTEE progressive qui fait l'effet, pas la vitesse finale.
 local throttle: { [Player]: boolean } = {}
 local bladeSpeed: { [Player]: number } = {}
+-- Inclinaison courante de l'outil, de 0 a 1. Suivie a part de `bladeSpeed` : le poignet encaisse tout de
+-- suite, la masse des lames prend son elan. Deux grandeurs differentes, deux rythmes.
+local tiltAmount: { [Player]: number } = {}
+-- Ouverture du tremblement, de 0 a 1. Une valeur continue et non un booleen : couper net un sinus a 13 Hz
+-- laisserait l'outil fige sur un angle quelconque, et le saut se verrait.
+local vibeGate: { [Player]: number } = {}
 
 -- Son du moteur, en trois temps : ralenti -> attaque -> maintien. L'attaque et le maintien sont deux fichiers
 -- distincts qui s'enchainent bout a bout ; c'est cette suite qui dessine la courbe d'acceleration.
@@ -65,6 +85,18 @@ local engineSound: { [Player]: EngineSound } = {}
 -- Connexion a la fin de l'attaque. Gardee pour la couper : un Connect qui survit a son geste se rebrancherait
 -- au geste suivant et l'enchainement partirait en double.
 local accelEndedConn: { [Player]: RBXScriptConnection } = {}
+
+-- SEULE porte d'entree pour changer d'etat. Elle tient la table ET l'attribut du meme geste.
+--
+-- Six endroits ecrivaient l'etat. Poser l'attribut a cote de chacun, c'etait la garantie d'en oublier un, et
+-- de chercher ensuite pourquoi le client croit le moteur eteint alors qu'il tourne.
+local function setState(player: Player, state: State?)
+	states[player] = state
+	local character = player.Character
+	if character then
+		character:SetAttribute(ENGINE_ATTRIBUTE, state == "Running")
+	end
+end
 
 local function clearAccelConnection(player: Player)
 	local conn = accelEndedConn[player]
@@ -75,12 +107,19 @@ local function clearAccelConnection(player: Player)
 end
 
 local function reset(player: Player)
-	states[player] = nil
+	setState(player, nil)
 	lastActivate[player] = nil
 	throttle[player] = nil
 	bladeSpeed[player] = nil
+	tiltAmount[player] = nil
+	vibeGate[player] = nil
 	clearAccelConnection(player)
 	engineSound[player] = nil
+	-- Sans ca, ranger l'outil en pleine acceleration laisserait la camera zoomee pour toujours.
+	local character = player.Character
+	if character then
+		character:SetAttribute(THROTTLE_ATTRIBUTE, false)
+	end
 	-- Ranger l'outil remet le compteur a zero : il faudra relancer le moteur. C'est voulu, le rituel fait
 	-- partie du jeu.
 	pullCounts[player] = nil
@@ -165,13 +204,13 @@ local function enterReady(player: Player)
 	end
 	local animName = currentHeld.config.pullAnimation
 	if not animName then
-		states[player] = "Idle"
+		setState(player, "Idle")
 		return
 	end
 
 	local track = ToolService.getTrack(player, animName)
 	if not track then
-		states[player] = "Idle"
+		setState(player, "Idle")
 		return
 	end
 
@@ -186,7 +225,7 @@ local function enterReady(player: Player)
 	-- TimePosition APRES Play : sur une piste a l'arret, la valeur est ignoree.
 	track.TimePosition = 0
 
-	states[player] = "Ready"
+	setState(player, "Ready")
 end
 
 -- Le tirage. C'est la MEME piste que la posture, on ne fait que la relancer a vitesse normale : le joueur
@@ -206,7 +245,7 @@ local function pull(player: Player)
 		return
 	end
 
-	states[player] = "Pulling"
+	setState(player, "Pulling")
 
 	-- La reussite est decidee AVANT de jouer. Sinon il faudrait enchainer un echec puis une reussite, et le
 	-- joueur verrait deux gestes la ou il n'en a fait qu'un.
@@ -283,6 +322,10 @@ local function pull(player: Player)
 			-- L'outil, LUI, reste dans la main gauche : une fois lance, on tient le taille-haie a deux mains
 			-- pour couper, on ne le repasse pas a droite. C'est ReadyToCutAnimation qui place le bras droit.
 			ToolService.setLauncherHand(player, nil)
+			-- L'outil reste dans la MEME main, mais plus au meme angle : on passe de la prise de demarrage a la
+			-- prise de coupe. Sans ca, l'outil gardait l'angle du tirage de corde et pointait vers le ciel
+			-- pendant toute la taille, ce qui ressemble a une animation ratee alors que c'est une prise.
+			ToolService.setGripOffset(player, config.cutGripOffset)
 			-- Le ronronnement demarre ici, pas au marqueur : le son de lancement a eu le temps de poser son
 			-- "vroum" seul, et il continue de jouer par-dessus le regime etabli.
 			ToolService.playSound(player, config.runSound, true)
@@ -291,7 +334,7 @@ local function pull(player: Player)
 			-- l'etat et poser la vitesse de lames au ralenti : la boucle Heartbeat prend le relais ensuite.
 			bladeSpeed[player] = config.bladeIdleSpeed
 			ToolService.setToolAnimationSpeed(player, config.bladeIdleSpeed)
-			states[player] = "Running"
+			setState(player, "Running")
 			-- L'etat est pose AVANT : updateEngineSound refuse d'agir hors Running. Si le joueur tenait deja le
 			-- clic pendant le dernier tirage, l'acceleration part donc immediatement.
 			updateEngineSound(player)
@@ -317,7 +360,7 @@ local function prepare(player: Player)
 		return
 	end
 
-	states[player] = "Preparing"
+	setState(player, "Preparing")
 
 	track.Priority = SEQUENCE_PRIORITY
 	track.Looped = false
@@ -383,10 +426,23 @@ local function setThrottle(player: Player, wants: boolean)
 	if typeof(wants) ~= "boolean" then
 		return
 	end
+	-- Sans outil en main il n'y a rien a accelerer. Sans ce test, cliquer les mains vides posait quand meme
+	-- l'attribut et resserrait le champ de vision.
+	if wants and not ToolService.getHeld(player) then
+		return
+	end
 	if throttle[player] == wants then
 		return
 	end
 	throttle[player] = wants
+
+	-- Le client s'y branche pour la camera et le champ de vision. Toujours pas de remote dans ce sens :
+	-- l'attribut se replique tout seul.
+	local character = player.Character
+	if character then
+		character:SetAttribute(THROTTLE_ATTRIBUTE, wants)
+	end
+
 	updateEngineSound(player)
 end
 
@@ -414,6 +470,54 @@ local function stepBlades(dt: number)
 
 				bladeSpeed[player] = speed
 				ToolService.setToolAnimationSpeed(player, speed)
+
+				-- L'inclinaison suit la MEME rampe que les lames : une seule source de verite pour le regime.
+				-- Image, son et reaction de couple ne peuvent donc pas se desynchroniser.
+				-- L'inclinaison a son PROPRE rythme, et vise directement l'ACCELERATEUR plutot que la vitesse de
+				-- lame atteinte.
+				--
+				-- Les lames montent lentement parce que c'est une masse qui prend son elan, et le son est cale
+				-- dessus. La reaction de couple, elle, est immediate : c'est le poignet qui encaisse, pas un
+				-- volant d'inertie. Les caler ensemble rendait le geste mou.
+				-- Lerp exponentiel : depart franc, arrivee douce, et jamais de depassement.
+				local tiltTarget = if throttle[player] then 1 else 0
+				local tilt = tiltAmount[player] or 0
+				tilt += (tiltTarget - tilt) * math.min(1, config.tiltFollowSpeed * dt)
+				tiltAmount[player] = tilt
+
+				-- TREMBLEMENT. L'outil bat de part et d'autre de sa position inclinee : un sinus donne
+				-- naturellement l'alternance dans un sens puis dans l'autre.
+				--
+				-- Il n'apparait que dans le HAUT du regime. Present des le ralenti il se lirait comme un defaut
+				-- d'affichage ; reserve a plein regime il se lit comme une machine qui force, et il recompense
+				-- le joueur qui tient l'accelerateur.
+				-- Horloge partagee plutot qu'une phase par joueur : une table de moins a nettoyer, et deux
+				-- outils qui tremblent en phase ne se remarque pas.
+				-- PAS AU PIED D'UNE HAIE. Le tremblement dit "la machine tourne dans le vide, elle force pour
+				-- rien". En pleine taille il dit donc le contraire de ce qu'on veut montrer, et il brouille un
+				-- geste de precision.
+				-- On lit l'attribut pose sur le personnage plutot que d'appeler HedgeService : deux services qui
+				-- ne se connaissent pas restent deux services qu'on peut retoucher separement.
+				local character = player.Character
+				local working = character ~= nil
+					and character:GetAttribute(HedgeConfigs.AT_HEDGE_ATTRIBUTE) == true
+				local gate = vibeGate[player] or 0
+				gate += ((if working then 0 else 1) - gate) * math.min(1, config.vibeGateSpeed * dt)
+				vibeGate[player] = gate
+
+				local span = math.max(1 - config.vibeStart, 1e-3)
+				local intensity = math.clamp((tilt - config.vibeStart) / span, 0, 1) * gate
+				local vibe = 0
+				if intensity > 0 then
+					vibe = math.sin(os.clock() * config.vibeFrequency * 2 * math.pi) * config.vibeMaxAngle * intensity
+				end
+
+				-- L'inclinaison est REDUITE au pied d'une haie : elle fait pivoter la lame, qui finissait dans la
+				-- haie. Le meme `gate` sert aux deux, donc la transition est deja lissee.
+				-- gate vaut 1 hors chantier et 0 devant une haie : on interpole entre pleine inclinaison et
+				-- inclinaison de travail.
+				local scale = config.tiltWorkingScale + (1 - config.tiltWorkingScale) * gate
+				ToolService.setGripTilt(player, tilt * scale, vibe)
 			end
 		end
 	end

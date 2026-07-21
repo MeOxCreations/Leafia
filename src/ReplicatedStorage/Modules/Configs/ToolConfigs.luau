@@ -79,6 +79,51 @@ export type ToolConfig = {
 	-- Accelerateur des lames, une fois le moteur en marche. La vitesse de l'animation monte quand le joueur
 	-- maintient le clic, redescend au relachement. C'est le debut de la coupe : lame lente = ralenti, lame
 	-- rapide = ca taille.
+	-- REACTION DE COUPLE. L'outil s'incline dans la main a mesure que le moteur monte en regime, comme s'il
+	-- tirait. Sans ca le moteur monte en puissance sans qu'on le SENTE dans les mains.
+	-- Axe de l'inclinaison, dans le repere de l'OUTIL AU REPOS (la prise est deja appliquee, voir setGripTilt).
+	--
+	-- NE PAS chercher a deviner lequel fait quoi. La prise de coupe tourne le repere de -50 / 162 / 80 degres :
+	-- X, Y et Z ne pointent donc plus du tout dans les directions qu'on imagine. Les essayer un par un coute
+	-- trois essais, les deduire coute une soiree.
+	--   Vector3.xAxis / yAxis / zAxis  -> les trois axes purs
+	--   (Vector3.yAxis + Vector3.zAxis).Unit -> une diagonale, si aucun pur ne donne le bon geste
+	-- L'axe doit etre UNITAIRE : fromAxisAngle tourne autour de sa direction, une longueur differente de 1
+	-- fausserait l'angle.
+	tiltAxis: Vector3,
+	tiltMaxAngle: number, -- en degres, atteint a plein regime
+	-- Vitesse a laquelle l'inclinaison rejoint sa cible, par seconde. Plus haut = coup de poignet plus sec.
+	--
+	-- L'inclinaison a son PROPRE rythme, plus celui des lames. Les lames montent lentement parce que c'est une
+	-- masse qui prend son elan, et le son est cale dessus. La reaction de couple, elle, est immediate : c'est
+	-- le poignet qui encaisse, pas un volant d'inertie. Les caler ensemble rendait le geste mou.
+	-- Contrepartie assumee : a mi-regime, inclinaison et vitesse de lame ne correspondent plus exactement.
+	tiltFollowSpeed: number,
+	-- TREMBLEMENT a plein regime : l'outil bat autour de `tiltAxis`, alternativement dans un sens et dans
+	-- l'autre. C'est ce qui dit "la machine force" une fois l'accelerateur a fond.
+	vibeMaxAngle: number, -- en degres, de part et d'autre de l'inclinaison
+	-- En hertz. PLAFOND REEL vers 15 : l'inclinaison est calculee cote serveur puis repliquee, et au-dela la
+	-- replication ne suit plus. On n'obtient pas un tremblement plus rapide, on obtient du bruit.
+	-- Pour monter vraiment plus haut il faudrait calculer le tremblement chez chaque client.
+	vibeFrequency: number,
+	-- Part du regime a partir de laquelle le tremblement apparait. Present des le ralenti, il se lirait comme
+	-- un defaut d'affichage ; reserve au haut du regime, il se lit comme un effort.
+	vibeStart: number,
+	-- Vitesse d'ouverture et de fermeture du tremblement, par seconde. Il s'ETEINT au pied d'une haie : la
+	-- machine qui force pour rien n'a plus lieu d'etre quand la lame mord dans quelque chose, et un tremblement
+	-- pendant un geste de precision brouille la lecture.
+	-- En fondu et non net : couper un sinus a 13 Hz laisserait l'outil fige sur un angle quelconque.
+	vibeGateSpeed: number,
+	-- Part de l'inclinaison conservee AU PIED D'UNE HAIE. 1 = inchangee, 0 = plus d'inclinaison du tout.
+	--
+	-- Hors chantier, l'inclinaison est une reaction de couple : l'outil tire dans la main, c'est ce qui fait
+	-- sentir le moteur. Devant une haie elle devient un probleme : elle fait pivoter la LAME de 10 degres, soit
+	-- 0.7 stud au bout, et la lame entre dans la haie. Aucune animation ne peut corriger ca, l'angle de l'outil
+	-- dans la main vient du Motor6D.
+	-- On la reduit au lieu de la supprimer : a zero, accelerer ne se sentirait plus du tout la ou le joueur
+	-- passe le plus de temps.
+	-- Passe par le meme fondu que le tremblement, donc pas de saut en arrivant sur la haie.
+	tiltWorkingScale: number,
 	bladeIdleSpeed: number, -- vitesse au repos, moteur allume mais joueur passif
 	bladeMaxSpeed: number, -- vitesse a fond, clic maintenu
 	bladeAccel: number, -- gain de vitesse par seconde en montee (progressif = petit)
@@ -106,6 +151,13 @@ export type ToolConfig = {
 	-- En "Action" elle passe au-dessus. Attention, elle ecrase aussi les jambes si elle les cle : une pose de
 	-- maintien ne doit cler que les bras et le torse.
 	holdPriority: Enum.AnimationPriority,
+	-- Orientation de l'outil dans la main une fois le MOTEUR LANCE. Meme main que le demarrage, autre angle.
+	--
+	-- Tirer une corde et tailler une haie ne sont pas le meme geste : il n'y a aucune raison que l'outil soit
+	-- tenu pareil. Sans cet angle dedie, la prise de demarrage restait en place pendant toute la coupe et
+	-- l'outil pointait vers le ciel. Aucune animation ne peut corriger ca : l'angle de l'outil DANS la main
+	-- vient du Motor6D, pas des bras.
+	cutGripOffset: CFrame,
 }
 
 local ToolConfigs: { [string]: ToolConfig } = {
@@ -156,17 +208,37 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		pullSound = "TryLaunchSound",
 		startSound = "StartFirstSound",
 		runSound = "IdleSound",
+		-- Le troisieme essai. X et Y donnaient le mauvais geste, il ne restait que celui-la.
+		tiltAxis = Vector3.zAxis,
+		tiltMaxAngle = 10,
+		tiltFollowSpeed = 14,
+		vibeMaxAngle = 1.4,
+		vibeFrequency = 13,
+		vibeStart = 0.8,
+		vibeGateSpeed = 9,
+		-- ZERO. Devant une haie l'outil ne bouge plus DU TOUT a l'accelerateur : au moment de tailler, la
+		-- position de la lame doit dependre de la visee et de rien d'autre. Un outil qui bouge tout seul pendant
+		-- un geste de precision se ressent comme une perte de controle, meme quand c'est joli.
+		-- L'inclinaison reste entiere hors chantier, la ou elle sert a faire sentir le moteur.
+		tiltWorkingScale = 0,
 		bladeIdleSpeed = 0.35,
 		bladeMaxSpeed = 1.6,
 		bladeAccel = 1.6,
 		bladeDecel = 2.8,
 		accelStartSound = "SpeedStartMotor",
 		accelLoopSound = "SpeedStartMotorInfinite",
-		engineReleaseFade = 0.45,
-		engineWindDownPitch = 0.7,
+		engineReleaseFade = 0.7,
+		-- Descend plus bas qu'avant : c'est l'ECART de hauteur qui s'entend comme une deceleration. A 0.7 le
+		-- moteur avait surtout l'air de baisser le volume.
+		engineWindDownPitch = 0.5,
 		engineAccelFade = 0.12,
 		pullsToStart = 3,
 		holdPriority = Enum.AnimationPriority.Action,
+		-- A REGLER A L'OEIL, comme les autres prises. Part de la prise de demarrage : tant qu'on n'y touche
+		-- pas, rien ne change par rapport a avant.
+		--   X = bascule avant / arriere    Y = rotation autour du manche    Z = inclinaison laterale
+		-- Par pas de 45 degres pour trouver le bon axe, puis par 10 pour affiner.
+		cutGripOffset = CFrame.Angles(math.rad(-50), math.rad(162), math.rad(80)),
 	},
 }
 

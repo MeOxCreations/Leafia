@@ -61,6 +61,13 @@ local function setupLanding(player: Player, character: Model, humanoid: Humanoid
 	end
 	if track then
 		track.Priority = CharacterConfigs.LANDING_PRIORITY
+		-- FORCE non bouclee, quoi qu'en dise l'editeur. Une reception se termine par definition : bouclee, elle
+		-- reste a plein poids pour toujours.
+		--
+		-- Consequence observee : elle est en Action, comme le pas chasse. A priorite EGALE Roblox ne choisit
+		-- pas, il MELANGE les deux. Les jambes recevaient donc en permanence une moyenne entre une reception et
+		-- un pas chasse, ce qui ne ressemble a rien et ne se diagnostique pas a l'oeil.
+		track.Looped = false
 		landingTracks[player] = track
 	end
 

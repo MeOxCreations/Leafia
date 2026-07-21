@@ -82,12 +82,39 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
 - **Priorites d'animation Roblox** : `Core < Idle < Movement < Action < Action2..4`. Une pose de maintien
   d'outil doit etre en `Action`, sinon la marche (`Movement`) l'ecrase. Mais en `Action` elle ecrase aussi les
   jambes si elle les cle : une pose de maintien ne doit cler que les bras et le torse.
+- **`UserInputService:GetMouseLocation()` va avec `Camera:ViewportPointToRay`, PAS `ScreenPointToRay`.** Avec
+  le second, le point tombe ~36 px trop bas : l'inset de la barre Roblox est compte deux fois. Verifie a
+  l'ecran, contre ce qu'affirmaient des sources trouvees en ligne.
+- **Une source web n'est pas une preuve.** Quand le comportement observe contredit ce qu'on a lu, c'est
+  l'ecran qui a raison. Corriger d'abord, et noter la vraie regle ici.
+- **`BasePart.CanQuery = false` n'a d'effet que si `CanCollide` est FAUX.** Une part solide reste vue par les
+  raycasts quoi qu'on mette dedans. Pour un obstacle physique invisible aux lancers, il faut l'exclure
+  explicitement via `RaycastParams`. Et comme un filtre exclut une instance ET ses descendants, cet obstacle ne
+  doit pas etre enfant de ce qu'on veut detecter : le ranger dans un dossier a part.
 - **Quand un nettoyage rate malgre une comptabilite correcte, arreter de compter et demander a la source.**
   Une liste tenue a la main est une hypothese ; `animator:GetPlayingAnimationTracks()` est un fait. Pareil
   pour les instances, les connexions, les threads : l'etat reel du moteur bat l'etat qu'on croit avoir.
 - **Celui qui cree est celui qui nettoie, et il nettoie TOUT.** Un nettoyage reparti sur plusieurs modules et
   plusieurs champs finit toujours par en oublier un. Ne pas chercher lequel : centraliser la creation ET la
   destruction au meme endroit, avec un registre balaye en sortie.
+- **A priorite d'animation EGALE, Roblox ne choisit pas : il MELANGE.** Deux pistes en `Action` qui clent les
+  memes membres donnent une moyenne des deux, pas la plus recente. Symptome : une animation "presque bonne"
+  qu'on croit mal faite. Se lit uniquement dans `animator:GetPlayingAnimationTracks()`, jamais a l'oeil.
+- **Forcer `Looped = false` cote code sur toute animation ponctuelle** (reception, impact, geste unique).
+  Le reglage de l'editeur n'est qu'une suggestion, et une piste bouclee par erreur reste a plein poids POUR
+  TOUJOURS et pollue tout ce qui partage sa priorite.
+- **L'angle d'un outil DANS la main vient du Motor6D (`C0`), jamais de l'animation.** Animer les bras ne le
+  corrigera pas. Un meme outil dans une meme main peut avoir plusieurs angles selon le GESTE (tirer une corde
+  n'est pas tailler) : c'est un offset par geste, pas un offset par main.
+- **Un `Tool` Roblox n'a rien de magique : c'est Roblox qui lui cree un Motor6D `RightGrip` a l'equipement.**
+  Un `Model` ne declenche rien. Le parenter au personnage ne cree AUCUN joint, donc l'editeur d'animation ne
+  le voit meme pas. Il faut creer le Motor6D soi-meme. Symptome trompeur : l'outil flotte a cote, ce qui
+  ressemble a un probleme d'orientation alors que c'est un joint absent. Et une part `Anchored` ignore son
+  Motor6D, quoi qu'on mette dedans.
+- **Ne jamais refaire A LA MAIN dans Studio un placement que le code CALCULE.** Poser un outil "a peu pres"
+  dans l'editeur d'animation donne des poses justes a l'ecran et fausses en jeu, et on cherche ensuite
+  l'erreur dans l'animation. Rejouer le calcul du jeu dans un script de barre de commandes coute dix minutes
+  et supprime la classe entiere de bugs. Voir `scripts/studio/` (hors `src/`, donc Rojo ne le synchronise pas).
 - **A `CharacterAdded`, le personnage est parente mais PAS complet.** L'`Animator` en particulier arrive
   quelques frames apres l'`Humanoid`. Un `FindFirstChildOfClass` a cet instant renvoie `nil`. Utiliser
   `WaitForChild` avec timeout. Symptome trompeur : tout marche des qu'on refait l'action a la main, ce qui

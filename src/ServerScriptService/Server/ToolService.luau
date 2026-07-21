@@ -41,6 +41,9 @@ export type Held = {
 	toolName: string,
 	config: ToolConfigs.ToolConfig,
 	motor: Motor6D,
+	-- Prise au REPOS, sans inclinaison. Reference a laquelle l'inclinaison du moteur s'ajoute : sans elle, elle
+	-- s'accumulerait sur elle-meme et l'outil tournerait sur lui-meme.
+	baseC0: CFrame,
 	-- Pose de maintien en cours sur le PERSONNAGE (idle outil eteint, ou pose moteur allume). Memorisee pour
 	-- pouvoir la couper quand on la remplace : sans reference, elle continuerait de jouer sous la nouvelle.
 	holdTrack: AnimationTrack?,
@@ -302,7 +305,10 @@ local function applyGrip(current: Held, hand: BasePart, attachmentName: string, 
 	-- On repointe Part0 du Motor6D EXISTANT au lieu de le detruire et le recreer : recreer casserait toute
 	-- animation en cours sur cette chaine.
 	current.motor.Part0 = hand
-	current.motor.C0 = c0 * offset
+	-- On MEMORISE la prise de repos avant toute inclinaison. Sans elle, l'inclinaison du moteur s'accumulerait
+	-- sur elle-meme frame apres frame et l'outil finirait par tourner sur lui-meme.
+	current.baseC0 = c0 * offset
+	current.motor.C0 = current.baseC0
 	current.motor.C1 = c1
 	current.motor.Parent = hand
 end
@@ -409,6 +415,8 @@ function ToolService.equip(player: Player, toolName: string): boolean
 		toolName = toolName,
 		config = config,
 		motor = motor,
+		-- Ecrasee par applyGrip juste apres, qui calcule la vraie prise.
+		baseC0 = CFrame.identity,
 		launcherMotor = launcherMotor,
 		launcherHome = launcherHome,
 		launcherBeam = launcherBeam,
@@ -499,6 +507,29 @@ function ToolService.setHand(player: Player, handPartName: string): boolean
 		if isOffHand then config.offHandAttachment else config.gripAttachment,
 		if isOffHand then config.offHandGripOffset else config.gripOffset
 	)
+	return true
+end
+
+-- Change l'ANGLE de l'outil dans la main courante, sans changer de main.
+--
+-- Sert a passer de la prise de demarrage a la prise de coupe. Tirer une corde et tailler une haie ne sont pas
+-- le meme geste : il n'y a aucune raison que l'outil soit tenu pareil, alors que c'est bien la meme main.
+-- Aucune animation ne peut faire ce travail : l'angle de l'outil DANS la main vient du Motor6D, pas des bras.
+function ToolService.setGripOffset(player: Player, offset: CFrame): boolean
+	local current = held[player]
+	if not current then
+		return false
+	end
+	-- La main courante est celle que porte le Motor6D, pas une valeur qu'on garderait de son cote : l'etat reel
+	-- du joint bat toujours l'etat qu'on croit avoir.
+	local hand = current.motor.Part0
+	if not (hand and hand:IsA("BasePart")) then
+		return false
+	end
+
+	local config = current.config
+	local isOffHand = hand.Name == config.offHandPart
+	applyGrip(current, hand, if isOffHand then config.offHandAttachment else config.gripAttachment, offset)
 	return true
 end
 
@@ -601,6 +632,23 @@ local function cancelSoundTween(current: Held, soundName: string)
 	end
 end
 
+-- Incline l'outil dans la main, proportionnellement au regime moteur. Un moteur qui monte en regime pousse
+-- l'outil : sans cette reaction il monterait en puissance sans qu'on le SENTE dans les mains.
+--
+-- On repart TOUJOURS de la prise de repos memorisee. Multiplier la C0 courante ferait s'accumuler l'inclinaison
+-- frame apres frame, et l'outil finirait par tourner sur lui-meme.
+-- `extraDegrees` s'ajoute a l'inclinaison sur le MEME axe, sans etre borne : c'est par la qu'arrive le
+-- tremblement de plein regime, qui doit pouvoir passer de part et d'autre de la position inclinee.
+function ToolService.setGripTilt(player: Player, amount: number, extraDegrees: number?)
+	local current = held[player]
+	if not current then
+		return
+	end
+	local config = current.config
+	local angle = math.rad(config.tiltMaxAngle) * math.clamp(amount, 0, 1) + math.rad(extraDegrees or 0)
+	current.motor.C0 = current.baseC0 * CFrame.fromAxisAngle(config.tiltAxis, angle)
+end
+
 -- Regle la vitesse de lecture des animations de l'outil (lames, bloc moteur). Sert a l'accelerateur : le
 -- meme geste anime, joue plus ou moins vite selon que le joueur pousse ou non.
 function ToolService.setToolAnimationSpeed(player: Player, speed: number)
@@ -694,7 +742,14 @@ function ToolService.fadeOutSound(player: Player, soundName: string?, duration: 
 		goal.PlaybackSpeed = pitchDown
 	end
 
-	local tween = TweenService:Create(sound, TweenInfo.new(duration), goal)
+	-- LINEAIRE quand on fait aussi descendre la hauteur, la courbe par defaut sinon.
+	--
+	-- TweenInfo.new sans style utilise Quad Out : le volume s'ecroule tout de suite puis traine. A mi-parcours
+	-- il ne reste qu'un quart du volume, donc la descente de hauteur se produit quand on n'entend presque plus
+	-- rien : le moteur avait l'air de se couper, pas de ralentir.
+	-- En lineaire, volume et hauteur descendent du meme pas et on ENTEND la deceleration jusqu'au bout.
+	local style = if pitchDown then Enum.EasingStyle.Linear else Enum.EasingStyle.Quad
+	local tween = TweenService:Create(sound, TweenInfo.new(duration, style), goal)
 	current.soundTweens[soundName] = tween
 	tween.Completed:Connect(function(state: Enum.PlaybackState)
 		-- Cancelled = le son est reparti pendant la descente. On ne touche a rien, celui qui l'a relance a

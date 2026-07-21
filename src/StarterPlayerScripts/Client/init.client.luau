@@ -10,6 +10,8 @@ CameraController.init()
 local ToolController = require(script.ToolController)
 ToolController.init()
 
+-- HedgeController EN DERNIER : sa camera scriptee applique le decalage compose par CameraEffects, qui doit
+-- donc avoir ete calcule cette frame. L'ordre des connexions RenderStepped suit l'ordre de ces init.
 local HedgeController = require(script.HedgeController)
 HedgeController.init()
 

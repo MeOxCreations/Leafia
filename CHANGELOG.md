@@ -1323,6 +1323,994 @@ Regle a retenir : **un outil de debug doit partager ses valeurs avec le code qu'
 siennes.** Deux jeux de constantes finissent toujours par diverger, et le debug se met a mentir au pire
 moment.
 
+## 0.0.57 — Haie, couche 2 : orientation forcee et camera de travail
+
+Devant une haie, le personnage pivote pour lui faire face et la camera passe en vue de travail. En reculant,
+tout se relache.
+
+### Cote CLIENT, pas serveur
+
+Le client possede son personnage et sa camera. Forcer l'orientation depuis le serveur se battrait contre la
+simulation locale et donnerait du rubber-banding. **Le serveur DECIDE** (il pose `LeafiaAtHedge` et
+`LeafiaHedgeNormal`), **le client OBEIT**.
+
+### Orientation
+
+- `Humanoid.AutoRotate = false` pendant l'accroche. Sans ca Roblox tourne le personnage dans la direction ou
+  il MARCHE : le joueur qui longe la haie se retrouverait de profil, impossible de tailler.
+- Le joueur garde le controle de son DEPLACEMENT (il longe la haie en marchant sur le cote), il perd celui de
+  son orientation. C'est le but : elle est toujours bonne pour travailler.
+- La normale sort de la haie, donc on regarde dans le sens INVERSE.
+- Lerp exponentiel avec `dt` dans le facteur : meme vitesse de pivot a 30 et a 60 FPS.
+
+### Camera
+
+`Scriptable` pendant l'accroche, `Custom` au relachement. Position calculee a partir de la NORMALE et non du
+regard du joueur : elle reste donc stable pendant que le personnage pivote.
+
+`CAMERA_SIDE` (4) donne l'angle 3/4 isometrique. `CAMERA_LERP_SPEED` volontairement lent : une camera qui
+claque en place donne la nausee meme quand la position finale est bonne.
+
+### Le piege regle au passage : CameraOffset ignore en Scriptable
+
+`Humanoid.CameraOffset` n'est applique que par les scripts de camera PAR DEFAUT de Roblox. Des qu'une feature
+passe la camera en `Scriptable`, il est ignore.
+
+Sans correction, secousse, bob et plongee d'atterrissage auraient disparu **exactement au pied d'une haie**,
+donc precisement la ou le futur retour de coupe devra se voir. Le genre de bug qu'on decouvre trois semaines
+plus tard en cherchant du cote du mauvais module.
+
+`CameraEffects.GetOffset()` expose le decalage compose ; la camera scriptee l'applique elle-meme, apres son
+lerp et en repere local (un impact doit claquer, pas se fondre).
+
+`HedgeController` s'initialise EN DERNIER : l'ordre des connexions `RenderStepped` suit l'ordre des `init`, et
+il lui faut le decalage deja calcule cette frame.
+
+### Decrochage automatique
+
+Reculer eloigne le joueur, le volume de detection ne touche plus, le serveur passe l'attribut a `false`, tout
+se relache. Aucun code de sortie a ecrire.
+
+### Point a evaluer au test
+
+Le retour en `CameraType.Custom` rend la main a la camera par defaut, qui reprend a SA position : il peut y
+avoir un petit saut. A voir si ca se remarque avant d'ecrire une transition de sortie.
+
+## 0.0.58 — Hysteresis de face, camera plus haute, espace vital
+
+### La camera oscillait dans les angles
+
+Dans un coin de haie, deux faces sont a EGALITE. La face retenue basculait a chaque frame au moindre
+tremblement du joueur, la normale sautait, la camera partait en gauche-droite.
+
+`FACE_SWITCH_MARGIN` (1.2 stud) : une face gardee tant qu'une autre ne la bat pas nettement. Verifie par
+simulation sur un joueur qui tremble dans un coin : **4 basculements sans, 0 avec.**
+
+L'hysteresis ne vaut que sur la MEME haie : en changeant de haie, la face repart de zero.
+
+C'est le TROISIEME endroit ou l'hysteresis nous sauve (distance d'accrochage, longueur du volume, choix de
+face). **Des qu'un etat est choisi par comparaison, il lui faut de l'hysteresis** : deux candidats a egalite
+font clignoter le systeme. A retenir pour la selection de tranche quand viendra la coupe.
+
+`CAMERA_HEIGHT` 7 -> 9.5. Le point vise ne bouge pas, donc monter la camera la fait plonger davantage.
+
+### Espace vital autour des haies
+
+Le joueur pouvait se coller a la haie. Une boite invisible, plus large de `BUFFER_MARGIN` (1.2) sur les cotes,
+l'en empeche.
+
+- **La PHYSIQUE fait le travail**, pas un repoussement en code. Elle gere le glissement le long de la haie, les
+  sauts et les collisions entre joueurs, gratuitement. Un repoussement code aurait fait vibrer le personnage a
+  chaque frame en se battant avec la simulation locale du client.
+- Elargie sur les COTES seulement. En hauteur, son toit depasserait celui de la haie et le joueur marcherait
+  sur du vide au-dessus.
+- Nommee `HedgeBuffer`, distinct du prefixe `hedge_`, sinon l'auto-tag la prendrait pour une haie.
+
+## 0.0.59 — Correction : la boite d'espace vital bloquait la detection
+
+Erreur de ma part en 0.0.58 : j'avais affirme que `CanQuery = false` rendait la boite invisible aux raycasts
+tout en gardant sa collision.
+
+**Faux.** `CanQuery` n'a d'effet que si `CanCollide` est FAUX. Une part solide est toujours vue par les
+raycasts, quoi qu'on mette dans `CanQuery`. La boite bloquait donc bel et bien la detection : plus aucune haie
+n'aurait ete trouvee.
+
+Correction : les boites vivent dans un dossier `Workspace.HedgeBuffers` et sont exclues explicitement du
+filtre de lancer.
+
+### Pourquoi un dossier et non un enfant de la haie
+
+Un filtre de raycast exclut une instance **et tous ses descendants**. Rangee dans la haie, exclure la boite
+aurait exclu la haie elle-meme : le probleme inverse, tout aussi bloquant.
+
+Un dossier commun permet de tout exclure d'un coup, avec une seule entree dans le filtre.
+
+Contrepartie : la boite ne meurt plus avec sa haie. Le lien est refait a la main via `hedge.Destroying`.
+
+### Le meme filtre des deux cotes
+
+Le debug client reprend exactement le filtre du serveur. L'oublier ferait s'arreter la barre AVANT la haie
+alors que le serveur la detecte : le debug mentirait, encore.
+
+### Les deux `CanQuery = false` restants sont valides
+
+Parts d'outil et barre de debug ont `CanCollide = false` : la propriete y fonctionne normalement.
+
+### `GetDebugId` est reserve aux plugins
+
+Utilise d'abord pour donner un nom unique a chaque boite, il leve `lacking capability Plugin` dans un script
+serveur normal.
+
+Remplace par une table `haie -> boite`. Plus simple, et surtout plus juste : plusieurs haies portent le MEME
+nom et le dossier leur est commun, donc identifier par le nom etait bancal des le depart.
+
+## 0.0.60 — Pivot horizontal de la camera + curseur sur la haie
+
+### Pivot au clic droit
+
+La camera fixe etait etouffante. Clic DROIT maintenu + souris horizontale = la camera pivote autour du joueur.
+
+- Le bouton gauche reste a l'outil, le curseur reste libre pour viser : le droit est le seul disponible.
+- **Le personnage ne tourne pas.** Seule la camera pivote : on regarde son travail sous un autre angle sans
+  jamais perdre le bon placement pour tailler.
+- Uniquement l'axe horizontal. La hauteur de vue reste celle du reglage : on ne veut pas que le joueur se
+  retrouve a regarder ses pieds ou le ciel en plein travail.
+- Butee a `CAMERA_YAW_LIMIT` (70 deg) de chaque cote, sinon on passe derriere la haie et on travaille a
+  l'aveugle.
+- `MouseBehavior = LockCurrentPosition` pendant le glissement : sans ca le curseur sortirait de l'ecran au
+  bout de deux pivots, et la bille de visee avec lui.
+- Remis a zero au decrochage : on repart toujours d'une vue de face.
+
+### Curseur sur la haie
+
+Bille rose fluo posee la ou le curseur touche la haie. C'est **le point qui deviendra l'endroit ou l'on
+taille** : le construire maintenant sert d'abord a voir ou on vise.
+
+- **`ScreenPointToRay` et non `ViewportPointToRay`.** `GetMouseLocation` rend une position ECRAN, qui inclut
+  le decalage de la barre du haut ; `ViewportPointToRay` l'ignore et la bille serait decalee verticalement.
+- Calculee APRES la camera dans la meme frame : sinon elle viserait depuis l'image precedente et flotterait
+  en arriere pendant les pivots.
+- `CanQuery = false` fonctionne ici (la bille n'a pas de collision). Sans ca elle se trouverait elle-meme au
+  lancer suivant et resterait collee devant la camera.
+
+### Nouvel attribut `LeafiaHedge` sur chaque haie
+
+Le client doit savoir si son curseur est sur une haie. Il lit un ATTRIBUT plutot que le tag CollectionService :
+un attribut se replique de facon certaine, inutile de parier sur autre chose.
+
+## 0.0.61 — Curseur recale, detection de biais
+
+### La bille tombait sous le curseur
+
+`ScreenPointToRay` etait le mauvais choix : la bille apparaissait ~36 px trop bas, pile la hauteur de la barre
+Roblox. `GetMouseLocation` rend deja des coordonnees VIEWPORT, `ScreenPointToRay` ajoutait donc l'inset une
+seconde fois.
+
+Corrige en `ViewportPointToRay`.
+
+**Une source web n'est pas une preuve.** Les pages consultees affirmaient l'inverse ; c'est l'ecran qui a
+tranche. Regle notee dans `CLAUDE.md` : quand l'observe contredit le lu, corriger d'abord.
+
+### Detection en eventail
+
+Un seul lancer droit devant ratait la haie des que le joueur se presentait de biais, alors qu'il etait
+manifestement en train de travailler dessus.
+
+`DETECT_ANGLES = { 0, -40, 40 }` : trois Blockcast, le contact le PLUS PROCHE gagne. Chaque angle coute un
+lancer par joueur et par frame ; trois suffisent largement.
+
+Le debug dessine **les trois** barres. N'en montrer qu'une masquerait les lancers de biais, et on ne
+comprendrait pas pourquoi une haie sur le cote est detectee. Encore la meme regle : le debug doit montrer tout
+ce qui est teste, sinon il ment.
+
+## 0.0.62 — Zone de chantier au sol, debug eteint
+
+`DEBUG_RAY = false`. Les barres de detection ne s'affichent plus.
+
+### Zone posee automatiquement
+
+Chaque haie recoit son rectangle de beams au sol, clone de
+`ReplicatedStorage.Assets.Zones.area_color_action`, dimensionne a l'emprise de la haie plus `ZONE_MARGIN`.
+
+Le dossier `Assets/Zones` regroupera les autres marqueurs de ce type (depot, client), a cote de `Tools` et
+`Effects`.
+
+### Le piege : redimensionner une part ne deplace pas ses Attachment
+
+L'outil Echelle de STUDIO les deplace, mais `part.Size = ...` en script ne les touche pas. Les beams seraient
+restes a la taille du modele d'origine, quelle que soit la haie.
+
+On remet donc les attachments a l'echelle nous-memes, proportionnellement au rapport des tailles. Ca marche
+quelle que soit la facon dont ils ont ete disposes dans le modele : aucune supposition sur quel attachment est
+a quel coin.
+
+Verifie par calcul : un modele 4x1x4 sur une haie 3x3x15 donne une zone 8 x 20, avec les quatre coins pile aux
+bords.
+
+### Details
+
+- Seul le LACET de la haie est repris. Si elle est legerement inclinee, la zone reste a plat au sol.
+- Posee a la base de la haie, avec `ZONE_LIFT` (0.05) de soulevement : deux surfaces exactement au meme niveau
+  se disputent l'affichage pixel par pixel et clignotent.
+- `CanCollide = false` puis `CanQuery = false` : sans ca la dalle serait touchee par la detection, et le
+  curseur se poserait dessus au lieu de la haie.
+
+## 0.0.63 — Haie, couche 3 : le rail de travail
+
+Decision de game design. Pendant l'accroche :
+
+| Touche | Effet |
+|---|---|
+| Q / D | glisse le long de la haie, a distance constante |
+| Z | rien. Le joueur est deja a sa place de travail |
+| S | decroche et sort immediatement |
+
+### Pourquoi PAS remapper Z/S en lateral
+
+C'etait l'autre option envisagee. Elle casse la memoire musculaire : un joueur qui appuie sur Z attend
+d'avancer. Si son personnage part sur le cote, il ne trouve pas ca ingenieux, il trouve les controles bizarres.
+
+**Une commande qui ment sur ce qu'elle fait coute toujours plus cher qu'elle ne rapporte.** Ici les touches
+gardent leur sens : c'est le MONDE qui restreint. Le joueur ne subit pas un remapping, il decouvre une
+contrainte, et ca se comprend sans tutoriel.
+
+### La distance constante n'est pas du confort
+
+C'est ce qui rend la taille APPRENABLE. Si le joueur derive d'un stud vers l'avant ou l'arriere :
+
+- le cadrage camera change
+- la correspondance entre la souris et la hauteur de coupe change
+- le meme geste ne coupe plus au meme endroit
+
+Le joueur ne peut developper aucune precision parce que les regles bougent sous ses pieds. A distance fixe, le
+meme mouvement de souris tape toujours au meme endroit.
+
+`WORK_DISTANCE` (2.6) avec une zone morte de 0.25 : sans elle l'aimant pousserait en permanence et le joueur
+sentirait une main dans son dos.
+
+### Trois pieges techniques
+
+**1. On ne lit PAS `humanoid.MoveDirection`.** Des qu'on contraint le deplacement avec `humanoid:Move()`,
+`MoveDirection` devient notre propre valeur contrainte : on lirait notre sortie, et l'intention de reculer
+serait invisible.
+
+On passe par `ControlModule:GetMoveVector()`, l'input tel qu'il a ete saisi. Bonus : il ne depend pas du
+clavier, AZERTY ou QWERTY sont geres par Roblox.
+
+**2. `BindToRenderStep` a la priorite `Camera` (200), pas un `RenderStepped` simple.** Le module de controle
+tourne a la priorite `Input` (100) et appelle `Move` avec l'input brut. Notre contrainte doit passer APRES,
+sinon il ecrase la notre et le joueur avance librement. Un `RenderStepped` ne garantit pas cet ordre.
+
+**3. La sortie passe par une direction NON contrainte.** Quand le joueur pousse vers l'arriere, le client
+appelle `Move` avec sa direction brute. C'est cette direction que le serveur lit dans `MoveDirection` pour
+decrocher tout de suite. Sans ca il faudrait reculer plusieurs studs a vitesse de travail avant d'etre libere,
+et la sortie serait molle.
+
+`EXIT_DOT` (0.5) vaut environ 60 degres de tolerance : assez large pour sortir en diagonale, assez strict pour
+qu'un pas de cote ne decroche pas par accident.
+
+## 0.0.64 — Deux corrections du rail
+
+### Le deplacement suivait la camera
+
+Q/D partaient en diagonale : l'input etait transforme par la CFrame de la CAMERA, tres decalee sur le cote
+(`CAMERA_SIDE = -10`).
+
+Les axes de travail sont desormais ceux de la FACE. Le joueur regarde la haie : sa droite la longe, son avant
+y va. `right = (-normal):Cross(Y)`, et l'input s'y projette directement.
+
+### Le personnage avancait et reculait tout seul
+
+Cause trouvee apres avoir elimine deux fausses pistes (la force constante de l'aimant, puis la latence de
+replication : ni l'une ni l'autre ne reproduisait le probleme en simulation).
+
+**L'aimant se faisait passer pour le joueur.** Trop pres de la haie, il poussait vers l'arriere ; le client
+transmettait cette poussee via `humanoid:Move`, donc elle atterrissait dans `MoveDirection` ; le serveur y
+lisait une intention de sortir et decrochait. Ca raccrochait, l'aimant repoussait, ca redecrochait. Boucle
+infinie, clavier au repos.
+
+Deux corrections, l'une suffirait mais les deux se completent :
+
+1. **L'aimant ne tire QUE vers la haie**, jamais vers l'arriere. Le trop-pres n'a pas besoin de lui : l'espace
+   vital l'empeche physiquement. Une poussee vers l'avant ne peut jamais ressembler a une sortie.
+2. **`EXIT_MIN_INPUT` (0.7)** cote serveur. Une correction d'aimant vaut au plus 0.45, une vraie poussee au
+   clavier vaut 1. Les deux arrivent par le MEME canal ; seule leur ampleur les distingue.
+
+Verifie : aimant a fond -> ne decroche pas. S -> decroche. Q/D -> ne decroche pas. Sortie en diagonale ->
+decroche.
+
+### Lecon
+
+**Quand un systeme automatique ecrit dans le meme canal que le joueur, le recepteur ne peut plus distinguer
+les deux.** Soit on separe les canaux, soit on rend l'automatique reconnaissable (ici : plus faible, et jamais
+dans la direction ambigue). Le probleme n'etait ni dans l'aimant ni dans la detection de sortie, mais dans le
+fait qu'ils partagent `MoveDirection`.
+
+L'attribut `LeafiaHedgeDistance` est supprime : le client mesure sa distance LUI-MEME par un lancer local.
+Deux sources de verite pour la meme grandeur, c'est exactement ce qu'on evite partout ailleurs.
+
+## 0.0.65 — Temps mort de sortie
+
+Sortir avec S faisait trembler la camera.
+
+Le serveur decrochait, mais la frame suivante la haie etait TOUJOURS a portee (le joueur est a 2.6 studs, la
+detection porte a 4) : ca raccrochait, la sortie etait redetectee, ca redecrochait. Soixante bascules par
+seconde, et la camera passait de `Scriptable` a `Custom` a chaque fois.
+
+`EXIT_COOLDOWN` (0.5 s) : aucune nouvelle accroche possible pendant ce delai. Il ne bloque QUE la nouvelle
+accroche, jamais le travail en cours.
+
+Simule : **21 bascules sans, 1 avec.**
+
+Troisieme fois aujourd'hui que le meme motif mord (accroche, choix de face, sortie). **Tout etat booleen qui
+depend d'une mesure a besoin d'une marge ou d'un temps mort.**
+
+## 0.0.66 — L'acceleration se voit et se sent
+
+Trois retours branches sur la MEME rampe de regime que les lames et le son. Une seule source de verite : rien
+ne peut se desynchroniser.
+
+### Camera qui se rapproche
+
+`CAMERA_DISTANCE_THROTTLE` (9.5 au lieu de 13) pendant l'acceleration. Le lerp de camera existant fait la
+transition, aucun code de plus.
+
+### Champ de vision qui se resserre
+
+`THROTTLE_FOV` (-5), applique comme un DECALAGE sur la valeur courante et non comme une valeur absolue : il
+s'additionne au sprint et a la marche au lieu de les remplacer.
+
+S'applique meme hors chantier : c'est une reaction a l'OUTIL, pas au lieu.
+
+### Reaction de couple sur l'outil
+
+`ToolService.setGripTilt(player, ratio)`. L'outil s'incline dans la main a mesure que le regime monte, comme
+s'il tirait. Sans ca le moteur montait en puissance sans qu'on le SENTE dans les mains.
+
+`ToolConfigs.tiltAxis` et `tiltMaxAngle` (10 degres a plein regime).
+
+**Piege evite** : on repart TOUJOURS de `Held.baseC0`, la prise de repos memorisee. Multiplier la `C0` courante
+ferait s'accumuler l'inclinaison frame apres frame, et l'outil finirait par tourner sur lui-meme.
+
+### Nouvel attribut `LeafiaThrottle`
+
+Pose sur le PERSONNAGE et non sur l'outil : deux controllers clients en ont besoin, et le personnage est le
+seul objet que les deux tiennent deja.
+
+Remis a `false` au rangement, sinon ranger l'outil en pleine acceleration laisserait la camera zoomee pour
+toujours.
+
+## 0.0.67 — La touche AVANT glisse aussi
+
+Devant la haie il n'y a nulle part ou avancer : la touche avant ne faisait donc rien, ce qui se sentait comme
+un blocage. Elle glisse maintenant dans le meme sens que la touche gauche.
+
+| Touche | Effet |
+|---|---|
+| gauche | glisse a gauche |
+| droite | glisse a droite |
+| avant | glisse a gauche |
+| arriere | SORT du chantier |
+
+**`math.min(Z, 0)`** : seule la part AVANT de l'axe alimente le glissement. La part arriere est traitee juste
+avant comme une sortie ; la laisser passer aurait fait glisser au lieu de sortir, et la touche arriere aurait
+cesse de fonctionner.
+
+Le total est clampe : avant + gauche ensemble ne doivent pas donner une vitesse double.
+
+Verifie par table de verite, y compris les combinaisons contradictoires (avant + droite s'annulent).
+
+## 0.0.68 — Le zoom d'acceleration se limite au chantier
+
+Le rapprochement de camera etait deja limite a la zone (tout le code de camera de travail ne tourne que la),
+mais le resserrement du CHAMP DE VISION s'appliquait partout.
+
+Un resserrement dit "je me concentre sur ce travail". Il n'a de sens que s'il y a un travail devant : accelerer
+dans le vide en traversant le jardin ne doit rien changer.
+
+Il exige desormais les DEUX conditions : outil en main **et** accroche a une haie.
+
+### Bug attrape au passage
+
+`setThrottle` ne verifiait pas que le joueur tenait un outil. Cliquer les mains vides posait quand meme
+l'attribut et resserrait la vue.
+
+Verifie : mains vides -> non. Outil mais loin -> non. Pres mais sans clic -> non. Les trois reunis -> oui.
+
+## 0.0.69 — Pas chasses le long de la haie
+
+Devant une haie le joueur ne marche plus, il se deplace en pas chasses.
+
+**UNE seule piste pour les deux sens.** Vers la droite elle est jouee A L'ENVERS (vitesse negative). Le miroir
+est donc exact par construction, et il n'y a qu'une animation a maintenir au lieu de deux qu'il faudrait garder
+synchronisees a la main.
+
+| Touche | Sens | Lecture |
+|---|---|---|
+| gauche | gauche | endroit |
+| droite | droite | ENVERS |
+| avant | gauche | endroit |
+| avant + gauche | gauche | endroit |
+| avant + droite | immobile | arret |
+| arriere | sortie | marche normale |
+
+### Trois pieges evites
+
+**`Play` remet la vitesse a 1.** Sans troisieme argument, regler la vitesse AVANT `Play` ne sert a rien : la
+premiere image partirait a l'endroit avant d'etre corrigee. La vitesse est donc passee a `Play` directement.
+
+**Demarrer a l'envers depuis le debut n'a nulle part ou reculer.** On place la lecture a la fin, et APRES
+`Play` : `TimePosition` ne tient que sur une piste deja lancee.
+
+**Changer de sens ne relance pas la piste.** `AdjustSpeed` sur une piste qui joue deja fait repartir la lecture
+d'ou elle en est, dans l'autre sens. Relancer ferait sauter les jambes a la premiere image a chaque
+changement de direction.
+
+### Priorite
+
+`Action`, pas `Movement` : a egalite avec la marche de Roblox les deux se melangeraient et les jambes
+hesiteraient. La piste ne cle que les JAMBES ; la pose de maintien de l'outil est elle aussi en `Action` mais
+ne cle que les bras et le torse. Les deux jouent ensemble sans se disputer un seul membre.
+
+Cote CLIENT et non serveur, contrairement aux animations d'outil : le sens est calcule frame par frame depuis
+l'input brut. Passer par le serveur ajouterait un aller-retour reseau a chaque changement de direction. Une
+animation jouee sur son propre personnage se replique de toute facon aux autres joueurs.
+
+Arret au decrochage, a la sortie, et a la disparition du personnage (la piste appartient a l'Animator qui part
+avec lui).
+
+## 0.0.70 — Le joueur avance quand son pied touche le sol
+
+Le deplacement n'est plus continu. Un marqueur `WalkEvent1` pose dans l'animation declenche une POUSSEE au
+moment exact ou le pied touche le sol ; entre deux pas le joueur glisse sur son elan.
+
+Cause et effet sur la meme image. C'est ce qui supprime le patinage des pieds, et aucune minuterie ne peut
+deriver par rapport a l'animation puisque c'est l'animation elle-meme qui donne le tempo.
+
+`STEP_GLIDE` ne vaut pas zero volontairement : un arret NET entre chaque pas se sentirait comme des a-coups,
+pas comme une marche.
+
+### Filet de securite
+
+Une piste jouee A L'ENVERS ne declenche pas forcement ses marqueurs. Sans repli, le glissement d'un cote
+serait bloque net et rien a l'ecran ne dirait pourquoi.
+
+Sans marqueur recu pendant `STEP_TIMEOUT`, on repasse en deplacement continu. Le debug affiche lequel des deux
+modes est actif : c'est LA ligne a lire pour savoir si le pas chasse fonctionne vraiment.
+
+### Reglage
+
+`STEP_DECAY` decide de la duree de la poussee : `(STEP_PUSH - STEP_GLIDE) / STEP_DECAY` secondes.
+2 -> 0.38 s, 4 -> 0.19 s, 6 -> 0.12 s. Trop haut, le joueur avance par a-coups ; trop bas, on retrouve le
+deplacement continu.
+
+### A L'ESSAI
+
+Le pas chasse n'est pas valide. Tout ce qui le concerne est regroupe (`SLIDE_*` et `STEP_*` dans les configs,
+`setSlide` cote client) : il n'y a qu'un bloc a enlever si l'effet ne convainc pas.
+
+## 0.0.71 — Hauteur de coupe pilotee par la visee
+
+`UpDownAnimation` n'est jamais JOUEE. Elle est lancee a vitesse ZERO puis parcourue a la main : sa premiere
+image est la coupe basse, sa derniere la coupe haute. La piste sert de regle graduee que la hauteur visee
+promene.
+
+Deux images suffisent donc a couvrir toutes les hauteurs intermediaires. C'est la visee qui interpole, pas
+l'animation.
+
+La hauteur est ramenee sur la HAIE et non sur le joueur : le pied de la haie donne la pose basse quelle que
+soit la taille du personnage ou la hauteur du terrain sous lui.
+
+### Lissage
+
+`UPDOWN_FOLLOW_SPEED` : les bras REJOIGNENT la hauteur visee au lieu d'y sauter. Le curseur bouge par pixels,
+sans lissage les bras claqueraient a chaque secousse de souris. Temps de rattrapage mesure : 6 -> ~0.4 s
+(lourd), 12 -> ~0.15 s (actuel), 25 -> ~0.08 s (nerveux).
+
+Priorite `Action2`, au-dessus de la pose de maintien qui est en `Action` et qui cle les MEMES bras. A egalite
+les deux se melangeraient et la hauteur visee ne serait jamais atteinte.
+
+### Nouvel attribut `LeafiaEngine`
+
+Le client ne pouvait pas savoir si le moteur tourne. Different de `LeafiaThrottle` : celui-ci dit "le moteur
+tourne", l'autre "le joueur appuie sur le clic". On peut avoir le moteur en marche sans accelerer, et c'est
+justement l'etat ou le joueur vise sa hauteur.
+
+**Six endroits ecrivaient l'etat.** Poser l'attribut a cote de chacun etait la garantie d'en oublier un, et de
+chercher ensuite pourquoi le client croit le moteur eteint alors qu'il tourne. Les six passent desormais par
+une seule fonction `setState`, qui tient la table ET l'attribut du meme geste.
+
+## 0.0.72 — Outils Studio : accrocher l'outil au rig d'animation
+
+Deux scripts de barre de commandes, dans `scripts/studio/` (hors `src/`, donc Rojo ne les synchronise pas
+dans le jeu).
+
+`AttacherOutilAuRig.lua` cree le Motor6D `ToolGrip` sur le rig d'animation, avec la prise EXACTE du jeu :
+
+```
+C0 = RightGripAttachment.CFrame * gripOffset
+C1 = Handle.GripLeft.CFrame
+```
+
+`VerifierPriseRig.lua` ne modifie rien : il repond OK / NON sur les quatre causes possibles (joint absent,
+part ancree, Attachment manquante, Part0/Part1 mal branches).
+
+### Pourquoi
+
+Un `Tool` Roblox recoit un Motor6D `RightGrip` cree par le moteur a l'equipement. Un `Model` ne declenche
+rien : sans joint, l'editeur d'animation ne voit meme pas l'outil.
+
+Et poser l'outil A LA MAIN dans l'editeur donnerait des poses justes a l'ecran et fausses en jeu, avec une
+recherche d'erreur du cote de l'animation alors qu'elle serait dans le placement.
+
+### Limite assumee
+
+La barre de commandes ne peut pas `require` un module du jeu : les valeurs sont RECOPIEES depuis
+`ToolConfigs`. Changer `gripOffset` la-bas oblige a le changer ici. C'est ecrit en tete des deux fichiers.
+
+### Regle d'animation
+
+Ne JAMAIS cler la piste de l'outil. `setGripTilt` ecrit dans ce joint a chaque frame pour l'incliner avec le
+regime moteur : une animation qui ecrit dedans aussi ferait deux ecrivains sur la meme propriete. On anime les
+bras, l'outil suit.
+
+## 0.0.73 — Prise de COUPE, distincte de la prise de demarrage
+
+L'outil pointait vers le ciel pendant toute la taille. Ce n'etait pas l'animation : l'angle de l'outil DANS la
+main vient du Motor6D, jamais des bras. Aucune animation ne peut le corriger.
+
+Il gardait `offHandGripOffset`, l'angle regle pour TIRER LA CORDE. Tirer une corde et tailler une haie ne sont
+pas le meme geste : il n'y a aucune raison que l'outil soit tenu pareil.
+
+Nouveau `cutGripOffset`, applique a l'entree en `Running` via `ToolService.setGripOffset`. MEME main (gauche),
+autre angle. Part de la valeur de demarrage : tant qu'on n'y touche pas, rien ne change par rapport a avant.
+
+`setGripOffset` lit la main courante sur `motor.Part0` et non sur un etat garde de son cote : l'etat reel du
+joint bat toujours celui qu'on croit avoir.
+
+### Trois prises, pas deux
+
+Le script Studio expose maintenant `PRISE = "coupe" | "demarrage" | "port"`. Animer une pose de coupe avec la
+prise de demarrage donne un outil faux en jeu, et on cherche l'erreur dans l'animation.
+
+## 0.0.74 — L'animation d'atterrissage tournait en boucle pour toujours
+
+Trouve dans la console, pas a l'oeil :
+
+```
+Animation           | Action | poids 1.00 | vitesse 1
+PasChasserAnimation | Action | poids 1.00 | vitesse 1
+```
+
+La reception restait a plein poids en permanence (bouclee dans l'editeur). Elle est en `Action`, comme le pas
+chasse. **A priorite EGALE, Roblox ne choisit pas : il MELANGE.** Les jambes recevaient donc en permanence une
+moyenne entre une reception et un pas chasse.
+
+`track.Looped = false` force cote code, quoi qu'en dise l'editeur : une reception se termine par definition.
+
+Ce genre de bug ne se voit pas a l'oeil. Il se lit dans la liste des pistes reellement jouees.
+
+## 0.0.75 — Pas de chantier les mains vides
+
+S'accrocher a une haie sans outil n'avait aucun sens : camera de travail imposee, orientation bloquee, vitesse
+reduite. Que des contraintes, aucune contrepartie, et rien a l'ecran pour expliquer au joueur pourquoi il ne
+peut plus avancer normalement.
+
+Le test est fait AVANT tout le reste dans `updatePlayer`, et a CHAQUE frame, pas seulement a l'accroche :
+ranger l'outil en plein chantier relache donc le joueur immediatement, au lieu de le laisser coince jusqu'a ce
+qu'il pense a reculer.
+
+Cout nul quand il n'y a rien a faire : `leaveHedge` sort tout de suite si le joueur n'etait pas accroche.
+
+`DEBUG_SLIDE` repasse a `false`. Il avait fait son travail : c'est lui qui a montre la reception bouclee.
+
+## 0.0.76 — La visee suit le PLAN de la face, plus la surface touchee
+
+Viser le pied de la haie pour le balayer proprement faisait glisser le curseur SOUS la haie. Il tombait sur le
+sol, la visee devenait nulle, et la pose sautait. Le lacher arrivait donc exactement la ou le joueur
+travaillait.
+
+La cause : on lisait l'endroit ou le rayon TOMBE. Rater la haie d'un pixel suffisait a tout perdre.
+
+Desormais le rayon est projete sur le PLAN de la face. Un plan est infini : deborder ne le rate jamais. Le
+lancer ne sert plus qu'a savoir QUELLE haie on vise, et cette haie reste memorisee tant qu'on est au chantier.
+
+`VectorToObjectSpace` pour trouver la profondeur de la face : ca marche aussi sur une haie tournee.
+
+### Marge
+
+`AIM_MARGIN` = 3 studs de debordement accepte, en haut comme en bas. Au-dela, le joueur ne vise plus la haie
+et on rend la main.
+
+### Zones mortes
+
+`AIM_DEADZONE` = 0.6 stud a chaque extremite. On remappe `[deadzone, hauteur - deadzone]` sur `[0, 1]` : plus
+bas vaut le bas franc, plus haut vaut le haut franc.
+
+Sans elle, tenir la pose la plus basse demanderait une visee au pixel. Le joueur n'atteindrait jamais vraiment
+le bas, il tournerait autour. **Les extremites doivent etre les positions les plus FACILES a tenir**, ce sont
+elles qu'on utilise le plus.
+
+Mesure sur une haie de 8 studs :
+
+| Hauteur visee | Pose |
+|---|---|
+| -4 studs | visee lachee |
+| -3 a +0.6 | 0.00 (bas franc) |
+| 4 | 0.50 |
+| 7.4 a 11 | 1.00 (haut franc) |
+| 12 | visee lachee |
+
+## 0.0.77 — Contourner la haie devient possible
+
+Impossible de passer de l'autre cote d'une haie. Pas un reglage trop serre : une erreur de conception.
+
+La face travaillee etait choisie d'apres le POINT D'IMPACT. Or ce point est toujours SUR la haie : sur une
+haie de 2 studs d'epaisseur, la face avant et le bout se retrouvent a moins d'un stud l'un de l'autre.
+`FACE_SWITCH_MARGIN` valant 1.2, **la face avant ne pouvait mathematiquement jamais perdre**. Aucune valeur de
+marge n'aurait repare ca : elle aurait ramene l'oscillation dans les angles avant de debloquer le contournement.
+
+Le critere mesure desormais de combien le JOUEUR a depasse le plan de chaque face. Le joueur, lui, s'ecarte
+franchement quand il contourne : les valeurs se separent, et la marge redevient ce qu'elle doit etre, une
+simple zone de calme.
+
+Trajet simule (haie 20 x 8 x 2, joueur a 2.6 studs) :
+
+| Critere | Resultat |
+|---|---|
+| Ancien (point d'impact) | avant -> avant -> ... -> avant (bloque) |
+| Nouveau (position joueur) | avant -> bout -> arriere |
+
+Non-regression verifiee sur 300 frames avec bruit :
+
+| Trajet | Changements de face |
+|---|---|
+| Longe la face avant sans depasser les bouts | 0 |
+| Pietine PILE dans l'angle | 0 |
+| Depasse les deux bouts | 2, tous legitimes |
+
+L'oscillation gauche-droite de la camera dans les angles, corrigee en son temps par la marge, ne revient pas.
+
+## 0.0.78 — On reste accroche par PROXIMITE, plus par le regard
+
+Le critere de face corrige ne suffisait pas : il restait un second verrou.
+
+L'orientation du joueur est bloquee face a la haie. En glissant vers le bout, son eventail de detection finit
+donc par pointer DANS LE VIDE. Le contact tombait AVANT qu'il ait avance assez pour que la face du bout
+l'emporte, il se raccrochait aussitot sur la face avant, et il tournait en rond.
+
+**Le REGARD sert a s'accrocher, c'est une intention. La PROXIMITE sert a rester, c'est un chantier.** Deux
+questions differentes, elles n'ont pas a avoir la meme reponse.
+
+Une fois accroche, on ne verifie plus que la distance a la BOITE de la haie (`HOLD_RANGE` = 6 studs). Distance
+a la boite et non au centre : une haie de 20 studs de long ne doit pas compter comme "loin" parce qu'on se
+tient a son extremite. Calcul a la main en bornant le point sur chaque axe, donc valable aussi sur une haie
+tournee.
+
+Sortir volontairement reste possible a tout moment : la detection de sortie passe AVANT ce test.
+
+### Verification
+
+Le joueur maintient UNE SEULE touche pendant 9 secondes, aucune autre entree :
+
+| Temps | Face |
+|---|---|
+| 0.00 s | avant |
+| 1.72 s | bout |
+| 2.82 s | arriere |
+| 6.20 s | bout |
+| 7.33 s | avant |
+
+Tour complet de la haie, sans jamais decrocher, et retour au point de depart.
+
+## 0.0.79 — Tourner le coin n'est plus lu comme une sortie
+
+Le joueur etait ejecte du chantier sans avoir touche a la touche de sortie, au moment precis ou il contournait.
+
+En tournant le coin, la normale pivote de 90 degres. Le glissement lateral d'avant se retrouve donc ALIGNE
+avec la nouvelle normale, et le test de sortie le lisait comme une fuite.
+
+`FACE_CHANGE_GRACE` = 0.35 s pendant lesquelles on ne juge plus l'intention de sortir apres un pivot de face.
+Assez long pour couvrir la latence de replication de la nouvelle normale vers le client, assez court pour
+qu'une vraie sortie juste apres un coin reste immediate.
+
+Le pivot est detecte par `Dot < 0.99` et non par egalite : deux normales cardinales identiques peuvent
+differer d'un epsilon apres les allers-retours de repere, et le delai se rouvrirait a chaque frame.
+
+### La simulation ne suffisait pas
+
+Le premier modele ne reproduisait PAS le bug : il recalculait la direction depuis la nouvelle face
+instantanement. Il a fallu modeliser la LATENCE (le client continue de glisser sur l'ancien axe le temps que
+la normale lui parvienne) pour que le bug apparaisse.
+
+Une simulation qui ne reproduit pas le bug rapporte ne prouve rien : elle dit seulement que le modele est
+incomplet.
+
+`HOLD_RANGE` passe de 6 a 8 pour la meme raison : le joueur s'ecarte pendant ce delai.
+
+| Latence | HOLD = 6 | HOLD = 8 |
+|---|---|---|
+| 50 ms | tour complet | tour complet |
+| 100 ms | tour complet | tour complet |
+| 150 ms | decroche | tour complet |
+| 300 ms | decroche | tour complet (ecart max 7.2 studs) |
+
+## 0.0.80 — Debug lisible
+
+Les barres gardent leur TAILLE REELLE, celle qui est testee : les retrecir pour mieux voir ferait mentir le
+debug, ce qui a deja coute une soiree. C'est la TRANSPARENCE qui monte (0.82).
+
+Chaque barre porte un BillboardGui avec la part de portee CONSOMMEE avant de toucher (`72%`, ou `vide`). De
+face, une barre courte et une barre longue se ressemblent alors qu'elles ne disent pas du tout la meme chose.
+Les etiquettes sont decalees verticalement les unes des autres, sinon elles se superposent.
+
+La couleur est desormais decidee LANCER PAR LANCER. Trois barres toutes vertes disaient "une haie est
+detectee", ce qui n'apprend rien : on veut savoir LEQUEL des trois la voit, et a quelle distance.
+
+## 0.0.81 — Le champ de vision suit l'INTENTION, plus la vitesse
+
+Le champ de vision tremblait en marchant au pied d'une haie.
+
+Cause : il se decidait sur la vitesse MESUREE contre un seuil unique. Depuis le deplacement au pas, cette
+vitesse pulse entre la poussee et le glissement, et elle traversait le seuil a CHAQUE PAS.
+
+Un effet ne doit pas se brancher sur une grandeur qui oscille par construction. Il se branche desormais sur
+`MoveDirection`, l'INTENTION du joueur : elle ne retombe jamais a zero tant qu'il pousse sur ses touches.
+Elle est deja horizontale, donc un saut ne l'elargit pas non plus : le filtre vertical d'avant devient inutile.
+
+Deux protections en plus : un lissage du signal, et DEUX seuils (`0.30` a l'entree, `0.15` a la sortie).
+
+| | Basculements en 6 s |
+|---|---|
+| Vitesse mesuree, seuil unique | 13 |
+| Intention lissee, deux seuils | 1 |
+
+### Couplage a connaitre
+
+`MOVING_EXIT` (0.15) doit rester SOUS `STEP_GLIDE` (0.25). Le signal lisse ne descend jamais sous la plus
+petite valeur brute, et au pied d'une haie cette valeur EST `STEP_GLIDE`. Baisser `STEP_GLIDE` sous 0.15
+ramenerait le tremblement.
+
+Note ecrite des DEUX cotes : dans le controller et dans la config. Un couplage entre deux fichiers qu'un seul
+des deux mentionne est un piege a retardement.
+
+Marge mesuree en regime etabli, toutes cadences de pas confondues : le signal oscille entre 0.25 et 0.54.
+Arret complet : retour au repos en 0.12 s.
+
+## 0.0.82 — La reaction de couple a son propre rythme
+
+L'inclinaison de l'outit suivait la rampe des lames : 0.72 s pour arriver a fond. Trop mou.
+
+Les lames montent lentement parce que c'est une MASSE qui prend son elan, et le son est cale dessus. La
+reaction de couple, elle, est immediate : c'est le poignet qui encaisse, pas un volant d'inertie. Les caler
+ensemble etait une erreur de modele, pas un reglage trop bas.
+
+`tiltFollowSpeed` = 14, et l'inclinaison vise directement l'ACCELERATEUR au lieu de la vitesse de lame
+atteinte.
+
+| Reglage | 90 % atteint en |
+|---|---|
+| Ancien, cale sur les lames | 0.72 s |
+| 8 | 0.28 s |
+| **14** | **0.15 s** |
+| 22 | 0.10 s |
+| 30 | 0.07 s |
+
+Contrepartie assumee : a mi-regime, inclinaison et vitesse de lame ne correspondent plus exactement. C'est
+voulu, ce sont deux phenomenes physiques differents.
+
+## 0.0.90 — On entend vraiment le moteur DECELERER
+
+La retombee etait trop courte, mais la rallonger seule n'aurait rien donne.
+
+`TweenInfo.new(duration)` sans style utilise **Quad Out** : le volume s'ecroule tout de suite puis traine. A
+mi-parcours il ne restait qu'un quart du volume, donc la descente de hauteur se produisait quand on n'entendait
+presque plus rien. Le moteur avait l'air de se COUPER, pas de ralentir.
+
+Trois changements ensemble :
+
+| | Avant | Apres |
+|---|---|---|
+| Duree | 0.45 s | 1.0 s |
+| Courbe | Quad Out | Lineaire |
+| Hauteur finale | 0.70 | 0.50 |
+
+Mesure de ce qui est reellement audible (volume > 0.3) :
+
+| | Duree audible | Hauteur atteinte pendant ce temps |
+|---|---|---|
+| Avant | 0.20 s | 0.79 |
+| Apres | 0.70 s | 0.65 |
+
+Le lineaire n'est applique que lorsqu'une descente de hauteur est demandee : les autres fondus gardent la
+courbe par defaut.
+
+## 0.0.89 — Plus aucun mouvement de l'outil pendant la taille
+
+`tiltWorkingScale` = 0. Au pied d'une haie, ni l'inclinaison ni le tremblement ne bougent l'outil.
+
+| | Hors chantier | Devant une haie |
+|---|---|---|
+| Inclinaison | 10 deg | 0 |
+| Tremblement | 1.4 deg | 0 |
+| Deplacement du bout de lame | 0.79 stud | 0.00 |
+
+La position de la lame ne depend plus que de la VISEE. Hors chantier les deux effets restent entiers, la ou ils
+servent a faire sentir le moteur sans gener personne.
+
+**Regle a appliquer a la coupe** : un effet qui bouge l'outil pendant un geste de precision se ressent comme
+une perte de controle, meme quand il est joli. Chaque retour visuel ajoute devra passer ce test -- informe-t-il
+le joueur, ou le fait-il douter de ce qu'il vise ?
+
+## 0.0.88 — La distance de travail devient reproductible
+
+En revenant sur une face deja travaillee apres avoir contourne la haie, la distance n'etait plus la meme
+qu'avant.
+
+`WORK_DISTANCE_TOLERANCE` n'est pas seulement une zone de calme : c'est EXACTEMENT l'incertitude sur la
+distance finale. Le joueur cesse d'etre corrige des qu'il y entre, donc il se fige n'importe ou dedans, et
+l'endroit depend de la direction d'ou il arrive.
+
+| Tolerance | Ecart entre une arrivee de loin et de pres |
+|---|---|
+| 0.25 (avant) | 0.486 stud |
+| 0.12 | 0.234 |
+| **0.05** | **0.098** |
+| 0.00 | 0.001 |
+
+Passe a 0.05. Une zone morte large etait censee eviter de sentir une main dans le dos : c'est le caractere
+PROPORTIONNEL du rappel qui evite ca, pas sa largeur. La force faiblit toute seule en approchant.
+
+Verifie : amplitude residuelle 0.00000 stud, aucune oscillation, quelle que soit la distance de depart.
+
+## 0.0.87 — La visee etait bornee en hauteur mais pas en largeur
+
+La pose de coupe se declenchait meme curseur hors de la haie.
+
+Trou laisse par 0.0.76 : viser le PLAN de la face regle le probleme des bords, mais un plan est INFINI. On
+bornait le point en hauteur, jamais lateralement. Pointer vingt studs a cote de la haie donnait donc une visee
+parfaitement valide.
+
+Le point est desormais borne dans les DEUX directions, dans le repere de la haie (donc valable aussi sur une
+haie tournee). L'axe lateral se deduit de la normale : c'est celui des deux axes horizontaux qui n'est pas
+celui de la face.
+
+Meme marge partout (`AIM_MARGIN` = 3) : deborder d'un cheveu en balayant un bord ne lache pas la visee, viser
+franchement a cote rend la main.
+
+| Curseur | Resultat |
+|---|---|
+| Plein centre | pose 0.50 |
+| 1 stud sous la haie | pose 0.00 |
+| 3 studs sous (limite) | pose 0.00 |
+| 4 studs sous | LACHEE |
+| 2 studs a cote du bout | pose 0.50 |
+| 5 studs a cote | LACHEE |
+| 20 studs a cote | LACHEE |
+| Dans le ciel | LACHEE |
+
+**Lecon** : elargir une zone de tolerance dans une direction oblige a verifier les autres. Le plan infini
+reglait un bord et en ouvrait trois.
+
+## 0.0.86 — Le tremblement s'arrete au pied d'une haie
+
+Le tremblement dit "la machine tourne dans le vide, elle force pour rien". En pleine taille il dit donc le
+CONTRAIRE de ce qu'on veut montrer, et il brouille un geste de precision.
+
+Il s'eteint des que le joueur est accroche a une haie, et revient quand il la quitte.
+
+En FONDU et non net : couper un sinus a 13 Hz laisserait l'outil fige sur un angle quelconque, et le saut se
+verrait. `vibeGateSpeed` = 9.
+
+| | Temps |
+|---|---|
+| Extinction en arrivant sur la haie | 0.003 deg restant apres 0.6 s |
+| Retour en quittant la haie | 90 % en 0.25 s |
+
+`ToolStartService` lit l'ATTRIBUT pose sur le personnage plutot que d'appeler `HedgeService`. Une config
+partagee ne cree pas de dependance : les deux services continuent de s'ignorer, et restent retouchables
+separement.
+
+## 0.0.85 — L'aimant decide de la distance, la boite ne fait plus que bloquer
+
+Trois symptomes, une seule cause : **l'aimant ne tirait que VERS la haie, jamais en arriere.**
+
+Rien ne ramenait donc un joueur arrive trop pres : il restait colle a la boite d'espace vital, et sa distance
+de travail dependait de la BOITE au lieu du reglage. Le long d'un grand cote il mangeait la haie ; dans un
+coin, la diagonale de la boite le tenait trop loin.
+
+C'est aussi pour ca que passer `WORK_DISTANCE` a 3.3 n'avait rien change : ce reglage ne servait qu'a tirer
+vers la haie.
+
+### Ce qui bloquait la poussee arriere
+
+Elle avait ete supprimee parce que le serveur la confondait avec l'intention de sortir : il decrochait, ca
+raccrochait, l'aimant repoussait, ca redecrochait. Le personnage avancait et reculait tout seul.
+
+Les deux signaux arrivent par le meme canal ET dans la meme direction : **impossible de les distinguer une
+fois melanges.** Alors on ne cherche plus a les distinguer, on choisit QUAND poser la question.
+
+Tant que la distance de travail n'est pas retablie, le serveur NE JUGE PLUS l'intention de sortir. Le joueur
+qui pousse vraiment vers l'arriere sort des qu'il a repris sa distance, environ 0.13 s plus tard.
+
+### Repartition des roles
+
+| | Role |
+|---|---|
+| Aimant | decide de la distance, dans les DEUX sens |
+| Boite d'espace vital | empeche de traverser la haie, rien d'autre |
+
+`BUFFER_MARGIN` passe de 1.2 a 0.8, volontairement SOUS `WORK_DISTANCE` : les deux ne doivent plus se disputer
+le placement.
+
+`MAGNET_PUSH_STRENGTH` = 0.35, plus faible que l'attraction (0.45) : etre repousse doit se sentir comme un
+recadrage, pas comme une main dans le dos.
+
+### Convergence
+
+| Depart | Arrivee | Temps |
+|---|---|---|
+| 1.5 (dans la haie) | 3.06 | 1.07 s |
+| 2.5 | 3.05 | 0.62 s |
+| 6.0 | 3.55 | 1.07 s |
+
+Amplitude residuelle mesuree sur les 3 dernieres secondes : 0.0000 stud. Le rappel est proportionnel a l'ecart
+dans les deux sens, il faiblit donc en approchant et ne depasse jamais la cible.
+
+## 0.0.84 — La lame ne doit plus rentrer dans la haie
+
+`WORK_DISTANCE` passe de 2.6 a 3.3.
+
+Cette distance etait reglee sur l'outil AU REPOS. Or trois choses le font avancer, et elles s'ADDITIONNENT :
+
+| Source | Debattement au bout de lame |
+|---|---|
+| Hauteur visee (pose des bras) | variable |
+| Inclinaison de couple, 10 deg | 0.69 stud |
+| Tremblement, 1.4 deg | 0.10 stud |
+
+C'est pour ca que passer la souris de haut en bas ne rentrait pas alors qu'accelerer rentrait : l'animation
+bouge les BRAS, l'inclinaison fait pivoter l'OUTIL. Et c'est pour ca que ca "dependait" meme sans accelerer :
+la pose des bras change avec la hauteur visee.
+
+Reculer le joueur seulement pendant l'acceleration est impossible : l'aimant ne pousse jamais vers l'arriere,
+une poussee arriere se confondrait avec l'intention de sortir. Donc UNE distance, reglee sur le cas le pire.
+
+**3.3 est une premiere estimation**, calculee sur une lame supposee de 4 studs. A regler a l'oeil en visant le
+BAS de la haie a plein regime : c'est la que la marge est la plus faible.
+
+### A garder en tete pour la coupe
+
+Quand la coupe existera, une lame qui EFFLEURE la haie sera souhaitable : c'est ce qui donnera l'impression de
+mordre dedans. Ne pas trop reculer maintenant, sinon il faudra tout rapprocher a ce moment-la.
+
+## 0.0.83 — Tremblement a plein regime
+
+A fond d'accelerateur, l'outil bat de part et d'autre de sa position inclinee, sur le meme axe. Un sinus donne
+naturellement l'alternance dans un sens puis dans l'autre.
+
+Il n'apparait que dans le HAUT du regime (`vibeStart` = 0.8). Present des le ralenti, il se lirait comme un
+defaut d'affichage ; reserve a plein regime, il se lit comme une machine qui force, et il recompense le joueur
+qui tient l'accelerateur.
+
+L'intensite monte progressivement entre 80 % et 100 % du regime : pas d'apparition brutale.
+
+### Plafond de frequence, a connaitre
+
+`vibeFrequency` = 13 Hz. **Plafond reel vers 15.** L'inclinaison est calculee cote serveur puis repliquee : a
+13 Hz sur un serveur a 60 Hz, il reste 4.6 echantillons par cycle. Au-dela on n'obtient pas un tremblement plus
+rapide, on obtient du bruit.
+
+Pour monter vraiment plus haut il faudrait calculer le tremblement chez chaque client, a partir de
+`LeafiaThrottle` qui se replique deja. Pas fait : le besoin n'est pas prouve.
+
+`setGripTilt` prend un `extraDegrees` NON borne, pour que le tremblement puisse passer au-dessus de
+l'inclinaison maximale. Le borner ecraserait une alternance sur deux.
+
+`tiltAxis` passe a `zAxis` apres essai des trois. Aucun raisonnement possible : `cutGripOffset` tourne le
+repere de -50 / 162 / 80 degres, donc X, Y et Z ne pointent plus dans les directions qu'on imagine. Trois
+essais coutent moins cher qu'une deduction.
+
 ### CharacterService devient le seul proprietaire de WalkSpeed
 
 `CharacterService.setSpeedOverride(player, speed?)`. `HedgeService` **ne touche jamais** a `WalkSpeed` : il
