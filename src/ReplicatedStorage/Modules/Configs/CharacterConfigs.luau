@@ -10,6 +10,16 @@ local CharacterConfigs = {
 	-- Vitesse quand le joueur maintient Shift. Applique cote serveur : le client ne fait que demander.
 	SPRINT_SPEED = 17,
 
+	-- ATTERRISSAGE : le personnage encaisse avant de repartir. Sans ce ralentissement il touche le sol et file
+	-- comme s'il n'avait rien senti, ce qui enleve tout poids au saut.
+	LANDING_SPEED = 4,
+	-- Vitesse de recuperation, en studs/s gagnes par seconde. 14 donne ~0.4 s pour retrouver la marche et
+	-- ~0.9 s pour le sprint : on sent la reprise sans se sentir bloque.
+	LANDING_RECOVERY_RATE = 14,
+	-- Vitesse de RALENTISSEMENT, quand une feature impose une allure plus lente (travail au pied d'une haie).
+	-- Plus douce que la reprise : on est aspire vers le travail, on n'y est pas jete.
+	SPEED_SLOWDOWN_RATE = 9,
+
 	-- Roblox livre 7.2 par defaut, un saut trop haut pour un jeu au sol comme celui-ci. Un saut plus court
 	-- garde le personnage ancre, en accord avec le rythme calme. A regler au ressenti.
 	JUMP_HEIGHT = 4.5,
@@ -20,6 +30,10 @@ local CharacterConfigs = {
 	-- Priorite Action : passe au-dessus de la marche, mais comme elle ne cle que les jambes, elle laisse les
 	-- bras a la pose de l'outil (elle aussi en Action, sur d'autres os).
 	LANDING_PRIORITY = Enum.AnimationPriority.Action,
+	-- Etant en Action, elle ECRASE la marche de Roblox tant qu'elle joue : les jambes restent figees puis la
+	-- marche arrive d'un coup. On la coupe donc des que le joueur se remet a avancer.
+	-- Fondu court : assez pour que la marche revienne sans saut, assez bref pour qu'on ne sente pas d'attente.
+	LANDING_CANCEL_FADE = 0.15,
 }
 
 return CharacterConfigs

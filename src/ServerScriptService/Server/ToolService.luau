@@ -12,6 +12,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+local TweenService = game:GetService("TweenService")
 
 local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
@@ -58,6 +59,12 @@ export type Held = {
 	-- entendent le moteur d'ou tu es), et ils meurent avec l'outil, donc rien a nettoyer.
 	-- Clones une fois et non a chaque tirage : pas d'allocation au milieu du geste.
 	sounds: { [string]: Sound },
+	-- Volume d'origine de chaque son. Un fondu ecrase le Volume ; sans cette copie on ne saurait plus a quelle
+	-- valeur revenir, et chaque fondu laisserait le son un peu plus faible que le precedent.
+	soundVolumes: { [string]: number },
+	-- Fondu en cours par son, pour l'annuler si le meme son repart avant la fin. Sans ca, un fondu sortant
+	-- continuerait de baisser le volume d'un son qu'on vient de relancer.
+	soundTweens: { [string]: Tween },
 }
 
 -- Une piste par animation et par personnage, chargee UNE FOIS au spawn.
@@ -407,6 +414,8 @@ function ToolService.equip(player: Player, toolName: string): boolean
 		launcherBeam = launcherBeam,
 		toolTracks = {},
 		sounds = {},
+		soundVolumes = {},
+		soundTweens = {},
 	}
 
 	-- Sons : on clone les originaux dans le Handle. L'original reste intact dans SoundService, et chaque
@@ -422,6 +431,8 @@ function ToolService.equip(player: Player, toolName: string): boolean
 					local clone = sound:Clone()
 					clone.Parent = handle
 					current.sounds[sound.Name] = clone
+					-- Memorise AVANT tout fondu : c'est la valeur de reference a laquelle on revient.
+					current.soundVolumes[sound.Name] = clone.Volume
 				end
 			end
 		else
@@ -580,6 +591,16 @@ function ToolService.setToolAnimationsPlaying(player: Player, playing: boolean, 
 	end
 end
 
+-- Annule le fondu en cours sur un son. Sans ca, un fondu sortant continuerait de baisser le volume d'un son
+-- qu'on vient de relancer, et on l'entendrait disparaitre juste apres l'avoir declenche.
+local function cancelSoundTween(current: Held, soundName: string)
+	local tween = current.soundTweens[soundName]
+	if tween then
+		tween:Cancel()
+		current.soundTweens[soundName] = nil
+	end
+end
+
 -- Regle la vitesse de lecture des animations de l'outil (lames, bloc moteur). Sert a l'accelerateur : le
 -- meme geste anime, joue plus ou moins vite selon que le joueur pousse ou non.
 function ToolService.setToolAnimationSpeed(player: Player, speed: number)
@@ -609,12 +630,98 @@ function ToolService.playSound(player: Player, soundName: string?, looped: boole
 		warn(`[ToolService] Son introuvable : {soundName}`)
 		return
 	end
+	-- Un fondu en cours sur ce son doit mourir ici : sinon il continuerait a en baisser le volume juste apres
+	-- qu'on l'ait relance. On restaure aussi volume et hauteur, qu'un fondu precedent a pu laisser en bas.
+	cancelSoundTween(current, soundName)
+	sound.Volume = current.soundVolumes[soundName] or sound.Volume
+	sound.PlaybackSpeed = 1
+
 	sound.Looped = looped == true
 	-- Un son en boucle deja en cours ne se relance pas : ca produirait un hoquet au milieu du ronronnement.
 	if sound.Looped and sound.IsPlaying then
 		return
 	end
 	sound:Play()
+end
+
+-- Fait MONTER un son depuis le silence. Le son demarre a zero puis rejoint son volume d'origine.
+function ToolService.fadeInSound(player: Player, soundName: string?, duration: number, looped: boolean?)
+	if not soundName then
+		return
+	end
+	local current = held[player]
+	if not current then
+		return
+	end
+	local sound = current.sounds[soundName]
+	if not sound then
+		return
+	end
+
+	cancelSoundTween(current, soundName)
+	local target = current.soundVolumes[soundName] or sound.Volume
+	sound.Looped = looped == true
+	-- PlaybackSpeed remise a 1 : un fondu sortant precedent a pu la laisser en bas.
+	sound.PlaybackSpeed = 1
+	if not sound.IsPlaying then
+		sound.Volume = 0
+		sound:Play()
+	end
+
+	local tween = TweenService:Create(sound, TweenInfo.new(duration), { Volume = target })
+	current.soundTweens[soundName] = tween
+	tween:Play()
+end
+
+-- Fait DESCENDRE un son puis l'arrete. `pitchDown` fait aussi tomber la hauteur pendant la descente : c'est ce
+-- qui fait entendre un moteur qui retombe plutot qu'un son qu'on baisse.
+function ToolService.fadeOutSound(player: Player, soundName: string?, duration: number, pitchDown: number?)
+	if not soundName then
+		return
+	end
+	local current = held[player]
+	if not current then
+		return
+	end
+	local sound = current.sounds[soundName]
+	if not (sound and sound.IsPlaying) then
+		return
+	end
+
+	cancelSoundTween(current, soundName)
+	local goal: { [string]: number } = { Volume = 0 }
+	if pitchDown then
+		goal.PlaybackSpeed = pitchDown
+	end
+
+	local tween = TweenService:Create(sound, TweenInfo.new(duration), goal)
+	current.soundTweens[soundName] = tween
+	tween.Completed:Connect(function(state: Enum.PlaybackState)
+		-- Cancelled = le son est reparti pendant la descente. On ne touche a rien, celui qui l'a relance a
+		-- deja remis le volume et la hauteur qu'il voulait.
+		if state ~= Enum.PlaybackState.Completed then
+			return
+		end
+		sound:Stop()
+		-- Remise a l'etat d'origine APRES l'arret : le son est pret a etre rejoue tel quel.
+		sound.Volume = current.soundVolumes[soundName] or sound.Volume
+		sound.PlaybackSpeed = 1
+		current.soundTweens[soundName] = nil
+	end)
+	tween:Play()
+end
+
+-- Rend l'instance Sound clonee dans le Handle. Sert a s'abonner a `Ended` : un son d'attaque qui se termine
+-- doit pouvoir enchainer sur son maintien.
+function ToolService.getSound(player: Player, soundName: string?): Sound?
+	if not soundName then
+		return nil
+	end
+	local current = held[player]
+	if not current then
+		return nil
+	end
+	return current.sounds[soundName]
 end
 
 -- Coupe un son de l'outil. Utile pour les boucles ; les sons courts s'arretent tout seuls, et de toute facon
@@ -629,7 +736,12 @@ function ToolService.stopSound(player: Player, soundName: string?)
 	end
 	local sound = current.sounds[soundName]
 	if sound then
+		-- Un arret net doit aussi tuer le fondu en cours, sinon celui-ci finirait par restaurer le volume d'un
+		-- son qu'on vient d'arreter.
+		cancelSoundTween(current, soundName)
 		sound:Stop()
+		sound.Volume = current.soundVolumes[soundName] or sound.Volume
+		sound.PlaybackSpeed = 1
 	end
 end
 

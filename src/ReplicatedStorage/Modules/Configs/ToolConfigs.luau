@@ -83,6 +83,21 @@ export type ToolConfig = {
 	bladeMaxSpeed: number, -- vitesse a fond, clic maintenu
 	bladeAccel: number, -- gain de vitesse par seconde en montee (progressif = petit)
 	bladeDecel: number, -- perte de vitesse par seconde au relachement
+	-- SON DU MOTEUR : une enveloppe en deux temps, pas un pitch qu'on tire.
+	--   accelStartSound : l'ATTAQUE, la montee en regime. Jouee une fois, non bouclee.
+	--   accelLoopSound  : le MAINTIEN, enchaine des que l'attaque se termine, en boucle tant qu'on pousse.
+	-- Les deux bout a bout dessinent la courbe d'acceleration. C'est le son qui porte la courbe, donc on ne
+	-- touche PAS a PlaybackSpeed : ca doublerait l'effet et sonnerait faux.
+	accelStartSound: string?,
+	accelLoopSound: string?,
+	-- Duree du fondu quand on RELACHE. Un moteur ne se coupe pas net : il redescend. Couper sec s'entend comme
+	-- un bug, meme quand tout le reste est bon.
+	engineReleaseFade: number,
+	-- Hauteur atteinte par le son sortant pendant ce fondu. En dessous de 1, on entend le regime RETOMBER au
+	-- lieu d'un simple baisser de volume.
+	engineWindDownPitch: number,
+	-- Fondu du ralenti quand on ACCELERE. Court : l'attaque doit mordre tout de suite.
+	engineAccelFade: number,
 	-- Nombre de tirages avant que le moteur demarre. C'est une CARACTERISTIQUE de l'outil, pas une constante
 	-- du jeu : un outil pourri en demandera 4, un outil pro partira au premier. Le joueur ressentira son
 	-- upgrade dans ses mains au lieu de le lire dans un menu.
@@ -145,6 +160,11 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		bladeMaxSpeed = 1.6,
 		bladeAccel = 1.6,
 		bladeDecel = 2.8,
+		accelStartSound = "SpeedStartMotor",
+		accelLoopSound = "SpeedStartMotorInfinite",
+		engineReleaseFade = 0.45,
+		engineWindDownPitch = 0.7,
+		engineAccelFade = 0.12,
 		pullsToStart = 3,
 		holdPriority = Enum.AnimationPriority.Action,
 	},

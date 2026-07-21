@@ -24,6 +24,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
 local ToolService = require(script.Parent.ToolService)
 
 local ToolStartService = {}
@@ -57,14 +58,100 @@ local pullCounts: { [Player]: number } = {}
 local throttle: { [Player]: boolean } = {}
 local bladeSpeed: { [Player]: number } = {}
 
+-- Son du moteur, en trois temps : ralenti -> attaque -> maintien. L'attaque et le maintien sont deux fichiers
+-- distincts qui s'enchainent bout a bout ; c'est cette suite qui dessine la courbe d'acceleration.
+type EngineSound = "Idle" | "Accel" | "Sustain"
+local engineSound: { [Player]: EngineSound } = {}
+-- Connexion a la fin de l'attaque. Gardee pour la couper : un Connect qui survit a son geste se rebrancherait
+-- au geste suivant et l'enchainement partirait en double.
+local accelEndedConn: { [Player]: RBXScriptConnection } = {}
+
+local function clearAccelConnection(player: Player)
+	local conn = accelEndedConn[player]
+	if conn then
+		conn:Disconnect()
+		accelEndedConn[player] = nil
+	end
+end
+
 local function reset(player: Player)
 	states[player] = nil
 	lastActivate[player] = nil
 	throttle[player] = nil
 	bladeSpeed[player] = nil
+	clearAccelConnection(player)
+	engineSound[player] = nil
 	-- Ranger l'outil remet le compteur a zero : il faudra relancer le moteur. C'est voulu, le rituel fait
 	-- partie du jeu.
 	pullCounts[player] = nil
+end
+
+-- ===== Son du moteur : ralenti / attaque / maintien =====
+--
+-- Le pitch dynamique a ete abandonne : deux sons dedies portent deja la courbe d'acceleration, et tirer sur
+-- PlaybackSpeed par-dessus doublerait l'effet. Le son design fait le travail, le code ne fait qu'enchainer.
+
+-- RELACHEMENT. Le moteur redescend, il ne se coupe pas net : l'acceleration s'efface en fondu avec sa hauteur
+-- qui tombe, pendant que le ralenti remonte. Les deux se croisent, donc il n'y a aucun trou.
+--
+-- La connexion a Ended est coupee AVANT le fondu : l'attaque qui s'eteint doit ecrire sa fin dans le vide, pas
+-- declencher le maintien qu'on est justement en train d'annuler.
+local function engineIdle(player: Player, config: ToolConfigs.ToolConfig)
+	clearAccelConnection(player)
+	ToolService.fadeOutSound(player, config.accelStartSound, config.engineReleaseFade, config.engineWindDownPitch)
+	ToolService.fadeOutSound(player, config.accelLoopSound, config.engineReleaseFade, config.engineWindDownPitch)
+	ToolService.fadeInSound(player, config.runSound, config.engineReleaseFade, true)
+	engineSound[player] = "Idle"
+end
+
+local function engineAccelerate(player: Player, config: ToolConfigs.ToolConfig)
+	clearAccelConnection(player)
+	-- Le ralenti s'efface, vite : l'attaque le remplace, elle ne se superpose pas. Deux regimes moteur en meme
+	-- temps donnent une bouillie, pas une acceleration.
+	ToolService.fadeOutSound(player, config.runSound, config.engineAccelFade)
+	ToolService.stopSound(player, config.accelLoopSound)
+	-- L'attaque, elle, part a PLEIN VOLUME tout de suite. La faire monter en fondu lui enleverait son mordant,
+	-- et c'est ce mordant qui fait la sensation de coup d'accelerateur.
+	ToolService.playSound(player, config.accelStartSound, false)
+	engineSound[player] = "Accel"
+
+	local sound = ToolService.getSound(player, config.accelStartSound)
+	if not sound then
+		return
+	end
+
+	-- ENCHAINEMENT : des que l'attaque atteint sa fin, le maintien prend le relais sans trou. On ecoute la fin
+	-- reelle du son plutot que de compter une duree a la main : une duree codee en dur se decale des que le
+	-- fichier change.
+	accelEndedConn[player] = sound.Ended:Connect(function()
+		clearAccelConnection(player)
+		-- Le joueur a pu relacher, ranger l'outil ou mourir pendant l'attaque.
+		if engineSound[player] ~= "Accel" or not throttle[player] or states[player] ~= "Running" then
+			return
+		end
+		ToolService.playSound(player, config.accelLoopSound, true)
+		engineSound[player] = "Sustain"
+	end)
+end
+
+-- Fait suivre le son a l'intention du joueur. Appelee a chaque changement de throttle et a l'entree en
+-- Running, jamais dans la boucle : le son change par PALIERS, contrairement a la vitesse des lames.
+local function updateEngineSound(player: Player)
+	local currentHeld = ToolService.getHeld(player)
+	if not currentHeld or states[player] ~= "Running" then
+		return
+	end
+	local config = currentHeld.config
+
+	if throttle[player] then
+		-- Deja en train d'accelerer ou de tenir le regime : on ne relance pas l'attaque, sinon un joueur qui
+		-- garde le clic entendrait le moteur redemarrer en boucle.
+		if engineSound[player] ~= "Accel" and engineSound[player] ~= "Sustain" then
+			engineAccelerate(player, config)
+		end
+	elseif engineSound[player] ~= "Idle" then
+		engineIdle(player, config)
+	end
 end
 
 -- La posture : l'animation de tirage jouee a vitesse ZERO sur sa premiere frame. Le joueur garde donc
@@ -199,11 +286,15 @@ local function pull(player: Player)
 			-- Le ronronnement demarre ici, pas au marqueur : le son de lancement a eu le temps de poser son
 			-- "vroum" seul, et il continue de jouer par-dessus le regime etabli.
 			ToolService.playSound(player, config.runSound, true)
+			engineSound[player] = "Idle"
 			-- La pose de travail a deja ete lancee au marqueur, sous le tirage. Ici il ne reste qu'a acter
 			-- l'etat et poser la vitesse de lames au ralenti : la boucle Heartbeat prend le relais ensuite.
 			bladeSpeed[player] = config.bladeIdleSpeed
 			ToolService.setToolAnimationSpeed(player, config.bladeIdleSpeed)
 			states[player] = "Running"
+			-- L'etat est pose AVANT : updateEngineSound refuse d'agir hors Running. Si le joueur tenait deja le
+			-- clic pendant le dernier tirage, l'acceleration part donc immediatement.
+			updateEngineSound(player)
 		else
 			-- enterReady accepte l'etat "Pulling", donc pas besoin de mentir sur l'etat pour passer sa garde.
 			enterReady(player)
@@ -286,14 +377,17 @@ local function activate(player: Player)
 end
 
 -- Le client dit s'il maintient le clic. On ne fait que noter l'intention : c'est la boucle Heartbeat qui la
--- traduit en vitesse, progressivement. Le throttle n'a d'effet qu'en Running ; note dans les autres etats, il
--- ne sert a rien mais ne gene pas.
+-- traduit en vitesse de lames, progressivement, et updateEngineSound qui bascule le son.
 local function setThrottle(player: Player, wants: boolean)
 	-- Validation : le client ment toujours. On n'accepte qu'un vrai booleen.
 	if typeof(wants) ~= "boolean" then
 		return
 	end
+	if throttle[player] == wants then
+		return
+	end
 	throttle[player] = wants
+	updateEngineSound(player)
 end
 
 -- Fait suivre la vitesse des lames a l'intention du joueur, un cran par frame. Une seule boucle pour tous les

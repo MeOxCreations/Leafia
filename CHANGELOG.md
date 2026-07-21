@@ -1086,6 +1086,260 @@ secouer la camera pendant que le bob tourne et que le FOV est deja elargi, tout 
 
 `SPRINT_BOB_AMPLITUDE` 0.12 stud, `LAND_DIP_DEPTH` 0.6 stud, `SPRINT_FOV` 80. Dans `CameraController`.
 
+## 0.0.50 — Plongee d'atterrissage en ressort
+
+La plongee posait un decalage instantane puis remontait en douceur : la descente etait donc un "TAC" sec.
+
+Remplacee par un **ressort amorti** : a la reception on donne une impulsion de VITESSE vers le bas, le ressort
+ramene la position a zero. La camera descend en douceur, freine, remonte, avec un leger depassement.
+
+`F = -raideur * position - amortissement * vitesse`, integre en Euler. Amortissement (13) volontairement SOUS
+l'amortissement critique (~22) : c'est ce depassement qui donne le cote souple au lieu d'un a-coup.
+
+Verifie par simulation : profondeur ~0.24 stud, rebond de 0.019 stud au-dessus de zero, stabilise en 0.68 s.
+
+`LandDip(strength)` prend desormais une VITESSE, pas une profondeur.
+
+## 0.0.51 — Son du moteur : enveloppe en deux temps
+
+Le pitch dynamique (`PlaybackSpeed` suivant la rampe des lames) est **abandonne**. Deux sons dedies le
+remplacent :
+
+```
+ralenti        IdleSound                 (boucle)
+  |  clic maintenu
+attaque        SpeedStartMotor           (une fois)
+  |  a sa fin, si le clic est toujours tenu
+maintien       SpeedStartMotorInfinite   (boucle)
+  |  relachement
+ralenti        IdleSound
+```
+
+**Ce sont les sons qui portent la courbe d'acceleration, pas le code.** Tirer sur `PlaybackSpeed` par-dessus
+doublerait l'effet et sonnerait faux. Le code ne fait qu'enchainer au bon moment.
+
+### Details
+
+- L'enchainement se fait sur `Sound.Ended`, la fin REELLE du fichier, jamais sur une duree codee en dur : une
+  duree se decale des que le son est remplace.
+- Le ralenti s'ARRETE pendant l'acceleration au lieu de se superposer. Deux regimes moteur en meme temps
+  donnent une bouillie.
+- La connexion a `Ended` est gardee et coupee a chaque transition. Un `Connect` qui survit a son geste se
+  rebrancherait au suivant et l'enchainement partirait en double.
+- `setThrottle` ignore une valeur identique a la precedente : sans ca, un client bavard relancerait l'attaque
+  en boucle.
+- Le son change par PALIERS (a chaque changement de throttle), contrairement a la vitesse des lames qui suit
+  une rampe continue dans la boucle. Deux mecaniques differentes pour deux natures differentes.
+
+## 0.0.52 — Le moteur redescend au lieu de se couper
+
+Relacher pendant `SpeedStartMotor` coupait le son NET. Un moteur ne fait pas ca : il retombe.
+
+Fondu croise au relachement. L'acceleration s'efface pendant que le ralenti remonte, les deux se croisent,
+il n'y a aucun trou.
+
+- `ToolService.fadeInSound` / `fadeOutSound`, par tween sur `Volume`.
+- `ToolConfigs` : `engineReleaseFade` (0.45 s), `engineWindDownPitch` (0.7), `engineAccelFade` (0.12 s).
+
+### La hauteur tombe pendant le fondu
+
+`fadeOutSound` fait aussi descendre `PlaybackSpeed` vers `engineWindDownPitch`. On entend le REGIME retomber,
+pas juste un volume qu'on baisse. C'est la difference entre "le son s'arrete" et "le moteur redescend".
+
+### L'attaque part a plein volume, elle
+
+Seul le son SORTANT est fondu. `SpeedStartMotor` demarre net : la faire monter en fondu lui enleverait son
+mordant, et c'est ce mordant qui fait la sensation de coup d'accelerateur. On fond ce qui part, jamais ce qui
+attaque.
+
+### Trois pieges d'etat
+
+- **Volume d'origine memorise a l'equipement** (`soundVolumes`). Un fondu ecrase `Volume` ; sans cette copie on
+  ne saurait plus a quelle valeur revenir, et chaque fondu laisserait le son un peu plus faible que le
+  precedent.
+- **Un seul fondu par son a la fois** (`soundTweens`), annule des que le son repart. Sinon un fondu sortant
+  continuerait de baisser le volume d'un son qu'on vient de relancer.
+- **La connexion a `Ended` est coupee AVANT le fondu.** L'attaque qui s'eteint doit ecrire sa fin dans le vide,
+  pas declencher le maintien qu'on est justement en train d'annuler.
+
+`playSound` et `stopSound` annulent aussi le fondu en cours et restaurent volume et hauteur : quel que soit le
+chemin, un son repart toujours dans un etat propre.
+
+## 0.0.53 — Perte de vitesse a l'atterrissage
+
+A la reception, la vitesse tombe a `LANDING_SPEED` (4) puis remonte progressivement. Sans ca le personnage
+touchait le sol et repartait comme s'il n'avait rien senti : le saut n'avait aucun poids.
+
+Mesure : ~0.43 s pour retrouver la marche, ~0.93 s pour le sprint.
+
+### Chute brutale, reprise progressive
+
+La vitesse tombe **d'un coup** et remonte **doucement**. C'est l'asymetrie qui fait l'impact : des jambes qui
+absorbent puis repoussent. L'inverse (chute douce, reprise seche) ne se ressentirait pas comme un choc.
+
+Meme principe que la descente du moteur en 0.0.52 et que le ressort de camera en 0.0.50 : dans un retour de
+game feel, les deux sens n'ont presque jamais la meme vitesse.
+
+### Le serveur retient maintenant l'etat du sprint
+
+`sprinting[player]` est necessaire : la reprise doit savoir vers quelle vitesse remonter. Un joueur qui
+retombe en tenant Shift doit retrouver le SPRINT, pas la marche.
+
+### Un seul pilote a la fois
+
+Pendant une recuperation, `onSetSprint` **n'ecrit pas** dans `WalkSpeed` : la boucle est seule aux commandes et
+lira la nouvelle cible d'elle-meme. Sans cette regle, appuyer sur Shift en plein atterrissage remettrait
+instantanement la pleine vitesse et annulerait l'impact.
+
+C'est encore la meme regle que pour la camera : **une propriete, un seul ecrivain a un instant donne.**
+
+### Details
+
+- Vitesse EXACTE a l'arrivee, pas approchee : sinon un ecart minime resterait pour toujours et deux joueurs
+  cote a cote finiraient par se decaler.
+- `recovering` et `sprinting` remis a zero au respawn : la recuperation en cours portait sur l'ancien
+  personnage.
+- L'animation d'atterrissage ne bloque plus le ralentissement si elle echoue a charger : les deux effets sont
+  independants.
+
+## 0.0.54 — L'animation d'atterrissage laisse la marche reprendre
+
+Symptome : en repartant juste apres une reception, les jambes restaient figees un instant avant que la marche
+de Roblox apparaisse d'un coup.
+
+Cause : l'animation d'atterrissage est en priorite `Action`, la marche de Roblox en `Movement`. Tant que la
+premiere joue, elle MASQUE la seconde. Le joueur avancait donc avec des jambes immobiles jusqu'a la fin de la
+piste.
+
+Correction : la piste est coupee des que le joueur se remet a avancer, en fondu (`LANDING_CANCEL_FADE`, 0.15 s).
+
+- Immobile a la reception -> l'animation joue en entier.
+- Repart tout de suite -> elle est coupee, la marche reprend la main sans attendre.
+
+### On teste `MoveDirection`, pas la vitesse
+
+`MoveDirection` est l'INTENTION du joueur. Au moment ou il touche le sol il glisse encore : sa vitesse reelle
+n'est donc pas un signal fiable, elle declencherait la coupure alors qu'il ne fait que finir sa chute.
+`MoveDirection` ne bouge que s'il pousse vraiment sur ses touches.
+
+### Regle generale
+
+**Une animation en priorite haute doit savoir s'effacer.** Elle est prioritaire parce qu'elle raconte un
+moment precis ; passe ce moment, elle n'a plus de raison de bloquer ce qui est en dessous. Poser la priorite ne
+suffit pas, il faut aussi decider quand la rendre.
+
+## 0.0.55 — Haie, couche 1 : approche et ecart
+
+Debut du systeme de taille. Le joueur qui se presente devant une haie ralentit ; il retrouve son allure en
+s'ecartant.
+
+- `Modules/Configs/HedgeConfigs.luau`
+- `Server/HedgeService.luau` : detecte la haie la plus proche, la FACE concernee, et l'etat entrer / sortir.
+- Attributs poses sur le personnage : `LeafiaAtHedge` (booleen) et `LeafiaHedgeNormal` (Vector3). Contrat
+  serveur -> client pour la camera et l'UI a venir, sans remote.
+
+### Tag pose AUTOMATIQUEMENT par le serveur
+
+Le jeu interroge le tag `Hedge` : une seule question a poser, quelle que soit la facon dont la haie a ete
+marquee. Mais c'est le SERVEUR qui pose ce tag, sur toute part de `Workspace.Worlds.Maps` dont le nom commence
+par `hedge_`.
+
+Premiere version : taguer a la main dans Studio. Mauvais choix. Cinquante haies a taguer, c'est du travail pour
+rien, et une haie oubliee ne reagit pas sans qu'on comprenne pourquoi.
+
+- Balayage au demarrage, puis `DescendantAdded` sur ce seul dossier. On ne branche PAS
+  `Workspace.DescendantAdded` : chaque part de personnage, chaque outil clone et chaque debris passerait par le
+  test de nom, des centaines de fois pour rien.
+- Le tag manuel reste possible pour une haie qui ne suit pas la convention de nom.
+- Plusieurs haies peuvent porter le MEME nom : Roblox n'exige pas de noms uniques et le service boucle sur
+  toutes les instances taguees.
+
+### Detection par RAYCAST devant le joueur, pas par distance
+
+Premiere version : distance a la face la plus proche. Mauvais choix. Le joueur ralentissait des qu'il LONGEAIT
+une haie, sans meme la regarder. Penible.
+
+Un rayon lance devant lui detecte une **intention** : on ralentit parce qu'on va vers la haie, pas parce qu'on
+est a cote. `RAY_LENGTH` 4 studs, court expres, il faut vraiment se planter devant.
+
+- Origine a `RAY_HEIGHT` au-dessus du centre : hauteur de poitrine, la ou l'outil travaille.
+- `LookVector` du `HumanoidRootPart` : il ne s'incline jamais, le rayon reste horizontal meme en pente.
+- Le personnage est EXCLU du filtre, sinon le rayon taperait dans l'outil qu'il tient, a zero stud.
+- Hysteresis conservee : `RAY_LENGTH_ENGAGED` (5.5) une fois accroche, sinon l'etat clignoterait a la limite.
+
+### La normale de face est recalculee, pas prise du raycast
+
+`result.Normal` vient du TRIANGLE touche : sur un MeshPart de haie, elle part dans tous les sens selon la
+feuille visee. Pour orienter le joueur et la camera il faut une direction propre.
+
+On projette donc le point d'impact dans le repere de la haie (`PointToObjectSpace`) et on retient le cote dont
+le plan est le plus proche. Une haie tournee de 37 degres se traite comme une haie droite.
+
+Seuls les quatre COTES sont candidats, jamais le dessus : on ne taille pas une haie en marchant dessus.
+
+La normale finale passe par `VectorToWorldSpace` et non `PointToWorldSpace` : une direction ne doit pas subir
+la translation de la haie.
+
+### Debug visuel, cote CLIENT
+
+`Client/HedgeController.luau`. Barre Neon le long du rayon : verte quand une haie est visee, orange sinon,
+longueur arretee au point d'impact.
+
+Premiere version dessinee par le SERVEUR : elle trainait derriere le personnage. Le client possede son
+personnage et le bouge instantanement ; une part creee par le serveur, elle, arrive avec la latence et
+l'interpolation de replication. D'ou le decalage lisse, tres visible en tournant.
+
+**Repartition retenue** : le client dessine la GEOMETRIE, le serveur donne le VERDICT via l'attribut
+`LeafiaAtHedge`. Aucune regle de jeu n'est dupliquee, et la couleur reflete toujours la vraie decision serveur.
+
+- `RenderStepped` et non `Heartbeat` : on dessine juste avant le rendu, donc sur la MEME position que celle qui
+  sera affichee. Sur `Heartbeat` la barre aurait une frame de retard.
+- Parentee a `workspace.CurrentCamera` : rien de ce qui vit la n'est replique ni sauvegarde, c'est l'endroit des
+  objets purement visuels et locaux.
+
+Le rayon part desormais du CENTRE du `HumanoidRootPart`, sans decalage vertical.
+
+**`DEBUG_RAY` a passer a `false` avant toute publication.**
+
+## 0.0.56 — Detection par VOLUME et non par ligne
+
+Symptome : une haie clairement devant le joueur n'etait pas detectee. Grossir la barre de debug n'y changeait
+rien.
+
+Cause : un `Raycast` teste une LIGNE infiniment fine, partie du centre du `HumanoidRootPart`. Une haie plus
+basse ou plus haute que ce niveau passait dessous ou dessus sans jamais etre vue. La barre de debug, elle,
+avait une taille cosmetique reglable a part : elle touchait visuellement la haie alors que la ligne centrale
+passait a cote. **Un debug qui ne montre pas ce qui est reellement teste est pire que pas de debug.**
+
+Correction : `WorldRoot:Blockcast(cframe, size, direction, params)` — un lancer de volume.
+
+- `DETECT_WIDTH` (1.5), `DETECT_HEIGHT` (4), `DETECT_THICKNESS` (0.2). Ces valeurs sont REELLES, plus
+  cosmetiques : elles definissent ce qui est teste.
+- `DEBUG_RAY_WIDTH` / `DEBUG_RAY_HEIGHT` supprimees. La boite de debug reprend exactement `DETECT_WIDTH` et
+  `DETECT_HEIGHT` : **ce qu'on voit EST ce qui est teste.**
+- La boite part orientee comme le regard (`CFrame.lookAt`), sa profondeur suit la direction du lancer.
+
+Regle a retenir : **un outil de debug doit partager ses valeurs avec le code qu'il illustre, jamais les
+siennes.** Deux jeux de constantes finissent toujours par diverger, et le debug se met a mentir au pire
+moment.
+
+### CharacterService devient le seul proprietaire de WalkSpeed
+
+`CharacterService.setSpeedOverride(player, speed?)`. `HedgeService` **ne touche jamais** a `WalkSpeed` : il
+declare une intention.
+
+Sans cette regle, la haie mettrait 5, le sprint remettrait 17 la frame d'apres, et la reprise d'atterrissage
+ferait sa rampe par-dessus. C'est la meme regle que pour la camera en 0.0.49 : **une propriete, un seul
+ecrivain.** Elle revient partout.
+
+La rampe de vitesse devient BIDIRECTIONNELLE : `LANDING_RECOVERY_RATE` (14) pour remonter,
+`SPEED_SLOWDOWN_RATE` (9) pour descendre. On est aspire vers le travail, on n'y est pas jete.
+
+### A faire dans Studio
+
+Rien. Il suffit que les haies vivent dans `Workspace.Worlds.Maps` et que leur nom commence par `hedge_`.
+Le serveur affiche au demarrage combien il en a trouve.
+
 ### Note
 
 Ecart assume avec la regle d'or : c'est de l'habillage, pose avant validation du geste de taille. A ne pas

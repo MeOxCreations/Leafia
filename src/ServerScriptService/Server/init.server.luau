@@ -21,4 +21,8 @@ ToolService.init()
 local ToolStartService = require(script.ToolStartService)
 ToolStartService.init()
 
+-- Apres CharacterService : HedgeService lui demande le ralentissement, il ne l'applique pas lui-meme.
+local HedgeService = require(script.HedgeService)
+HedgeService.init()
+
 print("[Server] Leafia demarre")

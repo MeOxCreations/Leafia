@@ -10,4 +10,7 @@ CameraController.init()
 local ToolController = require(script.ToolController)
 ToolController.init()
 
+local HedgeController = require(script.HedgeController)
+HedgeController.init()
+
 print("[Client] Pret")
