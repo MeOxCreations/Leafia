@@ -15,4 +15,22 @@ ToolController.init()
 local HedgeController = require(script.HedgeController)
 HedgeController.init()
 
+-- Ordre indifferent : le balancement des feuilles tourne en Heartbeat, apres le rendu, et ne partage rien avec
+-- les autres controllers.
+local HedgeLeafController = require(script.HedgeLeafController)
+HedgeLeafController.init()
+
+-- HedgeMeshController n'est PLUS demarre : il a servi de banc d'essai a la texture repetee, qui est maintenant
+-- dans HedgeBranchService. Le laisser tourner poserait une plaque flottante devant le joueur a chaque spawn.
+-- Le fichier reste au cas ou tu veuilles remesurer quelque chose dessus.
+
+-- Interface : elle ne fait que LIRE des attributs poses par le serveur, donc son ordre n'a pas d'importance.
+local HedgeHologramHandler = require(game:GetService("ReplicatedStorage").Modules.UI.Hedge.HedgeHologramHandler)
+HedgeHologramHandler.init()
+
+-- Toasts : primitive reutilisable. Ecoute le remote UI/Notify (serveur -> client) et expose Toast.show pour
+-- les notifications purement client. Ordre indifferent, elle ne depend d'aucun autre controller.
+local Toast = require(game:GetService("ReplicatedStorage").Modules.UI.Core.Toast)
+Toast.init()
+
 print("[Client] Pret")

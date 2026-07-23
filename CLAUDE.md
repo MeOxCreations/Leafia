@@ -119,6 +119,24 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   quelques frames apres l'`Humanoid`. Un `FindFirstChildOfClass` a cet instant renvoie `nil`. Utiliser
   `WaitForChild` avec timeout. Symptome trompeur : tout marche des qu'on refait l'action a la main, ce qui
   envoie chercher le bug du cote de l'action au lieu du timing.
+- **Un plancher exprime en STUDS depend de tous les reglages qui produisent la taille.** Pose au-dessus de la
+  plus petite valeur possible, il INVERSE l'effet qu'il est cense borner (des feuilles qui GROSSISSENT en
+  etant taillees). Invisible au reglage, parce que les grands cas continuent de marcher et que l'ecran dit
+  donc "ca fonctionne". Toute borne absolue doit etre bornee a son tour par la donnee de chaque objet.
+- **Un test serveur qui compare une direction a une NORMALE DE FACE casse des que le client cesse de bouger
+  perpendiculairement a cette face.** Comparer au REGARD du personnage : il se replique gratuitement, il suit
+  toujours ce que le client fait, et il ne suppose aucune geometrie. Regle generale : ne pas faire juger au
+  serveur une intention a partir d'un repere que le client peut changer sans le lui dire.
+- **Avant de "lisser" une transition seche, regarder si la geometrie ne la contient pas deja.** Une surface a
+  distance constante d'une boite EST un rectangle a coins arrondis. Decouper en faces discretes fabrique la
+  bascule qu'on cherche ensuite a interpoler. Souvent la vraie correction supprime le probleme au lieu de le
+  masquer, et coute moins de lignes.
+- **Un lerp exponentiel (`x += (cible - x) * k`) n'atteint JAMAIS sa cible.** Il laisse un residu minuscule
+  pour toujours. Sur une transparence ca se voit : `LocalTransparencyModifier` a ~0.005 (au lieu de 0 pile)
+  suffit a faire passer la part dans le rendu TRANSPARENT de Roblox, ou le tri se fait par objet et pas par
+  profondeur. Symptome : des membres qui se chevauchent quand on pivote la camera, alors que "le fondu est
+  fini". Cler la valeur a la cible des qu'on est assez pres. Piege double : un garde-fou "ne pas reecrire si
+  le delta est infime" FIGE justement ce residu au lieu de le laisser finir de descendre.
 
 ## Design emotionnel
 

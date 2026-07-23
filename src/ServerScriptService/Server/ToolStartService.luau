@@ -66,6 +66,10 @@ type State = "Idle" | "Preparing" | "Ready" | "Pulling" | "Running"
 local states: { [Player]: State } = {}
 local lastActivate: { [Player]: number } = {}
 local pullCounts: { [Player]: number } = {}
+-- Nombre de tirages a atteindre pour CE demarrage, tire au hasard au premier tirage. Retenu pour toute la
+-- tentative : le retirer a chaque coup ferait un moteur qui redecide sans cesse, et le joueur ne saurait jamais
+-- s'il approche du but. Une seule surprise par demarrage, pas une par tirage.
+local pullTargets: { [Player]: number } = {}
 -- Accelerateur des lames. `throttle` = le joueur maintient-il le clic. `bladeSpeed` = vitesse actuelle des
 -- lames, qui suit `throttle` progressivement (voir la boucle Heartbeat). Deux tables plutot qu'une valeur
 -- cible atteinte d'un coup : c'est la MONTEE progressive qui fait l'effet, pas la vitesse finale.
@@ -123,6 +127,9 @@ local function reset(player: Player)
 	-- Ranger l'outil remet le compteur a zero : il faudra relancer le moteur. C'est voulu, le rituel fait
 	-- partie du jeu.
 	pullCounts[player] = nil
+	-- Et la cible avec lui : le prochain demarrage doit retirer un nouveau nombre de coups, sinon le meme se
+	-- rejouerait toute la session.
+	pullTargets[player] = nil
 end
 
 -- ===== Son du moteur : ralenti / attaque / maintien =====
@@ -251,7 +258,12 @@ local function pull(player: Player)
 	-- joueur verrait deux gestes la ou il n'en a fait qu'un.
 	local config = currentHeld.config
 	pullCounts[player] = (pullCounts[player] or 0) + 1
-	local success = pullCounts[player] >= config.pullsToStart
+	-- Au PREMIER tirage seulement, on tire le nombre de coups a faire pour ce demarrage. Les tirages suivants
+	-- comparent a cette meme cible : la surprise est posee une fois, pas rejouee a chaque coup.
+	if not pullTargets[player] then
+		pullTargets[player] = math.random(config.pullsMin, config.pullsMax)
+	end
+	local success = pullCounts[player] >= pullTargets[player]
 
 	-- Le son part avec le GESTE, pas avec la butee : on entend la corde se derouler pendant que le bras
 	-- recule. C'est le seul element de cette sequence qui commence avant le marqueur.

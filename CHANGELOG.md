@@ -2099,6 +2099,116 @@ atteinte.
 Contrepartie assumee : a mi-regime, inclinaison et vitesse de lame ne correspondent plus exactement. C'est
 voulu, ce sont deux phenomenes physiques differents.
 
+## 0.1.0 — LE GESTE DE TAILLER EXISTE
+
+C'est le commit qui compte. Depuis 0.0.1, tout etait de l'habillage pose avant le coeur. La, on taille une haie
+et la forme change sous le geste. Ce que la regle d'or exige de valider AVANT tout le reste existe enfin, et une
+vraie personne peut le prendre en main. Ce qui suit a ete construit par-dessus les carreaux de 0.0.91.
+
+### La coupe (HedgeCutService)
+
+Le client envoie le SEGMENT de la lame (base + pointe, le long du plus grand axe de l'outil), pas un point. Le
+serveur teste la distance de chaque carreau a ce segment : la coupe est une CAPSULE, pas une sphere. C'est ce
+qui fait couper TOUTE la lame, le bout compris. Une sphere autour d'un seul point ratait la pointe, ce qui se
+lisait a l'ecran comme un bout de taille-haie inerte.
+
+`SetAim` (client -> serveur) valide deux Vector3 et borne la longueur de lame ; le serveur garde l'autorite sur
+la vitesse de coupe, la haie concernee et la portee. `CUT_RADIUS` est un chiffre UNIQUE : il pilote la coupe ET
+le cylindre d'aide, ils ne peuvent donc pas se contredire (le guide ne ment jamais sur ce qui tombe).
+
+### Les feuilles (HedgeLeafController)
+
+Rendu, balancement et couleur calcules CHEZ CHAQUE CLIENT : une part que le serveur bouge replique sa CFrame a
+tout le monde, mille feuilles animees videraient la bande passante pour du decor. Le serveur possede la DONNEE
+(la pousse, dans un attribut), le client en deduit le RENDU. Aucun des deux ne se dispute la meme CFrame.
+
+- Balancement par bulle : seules les feuilles a portee du joueur remuent, mesure depuis le carreau, sans racine.
+- Couleur en deux etages : vert frais -> vert taille a mesure de la pousse, puis rouge d'acharnement par-dessus
+  une fois passe un seuil de degats. La marge silencieuse rend la regle apprenable au lieu de punitive.
+- Retrecissement a la taille, plancher borne a la taille de depart de CHAQUE feuille (sinon un plancher trop
+  haut fait GROSSIR les petites feuilles en les taillant).
+- Peignage (`LEAF_TRIM_SPIN`) : la feuille pivote a mesure qu'elle est taillee. Les feuilles poussues partent
+  dans tous les sens, les taillees s'alignent. Le desordre pousse, le propre est peigne.
+
+### Habillage des haies
+
+- `HedgeBranchService` : la couche de branches vue a travers les trous. Volume defini en STUDS (marges laterale
+  et haute), jamais en pourcentage : un pourcentage baille aux extremites des grandes haies et depasse par le
+  dessus des petites.
+- `HedgeGroundService` : une plaque de terre au pied de chaque haie.
+- `HedgeStockService` : quatre zones de depot au sol, une par cote, ou les feuilles coupees s'entasseront.
+- Zone de chantier : un rectangle marque au sol autour de la haie, pour montrer ou se situe le travail.
+- Dessus de haie : carreaux du bord biseautes et descendus (une vraie haie n'a pas d'arete vive, et le dessus
+  plat faisait un chapeau), plus un basculement des feuilles reserve a cette face (`LEAF_TILT_TOP`) pour lui
+  rendre du volume sans decoller celles des cotes.
+
+### Le personnage fantome au travail (CharacterFade)
+
+Au travail, le corps du joueur devient semi-transparent, sauf les mains qui tiennent l'outil. Par
+`LocalTransparencyModifier` et non `Transparency` : ca ne se replique pas (les autres voient un perso normal en
+CO-OP) et ca s'ajoute a la transparence du jeu au lieu de l'ecraser. Le fondu se cle a 0 pile en sortie de haie,
+sinon un residu de transparence fait chevaucher les membres au rendu.
+
+### Notifications (Toast)
+
+Primitive UI reutilisable, `Modules/UI/Core/Toast`. Ecoute le remote `UI/Notify` (serveur -> client), quatre
+types d'accent. Sens unique : le client affiche ce que le serveur demande, aucune autorite en jeu.
+
+### Polish du loading
+
+- Rebond slime du logo prolonge.
+- Onde de choc retiree.
+- Zoom de reveal qui SUIT le joueur : une boucle par frame recalcule la cible depuis la position COURANTE du
+  joueur au lieu de viser un point fige. On peut courir pendant le reveal, la camera reste collee.
+
+### Note — la regle d'or, maintenant
+
+Le coeur existe. La prochaine etape N'EST PAS une feature. C'est le test des trois personnes reelles : est-ce
+qu'elles retaillent une deuxieme haie sans qu'on leur demande ? Tant que la reponse n'est pas oui, on ne
+construit rien par-dessus (ni jauge d'XP, ni combos, ni escabeau, ni tycoon). C'est ce qui a manque aux deux
+projets d'avant : l'emballage a recouvert un coeur jamais valide.
+
+## 0.0.91 — PRE-SYSTEME : les carreaux de pousse
+
+`HedgeCellService` pave la surface taillable des haies avec une grille de carreaux.
+
+**Rien ne les taille encore.** Cette etape repond a UNE question avant qu'un seul pixel de feuille soit
+dessine : combien ca coute ? Baseline a comparer : 4.71 ms, mesuree avant tout gameplay.
+
+### La grille s'ajuste a la face
+
+On DEDUIT la taille des carreaux du nombre qui tient, au lieu de decouper a taille fixe et de laisser une
+bande incomplete au bord. Ils pavent donc exactement la face, sans trou ni depassement, et leur cote s'ecarte
+au maximum de moitie de `CELL_SIZE`.
+
+Tout est construit dans le repere de la HAIE puis ramene en monde : une haie tournee se traite comme une haie
+droite, sans un seul cas particulier.
+
+| CELL_SIZE | 1 face (20x8) | 4 cotes + dessus | x10 haies |
+|---|---|---|---|
+| 2 | 40 | 98 | 980 |
+| **1** | **160** | 392 | 3920 |
+| 0.5 | 640 | 1568 | 15680 |
+
+`CELL_FACES` ne contient qu'UNE face au depart, volontairement. Ajouter les autres est une ligne ; decouvrir
+apres coup que cinq faces ne tiennent pas coute une semaine d'art.
+
+`CELL_BUDGET` = 4000, verifie AVANT de parenter : rien n'entre dans le monde tant qu'il n'y a pas la place.
+
+### Trois reglages obligatoires sur chaque carreau
+
+`CanCollide = false`, `CanQuery = false`, `CastShadow = false`. Le dernier est le plus important a ce volume.
+Le second ne prend effet que parce que le premier est deja faux.
+
+### Piege evite
+
+Les carreaux se posent DEVANT la haie : sans exclusion ils seraient touches avant elle et plus aucune haie ne
+serait jamais detectee. Meme piege que les boites d'espace vital, et meme solution : un dossier a part, exclu
+d'un coup, jamais range dans la haie (un filtre exclut une instance ET ses descendants).
+
+Cote client, les trois copies du filtre de lancer sont remplacees par `hedgeRayParams`. Trois copies, c'etait
+la garantie d'oublier la prochaine exclusion dans une seule des trois, et de chercher longtemps.
+
 ## 0.0.90 — On entend vraiment le moteur DECELERER
 
 La retombee etait trop courte, mais la rallonger seule n'aurait rien donne.

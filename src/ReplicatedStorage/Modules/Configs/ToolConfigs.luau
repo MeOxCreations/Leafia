@@ -124,6 +124,13 @@ export type ToolConfig = {
 	-- passe le plus de temps.
 	-- Passe par le meme fondu que le tremblement, donc pas de saut en arrivant sur la haie.
 	tiltWorkingScale: number,
+	-- Part qui donne l'EMPRISE de la lame. Posee a la main dans l'outil, solidaire du manche.
+	--
+	-- Seule sa TAILLE est lue, jamais sa position. Sa position cote serveur est fausse : elle suit les bras,
+	-- donc une animation jouee chez le client et que le serveur ne voit pas defiler. Sa taille, elle, ne
+	-- s'anime pas : c'est une donnee fiable, et elle evite de recopier a la main des dimensions qu'on a deja
+	-- reglees a l'oeil dans Studio.
+	hitboxName: string,
 	bladeIdleSpeed: number, -- vitesse au repos, moteur allume mais joueur passif
 	bladeMaxSpeed: number, -- vitesse a fond, clic maintenu
 	bladeAccel: number, -- gain de vitesse par seconde en montee (progressif = petit)
@@ -143,10 +150,16 @@ export type ToolConfig = {
 	engineWindDownPitch: number,
 	-- Fondu du ralenti quand on ACCELERE. Court : l'attaque doit mordre tout de suite.
 	engineAccelFade: number,
-	-- Nombre de tirages avant que le moteur demarre. C'est une CARACTERISTIQUE de l'outil, pas une constante
-	-- du jeu : un outil pourri en demandera 4, un outil pro partira au premier. Le joueur ressentira son
-	-- upgrade dans ses mains au lieu de le lire dans un menu.
-	pullsToStart: number,
+	-- Nombre de tirages avant que le moteur demarre, TIRE AU HASARD entre ces deux bornes a chaque demarrage.
+	--
+	-- C'est un vrai moteur deux-temps : il ne part pas toujours au meme coup. Cette incertitude fait le geste,
+	-- exactement comme une tondeuse qui tousse une ou deux fois avant de prendre. min == max = nombre fixe.
+	--
+	-- Reste une CARACTERISTIQUE de l'outil, pas une constante du jeu : un outil pourri aura une fourchette
+	-- haute (2 a 4), un outil pro partira souvent au premier (1 a 2). Le joueur sentira son upgrade dans ses
+	-- mains au lieu de le lire dans un menu.
+	pullsMin: number,
+	pullsMax: number,
 	-- Roblox joue la marche en "Movement" : en dessous, la pose disparait des que le joueur avance.
 	-- En "Action" elle passe au-dessus. Attention, elle ecrase aussi les jambes si elle les cle : une pose de
 	-- maintien ne doit cler que les bras et le torse.
@@ -221,6 +234,7 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- un geste de precision se ressent comme une perte de controle, meme quand c'est joli.
 		-- L'inclinaison reste entiere hors chantier, la ou elle sert a faire sentir le moteur.
 		tiltWorkingScale = 0,
+		hitboxName = "HitBoxRoot",
 		bladeIdleSpeed = 0.35,
 		bladeMaxSpeed = 1.6,
 		bladeAccel = 1.6,
@@ -232,7 +246,8 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- moteur avait surtout l'air de baisser le volume.
 		engineWindDownPitch = 0.5,
 		engineAccelFade = 0.12,
-		pullsToStart = 3,
+		pullsMin = 1,
+		pullsMax = 3,
 		holdPriority = Enum.AnimationPriority.Action,
 		-- A REGLER A L'OEIL, comme les autres prises. Part de la prise de demarrage : tant qu'on n'y touche
 		-- pas, rien ne change par rapport a avant.

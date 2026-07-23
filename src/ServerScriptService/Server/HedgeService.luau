@@ -186,7 +186,19 @@ local function castForward(character: Model, root: BasePart, length: number, cur
 	-- Le personnage : sans lui le volume taperait dans l'outil qu'il tient, a zero stud.
 	-- Le dossier des boites d'espace vital : elles entourent chaque haie, donc elles seraient touchees AVANT
 	-- elle et plus aucune haie ne serait jamais detectee.
-	params.FilterDescendantsInstances = { character, getBufferFolder() }
+	-- Les carreaux de pousse sont poses DEVANT la haie, et les feuilles coupees tombent juste devant : sans ces
+	-- exclusions elles seraient touchees avant la haie, et plus aucune haie ne serait jamais detectee. Meme
+	-- raison que les boites d'espace vital.
+	-- Les feuilles qui tombent ont CanCollide a VRAI pour se poser au sol : leur CanQuery ne les protege donc
+	-- plus, seule cette exclusion le fait.
+	local ignore: { Instance } = { character, getBufferFolder() }
+	for _, folderName in ipairs({ HedgeConfigs.CELL_FOLDER }) do
+		local folder = workspace:FindFirstChild(folderName)
+		if folder then
+			table.insert(ignore, folder)
+		end
+	end
+	params.FilterDescendantsInstances = ignore
 
 	local size = Vector3.new(HedgeConfigs.DETECT_WIDTH, HedgeConfigs.DETECT_HEIGHT, HedgeConfigs.DETECT_THICKNESS)
 
@@ -266,6 +278,10 @@ local function updatePlayer(player: Player)
 	-- Le contournement qu'on vient d'autoriser ressemble a une fuite : la normale a pivote de 90 degres, donc
 	-- le glissement lateral d'avant pointe maintenant vers la sortie. On laisse au joueur ET au client le temps
 	-- de se realigner sur la nouvelle face avant de rejuger son intention.
+	--
+	-- Ce delai ne couvre plus tout depuis que le client arrondit les angles : sa normale tourne AVANT que la
+	-- face change ici, donc il existe une fenetre ou il glisse deja de biais et ou le delai n'a pas commence.
+	-- Il reste utile pour l'apres-bascule, mais il ne suffit plus a lui seul.
 	local turning = os.clock() - (faceChangedAt[player] or 0) < HedgeConfigs.FACE_CHANGE_GRACE
 
 	-- TROP PRES : l'aimant est en train de repousser le joueur. Sa poussee arrive ici par le meme canal qu'une
@@ -282,9 +298,20 @@ local function updatePlayer(player: Player)
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid and humanoid:IsA("Humanoid") then
 			local move = humanoid.MoveDirection
+			-- ON COMPARE AU REGARD DU JOUEUR, PAS A LA FACE.
+			--
+			-- Sortir, c'est reculer par rapport a ou l'on regarde. Le personnage regarde la haie, donc l'oppose
+			-- de son regard est la direction de fuite. Aucune geometrie a refaire ici : le client oriente son
+			-- personnage, et cette orientation se replique.
+			--
+			-- Contre la FACE, le contournement arrondi decroche a coup sur : le joueur y glisse le long d'un arc,
+			-- donc de biais par rapport a la face que le serveur a encore en tete. Mesure en simulation, sur un
+			-- angle a vitesse de replacement, le produit monte a 0.83 pour un seuil a 0.5. Contre le regard il
+			-- reste a 0.00, parce que le joueur avance toujours perpendiculairement a ce qu'il regarde.
+			local away = -root.CFrame.LookVector
 			-- Magnitude proche de 1 : une vraie poussee du joueur, pas une correction d'aimant. Les deux
 			-- arrivent par le meme canal, seule leur AMPLEUR les distingue.
-			if move.Magnitude > HedgeConfigs.EXIT_MIN_INPUT and move:Dot(current.normal) > HedgeConfigs.EXIT_DOT then
+			if move.Magnitude > HedgeConfigs.EXIT_MIN_INPUT and move:Dot(away) > HedgeConfigs.EXIT_DOT then
 				-- Temps mort : la haie reste a portee la frame suivante, on raccrocherait aussitot.
 				exitUntil[player] = os.clock() + HedgeConfigs.EXIT_COOLDOWN
 				leaveHedge(player)
@@ -340,10 +367,20 @@ local function updatePlayer(player: Player)
 	-- La normale est mise a jour meme si la haie ne change pas : le joueur peut contourner vers une autre face.
 	character:SetAttribute(HedgeConfigs.HEDGE_NORMAL_ATTRIBUTE, contact.normal)
 
-	if not current then
-		-- Premiere accroche : on impose l'allure de travail. CharacterService fait la descente en douceur.
-		CharacterService.setSpeedOverride(player, HedgeConfigs.WORK_SPEED)
-	end
+	-- DEUX ALLURES, selon que la gachette est pressee ou non.
+	--
+	-- Lame a l'arret, on se REPLACE : le joueur longe la haie pour aller ou il veut travailler, il n'a aucune
+	-- raison de trainer. Gachette pressee, on TRAVAILLE : c'est un geste de precision, il doit ralentir.
+	--
+	-- C'est ce qui donne enfin un cout a la gachette. Sans ca, la presser en permanence n'avait aucun
+	-- inconvenient, donc personne ne la relachait et elle ne voulait plus rien dire.
+	-- Reevalue chaque frame : setSpeedOverride ne fait rien quand la valeur ne change pas, et c'est
+	-- CharacterService qui lisse la transition entre les deux.
+	local working = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
+	CharacterService.setSpeedOverride(
+		player,
+		if working then HedgeConfigs.CUT_SPEED else HedgeConfigs.WORK_SPEED
+	)
 end
 
 -- Etat courant, pour les services qui en auront besoin (coupe, camera, UI).

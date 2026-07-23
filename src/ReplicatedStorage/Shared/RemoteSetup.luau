@@ -23,9 +23,29 @@ local REMOTES: { { any } } = {
 	-- Accelerateur des lames : le client dit s'il maintient le clic. UN argument booleen, valide cote serveur.
 	{ "SetThrottle", E, "Tool" },
 
+	-- [ HEDGE ] --
+	-- Position MONDE du centre de la lame. UN Vector3, borne cote serveur a une distance plausible du joueur.
+	--
+	-- POURQUOI UN REMOTE ICI alors qu'on evite d'en ajouter. La pose des bras est jouee chez le client et
+	-- pilotee image par image : Roblox replique le DEMARRAGE d'une animation, pas son defilement. Le serveur
+	-- voit donc la lame figee, pendant que le joueur la voit suivre sa souris.
+	--
+	-- On envoie la position REELLE de la lame et non la hauteur visee : les deux different, parce que rien ne
+	-- garantit qu'a 80 pour cent de visee le bras soit a 80 pour cent de la hauteur de la haie. C'est ce qui
+	-- faisait couper au-dessus de la lame, la ou pointait le curseur.
+	-- Le serveur garde l'autorite sur la vitesse de coupe, sur la haie concernee, et borne la portee.
+	{ "SetAim", E, "Hedge" },
+
 	-- [ CHARACTER ] --
 	-- Sprint : le client dit s'il maintient Shift. UN argument booleen, valide cote serveur.
 	{ "SetSprint", E, "Character" },
+
+	-- [ UI ] --
+	-- Toast serveur -> client. Deux arguments : le TYPE (couleur d'accent) et le TEXTE. Aucune autorite en jeu :
+	-- le client se contente d'afficher ce que le serveur lui demande. Sens unique, FireClient uniquement.
+	-- ATTENTION avant d'emettre : un joueur qui vient de se connecter n'ecoute pas encore (ses scripts de
+	-- StarterGui ne sont copies qu'au spawn). Verifier qu'il est reellement en jeu avant FireClient.
+	{ "Notify", E, "UI" },
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder

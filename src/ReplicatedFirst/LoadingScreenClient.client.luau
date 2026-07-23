@@ -39,8 +39,75 @@ loadingGui.Parent = playerGui
 local MIN_DURATION = 2 -- duree minimale a l'ecran, meme si tout est deja charge
 local SKIP_APPEAR_AFTER = 2 -- delai avant que le bouton passer apparaisse
 
-local currentAsset = ""
-local animating = true
+-- Lueur posee DERRIERE le logo, qui vacille comme une torche dans la nuit.
+local GLOW_IMAGE = "rbxassetid://108057663284590"
+local GLOW_SCALE = 1.8 -- taille par rapport au logo : une lueur deborde de ce qu'elle eclaire, sinon c'est un cadre
+local GLOW_TRANSPARENCY = 0.6 -- transparence MOYENNE, autour de laquelle la flamme monte et descend
+local GLOW_FLICKER = 0.18 -- amplitude du vacillement : de combien la transparence bat autour de la moyenne
+
+-- ===== Zoom de reveal (fin du loading) =====
+-- La camera part LOIN sur le joueur (plan large), puis zoome sur lui pendant que l'ecran se leve.
+local ZOOM_ENABLED = true
+local ZOOM_WAIT = 3 -- attente max du personnage avant de renoncer au zoom, en secondes
+local ZOOM_DURATION = 1.5 -- duree du zoom, en secondes
+local ZOOM_FAR_DIST = 42 -- recul de depart, en studs : le plan large
+local ZOOM_FAR_HEIGHT = 26 -- hauteur de depart : une vue haute et large
+local ZOOM_NEAR_DIST = 12 -- arrivee, PROCHE de la distance de la camera de jeu pour que le passage ne saute pas
+local ZOOM_NEAR_HEIGHT = 3 -- hauteur d'arrivee
+local ZOOM_FOCUS_HEIGHT = 2 -- point vise, au-dessus des pieds du joueur
+local TWEEN_ZOOM = TweenInfo.new(ZOOM_DURATION, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+-- ===== Lueur derriere le logo =====
+-- Posee DANS le loadHolder, donc dans le CanvasGroup : le fondu de sortie l'emporte avec tout le reste, sans
+-- qu'on ait a la citer. Centree sur le logo, ZIndex juste en dessous pour rester derriere lui.
+-- On lit la taille du logo MAINTENANT : l'intro (slime) ne l'ecrase qu'a son lancement, bien plus tard, donc on
+-- capte ici sa taille finale reglee dans Studio.
+local logoGlow = Instance.new("ImageLabel")
+logoGlow.Name = "LogoGlow"
+logoGlow.BackgroundTransparency = 1
+logoGlow.AnchorPoint = iconLogo.AnchorPoint
+logoGlow.Position = iconLogo.Position
+logoGlow.SizeConstraint = iconLogo.SizeConstraint
+-- Plus grande que le logo dans les deux axes, en gardant Scale ET Offset : la taille Studio peut etre dans l'un
+-- ou l'autre, ce facteur s'applique aux deux sans supposer lequel.
+logoGlow.Size = UDim2.new(
+	iconLogo.Size.X.Scale * GLOW_SCALE,
+	iconLogo.Size.X.Offset * GLOW_SCALE,
+	iconLogo.Size.Y.Scale * GLOW_SCALE,
+	iconLogo.Size.Y.Offset * GLOW_SCALE
+)
+logoGlow.Image = GLOW_IMAGE
+logoGlow.ImageTransparency = GLOW_TRANSPARENCY
+-- Un cran sous le logo : derriere lui, mais devant le fond. Si la lueur se retrouvait cachee par le fond, c'est
+-- ce ZIndex qu'il faudrait remonter.
+logoGlow.ZIndex = iconLogo.ZIndex - 1
+logoGlow.Parent = loadHolder
+
+-- Petite echelle a part, pour faire respirer le halo sans toucher a sa taille de base.
+local glowScale = Instance.new("UIScale")
+glowScale.Parent = logoGlow
+
+-- VACILLEMENT DE TORCHE. math.noise donne une variation ORGANIQUE, pas un clignotement regulier : deux octaves
+-- se superposent, une houle lente et un frisson rapide, comme une vraie flamme. La transparence bat autour de
+-- sa moyenne, et le halo respire un peu avec.
+-- AUTO-NETTOYANT : a la sortie, le loadHolder est detruit, le glow perd son parent, et la boucle se coupe seule.
+-- Pas besoin de la citer dans la sequence de sortie, qui a deja assez a gerer.
+local glowT0 = os.clock()
+local glowConn: RBXScriptConnection? = nil
+glowConn = RunService.Heartbeat:Connect(function()
+	if not logoGlow.Parent then
+		if glowConn then
+			glowConn:Disconnect()
+			glowConn = nil
+		end
+		return
+	end
+	local t = os.clock() - glowT0
+	local flick = math.noise(t * 1.6) + math.noise(t * 7 + 50) * 0.5
+	logoGlow.ImageTransparency = math.clamp(GLOW_TRANSPARENCY + flick * GLOW_FLICKER, 0, 1)
+	glowScale.Scale = 1 + flick * 0.05
+end)
+
 local skipRequested = false
 
 -- ===== Masquage du chat et de la liste des joueurs =====
@@ -121,7 +188,6 @@ task.delay(CORE_GUI_SAFETY_DELAY, restoreCoreGuis)
 -- Le jour ou tu poses les sons dans SoundService, ils se mettent a jouer sans toucher a ce fichier.
 local SOUND_MUSIC = { "GameSounds", "Musics", "Loading Screen" }
 local SOUND_LOGO_POP = { "UI", "cartoon_pop" }
-local SOUND_SHOCKWAVE = { "UI", "Star_Explosion" }
 
 local function findSound(path: { string }): Sound?
 	local current: Instance = SoundService
@@ -172,21 +238,7 @@ do
 	end
 end
 
--- ===== Tips de gameplay =====
--- Textes joueur : en anglais, c'est la langue par defaut sur la plateforme. Aucun nom de jeu connu cite.
-local TIPS = {
-	"Every client has a deadline. Late work costs you your rating.",
-	"Trim slow and clean. A rushed hedge shows.",
-	"Your rating decides which clients call you back.",
-	"Tools wear down. Keep an eye on your gear.",
-	"Bigger jobs pay more, but they are harder to finish in time.",
-	"Reinvest early. A better tool pays for itself in one job.",
-	"Work with a friend to take on the long jobs.",
-	"Your company grows only as fast as your reputation.",
-}
-
 -- ===== Tweens preconfigures =====
-local TWEEN_SHOCK = TweenInfo.new(0.6, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 -- Sortie DOUCE. En Back In sur un retrecissement vers zero, l'element grossit d'abord (l'overshoot du Back)
 -- puis s'effondre d'un coup : lu comme une aspiration brutale, au moment precis ou le joueur vient de demander
 -- a passer. On fond au lieu d'ecraser.
@@ -206,9 +258,11 @@ local LOGO_SPLAT_X, LOGO_SPLAT_Y = 1.18, 0.82 -- ecrase : large et aplati
 local LOGO_STRETCH_X, LOGO_STRETCH_Y = 0.93, 1.09 -- rebond : etire vers le haut
 local LOGO_SLIME_SPLAT = TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local LOGO_SLIME_STRETCH = TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
--- C'est CE tween qui fait le "prolonge" : Elastic sur presque une seconde, le logo continue de gigoter
--- longtemps apres avoir atteint sa taille finale.
-local LOGO_SLIME_SETTLE = TweenInfo.new(0.95, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
+-- C'est CE tween qui fait le "prolonge" : Elastic sur plus de deux secondes, le logo continue de gigoter
+-- longtemps apres avoir atteint sa taille finale. L'Elastic de Roblox a un nombre d'oscillations FIXE : monter
+-- la duree ne rajoute pas de rebonds, elle les ETALE. Un tremblement plus lent qui traine, pas plus de coups.
+-- C'est le seul chiffre a toucher pour faire durer le rebond plus ou moins longtemps.
+local LOGO_SLIME_SETTLE = TweenInfo.new(2.2, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
 
 -- Multiplie X et Y separement en gardant Scale ET Offset : la taille Studio peut etre exprimee dans l'un,
 -- l'autre, ou les deux, et n'en traiter qu'un casserait la mise en page selon le reglage.
@@ -219,147 +273,6 @@ local function logoSize(fx: number, fy: number): UDim2
 		iconLogoSize.Y.Scale * fy,
 		iconLogoSize.Y.Offset * fy
 	)
-end
-
--- ===== POINTS DE CHARGEMENT (4 boules qui rebondissent en vague) =====
--- Pas de barre de progression. Une barre PROMET une duree ; des points disent juste "ca travaille". C'est plus
--- honnete ici, puisqu'on ne connait pas la duree reelle du prechargement, et ca evite l'effet "barre bloquee a
--- 80%" qui donne l'impression que le jeu a plante.
--- Construits EN CODE : rien a poser dans Studio, tous les reglages sont ci-dessous.
-local DOT_COUNT = 4
-local DOT_Y = 0.72 -- position verticale du groupe dans le holder (sous le logo)
-local DOT_COLOR = Color3.fromRGB(255, 255, 255)
-
--- Ces tailles sont en pixels de REFERENCE, pas en pixels reels : un UIScale (voir applyDotsScale) les remet a
--- l'echelle de l'ecran du joueur. On raisonne donc ici sur un 1080p et on oublie le reste.
-local DOT_REF_HEIGHT = 1080
-local DOT_SIZE = 16 -- diametre d'un point
-local DOT_GAP = 12 -- espace entre deux points
-local DOT_RISE = 20 -- hauteur du saut
--- Bornes de l'echelle : sans elles un tres petit ecran rendrait les points illisibles, et un 4K en ferait des
--- grosses billes.
-local DOT_SCALE_MIN = 0.75
-local DOT_SCALE_MAX = 2
-
--- Montee franche puis retombee elastique : c'est le "slime". La descente dure plus longtemps que la montee,
--- sinon le rebond parait mecanique.
-local DOT_UP_TIME = 0.16
-local DOT_DOWN_TIME = 0.34
-local DOT_UP = TweenInfo.new(DOT_UP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local DOT_DOWN = TweenInfo.new(DOT_DOWN_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
-
--- Periode d'un point : juste de quoi contenir montee + descente. Plus long, et il reste une pause morte entre
--- deux sauts, ce qui donne "rebond, pause, rebond" au lieu d'une vague qui circule.
-local DOT_PERIOD = DOT_UP_TIME + DOT_DOWN_TIME
--- Decalage entre deux points voisins. Reparti sur la periode : quand la vague sort du dernier point, elle
--- repart du premier, donc le mouvement ne s'arrete jamais.
-local DOT_STEP = DOT_PERIOD / (DOT_COUNT + 1)
-
-local dotsScale: UIScale? = nil
-local dots: { Frame } = {}
-local dotsRunning = false
-local viewportConn: RBXScriptConnection? = nil
-
--- L'echelle suit la HAUTEUR de l'ecran. Un UIScale multiplie aussi les offsets des enfants, donc les sauts
--- suivent automatiquement : rien a toucher dans la boucle d'animation.
-local function applyDotsScale()
-	local scale = dotsScale
-	if not scale then
-		return
-	end
-	local cam = workspace.CurrentCamera
-	local height = if cam then cam.ViewportSize.Y else DOT_REF_HEIGHT
-	if height <= 0 then
-		return
-	end
-	scale.Scale = math.clamp(height / DOT_REF_HEIGHT, DOT_SCALE_MIN, DOT_SCALE_MAX)
-end
-
-local function buildBounceDots()
-	local holder = Instance.new("Frame")
-	holder.Name = "LoadingDots"
-	holder.AnchorPoint = Vector2.new(0.5, 0.5)
-	holder.Position = UDim2.fromScale(0.5, DOT_Y)
-	holder.Size = UDim2.fromOffset(DOT_COUNT * DOT_SIZE + (DOT_COUNT - 1) * DOT_GAP, DOT_SIZE + DOT_RISE)
-	holder.BackgroundTransparency = 1
-	holder.Parent = loadHolder
-
-	local scale = Instance.new("UIScale")
-	scale.Parent = holder
-	dotsScale = scale
-
-	for i = 1, DOT_COUNT do
-		local d = Instance.new("Frame")
-		d.Name = "Dot" .. i
-		-- AnchorPoint en BAS : le point saute vers le haut, sa base reste posee sur la meme ligne.
-		d.AnchorPoint = Vector2.new(0, 1)
-		d.Position = UDim2.fromOffset((i - 1) * (DOT_SIZE + DOT_GAP), holder.Size.Y.Offset)
-		d.Size = UDim2.fromOffset(DOT_SIZE, DOT_SIZE)
-		d.BackgroundColor3 = DOT_COLOR
-		d.BorderSizePixel = 0
-		local corner = Instance.new("UICorner")
-		corner.CornerRadius = UDim.new(1, 0) -- cercle parfait
-		corner.Parent = d
-		d.Parent = holder
-		dots[i] = d
-	end
-
-	applyDotsScale()
-
-	local cam = workspace.CurrentCamera
-	if cam then
-		viewportConn = cam:GetPropertyChangedSignal("ViewportSize"):Connect(applyDotsScale)
-	end
-end
-
--- Chaque point a SA propre boucle, decalee de DOT_STEP : c'est ce qui donne la vague plutot qu'un
--- clignotement synchrone. Un timer unique partage aurait demande de gerer les phases a la main.
-local function startBounceDots()
-	if dotsRunning then
-		return
-	end
-	dotsRunning = true
-	local startAt = os.clock()
-	for i, d in ipairs(dots) do
-		task.spawn(function()
-			local phase = (i - 1) * DOT_STEP
-			local baseY = d.Position.Y.Offset
-			local x = d.Position.X.Offset
-			local cycle = 0
-			while dotsRunning and d.Parent do
-				-- On vise un instant ABSOLU au lieu d'enchainer des task.wait relatifs. Chaque wait arrondit au
-				-- frame suivant ; cumule sur des centaines de cycles, les points derivent les uns par rapport aux
-				-- autres et la vague se transforme en bouillie.
-				local target = startAt + phase + cycle * DOT_PERIOD
-				local delay = target - os.clock()
-				if delay > 0 then
-					task.wait(delay)
-				end
-				if not (dotsRunning and d.Parent) then
-					break
-				end
-
-				TweenService:Create(d, DOT_UP, { Position = UDim2.fromOffset(x, baseY - DOT_RISE) }):Play()
-				task.wait(DOT_UP_TIME)
-				if not (dotsRunning and d.Parent) then
-					break
-				end
-				TweenService:Create(d, DOT_DOWN, { Position = UDim2.fromOffset(x, baseY) }):Play()
-
-				cycle += 1
-			end
-		end)
-	end
-end
-
-local function stopBounceDots()
-	dotsRunning = false
-	-- Le LoadingScreen se detruit a la fin, mais cette connexion vit sur la CAMERA, pas sur lui : sans ce
-	-- Disconnect elle resterait active toute la session en gardant des Frames mortes en memoire.
-	if viewportConn then
-		viewportConn:Disconnect()
-		viewportConn = nil
-	end
 end
 
 -- ===== REFLET DU LOGO (balayage en transparence) =====
@@ -426,13 +339,12 @@ local function stopLogoShine()
 	shineRunning = false
 end
 
-buildBounceDots()
 buildLogoShine()
 
 -- ===== Etats de depart : tout a zero =====
 iconLogo.Size = UDim2.new(0, 0, 0, 0)
-cercleImage.Size = UDim2.new(0, 0, 0, 0)
-cercleImage.ImageTransparency = 0
+-- Onde de choc retiree : on cache le cercle une fois pour toutes plutot que de l'animer.
+cercleImage.Visible = false
 skipButton.ImageTransparency = 1
 
 -- ===== Skip (bouton + touche Echap) =====
@@ -441,7 +353,6 @@ local function skipLoading()
 		return
 	end
 	skipRequested = true
-	animating = false
 end
 
 skipButton.MouseButton1Click:Connect(skipLoading)
@@ -524,26 +435,6 @@ do
 		end
 	end)
 end
-
--- ===== Boucle des tips =====
-task.spawn(function()
-	local tipIndex = 0
-	local tipTimer = 0
-
-	while animating do
-		if currentAsset ~= "" then
-			statusLabel.Text = currentAsset
-		else
-			tipTimer += 0.2
-			if tipTimer >= 4 then
-				tipTimer = 0
-				tipIndex = (tipIndex % #TIPS) + 1
-				statusLabel.Text = TIPS[tipIndex]
-			end
-		end
-		task.wait(0.2)
-	end
-end)
 
 -- ============================================================
 -- L'animation demarre TOUT DE SUITE. On ne bloque pas sur game.Loaded ici : l'intro tourne pendant que Roblox
@@ -643,31 +534,14 @@ local function playIntroSequence()
 		return
 	end
 
-	-- 3. Le tremblement final. On ne l'ATTEND PAS : l'impact visuel est deja passe, et bloquer ici une seconde
-	-- de plus decalerait l'onde de choc bien apres le moment ou le logo a "tape". Le logo gigote donc pendant
-	-- que le cercle part, ce qui lie les deux au lieu de les mettre a la queue leu leu.
+	-- 3. Le tremblement final. On ne l'ATTEND PAS : l'impact visuel est deja passe, bloquer ici n'apporterait
+	-- rien. Le logo gigote donc pendant que la suite de la sequence continue.
 	TweenService:Create(iconLogo, LOGO_SLIME_SETTLE, { Size = iconLogoSize }):Play()
-
-	-- Cercle : onde de choc
-	cercleImage.Size = UDim2.new(0, 0, 0, 0)
-	cercleImage.ImageTransparency = 0
-	TweenService:Create(cercleImage, TWEEN_SHOCK, {
-		Size = UDim2.fromScale(1.509, 2.685),
-		ImageTransparency = 1,
-	}):Play()
-	task.delay(0.3, function()
-		if skipRequested then
-			return
-		end
-		playSound(SOUND_SHOCKWAVE)
-	end)
 end
 
 playIntroSequence()
--- Les points ne rebondissent qu'APRES l'intro : pendant l'apparition du logo ils lui voleraient la vedette.
-startBounceDots()
--- Meme raison pour le reflet : pendant l'impact du slime, un balayage en plus rend l'image illisible. Le
--- tremblement final, lui, tourne encore ici, et le reflet par dessus rend bien.
+-- Le reflet ne part qu'APRES l'intro : pendant l'impact du slime, un balayage en plus rend l'image illisible.
+-- Le tremblement final, lui, tourne encore ici, et le reflet par dessus rend bien.
 startLogoShine()
 
 -- ===== On attend que le jeu soit charge avant de finaliser la sortie =====
@@ -721,7 +595,6 @@ while not skipRequested do
 	RunService.Heartbeat:Wait()
 end
 
-animating = false
 statusLabel.Text = "Ready"
 
 task.wait(if skipRequested then 0 else 0.4)
@@ -729,6 +602,46 @@ task.wait(if skipRequested then 0 else 0.4)
 -- ============================================================
 -- ===== SORTIE =====
 -- ============================================================
+
+-- ===== ZOOM DE REVEAL =====
+-- La camera part LOIN sur le joueur (plan large) et zoomera sur lui pendant que l'ecran se leve. On la met en
+-- place DES MAINTENANT, cachee derriere l'ecran encore plein : quand le fondu commencera, le plan large est deja
+-- la, et il n'y a aucun a-coup au premier instant du reveal.
+--
+-- Le personnage peut ne pas etre pret : on l'attend un court instant, et si vraiment il n'arrive pas, on renonce
+-- au zoom plutot que de bloquer le reveal. Mieux vaut un reveal sans zoom qu'un ecran fige.
+local camera = workspace.CurrentCamera
+
+-- Plan derriere le joueur, dans le sens ou il regarde. RECALCULE a chaque appel depuis la position COURANTE de
+-- l'ancre : c'est ce qui permet a la camera de SUIVRE un joueur qui bouge pendant le zoom, au lieu de viser un
+-- point fige. La camera de jeu se posera au meme endroit, donc rendre la main a la fin ne fait pas sauter l'image.
+local function zoomShot(anchor: BasePart, dist: number, height: number): CFrame
+	local focus = anchor.Position + Vector3.new(0, ZOOM_FOCUS_HEIGHT, 0)
+	local back = anchor.CFrame.LookVector
+	return CFrame.lookAt(focus - back * dist + Vector3.new(0, height, 0), focus)
+end
+
+local zoomRoot: BasePart? = nil
+do
+	local deadline = os.clock() + ZOOM_WAIT
+	local root: BasePart? = nil
+	repeat
+		local char = player.Character
+		local found = char and char:FindFirstChild("HumanoidRootPart")
+		if found and found:IsA("BasePart") then
+			root = found
+			break
+		end
+		RunService.Heartbeat:Wait()
+	until os.clock() >= deadline
+
+	if ZOOM_ENABLED and camera and root then
+		zoomRoot = root
+		camera.CameraType = Enum.CameraType.Scriptable
+		-- Plan large en place tout de suite, cache derriere l'ecran encore plein : aucun a-coup au premier reveal.
+		camera.CFrame = zoomShot(root, ZOOM_FAR_DIST, ZOOM_FAR_HEIGHT)
+	end
+end
 
 -- Les textes s'effacent en premier : ils se lisent, donc les faire disparaitre en meme temps que le reste
 -- donne une bouillie illisible pendant une demi-seconde.
@@ -749,16 +662,11 @@ skipButton.AutoButtonColor = false
 -- Tout sort en FONDU, sans changement de taille : rien n'est ecrase ni aspire. L'ecran s'efface, ce qui se lit
 -- comme une transition et non comme un evenement.
 TweenService:Create(skipButton, TWEEN_EXIT, { ImageTransparency = 1 }):Play()
-TweenService:Create(cercleImage, TWEEN_EXIT, { ImageTransparency = 1 }):Play()
 TweenService:Create(iconLogo, TWEEN_EXIT, { ImageTransparency = 1 }):Play()
 
--- On coupe les boucles AVANT de faire disparaitre leurs cibles : un tween de sortie et une animation qui
--- tourne encore se disputent la meme propriete, et le point continue de sauter en s'effacant.
-stopBounceDots()
+-- On coupe la boucle du logo AVANT de faire disparaitre sa cible : un tween de sortie et une animation qui
+-- tourne encore se disputent la meme propriete.
 stopLogoShine()
-for _, d in ipairs(dots) do
-	TweenService:Create(d, TWEEN_EXIT, { BackgroundTransparency = 1 }):Play()
-end
 
 task.wait(0.35)
 
@@ -770,6 +678,40 @@ fadeText(copyRight)
 -- element un par un, et tout ce qu'on ajoutera plus tard resterait affiche.
 local holderFade = TweenService:Create(canvasGroup, TWEEN_FADE, { GroupTransparency = 1 })
 holderFade:Play()
+-- LE ZOOM part EN MEME TEMPS que le fondu : le joueur decouvre le plan large qui se resserre sur lui. Le zoom
+-- dure plus longtemps que le fondu, donc il continue une fois l'ecran entierement leve.
+--
+-- BOUCLE PAR FRAME, pas un Tween sur la CFrame. Un tween vise un point fige calcule au depart : si le joueur
+-- bouge pendant (et il bouge, il est impatient), la camera fonce vers l'endroit ou il ETAIT. Ici on interpole
+-- seulement la distance et la hauteur, avec l'easing de TWEEN_ZOOM (GetValue), et on refabrique la CFrame depuis
+-- la position COURANTE du joueur a chaque frame. La camera le suit tant qu'elle zoome.
+local zoomActive = zoomRoot ~= nil and camera ~= nil
+local zoomDone = not zoomActive
+if zoomActive then
+	local root = zoomRoot :: BasePart
+	local cam = camera :: Camera
+	task.spawn(function()
+		local duration = TWEEN_ZOOM.Time
+		local start = os.clock()
+		while true do
+			local raw = if duration > 0 then math.clamp((os.clock() - start) / duration, 0, 1) else 1
+			local a = TweenService:GetValue(raw, TWEEN_ZOOM.EasingStyle, TWEEN_ZOOM.EasingDirection)
+			if root.Parent then
+				cam.CFrame = zoomShot(
+					root,
+					ZOOM_FAR_DIST + (ZOOM_NEAR_DIST - ZOOM_FAR_DIST) * a,
+					ZOOM_FAR_HEIGHT + (ZOOM_NEAR_HEIGHT - ZOOM_FAR_HEIGHT) * a
+				)
+			end
+			if raw >= 1 then
+				break
+			end
+			-- RenderStepped : la camera doit etre posee AVANT le rendu de la frame, sinon elle traine d'une image.
+			RunService.RenderStepped:Wait()
+		end
+		zoomDone = true
+	end)
+end
 holderFade.Completed:Wait()
 
 -- ===== Nettoyage =====
@@ -786,6 +728,18 @@ end
 
 loadingGui:Destroy()
 restoreCoreGuis()
+
+-- Le zoom fini, on rend la main a la camera de jeu (Custom). On ATTEND sa fin d'abord : couper avant ferait
+-- sauter l'image de la position scriptee a celle de Roblox. Comme l'arrivee du zoom est calee sur la distance
+-- de jeu, ce passage est deja quasi invisible.
+if zoomActive then
+	while not zoomDone do
+		RunService.Heartbeat:Wait()
+	end
+	if camera then
+		camera.CameraType = Enum.CameraType.Custom
+	end
+end
 
 if loadingMusic then
 	-- Fondu sonore : couper net une musique au moment ou l'image disparait s'entend comme un bug.
