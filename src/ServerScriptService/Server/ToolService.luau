@@ -47,6 +47,9 @@ export type Held = {
 	-- Pose de maintien en cours sur le PERSONNAGE (idle outil eteint, ou pose moteur allume). Memorisee pour
 	-- pouvoir la couper quand on la remplace : sans reference, elle continuerait de jouer sous la nouvelle.
 	holdTrack: AnimationTrack?,
+	-- Nom de la pose de maintien courante. Sert a la REJOUER a l'identique (ex : apres l'echelle, dont le garde-fou
+	-- d'anim a pu la couper) sans avoir a redeviner l'etat moteur.
+	holdAnimName: string?,
 	-- Motor6D de la poignee du lanceur, et son etat de repos. On memorise Part0/Parent/C0/C1 a l'equipement :
 	-- sans ces valeurs, rendre la poignee a l'outil demanderait de les recalculer, et la moindre erreur
 	-- laisserait la corde tendue de travers pour toujours.
@@ -257,6 +260,7 @@ function ToolService.setHoldAnimation(player: Player, animName: string?)
 
 	local previous = current.holdTrack
 	current.holdTrack = nil
+	current.holdAnimName = animName
 	if previous then
 		previous:Stop(HOLD_FADE)
 		task.delay(HOLD_FADE + 0.05, function()
@@ -274,6 +278,16 @@ function ToolService.setHoldAnimation(player: Player, animName: string?)
 		track.Priority = current.config.holdPriority
 		track:Play(HOLD_FADE)
 		current.holdTrack = track
+	end
+end
+
+-- Rejoue la pose de maintien COURANTE a l'identique. Sert apres l'echelle : son garde-fou d'anim a pu couper la
+-- pose de l'outil, et l'outil ne la relance pas tout seul. On la refait donc jouer, comme un re-equipement, sans
+-- changer d'etat (moteur, prise). Sans outil en main : rien a faire.
+function ToolService.replayHold(player: Player)
+	local current = held[player]
+	if current then
+		ToolService.setHoldAnimation(player, current.holdAnimName)
 	end
 end
 

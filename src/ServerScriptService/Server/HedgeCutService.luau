@@ -242,9 +242,21 @@ local function step(dt: number)
 			continue
 		end
 
+		-- REFERENCE DE PORTEE. Normalement le HumanoidRootPart : la lame doit rester a portee de bras du centre du
+		-- joueur. Mais sur l'echelle, ce root est ANCRE EN BAS pendant que l'animation monte le corps : la lame est
+		-- alors a plusieurs studs au-dessus du root et la portee la rejetterait. On mesure donc depuis le LowerTorso
+		-- (le corps reellement en hauteur). La portee reste verifiee, juste depuis le bon point.
+		local reference: BasePart = root
+		if HedgeService.isLadderTrimming(player) then
+			local torso = character:FindFirstChild("LowerTorso") or character:FindFirstChild("Torso")
+			if torso and torso:IsA("BasePart") then
+				reference = torso
+			end
+		end
+
 		-- Le signal ne part QUE si des carreaux ont reellement ete entames. Passer la lame dans le vide ne doit
 		-- rien declencher : un retour qui arrive sans consequence apprend au joueur a l'ignorer.
-		local cut, finished, grind = cutWith(player, root, contact.hedge, dt)
+		local cut, finished, grind = cutWith(player, reference, contact.hedge, dt)
 
 		-- DEPOT AU SOL. Un tas tous les N carreaux AMENES AU RAS : on depose ce qui a reellement ete retire, on
 		-- ne paie jamais l'intention.

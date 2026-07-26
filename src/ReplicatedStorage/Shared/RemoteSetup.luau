@@ -35,6 +35,22 @@ local REMOTES: { { any } } = {
 	-- faisait couper au-dessus de la lame, la ou pointait le curseur.
 	-- Le serveur garde l'autorite sur la vitesse de coupe, sur la haie concernee, et borne la portee.
 	{ "SetAim", E, "Hedge" },
+	-- Taille DEPUIS L'ECHELLE. UN booleen : le client dit "je suis en haut, pret a tailler le dessus" (true) ou
+	-- "j'ai fini" (false). Le serveur ne fait PAS confiance a une haie envoyee : il CHOISIT lui-meme la haie la
+	-- plus proche du joueur. Sert a activer la coupe alors que l'aimant du sol, lui, est desengage sur l'echelle.
+	{ "SetLadderWork", E, "Hedge" },
+	-- SUR L'ECHELLE (accroche complete, toute phase). UN booleen. Sert a DEUX choses cote serveur : desengager
+	-- l'aimant du sol tant qu'on est sur l'echelle (sinon les deux systemes se disputent le joueur dans la zone),
+	-- et REJOUER le maintien de l'outil a la sortie (le garde-fou d'anim de l'echelle a pu le couper).
+	{ "SetOnLadder", E, "Hedge" },
+
+	-- [ LADDER ] --
+	-- PRISE / REPOSE de l'echelle, avec transfert de PROPRIETE RESEAU. Trois arguments : l'echelle (Instance), un
+	-- booleen carrying, et un CFrame optionnel (la position finale, a la repose). A la PRISE (carrying=true) : le
+	-- serveur desancre l'echelle et en donne la propriete au porteur -> des lors sa position ET son repli se
+	-- repliquent nativement a tous (comme un perso), sans flot de remotes. A la REPOSE (carrying=false + CFrame) : le
+	-- serveur reprend la main, re-ancre a la position finale. Le serveur valide (vraie echelle, pres du joueur).
+	{ "SetLadderCarry", E, "Ladder" },
 
 	-- [ CHARACTER ] --
 	-- Sprint : le client dit s'il maintient Shift. UN argument booleen, valide cote serveur.

@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local CharacterService = require(script.Parent.CharacterService)
 local ToolService = require(script.Parent.ToolService)
 
@@ -37,6 +38,17 @@ type Contact = {
 }
 
 local atHedge: { [Player]: Contact } = {}
+-- Taille DEPUIS L'ECHELLE. Contact synthetique pose quand le joueur est en haut d'une echelle, pret a tailler le
+-- dessus. Il court-circuite l'aimant du sol (desengage tant qu'il est la) : la coupe fonctionne alors que le
+-- joueur est ancre en hauteur, hors du systeme d'accroche au sol. La haie est CHOISIE par le serveur, jamais
+-- envoyee par le client.
+local ladderWork: { [Player]: Contact } = {}
+-- SUR L'ECHELLE (toute phase, pas seulement le sommet). Tant que c'est vrai, l'aimant du sol reste desengage :
+-- sinon, dans une zone qui chevauche celle de la haie, les deux systemes se disputent le joueur.
+local onLadder: { [Player]: boolean } = {}
+-- Distance max (au bord de la boite) pour accepter une haie de travail depuis l'echelle : anti-abus, et evite de
+-- designer une haie a l'autre bout du jardin si aucune n'est a cote.
+local LADDER_WORK_RANGE = 15
 -- Instant avant lequel un joueur ne peut pas se raccrocher, apres une sortie volontaire. Sans ce temps mort la
 -- haie est encore a portee la frame suivante : ca raccroche, la sortie est redetectee, ca redecroche.
 local exitUntil: { [Player]: number } = {}
@@ -236,6 +248,25 @@ local function castForward(character: Model, root: BasePart, length: number, cur
 	return contact
 end
 
+-- Pose (ou retire) la HAIE DE TRAVAIL sur le personnage, via un ObjectValue qui se replique au client. C'est ce
+-- qui permet a l'aimant du client de savoir sur quelle haie s'accrocher des l'entree dans la zone, sans dependre
+-- du curseur du joueur.
+local function setWorkHedge(character: Model, hedge: BasePart?)
+	local existing = character:FindFirstChild(HedgeConfigs.WORK_HEDGE_VALUE)
+	local value: ObjectValue
+	if existing and existing:IsA("ObjectValue") then
+		value = existing
+	else
+		if existing then
+			existing:Destroy()
+		end
+		value = Instance.new("ObjectValue")
+		value.Name = HedgeConfigs.WORK_HEDGE_VALUE
+		value.Parent = character
+	end
+	value.Value = hedge
+end
+
 local function leaveHedge(player: Player)
 	if not atHedge[player] then
 		return
@@ -246,6 +277,7 @@ local function leaveHedge(player: Player)
 	local character = player.Character
 	if character then
 		character:SetAttribute(HedgeConfigs.AT_HEDGE_ATTRIBUTE, false)
+		setWorkHedge(character, nil)
 	end
 end
 
@@ -253,6 +285,15 @@ local function updatePlayer(player: Player)
 	local character = player.Character
 	local root = character and character:FindFirstChild("HumanoidRootPart")
 	if not (root and root:IsA("BasePart")) then
+		leaveHedge(player)
+		return
+	end
+
+	-- SUR L'ECHELLE (toute phase) : l'aimant du sol est DESENGAGE. Le joueur est ancre, pilote par LadderController ;
+	-- laisser l'accroche au sol se declencher ici (il est pres de la haie, souvent dans les deux zones a la fois)
+	-- ferait battre les deux systemes (camera, orientation, vitesse). getContact renvoie le contact echelle si on
+	-- taille depuis le sommet.
+	if onLadder[player] then
 		leaveHedge(player)
 		return
 	end
@@ -366,6 +407,8 @@ local function updatePlayer(player: Player)
 	character:SetAttribute(HedgeConfigs.AT_HEDGE_ATTRIBUTE, true)
 	-- La normale est mise a jour meme si la haie ne change pas : le joueur peut contourner vers une autre face.
 	character:SetAttribute(HedgeConfigs.HEDGE_NORMAL_ATTRIBUTE, contact.normal)
+	-- La haie de travail, pour l'aimant du client : elle suit le contournement (contact.hedge peut changer).
+	setWorkHedge(character, contact.hedge)
 
 	-- DEUX ALLURES, selon que la gachette est pressee ou non.
 	--
@@ -377,15 +420,79 @@ local function updatePlayer(player: Player)
 	-- Reevalue chaque frame : setSpeedOverride ne fait rien quand la valeur ne change pas, et c'est
 	-- CharacterService qui lisse la transition entre les deux.
 	local working = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
-	CharacterService.setSpeedOverride(
-		player,
-		if working then HedgeConfigs.CUT_SPEED else HedgeConfigs.WORK_SPEED
-	)
+	local speed
+	if working then
+		speed = HedgeConfigs.CUT_SPEED
+	else
+		-- ACCELERATION DANS L'ARRONDI. On est dans le coin quand la position DEBORDE de la boite sur les DEUX axes
+		-- horizontaux a la fois (diagonale d'un coin), pas juste d'une face. Le facteur vaut sin(2*angle) : 0 le
+		-- long d'un axe (face plate), 1 a 45 degres (coin le plus serre). La vitesse interpole entre les deux.
+		local localRoot = contact.hedge.CFrame:PointToObjectSpace(root.Position)
+		local half = contact.hedge.Size * 0.5
+		local outX = localRoot.X - math.clamp(localRoot.X, -half.X, half.X)
+		local outZ = localRoot.Z - math.clamp(localRoot.Z, -half.Z, half.Z)
+		local outLenSq = outX * outX + outZ * outZ
+		local cornerFactor = if outLenSq > 1e-6 then math.clamp(2 * math.abs(outX * outZ) / outLenSq, 0, 1) else 0
+		speed = HedgeConfigs.WORK_SPEED
+			+ (HedgeConfigs.WORK_SPEED_CORNER - HedgeConfigs.WORK_SPEED) * cornerFactor
+	end
+	-- Reevalue chaque frame ; setSpeedOverride ne fait rien quand la valeur ne change pas, et CharacterService
+	-- lisse la transition entre les allures.
+	CharacterService.setSpeedOverride(player, speed)
 end
 
--- Etat courant, pour les services qui en auront besoin (coupe, camera, UI).
+-- Etat courant, pour les services qui en auront besoin (coupe, camera, UI). Le contact ECHELLE prime : quand il
+-- est pose, l'aimant du sol est desengage, donc atHedge est nil de toute facon.
 function HedgeService.getContact(player: Player): Contact?
-	return atHedge[player]
+	return ladderWork[player] or atHedge[player]
+end
+
+-- Vrai quand le joueur taille depuis l'echelle. La coupe s'en sert pour mesurer la portee depuis le CORPS (en
+-- hauteur) et non le HumanoidRootPart (ancre en bas).
+function HedgeService.isLadderTrimming(player: Player): boolean
+	return ladderWork[player] ~= nil
+end
+
+-- La haie taguee la plus proche d'un point, avec sa distance AU BORD (pas au centre). Sert a la taille depuis
+-- l'echelle : le serveur choisit lui-meme la haie, il ne fait pas confiance au client.
+local function nearestTaggedHedge(position: Vector3): (BasePart?, number)
+	local best: BasePart? = nil
+	local bestDist = math.huge
+	for _, instance in ipairs(CollectionService:GetTagged(HedgeConfigs.TAG)) do
+		if instance:IsA("BasePart") then
+			local d = distanceToHedge(instance, position)
+			if d < bestDist then
+				bestDist = d
+				best = instance
+			end
+		end
+	end
+	return best, bestDist
+end
+
+-- Active / coupe la taille depuis l'echelle. Sur activation, le SERVEUR choisit la haie la plus proche (dans la
+-- portee) : rien envoye par le client n'est cru.
+local function setLadderWork(player: Player, active: boolean)
+	local character = player.Character
+	local hedge: BasePart? = nil
+	if active and character then
+		local root = character:FindFirstChild("HumanoidRootPart")
+		if root and root:IsA("BasePart") then
+			local nearest, dist = nearestTaggedHedge(root.Position)
+			if nearest and dist <= LADDER_WORK_RANGE then
+				hedge = nearest
+			end
+		end
+	end
+	if hedge then
+		ladderWork[player] = { hedge = hedge, normal = Vector3.yAxis, distance = 0 }
+	else
+		ladderWork[player] = nil
+	end
+	-- Attribut repliqué au client : il s'en sert pour dessiner le guide de coupe (le cylindre) sur l'echelle.
+	if character then
+		character:SetAttribute(HedgeConfigs.LADDER_TRIM_ATTRIBUTE, ladderWork[player] ~= nil)
+	end
 end
 
 -- ESPACE VITAL : une boite invisible un peu plus large que la haie, pour que le joueur ne puisse pas s'y
@@ -541,8 +648,43 @@ function HedgeService.init()
 		end
 	end)
 
+	-- Taille depuis l'echelle : le client signale seulement s'il est en position (booleen). Le serveur choisit la
+	-- haie. Toute valeur non-booleenne est ignoree (le client ment toujours).
+	local ladderRemote = RemoteSetup.getRemote("SetLadderWork", "Hedge")
+	if ladderRemote and ladderRemote:IsA("RemoteEvent") then
+		ladderRemote.OnServerEvent:Connect(function(player: Player, active: unknown)
+			if typeof(active) ~= "boolean" then
+				return
+			end
+			setLadderWork(player, active)
+		end)
+	else
+		warn("[HedgeService] Remote Hedge/SetLadderWork introuvable : pas de taille depuis l'echelle")
+	end
+
+	-- Sur l'echelle (toute phase) : desengage l'aimant du sol. A la SORTIE (false), on rejoue le maintien de l'outil,
+	-- que le garde-fou d'anim de l'echelle a pu couper (sinon l'outil reste dans la main SANS pose de maintien).
+	local onLadderRemote = RemoteSetup.getRemote("SetOnLadder", "Hedge")
+	if onLadderRemote and onLadderRemote:IsA("RemoteEvent") then
+		onLadderRemote.OnServerEvent:Connect(function(player: Player, active: unknown)
+			if typeof(active) ~= "boolean" then
+				return
+			end
+			if active then
+				onLadder[player] = true
+			else
+				onLadder[player] = nil
+				ToolService.replayHold(player)
+			end
+		end)
+	else
+		warn("[HedgeService] Remote Hedge/SetOnLadder introuvable : aimant sol et echelle vont se disputer")
+	end
+
 	Players.PlayerRemoving:Connect(function(player: Player)
 		atHedge[player] = nil
+		ladderWork[player] = nil
+		onLadder[player] = nil
 		exitUntil[player] = nil
 		faceChangedAt[player] = nil
 	end)

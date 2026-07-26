@@ -78,6 +78,12 @@ local HedgeConfigs = {
 	-- aucune raison de trainer. Plus rapide meme que la marche normale (10), parce qu'il glisse en pas chasses
 	-- le long d'un rail, sans rien a eviter.
 	WORK_SPEED = 13,
+	-- Dans l'ARRONDI d'un angle, le joueur suit un arc plus long qu'une face plate : a WORK_SPEED constante, le
+	-- contournement traine. On accelere donc dans le virage pour compenser. La vitesse interpole de WORK_SPEED
+	-- (face plate) a cette valeur (coin le plus serre, a 45 degres). NE S'APPLIQUE QU'AU replacement, pas a la
+	-- coupe : tailler reste un geste de precision. Le monter rend le contournement plus vif, le baisser vers
+	-- WORK_SPEED le neutralise.
+	WORK_SPEED_CORNER = 18,
 	-- Gachette pressee, il TRAVAILLE : geste de precision, il faut ralentir.
 	--
 	-- C'est ce qui donne enfin un COUT a la gachette. Sans ecart, la presser en permanence n'avait aucun
@@ -113,6 +119,13 @@ local HedgeConfigs = {
 	AT_HEDGE_ATTRIBUTE = "LeafiaAtHedge",
 	-- Normale de la face travaillee, en monde. Servira a orienter le joueur et la camera.
 	HEDGE_NORMAL_ATTRIBUTE = "LeafiaHedgeNormal",
+	-- ObjectValue pose sur le PERSONNAGE par le serveur : la haie de travail (l'instance). Un attribut ne peut
+	-- pas porter une Instance, d'ou l'ObjectValue, qui lui SE REPLIQUE au client. Sert a ce que l'aimant et
+	-- l'orientation s'accrochent des l'entree dans la zone, sans attendre que le curseur nomme la haie.
+	WORK_HEDGE_VALUE = "LeafiaWorkHedge",
+	-- Pose par le serveur quand le joueur taille DEPUIS L'ECHELLE (sommet). Le client s'en sert pour dessiner le
+	-- guide de coupe (le cylindre) alors que l'accroche au sol, elle, est desengagee.
+	LADDER_TRIM_ATTRIBUTE = "LeafiaLadderTrim",
 
 	-- ===== RAIL DE TRAVAIL =====
 	-- Pendant l'accroche, le joueur glisse le long de la haie a distance CONSTANTE.
@@ -456,7 +469,7 @@ local HedgeConfigs = {
 	-- ATTENTION A LA COUCHE DE BRANCHES. Le dessus taille finit a CELL_TOP_DROP + CUT_DEPTH sous le haut de la
 	-- haie ; le sommet du bois, lui, s'arrete a BRANCH_TOP_CLEARANCE sous ce meme haut. Garder
 	-- BRANCH_TOP_CLEARANCE >= CELL_TOP_DROP + CUT_DEPTH, sinon le bois ressort par le dessus des feuilles rasees.
-	CELL_TOP_DROP = 0.3,
+	CELL_TOP_DROP = 0.01,
 	-- Bascule vers l'exterieur des carreaux du BORD du dessus, en degres. 0 = arete vive.
 	--
 	-- C'est ce qui casse l'angle du haut. Deux surfaces perpendiculaires s'ecartent forcement en etant
@@ -560,8 +573,8 @@ local HedgeConfigs = {
 	-- Le tirage est SEME sur la position de la haie : le meme jardin se regenere donc a l'identique d'une
 	-- session a l'autre. Un decor qui change de tete a chaque relance empeche de juger un reglage.
 	-- Taille, en part de LEAF_SCALE.
-	LEAF_SCALE_MIN = 1.1,
-	LEAF_SCALE_MAX = 2.25,
+	LEAF_SCALE_MIN = 1.9,
+	LEAF_SCALE_MAX = 2.3,
 	-- Rotation dans le PLAN de la face, en degres. C'est celle qui coute le moins et se voit le plus : une
 	-- feuille tournee ne ressemble plus a sa voisine.
 	LEAF_SPIN = 50,
@@ -570,27 +583,27 @@ local HedgeConfigs = {
 	-- reglage a ras. Les feuilles poussues partent dans tous les sens, les taillees s'alignent dans une meme
 	-- direction. C'est un signal gratuit et fort : le desordre pousse, le propre est peigne.
 	-- Calcule CHEZ CHAQUE CLIENT (voir HedgeLeafController), comme le reste du rendu des feuilles.
-	LEAF_TRIM_SPIN = 10,
+	LEAF_TRIM_SPIN = 0.2,
 	-- Basculement HORS du plan, en degres. A garder petit : trop, et les feuilles decollent de la surface,
 	-- laissant voir les carreaux entre elles.
-	LEAF_TILT = 0.5,
+	LEAF_TILT = 0.1,
 	-- Meme chose, mais RESERVE a la face du dessus. Une feuille couchee a plat sur le dessus se lit comme un
 	-- tapis : vue de biais, on ne voit que des plans horizontaux alignes. La redresser lui rend du volume et
 	-- casse la surface plate. Distinct de LEAF_TILT parce que les cotes, eux, doivent RESTER plaques : une
 	-- feuille verticale qui decolle laisse voir l'interieur entre les carreaux, alors qu'une feuille du dessus
 	-- qui se redresse retombe sur ses voisines. On peut donc pousser le dessus sans abimer les cotes.
-	LEAF_TILT_TOP = 15,
+	LEAF_TILT_TOP = 18,
 	-- Decalage dans le plan, en part du carreau. C'est CE reglage qui casse vraiment la grille : deux feuilles
 	-- peuvent etre tournees differemment et rester alignees comme du carrelage.
 	-- Au-dela de 0.5 elles sortent de leur carreau et des trous apparaissent.
-	LEAF_JITTER = 0.18,
+	LEAF_JITTER = 0.2,
 
 	-- Balancement, calcule CHEZ CHAQUE CLIENT.
 	--
 	-- Jamais cote serveur : une part que le serveur bouge replique sa CFrame a tous les joueurs. Mille feuilles
 	-- animees, c'est la bande passante entiere pour du decor.
 	LEAF_SWAY_ANGLE = 7, -- degres
-	LEAF_SWAY_SPEED = 0.8, -- oscillations par seconde
+	LEAF_SWAY_SPEED = 1, -- oscillations par seconde
 	-- Au-dela de cette distance de la camera, une feuille ne bouge plus. Personne ne voit un balancement de
 	-- sept degres a soixante-dix studs, autant ne pas le payer.
 	-- Distance a la HAIE, pas a la feuille : la portee de sa sphere englobante s'y ajoute. Au-dela, la haie
@@ -729,6 +742,24 @@ local HedgeConfigs = {
 	-- FRAICHE n'est PAS reglee ici : elle vient du SurfaceAppearance de la feuille, seule source de verite.
 	-- La retaper en config donnerait deux valeurs a garder d'accord, et l'une finirait par mentir.
 	TRIMMED_COLOR = Color3.fromRGB(44, 86, 29),
+
+	-- VARIANTES de la couleur de coupe. Chaque feuille tire la sienne dans cette palette (par un hash de sa position,
+	-- cote client) : une haie taillee montre alors des TACHES de tons legerement differents au lieu d'un vert uniforme,
+	-- ce qui fait plus vivant / naturel. Format { couleur, poids }. La base domine, les accents sont plus rares.
+	-- Regler les poids pour doser : plus de poids sur la base = taches plus rares ; plus sur un accent = il ressort plus.
+	TRIMMED_COLOR_VARIANTS = {
+		{ color = Color3.fromRGB(44, 86, 29), weight = 6 }, -- base (la meme que TRIMMED_COLOR) : dominante
+		{ color = Color3.fromRGB(66, 86, 44), weight = 2 }, -- accent CLAIR
+		{ color = Color3.fromRGB(49, 95, 32), weight = 2 }, -- accent moyen
+		{ color = Color3.fromRGB(37, 70, 24), weight = 2 }, -- accent SOMBRE
+	},
+
+	-- DEGRADE VERTICAL. Le BAS de la haie tire vers ce vert sombre (moins de lumiere l'atteint : plus naturel qu'un
+	-- vert uniforme du sol au sommet). Dose maximale tout en bas, nulle en haut. S'applique a la couleur FINALE, donc
+	-- sur la haie fraiche comme taillee.
+	BOTTOM_GRADIENT_COLOR = Color3.fromRGB(37, 70, 24),
+	-- Force du degrade tout en bas (0 = aucun, 1 = le bas devient pleinement BOTTOM_GRADIENT_COLOR). A doser a l'oeil.
+	BOTTOM_GRADIENT_STRENGTH = 0.65,
 
 	-- ===== SUR-TAILLE =====
 	-- Un carreau deja au ras qu'on continue de raser s'ABIME. C'est l'enjeu du geste : sans consequence a trop

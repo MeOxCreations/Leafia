@@ -324,9 +324,11 @@ local function buildHedge(hedge: BasePart): number
 	local folder = Instance.new("Folder")
 	folder.Name = hedge.Name
 
-	-- Le DESSUS d'une haie trop haute n'est pas taillable : on ne l'atteint pas du sol tant qu'il n'y a pas
-	-- d'echelle. Il est quand meme pose et rendu, il ne compte juste pas dans la coupe.
-	local topCuttable = hedge.Size.Y <= HedgeConfigs.TOP_CUT_MAX_HEIGHT
+	-- Le DESSUS est TOUJOURS taillable : maintenant qu'il y a l'echelle, on l'atteint. Avant on le bloquait sur les
+	-- haies hautes parce qu'on ne l'atteignait pas du sol. Desormais c'est la PORTEE PHYSIQUE qui decide qui peut le
+	-- couper : du sol la lame n'atteint pas le dessus d'une haie haute (trop loin du corps), depuis l'echelle (corps
+	-- monte) oui. Une haie haute ne peut donc finir a 100% qu'avec l'echelle : c'est la progression voulue.
+	local topCuttable = true
 
 	local grid: { [number]: { BasePart } } = {}
 	-- Deux comptes distincts : `rendered` est tout ce qui est pose (pese sur le budget et sur le nettoyage),

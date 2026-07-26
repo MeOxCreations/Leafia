@@ -135,11 +135,10 @@ export type ToolConfig = {
 	bladeMaxSpeed: number, -- vitesse a fond, clic maintenu
 	bladeAccel: number, -- gain de vitesse par seconde en montee (progressif = petit)
 	bladeDecel: number, -- perte de vitesse par seconde au relachement
-	-- SON DU MOTEUR : une enveloppe en deux temps, pas un pitch qu'on tire.
+	-- SON DU MOTEUR : une enveloppe en deux temps.
 	--   accelStartSound : l'ATTAQUE, la montee en regime. Jouee une fois, non bouclee.
 	--   accelLoopSound  : le MAINTIEN, enchaine des que l'attaque se termine, en boucle tant qu'on pousse.
-	-- Les deux bout a bout dessinent la courbe d'acceleration. C'est le son qui porte la courbe, donc on ne
-	-- touche PAS a PlaybackSpeed : ca doublerait l'effet et sonnerait faux.
+	-- Les deux bout a bout dessinent la courbe d'acceleration.
 	accelStartSound: string?,
 	accelLoopSound: string?,
 	-- Duree du fondu quand on RELACHE. Un moteur ne se coupe pas net : il redescend. Couper sec s'entend comme
@@ -235,7 +234,7 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- L'inclinaison reste entiere hors chantier, la ou elle sert a faire sentir le moteur.
 		tiltWorkingScale = 0,
 		hitboxName = "HitBoxRoot",
-		bladeIdleSpeed = 0.35,
+		bladeIdleSpeed = 0.15,
 		bladeMaxSpeed = 1.6,
 		bladeAccel = 1.6,
 		bladeDecel = 2.8,
@@ -247,7 +246,7 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		engineWindDownPitch = 0.5,
 		engineAccelFade = 0.12,
 		pullsMin = 1,
-		pullsMax = 3,
+		pullsMax = 2,
 		holdPriority = Enum.AnimationPriority.Action,
 		-- A REGLER A L'OEIL, comme les autres prises. Part de la prise de demarrage : tant qu'on n'y touche
 		-- pas, rien ne change par rapport a avant.

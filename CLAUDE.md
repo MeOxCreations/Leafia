@@ -137,6 +137,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   profondeur. Symptome : des membres qui se chevauchent quand on pivote la camera, alors que "le fondu est
   fini". Cler la valeur a la cible des qu'on est assez pres. Piege double : un garde-fou "ne pas reecrire si
   le delta est infime" FIGE justement ce residu au lieu de le laisser finir de descendre.
+- **Jouer une anim UNE fois et TENIR sa derniere image** : garder `Looped = true` (sinon la piste se relache a
+  la fin et la pose saute) MAIS piloter la `TimePosition` A LA MAIN (vitesse 0, `+= dt` chaque frame, clamp a
+  `Length - 0.001`). Laisser la lecture tourner a vitesse > 0 avec Looped = true rebouclerait (wrap au bout, et
+  a bas FPS le clamp d'une fenetre `>= Length - eps` peut le rater). La combinaison manuelle fait les deux :
+  joue une fois, tient la pose au bout, sans wrap. Sortie inverse = `Looped = false` puis vitesse negative.
+- **Ne pas fabriquer un deplacement quand le joueur est deja arrive.** Une zone de detection posait le joueur a
+  0.59 stud du point cible : tout un systeme de "marche forcee" (Humanoid:Move a priorite Camera + marqueurs
+  d'anim + secours distance/timeout) etait inutile, l'arrivee par distance tirait des la 1re frame (log a
+  l'appui). Mesurer la distance REELLE avant de coder un trajet. La solution etait : ancrer + jouer la pose.
 
 ## Design emotionnel
 

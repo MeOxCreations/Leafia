@@ -52,9 +52,9 @@ local ZOOM_WAIT = 3 -- attente max du personnage avant de renoncer au zoom, en s
 local ZOOM_DURATION = 1.5 -- duree du zoom, en secondes
 local ZOOM_FAR_DIST = 42 -- recul de depart, en studs : le plan large
 local ZOOM_FAR_HEIGHT = 26 -- hauteur de depart : une vue haute et large
-local ZOOM_NEAR_DIST = 12 -- arrivee, PROCHE de la distance de la camera de jeu pour que le passage ne saute pas
-local ZOOM_NEAR_HEIGHT = 3 -- hauteur d'arrivee
-local ZOOM_FOCUS_HEIGHT = 2 -- point vise, au-dessus des pieds du joueur
+-- Pas de position d'arrivee reglee ici : le zoom finit PILE sur la camera de jeu (Roblox), capturee avant qu'on
+-- prenne la main. C'est ce qui evite le saut ("TAC") au retour a la camera par defaut.
+local ZOOM_FOCUS_HEIGHT = 2 -- point vise du plan large, au-dessus des pieds du joueur
 local TWEEN_ZOOM = TweenInfo.new(ZOOM_DURATION, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
 
 -- ===== Lueur derriere le logo =====
@@ -622,6 +622,10 @@ local function zoomShot(anchor: BasePart, dist: number, height: number): CFrame
 end
 
 local zoomRoot: BasePart? = nil
+-- Depart (plan large) et arrivee (camera de jeu capturee) du zoom. Fixes une fois pour toutes : le joueur est
+-- verrouille pendant le reveal, donc ni l'un ni l'autre ne bouge, et on lerp simplement de l'un a l'autre.
+local zoomFarCFrame: CFrame? = nil
+local zoomGameCFrame: CFrame? = nil
 do
 	local deadline = os.clock() + ZOOM_WAIT
 	local root: BasePart? = nil
@@ -637,9 +641,20 @@ do
 
 	if ZOOM_ENABLED and camera and root then
 		zoomRoot = root
+		-- ARRIVEE DU ZOOM = la camera de jeu (Roblox, Custom) telle qu'elle est MAINTENANT, capturee AVANT qu'on
+		-- prenne la main. Le zoom finira pile dessus, donc le retour a Custom a la fin ne fait aucun saut ("TAC").
+		-- Valable parce que le joueur est verrouille juste apres : sa position, et donc celle de la camera de jeu,
+		-- ne bouge plus jusqu'a la fin du reveal.
+		zoomGameCFrame = camera.CFrame
+		-- ON BLOQUE LE JOUEUR le temps du reveal, en ancrant son root. Sinon, s'il se met a marcher ET tourner
+		-- pendant le zoom (il est impatient), le code re-cadre sur lui a chaque frame et ECRASE sa rotation : le
+		-- suivi parait "strict", saccade, moche. Immobile, il n'y a plus rien a ecraser et le cinematique reste
+		-- propre. On lui rend le controle a la toute fin, quand la camera de jeu reprend la main.
+		root.Anchored = true
+		zoomFarCFrame = zoomShot(root, ZOOM_FAR_DIST, ZOOM_FAR_HEIGHT)
 		camera.CameraType = Enum.CameraType.Scriptable
 		-- Plan large en place tout de suite, cache derriere l'ecran encore plein : aucun a-coup au premier reveal.
-		camera.CFrame = zoomShot(root, ZOOM_FAR_DIST, ZOOM_FAR_HEIGHT)
+		camera.CFrame = zoomFarCFrame
 	end
 end
 
@@ -681,28 +696,22 @@ holderFade:Play()
 -- LE ZOOM part EN MEME TEMPS que le fondu : le joueur decouvre le plan large qui se resserre sur lui. Le zoom
 -- dure plus longtemps que le fondu, donc il continue une fois l'ecran entierement leve.
 --
--- BOUCLE PAR FRAME, pas un Tween sur la CFrame. Un tween vise un point fige calcule au depart : si le joueur
--- bouge pendant (et il bouge, il est impatient), la camera fonce vers l'endroit ou il ETAIT. Ici on interpole
--- seulement la distance et la hauteur, avec l'easing de TWEEN_ZOOM (GetValue), et on refabrique la CFrame depuis
--- la position COURANTE du joueur a chaque frame. La camera le suit tant qu'elle zoome.
-local zoomActive = zoomRoot ~= nil and camera ~= nil
+-- BOUCLE PAR FRAME avec l'easing de TWEEN_ZOOM (GetValue). On lerp du plan large vers la CAMERA DE JEU capturee.
+-- Deux CFrame fixes : le joueur est verrouille, rien ne bouge, donc pas besoin de recalculer depuis lui a chaque
+-- frame. Et finir pile sur la camera de jeu est ce qui supprime le saut au retour a Custom.
+local zoomActive = zoomRoot ~= nil and camera ~= nil and zoomFarCFrame ~= nil and zoomGameCFrame ~= nil
 local zoomDone = not zoomActive
 if zoomActive then
-	local root = zoomRoot :: BasePart
 	local cam = camera :: Camera
+	local far = zoomFarCFrame :: CFrame
+	local target = zoomGameCFrame :: CFrame
 	task.spawn(function()
 		local duration = TWEEN_ZOOM.Time
 		local start = os.clock()
 		while true do
 			local raw = if duration > 0 then math.clamp((os.clock() - start) / duration, 0, 1) else 1
 			local a = TweenService:GetValue(raw, TWEEN_ZOOM.EasingStyle, TWEEN_ZOOM.EasingDirection)
-			if root.Parent then
-				cam.CFrame = zoomShot(
-					root,
-					ZOOM_FAR_DIST + (ZOOM_NEAR_DIST - ZOOM_FAR_DIST) * a,
-					ZOOM_FAR_HEIGHT + (ZOOM_NEAR_HEIGHT - ZOOM_FAR_HEIGHT) * a
-				)
-			end
+			cam.CFrame = far:Lerp(target, a)
 			if raw >= 1 then
 				break
 			end
@@ -738,6 +747,10 @@ if zoomActive then
 	end
 	if camera then
 		camera.CameraType = Enum.CameraType.Custom
+	end
+	-- Reveal fini : on rend au joueur le controle qu'on lui avait retire (voir l'ancrage plus haut).
+	if zoomRoot and zoomRoot.Parent then
+		zoomRoot.Anchored = false
 	end
 end
 

@@ -2168,6 +2168,73 @@ qu'elles retaillent une deuxieme haie sans qu'on leur demande ? Tant que la repo
 construit rien par-dessus (ni jauge d'XP, ni combos, ni escabeau, ni tycoon). C'est ce qui a manque aux deux
 projets d'avant : l'emballage a recouvert un coeur jamais valide.
 
+## 0.0.92 — L'echelle se DEPLACE, et les autres la voient (co-op)
+
+Le joueur prend l'escabeau (E dans `box_detecte_For_Move`), le porte le long de la haie, et le repose ou il
+veut. `Client/LadderMoveController.luau` + `Server/LadderMoveService.luau`. Ecart assume avec la regle d'or
+(habillage avant validation du geste) : pose, ne pas etendre.
+
+### Le portage cote porteur (client)
+
+- **Rail comme la taille.** En portage FOCUS, le joueur glisse le long de la haie a distance constante, face a
+  elle. La normale de travail est la VRAIE (point le plus proche de la boite -> arc de cercle aux coins,
+  gratuit), pas une face discrete qu'on lisse : le lieu a distance constante d'une boite EST un rectangle a
+  coins arrondis.
+- **Deux modes** : FOCUS (rail) et LIBRE (detache, on pose ou on veut). S pousse au detachement ; on re-focus
+  en revenant pres d'une haie (garde de temps, pas de distance, pour re-accrocher de n'importe quel cote).
+- **Repli / depli** : une seule anim d'echelle (`ActionLadderAnimation`) porte les deux temps, balises par
+  `FermerEvenement` (replie, on fige) et `LadderOpenEndEvent` (deplie, on stoppe). Pilotee a la main (vitesse 0
+  + `AdjustSpeed`), jamais laissee se relacher.
+
+### Co-op : le WELD, apres deux culs-de-sac
+
+Pour que les AUTRES voient l'echelle suivre le porteur, deux approches ont ECHOUE avant la bonne :
+
+1. **Sync position en continu (serveur PivotTo repete).** Se battait avec la prediction locale du porteur ->
+   l'echelle se rendait depliee et "bouffait" le joueur.
+2. **Propriete reseau (SetNetworkOwner sur l'echelle desancree).** Les meshparts, mal tenus, tombaient a
+   travers le sol (CanCollide off) et se faisaient DETRUIRE a `FallenPartsDestroyHeight` (-500) : l'echelle
+   "disparaissait". Meme en corrigeant l'owner (chaque `AssemblyRootPart`) et en figeant le Humanoid, la
+   repose renvoyait l'echelle sous / au-dessus de la map (vitesse residuelle + anti-teleport qui se basait sur
+   la position envolee).
+
+**La bonne solution (idee du joueur) : un WELD.** A la prise, le serveur desancre l'echelle et SOUDE sa
+RootPart au HumanoidRootPart du porteur. L'echelle devient solidaire du perso -> elle le suit et se replique
+NATIVEMENT a tous (le perso se replique deja), sans flot de remotes, et **elle ne peut pas tomber** (le weld
+la tient). A la repose : on retire le weld et on re-ancre sur place. C'est plus simple ET plus robuste que
+tout le reseau qu'on avait tente.
+
+### Deux pieges du weld, resolus
+
+- **L'offset c0 se calcule dans le REPERE CARRE (face haie), pas dans le HRP de la prise.** Le weld fige
+  l'echelle relative au HRP ; or le HRP se tourne vers la haie APRES la prise (le rail l'y amene). Cale sur le
+  HRP de depart, l'echelle finissait de travers une fois le joueur retourne. Cale sur le repere carre, elle
+  est alignee des que le joueur l'est.
+- **Le repli / depli se replique tant que l'echelle est soudee.** A la repose, on relache seulement a la FIN
+  du depli (`OPEN_EVENT`), pas avant : sinon l'echelle re-ancree ne s'anime plus et le depli ne se verrait que
+  chez le porteur.
+
+### Recul du joueur : mesure, plus de reglage au pif
+
+`CARRY_CLEARANCE` (1 stud). Le joueur n'est plus "dans" l'echelle : on MESURE le bord arriere reel de l'echelle
+(coins de ses parts structurelles, zones de detection exclues) et on la pousse devant de sorte que ce bord
+tombe a `CARRY_CLEARANCE` du joueur. Quelle que soit la taille de l'echelle, le perso reste juste derriere.
+Fini le `CARRY_FORWARD` magique regle par tatonnement (avance / recule / avance).
+
+### Filets
+
+- Mort / respawn en plein portage, ou porteur qui quitte le serveur : on retire le weld + re-ancre, sinon on
+  laisserait une echelle soudee a un perso disparu.
+- Detection de l'echelle en RECURSIF (`GetDescendants`) : elle reste trouvee meme rangee dans un dossier. La
+  grimpe (`LadderController`) cache le resultat, invalide seulement quand un `Escabaut*` apparait / disparait
+  (pas de scan des milliers de carreaux chaque frame).
+- Anti-spam de E (0.6 s) : un double-tap posait l'echelle avant que le repli ait joue.
+
+### A tester
+
+2 joueurs OBLIGATOIRE (Start > 2 players) : l'observateur doit voir l'echelle suivre le porteur, se replier a
+la prise, se deplier a la repose, et rester posee au bon endroit.
+
 ## 0.0.91 — PRE-SYSTEME : les carreaux de pousse
 
 `HedgeCellService` pave la surface taillable des haies avec une grille de carreaux.

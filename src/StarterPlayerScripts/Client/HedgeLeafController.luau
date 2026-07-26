@@ -47,6 +47,9 @@ type Leaf = {
 	-- Teinte d'origine, retenue pour pouvoir revenir dessus. Sans elle, un carreau soigne un jour resterait
 	-- rouge : on n'aurait plus la couleur de depart.
 	spawnColor: Color3,
+	-- Couleur de coupe PROPRE a cette feuille (tiree de la palette). C'est ce qui donne les taches de tons differents
+	-- une fois taillee, au lieu d'un vert uniforme. Deduite de la position, comme phase : pareille sur tous les clients.
+	trimmedColor: Color3,
 	-- Present si la feuille a un SurfaceAppearance. C'est LUI qui porte la couleur quand il existe : la teinte
 	-- de la part est alors ignoree par le moteur.
 	appearance: SurfaceAppearance?,
@@ -64,6 +67,10 @@ type Group = {
 	-- feuille.
 	center: Vector3,
 	radius: number,
+	-- Bornes verticales des feuilles de la haie (calculees avec la sphere). Servent au DEGRADE vertical : situer
+	-- chaque feuille entre le bas (minY) et le haut (maxY) pour doser l'assombrissement du bas.
+	minY: number,
+	maxY: number,
 	-- Ou reprendre dans CETTE haie au prochain tour. Un curseur par groupe evite de reconstruire une liste
 	-- globale a chaque fois que le joueur entre ou sort d'une portee.
 	cursor: number,
@@ -73,6 +80,28 @@ type Group = {
 }
 
 local groups: { [Instance]: Group } = {}
+
+-- Palette de couleurs de coupe (base + accents), poids total precalcule une fois.
+local TRIMMED_VARIANTS = HedgeConfigs.TRIMMED_COLOR_VARIANTS
+local TRIMMED_WEIGHT_TOTAL = 0
+for _, v in ipairs(TRIMMED_VARIANTS) do
+	TRIMMED_WEIGHT_TOTAL += v.weight
+end
+
+-- Couleur de coupe DE CETTE feuille : tiree de la palette par un hash de sa POSITION (deterministe, donc identique
+-- sur tous les clients et rien a synchroniser, meme idee que phase). Feuilles voisines = valeurs differentes -> des
+-- TACHES de tons melanges une fois la haie taillee, au lieu d'un aplat uniforme.
+local function pickTrimmedColor(position: Vector3): Color3
+	local h = math.sin(position.X * 12.9898 + position.Y * 78.233 + position.Z * 37.719) * 43758.5453
+	local r = (h - math.floor(h)) * TRIMMED_WEIGHT_TOTAL -- fraction 0..1 * poids total
+	for _, v in ipairs(TRIMMED_VARIANTS) do
+		r -= v.weight
+		if r <= 0 then
+			return v.color
+		end
+	end
+	return TRIMMED_VARIANTS[1].color
+end
 
 local function addLeaf(group: Group, part: BasePart)
 	local cell = part.Parent
@@ -100,6 +129,7 @@ local function addLeaf(group: Group, part: BasePart)
 		shownGrowth = -1,
 		shownDamage = -1,
 		spawnColor = appearance and appearance.Color or part.Color,
+		trimmedColor = pickTrimmedColor(position),
 		appearance = appearance,
 		phase = phase,
 		-- Au repos au depart : sa CFrame de naissance est deja sa pose de repos a pousse pleine, donc rien a
@@ -144,6 +174,8 @@ local function refresh(group: Group)
 	end
 	group.center = (minimum + maximum) * 0.5
 	group.radius = (maximum - group.center).Magnitude
+	group.minY = minimum.Y
+	group.maxY = maximum.Y
 end
 
 -- Remet les feuilles a plat. Appele UNE fois quand une haie sort de portee : sans ca elles resteraient figees
@@ -236,7 +268,12 @@ local function sway(
 			-- pousse descend. spawnColor est la couleur de l'asset : c'est elle le vert frais, on ne la reecrit
 			-- pas en config pour ne pas avoir deux verites a garder d'accord.
 			local trimmed = math.clamp(1 - growth, 0, 1)
-			local base = leaf.spawnColor:Lerp(HedgeConfigs.TRIMMED_COLOR, trimmed)
+			local base = leaf.spawnColor:Lerp(leaf.trimmedColor, trimmed)
+			-- DEGRADE VERTICAL : le bas de la haie tire vers un vert sombre, dose maximale tout en bas, nulle en haut.
+			-- Sur la couleur FINALE, donc visible haie fraiche comme taillee. minY/maxY viennent de refresh (deja passe).
+			local spanY = math.max(group.maxY - group.minY, 1e-3)
+			local heightT = math.clamp((leaf.part.Position.Y - group.minY) / spanY, 0, 1)
+			base = base:Lerp(HedgeConfigs.BOTTOM_GRADIENT_COLOR, (1 - heightT) * HedgeConfigs.BOTTOM_GRADIENT_STRENGTH)
 			-- ETAGE 2 : le ROUGE d'acharnement, par-dessus, une fois passe le seuil. En dessous, le carreau
 			-- s'abime sans que ca se voie : c'est la marge qui rend la regle apprenable au lieu de punitive.
 			local tintStart = HedgeConfigs.DAMAGE_TINT_START
@@ -365,6 +402,8 @@ local function collect(folder: Instance)
 			leaves = {},
 			center = Vector3.zero,
 			radius = 0,
+			minY = 0,
+			maxY = 0,
 			cursor = 1,
 			active = true,
 			dirty = true,

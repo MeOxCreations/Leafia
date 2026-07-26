@@ -933,6 +933,20 @@ local function hedgeReach(hedge: BasePart, from: Vector3): number
 	return math.sqrt(dx * dx + dz * dz)
 end
 
+-- La HAIE DE TRAVAIL, donnee par le SERVEUR via un ObjectValue replique. C'est la source fiable de "sur quelle
+-- haie je suis", independante du curseur : l'aimant et l'orientation s'y accrochent des l'entree dans la zone,
+-- sans attendre que la souris se pose sur la haie. Le curseur (lastHedge) ne sert plus qu'a VISER la coupe.
+local function serverHedge(character: Model): BasePart?
+	local value = character:FindFirstChild(HedgeConfigs.WORK_HEDGE_VALUE)
+	if value and value:IsA("ObjectValue") then
+		local hedge = value.Value
+		if hedge and hedge:IsA("BasePart") and hedge.Parent then
+			return hedge
+		end
+	end
+	return nil
+end
+
 -- Rend la HAUTEUR VISEE sur la face de la haie, entre 0 (le pied) et 1 (le sommet), ou nil si le joueur ne
 -- vise plus la haie. C'est cette valeur qui pilote la pose de coupe, et plus tard l'endroit reellement taille.
 --
@@ -1253,6 +1267,24 @@ local function update(dt: number)
 
 	local camera = workspace.CurrentCamera
 	if not (atHedge and typeof(serverNormal) == "Vector3" and camera) then
+		-- TAILLE DEPUIS L'ECHELLE. On n'est pas accroche au sol, mais si le serveur signale qu'on taille le dessus
+		-- depuis l'echelle, on DESSINE quand meme le guide de coupe (le cylindre), depuis la lame, pour que le joueur
+		-- voie ou ca coupe. On ne touche NI la camera (l'echelle la controle) NI l'aimant : juste le visuel.
+		if character:GetAttribute(HedgeConfigs.LADDER_TRIM_ATTRIBUTE) == true then
+			local blade = findBlade(character)
+			if blade then
+				local base, tip = bladeSegment(blade)
+				local throttling = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
+				drawCutZone(base, tip, if throttling then "cutting" else "guide")
+			else
+				hideCutZone()
+			end
+			-- Le POINT ROSE de visee, lui, est pose par LadderController (il projette le curseur sur le dessus).
+			return
+		end
+		-- release() ne cache PAS le cylindre quand on n'etait pas "engaged" (il sort tot). On le cache donc ici pour
+		-- que le guide de l'echelle disparaisse bien a la sortie. Sans guide, cutZonePart est nil : appel inoffensif.
+		hideCutZone()
 		release(humanoid)
 		return
 	end
@@ -1265,9 +1297,13 @@ local function update(dt: number)
 	-- Celle du serveur designe une FACE : elle est discrete, donc elle bascule d'un quart de tour d'un seul coup
 	-- dans un angle. Or tout en depend, le rail, l'aimant, l'orientation, la camera, et tout sautait avec elle.
 	-- La geometrie, elle, est continue par construction : voir surfaceNormal.
-	-- On garde quand meme celle du serveur en repli, le temps que le premier lancer du curseur nomme la haie.
-	local hedge = lastHedge
-	local aimed = (if hedge and hedge.Parent then surfaceNormal(hedge, root.Position) else nil) or serverNormal
+	-- HAIE DE TRAVAIL = celle que le SERVEUR designe (accrochee des l'entree dans la zone), curseur en repli.
+	-- Avant on ne prenait que lastHedge (le curseur) : sans souris sur la haie, la normale geometrique n'etait
+	-- pas calculee et l'aimant ne s'accrochait pas. Le serveur, lui, sait deja sur quelle haie on est.
+	local workHedge = serverHedge(character) or lastHedge
+	local aimed = (
+		if workHedge and workHedge.Parent then surfaceNormal(workHedge, root.Position) else nil
+	) or serverNormal
 
 	local previous = workNormal
 	if previous then
@@ -1342,7 +1378,8 @@ local function update(dt: number)
 	-- trois studs il passait AU-DESSUS, ne touchait rien, et l'aimant ne s'activait jamais. Le joueur restait
 	-- donc loin des haies basses sans qu'on comprenne pourquoi.
 	-- Une haie est une boite : sa distance se calcule, elle n'a pas besoin d'etre sondee.
-	local magnetHedge = lastHedge
+	-- La haie de travail (serveur), pas le curseur : l'aimant s'accroche des l'entree dans la zone.
+	local magnetHedge = workHedge
 	if magnetHedge and magnetHedge.Parent then
 		local localRoot = magnetHedge.CFrame:PointToObjectSpace(root.Position)
 		local localNormal = magnetHedge.CFrame:VectorToObjectSpace(normal)

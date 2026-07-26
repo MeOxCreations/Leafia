@@ -11,6 +11,10 @@ RemoteSetup.init()
 -- Les services se declarent UN PAR UN, dans l'ordre voulu. C'est volontairement explicite : quand un service
 -- en attend un autre (data avant economie, par exemple), l'ordre se lit ici en clair.
 
+-- EN PREMIER : la sauvegarde. Tout service qui devra lire / ecrire des donnees joueur passe par lui.
+local DataService = require(script.DataService)
+DataService.init()
+
 local CharacterService = require(script.CharacterService)
 CharacterService.init()
 
@@ -48,5 +52,13 @@ HedgeStockService.init()
 -- EN DERNIER : la coupe a besoin des carreaux poses, du contact en cours et de l'outil tenu.
 local HedgeCutService = require(script.HedgeCutService)
 HedgeCutService.init()
+
+-- Autorite serveur sur la POSITION des echelles (repose synchronisee). Independant du reste.
+local LadderMoveService = require(script.LadderMoveService)
+LadderMoveService.init()
+
+-- Teleport vers les chantiers (autre place de l'experience). Squelette : rien ne part tant qu'une mission ne l'appelle.
+local TeleportService = require(script.TeleportService)
+TeleportService.init()
 
 print("[Server] Leafia demarre")

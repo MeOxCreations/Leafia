@@ -18,9 +18,16 @@ local CameraController = {}
 
 local player = Players.LocalPlayer
 
--- Resserrement du champ de vision quand le joueur ACCELERE l'outil. Negatif : la vue se referme, ce qui se lit
--- comme de la concentration. S'applique meme hors chantier : c'est une reaction a l'OUTIL, pas au lieu.
+-- Resserrement du champ de vision quand le joueur ACCELERE l'outil AU PIED D'UNE HAIE. Negatif : la vue se
+-- referme, ce qui se lit comme de la concentration sur le travail.
 local THROTTLE_FOV = -5
+-- A l'inverse, accelerer EN LIBRE (hors chantier, hors echelle, hors box de deplacement) RECULE la vue : positif,
+-- la vue s'ouvre, on ressent la puissance du moteur. On le fait UNIQUEMENT en libre : sur l'echelle et au chantier
+-- la camera est deja scriptee, un effet de plus serait de trop (d'ou le test camera Custom plus bas).
+local FREE_REV_FOV = 6
+-- Petit DELAI avant que le recul demarre : il ne s'applique qu'apres avoir accelere EN CONTINU ce temps-la. Evite
+-- qu'un tapotement de gachette fasse pomper la vue ; le recul recompense une acceleration tenue.
+local FREE_REV_DELAY = 0.2
 
 local REST_FOV = 70
 local MOVE_FOV = 76
@@ -41,6 +48,8 @@ local MOVE_SIGNAL_SMOOTH = 8
 -- Signal lisse et etat courant, gardes d'une frame a l'autre.
 local moveSignal = 0
 local moving = false
+-- Temps passe a accelerer EN LIBRE d'affilee. Remis a zero des qu'on n'y est plus. Sert au delai du recul de FOV.
+local freeRevTime = 0
 
 -- Bob du sprint. TRES leger : c'est une respiration de la camera, pas un tremblement.
 local SPRINT_BOB_AMPLITUDE = 0.12 -- studs
@@ -124,13 +133,27 @@ function CameraController.init()
 		end
 		local sprinting = moving and isSprinting()
 
-		-- Accelerer RESSERRE la vue, mais uniquement AU PIED D'UNE HAIE. Accelerer dans le vide en traversant le
-		-- jardin ne doit pas resserrer la vue : le resserrement dit "je me concentre sur ce travail", il n'a de
-		-- sens que s'il y a un travail devant.
-		-- Un simple decalage, pour que l'effet s'additionne au sprint et a la marche au lieu de les remplacer.
-		local working = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
-			and character:GetAttribute(HedgeConfigs.AT_HEDGE_ATTRIBUTE) == true
-		local throttleFov = if working then THROTTLE_FOV else 0
+		-- Accelerer decale le champ de vision, et le SENS depend du contexte. Simple decalage : il s'additionne au
+		-- sprint / a la marche au lieu de les remplacer.
+		--   - AU PIED D'UNE HAIE : la vue se RESSERRE (concentration sur le travail).
+		--   - EN LIBRE (camera Custom : ni echelle ni chantier, et pas de portage puisque le portage range l'outil) :
+		--     la vue RECULE (s'ouvre) pour ressentir la puissance a l'acceleration.
+		--   - SUR L'ECHELLE / autre camera scriptee : rien (elle a deja son propre traitement, on n'en rajoute pas).
+		local throttling = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
+		local atHedge = character:GetAttribute(HedgeConfigs.AT_HEDGE_ATTRIBUTE) == true
+		local camera = workspace.CurrentCamera
+		local freeCam = camera ~= nil and camera.CameraType == Enum.CameraType.Custom
+
+		-- On compte le temps d'acceleration EN LIBRE d'affilee ; le recul n'apparait qu'apres FREE_REV_DELAY.
+		local freeRev = throttling and not atHedge and freeCam
+		freeRevTime = if freeRev then freeRevTime + dt else 0
+
+		local throttleFov = 0
+		if throttling and atHedge then
+			throttleFov = THROTTLE_FOV
+		elseif freeRev and freeRevTime >= FREE_REV_DELAY then
+			throttleFov = FREE_REV_FOV
+		end
 
 		if sprinting then
 			CameraEffects.SetFovBase(SPRINT_FOV + throttleFov)
