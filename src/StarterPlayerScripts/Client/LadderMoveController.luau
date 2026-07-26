@@ -1,11 +1,12 @@
 --!strict
 -- PROTOTYPE : DEPLACER l'echelle. Dans box_detecte_For_Move (enfant du model d'echelle) :
---   PRISE (E)   : le joueur joue MoveForwardLadderAnimation ; au marqueur TakeLadderEvent, l'echelle (son propre
---                 Humanoid) joue ActionLadderAnimation et se REPLIE, figee a CLOSE_EVENT. Puis pose de portage.
---   PORTAGE     : rail le long de la haie (face a elle, distance constante), l'echelle repliee SUIT le joueur.
---   REPOSE (E)  : on REPREND la meme anim de CLOSE_EVENT jusqu'a OPEN_EVENT (l'echelle se DEPLIE), et on lache tout.
--- Repli / portage / depli sont joues EN LOCAL (prediction client), le porteur les voit parfaitement. Seule la POSITION
--- finale part au serveur a la repose (LadderMoveService), pour que l'echelle POSEE se replique aux autres joueurs.
+--   PRISE (E)   : le joueur joue MoveForwardLadderAnimation ; au marqueur TakeLadderEvent, on demande au SERVEUR de
+--                 souder l'echelle a notre HRP et de jouer son REPLI. Puis pose de portage.
+--   PORTAGE     : rail le long de la haie (on deplace + oriente le JOUEUR) ; l'echelle, SOUDEE, le suit toute seule.
+--   REPOSE (E)  : on demande au serveur de retirer le weld, re-ancrer, et jouer le DEPLI. Puis on lache tout.
+-- Ce module (client) fait le rail JOUEUR, les animations JOUEUR (prise, portage, repose) et DECLENCHE le serveur. Le
+-- serveur (LadderMoveService) fait tout ce qui doit se repliquer sur l'echelle : le WELD (position) et son anim
+-- (repli / depli). Une anim jouee ici sur l'echelle ne se verrait que chez le porteur, d'ou le passage au serveur.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,13 +28,10 @@ local MOVE_ZONE_NAME = "box_detecte_For_Move"
 local ANIM_FOLDER = { "Animations", "Player", "Tools", "Ladder", "ModelAnimate" }
 local PLAYER_ANIM = "MoveForwardLadderAnimation" -- geste de PRISE (une fois) : le joueur attrape l'echelle
 local PLAYER_CARRY_ANIM = "IsReadyForMoveLadderAnimation" -- pose de PORTAGE, en boucle : jouee A LA FIN de la prise
--- UNE seule anim d'echelle, deux temps balises par deux marqueurs : 0 -> CLOSE_EVENT = repli, CLOSE_EVENT ->
--- OPEN_EVENT = depli. On la fige a CLOSE_EVENT a la prise, on la REPREND jusqu'a OPEN_EVENT a la repose.
-local MODEL_ANIM = "ActionLadderAnimation" -- jouee sur l'ECHELLE (repli puis depli, les deux temps dans une seule anim)
-local TAKE_EVENT = "TakeLadderEvent" -- marqueur dans PLAYER_ANIM : instant ou on lance le repli de l'echelle
-local CLOSE_EVENT = "FermerEvenement" -- marqueur MODEL_ANIM : echelle REPLIEE, on fige la pose la
-local OPEN_EVENT = "LadderOpenEndEvent" -- marqueur MODEL_ANIM : echelle DEPLIEE (fin), on stoppe l'anim la
-local CLOSED_ATTR = "LeafiaLadderClosed" -- attribut sur le model : true = repliee. Evite de la replier deux fois.
+-- L'anim de l'echelle (repli / depli, ActionLadderAnimation) est jouee cote SERVEUR (LadderMoveService), pour se
+-- repliquer a tous. Ici on garde juste le marqueur du geste de prise qui declenche le repli, et l'attribut d'etat (lu).
+local TAKE_EVENT = "TakeLadderEvent" -- marqueur dans PLAYER_ANIM : instant ou on demande au serveur le repli
+local CLOSED_ATTR = "LeafiaLadderClosed" -- attribut pose par le SERVEUR : true = repliee (lu a la prise / repose)
 local TAKE_KEY = Enum.KeyCode.E
 -- Pendant le portage, le joueur est sur un RAIL comme en taille : il glisse LE LONG de la haie a distance
 -- constante, face a elle. Il ne peut pas partir dans la map.
@@ -78,9 +76,6 @@ local carriedLadder: Instance? = nil
 local playerTrack: AnimationTrack? = nil -- geste de prise (une fois)
 local carryTrack: AnimationTrack? = nil -- pose de portage (jouee une fois puis figee a la derniere image)
 local placeTrack: AnimationTrack? = nil -- geste de repose = geste de prise joue A L'ENVERS (one-shot)
--- Piste de repli/depli PAR echelle : elle vit tout le cycle (prise -> figee repliee -> repose -> depliee -> stoppee).
--- Table (pas une var simple) pour ne jamais perdre la reference, meme apres une mort en plein portage.
-local foldTracks: { [Instance]: AnimationTrack } = {}
 local takeConn: RBXScriptConnection? = nil
 local endConn: RBXScriptConnection? = nil
 -- Rail de portage : bind RenderStep actif ? + AutoRotate d'origine a rendre a la fin. controlModule = le module de
@@ -106,8 +101,6 @@ local carryRemote: RemoteEvent? = nil
 -- Vrai entre la prise et la repose : on tient l'echelle (soudee). Sert a la relacher (retirer le weld) meme sur une mort
 -- (stopCarry appele hors repose normale), pour ne pas laisser une echelle desancree possedee par un perso disparu.
 local ownsLadder = false
--- Vrai pendant la sequence de repose (depli en cours) : empeche stopCarry de relacher trop tot (l'OPEN_EVENT le fera).
-local placing = false
 local lastEquipCheck = 0 -- throttle du test de proximite haie pour l'auto-equip
 local lastActionAt = 0 -- instant de la derniere prise/repose, pour l'anti-spam de E (PICKUP_DEBOUNCE)
 
@@ -340,26 +333,30 @@ local function carryStep(dt: number)
 	end
 end
 
--- Demande au serveur la PROPRIETE de l'echelle : il la desancre et nous la donne, donc notre portage (PivotTo) et
--- notre repli se repliquent des lors a tous. On retient qu'on la possede, pour la relacher meme sur une mort.
--- PRISE : on demande au serveur de SOUDER l'echelle a notre HRP, avec l'offset c0 (place l'echelle devant nous).
--- Des lors elle suit le perso et se replique a tous, sans que le client ait a la positionner (le weld le fait).
-local function grabCarry(ladder: Instance, c0: CFrame)
-	ownsLadder = true
+-- On DECLENCHE les actions serveur sur l'echelle par phase :
+--   "grab"    : soude l'echelle a notre HRP (offset c0) -> elle suit + se replique.
+--   "close"   : le serveur joue le REPLI (au marqueur de prise). Joue serveur pour se repliquer a tous.
+--   "place"   : retire le weld, re-ancre, et joue le DEPLI.
+--   "release" : retire le weld + re-ancre sans depli (mort / respawn).
+local function fireCarry(ladder: Instance, phase: string, c0: CFrame?)
 	if carryRemote then
-		carryRemote:FireServer(ladder, true, c0)
+		carryRemote:FireServer(ladder, phase, c0)
 	end
 end
 
--- REPOSE : on demande au serveur de retirer le weld et de re-ancrer l'echelle ou elle est. Idempotent (garde ownsLadder).
-local function releaseCarry(ladder: Instance)
+-- PRISE : on soude (grab). ownsLadder retient qu'on tient l'echelle, pour la relacher meme sur une mort.
+local function grabCarry(ladder: Instance, c0: CFrame)
+	ownsLadder = true
+	fireCarry(ladder, "grab", c0)
+end
+
+-- Fin de portage : on relache (phase donnee : "place" avec depli, ou "release" sec). Idempotent via ownsLadder.
+local function endCarry(ladder: Instance, phase: string)
 	if not ownsLadder then
 		return
 	end
 	ownsLadder = false
-	if carryRemote then
-		carryRemote:FireServer(ladder, false)
-	end
+	fireCarry(ladder, phase)
 end
 
 -- Debut du portage : on coupe l'AutoRotate (on gere l'orientation) et on branche le rail en priorite Camera.
@@ -417,15 +414,12 @@ local function stopCarry()
 		carryTrack:Stop(0.1)
 		carryTrack = nil
 	end
-	-- On ne touche PAS aux pistes de repli (foldTracks) ici : chaque echelle garde la sienne, qui tient sa pose
-	-- (repliee ou depliee) jusqu'a la prochaine transition. La repose la reprend pour deplier.
 	if carriedLadder then
 		setLadderBeams(carriedLadder, true) -- l'echelle est reposee (ou on est mort) : la zone redevient visible
-		-- Si on tient encore l'echelle et qu'on n'est PAS en repose normale (mort / respawn en plein portage), on la
-		-- relache ici (retire le weld + re-ancre) : sinon on laisserait une echelle soudee a un perso disparu. En repose
-		-- normale, placing=true : c'est l'OPEN_EVENT (fin du depli) qui relache, pour garder le weld pendant le depli.
-		if ownsLadder and not placing then
-			releaseCarry(carriedLadder)
+		-- Si on tient encore l'echelle (mort / respawn en plein portage), on la relache sec (retire le weld + re-ancre) :
+		-- sinon on laisserait une echelle soudee a un perso disparu. En repose normale, placeLadder a deja relache.
+		if ownsLadder then
+			endCarry(carriedLadder, "release")
 		end
 	end
 	carriedLadder = nil
@@ -439,21 +433,6 @@ local function getPlayerAnimator(): Animator?
 		return nil
 	end
 	return humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator", 2) :: Animator?
-end
-
--- Animator de l'ECHELLE (elle a son propre Humanoid). On le cree s'il manque : un rig anime en Studio a un
--- Humanoid mais pas forcement d'Animator a l'execution.
-local function getModelAnimator(model: Instance): Animator?
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return nil
-	end
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-	return animator
 end
 
 local function resolveAnimation(name: string): Animation?
@@ -506,27 +485,20 @@ local function playPlaceGesture()
 	end)
 end
 
--- REPOSE (2e appui sur E). On DEPLIE l'echelle. L'echelle est SOUDEE au perso pendant le depli (donc elle tient
--- toute seule et le depli se replique), et c'est l'OPEN_EVENT (fin du depli) qui relache : le serveur retire le weld
--- et re-ancre l'echelle sur place. Le weld la tient jusque-la : plus de pin, plus de chute possible.
+-- REPOSE (2e appui sur E). On DECLENCHE le serveur : "place" s'il faut deplier (echelle repliee), sinon "release".
+-- Le serveur retire le weld, re-ancre sur place, et joue le DEPLI (qui se replique a tous). Le client, lui, coupe
+-- juste son rail et joue le geste de repose : il n'a plus a gerer le timing du depli (le serveur le fait).
 local function placeLadder()
 	local ladder = carriedLadder
 	if not ladder then
 		return
 	end
 	playLadderSound(PLACE_SOUND, ladder) -- son de repose
-	local mt = foldTracks[ladder]
-	if mt then
-		placing = true -- empeche stopCarry de relacher : c'est l'OPEN_EVENT qui le fera, a la fin du depli
-		stopCarry() -- debranche le rail + stoppe la pose ; ne relache pas (placing=true), le weld tient l'echelle
-		playPlaceGesture()
-		mt:AdjustSpeed(1) -- 0 depuis CLOSE_EVENT -> OPEN_EVENT : l'echelle se deplie, et l'OPEN_EVENT clot la repose
-	else
-		-- Pas de depli (echelle deja depliee, ou repose tres tot) : rien a attendre, on relache tout de suite.
-		ladder:SetAttribute(CLOSED_ATTR, false)
-		stopCarry() -- placing=false -> stopCarry relache lui-meme (retire le weld + re-ancre sur place)
-		playPlaceGesture()
-	end
+	-- Toujours "place" a la repose normale : c'est le SERVEUR qui sait s'il y a un depli a jouer (il a la piste) ou
+	-- non. Pas de lecture d'attribut cote client, qui pourrait etre en retard sur le repli et rater le depli.
+	endCarry(ladder, "place") -- relache cote serveur : retire le weld, re-ancre, et deplie si l'echelle etait repliee
+	stopCarry() -- debranche le rail + stoppe la pose ; ownsLadder est deja false, donc pas de double release
+	playPlaceGesture()
 end
 
 -- Echelle dont le box_detecte_For_Move contient la position donnee, ou nil.
@@ -564,7 +536,6 @@ local function pickUp(ladder: Instance)
 		placeTrack = nil
 	end
 	carriedLadder = ladder
-	placing = false
 	playLadderSound(PICKUP_SOUND, ladder) -- son de prise
 	setLadderBeams(ladder, false) -- on cache la zone (Beams) tant qu'on porte l'echelle
 
@@ -628,43 +599,15 @@ local function pickUp(ladder: Instance)
 	track.Looped = false
 	track:Play()
 
-	-- 2. SYNCHRO : au marqueur TakeLadderEvent, l'echelle joue son REPLI, SAUF si elle est deja repliee (piste deja
-	-- figee a CLOSE_EVENT). On charge la piste une fois par echelle et on branche ses DEUX marqueurs des maintenant :
-	-- CLOSE_EVENT (fige replie a la prise) et OPEN_EVENT (stoppe deplie a la repose). Ils ne tirent qu'a la phase
-	-- correspondante : le repli va 0 -> CLOSE_EVENT ; le depli ne repart que sur ordre de la repose (voir placeLadder).
+	-- 2. SYNCHRO : au marqueur TakeLadderEvent (la main attrape l'echelle), on DEMANDE au serveur de jouer le REPLI,
+	-- SAUF si l'echelle est deja repliee. C'est le SERVEUR qui joue l'anim (elle se replique alors a tous les joueurs,
+	-- contrairement a une anim jouee ici sur l'echelle). Le depli, lui, sera declenche a la repose (voir placeLadder).
 	if takeConn then
 		takeConn:Disconnect()
 	end
 	if not alreadyClosed then
 		takeConn = track:GetMarkerReachedSignal(TAKE_EVENT):Connect(function()
-			local modelAnimator = getModelAnimator(ladder)
-			if not modelAnimator then
-				warn("[LadderMove] Pas d'Animator sur l'echelle : repli impossible")
-				return
-			end
-			local mt = loadTrack(modelAnimator, MODEL_ANIM)
-			if not mt then
-				return
-			end
-			foldTracks[ladder] = mt
-			mt.Looped = false
-			mt.TimePosition = 0
-			mt:Play()
-			mt:GetMarkerReachedSignal(CLOSE_EVENT):Connect(function()
-				mt:AdjustSpeed(0) -- fige sur la pose repliee (ne se rouvre pas)
-				ladder:SetAttribute(CLOSED_ATTR, true)
-			end)
-			mt:GetMarkerReachedSignal(OPEN_EVENT):Connect(function()
-				mt:Stop(0.1) -- depliee : on lache l'anim, le rig revient a sa pose de repos (ouverte)
-				foldTracks[ladder] = nil
-				ladder:SetAttribute(CLOSED_ATTR, false)
-				-- Fin du depli = fin de la repose : on demande au serveur de retirer le weld et de re-ancrer l'echelle
-				-- sur place. C'est ICI qu'on relache, pas avant, pour que le depli se replique (echelle encore soudee).
-				if placing then
-					placing = false
-					releaseCarry(ladder)
-				end
-			end)
+			fireCarry(ladder, "close")
 		end)
 	end
 

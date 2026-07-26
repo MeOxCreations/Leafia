@@ -2168,6 +2168,49 @@ qu'elles retaillent une deuxieme haie sans qu'on leur demande ? Tant que la repo
 construit rien par-dessus (ni jauge d'XP, ni combos, ni escabeau, ni tycoon). C'est ce qui a manque aux deux
 projets d'avant : l'emballage a recouvert un coeur jamais valide.
 
+## 0.0.93 — Le repli / depli de l'echelle se voit aussi en co-op
+
+Suite du 0.0.92. La POSITION de l'echelle se repliquait (weld), mais son REPLI / DEPLI restait invisible aux
+autres : joueur1 prend l'echelle, joueur2 ne la voit pas se replier.
+
+**Cause.** L'anim `ActionLadderAnimation` etait jouee par le CLIENT sur l'Animator de l'echelle. Une anim jouee
+par un client sur un objet qui n'est pas SON perso ne se replique pas aux autres.
+
+**Fix.** On la joue cote SERVEUR (comme un NPC) : le client ne fait plus que DECLENCHER par phase via le remote
+`SetLadderCarry` :
+
+- `"grab"` (prise) : soude l'echelle au HRP + CHARGE la piste de repli (sans la jouer).
+- `"close"` (marqueur `TakeLadderEvent`) : le serveur joue le repli, fige a `FermerEvenement`.
+- `"place"` (repose) : retire le weld, re-ancre sur place, joue le depli (jusqu'a `LadderOpenEndEvent`).
+- `"release"` (mort / depart) : retire le weld sans depli.
+
+C'est possible SANS conflit maintenant parce que le weld gere deja la position : le repli serveur ne se bat
+plus contre une prediction client (c'est ce qui echouait avant le weld, cf 0.0.92).
+
+Cote client : tout le repli local (`foldTracks`, `getModelAnimator`, le pin de repose) est SUPPRIME. Le client
+ne fait plus que le rail JOUEUR, les anims JOUEUR, et le declenchement serveur.
+
+### Le bug de la PREMIERE prise, et sa parade
+
+A la toute premiere prise d'une session, le repli jouait EN ENTIER au lieu de se figer a `FermerEvenement`.
+
+**Cause.** L'asset de l'anim n'est pas encore charge cote serveur a la premiere lecture : ses MARQUEURS ne
+tirent pas pour cette lecture-la. Les fois d'apres, l'asset est en cache, donc ca marche. Symptome classique
+et trompeur : "ca marche sauf la premiere fois".
+
+**Deux parades.**
+
+1. `ContentProvider:PreloadAsync` de l'anim au demarrage du serveur (dans un thread a part, PreloadAsync yield).
+2. La piste est chargee des la PRISE (`"grab"`), pas au moment du repli : elle a ~0.23 s pour etre prete avant
+   le `"close"`.
+
+### Piege a retenir
+
+**Un marqueur d'animation ne tire pas sur une piste dont l'asset n'est pas encore charge.** Precharger cote
+serveur (pas seulement client) ce dont on lit les marqueurs, ou charger la piste EN AVANCE du moment ou on
+compte sur elle. Meme famille que 0.0.41 (les sons manquaient au premier jeu faute d'etre dans la collecte de
+prechargement).
+
 ## 0.0.92 — L'echelle se DEPLACE, et les autres la voient (co-op)
 
 Le joueur prend l'escabeau (E dans `box_detecte_For_Move`), le porte le long de la haie, et le repose ou il
