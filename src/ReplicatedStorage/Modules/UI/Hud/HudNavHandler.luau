@@ -40,7 +40,8 @@ local HudNavHandler = {}
 HudNavHandler.onSelect = function(_id: string) end :: (string) -> ()
 
 -- ===== STYLE (tokens) =====
-local GREEN = Color3.fromRGB(96, 165, 78) -- accent
+-- selene: allow(unused_variable)
+local GREEN = Color3.fromRGB(96, 165, 78) -- accent : token de palette garde pour les sections a venir
 local GREEN_SOFT = Color3.fromRGB(204, 232, 201) -- fond de l'onglet SELECTIONNE (box arrondie qui s'affiche au clic)
 local TEXT = Color3.fromRGB(96, 104, 86) -- libelle au repos
 local TEXT_SEL = Color3.fromRGB(60, 120, 55) -- libelle selectionne
@@ -105,7 +106,7 @@ local function makeCard(): (Frame, Frame)
 	local wrapper = Instance.new("Frame")
 	wrapper.BackgroundTransparency = 1
 	wrapper.AutomaticSize = Enum.AutomaticSize.X
-	wrapper.Size = UDim2.new(0, 0, 0, PILL_H)
+	wrapper.Size = UDim2.fromOffset(0, PILL_H)
 
 	local shadow = Instance.new("Frame")
 	shadow.Name = "Shadow"
@@ -122,7 +123,7 @@ local function makeCard(): (Frame, Frame)
 	local card = Instance.new("Frame")
 	card.Name = "Card"
 	card.AutomaticSize = Enum.AutomaticSize.X
-	card.Size = UDim2.new(0, 0, 1, 0)
+	card.Size = UDim2.fromScale(0, 1)
 	card.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
 	card.BorderSizePixel = 0
 	card.ZIndex = 2
@@ -199,7 +200,7 @@ local function makeTab(parent: Instance, tab: TabDef)
 	label.Name = "Label"
 	label.LayoutOrder = 2
 	label.AutomaticSize = Enum.AutomaticSize.X
-	label.Size = UDim2.new(0, 0, 1, 0)
+	label.Size = UDim2.fromScale(0, 1)
 	label.BackgroundTransparency = 1
 	label.Font = Enum.Font.GothamBold
 	label.TextSize = TEXT_SIZE

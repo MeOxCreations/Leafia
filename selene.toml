@@ -1,4 +1,7 @@
 std = "roblox"
 
+# ProfileStore est une lib tierce vendorisee : on ne la maintient pas, donc on ne la lint pas.
+exclude = ["src/ServerStorage/ProfileStore.luau"]
+
 [lints]
 shadowing = "allow"

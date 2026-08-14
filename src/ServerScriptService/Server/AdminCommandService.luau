@@ -2,7 +2,6 @@
 -- Console admin (AUTORITE serveur). Recoit une ligne de commande (string) via RemoteFunction, verifie que l'appelant
 -- est admin, parse, execute, et RENVOIE un texte de resultat affiche dans la console. Le client ne decide RIEN : il
 -- envoie du texte, le serveur seul tranche (acces + effet). Meme gate que le reste (Studio ou UserId liste).
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
