@@ -1205,7 +1205,8 @@ local function touchOnHedge(character: Model, screen: Vector2): boolean
 end
 
 -- Rend (hauteur visee, est-ce le DESSUS). nil = le joueur ne vise plus la haie.
-local function updateCursor(character: Model, normal: Vector3): (number?, boolean)
+-- `workHedge` est la haie D'OU VIENT `normal`. Les deux vont ENSEMBLE : voir le repli plus bas.
+local function updateCursor(character: Model, normal: Vector3, workHedge: BasePart?): (number?, boolean)
 	local camera = workspace.CurrentCamera
 	if not camera then
 		hideCursor()
@@ -1272,7 +1273,16 @@ local function updateCursor(character: Model, normal: Vector3): (number?, boolea
 		end
 	end
 
-	local hedge = lastHedge
+	-- REPLI : le curseur ne touche aucune haie atteignable, on projette sur un PLAN. Ce plan doit etre celui de la
+	-- haie D'OU VIENT `normal`, c'est-a-dire la haie de TRAVAIL, jamais la derniere haie survolee.
+	--
+	-- Les deux different des qu'il y a plus d'une haie dans le jardin : `lastHedge` retient la derniere que le
+	-- curseur a touchee, `workHedge` est celle que le serveur nous a accrochee. Prendre les dimensions de l'une
+	-- avec la normale de l'autre construit un plan qui n'existe nulle part -- il passe a cote de la haie, souvent
+	-- de plusieurs studs, et la bille de visee va se poser dans le vide. Le joueur voit alors un curseur qui ne
+	-- suit plus sa souris, alors que la souris est lue correctement : c'est la CIBLE qui est fausse.
+	-- Sans haie de travail (le serveur n'a pas encore accroche), `lastHedge` reste le meilleur repli disponible.
+	local hedge = workHedge or lastHedge
 	-- Parent verifie aussi : une haie detruite ou sortie du streaming laisserait une reference morte.
 	if not (hedge and hedge.Parent) then
 		hideCursor()
@@ -1761,21 +1771,33 @@ local function update(dt: number)
 		return
 	end
 
-	-- GLISSEMENT. La touche AVANT glisse dans le meme sens que la touche GAUCHE : devant la haie il n'y a nulle
-	-- part ou avancer, autant que la touche serve plutot que de ne rien faire.
+	-- GLISSEMENT. SEUL le pas de cote deplace le joueur.
 	--
-	-- math.min(Z, 0) ne garde que l'avant : la part arriere vient d'etre traitee comme une sortie, elle ne doit
-	-- surtout pas se transformer en glissement, sinon S ne ferait plus sortir.
-	local lateral = math.clamp(moveVector.X * cameraSign + math.min(moveVector.Z, 0), -1, 1)
+	-- L'axe avant / arriere ne glisse plus. Avant, l'avant etait recycle en glissement vers la GAUCHE, au motif
+	-- que la touche ne servait a rien devant une haie. Ca TROMPE le joueur : il pousse en avant et son
+	-- personnage part sur le cote sans qu'il l'ait demande, donc il ne peut plus relier ce qu'il appuie a ce
+	-- qu'il voit. Ne rien faire est plus lisible, et c'est la verite du chantier : devant la haie, on ne va pas
+	-- plus loin.
+	-- L'arriere, lui, est deja parti plus haut en sortie de chantier : il ne reste rien a en faire ici.
+	local lateral = math.clamp(moveVector.X * cameraSign, -1, 1)
 
 	-- Les jambes suivent le sens du glissement. On lit `lateral` et non l'input brut : c'est le deplacement
 	-- REEL apres contrainte, donc avant + droite qui s'annulent laissent bien le joueur immobile ET jambes au
 	-- repos, au lieu de le figer sur place en continuant a pietiner.
 	setSlide(if math.abs(lateral) < HedgeConfigs.SLIDE_MIN_INPUT then 0 else math.sign(lateral))
 
+	-- Moteur accelere. Sert ICI (plancher du pas) et plus bas (recul de la camera, etat du repere) : calcule une
+	-- fois, reutilise.
+	local throttling = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
+
 	-- DEPLACEMENT AU PAS. Le corps avance quand le PIED POUSSE, puis il glisse sur son elan jusqu'au pas
 	-- suivant. La poussee vient du marqueur de l'animation, cette ligne ne fait que la laisser retomber.
-	stepStrength = math.max(HedgeConfigs.STEP_GLIDE, stepStrength - HedgeConfigs.STEP_DECAY * dt)
+	--
+	-- PLANCHER PROPRE A L'ALLURE. Ce plancher MULTIPLIE la vitesse : partage entre les deux allures, il ne
+	-- permettait pas d'accelerer le replacement sans accelerer la coupe du meme coup. La coupe garde donc le sien,
+	-- reste a la valeur historique, et retrouve exactement le rythme qu'elle avait.
+	local glide = if throttling then HedgeConfigs.STEP_GLIDE_CUT else HedgeConfigs.STEP_GLIDE
+	stepStrength = math.max(glide, stepStrength - HedgeConfigs.STEP_DECAY * dt)
 
 	-- Repli : sans marqueur depuis trop longtemps, on repasse en continu plutot que de bloquer le joueur.
 	local stepping = os.clock() - lastStepAt < HedgeConfigs.STEP_TIMEOUT
@@ -1856,8 +1878,6 @@ local function update(dt: number)
 		end
 	end
 
-	-- Moteur accelere : sert au recul de la cam iso ET a l'etat du repere plus bas. Calcule UNE fois ici, reutilise.
-	local throttling = character:GetAttribute(HedgeConfigs.THROTTLE_ATTRIBUTE) == true
 	-- PREMIERE PERSONNE (CAMERA_FIRST_PERSON) : oeil A LA TETE, regard vers la haie. Sinon vue iso 3/4 (orbite).
 	local target = camera.CFrame
 	if HedgeConfigs.CAMERA_FIRST_PERSON then
@@ -1924,7 +1944,9 @@ local function update(dt: number)
 
 	-- Apres la camera : la bille se calcule depuis la camera de CETTE frame, sinon elle viserait a partir de
 	-- l'image precedente et flotterait en arriere pendant les pivots.
-	local aim, onTop = updateCursor(character, normal)
+	-- workHedge en 3e argument : la bille doit se projeter sur la haie qui a donne `normal`, pas sur la derniere
+	-- survolee par le curseur (les deux different des qu'il y a plusieurs haies).
+	local aim, onTop = updateCursor(character, normal, workHedge)
 
 	-- HAUTEUR DE COUPE. La pose ne sort que moteur EN MARCHE : lever le taille-haie vers le haut de la haie
 	-- alors qu'il est eteint n'a aucun sens, le joueur ne taille rien.
@@ -1968,7 +1990,7 @@ local function update(dt: number)
 	--   hors haie -> la souris a quitte la haie (aim nil), la coupe ne mordra rien : orange.
 	--   coupe     -> gachette pressee, il taille : discret, on ne masque pas le travail.
 	--   guide     -> il vise mais ne taille pas encore : bien visible, "tu couperas ici".
-	-- `throttling` est deja calcule plus haut dans update (partie camera) : on le reutilise.
+	-- `throttling` est deja calcule plus haut dans update (avant le deplacement au pas) : on le reutilise.
 	local cutState = if aim == nil then "off" elseif throttling then "cutting" else "guide"
 
 	-- COULEUR DU REPERE : blanc s'il reste a couper, orange si c'est nu. Approximation cote client : hors coupe on tient

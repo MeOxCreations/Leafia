@@ -379,6 +379,47 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   la DETECTION qu'il veut etendre, pas la hauteur d'AFFICHAGE (offset Y) -- deux reglages sans rapport. J'avais monte
   l'offset (mauvais), il fallait etendre le rayon de detection.
 
+- **Quand une vitesse est modulee par un MULTIPLICATEUR CYCLIQUE, le chiffre de la config ne veut plus rien dire.**
+  Le deplacement au pas multiplie la vitesse par STEP_GLIDE entre deux poussees : a 0.25, WORK_SPEED = 13 donnait
+  environ 5 studs/s ressentis, moitie moins que la marche normale, alors que la config annonce le contraire. Symptome
+  trompeur : "c'est lent" envoie chercher dans le reglage de VITESSE, qui est innocent et parait meme genereux. Regle :
+  avant de monter une vitesse, chercher qui la MULTIPLIE en aval, et calculer la moyenne sur un cycle -- pas la valeur
+  de pointe. Meme famille que le plancher en studs qui inversait l'effet qu'il devait borner.
+  SUITE (le piege du tour d'apres) : ce multiplicateur etait PARTAGE par les deux allures (replacement et coupe), donc
+  le monter a accelere la coupe aussi, ce qu'on ne voulait pas. J'ai tente de rattraper en baissant CUT_SPEED d'un
+  facteur CALCULE -- faux, parce que ce facteur depend de la cadence des pas, qui vit dans l'ANIMATION et pas dans la
+  config : impossible a deduire, seulement a mesurer a l'oeil, donc devine et rate. La vraie reponse n'est pas de
+  compenser, c'est de DECOUPLER : un knob par etat (STEP_GLIDE / STEP_GLIDE_CUT), chacun reglable sans toucher a
+  l'autre. Regle generale : quand un reglage partage force a compenser ailleurs, le compensateur sera toujours une
+  estimation ; dedoubler le reglage supprime le probleme au lieu de le rattraper.
+
+- **Un mode a moitie branche donne un input qui tourne DANS LE VIDE : le code s'execute, l'ecran ne bouge pas.**
+  `CAMERA_FIRST_PERSON = true` place l'oeil sans jamais lire `yaw` ni `cameraZoom` -- pourtant le clic droit posait bien
+  `orbiting`, le yaw avancait, le ressort de rubber-band tournait. Tout marchait SAUF le consommateur final. Symptome
+  trompeur : ca ressemble a un input casse (on va debuggeur InputBegan, la sensibilite, le gameProcessed) alors que
+  l'input arrive parfaitement. Regle : quand un input "ne fait rien", verifier D'ABORD que quelqu'un LIT la variable
+  qu'il ecrit -- en remontant depuis l'affichage, pas depuis la touche. Et un flag experimental qui court-circuite un
+  chemin complet doit lister ce qu'il PERD, sinon la perte se decouvre a l'usage des mois plus tard.
+
+- **Basculer un flag ne suffit pas : les REGLAGES cales pendant qu'il etait actif restent en place.** En repassant la
+  camera de taille de 1re personne a iso, `UPDOWN_FOLLOW_SPEED` restait a 10 -- valeur montee de 6.5 a 10 DANS le
+  commit de la 1re personne, parce qu'un oeil pose a la tete rend une visee stable qui supporte un ressort sec. En
+  iso le rayon arrive de biais, le signal est plus nerveux, et le ressort raide l'amplifie : ca se ressent comme un
+  "ciblage bugue" alors que rien n'est casse. Se trouve en une commande, `git log -S "<le flag>" -- <fichier>` puis
+  la liste des valeurs modifiees par ce commit -- ne pas chercher a l'oeil dans une config de 1100 lignes. Regle :
+  revenir a un ancien mode = revenir aussi a ses reglages. Corollaire : un mode qui MASQUE un effet (ici la 1re
+  personne cachait le perso, donc le fantome WORK_FADE) le fait passer pour un bug NEUF quand on quitte ce mode.
+
+- **Deux references vers "la meme chose" finissent par diverger, et en CROISER deux donne un resultat qui n'existe
+  nulle part.** La haie visee existe en deux exemplaires : `lastHedge` (celle que le CURSEUR a survolee en dernier) et
+  `workHedge` (celle que le SERVEUR a accrochee). Identiques quand il n'y a qu'une haie -- donc le bug dort pendant
+  tout le prototypage -- differentes des qu'il y en a deux. La projection de la bille prenait les DIMENSIONS de l'une
+  avec la NORMALE de l'autre : le plan obtenu ne correspond a aucune haie reelle, et la bille se pose a cote.
+  Symptome trompeur : "le curseur ne suit pas la souris" fait aller verifier la lecture de la souris
+  (GetMouseLocation, inset, ViewportPointToRay) qui est parfaitement juste -- c'est la CIBLE qui est fausse, pas la
+  lecture. Regle : quand deux variables designent le meme objet du monde, tout calcul doit les prendre TOUTES LES
+  DEUX de la meme source ; faire passer la source en argument plutot que la lire en upvalue rend le couplage visible.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

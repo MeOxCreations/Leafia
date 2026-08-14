@@ -89,6 +89,12 @@ local HedgeConfigs = {
 	-- C'est ce qui donne enfin un COUT a la gachette. Sans ecart, la presser en permanence n'avait aucun
 	-- inconvenient, donc personne ne la relachait et elle ne voulait plus rien dire.
 	-- L'ecart doit rester GRAND : c'est lui qu'on sent, pas la valeur absolue.
+	--
+	-- INCHANGE, ET C'EST VOLONTAIRE. La vitesse de coupe ne se regle PAS ici quand le pas chasse change : voir
+	-- STEP_GLIDE_CUT. Tenter de compenser un plancher de glisse par un facteur sur cette valeur demande de
+	-- connaitre la cadence reelle des pas (qui vit dans l'animation, pas dans la config) : ca se devine mal et ca
+	-- tombe a cote. On garde les deux vitesses telles qu'elles sont ressenties, et on donne a chaque allure son
+	-- propre plancher.
 	CUT_SPEED = 5,
 
 	-- ESPACE VITAL. Marge, en studs, ajoutee autour de chaque haie sur les cotes. Une boite invisible de cette
@@ -230,7 +236,24 @@ local HedgeConfigs = {
 	-- ATTENTION : CameraController.MOVING_EXIT (0.15) doit rester SOUS cette valeur. Le champ de vision se
 	-- decide sur l'intention de deplacement lissee, qui ne descend jamais sous STEP_GLIDE. Baisser STEP_GLIDE
 	-- sous 0.15 ferait retomber le champ de vision entre deux pas, et il tremblerait au rythme de la marche.
-	STEP_GLIDE = 0.25,
+	--
+	-- C'EST LUI QUI DECIDE DE LA VITESSE REELLE, pas WORK_SPEED. Le joueur passe le plus clair de son temps a ce
+	-- plancher (la poussee ne dure que 0.19 s), donc sa vitesse moyenne vaut a peu pres WORK_SPEED * ce nombre,
+	-- releve par la part de poussee. A 0.25 le replacement se trainait a environ 5 studs/s, soit moitie moins que
+	-- la marche normale, alors que WORK_SPEED annonce 13. Le monter vers 1 rend le deplacement continu et efface
+	-- le pas chasse ; le baisser rend les a-coups plus francs mais ralentit tout.
+	-- NE VAUT QUE POUR LE REPLACEMENT, lame a l'arret. En taillant, c'est STEP_GLIDE_CUT qui s'applique.
+	STEP_GLIDE = 0.5,
+	-- Le meme plancher, mais GACHETTE PRESSEE. Reste a 0.25, la valeur historique : la coupe garde donc exactement
+	-- la vitesse qu'elle avait avant qu'on accelere le replacement.
+	--
+	-- DEUX PLANCHERS ET NON UN SEUL parce que ce plancher multiplie la vitesse : un reglage unique fait bouger les
+	-- deux allures ensemble, et on ne peut plus accelerer le replacement sans accelerer la coupe avec. Corriger ca
+	-- en baissant CUT_SPEED demanderait de connaitre la cadence des pas (elle vit dans l'animation) : essaye, et
+	-- tombe a cote. Ici chaque allure a son plancher, donc chacune se regle sans toucher a l'autre.
+	-- A GARDER AU-DESSUS de CameraController.MOVING_EXIT (0.15), comme STEP_GLIDE : c'est le plus BAS des deux qui
+	-- decide, sinon le champ de vision tremble au rythme des pas pendant la coupe.
+	STEP_GLIDE_CUT = 0.25,
 	-- Retombee de la poussee vers le glissement, par seconde. Plus haut = poussee plus seche.
 	-- A REGLER en premier si le rendu ne va pas : c'est cette valeur qui decide combien de temps dure la
 	-- poussee. Trop haut, le joueur avance par a-coups ; trop bas, on retrouve le deplacement continu.
@@ -291,7 +314,13 @@ local HedgeConfigs = {
 	-- Mesure du temps pour parcourir toute la hauteur d'une haie : 12 -> 0.33 s, 9 -> 0.45 s, 6.5 -> 0.62 s,
 	-- 5 -> 0.78 s, 4 -> 0.98 s.
 	-- En dessous de 4 l'outil ne suit plus la souris, il la subit : viser devient un combat.
-	UPDOWN_FOLLOW_SPEED = 10,
+	--
+	-- CETTE VALEUR DEPEND DE LA CAMERA. Elle etait montee a 10 pour la vue 1re personne, ou l'oeil est a la tete :
+	-- le curseur tombe presque a la verticale sur la haie, la hauteur visee est donc stable et le ressort peut
+	-- etre sec. En vue iso le rayon arrive DE BIAIS, le meme pixel de souris couvre bien plus de hauteur de haie
+	-- et le signal est plus nerveux -- un ressort raide amplifie ce bruit au lieu de l'absorber, et la visee parait
+	-- sauter toute seule. Retour a 6.5, la valeur d'avant la 1re personne. A remonter vers 10 si on y revient.
+	UPDOWN_FOLLOW_SPEED = 6.5,
 
 	-- Debordement accepte au-dela des bords de la haie, en studs. La visee reste valide dans cette marge.
 	--
@@ -382,10 +411,16 @@ local HedgeConfigs = {
 	CAMERA_DISTANCE_LERP = 8,
 
 	-- PREMIERE PERSONNE (experimental). Vrai -> la camera de travail passe A LA TETE du joueur, regard vers la haie, au
-	-- lieu de la vue iso 3/4. La visee (souris / doigt) suit toute seule (le rayon part de cette camera). L'orbite est
-	-- DESACTIVEE dans ce mode ; on peut voir ses bras / son corps (une cam scriptee ne cache pas le perso comme la 1re
-	-- personne native de Roblox -- a affiner si ca gene). Repasser a false pour retrouver la vue iso.
-	CAMERA_FIRST_PERSON = true,
+	-- lieu de la vue iso 3/4. La visee (souris / doigt) suit toute seule (le rayon part de cette camera). On peut voir
+	-- ses bras / son corps (une cam scriptee ne cache pas le perso comme la 1re personne native de Roblox), d'ou le
+	-- masquage local a l'engage.
+	--
+	-- REPASSE A FALSE : dans ce mode la vue est FIGEE. La branche 1re personne de HedgeController ne lit ni le pivot
+	-- (yaw) ni le zoom, donc le clic droit, le glissement du doigt et la molette ne font RIEN a l'ecran, alors que le
+	-- code d'orbite tourne quand meme. On taille sous un angle impose, et on ne peut pas aller voir ce qu'on coupe.
+	-- La vue iso, elle, a deja l'orbite, le zoom, le rubber-band de butee et le rapproche a l'acceleration.
+	-- Le remettre a true demande d'abord de brancher yaw et cameraZoom sur le placement de l'oeil.
+	CAMERA_FIRST_PERSON = false,
 	-- Vue RAPPROCHEE DE COTE (near-first-person). Droit dans la haie = plat et illisible ; on DECALE l'oeil sur le cote
 	-- pour voir la surface taillee DE BIAIS. FP_SIDE est le knob principal (l'angle "de cote").
 	FP_SIDE = -4, -- decalage lateral de l'oeil (studs). Signe = cote (negatif = droite du joueur). PLUS GRAND = plus de biais

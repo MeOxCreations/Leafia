@@ -2185,6 +2185,81 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.201 — Un plancher de glisse PAR ALLURE, et la bille visait la mauvaise haie
+
+**La compensation de 0.0.200 etait fausse, et elle ne pouvait pas etre juste.** Baisser CUT_SPEED (5 -> 3.5) pour
+rattraper la hausse de STEP_GLIDE demandait de connaitre la cadence reelle des pas, qui vit dans l'ANIMATION et non
+dans la config : le facteur a ete estime, donc rate, et la coupe restait trop rapide. Correction sans aucune
+estimation : CUT_SPEED revient a 5, et le plancher du pas devient PROPRE A CHAQUE ALLURE. Nouveau STEP_GLIDE_CUT
+(0.25, la valeur historique) s'applique gachette pressee, STEP_GLIDE (0.5) au replacement. La coupe retrouve donc
+exactement son rythme d'avant, au reglage pres, et le replacement garde son gain.
+
+Le fond du probleme : ce plancher MULTIPLIE la vitesse. Partage entre deux allures, il rend impossible d'en
+accelerer une sans accelerer l'autre. Un knob par allure supprime le couplage au lieu de le compenser.
+
+**La bille de visee se projetait sur la mauvaise haie.** `updateCursor` construisait son plan de repli a partir de
+`lastHedge` (la derniere haie que le CURSEUR a survolee) alors que la normale, elle, vient de `workHedge` (celle que
+le SERVEUR a accrochee). Des qu'il y a plus d'une haie dans le jardin les deux different, et croiser les dimensions
+de l'une avec la normale de l'autre donne un plan qui n'existe nulle part : la bille se pose a cote, parfois de
+plusieurs studs. Le joueur voit un curseur qui ne suit plus sa souris alors que la souris est lue correctement --
+c'est la CIBLE qui etait fausse, pas la lecture. `updateCursor` recoit maintenant `workHedge` et projette dessus.
+
+### Note — le cercle blanc n'est pas le curseur
+
+Deux reperes distincts a l'ecran, faciles a confondre : la BILLE rose se pose la ou vise la souris, le CERCLE blanc
+est le guide de coupe et suit la LAME. Le cercle ne sera donc jamais sous le curseur : il montre ce que l'outil va
+couper, pas ce qu'on designe.
+
+## 0.0.200 — Retour du chantier : la coupe retrouve sa lenteur, la visee son ressort
+
+Suites directes de 0.0.199, deux reglages qui trainaient derriere les changements de la veille.
+
+**CUT_SPEED 5 -> 3.5.** Monter STEP_GLIDE avait accelere les DEUX allures, alors qu'on ne voulait accelerer que le
+replacement : tailler doit rester un geste de precision, c'est tout l'interet d'avoir un cout a la gachette. Le
+multiplicateur moyen du pas passant d'environ 0.39 a 0.56 (rapport 0.69), 5 * 0.69 = 3.5 rend a la coupe sa vitesse
+RESSENTIE d'avant. Effet de bord souhaitable : l'ecart replacement / coupe passe de 2.6x a 3.7x, donc relacher la
+gachette se sent encore mieux qu'avant.
+
+**UPDOWN_FOLLOW_SPEED 10 -> 6.5.** Reglage cale sur une camera qui n'existe plus. Le commit de la 1re personne
+l'avait monte de 6.5 a 10 : l'oeil etant a la tete, le curseur tombe presque a la verticale sur la haie, la hauteur
+visee est stable et le ressort peut etre sec. En vue iso le rayon arrive DE BIAIS, le meme pixel de souris couvre
+bien plus de hauteur de haie, et un ressort raide AMPLIFIE ce bruit au lieu de l'absorber -- la visee parait sauter
+toute seule, ce qui se lit comme un bug de ciblage alors que rien n'est casse. Retrouve par git : c'est le seul
+reglage de visee touche par ce commit.
+
+### Note — le personnage transparent n'est pas une regression
+
+Question du joueur au meme moment. C'est WORK_FADE (WORK_FADE_BODY 0.85), le personnage fantome au travail, en
+place depuis 0.1.0 : le corps s'efface pour laisser voir la haie qu'on taille, les mains restent nettes parce
+qu'elles tiennent l'outil. Il ne se voyait plus parce que la 1re personne CACHAIT le personnage entierement en
+local ; en revenant a l'iso, le fantome redevient visible. Rien a corriger, mais a retenir : un mode qui masque un
+effet le fait passer pour neuf quand on quitte ce mode.
+
+## 0.0.199 — Chantier : deplacement plus rapide, l'avant ne glisse plus, retour a la camera iso
+
+Trois retours du joueur sur le travail au pied d'une haie, trois causes distinctes.
+
+**Le replacement se trainait.** Le coupable n'etait pas WORK_SPEED (13, deja au-dessus de la marche normale) mais
+le deplacement au pas : entre deux poussees, la vitesse est multipliee par STEP_GLIDE. A 0.25, avec une poussee qui
+ne dure que 0.19 s, la vitesse moyenne reelle tombait autour de 5 studs/s, soit MOITIE MOINS que la marche normale
+pendant que la config annoncait 13. STEP_GLIDE passe a 0.5. Lecon a retenir : quand une vitesse est modulee par un
+multiplicateur cyclique, le chiffre affiche dans la config n'est pas celui que le joueur ressent.
+
+**Pousser en AVANT deplacait le personnage sur le cote.** L'axe avant etait recycle en glissement vers la GAUCHE
+(`math.min(moveVector.Z, 0)` ajoute au lateral), au motif que la touche ne servait a rien devant une haie. Ca
+trompait le joueur : il pousse en avant, son perso part a gauche, et il ne peut plus relier ce qu'il appuie a ce
+qu'il voit. Asymetrie aggravante : reculer, lui, ne partait PAS a droite (l'arriere est capte plus haut comme
+sortie de chantier). Desormais seul le pas de cote deplace. L'avant ne fait rien, et c'est la verite du chantier.
+
+**La camera etait figee.** CAMERA_FIRST_PERSON repasse a false. Dans ce mode la branche 1re personne de
+HedgeController ne lit NI le pivot (yaw) NI le zoom : le clic droit, le glissement du doigt et la molette ne
+faisaient rien a l'ecran, alors que tout le code d'orbite tournait quand meme dessous (yaw bougeait, le ressort de
+rubber-band aussi). On taillait sous un angle impose sans pouvoir aller voir ce qu'on coupe. La vue iso 3/4 a deja
+l'orbite, le zoom, le rubber-band de butee et le rapproche a l'acceleration. Le remettre a true demandera d'abord
+de brancher yaw et cameraZoom sur le placement de l'oeil.
+
+Fichiers : `HedgeConfigs.luau` (STEP_GLIDE, CAMERA_FIRST_PERSON), `HedgeController.luau` (calcul de `lateral`).
+
 ## 0.0.198 — Nav bar : forme des pilules, feuille verte, et OUVERTURE PAR GESTE (clic-glisse haut)
 
 Retouches nav bar. Les deux pilules (LeftGroup / RightGroup) prennent des coins ASYMETRIQUES par cote (haut exterieur
