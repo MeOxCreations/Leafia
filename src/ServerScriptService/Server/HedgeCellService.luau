@@ -210,6 +210,12 @@ local function buildFace(
 			if onEdge then
 				cell:SetAttribute(HedgeConfigs.EDGE_ATTRIBUTE, true)
 			end
+			-- Rangee du SOL d'un COTE : pas une bordure (on ne detruit pas ses feuilles), mais dure a atteindre
+			-- car la pose la plus basse des bras arrive au-dessus. On la marque pour lui donner une portee bonus a
+			-- la coupe, sinon une frange de feuillus reste au ras du sol.
+			if not isTop and row == 0 then
+				cell:SetAttribute(HedgeConfigs.BASE_ATTRIBUTE, true)
+			end
 			-- Construit dans le repere de la HAIE puis ramene en monde : une haie tournee se traite donc comme
 			-- une haie droite, sans un seul cas particulier.
 			local placement = CFrame.fromMatrix(offset, right, up, normal)
@@ -369,6 +375,32 @@ end
 -- carreaux bougent. C'est ce service-ci qui les cree et les detruit, personne d'autre ne touche a la table.
 function HedgeCellService.getCount(hedge: BasePart): number
 	return counts[hedge] or 0
+end
+
+-- AUTO-COMPLETION : met AU RAS (growth 0) tous les carreaux encore a tailler d'une haie, et rend leur nombre. Appele
+-- par la coupe quand la haie franchit le seuil d'auto-completion. C'est ce service qui possede les carreaux, donc c'est
+-- lui qui les termine (feuille des ARETES retiree, comme une arete arrivee au ras en coupe normale). Les carreaux ainsi
+-- finis comptent pour l'XP / les debris cote appelant.
+function HedgeCellService.finishRemaining(hedge: BasePart): number
+	local folder = cells[hedge]
+	if not folder then
+		return 0
+	end
+	local finished = 0
+	for _, cell in ipairs(folder:GetChildren()) do
+		local growth = cell:GetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE)
+		if typeof(growth) == "number" and growth > 0 then
+			cell:SetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE, 0)
+			finished += 1
+			if HedgeConfigs.CUT_EDGE_CLEAR and cell:GetAttribute(HedgeConfigs.EDGE_ATTRIBUTE) then
+				local leaf = cell:FindFirstChild("Leaf")
+				if leaf then
+					leaf:Destroy()
+				end
+			end
+		end
+	end
+	return finished
 end
 
 -- Remplit `out` avec les carreaux susceptibles d'etre a `radius` de `position`, et rend leur nombre.

@@ -106,6 +106,9 @@ local function onCharacterAdded(player: Player, character: Model)
 	-- serait qu'une suggestion. Ici elle fait autorite.
 	humanoid.WalkSpeed = CharacterConfigs.WALK_SPEED
 	humanoid.JumpHeight = CharacterConfigs.JUMP_HEIGHT
+	-- Coupe l'auto-jump (le perso saute tout seul en butant sur le bas d'une haie / un obstacle). EN CODE ici (et pas via
+	-- un reglage StarterPlayer par-place) pour que ce soit vrai dans TOUS les lieux : le tuto n'a pas le reglage de Leafia.
+	humanoid.AutoJumpEnabled = false
 
 	setupLanding(player, character, humanoid)
 end

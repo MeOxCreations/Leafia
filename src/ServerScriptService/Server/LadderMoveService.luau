@@ -11,6 +11,7 @@
 -- On memorise l'etat d'origine (Anchored, CanCollide par part ; PlatformStand du Humanoid) pour le restaurer a la repose.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 
@@ -22,6 +23,14 @@ local MODEL_ANIM = "ActionLadderAnimation"
 local CLOSE_EVENT = "FermerEvenement" -- echelle REPLIEE : on fige la
 local OPEN_EVENT = "LadderOpenEndEvent" -- echelle DEPLIEE (fin) : on stoppe
 local CLOSED_ATTR = "LeafiaLadderClosed" -- true = repliee (le client le lit)
+-- ROTATION de l'echelle portee (touche R). On tween le C0 du weld -> l'echelle tourne pour TOUS (le weld est
+-- serveur). Toggle entre l'orientation de base et une rotation de 180 degres autour de la VERTICALE (Y du repere
+-- de l'echelle). Si l'echelle tourne autour du mauvais axe, changer l'axe ici (ex : math.pi sur Z).
+local ROTATE_FLIP = CFrame.Angles(0, math.pi, 0)
+local ROTATE_TWEEN = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+-- MONTEE : l'aimant vers le point de montage, joue COTE SERVEUR (tween du CFrame du HRP ancre) pour se repliquer
+-- a tous. Cote client, ancrer + poser sa propre part ne se repliquait pas -> les autres voyaient le grimpeur de travers.
+local CLIMB_MOUNT_TWEEN = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local LadderMoveService = {}
 
@@ -33,8 +42,16 @@ type CarryState = {
 	platformStand: boolean,
 	weld: Weld?,
 	foldTrack: AnimationTrack?,
+	-- ROTATION : C0 de base (non tourne), etat retourne courant, et le tween en cours (pour l'annuler a la repose
+	-- ou a un nouveau R). On repart toujours de baseC0 : pas d'accumulation qui deriverait au fil des rotations.
+	baseC0: CFrame,
+	rotated: boolean,
+	rotateTween: Tween?,
 }
 local carried: { [Model]: CarryState } = {}
+-- MONTEE : HRP ancre par le serveur le temps de la grimpe (+ le tween d'aimant en cours). Sert a poser la pose du
+-- grimpeur (face a l'echelle) de facon repliquee, et a tout defaire proprement a la descente / mort.
+local climbing: { [Player]: { hrp: BasePart, tween: Tween? } } = {}
 
 local function isLadder(inst: unknown): boolean
 	if typeof(inst) ~= "Instance" then
@@ -80,6 +97,12 @@ end
 -- Retire le weld, coupe la vitesse, restaure l'etat d'origine (root re-ancre, enfants restaures) et fige la position.
 local function unweld(state: CarryState, model: Model)
 	local pivot = model:GetPivot()
+	-- Une rotation en cours tweenait le C0 du weld : on la coupe AVANT de detruire le weld, sinon le tween
+	-- ecrirait sur une instance detruite.
+	if state.rotateTween then
+		state.rotateTween:Cancel()
+		state.rotateTween = nil
+	end
 	if state.weld then
 		state.weld:Destroy()
 		state.weld = nil
@@ -121,8 +144,17 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 		return
 	end
 
-	local state: CarryState =
-		{ owner = player, parts = {}, humanoid = nil, platformStand = false, weld = nil, foldTrack = nil }
+	local state: CarryState = {
+		owner = player,
+		parts = {},
+		humanoid = nil,
+		platformStand = false,
+		weld = nil,
+		foldTrack = nil,
+		baseC0 = CFrame.identity,
+		rotated = false,
+		rotateTween = nil,
+	}
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }
@@ -146,6 +178,8 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 	end
 	weld.Parent = root
 	state.weld = weld
+	-- Orientation de reference pour la rotation : on la memorise APRES avoir pose le C0 de portage.
+	state.baseC0 = weld.C0
 	carried[model] = state
 
 	-- On CHARGE la piste de repli des la prise (sans la jouer) : au "close" (~0.23s plus tard) elle sera prete,
@@ -223,6 +257,63 @@ local function releaseImmediate(player: Player, model: Model)
 	carried[model] = nil
 end
 
+-- ROTATION ("rotate", touche R) : chaque appui BASCULE entre l'orientation de base et la retournee de 180 degres.
+-- On tween le C0 du weld (serveur) -> l'echelle tourne pour TOUS. On repart de baseC0 a chaque fois (pas
+-- d'accumulation), et on annule un tween en cours pour repartir de la position courante sans a-coup.
+local function rotateLadder(player: Player, model: Model)
+	local state = carried[model]
+	if not state or state.owner ~= player or not state.weld then
+		return
+	end
+	state.rotated = not state.rotated
+	local target = if state.rotated then state.baseC0 * ROTATE_FLIP else state.baseC0
+	if state.rotateTween then
+		state.rotateTween:Cancel()
+	end
+	local tween = TweenService:Create(state.weld, ROTATE_TWEEN, { C0 = target })
+	state.rotateTween = tween
+	tween:Play()
+end
+
+-- MONTEE : le grimpeur signale son echelle + son point de montage (face a l'echelle). On ANCRE son HRP et on le
+-- pose la, par un tween, COTE SERVEUR -> tous le voient droit devant l'echelle. Le client ancre aussi en local
+-- (freeze immediat), mais c'est ce CFrame SERVEUR qui se replique aux autres.
+local function climbMount(player: Player, model: Model, cframe: CFrame)
+	local character = player.Character
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	if not (hrp and hrp:IsA("BasePart")) then
+		return
+	end
+	-- Anti-triche : le point de montage ET le joueur doivent etre pres de l'echelle.
+	local pivot = model:GetPivot().Position
+	if (cframe.Position - pivot).Magnitude > MAX_DIST or (hrp.Position - pivot).Magnitude > MAX_DIST then
+		return
+	end
+	local existing = climbing[player]
+	if existing and existing.tween then
+		existing.tween:Cancel()
+	end
+	hrp.Anchored = true -- serveur AUTORITAIRE : il possede la part ancree, donc son CFrame se replique.
+	local tween = TweenService:Create(hrp, CLIMB_MOUNT_TWEEN, { CFrame = cframe })
+	climbing[player] = { hrp = hrp, tween = tween }
+	tween:Play()
+end
+
+-- DESCENTE / mort : on desancre le HRP et on annule le tween. Le joueur reprend la main sur sa physique.
+local function climbRelease(player: Player)
+	local state = climbing[player]
+	if not state then
+		return
+	end
+	climbing[player] = nil
+	if state.tween then
+		state.tween:Cancel()
+	end
+	if state.hrp.Parent then
+		state.hrp.Anchored = false
+	end
+end
+
 local function onCarry(player: Player, ladder: unknown, phase: unknown, c0: unknown)
 	if not isLadder(ladder) or typeof(phase) ~= "string" then
 		return
@@ -236,6 +327,8 @@ local function onCarry(player: Player, ladder: unknown, phase: unknown, c0: unkn
 		place(player, model)
 	elseif phase == "release" then
 		releaseImmediate(player, model)
+	elseif phase == "rotate" then
+		rotateLadder(player, model)
 	end
 end
 
@@ -245,6 +338,21 @@ function LadderMoveService.init()
 		remote.OnServerEvent:Connect(onCarry)
 	else
 		warn("[LadderMoveService] Remote Ladder/SetLadderCarry introuvable : le portage co-op ne marchera pas")
+	end
+
+	-- MONTEE : le serveur ancre + pose le grimpeur face a l'echelle (repliqué). A la montee : (echelle, CFrame).
+	-- A la descente : rien -> on desancre.
+	local climbRemote = RemoteSetup.getRemote("SetLadderClimb", "Ladder")
+	if climbRemote and climbRemote:IsA("RemoteEvent") then
+		climbRemote.OnServerEvent:Connect(function(player: Player, ladder: unknown, cframe: unknown)
+			if isLadder(ladder) and typeof(cframe) == "CFrame" then
+				climbMount(player, ladder :: Model, cframe :: CFrame)
+			else
+				climbRelease(player)
+			end
+		end)
+	else
+		warn("[LadderMoveService] Remote Ladder/SetLadderClimb introuvable : la montee ne se verra pas droite chez les autres")
 	end
 
 	-- PRECHARGE l'anim de l'echelle au demarrage : sans ca, la 1re prise de la session trouve l'asset pas encore
@@ -265,6 +373,7 @@ function LadderMoveService.init()
 				releaseImmediate(player, model)
 			end
 		end
+		climbRelease(player)
 	end)
 end
 

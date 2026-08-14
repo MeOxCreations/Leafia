@@ -181,18 +181,30 @@ end
 function Toast.init()
 	-- Le serveur DEMANDE un toast par ce remote. Seul chemin serveur -> client : le client affiche, il ne
 	-- valide rien (un FireClient ne peut venir que du serveur, qui est notre autorite).
-	local remote = RemoteSetup.getRemote("Notify", "UI")
-	if remote and remote:IsA("RemoteEvent") then
-		remote.OnClientEvent:Connect(function(kind, text)
-			Toast.show(kind, text)
-		end)
-	else
-		warn("[Toast] Remote UI/Notify introuvable : les notifications serveur n'arriveront pas")
-	end
-
-	-- On attend que StarterGui ait copie l'interface dans PlayerGui, en tache de fond pour ne pas bloquer le
-	-- boot. Sans cette attente, un premier resolve() echouerait et previendrait a tort d'une interface absente.
+	--
+	-- EN TACHE DE FOND : getRemote cache un WaitForChild (jusqu'a 10 s si le remote tarde a repliquer). Appele en
+	-- SYNCHRONE ici, il GELAIT le boot client jusqu'a 10 s le jour ou le remote n'etait pas encore la (mesure : un
+	-- trou de 10 s dans le boot). Le serveur cree ce remote au tout debut de son init, donc c'est normalement
+	-- instantane ; le task.spawn protege juste le boot du cas ou la replication traine.
 	task.spawn(function()
+		local remote = RemoteSetup.getRemote("Notify", "UI")
+		if remote and remote:IsA("RemoteEvent") then
+			remote.OnClientEvent:Connect(function(kind, text)
+				Toast.show(kind, text)
+			end)
+		else
+			warn("[Toast] Remote UI/Notify introuvable : les notifications serveur n'arriveront pas")
+		end
+	end)
+
+	-- On attend que StarterGui ait copie l'interface dans PlayerGui, en tache de fond pour ne pas bloquer le boot.
+	-- La copie a lieu au SPAWN (qui peut tarder : chargement des donnees), donc on attend le perso d'abord, sinon un
+	-- premier resolve() echouerait et previendrait a tort d'une interface absente. (resolve() re-tente de toute facon
+	-- a chaque show(), le Toast se rattrape ; ceci evite juste le faux warning au boot.)
+	task.spawn(function()
+		if not player.Character then
+			player.CharacterAdded:Wait()
+		end
 		local playerGui = player:WaitForChild("PlayerGui")
 		playerGui:WaitForChild("NotificationUI", 10)
 		resolve()

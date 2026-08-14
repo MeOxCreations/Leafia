@@ -170,9 +170,132 @@ export type ToolConfig = {
 	-- l'outil pointait vers le ciel. Aucune animation ne peut corriger ca : l'angle de l'outil DANS la main
 	-- vient du Motor6D, pas des bras.
 	cutGripOffset: CFrame,
+	-- Outil qui COUPE sans moteur (cisaille) : des qu'il est en main il est "pret a couper" (on pose ENGINE a
+	-- l'equipement, cf ToolStartService). Le taille-haie, lui, doit d'abord DEMARRER : nil / false pour lui.
+	cutReadyOnEquip: boolean?,
+	-- Multiplicateur de vitesse de coupe EN MAINTENU. 1 (ou nil) = plein regime (taille-haie). Sans effet sur un
+	-- outil clic-par-clic, qui ne passe pas par la boucle continue. Reste utile a un futur outil maintenu plus lent.
+	cutRateScale: number?,
+	-- Outil CLIC-PAR-CLIC (cisaille) : nil = maintenu (taille-haie, coupe en continu). Un NOMBRE = clic-par-clic,
+	-- et c'est la pousse retiree par clic (bouchee fixe). Petit = outil "de merde" (beaucoup de clics), gros =
+	-- mord bien. Comparer a CUT_RATE (pousse/seconde du taille-haie) pour se situer.
+	cutPerClick: number?,
+	-- Animation du MODEL de l'outil jouee UNE fois a chaque clic de coupe (les lames qui claquent). Doit figurer
+	-- dans toolRunAnimations pour etre chargee sur l'animator du model. nil = pas de geste d'outil (taille-haie :
+	-- ses lames TOURNENT en continu via toolRunAnimations, pas de geste ponctuel).
+	cutAnimation: string?,
+	-- REACTIVITE de la pose UP/DOWN (les bras qui suivent la visee haut / bas sur la face). Frequence du ressort amorti
+	-- au critique qui rejoint la hauteur visee : plus haut = plus reactif. 0 = AUCUN smooth, la pose COLLE a la visee
+	-- (outil LEGER, ex. cisaille). Le taille-haie, plus LOURD, garde un smooth. nil = defaut HedgeConfigs.UPDOWN_FOLLOW_SPEED.
+	poseFollowSpeed: number?,
 }
 
+-- Entree d'un outil SIMPLE : pas de moteur, pas de sequence de demarrage (cisaille, secateur, arrosoir...). Il ne se
+-- sert que de sa PRISE et, si on veut, d'une pose de maintien et de la coupe. On ne renseigne donc QUE ces champs-la.
+type SimpleTool = {
+	assetName: string, -- modele dans ReplicatedStorage.Assets.Tools
+	handPart: string?, -- defaut "RightHand"
+	handleName: string?, -- part accrochee a la main, defaut "Handle"
+	gripAttachment: string?, -- Attachment de prise dans le Handle, defaut "Grip"
+	gripOffset: CFrame?, -- correction d'orientation (CFrame.Angles + math.rad), defaut identite
+	animationFolder: string?, -- dossier d'anims, defaut = assetName
+	holdAnimation: string?, -- pose tenue en main (nil = idle par defaut)
+	spawnEffect: string?, -- effet a l'apparition (nil = aucun)
+	emitCount: number?, -- particules de l'effet, defaut 1
+	-- COUPE (une cisaille ; un arrosoir laisserait ces champs vides) :
+	hitboxName: string?, -- part de la LAME dont on tire la visee. La nommer "HitBoxRoot" pour que findBlade la trouve.
+	cutReadyOnEquip: boolean?, -- true = coupe des l'equipement (pas de moteur a demarrer)
+	cutRateScale: number?, -- vitesse de coupe en maintenu (< 1 = plus lent que le taille-haie)
+	cutPerClick: number?, -- nombre = clic-par-clic, pousse retiree par clic (nil = maintenu)
+	toolRunAnimations: { string }?, -- anims du MODEL de l'outil a charger sur son animator (lames), defaut {}
+	cutAnimation: string?, -- anim du model jouee une fois par clic (doit etre dans toolRunAnimations)
+	poseFollowSpeed: number?, -- reactivite de la pose up/down. 0 = aucun smooth (colle a la visee). nil = defaut global.
+}
+
+-- Fabrique une ToolConfig complete a partir des seuls champs utiles a un outil simple : tous les champs MOTEUR
+-- (exiges par le type, faconne pour le taille-haie) sont remplis ICI avec des valeurs neutres INUTILISEES. Ainsi la
+-- config d'une cisaille reste lisible : que ce qui la concerne. Le code moteur ne s'execute jamais pour elle (les
+-- sequences guardent sur prepareAnimation / pullAnimation, absents ici).
+local function simpleTool(t: SimpleTool): ToolConfig
+	return {
+		assetName = t.assetName,
+		handPart = t.handPart or "RightHand",
+		handleName = t.handleName or "Handle",
+		gripAttachment = t.gripAttachment or "Grip",
+		gripOffset = t.gripOffset or CFrame.identity,
+		animationFolder = t.animationFolder or t.assetName,
+		holdAnimation = t.holdAnimation,
+		spawnEffect = t.spawnEffect,
+		emitCount = t.emitCount or 1,
+		-- Coupe (nil par defaut : un outil simple ne coupe pas, sauf si on le renseigne).
+		hitboxName = t.hitboxName or "",
+		cutReadyOnEquip = t.cutReadyOnEquip or false,
+		cutRateScale = t.cutRateScale or 1,
+		cutPerClick = t.cutPerClick,
+		cutAnimation = t.cutAnimation,
+		poseFollowSpeed = t.poseFollowSpeed,
+		-- ===== DEFAUTS MOTEUR : inutilises par un outil simple, presents seulement pour satisfaire le type. NE RIEN
+		-- regler ici (ce serait sans effet) ; les vrais reglages moteur sont sur le taille-haie. =====
+		offHandPart = "LeftHand",
+		offHandAttachment = "Grip",
+		offHandGripOffset = CFrame.identity,
+		offHandDelay = 0,
+		launcherAttachment = "",
+		launcherGripOffset = CFrame.identity,
+		toolRunAnimations = t.toolRunAnimations or {},
+		sputterDuration = 0,
+		pullShakeIntensity = 0,
+		pullShakeDuration = 0,
+		pullFovPunch = 0,
+		soundFolder = {},
+		tiltAxis = Vector3.yAxis,
+		tiltMaxAngle = 0,
+		tiltFollowSpeed = 0,
+		vibeMaxAngle = 0,
+		vibeFrequency = 0,
+		vibeStart = 1,
+		vibeGateSpeed = 0,
+		tiltWorkingScale = 1,
+		bladeIdleSpeed = 0,
+		bladeMaxSpeed = 0,
+		bladeAccel = 0,
+		bladeDecel = 0,
+		engineReleaseFade = 0,
+		engineWindDownPitch = 1,
+		engineAccelFade = 0,
+		pullsMin = 1,
+		pullsMax = 1,
+		holdPriority = Enum.AnimationPriority.Action,
+		cutGripOffset = CFrame.identity,
+	}
+end
+
 local ToolConfigs: { [string]: ToolConfig } = {
+	-- CISAILLE : outil de DEPART, coupe SANS moteur, plus lent que le taille-haie. Modele dans Assets.Tools.Shear,
+	-- avec une Attachment "Grip" et une part "HitBoxRoot" le long de la lame (pour la visee). Regler gripOffset a l'oeil.
+	Shear = simpleTool({
+		assetName = "Shear",
+		handPart = "RightHand",
+		handleName = "Handle",
+		gripAttachment = "Grip",
+		gripOffset = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)), -- A REGLER (degres via math.rad)
+		spawnEffect = "SpawnToolHand",
+		emitCount = 4,
+		animationFolder = "Shear", -- Animations.Player.Tools.Shear (UpDownAnimation, IdleAnimation, CutLamesAnimation)
+		holdAnimation = "IdleAnimation", -- pose de maintien, sur le PERSO (les bras)
+		-- CutLamesAnimation anime le MODEL de la cisaille (les lames Lame/LameB), pas les bras : elle se charge donc
+		-- sur l'animator DU MODEL (toolRunAnimations) et se joue une fois par clic (cutAnimation), cote serveur.
+		toolRunAnimations = { "CutLamesAnimation" },
+		cutAnimation = "CutLamesAnimation",
+		-- COUPE : prete des l'equipement (pas de moteur), CLIC-PAR-CLIC (un coup de cisaille par clic).
+		hitboxName = "HitBoxRoot", -- part le long de la lame -> findBlade la trouve (meme nom que le taille-haie)
+		cutReadyOnEquip = true,
+		-- Bouchee par clic. CUT_RATE (taille-haie) = 3.5 pousse/seconde ; 0.4 par clic = "outil de merde" mais qui
+		-- avance visiblement. A REGLER a l'oeil pour la sensation avant l'upgrade.
+		cutPerClick = 0.4,
+		-- LEGERE : aucun smooth, la pose colle a la visee (reactivite max, la ou est le curseur sur la face).
+		poseFollowSpeed = 0,
+	}),
 	HedgeTrimmer = {
 		assetName = "HedgeTrimmer",
 		handPart = "RightHand",
@@ -253,6 +376,8 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		--   X = bascule avant / arriere    Y = rotation autour du manche    Z = inclinaison laterale
 		-- Par pas de 45 degres pour trouver le bon axe, puis par 10 pour affiner.
 		cutGripOffset = CFrame.Angles(math.rad(-50), math.rad(162), math.rad(80)),
+		-- LOURD : la pose suit la visee avec un smooth (le poids de la machine). Plus bas = plus lourd / plus de retard.
+		poseFollowSpeed = 7,
 	},
 }
 

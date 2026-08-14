@@ -20,9 +20,12 @@ local TOOL_ATTRIBUTE = "LeafiaTool"
 -- Compteur incremente par le serveur a chaque butee de corde. Un compteur et non un booleen : deux tirages
 -- d'affilee ecriraient la meme valeur et l'attribut ne changerait pas.
 local PULL_TICK_ATTRIBUTE = "LeafiaPullTick"
--- Touche 1 comme un emplacement d'inventaire : c'est le reflexe des joueurs sur la plateforme, et ca laisse
--- E libre pour l'interaction avec les clients, qui arrivera.
-local TOGGLE_KEY = Enum.KeyCode.One
+-- Emplacements d'outils facon inventaire : chaque touche equipe SON outil (ou le range si deja en main). 1 = cisaille
+-- (outil de depart), 2 = taille-haie. Reflexe des joueurs sur la plateforme, et ca laisse E libre pour l'interaction.
+local TOOL_SLOTS: { [Enum.KeyCode]: string } = {
+	[Enum.KeyCode.One] = "Shear",
+	[Enum.KeyCode.Two] = "HedgeTrimmer",
+}
 local ASSET_TIMEOUT = 10
 -- Filet si un emetteur n'a pas de Lifetime exploitable. Les particules vivent rarement plus longtemps.
 local FALLBACK_EFFECT_LIFETIME = 3
@@ -146,11 +149,11 @@ function ToolController.init()
 		watchCharacter(player.Character)
 	end
 
-	-- Le client ne fait qu'AVERTIR. Il n'envoie aucun argument et ne touche pas a l'outil lui-meme : c'est le
-	-- serveur qui sait ce que le joueur tient et qui tranche.
-	local toggleRemote = RemoteSetup.getRemote("ToggleTool", "Tool")
-	if not (toggleRemote and toggleRemote:IsA("RemoteEvent")) then
-		warn("[ToolController] Remote Tool/ToggleTool introuvable")
+	-- Le client ne fait qu'AVERTIR quel emplacement a ete presse. Le serveur valide le nom, verifie ce que le joueur
+	-- tient et tranche (equiper / ranger). Le client ne touche jamais a l'outil lui-meme.
+	local selectRemote = RemoteSetup.getRemote("SelectTool", "Tool")
+	if not (selectRemote and selectRemote:IsA("RemoteEvent")) then
+		warn("[ToolController] Remote Tool/SelectTool introuvable")
 		return
 	end
 
@@ -169,8 +172,9 @@ function ToolController.init()
 			return
 		end
 
-		if input.KeyCode == TOGGLE_KEY then
-			toggleRemote:FireServer()
+		local slotTool = TOOL_SLOTS[input.KeyCode]
+		if slotTool then
+			selectRemote:FireServer(slotTool)
 		elseif isPrimaryClick(input) then
 			-- Le clic sert a deux choses selon l'etat, mais le CLIENT ne connait pas l'etat : il envoie les
 			-- deux signaux et laisse le serveur trancher. ActivateTool fait avancer le demarrage (tirages) ;

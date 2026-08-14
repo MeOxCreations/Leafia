@@ -10,6 +10,9 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local GuiService = game:GetService("GuiService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local InputDevice = require(ReplicatedStorage.Modules.Utils.InputDevice)
 
 local player = Players.LocalPlayer
 
@@ -21,7 +24,7 @@ local TOP_LEFT_WIDTH = 199
 
 local CURSOR_IMAGE = "rbxassetid://138708177636922"
 -- Taille du curseur = cette fraction de la HAUTEUR du viewport. Petit et proportionnel a l'ecran. A regler a l'oeil.
-local CURSOR_SCALE = 0.022
+local CURSOR_SCALE = 0.020
 -- Point d'accroche = l'endroit de l'image qui "clique". (0,0) = coin haut-gauche (fleche classique).
 -- Mettre 0.5,0.5 pour un point / une croix centree (recommande pour l'effet slime, il pulse alors autour du centre).
 local CURSOR_ANCHOR = Vector2.new(0, 0)
@@ -37,6 +40,12 @@ local SLIME_DAMPING = 24 -- amortissement (BAS = rebondit plus longtemps ; haut 
 -- retour rapide ; un clic maintenu = curseur garde petit, puis rebond a la fin.
 local SLIME_PRESSED = -0.09
 
+-- HOVER SUR UN BOUTON : retour "vivant" et PROLONGE (dure tout le survol), distinct du choc bref au clic. Le
+-- curseur GONFLE et RESPIRE doucement tant qu'il survole un bouton, puis repart a sa taille quand on le quitte.
+local SLIME_HOVER = 0.14 -- gonflement en survol (ecart de taille ; positif = plus gros)
+local SLIME_HOVER_PULSE = 0.03 -- amplitude de la respiration pendant le survol (0 = juste le gonflement, sans pulse)
+local SLIME_HOVER_PULSE_SPEED = 4.5 -- vitesse de la respiration en rad/s (lent = elegant)
+
 local CursorController = {}
 
 function CursorController.init()
@@ -50,7 +59,8 @@ function CursorController.init()
 	gui.IgnoreGuiInset = true
 	gui.ResetOnSpawn = false
 	gui.DisplayOrder = 1000 -- au-dessus du reste de l'UI
-	gui.Parent = player:WaitForChild("PlayerGui")
+	local playerGui = player:WaitForChild("PlayerGui") :: PlayerGui
+	gui.Parent = playerGui
 
 	local cursor = Instance.new("ImageLabel")
 	cursor.Name = "Cursor"
@@ -69,6 +79,9 @@ function CursorController.init()
 	local slimePos = 0
 	local slimeVel = 0
 	local held = false
+	-- Survol : phase de la respiration, et etat precedent (pour ne declencher son + pulse qu'a l'ENTREE sur un bouton).
+	local hoverPhase = 0
+	local wasHovering = false
 	-- Curseur systeme affiche a la place du notre (sur les boutons Roblox du haut-gauche). Retenu pour ne basculer
 	-- MouseIconEnabled qu'aux CHANGEMENTS, pas chaque frame.
 	local systemShown = false
@@ -81,13 +94,42 @@ function CursorController.init()
 		local overCore = m.Y <= topInset.Y and m.X <= TOP_LEFT_WIDTH
 		if overCore ~= systemShown then
 			systemShown = overCore
-			cursor.Visible = not overCore
 			UserInputService.MouseIconEnabled = overCore
 		end
+		-- Sur TACTILE : pas de souris -> on cache notre curseur, et rien a positionner. Sinon : cache seulement sur
+		-- les boutons Roblox (le curseur systeme y prend le relais). Suit InputDevice, donc bascule si le joueur change.
+		local touch = InputDevice.isTouch()
+		cursor.Visible = not (touch or overCore)
+		if touch then
+			return
+		end
 
-		-- Ressort amorti vers la cible : F = -k*(x - cible) - c*v, integre en Euler. dt borne (anti-explosion au lag).
-		local target = if held then SLIME_PRESSED else 0
+		-- SURVOL D'UN BOUTON, detecte UNE fois par frame (pas par event de souris : agiter la souris ne doit pas
+		-- flooder le hit-test). GetGuiObjectsAtPosition rend tous les GuiObject sous le point ; l'ImageLabel du
+		-- curseur n'est pas un GuiButton, il ne se compte donc pas. m.X/m.Y = coords absolues, comme AbsolutePosition
+		-- des boutons (l'inset est deja dedans des deux cotes), donc ca marche quel que soit l'IgnoreGuiInset du GUI.
+		local hovering = false
+		for _, obj in ipairs(playerGui:GetGuiObjectsAtPosition(m.X, m.Y)) do
+			if obj:IsA("GuiButton") and obj.Visible then
+				hovering = true
+				break
+			end
+		end
+		-- Entree sur un bouton : la respiration repart proprement (sin(0) = 0). Le SON du survol, lui, est joue par
+		-- ButtonSlime a l'entree de CHAQUE bouton (MouseEnter), pas ici : sinon survoler des boutons COLLES ne sonnait
+		-- qu'une fois (on ne repassait jamais par un "aucun bouton" entre eux).
+		if hovering and not wasHovering then
+			hoverPhase = 0
+		end
+		wasHovering = hovering
+
+		-- Ressort amorti vers la cible : F = -k*(x - cible) - c*v, integre en Euler. step borne (anti-explosion au lag).
 		local step = math.min(dt, 1 / 30)
+		hoverPhase += step * SLIME_HOVER_PULSE_SPEED
+		-- Cible = gonflement du survol (+ respiration lente = slime PROLONGE) AJOUTE au creux du clic. Les deux se
+		-- composent : survoler GONFLE, cliquer ENFONCE, relacher rend le gonflement.
+		local hoverGoal = if hovering then SLIME_HOVER + math.sin(hoverPhase) * SLIME_HOVER_PULSE else 0
+		local target = hoverGoal + (if held then SLIME_PRESSED else 0)
 		local force = -SLIME_STIFFNESS * (slimePos - target) - SLIME_DAMPING * slimeVel
 		slimeVel += force * step
 		slimePos += slimeVel * step

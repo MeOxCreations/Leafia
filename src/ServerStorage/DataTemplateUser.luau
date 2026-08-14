@@ -44,6 +44,12 @@ return {
 		Notoriety = 0,
 	},
 
+	-- ===== SAVE SLOTS (companies) : jusqu'a 3 SAVES INDEPENDANTES =====
+	-- Tableau PLEIN de 3 cases (false = vide) -- pas un tableau a trous, ca casse la serialisation. Chaque case remplie
+	-- = une table Company { Name, Coins, Reputation, Level, Playtime, CreatedAt, LastPlayed } (voir CompanyService).
+	Companies = { false, false, false },
+	ActiveSlot = 0, -- slot en cours de jeu (0 = aucun)
+
 	-- ===== PREMIUM / PASS =====
 	-- Les GAMEPASSES ne se stockent PAS ici : on les verifie EN DIRECT (MarketplaceService:UserOwnsGamePassAsync)
 	-- pour qu'un achat compte tout de suite. On ne garde que ce qui est propre a Leafia (abonnement custom, etc.).

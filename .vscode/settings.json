@@ -4,5 +4,6 @@
   "luau-lsp.sourcemap.rojoProjectFile": "Leafia.project.json",
   "files.associations": {
     "*.luau": "luau"
-  }
+  },
+  "cSpell.enabled": false
 }

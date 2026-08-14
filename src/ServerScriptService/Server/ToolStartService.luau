@@ -362,6 +362,16 @@ local function prepare(player: Player)
 	if not currentHeld then
 		return
 	end
+	-- Outil qui coupe SANS moteur (cisaille) : il est "pret a couper" des l'equipement. On pose donc ENGINE (qui
+	-- autorise la coupe, la visee et la pose de travail -- memes gates que le taille-haie) sans aucune sequence de
+	-- demarrage. reset() (branche sur l'unequip) le remet a false via setState(nil). Ici ENGINE = "coupe activee".
+	if currentHeld.config.cutReadyOnEquip then
+		local character = player.Character
+		if character then
+			character:SetAttribute(ENGINE_ATTRIBUTE, true)
+		end
+		return
+	end
 	local animName = currentHeld.config.prepareAnimation
 	if not animName then
 		return
@@ -438,9 +448,16 @@ local function setThrottle(player: Player, wants: boolean)
 	if typeof(wants) ~= "boolean" then
 		return
 	end
+	local held = ToolService.getHeld(player)
+	-- Outil clic-par-clic (cisaille) : pas de gachette maintenue. Chaque coup passe par le remote CutSnip, et
+	-- THROTTLE ne doit surtout pas se poser (sinon la camera se resserrerait a chaque clic). On ignore donc
+	-- presser ET relacher pour ces outils.
+	if held and held.config.cutPerClick then
+		return
+	end
 	-- Sans outil en main il n'y a rien a accelerer. Sans ce test, cliquer les mains vides posait quand meme
 	-- l'attribut et resserrait le champ de vision.
-	if wants and not ToolService.getHeld(player) then
+	if wants and not held then
 		return
 	end
 	if throttle[player] == wants then

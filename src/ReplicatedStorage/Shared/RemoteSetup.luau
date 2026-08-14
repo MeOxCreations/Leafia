@@ -17,6 +17,7 @@ local REMOTES: { { any } } = {
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur
 	-- tient, donc il n'y a rien a valider et rien a falsifier.
 	{ "ToggleTool", E, "Tool" },
+	{ "SelectTool", E, "Tool" }, -- equipe un outil par NOM (emplacements clavier 1/2). Le client envoie le nom, serveur valide.
 	-- Clic gauche. Aucun argument : le serveur connait deja l'etat de l'outil, donc il n'y a rien a valider et
 	-- rien a falsifier.
 	{ "ActivateTool", E, "Tool" },
@@ -35,6 +36,10 @@ local REMOTES: { { any } } = {
 	-- faisait couper au-dessus de la lame, la ou pointait le curseur.
 	-- Le serveur garde l'autorite sur la vitesse de coupe, sur la haie concernee, et borne la portee.
 	{ "SetAim", E, "Hedge" },
+	-- Un COUP de cisaille (outil clic-par-clic). Aucun argument : le client dit juste "j'ai clique", le serveur
+	-- decide s'il coupe (outil clic-par-clic ? pret ? en contact ?) et de combien. Anti-spam borne cote serveur.
+	-- Le taille-haie n'utilise pas ce remote : il coupe en continu tant que la gachette est maintenue.
+	{ "CutSnip", E, "Hedge" },
 	-- Taille DEPUIS L'ECHELLE. UN booleen : le client dit "je suis en haut, pret a tailler le dessus" (true) ou
 	-- "j'ai fini" (false). Le serveur ne fait PAS confiance a une haie envoyee : il CHOISIT lui-meme la haie la
 	-- plus proche du joueur. Sert a activer la coupe alors que l'aimant du sol, lui, est desengage sur l'echelle.
@@ -45,12 +50,17 @@ local REMOTES: { { any } } = {
 	{ "SetOnLadder", E, "Hedge" },
 
 	-- [ LADDER ] --
-	-- PRISE / REPOSE de l'echelle, avec transfert de PROPRIETE RESEAU. Trois arguments : l'echelle (Instance), un
-	-- booleen carrying, et un CFrame optionnel (la position finale, a la repose). A la PRISE (carrying=true) : le
-	-- serveur desancre l'echelle et en donne la propriete au porteur -> des lors sa position ET son repli se
-	-- repliquent nativement a tous (comme un perso), sans flot de remotes. A la REPOSE (carrying=false + CFrame) : le
-	-- serveur reprend la main, re-ancre a la position finale. Le serveur valide (vraie echelle, pres du joueur).
+	-- PRISE / PORTAGE / REPOSE de l'echelle. Trois arguments : l'echelle (Instance), une PHASE (string), et un CFrame
+	-- optionnel (l'offset de portage, a la prise). Le serveur SOUDE l'echelle au HRP du porteur (weld) : sa position,
+	-- son repli et sa rotation se repliquent alors a tous, sans flot de remotes. Phases : "grab" (soude, offset c0),
+	-- "close" (repli au marqueur de prise), "rotate" (tween 180 degres, toggle), "place" (retire le weld + re-ancre +
+	-- deplie), "release" (retire le weld sec : mort / respawn). Le serveur valide (vraie echelle, proprietaire, proximite).
 	{ "SetLadderCarry", E, "Ladder" },
+	-- MONTEE sur l'echelle. Deux arguments : l'echelle (Instance) et le CFrame de montage (face a l'echelle), ou
+	-- rien a la descente. A la montee, le serveur ANCRE le HRP du grimpeur et le pose a ce CFrame (tween) : ancrer
+	-- + poser cote CLIENT ne se replique pas -> les autres voyaient le grimpeur de travers. Le serveur valide
+	-- (vraie echelle, montage pres de l'echelle). A la descente (rien) : il desancre.
+	{ "SetLadderClimb", E, "Ladder" },
 
 	-- [ CHARACTER ] --
 	-- Sprint : le client dit s'il maintient Shift. UN argument booleen, valide cote serveur.
@@ -62,6 +72,44 @@ local REMOTES: { { any } } = {
 	-- ATTENTION avant d'emettre : un joueur qui vient de se connecter n'ecoute pas encore (ses scripts de
 	-- StarterGui ne sont copies qu'au spawn). Verifier qu'il est reellement en jeu avant FireClient.
 	{ "Notify", E, "UI" },
+	-- Notification LATERALE (riche) serveur -> client. UN argument : la table de donnees (kind, title, description,
+	-- earn / amount, icon). Le SideNotificationHandler la recoit et spawn la notif. Aucune autorite : le client
+	-- affiche ce que le serveur demande. Meme precaution que Notify : le joueur doit etre en jeu (spawne) pour ecouter.
+	{ "SideNotify", E, "UI" },
+
+	-- [ PLOT ] --
+	-- Le client dit quel plot il a choisi au Start (nom du Slot, string). Le serveur VALIDE que c'est un vrai Slot
+	-- et retient l'attribution par joueur. Sert a l'autorite : n'ouvrir que la boite aux lettres de SON plot, etc.
+	{ "SelectPlot", E, "Plot" },
+
+	-- [ DEV ] --
+	-- OUTIL DE TEST, pas une feature. Le client dit "donne-moi des pieces de test" (aucun argument : il ne fixe pas
+	-- le montant, le serveur decide). Le serveur ne branche son ecoute QUE dans Studio (RunService:IsStudio) : sur
+	-- un vrai serveur ce remote est mort, aucun exploit possible. A retirer si un jour on veut zero surface dev.
+	{ "DevGrantCoins", E, "Dev" },
+
+	-- [ ADMIN ] --
+	-- Console admin. RemoteFunction : le client envoie la LIGNE de commande tapee (string), le serveur verifie
+	-- l'acces (Studio ou UserId liste), execute, et RENVOIE le texte de resultat affiche dans la console. Le serveur
+	-- seul tranche : il re-verifie l'admin et n'execute que ce qu'il decide, le client n'ordonne rien.
+	{ "AdminCommand", F, "Admin" },
+
+	-- [ NAME ] --
+	-- Filtre serveur d'un nom (company). RemoteFunction : le client envoie le nom (string), le serveur le passe au vrai
+	-- filtre Roblox (TextService, appelable UNIQUEMENT cote serveur) et renvoie { ok, filtered }. ok = true si RIEN n'a
+	-- ete censure. Le client n'a pas le dernier mot : c'est le serveur qui tranche si le nom est propre.
+	{ "FilterName", F, "Name" },
+
+	-- [ COMPANY ] --
+	-- Saves (companies) : lister / creer / renommer / supprimer / selectionner un slot. RemoteFunctions (le client a
+	-- besoin de la reponse : ok + les vues fraiches). Autorite serveur (CompanyService) : le client n'ecrit RIEN, il
+	-- affiche ce que le serveur renvoie.
+	{ "ListCompanies", F, "Company" },
+	{ "CreateCompany", F, "Company" },
+	{ "RenameCompany", F, "Company" },
+	{ "DeleteCompany", F, "Company" },
+	{ "SelectCompany", F, "Company" },
+	{ "StartGame", F, "Company" }, -- START : le serveur decide (nouvelle save -> teleport tuto, sinon -> entree jeu)
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder

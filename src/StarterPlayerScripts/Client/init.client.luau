@@ -24,9 +24,73 @@ task.spawn(function()
 	end
 end)
 
+local PlacesConfig = require(game:GetService("ReplicatedStorage").Modules.Configs.PlacesConfig)
+
+-- PLACE TUTORIAL : controllers TAILLE + feel + admin uniquement. Pas de plot-select / save UI / mailbox / HUD eco,
+-- dont les ScreenGui n'existent pas dans la place tuto (ils timeouteraient). Le `return` coupe la sequence principale.
+if game.PlaceId == PlacesConfig.TUTORIAL then
+	local RS = game:GetService("ReplicatedStorage")
+	require(script.CursorController).init()
+	require(script.ClickSoundController).init()
+	require(script.ButtonSlimeController).init()
+	require(script.FootstepController).init()
+	require(script.TeleportController).init()
+	require(script.CameraController).init()
+	require(script.ToolController).init()
+	require(script.HedgeController).init()
+	require(script.HedgeLeafController).init()
+	require(RS.Modules.UI.Hedge.HedgeHologramHandler).init()
+	require(RS.Modules.UI.Core.Toast).init()
+	require(script.ComboController).init()
+	require(RS.Modules.UI.Notification.SideNotificationHandler).init()
+	-- Echelle COMPLETE dans le tuto (on l'enseigne) : grimpe + portage + auto-equip. Le flag LeafiaCarryingLadder coupe la
+	-- grimpe pendant le portage (pas d'auto-accroche a sa propre echelle). Necessite la VRAIE echelle de jeu dans la map.
+	require(script.LadderController).init()
+	require(script.LadderMoveController).init()
+	require(script.AdminCommandController).init()
+
+	-- TEMP (test de la boite de dialogue) : joue la narration d'intro UNE fois, ~1.5 s apres le 1er spawn, pour regler
+	-- le visuel et le texte avec le joueur. A RETIRER quand le tuto la declenchera pour de vrai (mission / TutorialService).
+	task.spawn(function()
+		local plr = game:GetService("Players").LocalPlayer
+		local Dialogue = require(RS.Modules.UI.Core.Dialogue)
+		if not game:IsLoaded() then
+			game.Loaded:Wait() -- attendre que TOUT soit charge
+		end
+		if not plr.Character then
+			plr.CharacterAdded:Wait() -- attendre que le joueur soit spawn
+		end
+		task.wait(3) -- puis 3 s avant d'afficher le dialogue
+		Dialogue.play({
+			{ speaker = "Finn", emotion = "hello", text = "Oh, salut " .. plr.DisplayName .. " ! Comment tu vas ?" },
+			{ speaker = "Finn", emotion = "intrigued", text = "Dis, ton papi t'a laisse tout son matos. De quoi t'occuper de ses clients." },
+			{ speaker = "Finn", emotion = "sad", text = "Maintenant il est trop vieux, son dos lui fait mal... il peut plus tailler." },
+			{ speaker = "Finn", emotion = "happy", text = "Du coup c'est a toi de continuer son travail ! Je te fais confiance, mon pote." },
+			{ speaker = "Finn", emotion = "happy", text = "Et qui sait... avec assez de coins, tu pourras batir ta PROPRE entreprise !" },
+			{ speaker = "Finn", emotion = "happy", text = "Justement, t'y es deja : c'est chez ton premier client. Sa haie t'attend, montre-moi ce que tu sais faire !" },
+		})
+	end)
+
+	print("[Client] Pret (tuto)")
+	return
+end
+
 -- Curseur custom (cache le curseur systeme, suit la souris). Ordre indifferent : il ne partage rien avec les autres.
 local CursorController = require(script.CursorController)
 CursorController.init()
+
+-- Son de clic global (confort). Ordre indifferent : il n'ecoute que l'input.
+local ClickSoundController = require(script.ClickSoundController)
+ClickSoundController.init()
+
+-- Effet slime sur TOUS les boutons de l'UI (survol + clic). Ordre indifferent : il attend PlayerGui en tache de
+-- fond et n'ajoute qu'un comportement par-dessus les interfaces faites dans Studio.
+local ButtonSlimeController = require(script.ButtonSlimeController)
+ButtonSlimeController.init()
+
+-- Son de pas au sol (remplace le son de marche par defaut de Roblox). Ordre indifferent.
+local FootstepController = require(script.FootstepController)
+FootstepController.init()
 
 -- Ecran de transition de teleport (SetTeleportGui). Ordre indifferent : il ne fait que declarer le GUI a Roblox.
 local TeleportController = require(script.TeleportController)
@@ -63,6 +127,31 @@ HedgeHologramHandler.init()
 local Toast = require(game:GetService("ReplicatedStorage").Modules.UI.Core.Toast)
 Toast.init()
 
+-- Jauge d'experience qui SUIT le joueur (WorldAnchor). Ordre indifferent : elle ne fait que suivre le perso et lire
+-- l'attribut d'XP pose par le serveur (a venir).
+local ExperiencesController = require(script.ExperiencesController)
+ExperiencesController.init()
+
+-- Combo de coupe : texte "xN" qui SUIT le joueur (WorldAnchor) et monte tant qu'il taille. Ordre indifferent : il ne
+-- fait que suivre le perso et lire l'attribut de combo pose par le serveur.
+local ComboController = require(script.ComboController)
+ComboController.init()
+
+-- Economie (HUD fixe en haut) : pieces + reputation. Ordre indifferent : il ne fait que lire les attributs poses
+-- par le serveur et remplir CoinsText / ReputationText dans CurrencyUI.
+local CurrencyController = require(script.CurrencyController)
+CurrencyController.init()
+
+-- Barre de NAVIGATION du HUD (bas de l'ecran). Cadre : onglets inertes pour l'instant (les sections n'existent pas encore),
+-- feuille centrale -> arbre de competences (a venir). Ne s'affiche que quand le joueur a un plot. Ordre indifferent.
+local HudNavHandler = require(game:GetService("ReplicatedStorage").Modules.UI.Hud.HudNavHandler)
+HudNavHandler.init()
+
+-- Notifications laterales (bas droite). Step 1 : ouverture / fermeture au clic (resize + arrondi + contour). Ordre
+-- indifferent, elle ne fait que cabler les boutons des notifications existantes.
+local SideNotificationHandler = require(game:GetService("ReplicatedStorage").Modules.UI.Notification.SideNotificationHandler)
+SideNotificationHandler.init()
+
 -- PROTOTYPE escabeau (socle minimal) : entrer dans une zone de detection -> aimant + anim UpDown. A promouvoir en
 -- LadderController + LadderService, ou a retirer. Ne fait rien tant qu'on n'entre pas dans une zone.
 local LadderController = require(script.LadderController)
@@ -71,5 +160,38 @@ LadderController.init()
 -- PROTOTYPE : deplacer l'echelle (E dans box_detecte_For_Move -> prise + repli synchronise). Increment 1.
 local LadderMoveController = require(script.LadderMoveController)
 LadderMoveController.init()
+
+-- Boite aux lettres : dessine le prompt stylise (InteractionPrompt) a la place du prompt Roblox par defaut. Ordre
+-- indifferent : il ne fait qu'ecouter ProximityPromptService et afficher.
+local MailboxController = require(script.MailboxController)
+MailboxController.init()
+
+-- Ecran de selection de plot (entree du jeu) : camera qui orbite un plot + boutons Claim / Start. Ordre indifferent :
+-- il attend son UI (LoadSaveUI) en tache de fond.
+local PlotSelectController = require(script.PlotSelectController)
+PlotSelectController.init()
+
+-- Mode BUILD (amenagement du plot facon Sims). Increment 1 : entrer / sortir + quadrillage au sol. Ordre indifferent :
+-- il lit l'attribut de plot au moment d'entrer, il ne depend d'aucun autre controller au boot.
+local BuildController = require(script.BuildController)
+BuildController.init()
+
+-- L'onglet BUILD de la nav entre / sort du mode build (acces PC ET mobile, sans la touche B temporaire).
+HudNavHandler.onSelect = function(id: string)
+	if id == "build" then
+		BuildController.toggle()
+	end
+end
+
+-- Et l'inverse : pendant le mode build, on CACHE la nav bar (l'UI de build prend le relais). Couvre tous les declencheurs
+-- (bouton nav ET touche B), car BuildController appelle onStateChanged a chaque enter / exit.
+BuildController.onStateChanged = function(active: boolean)
+	HudNavHandler.setBuildActive(active)
+end
+
+-- Console admin (F2). Ordre indifferent : elle ne se construit que pour un admin, au 1er toggle, et n'ecoute que
+-- l'input. Le serveur reste l'autorite sur ce qu'une commande fait.
+local AdminCommandController = require(script.AdminCommandController)
+AdminCommandController.init()
 
 print("[Client] Pret")

@@ -27,6 +27,21 @@ function DataService.get(player: Player): any
 	return profiles[player]
 end
 
+-- ADMIN (console) : efface la donnee PERSISTANTE (retour au template). La session reste ouverte, la sauvegarde
+-- suivante ecrira ces valeurs par defaut. On vide tous les champs puis Reconcile les recree depuis le template.
+-- Aujourd'hui le template est minimal (FirstJoin, Sessions) ; ca reste correct quand il grossira.
+function DataService.resetData(player: Player): boolean
+	local profile = profiles[player]
+	if not profile then
+		return false
+	end
+	for k in pairs(profile.Data) do
+		profile.Data[k] = nil
+	end
+	profile:Reconcile()
+	return true
+end
+
 local function onPlayerAdded(player: Player)
 	-- StartSessionAsync YIELD : le joueur peut partir pendant. Cancel arrete la tentative s'il n'est plus la.
 	local profile = PlayerStore:StartSessionAsync(`Player_{player.UserId}`, {

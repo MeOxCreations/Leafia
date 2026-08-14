@@ -3,26 +3,31 @@
 -- on l'AIMANTE au pied de l'echelle face a elle, root ANCRE + WalkSpeed 0 (pas de marche dans le vide), et deux
 -- animations s'echangent selon l'etat :
 --   - Au sol, pret a monter (pieds au sol, main sur l'echelle) : IdleDownAnimation, EN BOUCLE.
---   - En train de monter / descendre : UpDownAnimation, pilotee par W/S (Z/S sur AZERTY).
--- W monte (l'anim avance), S descend (l'anim recule). Tout en bas, S detache de l'echelle (IdleDown a l'envers).
+--   - En train de monter / descendre : UpDownAnimation, pilotee par le DEPLACEMENT (avant = monte, arriere = descend).
+-- On monte via un prompt E (bouton a taper sur mobile) en entrant dans la zone. Avant fait grimper (joystick ou W),
+-- arriere fait descendre ; tout en bas, arriere detache de l'echelle (IdleDown a l'envers).
 --
 -- Camera : vue ISO orbitale, activee des l'accroche. Elle ease depuis la vue joueur vers la vue iso, suit le corps
 -- qui monte, et le joueur peut tourner librement (clic droit) + zoomer (molette).
 
-local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
-local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
-local Toast = require(ReplicatedStorage.Modules.UI.Core.Toast)
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
+local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 
 local LadderController = {}
 
 local player = Players.LocalPlayer
+
+-- Pose par LadderMoveController sur le perso pendant qu'on PORTE une echelle. Tant qu'il est vrai, on ne grimpe
+-- pas : l'echelle portee est soudee a nous, ses zones de grimpe nous suivent, on grimperait sa propre echelle.
+-- Meme nom cote LadderMoveController (les deux doivent rester d'accord).
+local CARRYING_ATTR = "LeafiaCarryingLadder"
 
 -- Rigs poses a la main dans le Workspace, leurs deux zones, et le dossier des anims (renomme Escabaut -> Ladder).
 -- PREFIXE et non nom exact : on gere PLUSIEURS echelles. Tout enfant du Workspace dont le nom commence par ce
@@ -33,6 +38,13 @@ local ANIM_FOLDER = { "Animations", "Player", "Tools", "Ladder" }
 local IDLE_ANIM = "IdleDownAnimation" -- pose prete, au sol
 local CLIMB_ANIM = "UpDownAnimation" -- grimpe (corps / jambes), pilotee W/S
 local GRIP_ANIM = "UpDownHandGripAnimation" -- main qui agrippe l'echelle, jouee EN SYNC avec la grimpe
+-- SON DE PAS a la montee. On ne s'appuie PLUS sur des marqueurs d'anim (fragiles : nom exact + ne tirent pas
+-- fiablement sur une anim pilotee a la main) : on declenche un pas tous les X de PROGRESSION de la grimpe, et on
+-- tire un des deux sons AU HASARD. Sons ranges dans SoundService, clones au declenchement (volume regle en Studio).
+local LADDER_SOUND_PATH = { "Sounds", "Engins", "Ladder" }
+local CLIMB_STEP_SOUNDS = { "LadderClimbStepOne", "LadderClimbStepTwo" } -- un tire au hasard par pas
+-- Nombre de pas sur toute la grimpe (~ nombre de marches). Plus haut = plus de pas, plus rapproches. A REGLER a l'oreille.
+local CLIMB_STEP_COUNT = 6
 -- Maintien EN HAUT : jambes bien posees sur les marches. Joue au sommet PAR-DESSUS la grimpe gelee, en Action4 pour
 -- gagner sur les jambes de la grimpe. Meme dossier que la grimpe (Ladder).
 local TOP_LEGS_ANIM = "IdleUpLadder"
@@ -41,63 +53,58 @@ local TOP_LEGS_ANIM = "IdleUpLadder"
 -- IdleUpLadder le cle aussi (a hauteur sol), en Action4 elle ecrase la montee et le corps RETOMBE au pied. A false,
 -- on la coupe (le corps reste tenu par la grimpe seule, jambes en pose de grimpe).
 local TOP_LEGS_ENABLED = true
--- Coupe gauche-droite du DESSUS (bras), jouee AU SOMMET par-dessus IdleUpLadder. Dossier du taille-haie.
+-- Coupe gauche-droite du DESSUS (bras), jouee AU SOMMET par-dessus IdleUpLadder. TRIM_FOLDER = SECOURS (taille-haie) :
+-- ensureTrimTrack prend d'abord le dossier de l'OUTIL equipe (ex la cisaille a sa propre RightLeftAnimation) et ne
+-- retombe ici que si l'outil n'a pas cette pose.
 local TRIM_FOLDER = { "Animations", "Player", "Tools", "HedgeTrimmer" }
 local TRIM_ANIM = "RightLeftAnimation"
+-- VISEE DU DESSUS, UNE SEULE REGLE : la souris PAR RAPPORT AU JOUEUR a l'ecran pilote la lame. Souris pile DEVANT le
+-- joueur -> milieu de l'anim ; a gauche -> debut, a droite -> fin. Repere = le corps (pas le centre de l'ecran), donc
+-- peu importe ou le joueur est cadre. TOP_SENSITIVITY : plus haut = moins de mouvement de souris pour parcourir 0 a 1.
+local TOP_SENSITIVITY = 10
 
-local MAGNET_RATE = 10 -- vitesse d'aspiration vers le point de montage
-local CLIMB_SPEED = 0.7 -- vitesse de lecture de l'anim de grimpe
+local CLIMB_SPEED = 1.1 -- vitesse de lecture de l'anim de grimpe (monter = grimpe plus rapide)
+-- La camera SUIT la hauteur de grimpe : le HRP reste ancre en bas (c'est l'anim qui monte le corps), donc sans ca la
+-- vue resterait basse et le perso grimperait hors du cadre. On monte le POINT VISE de la camera (Humanoid.CameraOffset,
+-- la cam joueur garde son angle + zoom) selon la progression : 0 au sol, CLIMB_CAM_RISE en haut. A REGLER pour cadrer.
+local CLIMB_CAM_RISE = 6
 local EXIT_SPEED = 3 -- vitesse de lecture d'IdleDown A L'ENVERS pour sortir (plus haut = sortie plus rapide)
 local MOUNT_BACK = 1.25 -- recul du point de montage depuis le centre de la zone, vers l'exterieur de l'echelle (studs)
-
--- Camera : ORBITE autour du joueur qui grimpe, du COTE de la haie ou est posee l'echelle. On trouve la haie la plus
--- proche, on regarde de quel cote l'echelle se trouve (outward), et on place la camera a un azimut + une elevation
--- par defaut (l'angle iso 3/4). Le joueur peut ensuite tourner LIBREMENT (clic droit) : horizontal 360 + vertical
--- borne. Seul le POINT SUIVI est lisse ; l'orbit, lui, est DIRECT, donc reactif meme en tournant vite.
-local CAM_ISO_DIST = 19 -- rayon : distance camera -> joueur (studs)
-local CAM_ISO_YAW = 25 -- azimut par defaut = l'angle 3/4 (degres ; le signe choisit le cote du cadre)
-local CAM_ISO_PITCH = 38 -- elevation par defaut (degres ; haut = vue plus plongeante / iso)
-local CAM_ISO_LOOK = 3 -- point vise, au-dessus du joueur (studs). Monte-le pour viser davantage le haut de la haie
-local CAM_FOLLOW = 14 -- lissage du SUIVI du joueur (le point suivi seulement ; l'orbit reste direct, sans lag)
-local CAM_ENTER = 0.7 -- duree de l'entree en douceur : la vue glisse de la cam joueur vers la vue iso (s)
-local CAM_TWEEN_OUT = 0.3 -- duree du retour derriere le joueur a la sortie (s). Court : le joueur RECULE en sortant,
--- une cible figee "derriere lui" vieillit vite ; un tween long laisse la vue trainer pres de l'echelle avant de le
--- rattraper. Court = handoff rapide vers la camera de jeu qui suit le joueur en direct.
--- Orbit joueur au clic droit maintenu (meme geste qu'en taillant), applique DIRECT (pas de lerp) donc jamais en
--- retard. Yaw = tour horizontal complet ; pitch = inclinaison verticale, bornee pour ne pas retourner la camera.
-local CAM_YAW_SENS = 0.4 -- degres de pivot horizontal par pixel de souris
-local CAM_PITCH_SENS = 0.4 -- degres de pivot vertical par pixel de souris
-local CAM_PITCH_MIN = -45 -- inclinaison la plus basse (regarder le haut de la haie d'en dessous)
-local CAM_PITCH_MAX = 82 -- inclinaison la plus haute (vue plongeante ; sous 90 pour ne pas retourner la camera)
--- Zoom molette : multiplie le rayon. En PROPORTION (et non un pas fixe) pour que chaque cran change la vue d'autant
--- de pres que de loin. Pas besoin de tenir le clic droit : la molette zoome des qu'on est sur l'echelle.
-local CAM_ZOOM_STEP = 0.1 -- fraction par cran de molette
-local CAM_ZOOM_MIN = 0.5 -- au plus pres (rayon * 0.5)
-local CAM_ZOOM_MAX = 1.8 -- au plus loin (rayon * 1.8)
+-- Prompt "[E] MONTER" affiche quand on entre dans une zone de grimpe (box_detecte_A / _B). On ne monte PLUS
+-- automatiquement en entrant : il faut appuyer E (ou taper le bouton sur mobile). F est la prise (LadderMoveController).
+local MOUNT_PROMPT_KEY = "E"
+local MOUNT_PROMPT_LABEL = "MONTER"
+local MOUNT_PROMPT_TITLE = "LADDER" -- titre au-dessus du prompt, comme "MAILBOX" sur la boite aux lettres
+local MOUNT_PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-dessus de la zone (pas la distance de detection)
 
 local idleTrack: AnimationTrack? = nil
 local climbTrack: AnimationTrack? = nil
 local gripTrack: AnimationTrack? = nil
 local trimTrack: AnimationTrack? = nil
+-- Dossier d'anim pour lequel trimTrack est charge (nil = secours taille-haie). Sert a RECHARGER la pose si l'outil
+-- a change depuis la derniere montee (chaque outil a sa propre RightLeftAnimation).
+local trimFolderLoaded: string? = nil
 -- Maintien EN HAUT (jambes sur les marches). Joue au sommet a la place de la grimpe, sous les bras qui taillent.
 local topLegsTrack: AnimationTrack? = nil
 -- Sert AUSSI d'etat "accroche" : non-nil = on est sur l'echelle.
 local mountCFrame: CFrame? = nil
 -- Empeche de se raccrocher tant qu'on n'a pas quitte la zone une fois (apres une sortie).
 local canMount = true
--- Evite de repeter le toast "equipe ton taille-haie" a chaque frame passee dans la zone sans outil.
-local noTrimmerNotified = false
 -- WalkSpeed d'origine, retenue pour la rendre a la sortie.
 local savedWalkSpeed: number? = nil
--- La montee n'est ARMEE qu'apres avoir relache W une fois depuis l'accroche. Le joueur entre souvent dans la zone
--- en MARCHANT (touche avant = KeyCode.W), et sans ca on lancerait la grimpe direct au lieu de l'idle.
-local climbArmed = false
+-- Progression de la grimpe au dernier pas joue : sert a declencher un pas des qu'on a avance d'un intervalle.
+local lastStepPos = 0
 -- Phase sur l'echelle :
 --   "ready"    IdleDown EN BOUCLE (pret a monter). W = grimper, S = ressortir.
 --   "climbing" UpDown pilotee par W/S ; au bas de la descente, on repasse par "exiting".
 --   "top"      grimpe gelee au max, taille du dessus (IdleUpLadder + RightLeft).
 --   "exiting"  IdleDown a l'envers (max -> 0) ; arrive a 0, on lache l'echelle.
 local phase = "off"
+
+-- Prompt de montee : est-il affiche, et sur quelle zone / echelle il pointe (pour monter au bon endroit a l'appui).
+local mountPromptShown = false
+local pendingZone: BasePart? = nil
+local pendingLadder: Instance? = nil
 
 -- folderPath = chemin sous ReplicatedStorage (les anims de l'echelle et celle du taille-haie sont dans des
 -- dossiers differents).
@@ -146,19 +153,15 @@ local ladderWorkActive = false
 -- "Sur l'echelle" (toute phase) : le serveur desengage l'aimant du sol tant que c'est vrai, et rejoue le maintien
 -- de l'outil a la sortie. Different de SetLadderWork, qui ne concerne que la coupe au sommet.
 local onLadderRemote: RemoteEvent? = nil
+-- MONTEE : on demande au serveur d'ANCRER + poser le HRP face a l'echelle. Ancrer + poser en local ne se
+-- repliquait pas -> les autres voyaient le grimpeur de travers. Le serveur pose le CFrame, ca se voit chez tous.
+local climbRemote: RemoteEvent? = nil
 
--- La lame : la meme part que le systeme de taille au sol (HitBoxRoot). Ces deux helpers refletent HedgeController ;
--- si ca se stabilise, les sortir dans un util partage (voir CLAUDE.md sur la duplication).
+-- La lame : la meme part que le systeme de taille au sol (HitBoxRoot). Reflete HedgeController ; si ca se
+-- stabilise, la sortir dans un util partage (voir CLAUDE.md sur la duplication). Sert a la visee du dessus.
 local function findBlade(character: Model): BasePart?
 	local found = character:FindFirstChild("HitBoxRoot", true)
 	return if found and found:IsA("BasePart") then found else nil
-end
-
--- Taille-haie en main ? La lame (HitBoxRoot) n'existe dans le perso QUE quand l'outil est equipe. C'est donc le
--- signal d'equipement. On l'exige pour monter : sans outil, taille depuis l'echelle impossible et etats incoherents.
-local function isTrimmerEquipped(): boolean
-	local character = player.Character
-	return character ~= nil and findBlade(character) ~= nil
 end
 
 -- Les deux bouts de la lame en monde, le long de son axe le PLUS LONG. Le serveur taille le long de cette ligne.
@@ -201,12 +204,6 @@ local function sendBladeAim()
 	end
 end
 
--- La haie de travail (retenue a l'accroche) : sert a projeter le curseur sur son DESSUS pour la visee de coupe.
-local mountHedge: BasePart? = nil
--- Direction horizontale vers l'EXTERIEUR de la haie, du cote de l'echelle (le "cote" detecte). Declaree ICI (avant
--- topAim qui s'en sert pour trouver l'axe de largeur du dessus) ; elle sert aussi a la camera plus bas.
-local camOutward: Vector3? = nil
-
 -- Inverse le sens du balayage. La souris et la lame peuvent partir a l'oppose selon le sens de RightLeftAnimation et
 -- l'orientation de la haie. A basculer si le sens est faux (curseur a gauche -> lame a droite = mets false, ou true).
 local CUT_TOP_INVERT = false
@@ -215,78 +212,31 @@ local CUT_TOP_INVERT = false
 local CUT_SWEEP_SMOOTH = 10
 local cutRatioSmooth = 0.5
 
--- Point rose de visee sur le dessus (comme le curseur des cotes). Cree une fois, sous la camera. Neon = bien visible.
-local topCursorPart: BasePart? = nil
 local lastCutRatio = 0.5
 
-local function getTopCursor(): BasePart
-	local existing = topCursorPart
-	if existing and existing.Parent then
-		return existing
-	end
-	local part = Instance.new("Part")
-	part.Name = "LadderCutCursor"
-	part.Shape = Enum.PartType.Ball
-	part.Size = Vector3.one * HedgeConfigs.CURSOR_SIZE
-	part.Color = HedgeConfigs.CURSOR_COLOR
-	part.Material = Enum.Material.Neon
-	part.Anchored = true
-	part.CanCollide = false
-	part.CanQuery = false
-	part.CanTouch = false
-	part.CastShadow = false
-	part.Parent = workspace.CurrentCamera
-	topCursorPart = part
-	return part
-end
-
-local function hideTopCursor()
-	if topCursorPart then
-		topCursorPart:Destroy()
-		topCursorPart = nil
-	end
-end
-
--- VISEE DU DESSUS. On projette le curseur sur le plan du haut de la haie, mais on RAMENE le point sur l'emprise du
--- dessus (clampe) : il ne part donc jamais dans le vide, il reste SUR la haie. Le ratio se lit sur la LARGEUR REELLE
--- du dessus (auto-echelle) : les extremes tombent PILE aux bords de la haie, plus besoin de pointer loin. Le point
--- rose montre ou on vise, la lame suit. Renvoie le dernier ratio si on ne peut pas viser (regard a plat).
+-- VISEE DU DESSUS. La lame suit la souris PAR RAPPORT AU JOUEUR a l'ecran (pas le centre de l'ecran) : souris pile
+-- DEVANT le joueur -> MILIEU de l'anim ; a gauche -> debut, a droite -> fin. Le repere est le CORPS, donc peu importe ou
+-- le joueur est cadre. TOP_SENSITIVITY : plus haut = moins de mouvement de souris pour parcourir 0 a 1. CUT_TOP_INVERT
+-- si le sens gauche/droite est faux.
 local function topAim(): number
 	local camera = workspace.CurrentCamera
-	local hedge = mountHedge
-	if not (camera and hedge and hedge.Parent) then
-		hideTopCursor()
+	local root = getRoot()
+	if not (camera and root) then
 		return lastCutRatio
 	end
-	local half = hedge.Size * 0.5
-	local topY = hedge.Position.Y + half.Y
-	local ray = camera:ViewportPointToRay(UserInputService:GetMouseLocation().X, UserInputService:GetMouseLocation().Y)
-	-- La vue iso plonge : le rayon DESCEND vers le plan. S'il monte ou est a plat, pas d'intersection utile.
-	if ray.Direction.Y > -1e-3 then
-		hideTopCursor()
+	local viewW = camera.ViewportSize.X
+	if viewW <= 0 then
 		return lastCutRatio
 	end
-	local t = (topY - ray.Origin.Y) / ray.Direction.Y
-	if t <= 0 then
-		hideTopCursor()
-		return lastCutRatio
-	end
-	-- Point du plan ramene dans le repere de la haie, CLAMPE a l'emprise du dessus : le point rose reste sur la haie.
-	local localHit = hedge.CFrame:PointToObjectSpace(ray.Origin + ray.Direction * t)
-	localHit = Vector3.new(math.clamp(localHit.X, -half.X, half.X), half.Y, math.clamp(localHit.Z, -half.Z, half.Z))
-	local worldBall = hedge.CFrame:PointToWorldSpace(localHit)
-	getTopCursor().Position = worldBall
-	-- Ratio le long de la DROITE DE LA CAMERA (= la droite de l'ECRAN), pas celle du perso : c'est avec la souris,
-	-- sur l'ecran, que le joueur vise. Tourner l'echelle retourne le perso mais PAS l'ecran, donc "souris a droite =
-	-- lame a droite" reste vrai quelle que soit l'orientation. On mesure a plat (Y ignore), sur la largeur reelle du
-	-- dessus projetee sur cet axe (auto-echelle).
-	local camRight = camera.CFrame.RightVector
-	camRight = Vector3.new(camRight.X, 0, camRight.Z)
-	camRight = if camRight.Magnitude > 1e-3 then camRight.Unit else Vector3.xAxis
-	local halfWidth = math.abs(camRight.X) * half.X + math.abs(camRight.Z) * half.Z
-	local ratio = if halfWidth > 1e-3
-		then ((worldBall - hedge.Position):Dot(camRight) + halfWidth) / (2 * halfWidth)
-		else 0.5
+	-- Milieu du joueur A L'ECRAN : on prend la TETE si dispo (le corps est monte sur l'echelle), sinon la RootPart.
+	-- WorldToViewportPoint et GetMouseLocation sont dans le meme repere (viewport), donc leurs X se comparent direct.
+	local character = player.Character
+	local head = character and character:FindFirstChild("Head")
+	local refPos = if head and head:IsA("BasePart") then head.Position else root.Position
+	local playerX = camera:WorldToViewportPoint(refPos).X
+	local mouseX = UserInputService:GetMouseLocation().X
+	-- Offset de la souris PAR RAPPORT au joueur, normalise par la largeur d'ecran. 0 = pile devant -> ratio 0.5.
+	local ratio = 0.5 + ((mouseX - playerX) / viewW) * TOP_SENSITIVITY
 	if CUT_TOP_INVERT then
 		ratio = 1 - ratio
 	end
@@ -294,91 +244,11 @@ local function topAim(): number
 	return lastCutRatio
 end
 
--- Tween camera en cours (sortie). Garde pour l'annuler si l'etat change avant la fin.
-local camTween: Tween? = nil
--- Etat de la camera iso. camTracking = true quand le suivi iso est actif (camOutward est declaree plus haut).
-local camTracking = false
--- camSubject = point suivi LISSE (le corps qui monte), pour que l'orbit ne parte pas d'un point qui tremble.
-local camSubject: Vector3? = nil
--- Entree en douceur : camEnterFrom = la CFrame de la cam joueur au moment de l'accroche ; on ease depuis elle vers
--- la vue iso pendant camEnterElapsed < CAM_ENTER, puis l'orbit reprend en direct. Sans ca l'entree snappe sec.
-local camEnterFrom: CFrame? = nil
-local camEnterElapsed = 0
--- Orbit joueur : ladderYaw / ladderPitch = pivots accumules a la souris ; orbiting = clic droit maintenu maintenant.
--- ladderZoom = multiplicateur de rayon (molette).
-local ladderYaw = 0
-local ladderPitch = 0
-local ladderZoom = 1
-local orbiting = false
-
--- Le point du corps a viser / suivre. LowerTorso d'abord : c'est LUI qui MONTE avec l'anim (le HumanoidRootPart,
--- lui, reste ancre en bas). Sans ca la camera ne "suivrait" pas la grimpe. Secours : Torso (R6), puis HRP.
-local function getTrackPoint(): Vector3?
-	local character = player.Character
-	if not character then
-		return nil
-	end
-	local part = character:FindFirstChild("LowerTorso")
-		or character:FindFirstChild("Torso")
-		or character:FindFirstChild("HumanoidRootPart")
-	return if part and part:IsA("BasePart") then part.Position else nil
-end
-
--- La haie taguee la plus proche d'un point (l'echelle). C'est elle qui donne le cote et le haut a cadrer.
-local function nearestHedge(position: Vector3): BasePart?
-	local best: BasePart? = nil
-	local bestDist = math.huge
-	for _, instance in ipairs(CollectionService:GetTagged(HedgeConfigs.TAG)) do
-		if instance:IsA("BasePart") then
-			local d = (instance.Position - position).Magnitude
-			if d < bestDist then
-				bestDist = d
-				best = instance
-			end
-		end
-	end
-	return best
-end
-
--- Le COTE de la haie ou se trouve l'echelle, cale sur la face la plus proche (devant/derriere/gauche/droite) et
--- mis a plat. C'est la "normale" simplifiee qui sort de la haie vers l'echelle : la camera se posera dans cette
--- direction, donc automatiquement du bon cote quelle que soit l'orientation de la haie.
-local function outwardSide(hedge: BasePart, from: Vector3): Vector3
-	local localDir = hedge.CFrame:VectorToObjectSpace(from - hedge.Position)
-	local axis = if math.abs(localDir.X) >= math.abs(localDir.Z)
-		then Vector3.new(if localDir.X >= 0 then 1 else -1, 0, 0)
-		else Vector3.new(0, 0, if localDir.Z >= 0 then 1 else -1)
-	local world = hedge.CFrame:VectorToWorldSpace(axis)
-	world = Vector3.new(world.X, 0, world.Z)
-	return if world.Magnitude > 1e-3 then world.Unit else Vector3.new(0, 0, 1)
-end
-
--- Envoie la camera vers cf par un tween, puis rend la main a la camera de jeu (Custom). Sert a la SORTIE : ramener
--- la vue derriere le joueur en douceur avant de rendre le controle, au lieu d'un saut sec vers la vue par defaut.
-local function tweenCameraToCustom(cf: CFrame, duration: number)
-	local camera = workspace.CurrentCamera
-	if not camera then
-		return
-	end
-	if camTween then
-		camTween:Cancel()
-		camTween = nil
-	end
-	camera.CameraType = Enum.CameraType.Scriptable
-	local info = TweenInfo.new(duration, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-	local tween = TweenService:Create(camera, info, { CFrame = cf })
-	camTween = tween
-	tween.Completed:Connect(function()
-		if camTween ~= tween then
-			return -- un autre tween a pris le relais entre-temps : on ne fait rien.
-		end
-		-- Rien ne reste accroche : la camera de jeu reprend (derriere le joueur, libre a la souris).
-		local cam = workspace.CurrentCamera
-		if cam then
-			cam.CameraType = Enum.CameraType.Custom
-		end
-	end)
-	tween:Play()
+-- Position temporelle de la lame pour un ratio [0,1] : LINEAIRE sur toute la duree de l'anim (0 -> debut, 1 -> fin).
+-- Simple et robuste : le curseur pilote directement le temps de lecture, sans evenements ni appel async.
+local function topTrimTime(track: AnimationTrack, ratio: number): number
+	local length = track.Length
+	return math.clamp(ratio * length, 0, length - 0.001)
 end
 
 -- priority : par defaut Action4. Les pistes de BASE (grimpe, maintien en haut) se chargent plus BAS (Action3) pour
@@ -402,6 +272,17 @@ local function loadTrack(
 	return track
 end
 
+-- Un pas de grimpe : tire un des deux sons AU HASARD, joue sur le perso (spatial). Appele par la boucle de
+-- grimpe des qu'on a avance d'un intervalle (voir update).
+local function playClimbStep()
+	local name = CLIMB_STEP_SOUNDS[math.random(#CLIMB_STEP_SOUNDS)]
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local path = table.clone(LADDER_SOUND_PATH)
+	table.insert(path, name)
+	SoundUtils.play(path, if root and root:IsA("BasePart") then root else nil)
+end
+
 -- Charge les pistes une fois. Renvoie false si l'Animator ou une anim OBLIGATOIRE manque.
 local function ensureTracks(): boolean
 	if idleTrack and climbTrack then
@@ -419,13 +300,64 @@ local function ensureTracks(): boolean
 	climbTrack = climbTrack or loadTrack(animator, ANIM_FOLDER, CLIMB_ANIM, Enum.AnimationPriority.Action3)
 	topLegsTrack = topLegsTrack or loadTrack(animator, ANIM_FOLDER, TOP_LEGS_ANIM)
 	gripTrack = gripTrack or loadTrack(animator, ANIM_FOLDER, GRIP_ANIM)
-	trimTrack = trimTrack or loadTrack(animator, TRIM_FOLDER, TRIM_ANIM)
+	-- La pose de coupe du dessus (trimTrack) est chargee a part, dans ensureTrimTrack : elle depend de l'OUTIL equipe.
+	return idleTrack ~= nil and climbTrack ~= nil
+end
+
+-- Dossier d'anims de l'outil TENU (ex "Shear", "HedgeTrimmer"), lu via l'attribut LeafiaTool pose sur le modele de
+-- l'outil (enfant du perso), ou nil si aucun outil. Meme source que HedgeController.heldToolConfig cote sol.
+local function equippedToolFolder(): string?
+	local character = player.Character
+	if not character then
+		return nil
+	end
+	for _, child in ipairs(character:GetChildren()) do
+		local toolName = child:GetAttribute("LeafiaTool")
+		if typeof(toolName) == "string" then
+			local config = ToolConfigs[toolName]
+			if config then
+				return config.animationFolder
+			end
+		end
+	end
+	return nil
+end
+
+-- (Re)charge la pose de coupe du dessus (RightLeft) pour l'OUTIL equipe : son dossier si l'anim y existe, sinon le
+-- taille-haie (TRIM_FOLDER). Appele a la PRISE de l'echelle, ou l'outil est encore equipe (il est range juste apres,
+-- a SetOnLadder). Ne recharge que si l'outil a change (trimFolderLoaded) : pas de rechargement inutile a chaque montee.
+local function ensureTrimTrack()
+	local folder = equippedToolFolder()
+	if trimTrack and folder == trimFolderLoaded then
+		return
+	end
+	if trimTrack then
+		trimTrack:Stop(0)
+		trimTrack = nil
+	end
+	trimFolderLoaded = folder
+	local animator = getAnimator()
+	if not animator then
+		return
+	end
+	local folderPath = TRIM_FOLDER
+	if folder then
+		local toolFolder = { "Animations", "Player", "Tools", folder }
+		-- Existence de la pose dans le dossier de l'outil : sinon on retombe sur le taille-haie (evite un warn).
+		local node: Instance? = ReplicatedStorage
+		for _, name in ipairs(toolFolder) do
+			node = node and node:FindFirstChild(name)
+		end
+		if node and node:FindFirstChild(TRIM_ANIM) then
+			folderPath = toolFolder
+		end
+	end
+	trimTrack = loadTrack(animator, folderPath, TRIM_ANIM)
 	-- La coupe des bras ne DEFILE PAS toute seule : c'est une POSE parcourue a la main par la visee (comme au sol).
 	-- Bouclee, elle rejouait en boucle avec un reset moche. Non bouclee + vitesse 0 : on place sa position nous-memes.
 	if trimTrack then
 		trimTrack.Looped = false
 	end
-	return idleTrack ~= nil and climbTrack ~= nil
 end
 
 -- Toutes les echelles du Workspace : tout DESCENDANT dont le nom commence par LADDER_PREFIX (recursif : detecte
@@ -482,9 +414,6 @@ local function dismount()
 	end
 	mountCFrame = nil
 	phase = "off"
-	-- On quitte : plus de point rose de visee, plus de haie de travail retenue.
-	hideTopCursor()
-	mountHedge = nil
 	-- On quittait peut-etre depuis le sommet : couper la taille depuis l'echelle (idempotent si deja coupee).
 	setLadderWork(false)
 	-- On quitte l'echelle : le serveur reengage l'aimant du sol ET rejoue le maintien de l'outil (que le garde-fou
@@ -492,36 +421,30 @@ local function dismount()
 	if onLadderRemote then
 		onLadderRemote:FireServer(false)
 	end
+	-- Plus sur l'echelle : l'auto-equip du taille-haie peut de nouveau se declencher.
+	local char = player.Character
+	if char then
+		char:SetAttribute("LeafiaOnLadder", nil)
+	end
+	-- On dit au serveur de DESANCRER le HRP (fin de montee cote serveur). Sans argument -> release.
+	if climbRemote then
+		climbRemote:FireServer()
+	end
 	local root = getRoot()
 	if root then
 		root.Anchored = false
 	end
 	-- On rend sa vitesse de marche au joueur.
 	local humanoid = getHumanoid()
-	if humanoid and savedWalkSpeed then
-		humanoid.WalkSpeed = savedWalkSpeed
+	if humanoid then
+		if savedWalkSpeed then
+			humanoid.WalkSpeed = savedWalkSpeed
+		end
+		-- Fin du suivi vertical de la grimpe : on remet le point vise de la camera au niveau du joueur. On ne quitte
+		-- jamais la camera normale (voir mount) ; c'est le SEUL reglage camera a la sortie.
+		humanoid.CameraOffset = Vector3.zero
 	end
 	savedWalkSpeed = nil
-	-- CAMERA : on coupe d'abord la visee vivante (sinon la boucle d'aim ecraserait le tween de sortie), puis on ramene
-	-- la vue DERRIERE le joueur par un tween avant de rendre la main a la camera de jeu (Custom). Sans ce tween, Custom
-	-- reprend d'un coup = le saut qu'on veut eviter. Cible = derriere le joueur, visant sa tete.
-	camTracking = false
-	camOutward = nil
-	camSubject = nil
-	camEnterFrom = nil
-	-- Si on lache l'echelle en plein clic droit : on libere le curseur, sinon il resterait fige hors echelle.
-	orbiting = false
-	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-	if root then
-		local headPos = root.Position + Vector3.new(0, 1.5, 0)
-		local behind = root.Position - root.CFrame.LookVector * 12 + Vector3.new(0, 3, 0)
-		tweenCameraToCustom(CFrame.lookAt(behind, headPos), CAM_TWEEN_OUT)
-	else
-		local camera = workspace.CurrentCamera
-		if camera then
-			camera.CameraType = Enum.CameraType.Custom
-		end
-	end
 	if idleTrack then
 		idleTrack:Stop(0.15)
 	end
@@ -563,14 +486,21 @@ local function mount(zone: BasePart, ladder: Instance, root: BasePart)
 	if not ensureTracks() then
 		return
 	end
+	-- Pose de coupe du dessus pour l'OUTIL equipe : il l'est encore ici (il sera range plus bas, a SetOnLadder). Chaque
+	-- outil a sa propre RightLeftAnimation (ex la cisaille), sinon secours taille-haie.
+	ensureTrimTrack()
 	canMount = false
-	-- La montee n'est pas encore armee : il faut relacher W une fois (le joueur tenait souvent l'avant pour entrer).
-	climbArmed = false
 	phase = "ready"
 	-- On dit au serveur qu'on est SUR l'echelle : il desengage l'aimant du sol tant qu'on y est (sinon, dans une
 	-- zone qui chevauche celle de la haie, les deux systemes se disputent le joueur).
 	if onLadderRemote then
 		onLadderRemote:FireServer(true)
+	end
+	-- Marque le perso "sur l'echelle", lu par LadderMoveController pour BLOQUER l'auto-equip du taille-haie pendant
+	-- la grimpe. Le serveur range l'outil sur l'echelle ; sans ce blocage, l'auto-equip (haie a cote) le re-sortirait.
+	local char = player.Character
+	if char then
+		char:SetAttribute("LeafiaOnLadder", true)
 	end
 	-- Ancre : plus de physique qui se bat avec l'aimant. WalkSpeed A 0 : le Humanoid ne se croit plus en deplacement,
 	-- donc son anim de marche par defaut ne joue plus (LE fix du "walk dans le vide"). Root ancre + WalkSpeed 0
@@ -602,25 +532,66 @@ local function mount(zone: BasePart, ladder: Instance, root: BasePart)
 	local spot = Vector3.new(center.X, root.Position.Y, center.Z) + away * MOUNT_BACK
 	mountCFrame = CFrame.lookAt(spot, Vector3.new(towards.X, root.Position.Y, towards.Z))
 
-	-- CAMERA : vue iso du cote de la haie, activee DES l'accroche. On trouve la haie la plus proche de l'echelle et on
-	-- retient de quel COTE l'echelle se trouve (camOutward). La boucle d'aim posera la camera de ce cote, en hauteur,
-	-- et suivra le joueur. L'entree ease depuis la vue joueur ACTUELLE vers la vue iso (pas de snap).
-	local hedge = nearestHedge(spot)
-	mountHedge = hedge -- retenue pour la visee du dessus (projection du curseur sur son plan haut)
-	if hedge then
-		camOutward = outwardSide(hedge, spot)
-	else
-		-- Pas de haie taguee a proximite : on se rabat sur le cote de l'echelle (direction du recul deja calculee).
-		camOutward = if away.Magnitude > 1e-3 then away else Vector3.new(0, 0, 1)
+	-- On demande au SERVEUR d'ancrer + poser le HRP a ce point (face a l'echelle) : c'est ce CFrame serveur qui se
+	-- replique aux autres (l'aimant local, lui, ne se voyait que chez le grimpeur). Le root est deja ancre en local.
+	if climbRemote then
+		climbRemote:FireServer(ladder, mountCFrame)
 	end
-	ladderYaw = 0
-	ladderPitch = 0
-	ladderZoom = 1
-	camSubject = getTrackPoint()
-	local camNow = workspace.CurrentCamera
-	camEnterFrom = if camNow then camNow.CFrame else nil
-	camEnterElapsed = 0
-	camTracking = true
+
+	-- PAS de camera iso ici : sur l'echelle on garde la camera NORMALE du joueur, comme il l'a reglee (choix de design).
+end
+
+-- Input de deplacement pour MONTER / DESCENDRE l'echelle (avant = monte, arriere = descend). Marche au JOYSTICK sur
+-- mobile ET a W/S sur PC. Meme approche que HedgeController : ControlModule charge en fond (retry) + secours clavier si
+-- le module custom rend du vide. Avant on lisait W/S EN DUR -> le joystick mobile ne montait pas.
+local climbControlModule: any = nil
+task.spawn(function()
+	while not climbControlModule do
+		local ok, result = pcall(function()
+			local scripts = player:WaitForChild("PlayerScripts", 10)
+			local pm = scripts and require(scripts:WaitForChild("PlayerModule", 10)) :: any
+			return pm and pm:GetControls()
+		end)
+		if ok and result then
+			climbControlModule = result
+		else
+			task.wait(0.3)
+		end
+	end
+end)
+
+-- Move vector du ControlModule (mobile thumbstick ET PC WASD), en repere CAMERA-monde. Vide si le module n'est pas resolu.
+local function climbMoveVector(): Vector3
+	if climbControlModule then
+		local ok, v = pcall(function()
+			return climbControlModule:GetMoveVector()
+		end)
+		if ok and typeof(v) == "Vector3" then
+			return v
+		end
+	end
+	return Vector3.zero
+end
+
+-- Monte sur l'echelle. Appele par la touche E (PC, via init) ET par le tap du prompt sur mobile (onActivate). Garde et
+-- idempotent : ne fait rien si deja accroche, si on porte une echelle, ou si aucune zone de grimpe n'est en attente.
+local function tryMount()
+	local zone = pendingZone
+	local ladder = pendingLadder
+	if mountCFrame or not (zone and ladder and canMount) then
+		return
+	end
+	local character = player.Character
+	if character and character:GetAttribute(CARRYING_ATTR) == true then
+		return -- on porte une echelle : ses zones nous suivent, pas de grimpe
+	end
+	local root = getRoot()
+	if not root then
+		return
+	end
+	InteractionPrompt.hide()
+	mountPromptShown = false
+	mount(zone, ladder, root)
 end
 
 local function update(dt: number)
@@ -630,35 +601,45 @@ local function update(dt: number)
 		return
 	end
 
+	-- On PORTE une echelle (LadderMoveController) : elle est soudee a nous, donc ses zones de grimpe nous suivent
+	-- et on serait en permanence "dans la zone" -> on grimperait sa propre echelle. Tant qu'on porte, pas de grimpe.
+	-- dismount est idempotent : rien si on n'etait pas accroche ; sinon il sort proprement (cas ou on prend l'echelle
+	-- alors qu'on etait deja accroche).
+	local character = player.Character
+	if character and character:GetAttribute(CARRYING_ATTR) == true then
+		dismount()
+		return
+	end
+
 	if not mountCFrame then
 		local zone, ladder = zoneContaining(root.Position)
 		if zone and ladder and canMount then
-			-- TAILLE-HAIE OBLIGATOIRE pour monter : sans lui, la taille depuis l'echelle est impossible et l'etat
-			-- devient incoherent (bugs). On NE MONTE PAS tant qu'il n'est pas equipe ; on previent une fois.
-			if isTrimmerEquipped() then
-				noTrimmerNotified = false
-				mount(zone, ladder, root)
-			elseif not noTrimmerNotified then
-				noTrimmerNotified = true
-				Toast.show("Alert", "Equipe ton taille-haie pour monter sur l'echelle")
+			-- Dans une zone de grimpe, pas encore raccroche : on PROPOSE la montee (prompt E, bouton a taper sur
+			-- mobile). On ne monte QUE sur appui (tryMount), plus automatiquement. AUCUNE condition d'outil : il est
+			-- range pendant la grimpe (syncLadderTool) et rendu en haut pour tailler.
+			pendingZone, pendingLadder = zone, ladder
+			if not mountPromptShown then
+				mountPromptShown = true
+				InteractionPrompt.show(zone, MOUNT_PROMPT_KEY, MOUNT_PROMPT_LABEL, MOUNT_PROMPT_OFFSET, tryMount, MOUNT_PROMPT_TITLE)
 			end
-		elseif not zone then
-			-- On a quitte la zone : on pourra se raccrocher au prochain passage, et on re-avertira au besoin.
-			noTrimmerNotified = false
-			canMount = true
+		else
+			-- Hors zone de grimpe (ou raccrochage encore bloque) : on cache le prompt et on oublie la cible.
+			pendingZone, pendingLadder = nil, nil
+			if mountPromptShown then
+				mountPromptShown = false
+				InteractionPrompt.hide()
+			end
+			if not zone then
+				-- On a quitte la zone : on pourra se raccrocher au prochain passage.
+				canMount = true
+			end
 		end
 		return
 	end
 
-	-- AIMANT : on tire le joueur vers le point de montage. On CLE NET des qu'on est assez pres. Un lerp
-	-- exponentiel n'atteint jamais sa cible : il laisse un residu de mouvement PERMANENT, que le Humanoid lit
-	-- comme une vitesse et traduit en marche par-dessus l'anim (le "walk dans le vide"). Cf journal CLAUDE.md.
-	if (root.Position - mountCFrame.Position).Magnitude > 0.05 then
-		root.CFrame = root.CFrame:Lerp(mountCFrame, math.min(1, MAGNET_RATE * dt))
-	else
-		root.CFrame = mountCFrame
-	end
-
+	-- AIMANT : c'est le SERVEUR qui pose le HRP au point de montage (tween du CFrame de la part ancree), pour que
+	-- la pose face a l'echelle se voie chez TOUS. Le client ne touche plus a root.CFrame : le poser en local ne se
+	-- repliquait pas -> les autres voyaient le grimpeur de travers (cf climbMount serveur).
 	local idle = idleTrack
 	local climb = climbTrack
 	local grip = gripTrack
@@ -668,17 +649,30 @@ local function update(dt: number)
 		return
 	end
 
+	-- SUIVI VERTICAL DE LA GRIMPE. Le corps monte par l'anim alors que le HRP reste ancre en bas : sans ca il grimperait
+	-- hors du cadre. On decale le POINT VISE de la camera (CameraOffset) selon la progression de la grimpe -> la vue monte
+	-- avec le joueur. La cam garde son angle et son zoom (on ne touche QUE le point vise). 0 au sol, max en haut, et la
+	-- descente est suivie aussi. Hors grimpe (ready / exiting) : 0 ; a la sortie, dismount le remet a 0.
+	local humanoid = getHumanoid()
+	if humanoid then
+		local rise = 0
+		if (phase == "climbing" or phase == "top") and climb.Length > 0 then
+			rise = math.clamp(climb.TimePosition / climb.Length, 0, 1) * CLIMB_CAM_RISE
+		end
+		humanoid.CameraOffset = Vector3.new(0, rise, 0)
+	end
+
 	-- GARDE-FOU ANIM. On ne coupe QUE les anims Roblox par DEFAUT (idle / marche / course), sous la priorite Action :
 	-- ce sont elles qui jouent sur les parties non-clees et donnent le "walk dans le vide". On GARDE tout ce qui est
 	-- Action et au-dessus : nos pistes d'echelle (Action3/4) ET le MAINTIEN de l'outil (Action). Ce maintien est de
 	-- toute facon ECRASE par nos pistes d'echelle (plus prioritaires), donc invisible ici ; mais comme on ne le coupe
 	-- plus, il REVIENT tout seul a la sortie de l'echelle (coupe, l'outil ne le rejouait jamais -> bras sans pose).
 	--
-	-- SEULEMENT en grimpe/sommet. En phase "ready", si IdleDown ne cle pas les jambes, on LAISSE l'idle par defaut
-	-- les animer (le couper les figerait en pose gelee). Ancre + WalkSpeed 0, il n'y a de toute facon pas de walk
-	-- parasite a couper au sol.
+	-- DANS TOUTES LES PHASES (y compris "ready" au pied de l'echelle) : des qu'on est sur l'echelle, aucune anim
+	-- par defaut ne doit jouer, sinon les membres non-cles (ex : le bras gauche) "marchent dans le vide". Les
+	-- membres qu'aucune de nos pistes ne cle restent alors a leur pose de repos : a cler dans l'anim si on les veut poses.
 	local animator = getAnimator()
-	if animator and phase ~= "ready" then
+	if animator then
 		for _, playing in ipairs(animator:GetPlayingAnimationTracks()) do
 			if playing.Priority.Value < Enum.AnimationPriority.Action.Value then
 				playing:Stop(0)
@@ -686,38 +680,62 @@ local function update(dt: number)
 		end
 	end
 
-	local up = UserInputService:IsKeyDown(Enum.KeyCode.W)
-	local down = UserInputService:IsKeyDown(Enum.KeyCode.S)
-
-	-- ARMEMENT DE LA MONTEE. Tant que W n'a pas ete relache une fois depuis l'accroche, on IGNORE W : entrer dans
-	-- la zone en marchant (touche avant = W) montre l'idle au lieu de lancer la grimpe. Un vrai appui apres avoir
-	-- relache = grimper.
-	if not up then
-		climbArmed = true
+	-- Monte/descend au DEPLACEMENT : POUSSER VERS L'AVANT (haut du stick / W) = monter, arriere = descendre. Le move vector
+	-- du ControlModule (mobile thumbstick ET PC WASD) est en repere CAMERA-monde : on le PROJETTE sur le regard de la camera
+	-- pour recuperer la poussee "vers le haut de l'ecran", INDEPENDAMMENT de l'orientation de l'echelle. Avant on testait le
+	-- Z MONDE en dur (mv.Z) -> ne marchait que si l'echelle/camera faisait face a -Z, et le mobile ne montait pas sinon.
+	local mv = climbMoveVector()
+	local forward = 0
+	if mv.Magnitude > 0.05 then
+		local cam = workspace.CurrentCamera
+		local f = if cam then cam.CFrame.LookVector else Vector3.new(0, 0, -1)
+		f = Vector3.new(f.X, 0, f.Z) -- regard horizontal
+		if f.Magnitude > 1e-3 then
+			forward = mv:Dot(f.Unit)
+		end
 	end
-	local climbUp = up and climbArmed
+	if forward == 0 then -- secours si le ControlModule n'est pas (encore) resolu : lecture clavier directe (independante de la cam)
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			forward = 1
+		elseif UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			forward = -1
+		end
+	end
+	local up = forward > 0.2
+	local down = forward < -0.2
+
+	-- MONTEE EN FLUX CONTINU : tant qu'on POUSSE EN AVANT, on grimpe. PAS d'armement (relacher puis rappuyer) : entrer dans
+	-- la zone touche avant tenue enchaine directement sur la grimpe, ca coule sans point d'arret. Le raccrochage juste
+	-- apres une sortie est deja empeche par canMount (il faut quitter la zone une fois), donc pas de rebond au pied.
+	local climbUp = up
 
 	if phase == "ready" then
-		-- IdleDown joue 0 -> fin UNE fois, puis on la FIGE sur sa derniere image (la pose "pret a monter"). Looped=true
-		-- garde la pose APPLIQUEE au bout (non bouclee, la piste se relacherait a la fin et le corps sauterait), mais on
-		-- ne la laisse PAS reboucler : on avance sa TimePosition A LA MAIN jusqu'a la fin puis on cle la (aucun wrap).
-		-- W = enchainer sur la grimpe, S = ressortir (l'inverse).
+		-- IdleDown joue 0 -> fin UNE fois (l'anim d'ACCROCHE a l'echelle, ~1 s), puis on la FIGE sur sa derniere image
+		-- (la pose "pret a monter"). Looped=true garde la pose APPLIQUEE au bout (non bouclee, la piste se relacherait a
+		-- la fin et le corps sauterait), mais on ne la laisse PAS reboucler : on avance sa TimePosition A LA MAIN jusqu'a
+		-- la fin puis on cle la (aucun wrap). W = enchainer sur la grimpe une fois l'accroche JOUEE, S = ressortir.
 		if not idle.IsPlaying then
 			idle:Play()
 			idle.TimePosition = 0
 		end
 		idle.Looped = true
 		idle:AdjustSpeed(0)
+		local idleDone = true
 		if idle.Length > 0 then
 			idle.TimePosition = math.min(idle.TimePosition + dt, idle.Length - 0.001)
+			-- Accroche JOUEE EN ENTIER avant de grimper : on attend qu'elle atteigne sa fin. Sinon W tenu des la 1re
+			-- frame la couperait a ~0 s et on ne la verrait pas. Le flux reste continu : W maintenu enchaine tout seul
+			-- des que l'accroche est finie, sans avoir a relacher.
+			idleDone = idle.TimePosition >= idle.Length - 0.02
 		end
-		if climbUp then
+		if climbUp and idleDone then
 			-- On monte : UpDown demarre pile ou IdleDown s'arrete. La main qui agrippe demarre en meme temps, a 0.
 			phase = "climbing"
 			idle:Stop(0)
 			climb:Play()
 			climb.TimePosition = 0
 			climb:AdjustSpeed(0)
+			lastStepPos = 0 -- on repart du bas : pas de faux pas des la 1re frame
 			if grip then
 				grip:Play()
 				grip.TimePosition = 0
@@ -736,6 +754,15 @@ local function update(dt: number)
 		-- GRIMPE : UpDown (corps) pilotee par W/S ; la main qui agrippe suit EN SYNC juste apres.
 		local dir = if climbUp and not down then 1 elseif down and not climbUp then -1 else 0
 		climb:AdjustSpeed(dir * CLIMB_SPEED)
+		-- SON DE PAS : des qu'on a avance d'un INTERVALLE de grimpe (montee OU descente), un pas au hasard. Base
+		-- sur la progression et non sur des marqueurs -> se declenche a coup sur tant que la grimpe avance.
+		if dir ~= 0 and climb.Length > 0 then
+			local interval = climb.Length / CLIMB_STEP_COUNT
+			if interval > 0 and math.abs(climb.TimePosition - lastStepPos) >= interval then
+				lastStepPos = climb.TimePosition
+				playClimbStep()
+			end
+		end
 		if climb.Length > 0 then
 			if dir >= 0 and climb.TimePosition >= climb.Length - 0.02 then
 				-- SOMMET ATTEINT. dir >= 0 (et pas > 0) : des qu'on touche le max on bascule, MEME si Z vient d'etre
@@ -764,7 +791,7 @@ local function update(dt: number)
 					trim:AdjustSpeed(0)
 					-- On part de la visee COURANTE (pas de glissement depuis 0.5 en arrivant en haut).
 					cutRatioSmooth = topAim()
-					trim.TimePosition = math.min(cutRatioSmooth * trim.Length, trim.Length - 0.001)
+					trim.TimePosition = topTrimTime(trim, cutRatioSmooth)
 				end
 				-- On est en haut : on signale au serveur qu'on peut tailler le dessus (il choisit la haie la plus
 				-- proche). La coupe reste conditionnee au moteur en marche + gachette, comme au sol.
@@ -812,8 +839,9 @@ local function update(dt: number)
 			trim:AdjustSpeed(0)
 			-- LISSAGE : la lame GLISSE vers la visee (topAim) au lieu de la coller sec, quand on va de gauche a droite.
 			cutRatioSmooth += (topAim() - cutRatioSmooth) * math.min(1, CUT_SWEEP_SMOOTH * dt)
-			-- Borne juste sous la fin : poser TimePosition PILE a la fin d'une piste non bouclee peut l'auto-stopper.
-			trim.TimePosition = math.min(cutRatioSmooth * trim.Length, trim.Length - 0.001)
+			-- Balayage compresse a la largeur de la haie + centre (topTrimTime), borne sous la fin (une piste non
+			-- bouclee posee PILE a sa fin peut s'auto-stopper).
+			trim.TimePosition = topTrimTime(trim, cutRatioSmooth)
 		end
 		-- TAILLE DU DESSUS : on envoie le segment REEL de la lame chaque frame. Moteur en marche + gachette pressee,
 		-- le serveur coupe le dessus la ou passe la lame. Sans outil en main, rien n'est envoye.
@@ -823,7 +851,6 @@ local function update(dt: number)
 			-- la main qui agrippe. La grimpe est DEJA jouee (gelee au max), la phase "climbing" la fait redescendre.
 			phase = "climbing"
 			setLadderWork(false)
-			hideTopCursor() -- plus de visee du dessus tant qu'on n'est pas au sommet
 			if topLegs then
 				topLegs:Stop(0.1)
 			end
@@ -867,148 +894,52 @@ function LadderController.init()
 		warn("[Ladder] Remote Hedge/SetOnLadder introuvable : aimant sol et echelle vont se disputer")
 	end
 
+	local climb = RemoteSetup.getRemote("SetLadderClimb", "Ladder")
+	if climb and climb:IsA("RemoteEvent") then
+		climbRemote = climb
+	else
+		warn("[Ladder] Remote Ladder/SetLadderClimb introuvable : la montee ne se verra pas droite chez les autres")
+	end
+
 	player.CharacterAdded:Connect(function()
 		-- Nouveau perso : anciens Animator/pistes morts, etat propre.
 		idleTrack = nil
 		climbTrack = nil
 		gripTrack = nil
 		trimTrack = nil
+		trimFolderLoaded = nil
 		topLegsTrack = nil
 		mountCFrame = nil
 		phase = "off"
 		canMount = true
 		savedWalkSpeed = nil
+		mountPromptShown = false
+		pendingZone = nil
+		pendingLadder = nil
+		InteractionPrompt.hide()
 		-- Si on meurt en haut d'une echelle, les etats "taille echelle" et "sur l'echelle" resteraient poses cote
 		-- serveur et bloqueraient la taille au sol du nouveau perso. On les coupe (idempotent si deja coupes).
 		setLadderWork(false)
 		if onLadderRemote then
 			onLadderRemote:FireServer(false)
 		end
-		hideTopCursor()
-		mountHedge = nil
-		-- Si on meurt accroche, la camera etait scriptee : on la rend a Custom, et on coupe le suivi / un tween en
-		-- cours. (Plus de controles a rallumer : on ne les coupe plus, voir mount.)
-		camTracking = false
-		camOutward = nil
-		camSubject = nil
-		camEnterFrom = nil
-		orbiting = false
-		ladderYaw = 0
-		ladderPitch = 0
-		ladderZoom = 1
-		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-		if camTween then
-			camTween:Cancel()
-			camTween = nil
+		-- Rien a reinitialiser cote camera : sur l'echelle on ne touche jamais a la camera du joueur (voir mount).
+	end)
+
+	-- Touche E = monter (PC). Sur mobile, c'est le tap du prompt (onActivate = tryMount) qui monte. tryMount est garde :
+	-- sans zone de grimpe en attente, l'appui ne fait rien (donc pas de conflit avec le E de la boite aux lettres, ailleurs).
+	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
+		if gameProcessed then
+			return
 		end
-		local camera = workspace.CurrentCamera
-		if camera then
-			camera.CameraType = Enum.CameraType.Custom
+		if input.KeyCode == Enum.KeyCode.E then
+			tryMount()
 		end
 	end)
+
 	RunService.Heartbeat:Connect(update)
 
-	-- ORBITE. On separe deux choses pour que l'orbit ne traine jamais :
-	--   1. Le POINT SUIVI (camSubject) se lisse vers le corps qui monte -> pas de tremblement d'anim, mais ce lissage
-	--      ne touche QUE le point vise, pas la rotation.
-	--   2. La CAMERA se pose DIRECTEMENT (aucun lerp) a l'azimut/elevation courants autour de ce point -> quand le
-	--      joueur pivote, ca repond a la frame, meme tres vite. C'etait la l'erreur d'avant : lerper toute la CFrame
-	--      lissait aussi la rotation, d'ou le retard degueu.
-	-- A la priorite Camera, comme HedgeController.
-	RunService:BindToRenderStep("LadderCamAim", Enum.RenderPriority.Camera.Value, function(dt: number)
-		local outward = camOutward
-		if not (camTracking and outward) then
-			return
-		end
-		local camera = workspace.CurrentCamera
-		local target = getTrackPoint()
-		if not (camera and target) then
-			return
-		end
-		-- 1. Point suivi lisse (le seul lissage restant).
-		camSubject = if camSubject then camSubject:Lerp(target, math.min(1, CAM_FOLLOW * dt)) else target
-		local focus = (camSubject :: Vector3) + Vector3.new(0, CAM_ISO_LOOK, 0)
-
-		-- 2. Direction camera -> AZIMUT (yaw defaut + pivot joueur) puis ELEVATION (pitch defaut + pivot joueur,
-		-- borne pour ne pas retourner la camera). Sphere autour du focus, rayon constant : la camera glisse sur une
-		-- calotte, jamais de flip.
-		local azimuth = ladderYaw + math.rad(CAM_ISO_YAW)
-		local pitch =
-			math.clamp(math.rad(CAM_ISO_PITCH) + ladderPitch, math.rad(CAM_PITCH_MIN), math.rad(CAM_PITCH_MAX))
-		local horiz = CFrame.Angles(0, azimuth, 0) * outward
-		horiz = Vector3.new(horiz.X, 0, horiz.Z)
-		horiz = if horiz.Magnitude > 1e-3 then horiz.Unit else Vector3.new(0, 0, 1)
-		local dir = horiz * math.cos(pitch) + Vector3.yAxis * math.sin(pitch)
-		local camPos = focus + dir * (CAM_ISO_DIST * ladderZoom)
-		local desired = CFrame.lookAt(camPos, focus)
-
-		camera.CameraType = Enum.CameraType.Scriptable
-		-- ENTREE EN DOUCEUR. Pendant CAM_ENTER secondes apres l'accroche, on EASE depuis la vue joueur (camEnterFrom)
-		-- vers la vue iso, au lieu de snapper. Ease-out (1-(1-t)^2) : demarre franc, finit doux. Passe ce temps, on
-		-- pose la camera en DIRECT : l'orbit redevient instantane. Le ease vise la CFrame COURANTE, donc pivoter
-		-- pendant l'entree marche deja.
-		local from = camEnterFrom
-		if from and camEnterElapsed < CAM_ENTER then
-			camEnterElapsed += dt
-			local t = math.clamp(camEnterElapsed / CAM_ENTER, 0, 1)
-			local a = 1 - (1 - t) * (1 - t)
-			camera.CFrame = from:Lerp(desired, a)
-			if t >= 1 then
-				camEnterFrom = nil
-			end
-		else
-			camera.CFrame = desired
-		end
-	end)
-
-	-- ORBIT au clic droit maintenu, seulement sur l'echelle. Meme geste qu'en taillant. Le curseur se fige pendant
-	-- le glissement (sinon il sortirait de l'ecran) et revient libre au relachement.
-	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-		if gameProcessed or not mountCFrame then
-			return
-		end
-		if input.UserInputType == Enum.UserInputType.MouseButton2 then
-			orbiting = true
-			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
-		end
-	end)
-
-	UserInputService.InputEnded:Connect(function(input: InputObject)
-		-- Pas de filtre gameProcessed au relachement : l'orbit ne doit jamais rester coince.
-		if input.UserInputType == Enum.UserInputType.MouseButton2 then
-			orbiting = false
-			UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input: InputObject, gameProcessed: boolean)
-		if gameProcessed or not mountCFrame then
-			return
-		end
-		-- ZOOM MOLETTE. Marche des qu'on est sur l'echelle, sans tenir le clic droit. Position.Z vaut +1 vers l'AVANT
-		-- (zoom in) : on veut alors REDUIRE le multiplicateur (se rapprocher), d'ou le signe inverse ici, une fois.
-		if input.UserInputType == Enum.UserInputType.MouseWheel then
-			local factor = 1 - input.Position.Z * CAM_ZOOM_STEP
-			ladderZoom = math.clamp(ladderZoom * factor, CAM_ZOOM_MIN, CAM_ZOOM_MAX)
-			return
-		end
-		-- Le reste (pivot) demande le clic droit maintenu.
-		if not orbiting then
-			return
-		end
-		if input.UserInputType == Enum.UserInputType.MouseMovement then
-			-- Horizontal : meme signe que HedgeController (pivot dans le meme sens qu'en taillant).
-			ladderYaw -= math.rad(input.Delta.X * CAM_YAW_SENS)
-			-- Vertical : souris vers le BAS (Delta.Y positif) = vue qui descend. On clampe l'ACCUMULATEUR (pas juste
-			-- la valeur utilisee) : sinon, drague au-dela de la borne et le surplus doit etre rattrape avant que ca
-			-- reponde a nouveau (zone morte). ladderPitch est un offset autour de l'elevation par defaut.
-			local minOffset = math.rad(CAM_PITCH_MIN - CAM_ISO_PITCH)
-			local maxOffset = math.rad(CAM_PITCH_MAX - CAM_ISO_PITCH)
-			ladderPitch = math.clamp(ladderPitch + math.rad(input.Delta.Y * CAM_PITCH_SENS), minOffset, maxOffset)
-		end
-	end)
-
-	print("[Ladder] Pret. Entre dans une zone : idle au sol, W monte, S descend / lache.")
+	print("[Ladder] Pret. Entre dans une zone -> prompt E (MONTER). Avant = monte, arriere = descend / lache.")
 end
 
 return LadderController

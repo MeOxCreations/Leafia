@@ -8,6 +8,7 @@
 
 local Players = game:GetService("Players")
 local Teleport = game:GetService("TeleportService")
+local RunService = game:GetService("RunService")
 
 local RETRIES = 3 -- un teleport peut echouer (reseau, serveur cible plein) : on reessaie plutot que d'abandonner
 local RETRY_WAIT = 2 -- secondes entre deux essais
@@ -21,10 +22,18 @@ function TeleportService.teleportToPlace(player: Player, placeId: number, data: 
 		return false
 	end
 
-	local options = Instance.new("TeleportOptions")
-	if data then
-		options:SetTeleportData(data)
+	-- En STUDIO les teleports ne partent JAMAIS (TeleportAsync throw) : inutile de perdre RETRIES x RETRY_WAIT a echouer.
+	-- On rend false tout de suite -> l'appelant retombe sur son fallback (rester dans le hub, ce qui est voulu en Studio).
+	if RunService:IsStudio() then
+		return false
 	end
+
+	local options = Instance.new("TeleportOptions")
+	-- On pose TOUJOURS des donnees, avec un marqueur : a l'arrivee, l'ecran de chargement lit GetLocalPlayerTeleportData
+	-- pour savoir "on vient d'un teleport" -> il affiche le rideau GRIS + boules (pas le gros ecran herbe du 1er lancement).
+	local payload: { [string]: any } = data or {}
+	payload.leafiaTeleport = true
+	options:SetTeleportData(payload)
 
 	for attempt = 1, RETRIES do
 		local ok, err = pcall(function()

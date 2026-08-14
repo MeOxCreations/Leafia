@@ -13,6 +13,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+-- En mode build, c'est BuildController qui pilote le FOV (via CameraEffects). On lui rend la main pour ne pas ecraser
+-- son effet chaque frame avec REST_FOV (le perso etant fige, on le croirait a l'arret). Meme dossier -> require direct.
+local BuildController = require(script.Parent.BuildController)
 
 local CameraController = {}
 
@@ -74,6 +77,12 @@ local function watchCharacter(character: Model)
 	end
 	humanoid.StateChanged:Connect(function(_, newState: Enum.HumanoidStateType)
 		if newState == Enum.HumanoidStateType.Landed then
+			-- Une teleportation scriptee (ex : entree sur le plot au Start) pose ce drapeau sur le perso : la chute
+			-- FORCEE ne doit pas declencher la plongee. Invisible tant que la camera est scriptee, la plongee
+			-- "apparaitrait" d'un coup au passage en camera de jeu -> un bump. PlotSelectController pose ce drapeau.
+			if character:GetAttribute("LeafiaSuppressLandDip") then
+				return
+			end
 			CameraEffects.LandDip(LAND_DIP_STRENGTH)
 		end
 	end)
@@ -108,6 +117,10 @@ function CameraController.init()
 
 	-- FOV et bob : reevalues chaque frame selon l'etat reel du joueur.
 	RunService.RenderStepped:Connect(function(dt: number)
+		-- En mode build, BuildController possede le FOV : on ne touche a rien (sinon on ecraserait son effet de vitesse).
+		if BuildController.isActive() then
+			return
+		end
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if not humanoid then

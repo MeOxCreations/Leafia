@@ -46,6 +46,9 @@ local ladderWork: { [Player]: Contact } = {}
 -- SUR L'ECHELLE (toute phase, pas seulement le sommet). Tant que c'est vrai, l'aimant du sol reste desengage :
 -- sinon, dans une zone qui chevauche celle de la haie, les deux systemes se disputent le joueur.
 local onLadder: { [Player]: boolean } = {}
+-- Outil RANGE le temps de la grimpe (nom memorise pour rendre le MEME outil). On veut les mains libres pour l'anim
+-- de grimpe qui cle tous les membres : on deséquipe en montant, on rend en haut (pour tailler) et a la sortie.
+local ladderStash: { [Player]: string } = {}
 -- Distance max (au bord de la boite) pour accepter une haie de travail depuis l'echelle : anti-abus, et evite de
 -- designer une haie a l'autre bout du jardin si aucune n'est a cote.
 local LADDER_WORK_RANGE = 15
@@ -472,6 +475,27 @@ end
 
 -- Active / coupe la taille depuis l'echelle. Sur activation, le SERVEUR choisit la haie la plus proche (dans la
 -- portee) : rien envoye par le client n'est cru.
+-- OUTIL SUR L'ECHELLE. On veut l'outil en main SEULEMENT : hors echelle, OU en haut (position de taille). En
+-- grimpant, mains libres. Fait cote SERVEUR -> l'apparition / disparition se replique a tous. Appele a chaque
+-- changement d'etat (onLadder / ladderWork).
+local function syncLadderTool(player: Player)
+	local wantsTool = (not onLadder[player]) or (ladderWork[player] ~= nil)
+	if wantsTool then
+		local stashed = ladderStash[player]
+		if stashed then
+			ladderStash[player] = nil
+			ToolService.equip(player, stashed)
+		end
+	elseif not ladderStash[player] then
+		-- On grimpe : ranger l'outil une seule fois, en memorisant son nom pour le rendre a l'identique.
+		local current = ToolService.getHeld(player)
+		if current then
+			ladderStash[player] = current.toolName
+			ToolService.unequip(player)
+		end
+	end
+end
+
 local function setLadderWork(player: Player, active: boolean)
 	local character = player.Character
 	local hedge: BasePart? = nil
@@ -493,6 +517,8 @@ local function setLadderWork(player: Player, active: boolean)
 	if character then
 		character:SetAttribute(HedgeConfigs.LADDER_TRIM_ATTRIBUTE, ladderWork[player] ~= nil)
 	end
+	-- En HAUT on rend l'outil (pour tailler), en repartant on le range : l'etat vient de changer.
+	syncLadderTool(player)
 end
 
 -- ESPACE VITAL : une boite invisible un peu plus large que la haie, pour que le joueur ne puisse pas s'y
@@ -674,6 +700,16 @@ function HedgeService.init()
 				onLadder[player] = true
 			else
 				onLadder[player] = nil
+				-- On vient de QUITTER l'echelle : sa base est souvent DANS la zone d'une haie. Sans ca, l'accroche au
+				-- sol se declencherait AUSSITOT (aimant + orientation forcee + camera iso), pile quand le joueur veut
+				-- partir -> la camera semble "bloquer" un instant. On pose le meme temps mort qu'une sortie volontaire
+				-- (exitUntil) : le sol ne raccroche qu'apres, le joueur descend avec sa camera normale, le temps de
+				-- s'eloigner. S'il veut tailler au sol juste apres, il s'approche a nouveau (la grace expire vite).
+				exitUntil[player] = os.clock() + HedgeConfigs.LADDER_EXIT_GRACE
+			end
+			-- Range l'outil en montant, le rend a la sortie. Puis (sortie) on restaure sa pose de maintien.
+			syncLadderTool(player)
+			if not active then
 				ToolService.replayHold(player)
 			end
 		end)
@@ -685,6 +721,7 @@ function HedgeService.init()
 		atHedge[player] = nil
 		ladderWork[player] = nil
 		onLadder[player] = nil
+		ladderStash[player] = nil
 		exitUntil[player] = nil
 		faceChangedAt[player] = nil
 	end)

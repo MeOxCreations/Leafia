@@ -2168,6 +2168,1560 @@ qu'elles retaillent une deuxieme haie sans qu'on leur demande ? Tant que la repo
 construit rien par-dessus (ni jauge d'XP, ni combos, ni escabeau, ni tycoon). C'est ce qui a manque aux deux
 projets d'avant : l'emballage a recouvert un coeur jamais valide.
 
+## 0.0.107 — Tailler remplit la jauge d'XP (runtime, sans sauvegarde)
+
+Tailler une haie fait maintenant gagner de l'XP et monter de niveau. Nouveau ExperienceService (autorite serveur) :
+chaque CARREAU amene au ras rapporte de l'XP, via biteAt (le point UNIQUE par ou passent le taille-haie continu ET
+la cisaille au clic, donc un seul branchement couvre tous les outils et contextes). Il pose XpFill (0-1) + XpLevel
+sur le joueur, que la jauge affiche. Courbe geometrique (genereux tot, plus long ensuite), reglee dans
+ExperienceConfigs (XP_PER_CELL, LEVEL_BASE, LEVEL_GROWTH). Au level up, la barre tient PLEINE un court instant avant
+de repartir au nouveau niveau : le gain se LIT, pas de reflux qui ressemblerait a une perte.
+
+RUNTIME SEULEMENT (demande du joueur) : l'etat vit en memoire, remis a zero a chaque session, AUCUNE ecriture
+DataStore. On valide d'abord que gagner de l'XP en taillant est satisfaisant ; le branchement sur
+DataTemplate.Skills.Trimming (persistance) viendra apres. Noms d'attributs partages client / serveur via
+ExperienceConfigs, pour qu'ils ne divergent jamais.
+
+Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
+dedie). Simple pour l'instant, les effets viendront par-dessus.
+
+## 0.0.198 — Nav bar : forme des pilules, feuille verte, et OUVERTURE PAR GESTE (clic-glisse haut)
+
+Retouches nav bar. Les deux pilules (LeftGroup / RightGroup) prennent des coins ASYMETRIQUES par cote (haut exterieur
+tres rond, bas interieur demi-rond, les deux autres carres) et passent en BLANC. Egalisation des largeurs deja en place
+(0.0.197) -> nav symetrique. La feuille centrale devient vert fonce (63, 99, 52), icone agrandie a 45 px.
+
+Nouveau (idee du joueur) : la feuille ne s'ouvre PLUS au clic simple. Elle s'ETIRE vers le haut au survol (comme une
+etiquette qu'on tire), et on OUVRE son interface par un GESTE -- clic MAINTENU + glissement vers le HAUT au-dela d'un
+seuil (LEAF_DRAG_OPEN 55 px). Pendant le tir, la hauteur SUIT le curseur / doigt (retour direct) ; au franchissement du
+seuil ca ouvre (hook onSelect "skilltree"), une fois par geste. Marche souris ET tactile (ancree en bas -> grandit vers
+le haut sans bouger le layout ; le suivi du glissement passe par UserInputService en global). Knobs : LEAF_EXTEND_HOVER /
+_MAX, LEAF_DRAG_OPEN. NB : l'interface de l'arbre n'existe pas encore -> le geste appelle le hook, rien ne s'affiche pour
+l'instant. Ouverture au FRANCHISSEMENT du seuil (pas au relachement) ; a basculer si le ressenti demande l'inverse.
+
+## 0.0.197 — Feuille de chargement = barre de progression + sons sur la nav bar
+
+Deux touches UI.
+
+Feuille du LoadingOverlay (ecran de changement de lieu) : le vert ne BALAIE plus en boucle, il REMPLIT la feuille du bas
+vers le haut comme une barre de progression, et arrive EN HAUT (feuille pleine) PILE quand le chargement est fini (hide).
+La montee est estimee (on ne connait pas la duree : elle grimpe vite puis rampe jusqu'a un plafond HOLD 0.9) puis se
+COMPLETE d'un coup jusqu'au sommet a la fin reelle. Pilotee par une NumberValue tweenee qui redessine la ColorSequence du
+gradient (frontiere vert/gris qui monte) ; le gradient etant enfant de la feuille, le remplissage suit l'oscillation.
+Knobs : LEAF_PROGRESS_CLIMB / HOLD / FINISH, LEAF_FILL_SOFT ; sens via LEAF_GRADIENT_ROTATION (90, passer a 270 si ca
+remplit a l'envers -- seul l'ecran tranche).
+
+Nav bar : sons au CLIC et au SURVOL des onglets (et de la feuille centrale), reutilisant les memes assets UI que
+ButtonSlime (SoundService.Sounds.UI.PressButtonSound / HoverButtonSound) via SoundUtils.play. La nav opte-out du slime
+(LeafiaNoSlime) et avait donc perdu ces sons avec le mouvement : on rebranche juste le SON, pas le gonflement. Survol =
+PC seulement (pas de hover au doigt). NB : ces sons doivent EXISTER dans SoundService (assets Studio) ; sinon SoundUtils
+warn "Son introuvable" et reste muet.
+
+## 0.0.196 — La boucle est fermee : tailler une haie PAIE (cheque de fin)
+
+Le gain de coins est ENFIN branche en jeu. Finir une haie (100%, auto-completion incluse) verse un CHEQUE au joueur :
+payout = HEDGE_BASE_PAYOUT + floor(carreaux de la haie * HEDGE_PER_CELL_PAYOUT) (~100 pour une haie moyenne, a regler a
+la console admin). Branche dans HedgeCutService.cutWith au passage de ratio a 1, UNE fois par haie (garde
+PAID_ATTRIBUTE pose sur la haie -> repasser la lame sur une haie deja finie ne re-paie pas). Tout le reste etait deja
+pret : grantCoins persiste dans la company active (DataTemplate), et l'UI (CurrencyController) anime deja le compteur +
+un "+X" vert flottant.
+
+Aucun nouveau remote (les coins passent par attribut joueur). L'XP reste branchee PAR CARREAU (goutte-a-goutte de
+progression) ; le cheque est un GAIN distinct a la FIN (le payday). Config : CurrencyConfigs.HEDGE_BASE_PAYOUT /
+HEDGE_PER_CELL_PAYOUT. Garde : HedgeConfigs.PAID_ATTRIBUTE ("LeafiaPaid").
+
+Limites assumees (le systeme de chantiers viendra encadrer tout ca) : TOUTE haie du monde paie (pas encore de haie
+"assignee" par un client) ; en co-op c'est le joueur qui amene la haie a 100% qui touche le cheque ; sur la place tuto
+l'economie est no-op (le cheque scripte du didacticiel sera un branchement a part). Persistance reelle entre sessions =
+jeu publie (le DataStore est coupe en Studio).
+
+## 0.0.195 — Boutons TURN / DROP du portage : diagonale + style (fini les ronds CAS colles)
+
+Les boutons tactiles TURN et DROP (portage d'echelle, mobile) etaient deux ronds plats ContextActionService, auto-alignes
+COTE A COTE contre le bouton de saut : moche et ca l'encombrait. Refaits en ScreenGui CUSTOM (LeafiaLadderCarry) : deux
+ronds verts stylises (contour blanc), poses en DIAGONALE a gauche du bouton de saut, sans le chevaucher. On maitrise la
+position (knobs DROP_BTN_POS / TURN_BTN_POS) et la taille (CARRY_BTN_SIZE). Gate tactile (rien sur PC), montres au
+portage, caches sinon, ResetOnSpawn = false. Le clavier (F reposer / R tourner) reste gere par UserInputService cote PC ;
+comme il n'y a plus de CAS pour Sink la touche, plus de double possible. Import ContextActionService retire (plus utilise).
+
+## 0.0.194 — Prompt PRENDRE de l'echelle : detection RADIALE (fini l'angle mort)
+
+Le prompt "[F] PRENDRE" n'apparaissait qu'une fois COLLE a l'echelle. La detection reposait sur DEUX box posees sur les
+COTES (offset lateral 3), orientees sur la longueur de l'echelle : selon d'ou on arrivait (un bout de l'echelle, une
+RootPart decalee), on tombait dans un ANGLE MORT -> pas de prompt meme au contact. Grossir les box ne supprimait pas le
+trou. Passe en detection RADIALE : distance HORIZONTALE (X/Z) a la RootPart de l'echelle, sous DETECT_RADIUS (8 studs) ;
+on rend la plus proche. Un seul rayon, aucun angle mort, independant de l'orientation du rig. Knob : DETECT_RADIUS dans
+LadderMoveController. Les box box_detecte_For_Move restent (marquage au sol) mais ne pilotent plus la detection ;
+ZONE_SIZE remis a l'origine.
+
+Aussi : les offsets d'AFFICHAGE des prompts (E MONTER / F PRENDRE) remis a 5. Ils avaient ete montes a 9 par erreur --
+"plus loin" avait ete compris comme "plus haut", alors que c'etait la DETECTION qu'il fallait etendre, pas la hauteur.
+
+Reste : la detection MONTER (touche E, box_detecte_A/_B) utilise encore la meme logique de box, posee dans le rig
+Studio -- meme angle mort possible. A passer en radial aussi si besoin (le montage s'appuie sur la zone pour poser le
+joueur au pied, donc un peu plus de travail).
+
+## 0.0.193 — Le rideau couvre AVANT la transition d'entree (Start plus propre)
+
+Au clic START (ecran Load a company), le rideau de chargement secondaire s'affiche D'ABORD, puis TOUT le reste
+(fermeture du menu, transition camera vers le joueur) se joue DERRIERE lui. Avant, le menu se cachait et la camera
+bougeait a decouvert, PUIS le rideau arrivait : on voyait toute la mecanique, pas pro. Maintenant : presse Start ->
+l'ecran se couvre -> on arrive. On attend que le rideau soit OPAQUE (LoadingOverlay.showTime, la duree de son fondu
+d'entree, exposee pour ca) avant de bouger quoi que ce soit derriere.
+
+Consequence : l'ancien "exit slide" facon Sims (LoadCompanyController.playExit + goToPlayer cote PlotSelect + les
+refs cardListFrame / titleLabel / rightGroupRef + EXIT_TWEEN) devient inutile et est retire -- le curtain-first le
+remplace, pas de code mort laisse derriere.
+
+Polish du LoadingOverlay (ecran d'arrivee / changement de lieu) au passage :
+- Les 4 boules qui rebondissaient sont retirees. Il ne reste que le fond gris + la feuille (logo) qui oscille.
+- La feuille fait un POP slime a l'apparition : elle grossit de 0 a sa taille avec un rebond elastique (LEAF_POP),
+  rejoue a chaque show().
+
+Mode build : le pan au doigt (clic-glisse pour se deplacer dans l'espace) est plus rapide sur tablette / mobile
+(CAM_PAN_TOUCH 0.0016 -> 0.003), plus confortable a manier. Le pan souris (PC) n'est pas touche.
+
+## 0.0.192 — Mode suppression : rebond slime + son a chaque marquage
+
+Quand une structure devient jaune (marquee "a supprimer"), elle fait un petit REBOND slime (saut + ecrasement, retour a
+sa pose d'origine) et un SON "appear" (rbxassetid://138424352985426) joue -- un par instance, donc la selection multiple
+fait une salve de pops. Nouveau helper reutilisable BuildFx.slimeBounce(inst) : marche pour Model (PivotTo + ScaleTo) et
+BasePart (CFrame + Size), auto-protege (s'arrete si l'instance est detruite en plein rebond). SoundUtils.playId(id, volume,
+host) ajoute pour jouer un son par ASSET ID (pas besoin d'un Sound pre-regle dans SoundService). Reglages : BOUNCE_HOP /
+BOUNCE_SQUISH / BOUNCE_TIME (BuildFx), APPEAR_VOLUME (BuildDeleteController). Limites : l'ecrasement scale autour du pivot
+(pas ancre au sol) ; retracer dans les 0.32 s laisse le rebond finir sur l'instance demarquee -- a affiner si ca gene.
+
+## 0.0.191 — Mode suppression : demarquer en revenant sur ses pas (retrace)
+
+Complete la previsu : pendant le balayage (clic maintenu), revenir en arriere DEMARQUE. On garde l'ORDRE du balayage
+(markedOrder, le "stroke") ; quand le curseur repasse sur une structure marquee plus TOT dans le stroke, on restaure tout
+ce qui a ete ajoute APRES elle (le trait se retracte jusqu'au curseur). Le joueur peut donc balayer trop loin, reculer
+pour deselectionner, et relacher pile sur la bonne selection. markStructure devient markOne (empile) + restoreOne
+(depile) + sweepTo (decide marquer / retracter selon table.find dans le stroke).
+
+## 0.0.190 — Mode suppression : PREVISU avant de supprimer + grille coloree par mode
+
+La suppression ne detruit plus instantanement (trop brutal, aucune marche arriere). Nouveau flux : clic MAINTENU + slide
+-> chaque structure balayee est MARQUEE (l'asset passe en jaune neon semi-transparent, on retient son etat d'origine), et
+la vraie suppression n'a lieu qu'au RELACHEMENT. Le joueur voit ce qu'il va effacer avant que ca parte, et peut s'ajuster.
+Echappatoire : appuyer sur X (sortie du mode) pendant qu'on tient encore ANNULE la selection -> tout est restaure, rien
+supprime (clearMarks(false) au setEnabled). Les murs marques nettoient toujours leurs poteaux orphelins au commit.
+
+La grille change de couleur selon le mode, comme repere visuel : CYAN en construction (objet / mur), ROUGE en suppression
+(GRID_COLOR_BUILD / GRID_COLOR_DELETE). BuildController garde la liste des Frames de cases pour les recolorer au setMode.
+
+## 0.0.189 — Mode suppression : balayage (clic maintenu + slide)
+
+Le mode SUPPRIMER gagne le balayage : clic MAINTENU + on glisse le curseur -> tout ce qui passe dessous s'efface, frame
+par frame, tant qu'on tient (objets ET murs, poteaux d'angle orphelins nettoyes au passage). Le clic simple efface
+toujours une structure. Etat `deleting` pose a l'appui / leve au relachement (relachement toujours traite, sinon le
+balayage resterait coince). Suppression centralisee dans deleteTarget (nettoyage des coins + destroy). CLIENT-only.
+Limites connues : un slide TRES rapide peut sauter un segment entre deux frames (raycast par frame) ; sur mobile le
+glissement 1 doigt se battra avec le pan camera -- a regler quand l'UI mobile du build arrivera.
+
+## 0.0.188 — Mode mur : plusieurs types de mur (hauteurs) + glissement de la poignee
+
+Le mode mur gere maintenant PLUSIEURS meshes de mur au lieu d'un seul. On enumere au start tous les BaseParts sous
+Assets.Contents.Build (les objets, eux, sont des Models avec Hitbox -> naturellement exclus), tries par nom. TEMP :
+touches 1 / 2 / 3... pour choisir le type (le catalogue d'UI viendra dans Studio). Exemple pose par le joueur :
+metal_wall_type_1 (haut 9), type_2 (12), type_3 (16). La HAUTEUR n'est plus une constante figee : c'est le Size.Y du
+mesh choisi (wallHeight runtime). Tout suit -- segments, poteaux d'angle, etiquette de cout, ET la poignee fantome dont
+le cylindre est rebati a la bonne hauteur quand on change de type (on voit la hauteur du mur avant de le poser). Fallback
+box + valeurs du config si aucun mesh.
+
+La poignee (LeafiaWallHandle) GLISSE maintenant vers le coin sous le curseur au lieu de sauter de coin en coin (lerp de
+position ; la cible reste snappee sur la grille). Reglage HANDLE_SLIDE. Meme traitement pose au passage sur le fantome
+d'OBJET (GHOST_SLIDE) pour un feeling coherent entre les deux modes.
+
+## 0.0.187 — Fix : supprimer un mur enleve aussi ses poteaux d'angle orphelins
+
+Supprimer un mur laissait ses poteaux d'angle (WallCorner) plantes tout seuls. Maintenant, effacer un mur enleve les
+poteaux a ses bouts QUI NE SERVENT PLUS a aucun autre mur : deux murs qui se rejoignent partagent un poteau, donc on ne
+l'enleve que s'il devient orphelin (l'autre mur le garde). Logique dans BuildWallController.cleanupCornersFor (elle seule
+connait les noms Wall / WallCorner et la geometrie), appelee par le mode suppression avant de detruire la part. Un poteau
+deja orphelin (laisse par une suppression d'avant ce fix) reste cliquable et s'efface a la main.
+
+## 0.0.186 — Mode build : mode SUPPRIMER + spawn face au plot + fondu musique de sortie
+
+Troisieme mode de build : SUPPRIMER (touche X pour entrer / sortir). On survole une structure posee (objet ou mur) ->
+elle se surligne en ROUGE ; clic -> elle disparait. La cible = le descendant DIRECT du dossier Build sous le curseur : un
+Model d'objet entier, ou une part Wall / WallCorner (les murs s'effacent segment par segment pour l'instant, faute d'etre
+groupes en ligne). Nouveau BuildDeleteController, sur le meme moule que les autres (start / stop / setEnabled / init) ;
+X memorise le mode d'avant et y revient en sortant. Les trois modes (objet / mur / suppression) sont maintenant geres par
+un setMode unique : un seul controller actif, les deux autres en veille. CLIENT-only (la suppression est locale) ; autorite
+serveur + save : avec le reste du build.
+
+Presentation : en arrivant sur son plot (apres la selection), le joueur est maintenant tourne FACE a son plot (regard vers
+le centre du PrimaryGround), au lieu de suivre l'orientation "au hasard" de la part RootSpawnPlayer. Bonus gratuit : la camera
+de jeu se cale derriere lui (elle lit son regard), donc elle cadre le plot toute seule.
+
+Confort : le fondu de SORTIE de la musique de build passe de 0.6 s a 2.5 s (lineaire) -> la musique s'eteint en douceur au
+lieu d'etre coupee net (c'etait trop sec). Le fondu d'entree reste court (0.6 s).
+
+## 0.0.185 — Mode build : grille en carres pleins + vague d'initialisation
+
+La grille de build change de nature. Avant : une image de LIGNES fines tuilee. Probleme : de loin une ligne fait moins d'1
+pixel a l'ecran et DISPARAIT (minification) -> la grille s'effacait au fond du plot. Maintenant : un CARRE PLEIN par case
+(un Frame centre, avec un joint autour regle par GRID_CELL_GAP). Un carre plein n'a pas de resampling -> il reste visible
+de loin, juste plus petit. Regle le fade de distance ET donne un meilleur look.
+
+A l'ouverture du build, la grille ne pope plus d'un coup : une VAGUE d'initialisation (UNE seule fois) la revele. Un front
+diagonal traverse le plot ; au passage sur chaque case, elle FLASHE (transparence file vers REVEAL_FLASH_T, elle glowe avec
+le Brightness du SurfaceGui) et GROSSIT depuis son centre avec un rebond (easeOutBack), puis retombe a l'etat de repos
+(GRID_TRANSPARENCY, taille pleine). Un petit bruit de Perlin casse a peine le front pour qu'il ne soit pas mecanique. Une
+fois toutes les cases posees, la connexion se coupe : COUT SCRIPT NUL au repos (la grille ne bouge plus).
+
+Tout est regle par des constantes en tete de la section (BuildController) : vitesse de la vague, duree du pop, intensite du
+flash, bruit ; et cote config la transparence de repos, la couleur, le Brightness, le joint entre carres. Cote perf : un
+Frame par case (~3000 sur un grand plot), crees d'un coup a l'entree (micro-hitch possible sur mobile, a surveiller), mais
+STATIQUES ensuite. Si besoin plus tard : creation etalee ou cull par distance camera.
+
+## 0.0.184 — Mode build : murs facon Sims (drag, diagonales, angles, cout) + volume musique
+
+Le mode mur prend forme. On CLIC-DRAG sur la grille pour tirer un mur qui grandit le long des lignes : horizontal,
+vertical OU diagonale (l'angle du geste se snappe au multiple de 45 deg). Le mur est fait de morceaux de mesh a leur
+taille NATIVE (une "case" chacun), pas d'un mesh etire : la taule garde son echelle, sinon le motif s'ecarterait.
+A chaque bout, un poteau cylindrique (couleur du mesh) masque l'angle moche des jointures, avec DEDUP : deux murs
+qui se rejoignent partagent le coin, un seul poteau. Le fantome = une bille + un cylindre fin en Neon, groupes, qui
+se penchent dans le sens du curseur (meme effet que le fantome d'objet). Son + poof de fumee a la pose (BuildFx
+partage avec le placement d'objet).
+
+Deux murs ne peuvent plus se CHEVAUCHER : pendant le drag, si le trace recouvre un mur deja pose (test par segment
+sur le dossier Build), la poignee ET l'apercu passent ROUGE, et au clic une notification rouge sort sans rien poser
+(anti-spam). Deux murs qui se touchent juste a un coin restent OK (boite de test un peu retrecie).
+
+COUT visible : pendant qu'on tire le mur, une etiquette doree "-X" flotte au bout (le coin qui suit le curseur),
+X = nombre de segments * WALL_PRICE (BuildConfigs). C'est le VISUEL du prix ; la vraie deduction des coins viendra
+avec l'autorite serveur (spendCoins), sinon le client pourrait mentir sur son argent.
+
+Volume des musiques du mode build baisse de 0.5 a 0.15 (0.5 explosait les oreilles).
+
+CLIENT seulement pour l'instant (prediction, hauteur de mur fixe). Autorite serveur + sauvegarde + poignee de
+hauteur reglable + chainage : ensuite. Nouveaux fichiers : BuildWallController, Utils/BuildFx.
+
+## 0.0.183 — Mode build : brique 1 (entrer / sortir + quadrillage au sol)
+
+Debut du systeme d'amenagement du plot (facon Sims), en increments. Premiere brique, testable : entrer / sortir du mode
+build affiche un quadrillage au sol sur PrimaryGround (le sol du plot). La texture (creee par le joueur) est posee cote
+CLIENT -> locale, seul le joueur qui construit la voit. Elle tuile a BuildConfigs.TILE_SIZE : la MEME maille que le futur
+snap de placement, sinon la grille ne collerait pas aux cases ou les objets s'aimantent. Config PARTAGEE BuildConfigs
+(client + serveur, source unique de la maille). Raccourci TEMP (touche B) pour entrer / sortir tant que l'UI (barre
+d'outils + catalogue, faite dans Studio) n'existe pas ; le controller expose enter / exit / toggle pour qu'un bouton
+d'UI les appelle plus tard. Repartition : UI dans Studio par le joueur, backend + placement par l'assistant. Nouveaux
+fichiers : BuildConfigs, BuildController. A venir : fantome, poser, tourner, vendre, et sauvegarde (recettes serialisees
+dans Company.Builds, deja prevues dans DataTemplate).
+
+## 0.0.182 — Chargement secondaire : la feuille passe du gris au vert (anime)
+
+La feuille du rideau de chargement secondaire (LoadingOverlay) prend vie : un degrade gris -> vert la balaye en boucle
+(le vert monte puis revient), via l'Offset d'un UIGradient. ImageColor3 passe en BLANC pour que le degrade sorte propre
+(sinon le gris multiplierait le vert et le salirait). Le gradient est enfant de la feuille : il tourne AVEC elle (sway),
+le sens reste cale. Reglages en tete de fichier (vitesse, sens du balayage, couleurs) : le sens d'un Offset de gradient
+ne se devine pas au raisonnement, il se confirme a l'ecran.
+
+## 0.0.181 — Fix : se deplacer autour de la haie au joystick sur mobile
+
+Sur mobile, dans l'etat de travail (focus sur la haie), impossible de se DEPLACER : la camera passe en Scriptable, et le
+thumbstick tactile par defaut (PlayerModule custom) cesse alors de remonter un move vector -> GetMoveVector rend 0 (donc
+ni glisser ni sortir). On pose NOTRE propre joystick tactile, actif seulement pendant le travail : dynamique (apparait
+sous le doigt en bas a gauche), glisser sur le cote = pas de cote le long de la haie, tirer vers le bas = sortir. Son
+toucher est gameProcessed (bouton Active) -> la visee l'ignore : un doigt bouge, l'autre vise / taille. Independant du
+PlayerModule ET de la camera Scriptable. La marche normale (camera Custom) n'est pas touchee.
+
+## 0.0.180 — Fix : sortir de la haie au joystick sur mobile
+
+Sur mobile on ne pouvait pas quitter l'etat de travail sur la haie en reculant le joystick : le seuil de sortie
+`EXIT_MIN_INPUT` valait 0.7, atteint facilement par la touche S (1.0 pile) mais PAS par un stick analogique tire en
+arriere (valeur partielle). Baisse a 0.55 : un recul modere du joystick sort maintenant. Reste au-dessus du max de la
+correction d'aimant (0.45) pour ne pas confondre une correction avec une intention de sortie (le serveur lit le meme
+seuil, HedgeService). Aucun changement sur PC (S = 1.0 > 0.55).
+
+## 0.0.179 — Fix : tous les plots visibles a la selection (streaming, surtout mobile)
+
+Sur mobile (streaming plus serre), l'ecran de selection ne montrait que 2 plots au lieu de tous : avec StreamingEnabled,
+un client ne recoit que les plots proches de lui, et les plots eloignes ne se repliquaient jamais (donc introuvables par
+l'enumeration). PlotService force maintenant chaque plot en `ModelStreamingMode = Persistent` a l'init (cote serveur) :
+ils sont TOUJOURS repliques a tous, quelle que soit la position. Necessite que les plots soient des MODELS (sinon un warn
+le dit) ; si ce sont des Folders, les convertir en Models ou poser Persistent en Studio.
+
+## 0.0.178 — Dialogue du tuto : apparait apres chargement + 3s, style BLANC, plus petit
+
+- TIMING : le dialogue d'intro attend maintenant que le jeu soit CHARGE (`game.Loaded`) ET le joueur SPAWN, puis 3
+  secondes, avant de s'afficher (au lieu de 1.5s apres le spawn).
+- STYLE : le bandeau passe en BLANC facon Sims (fond clair 248/250/248, texte fonce, bord gris clair discret au lieu du
+  fond sombre / texte clair). Le chip du nom reste jaune (accent). Reduit : REF_WIDTH 820->680, HEIGHT 220->180,
+  portrait 200x250->165x210, texte 25->22. Tout reglable en haut de Dialogue.luau. (Style approche a l'oeil facon
+  "DescriptionHolder" du menu ; a affiner avec les vraies couleurs de ce panneau Studio si besoin.)
+
+## 0.0.177 — Menu : boutons de droite beaucoup plus petits sur MOBILE
+
+Sur mobile, les 3 boutons (CONTINUE / EDIT / CHANGE PLOT) + leurs libelles etaient en pixels FIXES (410x104) -> ils
+prenaient tout l'ecran. Les tailles du groupe sont maintenant CONDITIONNELLES au tactile (`IS_TOUCH`) : bien plus
+petites sur mobile (colonne 190px, boutons 54px de haut, libelles reduits), grosses sur PC (410x104, inchange). Le groupe
+reste colle en bas a droite. Les boutons restent tappables (54px > ~44px mini). Reglable : `BTN_COL_W`, `BTN_HEIGHT`,
+`LABELS_W`, `LABEL_MODE_H` (chacun a sa branche mobile / PC). Detection = `TouchEnabled` (vraie aussi dans l'emulateur
+d'appareil de Studio, donc testable la).
+
+## 0.0.176 — Fix : DeleteDialog borne sur grand ecran
+
+Le modal "hold to delete" (suppression d'une save) etait en scale pur -> son panneau s'etirait enorme sur ultrawide
+(~1445px de large sur 3440). Ajout d'un UISizeConstraint (MaxSize 720x620) : il reste centre et net quelle que soit la
+largeur d'ecran. Meme correctif que le NameDialog.
+
+## 0.0.175 — Menu : diamant qui pivote + hover des cartes plus discret
+
+- Le DIAMANT du compteur (CurrencyImageIcon) pivote doucement gauche-droite en boucle (pendule Sine, +/-10 deg, 1.8s).
+  Reglable : `DIAMOND_ROT` (amplitude), `DIAMOND_ROT_TWEEN` (vitesse).
+- Au SURVOL du compteur (ClickArea), le diamant fait la MEME anim que le badge des cartes (un tour complet + resize slime
+  prolonge). Le pendule est coupe le temps du tour puis relance ; un garde-fou empeche d'enchainer les tours.
+- Le HOVER slime des 3 cartes de save est plus discret : gonflement `CARD_HOVER = 0.02` au lieu du defaut 0.05 (les
+  cartes sont grosses, +5% faisait trop). On bind la carte explicitement avant l'auto-bind global (bind idempotent), donc
+  seul le hover des cartes change, les autres boutons gardent le defaut.
+
+## 0.0.174 — Fix : la corbeille de save ne flotte plus seule a l'ouverture du menu
+
+A la 1re ouverture de "Load a company", `selectSlot` sortait la corbeille (bouton delete) AVANT que les cartes aient fini
+leur slide d'entree -> on la voyait seule, hors carte, un court instant. Maintenant un flag `suppressTrashSlide` la garde
+rentree pendant l'anim d'entree ; elle sort seulement une fois toutes les cartes arrivees (delai = stagger + duree du
+slide), sur la carte selectionnee. Pendant l'entree, cliquer une carte ne sort pas non plus la corbeille prematurement.
+
+## 0.0.173 — Boite de dialogue : son de frappe ("tap tap tap")
+
+Le texte qui s'ecrit lettre par lettre joue maintenant un petit SON DE FRAPPE toutes les `TYPE_SOUND_EVERY` lettres (2
+par defaut), avec un pitch legerement varie (`math.random`) pour ne pas sonner robotique. Le son est un Sound pose dans
+`SoundService.Sounds.UI.DialogueType` (a deposer en Studio, comme les autres sons) ; s'il est ABSENT on ne joue rien et
+on ne spamme pas de warn (existence verifiee UNE fois). Regler `TYPE_SOUND_EVERY` (moins/plus de taps) en haut de
+Dialogue.luau. Le tap ne joue que pendant l'ecriture : sauter la ligne (tap sur le bandeau) coupe le son sans rafale.
+
+## 0.0.172 — Menu : NameDialog PC, chat coupe, top bar, libelles a gauche des boutons
+
+Lot de finitions sur les ecrans d'avant-jeu (surtout grand ecran / PC).
+
+- NAMEDIALOG (nommer une company) : sur PC on CACHE le clavier a l'ecran (custom), la box devient editable (vrai clavier,
+  focus auto a l'ouverture, Entree = valider), et le panneau est CENTRE (0.5, 0.5). Sur tactile : inchange (clavier custom,
+  panneau en haut). Le CONFIRM lit la box sur PC, le buffer du clavier sur tactile. Panneau reduit + borne (UISizeConstraint)
+  pour ne plus etre enorme sur ultrawide. Detection par `TouchEnabled` (capacite stable, cf journal).
+- CHAT Roblox coupe pendant chargement + menu (comme le playerlist), rallume a l'entree en jeu (PlotSelectController).
+- BARRE DU HAUT (STEP x OF 2 + compteur diamant / +SHOP) : plus petite et remontee en HAUT A DROITE (le playerlist etant
+  coupe, l'espace est libre).
+- LIBELLES "CONTINUE IN SLOT x / nom" : remis a GAUCHE des boutons (en gros), via un GROUPE HORIZONTAL [libelles][colonne
+  de boutons] colle en bas a droite -> ils restent adjacents quel que soit l'ecran. Boutons EDIT / CHANGE PLOT / CONTINUE
+  un peu plus gros. Tailles reglables en haut du fichier (`BTN_COL_W`, `BTN_HEIGHT`, `LABELS_W`, `GROUP_GAP`).
+
+## 0.0.171 — Menu "Load a company" : adaptable sur grand ecran (fini l'etirement ultrawide)
+
+Sur grand ecran (ex 3440x1440) tout le menu etait en scale -> cartes ~1070px de large, boutons CHANGE PLOT / EDIT ~890px,
+panneau CONTINUE ~2200px (libelles etales, texte "CONTINUE" coupe). La MISE EN PAGE est gardee (cartes a GAUCHE, boutons
+a DROITE) mais on borne les tailles :
+
+- GAUCHE (cartes + titre) : UISizeConstraint plafonne la largeur (`CARD_LIST_MAX_W`, `TITLE_MAX_W`), colle a gauche.
+- DROITE (les 3 boutons) : refonte en COLONNE VERTICALE unique (UIListLayout) au lieu de 3 positions hardcodees. Les
+  libelles (CONTINUE IN SLOT x / nom) + EDIT + CHANGE PLOT + CONTINUE sont empiles, MEME largeur, alignes a droite,
+  espaces regulierement (`BTN_HEIGHT`, `BTN_GAP`), la colonne bornee en largeur (`BTN_COL_WIDTH` / `_MIN_W` / `_MAX_W`).
+  Plus de bouton geant ni de texte coupe ; la colonne glisse en BLOC a l'exit. Tout reglable en haut du fichier.
+
+En dessous de ces tailles, tout scale normalement. (Une 1re tentative en safe-area 16:9 centree groupait tout au centre
+avec des marges laterales -> abandonnee : le joueur veut les elements colles aux bords, juste plus petits.) Note : ne
+touche que l'ecran "Load a company" (code) ; l'ecran de selection de plot (Studio) reste a ajuster si besoin.
+
+## 0.0.170 — Polish menu / chargement + badge qui tourne au clic
+
+Lot de finitions sur les ecrans d'avant-jeu.
+
+- BADGE DES CARTES DE SAVE : cliquer une des 3 cartes fait faire au badge (hexagone + niveau) un TOUR COMPLET (revient a
+  l'endroit) + un pop de taille elastique. Purement visuel, reglable (BADGE_CLICK_SPIN / _POP / _POP_FROM). Le badge est
+  desormais une reference (badgeFrame + un UIScale) au lieu d'etre inline.
+- PLAYERLIST coupe pendant tout le MENU, pas juste le chargement : l'ecran de chargement ne rallume plus le playerlist en
+  fin de chargement dans la place principale (le menu de selection suit) ; c'est PlotSelectController (entree en jeu) qui
+  le rallume, une fois le rideau leve pour ne pas le faire flasher. En place secondaire, il revient normalement.
+- StatusPill de l'ecran de chargement : fond transparent (on ne garde que le texte de statut).
+- FontGradient (voile de fond du menu) : UIAspectRatioConstraint RETIRE (il deformait le voile sur ultrawide).
+
+## 0.0.169 — Emplacements d'outils clavier : 1 = cisaille, 2 = taille-haie
+
+La touche 1 basculait le seul outil par defaut (ToggleTool). Maintenant 1 et 2 sont de vrais EMPLACEMENTS : 1 equipe la
+cisaille (Shear, outil de depart), 2 equipe le taille-haie (HedgeTrimmer). Rappuyer sur la touche de l'outil deja en
+main le RANGE (toggle). Nouveau remote `SelectTool` (le client envoie le NOM de l'outil, le serveur valide et
+`ToolService.selectTool` equipe / range ; equip range l'outil courant avant, donc changer d'outil est propre). Le
+ToggleTool reste pour l'auto-equip / le rangement de l'echelle. ATTENTION (a faire) : aucune POSSESSION d'outil n'existe
+encore -> n'importe qui peut sortir le taille-haie avec 2 ; quand il deviendra un upgrade PAYANT, gater selectTool sur la
+possession avant d'equiper. Ok en dev, PAS en live.
+
+## 0.0.168 — Auto-completion de la haie a 95%
+
+Les derniers % d'une haie (le dessus, les recoins) sont chiants a aller chercher : le joueur impatient les abandonne
+alors qu'il a fait le gros du travail. Des qu'une haie franchit `AUTO_COMPLETE_THRESHOLD` (0.95, dans HedgeConfigs, a
+regler), le reste se finit TOUT SEUL : `HedgeCellService.finishRemaining` met les carreaux restants au ras (feuille des
+aretes retiree comme en coupe normale), et ces carreaux comptent comme tailles a la main -> le joueur touche l'XP, le
+combo et les debris pour EUX AUSSI (il a fait le gros, il recoit tout). Equilibre patient / impatient. L'echelle reste
+necessaire : sur une haie HAUTE, le dessus fait plus de 5%, donc atteindre 95% exige deja d'y monter -> l'auto-completion
+ne mange que la derniere frange, elle ne trivialise pas la grimpe. Pour l'instant c'est un snap instantane (les feuilles
+restantes passent au ras d'un coup) ; un effet de "balayage" plus flatteur pourra venir plus tard.
+
+## 0.0.167 — START : une nouvelle save part au didacticiel (teleport tuto)
+
+Le bouton START ne posait le joueur que sur son plot dans la MEME place (il ne teleportait jamais). Maintenant le
+SERVEUR decide via un flag `TutorialDone` porte par chaque company : save neuve (tuto pas fini) -> `StartGame` (nouveau
+RemoteFunction Company) teleporte vers la place Tutorial et renvoie "teleport" ; save qui a fini le tuto -> "game", le
+client entre dans le jeu comme avant (transition camera). En STUDIO le teleport echoue toujours (limite Roblox : pcall
+cote TeleportService) -> on retombe sur "game", donc le hub reste testable en Studio. `CompanyService.markTutorialDone`
+pose le flag (a brancher a la fin du tuto). Commande admin `tutodone` ajoutee pour marquer le tuto fini a la main et
+tester le chemin du joueur qui revient. Rappel : le teleport ne se teste QUE dans l'experience publiee, pas en Studio.
+
+## 0.0.166 — Boite de dialogue avec portrait + emotions (narration du tuto)
+
+Premiere brique de la mise en scene du tuto. `Modules/UI/Core/Dialogue.luau` : un bandeau en bas d'ecran, le PORTRAIT
+dessine du personnage a gauche (il "sort" de la boite, sa tete depasse) et sa replique ecrite lettre par lettre a droite,
+un chip jaune pour son nom, une fleche qui pulse quand la ligne est finie. Chaque replique choisit une EMOTION par NOM
+(hello / sad / happy / angry / shocked / intrigued / why / embarrassed) : le dessin swappe avec un petit pop, donc le
+perso "reagit". Le dessin est affiche en Fit (jamais deforme, quel que soit son ratio). Primitive REUTILISABLE (narration
+maintenant, PNJ plus tard), construite 100% en code comme InteractionPrompt / Toast (rien a preparer dans Studio). API :
+`Dialogue.play(lignes, onDone)`, `Dialogue.hide()`, `Dialogue.isOpen()` ; une ligne = `{ speaker, text, emotion }`. On
+avance en TAPANT le bandeau (souris ET tactile) : 1er tap = finir la ligne d'un coup, tap suivant = replique d'apres, et a
+la fin ca ferme + appelle onDone. Singleton (un dialogue a la fois). Pose sur la place Tutorial un declencheur de TEST
+temporaire (joue la narration d'intro une fois au spawn), a retirer quand le tuto la lancera pour de vrai (mission /
+TutorialService). Nom du locuteur + textes d'intro = PLACEHOLDER a remplacer.
+
+## 0.0.165 — Echelle : prompt E "MONTER", prise sur F, grimpe au joystick (mobile)
+
+Trois patchs sur l'echelle, dans l'esprit de la boite aux lettres (un prompt clair et informatif).
+
+- MONTER (LadderController) : entrer dans une zone de grimpe (box_detecte_A / _B) ne colle plus le joueur a l'echelle
+  automatiquement. Ca affiche un prompt "[E] MONTER" avec le titre "LADDER" au-dessus (comme "MAILBOX"). On monte sur E
+  au clavier, ou en TAPANT le prompt sur mobile (InteractionPrompt cree le bouton tactile). Sortie de la zone = prompt
+  cache.
+- PRENDRE (LadderMoveController) : la prise passe de E a F (l'ancienne touche entrait en collision avec la nouvelle
+  montee sur E) et gagne le meme titre "LADDER". Le bouton tactile de prise suit la touche F.
+- GRIMPE AU JOYSTICK (mobile) : monter / descendre lisait W/S EN DUR -> increachable au joystick. Ca lit maintenant
+  l'input de DEPLACEMENT (avant = monte, arriere = descend) via le ControlModule, avec secours clavier W/S sur PC. Meme
+  correctif que la marche autour de la haie. Limite connue : dans la place Tutorial, le PlayerModule custom rend un
+  input vide -> sur VRAI mobile la grimpe y reste bloquee tant que ce module n'est pas repare (le secours clavier ne
+  depanne que PC / emulateur).
+
+## 0.0.164 — Ecran de chargement gris + boules pour les changements de lieu
+
+Les teleports (tuto, chantiers) ne montrent plus le ciel Roblox vide ni le gros ecran herbe/badge : transition ET
+arrivee en rideau GRIS FONCE + la feuille + boules. L'ecran de TRANSITION (TeleportController, pendant le voyage) est
+FIGE (contrainte Roblox : aucun script ne tourne dedans) -> feuille + 4 boules statiques. L'ecran d'ARRIVEE
+(ReplicatedFirst) detecte "on vient d'un teleport" via les donnees de teleport et affiche le rideau gris + 4 boules qui
+REBONDISSENT (anime), court (~1.4s). Le gros ecran herbe/badge reste reserve au 1er LANCEMENT de Leafia (join direct,
+sans donnees de teleport). TeleportService marque desormais tout teleport (`leafiaTeleport = true`) pour la detection.
+
+## 0.0.163 — Multi-place : gating par PlaceId + place Tutorial (setup)
+
+Le code (src) est synce dans CHAQUE lieu de l'experience (meme projet Rojo) ; c'est `game.PlaceId` qui decide du
+comportement. Nouveau `PlacesConfig` (MAIN = Leafia, TUTORIAL). Les deux bootstraps (serveur + client) gatent par
+PlaceId : dans la place Tutorial, seul le sous-ensemble TAILLE (+ console admin) s'initialise -- pas de save / plot /
+mailbox / economie persistante (dont les ScreenGui n'existent pas la-bas). La sequence de la place principale (Leafia)
+est INCHANGEE (la branche tuto `return` avant elle, et ne se declenche que si PlaceId == TUTORIAL). Commandes admin de
+test : `tuto` (vers le didacticiel) et `hub` (retour Leafia). Prochaine etape : la map du tuto (Studio) + la 1re haie
+guidee + brancher CreateCompany -> teleport tuto.
+
+## 0.0.162 — Stats live synchronisees sur la company active (source de verite)
+
+La company ACTIVE devient la SOURCE DE VERITE de l'economie du joueur. A l'entree dans une company (create / select), ses
+stats sont chargees dans l'economie live (CompanyService.activate -> CurrencyService.setWallet + ExperienceService.setState).
+A chaque gain, l'economie REECRIT dans la company active (writeToCompany) : ca persiste et alimente la carte de save.
+Nouveaux champs company : Xp (progression fine dans le niveau, preservee entre sessions) + HedgesTrimmed (carreaux amenes
+au ras -> chip HEDGES). Concretement : tailler fait monter le NIVEAU et les CARREAUX de la company active, qui persistent
+et s'affichent sur la carte, et se rechargent au CONTINUE. Coins / Reputation sont persistes de la meme facon mais restent
+a 0 tant que le systeme de chantiers (le cheque) ne branche pas leur gain. Les deux services d'economie ne sont donc plus
+"runtime only" : ils sont la vue live de la company active (dependent de DataService, pas de CompanyService -> aucun cycle).
+
+## 0.0.161 — Suppression d'une save : poubelle par carte + confirmation "hold to delete"
+
+Chaque carte REMPLIE a une icone poubelle cachee DERRIERE elle (ImageButton, ZIndex 0, au centre). Quand la carte est
+selectionnee, la poubelle glisse sur le cote droit et devient cliquable. Clic -> un modal de confirmation : "DELETE SAVE?",
+le nom de la company, et un bouton MAINTENIR dont un remplissage rouge grandit tant qu'on appuie. Arrive au bout (~1 s) ->
+DeleteCompany (serveur : la case repasse a vide et persiste) -> la carte se reconstruit EN PLACE en slot vide, sans reload.
+Relacher avant la fin annule. Bouton KEEP IT pour renoncer. Refactor au passage : la construction d'une carte (+ son tag
+NEW / ACTIVE + sa poubelle) est extraite en spawnCard, reutilisee pour reconstruire une carte apres suppression.
+
+## 0.0.160 — NameDialog : boutons CANCEL / CREATE stylises + touches en gras
+
+Les deux rectangles plats CANCEL / CREATE du modal de nommage deviennent des clones du TemplateButton (le meme bouton
+stylise que START / CHANGE PLOT) : CREATE garde le vert du template, CANCEL est recolore en ROUGE (degrade, texte blanc,
+contour rouge fonce). Les touches du clavier custom passent en gras (GothamSSm Bold) pour mieux se lire. Positions et
+tailles des boutons / TextBox / panneau reglees a l'oeil. Plus ergonomique, plus coherent.
+
+## 0.0.159 — Echelle jouable au tactile : boutons DROP / TURN sur mobile
+
+Sur mobile, deposer (E) et tourner (R) l'echelle etaient impossibles : ces deux actions n'existaient qu'au clavier (la
+PRISE marchait deja, via le tap du prompt d'interaction). Ajout de deux boutons tactiles (ContextActionService,
+createTouchButton) crees UNIQUEMENT pendant le portage : DROP (repose l'echelle) et TURN (la tourne 180). Sur PC rien
+ne change : ces boutons ne s'affichent que sur ecran tactile, E / R restent geres au clavier. Les 3 actions passent
+maintenant par des declencheurs centraux anti-spam, tapes indifferemment par le clavier ou le tactile.
+
+## 0.0.158 — Bouton EDIT : renommer une company (violet / rose, sur slot rempli)
+
+Un bouton EDIT (degrade violet clair -> rose) apparait au-dessus de CHANGE PLOT, mais SEULEMENT quand un slot rempli est
+selectionne (cache sur un slot vide, pas de raccourci clavier). Clic -> le modal de nommage s'ouvre PRE-REMPLI avec le
+nom actuel -> le nouveau nom passe le filtre puis RenameCompany (serveur, persiste) -> la carte ET le libelle du bas se
+mettent a jour EN PLACE, sans reload. Premiere MAJ de carte en direct (le create, lui, se voit encore au reload).
+
+A venir : bouton DELETE + dialogue de confirmation ("hold to delete").
+
+## 0.0.157 — Save system : companies persistees (fondation serveur + client branche)
+
+Les 3 slots de "Load a company" ne sont plus du mock : le client lit les VRAIES saves du serveur (remote ListCompanies)
+a l'ouverture. CREATE cree la company cote serveur (CreateCompany : persiste nom + stats dans le profil ProfileStore et
+refiltre le nom) ; CONTINUE la selectionne (SelectCompany : ActiveSlot + LastPlayed). Nouveau CompanyService (autorite
+serveur : list / create / rename / delete / select) + `Companies` dans le template (3 cases, false = vide, tableau PLEIN
+pour ne pas casser la serialisation) + `ActiveSlot`. Remotes Company/... . Le nom cree SURVIT au reload (API access actif).
+
+A venir : reconstruction des cartes en direct (sans reload), boutons EDIT (renommer) + DELETE (+ dialogue de
+confirmation facon "hold to delete"), et sync des stats live (level / cash) vers la company active.
+
+## 0.0.156 — Nommer sa company : modal + clavier custom en jeu + filtre serveur
+
+Creer une nouvelle save (CREATE sur un slot vide) ouvre un modal "NAME YOUR COMPANY" AVANT le loading. Le clavier NATIF
+est coupe (champ en lecture seule) au profit d'un clavier CUSTOM en jeu (lettres QWERTY + espace / effacer / OK), saisie
+affichee en Title Case. L'ecran de save disparait derriere pour que le modal soit net.
+
+Filtrage du nom en DEUX temps : (1) pre-check CLIENT instantane (petite liste noire) -> secousse ROUGE immediate du champ
+sur les cas evidents ; (2) vrai filtre SERVEUR via TextService:FilterStringAsync (Roblox) -> attrape toutes les langues,
+le leetspeak (NIC7AMAIRE), les variantes et les infos perso, SANS liste a maintenir. Un nom refuse secoue en rouge et ne
+valide pas. Fail-safe : filtre indisponible -> REFUS en jeu publie, ACCEPTE en Studio (le filtre exige "Enable Studio
+Access to API Services"). Nouveau NameFilterService (serveur) + remote Name/FilterName. Le nom est capture mais PAS encore
+persiste (pas de save serveur) -> a brancher quand la save existera.
+
+## 0.0.155 — Rideau de chargement : version FIGEE (logo gris + contour tournant, fermeture en 2 temps, destruction)
+
+Etat final du rideau (apres iterations). Fond gris fonce (31,31,31). Logo = 2 images carrees empilees : Icon1
+(remplissage gris) + Outline (contour blanc) qui porte un UIGradient de transparence TOURNANT vite (le fondu du
+chargement). Loader = 4 boules qui rebondissent (decalees). FERMETURE dans l'ordre : d'abord le CONTENU devient
+transparent (ImageTransparency des 2 images + BackgroundTransparency des 4 boules), PUIS le fond (Curtain, via
+GroupTransparency), puis DESTRUCTION de LeafiaLoadingOverlay (+ arret des tweens). Aucun gradient tween pour fermer.
+
+Remplace les essais 0.0.151-154 (fond bleu, wipe directionnel par gradient) : le wipe avait une direction impossible a
+verifier sans lancer le jeu et brouillait l'ordre. On fond les vraies proprietes de transparence, pas un gradient.
+
+## 0.0.154 — Rideau de chargement : loader 4 boules rebondissantes + fermeture en wipe
+
+Le loader n'est plus un cercle de points qui tourne mais 4 BOULES alignees qui sautent et retombent a leur base, en
+decale (l'onde), facon balles rebondissantes (Quad Out + reverses = un vrai rebond de gravite). Descendu plus bas sous
+le logo.
+
+A la FERMETURE : au lieu d'un fondu uniforme, un UIGradient balaie la transparence du rideau (wipe smooth) pour reveler
+le jeu en douceur. Filet de securite : Enabled = false a la fin garantit que le jeu s'affiche meme si l'effet ne rend
+pas comme prevu.
+
+## 0.0.153 — Rideau de chargement : fondu d'entree + logo monochrome a fondu tournant
+
+Le rideau APPARAIT maintenant en fondu (0.35 s) au lieu d'une coupe seche. Le logo passe en MONOCHROME (une seule
+couleur, blanc par defaut, reglable) : les 4 calques sont tous tintes pareil, dans un CanvasGroup, pour qu'UN seul
+UIGradient blanc qui TOURNE a l'infini balaie tout le logo d'un coup (le meme fondu tournant que l'ecran de chargement).
+
+## 0.0.152 — Rideau de chargement : exit qui glisse, logo du jeu, fond bleu fonce
+
+Raffinement du rideau (0.0.151). Au clic CREATE, les interfaces de selection GLISSENT d'abord hors ecran (cartes +
+titre a gauche, boutons a droite, top bar en haut, ~0.55 s, acceleration), PUIS le rideau les couvre. Ca donne un exit
+propre au lieu d'une coupe seche.
+
+Le rideau lui-meme : fond BLEU TRES FONCE, et a la place du texte "LEAFIA", le vrai LOGO du jeu (le meme que l'ecran de
+chargement, 4 calques d'images empiles) au centre, spinner en dessous. Duree portee a ~6.5 s (LOADING_MIN) pour poser un
+vrai temps de chargement facon Sims (le plot est deja pret derriere, c'est un temps ressenti volontaire).
+
+## 0.0.151 — Rideau de chargement a l'entree du jeu (clic CREATE)
+
+Quand on valide sa boite (bouton CREATE) et qu'on entre dans le jeu, un rideau de chargement SIMPLE (style Sims) couvre
+la transition : fond plein, logo blanc au centre, un spinner qui tourne a l'infini. Fini le glissement de camera visible
+(orbite -> perso) : le joueur voit "chargement" puis un fondu sur le jeu deja en place derriere.
+
+Nouveau module reutilisable LoadingOverlay (Modules/UI/Core) : show() / hide(). Le spinner est fait EN CODE (un cercle
+de points a trainee de comete, aucun asset requis), le rideau est un CanvasGroup (un seul GroupTransparency fond tout
+d'un coup). Reste affiche au moins 1.3 s (LOADING_MIN, cale sur la duree du glissement camera) pour ne pas flasher si la
+transition est instantanee.
+
+Le logo par defaut = le nom "LEAFIA" en texte blanc. Poser un vrai logo image = renseigner LOGO_IMAGE dans le module.
+
+## 0.0.150 — Juice : diamant "SHOP" clignotant (plus de "0") + pump des tags
+
+Le compteur de diamants a 0 n'affiche plus "0" (un solde mort ne donne envie de rien) mais un appel a l'action "SHOP"
+qui PULSE en couleur (bleu diamant <-> violet premium), en boucle. Le compteur est deja cliquable (ClickArea) : le but
+est de donner envie d'aller voir la boutique. Mot reglable (DIAMOND_CTA_TEXT) ; quand un vrai solde > 0 existera, on
+affichera le nombre a la place.
+
+Les tags NEW / ACTIVE des cartes "pompent" de temps en temps : un coup de zoom rapide qui rebondit (slime), a
+intervalle un peu aleatoire (1.4 a 3.2 s) pour attirer l'oeil sans fatiguer. Ne tourne que quand l'ecran est affiche
+(garde-fou root.Visible, comme l'effet slash).
+
+## 0.0.149 — Console admin (F2) : commandes serveur avec predicteur
+
+Une console admin codee, ouverte avec F2 (admin auto en Studio, ou UserId dans AdminCommandConfigs.ADMIN_USER_IDS en
+jeu publie). Une TextBox, un bouton Execute, et un PREDICTEUR qui filtre les commandes au fur et a mesure qu'on tape
+(clic sur une suggestion = remplit la ligne). Le resultat s'affiche dans la console.
+
+Autorite SERVEUR : le client envoie juste la ligne tapee (RemoteFunction Admin/AdminCommand), le serveur re-verifie
+l'admin, parse et execute. Le client n'ordonne rien. Commandes de depart : help, coins <montant> [joueur], reputation
+<montant> [joueur], xp <carreaux> [joueur], level <niveau> [joueur], resetdata [joueur] (soi-meme si aucun nom).
+Nouvelles fonctions serveur : CurrencyService.resetPlayer, ExperienceService.setLevel / resetPlayer,
+DataService.resetData (vide le profil puis le Reconcile au template).
+
+Pas de commande diamants : il n'existe pas encore de monnaie premium cote serveur (le compteur affiche un mock). A
+ajouter quand le systeme diamant existera.
+
+## 0.0.148 — Save : tous les slots vides par defaut
+
+Un nouveau joueur a 0 save : les 3 slots de l'ecran "Load a company" sont donc tous VIDES au depart (avant, des data
+mock remplissaient deux slots). Le premier slot est selectionne d'office, bouton CREATE. Les vraies data viendront du
+save serveur.
+
+## 0.0.147 — Ecran de chargement : plus de barre de %, un texte de generation qui defile
+
+La barre de progression en pourcentage est RETIREE. Une barre qui rampe fait COMPTER le temps au joueur ("putain c'est
+long"). A la place, juste un texte qui defile (Generation des terrains, Creation des massifs, Plantation des haies,
+Preparation des outils, Ouverture des chantiers) puis "C'est pret !". Ca donne l'impression que le monde se construit,
+au lieu d'un compte a rebours.
+
+Le timing de sortie ne change pas : toujours gate sur le prechargement fini ET la duree minimale (15 s). Toute la
+machinerie de la barre (progress, bump, boucle d'affichage) est supprimee.
+
+## 0.0.146 — Top bar de selection partage (StepBadge + diamant) + entree qui slide du haut
+
+Les deux ecrans de selection (plot puis save) partagent maintenant UN seul top bar : le StepBadge ("STEP 1 OF 2" sur le
+plot, "STEP 2 OF 2" sur les saves) et le compteur de diamants. Cree une fois dans LoadSaveUI (ensureTopBar), au-dessus
+de tout (ZIndex 50), toujours visible ; seul le numero d'etape change. Fini les doublons a maintenir de chaque cote.
+
+Petit plus : quand l'ecran de chargement s'enleve, le StepBadge et le diamant DEBOULENT du haut (slide Back Out). Ils
+attendent un signal (attribut LeafiaLoadingDone pose par le loading a sa fin) avant de slider, sinon l'animation se
+jouerait derriere l'ecran de chargement, invisible.
+
+## 0.0.145 — Mise en page MOBILE de l'ecran de selection (et du bas du chargement)
+
+Sur PETIT ECRAN tactile, l'ecran de plot debordait : la carte de description coupee aux bords, les fleches Next/Prev
+et les barres de page mal placees. On FORCE par code une mise en page mobile (valeurs tunees dans l'emulateur
+telephone) : positions/tailles de DescriptionHolder, SubHolder, ClaimButton, DescriptionText, Icon, Next/Previous,
+PointPageVisualHolder, et on RETIRE le UICorner du DescriptionHolder (ses coins arrondis se faisaient couper au bord).
+Table MOBILE_LAYOUT dans PlotSelectController, une entree par element (scope + anchor/position/size), reglable.
+
+Bas de l'ecran de chargement : sur mobile, Tycoon et Version etaient trop dans les coins, on rapproche leur X du centre
+(TYCOON_MOBILE_X / VERSION_MOBILE_X).
+
+Regle assumee : le code ne touche a ces elements QUE sur tactile. Sur PC ils gardent leurs valeurs Studio, qui restent
+donc la reference de la mise en page PC. Applique a tout appareil tactile (telephone ET tablette) pour l'instant.
+
+## 0.0.144 — Flou de profondeur sur l'ecran de selection de plot
+
+Un depth of field (flou du lointain) pendant qu'on choisit son plot et sa save : le plot ressort, le fond fond. L'effet
+vit dans Lighting (DepthOfFieldEffect, pose dans Studio). PlotSelectController en est le SEUL pilote : il l'ALLUME a
+l'ouverture de l'ecran (avec les valeurs voulues) et l'ETEINT au clic Start.
+
+Pourquoi eteindre AU CLIC et pas a la fin : la camera finit a ~12 studs du joueur, bien avant la zone nette
+(FocusDistance ~117), donc DOF allume = joueur FLOUTE. On coupe des le Start : le monde se defloute pendant que la
+camera plonge sur le joueur. Valeurs reglables dans le controller (DOF_FOCUS_DISTANCE, DOF_IN_FOCUS_RADIUS,
+DOF_FAR_INTENSITY, DOF_NEAR_INTENSITY).
+
+## 0.0.143 — Notification laterale : son a l'apparition + adaptation mobile (telephone / tablette)
+
+La notif laterale joue un petit son quand elle apparait (SoundUtils, Sounds/UI/NotificationSound).
+
+Sur ECRAN TACTILE elle etait trop petite au doigt et tombait sous le bouton de saut (coin bas-droit). On grossit la
+pile (UIScale sur HolderList) et on la repositionne. On DISTINGUE telephone et tablette : le cote COURT du viewport
+en dessous de PHONE_MAX_SHORT_SIDE (600) = telephone (petit ecran), au-dessus = tablette. Chacun a son scale et sa
+position (TABLET_SCALE / PHONE_SCALE, TABLET_POSITION / PHONE_POSITION), reglables a l'oeil.
+
+La NotificationUI passe en ScreenInsets = None (pose en code au boot) : coords plein ecran, l'origine devient le coin
+absolu de l'ecran (l'inset de la barre Roblox est ignore). Le placement de la pile est alors coherent entre appareils.
+Meme famille que WorldAnchor / GetMouseLocation.
+
+## 0.0.142 — Fond en tuiles a trou central (essai) + silence a l'entree dans le jeu
+
+Fond en tuiles (ESSAI, sur l'ecran de plot). Pas de gradient radial natif en UI Roblox : on le fait A LA MAIN, par
+tuile (idee du joueur). Une GRILLE de tuiles individuelles (rbxassetid://78626050824347) defile en diagonale
+par-dessus le monde 3D ; chaque frame, la transparence de CHAQUE tuile est recalculee selon la distance de son centre
+au centre de l'ecran -> trou clair au milieu (bord doux), tuiles visibles autour. ScreenGui a part (DisplayOrder -5 :
+devant le monde 3D, derriere l'UI de plot), detruit au Start. Reglages : TILE_FRAC (finesse du cercle et nombre de
+tuiles), TILE_BASE_TRANSPARENCY, TILE_SPEED, TILE_HOLE_INNER / OUTER.
+
+Silence a l'entree : au Start (camera qui se pose sur le joueur), la musique de jeu FOND a 0 sur 1.6 s. L'ecran de
+chargement nomme desormais son clone "GameMusic" pour que PlotSelect le retrouve sous SoundService. Effet voulu : un
+blanc sonore, une bascule d'etat quand on entre vraiment dans le jeu.
+
+## 0.0.141 — Ecran de plot vivant : nom, description, taille, step, cadre claimable, barres de page
+
+L'ecran de selection de plot s'habille. Nouveau `Modules/Configs/PlotConfigs.luau` (data pure, une entree par Slot :
+nom, categorie de taille, nombre de tuiles, description ~1 ligne et demie ; DEFAULT pour un plot non liste). Au
+changement de plot (goToPlotIndex), PlotSelectController remplit depuis ce config :
+- TitleNamePlot = le nom du plot.
+- DescriptionText = la description.
+- PlotMaxMinText = "PLOT x / y - SIZE - N TILES" (x = index courant, y = nombre de plots).
+
+AmountStep suit l'ecran : "STEP : 1 / 2" sur la selection de plot, "STEP : 2 / 2" sur la selection de save. Tous les
+changements d'ecran passent desormais par un showScreen() unique (UIManager + step + pulse).
+
+AvailablePlotLabel PULSE entre deux verts (41,172,26 <-> 93,220,34) tant que le plot est claimable (pour l'instant :
+toujours). Tween en reverse infini, COUPE quand on quitte l'ecran de plot (regle : pas d'effet en boucle sur une UI
+cachee), relance au retour.
+
+Barres de page (PointPageVisualHolder) : une barre par plot, clonee de Templates.PointSelectiveFrameTemplate. Celle
+du plot courant est jaune (255,204,52) et large, les autres blanches et etroites ; transition douce au Next/Prev.
+
+A ETOFFER : PlotConfigs contient des placeholders (vrais noms / descriptions a mettre). PAS ENCORE FAIT : AmountDiamond
+(devise PERSISTANTE a creer cote data) et l'essai de fond en tuiles animees (le "cercle clair au milieu" n'est pas
+natif en UI Roblox, cf discussion).
+
+## 0.0.140 — Selection de plot : Next / Previous font defiler les plots
+
+Les boutons PreviousButton / NextButton de l'ecran de selection font CHANGER de plot. La camera d'orbite GLISSE vers
+le nouveau plot (elle continue de tourner sans coupure : le centre d'orbite est lisse vers la cible via
+ORBIT_CENTER_LERP, l'angle reste continu) et un swoosh (SoundService.Sounds.UI.PassingSound) accompagne chaque
+changement. `currentPlot` suit, donc Claim et Start portent sur le plot AFFICHE. Le parcours BOUCLE (Next sur le
+dernier -> le premier, Prev sur le premier -> le dernier ; wrap par modulo dans goToPlotIndex).
+
+Enumeration : au demarrage on liste tous les enfants de Workspace.Worlds.Plots qui ont un PrimaryGround (le marqueur
+"c'est un plot") et on pre-calcule leur centre UNE fois -> Next/Prev lit ce cache, sans re-attendre. Les plots sont
+tries par nom (Slot1, Slot2...). `PLOT_NAME` (le plot unique code en dur) disparait. plotCenter passe de WaitForChild
+a FindFirstChild : on n'arrive la qu'apres game.Loaded et apres avoir attendu le dossier Plots.
+
+PAS FAIT (UI, laissee au joueur) : le nom du plot (TitleNamePlot), la description et les points de page
+(PointPageVisualHolder) ne sont pas encore mis a jour au changement -- la source de la donnee d'affichage
+(attribut sur le plot ? config ?) reste a definir. A cabler quand elle sera connue.
+
+## 0.0.139 — Musique du jeu au reveal + sons de clic separes (curseur / bouton)
+
+Musique de fond : `SoundService.Sounds.Game.Musics.Music3` demarre a la SORTIE du loading (pendant le reveal /
+fondu de l'ecran), a volume bas (force a GAME_MUSIC_VOLUME = 0.1 dans le code, reglable). Elle boucle et vit sur SoundService,
+donc elle survit a la destruction de l'ecran de chargement. Jouee dans LoadingScreenClient, qui gere deja sa propre
+musique : le fichier reste autonome (clone / play direct depuis SoundService, aucun require de ReplicatedStorage).
+Absente -> rien (findSound, aucun warn). Quand on voudra un vrai systeme (playlist Music1/2/3, crossfade), ca
+deviendra un MusicController ; pour l'instant une boucle simple suffit.
+
+Sons de clic separes (suite du 0.0.138) : deux Sounds dedies cote Studio. PressCursorSound = clic DANS LE MONDE
+(hors UI) ; PressButtonSound = clic SUR un bouton. Mutuellement exclusifs : ClickSoundController filtre desormais
+gameProcessed (un clic pris par l'UI ne joue plus le son curseur), et ButtonSlime joue PressButtonSound sur
+MouseButton1Down. Un clic = un seul son.
+
+Son de survol fiabilise : il partait du curseur sur la transition "aucun bouton -> un bouton", donc survoler des
+boutons COLLES ne sonnait qu'une fois (jamais de frame "aucun bouton" entre eux). Deplace dans ButtonSlime, par
+bouton (MouseEnter) : chaque bouton fait "pop", meme colles.
+
+Dosage : slime des boutons adouci (gonflement +10 -> +5 %, respiration et enfoncement baisses aussi). Curseur
+reduit d'un cran (CURSOR_SCALE 0.022 -> 0.020).
+
+## 0.0.138 — Juice des boutons : slime au survol + clic (curseur ET boutons), son au survol
+
+Retour d'interface "vivant". Trois choses.
+
+CURSEUR (CursorController). Au SURVOL d'un bouton il GONFLE et RESPIRE doucement (effet prolonge, il vit tant
+qu'on reste dessus), et un SON se joue une fois a l'entree. Ca se compose avec le creux du clic sur le meme
+ressort : survoler gonfle, cliquer enfonce, relacher rebondit. Le survol est detecte UNE fois par frame via
+`playerGui:GetGuiObjectsAtPosition(m.X, m.Y)` (pas par event de souris : agiter la souris ne doit pas flooder le
+hit-test). m.X/m.Y sont dans le meme repere absolu que l'AbsolutePosition des boutons, donc ca marche quel que
+soit l'IgnoreGuiInset du GUI. Curseur aussi reduit d'un cran (CURSOR_SCALE 0.022 -> 0.020).
+
+BOUTONS (nouveau `Modules/UI/Core/ButtonSlime.luau` + `Client/ButtonSlimeController.luau`). Le bouton LUI-MEME
+gonfle / respire au survol et s'enfonce au clic, via un `UIScale` dedie ajoute au bouton (nomme `SlimeScale`) : on
+ne touche jamais a la Size reglee dans Studio, et ce UIScale se compose avec un UIScale deja present. Une seule
+boucle RenderStepped anime tous les boutons ; les boutons au repos sont cales a 1 et sautes (pas de relayout pour
+rien). Le controller auto-branche TOUS les GuiButton de PlayerGui + les nouveaux (DescendantAdded), donc un bouton
+ajoute dans Studio est slime sans cablage. Filet anti-blocage : un relachement n'importe ou relache le clic de
+tous les boutons (si le bouton disparait au clic, son MouseButton1Up ne tirerait pas et l'enfoncement resterait
+fige). Un bouton cache relache aussi son etat (il ne revient pas gonfle).
+
+ORBITE du plot-select (PlotSelectController) : passe de `RenderStepped:Connect` a `BindToRenderStep` a la priorite
+Camera. C'est le pattern correct d'une camera scriptee (ecrire la CFrame au bon moment du pipeline). Note : le
+"drop de FPS" soupconne etait un FANTOME de Studio (MicroProfiler ouvert + survol Studio) ; le meme build tourne a
+200 FPS parfait dans l'appli Roblox. Ce changement ne repare donc rien cote perf, mais reste juste en soi.
+
+A faire dans Studio :
+- Creer un `Sound` nomme `HoverButtonSound` dans `SoundService.Sounds.UI` (a cote de `PressButtonSound` du clic),
+  avec un SoundId et un volume bas. Sans lui, un warn "Son introuvable" sort a chaque survol.
+- Pour un POP centre, les boutons doivent avoir AnchorPoint (0.5, 0.5) ; sinon ils grandissent depuis leur coin
+  d'ancrage (le slime marche quand meme).
+
+Reglages : `SLIME_HOVER` / `SLIME_HOVER_PULSE` (curseur), `HOVER` / `HOVER_PULSE` / `PRESSED` / `STIFFNESS` /
+`DAMPING` (boutons).
+
+Ecart assume avec la regle d'or : c'est de l'habillage / du juice, pose apres validation du geste. A doser, pas a
+etendre a l'infini.
+
+## 0.0.137 — Taille du dessus (echelle) : retour a la SIMPLICITE (curseur -> anim, point)
+
+Apres un long detour (visee par ANGLE facon champ de vision, ZONES colorees de la haie qui changeaient le
+comportement, EVENEMENTS d'anim lus en async) qui a coute cher et marchait "quand ca voulait", on tranche : UNE
+seule regle pour la lame du dessus. La position du curseur LE LONG de la haie pilote la RightLeftAnimation, du debut
+a la fin (bord a bord). Pas d'angle, pas de zones, pas d'appel reseau. Reglages restants : TOP_SENSITIVITY (extremes
+atteints avant les bords si > 1) et CUT_TOP_INVERT (sens gauche/droite).
+
+Supprime : le champ de vision (TOP_FOV_HALF_DEGREES), la lecture des evenements MaxLeft/Middle/MaxRight
+(GetKeyframeSequenceAsync, la source du "parfois ca marche"), et TOUT le systeme de zones : HedgeSectionService
+(les parts colorees Jaune/Rose/Bleu/Marron/Violet + la detection de position) et ses configs HEDGE_SECTION_*.
+topTrimTime est desormais LINEAIRE (ratio * duree). Lecon notee : une visee par angle depend du repere (camera,
+corps, position) et se paie en allers-retours ; le curseur projete SUR la haie, lui, est direct et stable.
+
+Regression du 0.0.135 : E ouvrait la boite, elle se refermait TOUTE SEULE dans la foulee, et ensuite plus rien
+(E mort, aucune anim). Cause : la piste etait en Looped = false ; arrivee au marqueur IsOpenEvent (le dernier
+evenement de l'anim), elle se RELACHAIT au bout, et un garde-fou "si la piste s'est stoppee, relance-la" faisait
+Play(0,1,0) qui REMET TimePosition a 0 -> la boite claquait fermee, et le drapeau atOpen restait a true -> la
+boucle la figeait fermee pour toujours. C'est le piege deja note dans CLAUDE.md (tenir la derniere image d'une
+anim = Looped = true, sinon la pose saute).
+
+Fix (MailboxService) : Looped = true (la pose tient au bout, rien ne se relache), suppression du garde-fou qui
+remettait a 0, et CLAMP a un frame de chaque borne (0 et Length) pour que la lecture ne wrappe jamais a l'autre
+extremite. Resultat : ouvrir / fermer / re-ouvrir marche indefiniment.
+
+## 0.0.135 — Boite aux lettres : E marche a TOUS les coups (fini "parfois ca ouvre, parfois non")
+
+Bug : E ouvrait la boite une session sur deux, et quand ca ratait, ca ne marchait plus de TOUTE la session. Cause :
+le temps du marqueur IsOpenEvent etait lu au boot via GetKeyframeSequenceAsync, une API reseau CAPRICIEUSE cote
+serveur (rate-limit, et l'echelle l'appelle au meme boot). Quand elle ratait, openTime restait a 0 -> la cible
+d'ouverture etait 0 -> la boite ne s'ouvrait jamais.
+
+Fix (MailboxService) : on ne lit PLUS le temps a l'avance. On joue l'anim et on la FIGE quand elle ATTEINT le
+marqueur IsOpenEvent (GetMarkerReachedSignal en avancant, Speed > 0 -> AdjustSpeed 0 + drapeau atOpen). C'est une
+lecture LOCALE pendant la lecture de l'anim, sans appel reseau : fiable a chaque session. La fermeture (recul
+jusqu'a 0 quand l'ouvreur part) est inchangee. Plus de dependance a GetKeyframeSequenceAsync ni de champ openTime.
+
+## 0.0.134 — Boite aux lettres : ouvre a l'approche (E), se referme quand on part
+
+Avant : E jouait tout le clip (ouvre PUIS ferme) d'un coup. Maintenant : E OUVRE la boite (l'anim va de 0 jusqu'au
+marqueur IsOpenEvent, ou la porte est ouverte, et s'y TIENT). Quand l'ouvreur s'ELOIGNE (au-dela de CLOSE_DISTANCE),
+l'anim repart EN ARRIERE jusqu'a 0 : la boite se referme.
+
+Technique (MailboxService) : le temps du marqueur IsOpenEvent est lu une fois au boot (GetKeyframeSequenceAsync).
+Une boucle Heartbeat pilote la VITESSE de lecture (AdjustSpeed +ANIM_SPEED pour ouvrir, -ANIM_SPEED pour fermer,
+0 pour tenir la pose) selon la cible (ouvert si l'ouvreur est pres, ferme sinon). On pilote la VITESSE plutot que
+la TimePosition a la main : "jouer a telle vitesse" se replique proprement a tous les clients. Reglages :
+ANIM_SPEED (vitesse), CLOSE_DISTANCE (distance de fermeture). NOTE : il faut le marqueur IsOpenEvent dans l'anim
+(sinon warn + la boite reste fermee).
+
+SONS : au marqueur OuvertureEvenement (GetMarkerReachedSignal), franchi dans les DEUX sens -> son d'OUVERTURE si on
+avance (Speed > 0), son de FERMETURE si on recule (Speed < 0). Spatial et a PORTEE LIMITEE (InverseTapered,
+RollOffMaxDistance = SOUND_MAX_DISTANCE) : seuls les joueurs PRES de la boite l'entendent, pas tout le serveur
+(sinon le son par defaut porte a ~10000 studs). Sons : SoundService.Sounds.Game.GlobalSounds.OpenMailboxSound /
+CloseMailboxSound.
+
+## 0.0.133 — Boite aux lettres : prompt stylise (le meme que l'echelle), fini le prompt Roblox moche
+
+Le ProximityPrompt affichait l'UI Roblox par defaut (moche). On passe son Style en Custom (plus d'UI par defaut)
+et on dessine notre InteractionPrompt a la place (le MEME prompt que l'echelle : pilule rose qui pulse, badge de
+touche, apparition slime, son). Cohérence visuelle totale.
+
+- `Server/MailboxService.luau` : le prompt passe en Style = Custom, nomme "MailboxPrompt". Il garde tout son
+  travail (proximite, input E, Triggered qui joue l'anim cote serveur) ; seul l'affichage change.
+- `Client/MailboxController.luau` (nouveau) : ecoute ProximityPromptService.PromptShown / PromptHidden ; quand
+  c'est le prompt de la boite, montre / cache l'InteractionPrompt qui suit la boite (WorldAnchor). Sur mobile, le
+  tap declenche le prompt (prompt:InputHoldBegin, HoldDuration 0). Branche dans le bootstrap client.
+- FIX : on ne pouvait cliquer qu'UNE fois. InputHoldBegin laissait le prompt "maintenu" -> les clics suivants
+  tombaient dans le vide. On appelle InputHoldEnd juste apres pour le liberer.
+- InteractionPrompt (partage avec l'echelle) : SQUISH slime au clic / tap. On ecrase d'un coup puis rebond Elastic
+  (gelee prolongee) a chaque appui. Reglages PRESS_SQUISH / PRESS_TWEEN.
+- TITRE de l'objet AU-DESSUS de la pilule du prompt (comme l'ObjectText d'un ProximityPrompt) : InteractionPrompt
+  enveloppe desormais la pilule dans un conteneur vertical (titre en haut, pilule en bas), et show() prend un
+  argument `title` optionnel (blanc + contour, cache si vide -> l'echelle, sans titre, ne change pas). Le titre
+  apparait / disparait AVEC le prompt et pop / squishe avec lui. Cote boite : PROMPT_OBJECT = "MAILBOX" (le client
+  le lit via prompt.ObjectText et le passe en titre).
+- Le prompt de la boite se place du cote OPPOSE au joueur (le long de la droite de l'ecran), pour ne pas tomber
+  SUR le perso. Quand le joueur passe de l'autre cote, le prompt GLISSE (lerp) vers l'autre bord (avec hysteresis
+  pour ne pas sauter quand on est aligne). Offset RELATIF A LA CAMERA (nouvel argument cameraRelative de
+  InteractionPrompt.show ; nouvelle fonction InteractionPrompt.setOffset pour l'animer). Reglages dans
+  MailboxController : PROMPT_HEIGHT (hauteur), PROMPT_SIDE (ecart lateral), SIDE_LERP, SIDE_HYSTERESIS. Titre en
+  LuckiestGuy (TITLE_FONT dans InteractionPrompt).
+
+## 0.0.132 — Taille du dessus : visee RELATIVE AU JOUEUR (le corps ne part plus trop loin selon la position)
+
+Vrai probleme derriere le 0.0.130/131 : le corps partait trop loin (a gauche surtout) quand l'echelle etait posee
+au BOUT de la haie. Cause : le ratio de visee etait relatif a la HAIE (0 = bord gauche de la haie), donc au bout
+gauche, viser le bord gauche envoyait quand meme le corps a fond a gauche, dans le vide.
+
+Fix : le ratio est desormais RELATIF AU JOUEUR (position laterale du curseur par rapport a OU on se tient, le long
+de la droite de l'ecran : 0.5 = pile devant, 0 = a REACH a gauche, 1 = a REACH a droite). Comme le curseur est
+clampe a la haie, quand l'echelle est au BOUT GAUCHE on ne peut viser que vers la droite -> le corps ne tourne
+jamais trop a gauche, TOUT SEUL. La plage utile de l'anim se limite d'elle-meme selon ou l'echelle est posee
+(bord gauche -> plage haute, milieu -> plage complete, bord droit -> plage basse). Exactement le comportement voulu.
+
+Reglage : TOP_PLAYER_REACH (studs, distance laterale du curseur pour un corps a fond tourne). Remplace
+TOP_SWEEP_REFERENCE_WIDTH / topSweepSpan du 0.0.130 (supprimes). Le mapping par evenements (0.0.131) est conserve :
+si l'anim a ses 3 evenements, la pose se cale dessus ; sinon secours LINEAIRE (le ratio etant deja relatif au
+joueur, 0.5 = centre). NOTE : les evenements ne s'appliquent que si l'anim de l'outil est bien trouvee (cf le
+souci du dossier Shear).
+
+## 0.0.131 — Taille du dessus : la pose se cale sur des EVENEMENTS d'anim (bord a bord propre)
+
+Suite du 0.0.130. Le joueur a pose 3 evenements dans la RightLeftAnimation (editeur d'anim) qui reperent les
+poses du CORPS : CompletLeftEvent (a fond a gauche), MiddleAnimationEvent (centre), CompletRightEvent (a fond a
+droite). On cale desormais la lame sur CES temps au lieu de balayer toute l'anim :
+- bord gauche de la haie -> CompletLeft, centre -> Middle, bord droit -> CompletRight (interpolation par morceaux).
+- La lame balaie donc EXACTEMENT de bord a bord ; le corps ne part jamais trop loin a gauche / droite.
+- Comme le curseur du dessus est deja clampe aux bords, au bord gauche de la haie on ne peut viser que vers la
+  droite -> le corps ne tourne pas trop a gauche, tout seul.
+
+Technique (LadderController) : les temps des 3 evenements sont lus UNE fois par outil, en tache de fond
+(KeyframeSequenceProvider:GetKeyframeSequenceAsync -> temps du Keyframe qui porte chaque KeyframeMarker), et mis en
+cache par id d'anim. Chaque outil a sa propre RightLeftAnimation (Shear fait ; HedgeTrimmer a faire). SECOURS : si
+une anim n'a pas les 3 evenements (ou si la lecture echoue), on retombe sur la compression du 0.0.130 (aucun crash,
+juste un warn). Les evenements remplacent le reglage TOP_SWEEP_REFERENCE_WIDTH des qu'ils sont presents.
+
+## 0.0.130 — Taille du dessus (echelle) : la lame suit le curseur jusqu'aux bords
+
+Bug : en taillant le dessus depuis l'echelle, plus le curseur approchait d'un BORD de la haie, plus la lame partait
+a cote (la coupe ne suivait plus la visee). Cause : le curseur du dessus est CLAMPE aux bords de la haie (0 = bord
+gauche, 1 = bord droit), mais la lame suit l'anim RightLeft dont le balayage a une AMPLITUDE FIXE (reglee dans
+Studio). Sur une haie plus etroite que ce balayage, la lame debordait : nul au centre (ca colle), pire aux bords.
+
+Fix (LadderController, phase "top") : on COMPRESSE le balayage de la lame a la largeur reelle du dessus, centre sur
+le milieu (comme la pose up/down au sol suit deja la HAUTEUR de la haie). La lame reste donc sous le curseur d'un
+bord a l'autre. Reglages : TOP_SWEEP_REFERENCE_WIDTH (largeur ou l'anim balaie pile bord a bord) et TOP_SWEEP_MIN_SPAN.
+
+A REGLER a l'oeil : si la lame DEBORDE encore aux bords, MONTER TOP_SWEEP_REFERENCE_WIDTH ; si elle N'ATTEINT PAS
+les bords, la baisser. NOTE : ce fix concerne la taille du dessus DEPUIS L'ECHELLE. Si le meme decalage arrive au
+SOL (dessus d'une haie basse, sans grimper), c'est un autre chemin (HedgeController onTop) a corriger a part.
+
+## 0.0.129 — L'echelle portee garde une orientation FIXE (fini "de travers")
+
+Bug : en prenant l'echelle, elle se tournait face au joueur, et se reposait donc mal par rapport a la haie. Cause :
+a la 1re prise on CAPTURAIT le yaw d'origine de l'echelle (sa pose Studio) et on le reutilisait a vie. Si cette
+pose etait de travers, l'echelle etait portee ET reposee de travers pour toujours.
+
+Fix : on ne capture plus le yaw d'origine. L'echelle se cale a une ORIENTATION FIXE reglable (CARRY_YAW_DEGREES,
+en degres autour de la verticale) RELATIVE au repere carre "face a la haie". Le portage, donc la repose, est donc
+toujours le meme et bien oriente vers la haie. On garde le choix du SENS (0 / 180) le plus proche de la pose
+actuelle pour eviter le demi-tour brusque dans les mains. Le recul (bord arriere a CARRY_CLEARANCE) est recalcule
+pour l'orientation choisie (nouvelle mesure `ladderBackOffsetForYaw`, en repere echelle). Supprime : la capture
+`carryOffset` et `ladderBackEdgeZ`.
+
+A REGLER a l'oeil : CARRY_YAW_DEGREES (0 par defaut). Prendre l'echelle ; si elle fait face de travers, essayer
+90 / 180 / 270 jusqu'a ce que le cote de grimpe pointe bien vers la haie.
+
+SUITE : le flip 0/180 "sens le plus proche de la pose plantee" a ete RETIRE. L'echelle REPLIEE est ~symetrique :
+le flip choisissait parfois l'oppose sans que ca se voie a la prise, et au DEPLI (repose) l'echelle se retrouvait
+a 180 de travers. Sens DETERMINISTE maintenant (toujours CARRY_YAW_DEGREES) : la repose est toujours bien orientee.
+Fonction rotAlign supprimee (plus utilisee).
+
+## 0.0.128 — Prendre l'echelle ne fait plus grimper dessus
+
+Bug : prendre l'echelle (E pour la porter, LadderMoveController) faisait aussi GRIMPER dessus. Cause : les zones
+de grimpe (box_detecte_A / B) sont ENFANTS du modele d'echelle. Une echelle portee est soudee au HRP du joueur,
+donc ses zones le suivent : LadderController croyait le joueur en permanence "dans la zone" et l'accrochait a sa
+propre echelle portee.
+
+Fix : un attribut client LeafiaCarryingLadder pose sur le perso pendant qu'on porte (grabCarry / endCarry dans
+LadderMoveController). LadderController le lit en tete de sa boucle : tant qu'on porte, pas de grimpe (dismount
+idempotent, qui sort proprement si on avait deja accroche avant de prendre). Aucun changement serveur.
+
+## 0.0.127 — Boite aux lettres : E l'ouvre (point d'entree des futurs chantiers)
+
+Premiere brique du systeme de chantiers : une boite aux lettres (MailboxModel, posee en Studio) qu'on ouvre en
+appuyant sur E. Pour l'instant ca ne fait QUE jouer l'animation ; le courrier / l'interface des chantiers se
+brancheront dessus ensuite.
+
+- `Server/MailboxService.luau` (nouveau) : retrouve MailboxModel dans le Workspace, charge son anim
+  ReplicatedStorage.Animations.Props.Mailbox.OpenCloseAnimation sur son Animator, et lui colle un ProximityPrompt
+  ("Ouvrir" / "Boite aux lettres", touche E). Au Triggered, joue l'anim UNE fois (debounce via track.IsPlaying,
+  l'etat reel du moteur, pas un drapeau maison).
+- Anim jouee cote SERVEUR : tous les joueurs voient la boite s'ouvrir (comme l'echelle en co-op).
+- ProximityPrompt plutot qu'une detection E maison : Roblox gere la proximite, l'invite clavier ET un bouton
+  tactile automatiquement (mobile gratuit). Aucun controller client necessaire.
+- Le Humanoid du modele est passe en DisplayDistanceType = None (pas de nom / barre de vie sur une boite).
+- Branche dans le bootstrap serveur.
+
+RESTE A FAIRE : ouvrir l'interface des chantiers du joueur au bon moment (hook laisse dans onTriggered, ou via
+l'evenement d'anim OuvertureEvenement). C'est le debut de la boucle boite -> courrier -> chantier -> cheque.
+
+## 0.0.126 — Coins / aretes plus faciles a finir (portee bonus sur les bordures)
+
+Probleme signale : certains feuillus dans les coins et les aretes restaient impossibles a amener au ras, il
+fallait se battre. Contraire a la regle d'or (tailler doit rester jouissif).
+
+Cause : la coupe cale la lame sur la face travaillee. Aux coutures entre deux faces (arete verticale, coin), la
+lame arrive DE BIAIS sur les cellules de la face d'a cote : le test "la lame est-elle du bon cote" (outward) et la
+portee ne les attrapaient pas tout a fait, donc une derniere frange de feuillus restait.
+
+Fix : les cellules de BORDURE (deja marquees EDGE_ATTRIBUTE a la construction) recoivent deux bonus, uniquement
+elles : plus de PORTEE (CUT_EDGE_REACH_BONUS) et une TOLERANCE de surface plus large (CUT_EDGE_SURFACE_BONUS, lame
+plus rasante acceptee). En balayant pres d'un coin, les coutures se finissent sans combat. La coupe en pleine face
+est INCHANGEE (les bonus ne touchent que les bordures). Le ramassage des cellules (gather) suit la portee elargie.
+
+Suite (meme session) : la FRANGE DU BAS restait, tout le pourtour au ras du sol. Cause distincte : la rangee du
+sol des cotes n'est PAS marquee Edge (voulu : detruire ses feuilles ouvrirait la haie par en dessous), donc elle
+n'avait pas le bonus ; et surtout la pose la plus BASSE des bras (frame 0 de l'anim, fixe quelle que soit la haie)
+arrive AU-DESSUS de cette rangee, hors de portee du geste. Fix : nouvel attribut BASE_ATTRIBUTE sur la rangee du
+sol des cotes (marque a la construction), avec un bonus de portee GENEREUX (CUT_BASE_REACH_BONUS, plus large que
+les aretes) et une tolerance elargie, MAIS sans destruction de feuille (la base reste fermee). Le geste bas
+attrape enfin la frange. Priorite base > edge (un coin bas est les deux). NOTE : les haies sont bati au demarrage
+du serveur, donc il faut RELANCER le playtest pour que les cellules recoivent le nouvel attribut.
+
+A noter, non concerne par ces fix : le DESSUS des haies hautes reste non taillable depuis le sol (voulu,
+TOP_CUT_MAX_HEIGHT) ; l'escabeau le levera. Et la visee reste calee sur la face travaillee : pour tailler une
+autre face on marche jusqu'a elle (la camera ne sert qu'a regarder). Une refonte "ce que je vois je le taille"
+reste une option si le besoin revient.
+
+## 0.0.125 — Orbite de la camera de travail : 1:1, fini la "courbe" et le smear
+
+Probleme signale : quand on tourne la camera (clic maintenu + glisse) en taillant, elle suivait une COURBE au lieu
+de tourner net, et plus on glissait vite plus ca trainait (smooth "degueulasse").
+
+Cause : la camera de travail est placee sur un CERCLE autour de la haie (angle = yaw, bouge au glisse). Chaque
+frame le code lissait la POSITION vers la cible en ligne droite. Or la cible tourne sur un ARC : lisser en ligne
+droite coupe la corde, la camera plonge vers l'interieur du cercle puis ressort -> la "courbe", et la distance a la
+haie qui varie pendant le pivot. En plus, un seuil "settled" repassait en mode LENT des que la cible sautait loin :
+donc plus on glissait vite, plus la camera trainait (a l'envers).
+
+Fix : on ne lisse PLUS la position pendant le travail. La camera est placee DIRECTEMENT sur son cercle au yaw
+courant -> orbite 1:1 avec le doigt / la souris, rayon constant, zero corde coupee. On garde le lissage seulement
+pour l'ARRIVEE a l'engage (le glisse depuis la cam de jeu, une fois, via un drapeau camArrived) et pour la
+DISTANCE de recul a l'acceleration (lissee en parametre : currentDistance / CAMERA_DISTANCE_LERP), qui ne deforme
+pas l'orbite. Reglage mort supprime : CAMERA_LERP_SPEED_WORK.
+
+RUBBER-BAND sur la butee d'orbite (avant, elle etait SECHE) : on peut ETIRER la camera de quelques degres au-dela
+de la limite, avec une resistance croissante (marge elastique), et au relachement un ressort SOUS-AMORTI la ramene
+a la limite avec un petit rebond (slime). Un helper applyOrbitDrag remplace le clamp dur des deux entrees (souris +
+tactile) ; le retour est un ressort dans update, actif seulement quand on ne pilote plus l'orbite et que yaw a
+deborde. Reglages : CAMERA_YAW_MARGIN (etirement max), CAMERA_YAW_SNAP_STIFFNESS / CAMERA_YAW_SNAP_DAMPING (le rebond).
+
+## 0.0.124 — Interface economie (CurrencyUI) : pieces + reputation, pilotees par le serveur
+
+Le joueur a monte a la main une ScreenGui CurrencyUI (pieces + reputation). On lui donne sa plomberie : le
+serveur pose les valeurs, le client les affiche. Meme schema que l'XP et le combo (attributs sur le joueur, zero
+remote), donc rien de nouveau a apprendre.
+
+- `Modules/Configs/CurrencyConfigs.luau` (nouveau) : noms d'attributs partages `LeafiaCoins` / `LeafiaReputation`.
+- `Server/CurrencyService.luau` (nouveau) : autorite, RUNTIME (pas de sauvegarde tant que le gain n'est pas
+  branche, meme regle que l'XP). Pose les attributs a 0 des le join pour que l'UI soit vivante. Expose
+  `grantCoins(player, montant)` et `grantReputation(player, montant)` : point d'entree UNIQUE du futur gain.
+- `Client/CurrencyController.luau` (nouveau) : HUD fixe, remplit `CoinsText` / `ReputationText` (formatage via
+  FormatUtils : 1250 -> "1.25K"), avec un petit POP a la hausse (gain). Attend le perso avant de chercher l'UI.
+- Branches dans les deux bootstraps.
+- OUTIL DE TEST (dev) : dans Studio, cliquer l'icone piece (CoinsImage) donne +1000. Remote `Dev/DevGrantCoins`,
+  double garde `RunService:IsStudio()` (client ET serveur) : mort sur un vrai serveur, le serveur decide du
+  montant (le client n'envoie rien). Aucun exploit possible, rien a retirer au lancement.
+- `FormatUtils.Abbreviate` : passe a UNE decimale TOUJOURS affichee (80000 -> "80.0K" au lieu de "80K"). Format
+  partage, donc harmonise aussi les notifications laterales. Sous 1000 : nombre entier brut (500 -> "500").
+- CoinsText / ReputationText colores selon le SIGNE : blanc-vert pale si > 0 (benefique), blanc pur a 0 (neutre),
+  rouge franc si negatif (dette). Robuste a un UIGradient sur le texte (force la teinte unie, sinon le degrade
+  ecraserait la couleur). Prepare l'enjeu a venir (bacler / casser du materiel pourra passer le solde sous zero) :
+  le rouge ne sort que si une source retire des pieces, tant qu'aucune n'existe tout reste blanc / vert pale.
+- Compteur qui DEFILE : quand la valeur change, le nombre affiche glisse jusqu'a la nouvelle (3.0K -> 3.1K ->
+  ... -> 4.0K) au lieu de sauter. Rend le gain gourmand. CurrencyController refactore : coins et reputation
+  partagent une seule structure Counter (defile + pop + couleur), fini la duplication.
+- SHINE a chaque gain : une bande blanche diagonale balaye le texte, vite (une passe). Portee par le meme
+  UIGradient que la couleur (un element n'a qu'un gradient) : le shine prend la main pendant le balayage puis
+  rend la teinte unie. UIScale et UIGradient crees en code si absents (pas a poser dans Studio).
+- TEXTE FLOTTANT "+X" a chaque gain de pieces (facon GTA / Sims) : le montant ajoute apparait SOUS le bloc pieces
+  (le HolderCoins), descend un peu et s'efface. Dore, police LuckiestGuy. Vit dans une ScreenGui a part
+  (CurrencyFly, ScreenInsets None) pour se placer aux pixels absolus sans se faire rogner par le HUD. Pas de fly
+  sur la reputation (un "+X" dore prendrait pour de la piece).
+
+Choix de design (valides avec le joueur) :
+- La REPUTATION reste un RANG qui se MERITE, jamais achetable : le bouton d'achat a ete retire de HolderReputation.
+- Le GAIN de pieces n'est PAS branche : il tombera comme un CHEQUE de fin de chantier, via le futur systeme de
+  quetes/clients (boite aux lettres -> courrier d'un client -> chantier -> paye). Ce systeme n'existe pas encore.
+  Le tuyau est pret : QuestService appellera `CurrencyService.grantCoins`. En attendant, pieces + repu affichent 0
+  (honnete) mais l'UI reagit des qu'une valeur bouge.
+
+RESTE A FAIRE : systeme de quetes/chantiers (le gain), puis persistance (DataTemplate.Coins/Reputation existent
+deja), depense (boutique/outils), et adaptation mobile de ce HUD si besoin.
+
+## 0.0.123 — Support MOBILE de la taille + refonte du repere de coupe
+
+Gros chantier : rendre la taille au sol JOUABLE sur tactile (90% du public Roblox), sans casser le PC.
+
+INPUT
+- Nouveau module leger `Modules/Utils/InputDevice` : `isTouch()`, `kind()`, signal `changed`. Suit le dernier input
+  UTILISE (un mobile avec clavier reste detecte tactile quand on touche l'ecran). Passif, auto-init a la 1re require.
+- VISEE AU DOIGT (HedgeController) : la visee ne lit plus la souris en dur, `aimScreenPoint()` rend `GetMouseLocation`
+  (qui suit le doigt, bon repere) et nil si aucun doigt pose. Poser+glisser = viser+couper. `aimTouch` = juste "un
+  doigt vise". Le point vient TOUJOURS de GetMouseLocation (utiliser InputObject.Position mettait la bille a cote).
+- CISAILLE AU DOIGT : le tap seul ne coupe jamais (aimActive faux a l'instant du contact) -> repete-au-glissement
+  rate-limite par `CUT_TOUCH_SNIP_INTERVAL` (0.3, cadence DELIBEREE, pas le plancher anti-triche 0.08 qui la rendait
+  x12/s = trop vite).
+- CURSEUR custom cache sur tactile (CursorController lit InputDevice).
+- HOLOGRAMME "Taille %" : UIScale `HOLOGRAM_TOUCH_SCALE` (0.55) sur tactile (il etait en pixels fixes -> enorme).
+- JUMP bloque pendant la taille (engage) : `SetStateEnabled(Jumping, false)`, rendu a la sortie. Cause du saut auto =
+  `AutoJumpEnabled` vrai par defaut sur mobile (le perso saute des qu'il bute sur le bas de la haie).
+
+CAMERA DE TRAVAIL (mobile)
+- Depart plus DE FACE : `CAMERA_SIDE_TOUCH` (-5 vs -10 PC).
+- ORBITE au doigt, geste CONTEXTUEL a un doigt : doigt SUR la haie -> taille ; doigt A COTE (ciel/sol) -> tourne la
+  camera (`orbitTouch`, un raycast a la pose du doigt decide). Sensibilite `CAMERA_YAW_TOUCH_SENSITIVITY`.
+- Orbite/suivi RAPIDES une fois la camera posee (`CAMERA_LERP_SPEED_WORK` 18 sous `CAMERA_SETTLE_DIST`), arrivee
+  toujours DOUCE (`CAMERA_LERP_SPEED` 5) : le smooth du pivot etait stressant.
+- Deplacement : le SENS suit la camera (`cameraSign` = signe de right.Dot(cam.RightVector)). Sans ca, camera pivotee
+  de l'autre cote, "droite input" partait a gauche de l'ecran (inversion). L'axe reste celui de la haie (pas de diagonale).
+
+REPERE DE COUPE (le cercle, PC + mobile)
+- Remplace le cylindre procedural par le CLONE du template Studio `Assets.Effects.VisualRootTarget` (Part fine +
+  SurfaceGui = cercle). Preserve les reglages non-scriptables (UIStroke ScaledSize). Config `VISUAL_CUT_TEMPLATE`.
+- A PLAT sur la surface : la face du HAUT du slab (+Y, le cercle) suit la NORMALE. Face verticale -> plaque contre ;
+  DESSUS -> a plat (on passe une normale verticale quand `onTop`). Reglait le bug "vertical sur le dessus".
+- Taille reglable (`VISUAL_CUT_SIZE_SCALE` 0.55). Slab invisible (Transparency 1), seul le cercle se voit.
+- SLIME : ressort amorti sur l'echelle. Jaillit de 0 a l'apparition, se PRESSE en coupe (`VISUAL_CUT_PRESS_SCALE`
+  0.9), et POP a chaque coup (`VISUAL_CUT_CLICK_KICK`). Knobs `VISUAL_CUT_SLIME_STIFFNESS/DAMPING`.
+- COULEUR selon la matiere : BLANC s'il reste a couper, ORANGE si nu. Approximation client : tailler sans mordre
+  pendant `VISUAL_CUT_DRY_TIME` -> orange (marche pendant la coupe ; la visee seule reste blanche).
+- Ancienne bille rose neon (cursorPart) rendue invisible (le cercle la remplace).
+
+POSE UP/DOWN reactive PAR OUTIL (`poseFollowSpeed` dans ToolConfigs) : cisaille = 0 (aucun smooth, colle a la visee,
+outil leger) ; taille-haie = 7 (smooth, le poids de la machine). `setPose` : 0 = snap, sinon ressort au critique.
+
+ECRAN DE CHARGEMENT : le zoom de reveal finit maintenant TOUJOURS derriere le joueur (avant : parfois face a lui, car
+il finissait sur la camera de jeu capturee, parfois heritee devant). On force le derriere via le LookVector, en gardant
+la distance de la camera de jeu (Custom reprend au meme endroit, sans saut).
+
+RESTE A FAIRE (mobile) : echelle (monter/descendre = W/S clavier, visee du dessus = souris, reposer/tourner = E/R),
+equiper l'outil (touche 1) -> a passer en ContextActionService (bouton tactile auto). Voir la carte d'input dans la
+session. A verifier aussi : le cercle "loin du curseur" (design : il est a la LAME, pas au curseur ; a retester).
+
+## 0.0.122 — Retrait de l'effet de feuilles volantes (FlyDebrisTrail)
+
+Retire entierement l'effet client "feuilles qui volent vers la zone de depot" (une trainee FlyDebrisTrail qui partait
+de la lame et retombait en arc dans la bande de depot). Rendu juge insatisfaisant par le joueur, et pas la direction
+voulue : on l'enleve avant d'aller plus loin plutot que de le trainer.
+
+Supprime dans HedgeController : le type Flyer, flyTemplate, la liste flyers, les fonctions dropPoint / flyDebris /
+stepFlyers, l'appel dans la boucle de coupe, le chargement du template et la connexion Heartbeat. Supprime dans
+HedgeConfigs : FLY_ASSET, FLY_TIME, FLY_ARC, FLY_MAX, FLY_SPIN. Le tas au sol n'est PAS touche : il est pose par le
+serveur (HedgeStockService), seul le visuel de trajet disparait. Zero reference restante, le reste de la coupe (contact,
+visee, particules emitCut, secousse) est intact. L'asset Studio Assets.Contents.FlyDebrisTrail peut etre supprime a la
+main, plus rien ne le lit.
+
+## 0.0.121 — Feuillages qui encadrent l'ecran de chargement (test d'un effet)
+
+Des feuillages cartoon (dessins du joueur) JAILLISSENT depuis les bords pour encadrer l'ecran de chargement, arrivent
+en eventail (stagger + Back), puis flottent doucement. La position POSEE (dans la data) est la finale ; le depart est
+CALCULE en la projetant vers l'exterieur du centre, donc chacun sort de son bon cote. Boucle de flottement coupee a la
+sortie (avec les autres connexions, avant destruction) : rien ne tourne apres le fondu.
+
+Fait INLINE dans LoadingScreenClient (le fichier reste AUTONOME : il tourne dans ReplicatedFirst, avant que le reste du
+jeu soit replique, donc il ne require aucun module de ReplicatedStorage). Data + reglages (SPREAD, STAGGER, AMPLITUDE)
+en tete du bloc ; pour deplacer / ajouter un feuillage, une ligne dans FOLIAGE_DATA.
+
+C'est un TEST d'effet, pose sciemment comme habillage. L'idee vise a terme les vraies interfaces (Daily Rewards, Season
+Pass...) : quand l'une existera, on ressortira une version reutilisable (elle, pourra require normalement). D'abord un
+essai en situation, dans le seul ecran deja code.
+
+## 0.0.120 — Le niveau se MERITE : courbe d'XP durcie (forme logarithme neperien)
+
+Avant, on montait de niveau BEAUCOUP trop vite : le 1er niveau coutait 10 carreaux (LEVEL_BASE 100 / XP_PER_CELL 10),
+donc une seule haie (150-300 carreaux taillables) faisait sauter 10-15 niveaux d'un coup. Le niveau ne voulait plus
+rien dire.
+
+Recalibrage dans ExperienceConfigs : LEVEL_BASE 100 -> 250, LEVEL_GROWTH 1.3 -> 1.4 (XP_PER_CELL reste a 10). Le cout
+par niveau est exponentiel, ce qui donne un niveau(XP) en LOGARITHME NEPERIEN (niveau ~ 1 + ln(1 + XP / 625) / ln(1.4)) :
+rapide au debut (euphorie du debutant preservee), ralentissement DOUX et continu ensuite, sans mur artificiel. En
+travail reel : L1->2 = 25 carreaux, L5->6 = 96, L10->11 = 516, L20->21 = ~15000. Une premiere haie fait monter ~2-3
+niveaux, puis chaque niveau se gagne. Deux boutons : LEVEL_BASE durcit le DEBUT, LEVEL_GROWTH durcit le HAUT niveau.
+Runtime toujours (rien de sauvegarde) : on regle le ressenti avant de brancher la persistance.
+
+Au passage, un oubli du combo (0.0.119) corrige : sa ScreenGui passe en ScreenInsets = None, OBLIGATOIRE avec
+WorldAnchor. WorldToViewportPoint rend en coords viewport (origine au coin absolu de l'ecran) ; avec l'inset par
+defaut, le compteur etait decale de ~36 px vers le bas. Le commentaire de WorldAnchor qui affirmait l'inverse est
+corrige (et note au journal de CLAUDE.md). L'ecran de chargement (0.0.118) passe aussi en ScreenInsets = None (bord a
+bord) : le legacy IgnoreGuiInset ne se traduisait plus en None dans les versions recentes (il restait en
+DeviceSafeInsets, un bandeau non couvert en haut). On pose donc la propriete moderne directement.
+
+## 0.0.119 — Combo de coupe : un compteur qui monte tant qu'on taille
+
+Un petit compteur "xN" surmonte de la legende "COMBOS" (police Luckiest Guy) apparait a DROITE du joueur, vers le
+corps, et monte a chaque carreau amene au ras : x1, x2, x3... a l'infini. Des qu'il ARRETE de tailler (rien d'amene au
+ras pendant RESET_TIMEOUT), il retombe a zero. C'est un ENJEU au sens de CLAUDE.md : le joueur a quelque chose a PERDRE
+en s'arretant, donc a gagner en enchainant.
+
+Autorite SERVEUR (nouveau ComboService) : le compteur vit en memoire (runtime, rien de sauvegarde). Il se branche sur
+le MEME signal honnete que l'XP, dans biteAt, quand un carreau est REELLEMENT amene au ras (pas quand on abime du vieux
+bois, pas quand on brasse du vide). Point unique : taille-haie continu ET cisaille au clic passent par la. Deux
+reglages dans ComboConfigs : MIN_INTERVAL (plancher entre deux montees, sinon le combo sauterait a x60 en une seconde,
+illisible) et RESET_TIMEOUT (delai d'oubli). L'etat se replique par un simple attribut (LeafiaCombo) : pas de remote,
+le client lit la valeur des qu'il est pret.
+
+Client (nouveau ComboController) : interface construite EN CODE (pas de ScreenGui Studio a maintenir pour un petit
+widget), accrochee au joueur via WorldAnchor en repere CAMERA (a droite de l'ecran, quel que soit l'angle). Le nombre
+et la legende jaillissent a l'apparition, POPent ENSEMBLE a chaque montee (d'autant plus fort que le combo grimpe, via
+un UIScale sur un Frame interne pour qu'ils ne se chevauchent pas), et se retirent en fondu quand ca retombe. Le nombre
+"chauffe" en couleur : blanc, puis dore a partir de x10.
+
+Purement VISUEL pour l'instant : aucun bonus (XP, argent) n'est encore branche dessus. Sa valeur restera limitee tant
+qu'il ne recompense rien de concret ; c'est le prochain palier, une fois le ressenti valide. A REGLER a l'oeil :
+RESET_TIMEOUT / MIN_INTERVAL (rythme), HEAD_OFFSET (hauteur), le palier de couleur.
+
+## 0.0.118 — Refonte de l'ecran de chargement (look "jardin")
+
+Reconstruit ENTIEREMENT en code (avant : monte dans Studio) d'apres la maquette : ciel en degrade + formes flottantes,
+pelouse en bas avec un bord tondu en pointilles, badge hexagone (lueur qui vacille + entree slime) et mot LEAFIA au
+centre, pilule d'etat + barre DOREE qui suit le VRAI chargement (collecte + preload mappes sur la barre, % reel), tip
+jardinier qui defile, bas de page "LANDSCAPING TYCOON" + version. Tout est reglable par des constantes (couleurs,
+polices via FontFace Luckiest Guy / Gotham, textes, tips). La logique eprouvee est conservee : prechargement asservi au
+FPS, skip (Echap), masquage chat / liste joueurs, et le ZOOM DE REVEAL a la fin (plan large qui se resserre sur le
+joueur, cale sur la camera de jeu pour ne pas sauter). L'ancien ecran Studio est lu (logo + version) puis remplace.
+Duree : en Studio tout charge en un clin d'oeil, donc la barre sautait a 100% et l'ecran partait trop vite. Corrige
+par MIN_DURATION (temps minimum a l'ecran depuis l'apparition, 6 s) ET une barre bornee par le temps ecoule : elle se
+remplit sur MIN_DURATION au minimum au lieu de sauter, et suit le vrai chargement s'il est plus lent. Skip toujours
+dispo. A REGLER : MIN_DURATION (si trop long / court) ; LOGO_FALLBACK si le badge n'est pas ton hexagone ; couleurs /
+proportions a l'oeil.
+
+## 0.0.117 — Quitter l'echelle ne re-agrippe plus au sol aussitot
+
+Bug : en descendant de l'echelle, un instant ou la camera "bloque" (le joueur bouge, la vue ne suit pas). Cause reelle
+(trouvee en tracant le serveur) : la base de l'echelle est dans la zone de detection d'une haie. Sur l'echelle, le
+serveur force LeafiaAtHedge = false ; mais des qu'on quitte (onLadder efface), updatePlayer reevalue et RE-ENGAGE tout
+le systeme sol d'un coup -> aimant qui tire + orientation forcee + camera iso, pile quand le joueur veut s'en aller.
+Fix : a la sortie d'echelle, le serveur pose le meme temps mort qu'une sortie volontaire (exitUntil = LADDER_EXIT_GRACE,
+0.9 s) -> le sol ne raccroche qu'apres, le joueur descend avec sa camera NORMALE et a le temps de s'eloigner. Aucun code
+camera ajoute : on empeche juste le systeme sol de mordre au mauvais moment. LADDER_EXIT_GRACE est le knob (a monter si
+la base des echelles est plus pres des haies). NB : si un blocage subsiste, c'est l'AUTRE cause (le HRP ancre pendant la
+grimpe, la grimpe fausse) et il faudra le vrai fix (faire monter le perso pour de vrai).
+
+## 0.0.116 — Retour DOUX de la camera en quittant une haie (au sol)
+
+Au sol, quitter une haie (S / on recule) rendait la main a la camera de jeu D'UN COUP : un cut sec, desagreable.
+Desormais la camera GLISSE de la vue iso vers la camera normale sur RELEASE_TIME (0.55 s, ease out), en SUIVANT le
+joueur qui recule. Meme technique eprouvee que la sortie d'echelle : a l'ENGAGE on capture, via camera.Focus, l'etat
+EXACT ou la cam de jeu reprendra (focus offset / HRP + offset camera = angle + zoom) ; a la sortie on ease l'offset de
+la vue iso vers cet etat, ancre sur le HRP VIVANT (donc ca suit), puis Custom reprend PILE la -> aucun saut, aucun
+trou. Un retour deja en cours est coupe si on se raccroche a une haie (re-engage). UNIQUEMENT le retour AU SOL : cote
+echelle rien n'est touche. L'ENTREE (accroche) etait deja lissee par la boucle de travail, on n'y touche pas.
+RELEASE_TIME est le knob (monter = plus lent / plus doux).
+
+## 0.0.115 — La camera MONTE avec la grimpe (sans reprendre la camera)
+
+Suite directe de 0.0.114 : comme le HRP reste ancre en bas pendant la grimpe (c'est l'anim UpDownAnimation qui monte le
+corps), avec la camera normale le perso grimpait hors du cadre. Corrige via Humanoid.CameraOffset : on monte le POINT
+VISE de la camera proportionnellement a la progression de la grimpe (climb.TimePosition / climb.Length) -> 0 au sol,
+CLIMB_CAM_RISE en haut, et la descente est suivie aussi. La camera du joueur GARDE son angle et son zoom : on ne touche
+QUE le point vise, le joueur reste maitre de sa vue (pas de reprise de camera). Remis a 0 hors grimpe (ready / exiting)
+et a la sortie (dismount, sinon l'offset resterait fige en haut). CLIMB_CAM_RISE (6 par defaut) est a REGLER a l'oeil
+pour bien cadrer le perso qui grimpe.
+
+## 0.0.114 — L'echelle garde la camera NORMALE du joueur (plus de vue iso)
+
+Choix de design : sur l'echelle, on ne bascule PLUS sur la camera iso de travail. Le joueur garde SA camera de jeu
+(son angle, son zoom), comme il l'a reglee, pendant toute l'interaction (montee, sommet, sortie). UNIQUEMENT pour
+l'echelle : la camera de travail AU SOL (HedgeController, autre fichier) n'est pas touchee.
+
+Retire de LadderController (~230 lignes) : la bascule iso, l'orbite clic-droit + le zoom molette, l'entree en douceur,
+ET tout le glissement de sortie de 0.0.113 (il n'a plus lieu d'etre puisqu'on ne quitte jamais la camera du joueur).
+Detail : constantes CAM_*, etat (camTracking, camSubject, camOutward, orbit, exit-glide), boucle LadderCamAim, inputs
+clic-droit / molette, fonctions getTrackPoint / outwardSide / stepCameraExit. La visee du DESSUS (topAim) est
+CONSERVEE : elle n'utilisait deja pas la camera iso (elle projette le curseur via la camera COURANTE, quelle qu'elle
+soit, et mesure sur l'axe de l'ECRAN) ; le vieux commentaire qui pretendait que topAim se servait de camOutward etait
+faux (camOutward n'etait plus lu nulle part, l'IDE le signalait).
+
+A TESTER : la taille du DESSUS depuis l'echelle. Le rayon du curseur doit DESCENDRE sur le plan du dessus, donc il
+faut regarder la haie vers le bas ; avec la camera normale c'est au joueur d'orienter sa vue (sur un escabeau court ca
+tombe naturel). Note : le HRP reste ancre en bas pendant la grimpe (c'est l'anim qui monte le corps), donc le perso
+monte un peu dans le cadre.
+
+## 0.0.113 — Quitter l'echelle : glissement DOUX qui suit le joueur
+
+A la sortie de l'echelle, la camera PIVOTAIT derriere le joueur (calcul depuis l'orientation du JOUEUR) : ca reframait
+la vue a chaque sortie. Corrige en trois passes : (1) garder l'angle qu'on avait ; (2) un tween vers ce cadrage, mais
+comme il visait un point FIXE, la camera restait plantee ~0.2 s pendant que le joueur s'en allait (aucune camera qui
+suit, moche) ; (3) remplace par un GLISSEMENT image par image qui SUIT le joueur (stepCameraExit dans la boucle camera,
+drapeau camExiting). Chaque frame : le point vise = HRP du joueur (donc ca suit), et on ease l'offset de la vue echelle
+vers la vue de jeu. La CIBLE est l'etat EXACT ou la cam de jeu reprend, capture a l'accroche via camera.Focus : point
+vise (savedFocusOffset = Focus - HRP, ~tete) et zoom (savedCamDist = distance camera -> Focus, le VRAI zoom, pas la
+distance au HRP), dans la direction courante (angle garde). Depart = vue echelle EXACTE (aucun pop), fin = PILE l'etat
+de la cam de jeu -> Custom reprend sans le moindre saut. (4e passe : une cible approximee -- hauteur du regard devinee a
+1.5, distance mesuree au HRP -- laissait un micro-saut de ~0.05 s au relais, visible et stressant ; caler focus + zoom
+sur camera.Focus le supprime.) Plus aucun trou "sans camera" non plus. Duree CAM_TWEEN_OUT (0.35 s, ease out).
+Nettoyage : plus de TweenService ni de camTween dans ce module. camExiting coupe au respawn et a une nouvelle accroche.
+
+## 0.0.112 — La montee a l'echelle coule sans point d'arret
+
+Friction viree. Au pied de l'echelle (box_detecte_A), il fallait RELACHER la touche avant puis la RAPPUYER pour passer
+de l'idle (IdleDownAnimation) a la grimpe (UpDownAnimation). Un mecanisme d'armement (climbArmed) ignorait la touche
+avant tant qu'elle n'avait pas ete relachee une fois depuis l'accroche. Retire : touche avant maintenue = on enchaine
+tout seul, ca coule sans point d'arret. MAIS l'anim d'accroche (IdleDownAnimation, ~1 s) se joue toujours EN ENTIER,
+de 0 a sa fin, AVANT la grimpe (garde idleDone) : sans ca, la touche tenue des la 1re frame la coupait a ~0 s et on ne
+la voyait plus. Une fois l'accroche jouee, touche tenue = grimpe direct. Le raccrochage juste apres une sortie en bas
+reste empeche par canMount (il faut quitter la zone une fois avant de se raccrocher) : pas de rebond au pied. La
+descente (S) et la sortie ne dependaient pas de l'armement, pas touchees.
+
+## 0.0.111 — Les notifs laterales se ferment toutes seules (compte a rebours)
+
+On avait oublie l'auto-fermeture : les notifs restaient a l'ecran indefiniment. Chaque notif a maintenant une duree de
+vie (LIFETIME, 6 s par defaut, surchargeable par notif via NotifData.duration) au bout de laquelle elle se replie
+seule. Le temps restant s'affiche dans CooldownClearNotification, un compte a rebours ("6.4s" -> "0.0s") pilote par la
+meme boucle Heartbeat que le degrade des gains (une seule boucle globale). Le rebours est visible dans les DEUX
+etats : place + couleur differentes (blanc 255,255,255 ouvert, gris 184,184,184 ferme), anime avec le meme tween que
+les autres enfants a l'ouverture / fermeture. Nettoyage centralise dans un dismiss() idempotent (drapeau Dismissed) :
+le retrait par minuteur et le retrait par plafond MAX_VISIBLE passent par le meme chemin, plus de double repli
+possible. Note : le rebours ne se met PAS en pause a l'ouverture (il tourne meme notif ouverte, comme le montre son
+affichage dans cet etat) ; a changer en une ligne si on veut qu'ouvrir laisse le temps de lire.
+
+## 0.0.110 — Le level up declenche une vraie notification
+
+Premier VRAI declencheur du systeme de notifs laterales : quand le joueur monte de niveau (en taillant des haies),
+ExperienceService envoie une notif via un nouveau remote SideNotify (serveur -> client, dans RemoteSetup). Le
+SideNotificationHandler l'ecoute et spawn la notif (kind Success, titre "NIVEAU X", message motivant). Le joueur
+taille donc il est spawne, il ecoute : envoi sur. Le generateur de TEST (les 4 notifs d'exemple + la boucle) est
+retire : les notifs viennent maintenant d'evenements reels. spawn(data) reste public pour tester a la main depuis la
+barre de commandes. (Le "+X point de competence" en gain n'est pas encore mis : il viendra quand le systeme de
+points de competence existera.)
+
+## 0.0.109 — Fiabilite : les UI se trouvent meme quand le spawn tarde
+
+Bug de timing intermittent : les ScreenGui de StarterGui ne sont copiees dans PlayerGui qu'au SPAWN du perso, qui
+peut tarder (chargement des donnees ProfileStore, ~10 s+). Les controllers cherchaient leur UI au boot avec un
+WaitForChild de 10 s qui expirait avant -> "ExperiencesUI introuvable", "NotificationUI introuvable", et la jauge
+d'XP ne se branchait pas (une session sur deux, selon la vitesse du spawn).
+
+Fix : ExperiencesController, SideNotificationHandler et Toast attendent maintenant le PERSO (CharacterAdded) AVANT de
+chercher leur UI, en tache de fond (task.spawn, pas de blocage du boot). Le Toast se rattrapait deja tout seul (il
+re-resout a chaque show), c'etait juste un faux warning au demarrage. A FAIRE cote Studio : passer ResetOnSpawn a
+false sur ExperiencesUI et NotificationUI, sinon elles sont recreees a chaque respawn et les references se perdent.
+
+## 0.0.108 — Notifications laterales : anim d'ouverture / fermeture (step 1)
+
+Debut d'un systeme de notifications en bas a droite (NotificationUI, faite en Studio). Step 1 : chaque notification
+s'OUVRE / se FERME au clic (SelectButton) avec une anim CONJOINTE de la taille (fermee {0.982, 0.076} <-> ouverte
+{0.982, 0.356}), de l'arrondi (UICorner 0.2 <-> 0.08) et du contour (UIStroke 0.03 <-> 0.01) : sinon les coins et le
+contour seraient disproportionnes sur la grande frame. Nouveau SideNotificationHandler : le template (range dans
+NotificationUI.Templates, un blueprint) est CLONE dans HolderList via spawn(), et cable (fermee + clic). Quelques
+notifs de test sont spawnees au demarrage (temporaire) pour voir le rendu et le reflow de la liste. Le vrai
+declencheur (evenement) + le slide-in d'entree viendront ensuite, par-dessus spawn() / apply(). Note : contour a
+0.03 / 0.01 px = quasi invisible, a remonter si besoin.
+
+Ouverture / fermeture passees en RAPIDE + rebond slime (Back Out, 0.22 s). Ajout d'un effet de SURVOL : la notif
+grossit d'un poil avec un mini rebond, retour au depart a la sortie ; et le degrade du contour (UIGradientRotate)
+fait UN tour complet a chaque survol (0 -> 360, one-shot, LENT : 0.8 s, ease in / out). Ce tour ne se voit que si le
+UIStroke est assez epais (contour actuel 0.03 / 0.01 = tres fin).
+
+PILE qui MONTE : les nouvelles notifs arrivent EN BAS, les autres remontent (UIListLayout passe en VerticalAlignment
+Bottom + LayoutOrder croissant). Au-dela de MAX_VISIBLE, la plus VIEILLE (en haut) se REPLIE en Y (hauteur -> 0, par
+le bas grace a l'AnchorPoint 0.5,1) et disparait ; la liste se compacte. Un generateur infini (TEMPORAIRE) remplit la
+pile ; le vrai declencheur appellera spawn(). Chaque effet sur SA propriete, sans conflit : ENTREE en LARGEUR (Size X,
+0 -> pleine, la notif se deplie horizontalement, le UIListLayout gere la position), RETRAIT + ouverture-fermeture sur
+la Size en Y, survol sur un UIScale, tour du degrade sur la Rotation du gradient.
+(Le retrecissement progressif de toutes les notifs, teste avant, a ete abandonne : juste le repli de la plus vieille.)
+L'Image (icone) ET le texte (NameNotificationType) suivent l'etat (Position + Size tweenes avec le reste) : l'icone
+petite en haut-droite quand ouvert / plus grande a droite quand ferme ; le texte reduit + descendu quand ferme. Les
+deux passent par un helper moveChild commun. L'icone a besoin de sa contrainte d'aspect en FitWithinMaxSize (sinon
+ScaleWithParentSize ignore la Size et le resize ne se voit pas). Valeurs de largeur arrondies (0.982 -> 0.98).
+COULEUR par TYPE (comme les toasts) : spawn(kind) teinte le degrade de fond (UIGradientNotificationColor, de la
+couleur vers une version sombre) + le contour, selon NOTIF_COLORS (Info / Success / Warning / Reward). Le generateur
+de test pioche un type au hasard pour montrer les couleurs.
+OUVERTURE = DETAILS : DescriptionText (long texte) et AdditionalEarnText (+X points de competence)
+apparaissent quand la notif est ouverte (caches a taille 0 quand fermee, ils grandissent sur place a l'ouverture,
+via le meme helper moveChild). Le degrade de l'AdditionalEarnText DEFILE en boucle entre quelques couleurs
+(palette RAINBOW cyclee sur un seul Heartbeat global, no-op quand aucune notif).
+Contenu DATA-DRIVEN : spawn(data) prend { kind, title, description, earn } et remplit NameNotificationType (le titre),
+DescriptionText (le texte) et AdditionalEarnText (`earn` = ce qui a ete GAGNE, texte libre : points de competence,
+tunes / pourboire...). Le vrai declencheur passera ces donnees ; le test envoie 4 notifs d'exemple (niveau, recompense
+avec pourboire, astuce, avertissement). Champ `icon` en plus : pour une recompense en monnaie, le code GENERE un
+ImageLabel (IconCurrency, carre) a droite du gain et decale le texte a gauche pour lui faire la place ; sans icone,
+le texte garde la pleine largeur. Positions reglables dans le handler. Et le montant en monnaie DEFILE de +0 a sa
+valeur A L'OUVERTURE (champ `amount` : compteur tweene, effet satisfaisant, format abrege via FormatUtils : +12.75K,
++10.42B...) ; `earn` (texte) reste pour les gains non chiffres (points de competence). Le helper d'icone est
+generalise (addIcon nom + position) : en plus de IconCurrency, une IconWarning s'affiche sur les notifs de type
+Warning. Extensible a d'autres icones de type.
+
+## 0.0.106 — Jauge d'experience qui suit le joueur (1re brique de la progression)
+
+Debut du systeme d'experience (vers l'arbre de competences). La jauge ExperiencesUI (faite en Studio) SUIT le joueur
+AU-DESSUS de sa tete et grossit / retrecit avec la distance camera. Elle n'APPARAIT que quand le joueur est a une
+haie (attribut serveur LeafiaAtHedge) avec une anim SLIME : elle sort du milieu de la tete en grossissant + montant
+jusqu'a sa place (rebond Elastic), et se retire pareil a l'inverse. Trois affichages pilotes par le serveur : la
+barre (SlideBar) se remplit selon XpFill (0-1, avec un fondu), le texte LevelDataCompetenceText montre XpLevel, et le
+degrade UIGradientRotate tourne, UNIQUEMENT tant que la jauge est affichee (coupe hors ecran / cachee).
+
+Pas encore d'XP reelle : le serveur (ExperienceService) qui lit Skills.Trimming (deja dans le DataTemplate : Xp +
+Level par competence) et pose XpFill / XpLevel vient apres. Pour tester tout de suite dans la barre de commandes :
+`game.Players.<toi>:SetAttribute("XpFill", 0.6)` et `:SetAttribute("XpLevel", 3)` (et s'approcher d'une haie pour
+declencher l'apparition).
+
+WorldAnchor gagne : un scale { ref, min, max } (grossissement billboard-like, taille ~ 1/distance, bornee, via un
+UIScale cree a la demande), un offset repere CAMERA (reste du meme cote de l'ecran quand on tourne), et setOffset /
+setScaleMul (bouger le point vise + multiplier la taille en direct, pour animer une apparition / disparition).
+
+## 0.0.105 — Plus de son de marche
+
+Le joueur ne veut aucun son de pas. On retire GroundStepSound (le son de foulee custom ajoute plus tot). On GARDE le
+mute du son "Running" par defaut de Roblox, sinon il reviendrait : resultat, silence au sol. FootstepController ne
+fait plus que couper le defaut, et reste le point unique ou rebrancher un son de pas plus tard si besoin.
+
+## 0.0.104 — La cisaille sonne a CHAQUE clic (LeafCutSound)
+
+Le son de coupe (LeafCutSound) sautait des clics de cisaille. Cause : playCut bornait le rythme des sons
+(CUT_SOUND_INTERVAL), un garde-fou pense pour la coupe CONTINUE du taille-haie. La cisaille coupe au CLIC (jusqu'a
+~12/s via l'anti-spam serveur) : deux clics rapproches tombaient dans l'intervalle et n'en jouaient qu'un seul.
+
+Fix : le clic-par-clic (heldPerClick) contourne cette borne -> chaque clic qui mord une haie joue son son. Le
+taille-haie garde le garde-fou (sa coupe continue empilerait trop de sons sinon). Le son ne joue toujours QUE si le
+clic coupe reellement des feuilles (viser du vide ou du deja-taille ne sonne pas).
+
+## 0.0.103 — La cisaille a son propre geste de coupe du dessus (RightLeftAnimation)
+
+La cisaille a maintenant sa RightLeftAnimation (pose des bras pour tailler un DESSUS), differente de celle du
+taille-haie (l'outil se tient autrement). Deux contextes la jouent, les deux passent maintenant par l'outil equipe :
+
+- Au SOL (viser un dessus horizontal) : deja automatique. La resolution de pose (resolvePosePath) prend d'abord le
+  dossier de l'outil equipe. Des que la cisaille a l'anim dans son dossier, elle l'utilise, sans code.
+- Depuis l'ECHELLE (tailler le dessus, en haut) : etait code en dur sur le taille-haie. Desormais la pose est
+  chargee (ensureTrimTrack) selon l'outil equipe, lu a la PRISE de l'echelle (avant qu'il soit range pour la
+  montee). Rechargee si on change d'outil. Retombe sur le taille-haie si un outil n'a pas cette pose.
+
+## 0.0.102 — L'echelle revient TOUJOURS droite devant le joueur a la prise
+
+A la prise (E) pour la deplacer, l'echelle partait de travers : la 1re prise etait nickel, mais apres l'avoir
+reposee dans une orientation quelconque, la reprise la laissait de travers, pas droite devant le joueur.
+
+Deux causes empilees, corrigees :
+
+1. Le portage se calait sur `ladder:GetPivot()`, qui suit la BOUNDING BOX du model. Les zones de detection generees
+   (box_detecte_For_Move, soudees a la racine, decalees sur les cotes + au sol) decalaient et desorientaient cette
+   bounding box -> l'echelle partait carrement de travers. On se base desormais sur la ROOTPART, une part reelle
+   et fixe que les zones ne touchent pas.
+
+2. On voulait a tort GARDER le sens de repose. Le vrai besoin : l'echelle doit revenir droite devant le joueur a
+   CHAQUE prise, comme la 1re fois, peu importe comment elle a ete reposee. On CAPTURE donc l'offset de portage UNE
+   SEULE FOIS (1re prise, echelle droite) et on le REUTILISE : meme offset relatif au porteur a chaque prise ->
+   toujours droite devant. Yaw seul (tangage / roulis a zero) pour rester droite. R (rotation 180 volontaire)
+   fonctionne toujours par-dessus.
+
+3. A la prise, on choisit le SENS (flip 0 ou 180 autour de la verticale) le plus proche de comment l'echelle est
+   PLANTEE. Elle reste droite devant, mais ne fait plus de demi-tour brusque de 180 dans les mains quand on la
+   prend du cote ou elle nous fait deja face.
+
+## 0.0.101 — La montee sur l'echelle se voit DROITE chez les autres (co-op)
+
+En co-op, un joueur qui grimpe se voyait parfaitement chez LUI (face a l'echelle, main dessus) mais les AUTRES
+le voyaient de travers (a son orientation d'avant la montee), parfois carrement a cote de l'echelle.
+
+**Cause.** Le client ANCRAIT son HRP et le posait face a l'echelle EN LOCAL. Ancrer + poser sa propre part ne se
+replique pas : les autres restaient sur la derniere position repliquee (le pas d'approche, de travers). Meme
+famille que le portage de l'echelle (regle par un weld serveur).
+
+**Fix.** L'ancrage + la pose passent COTE SERVEUR. Nouveau remote `Ladder/SetLadderClimb` : a la montee, le client
+envoie l'echelle + le CFrame de montage ; le serveur (`LadderMoveService.climbMount`) ancre le HRP et le tween a
+ce CFrame -> ca se replique a TOUS. A la descente, il desancre. Le serveur valide (vraie echelle, montage pres de
+l'echelle). L'anim de grimpe (jouee par le client) se replique deja par-dessus. Cote client : l'aimant local
+(lerp de root.CFrame) est retire, le serveur s'en charge ; le root reste ancre en local pour un freeze immediat.
+
+## 0.0.100 — Plus de marche parasite sur l'echelle + son de pas au sol
+
+Deux corrections autour de la MARCHE.
+
+- **Aucune anim par defaut sur l'echelle.** Le garde-fou qui coupe les anims Roblox par defaut (idle / marche /
+  course, sous priorite Action) ne tournait qu'en grimpe/sommet, PAS en phase "ready" au pied de l'echelle : les
+  membres non-cles (le bras gauche) y "marchaient dans le vide". Il tourne maintenant dans TOUTES les phases des
+  qu'on est sur l'echelle. Les membres qu'aucune piste d'echelle ne cle restent a leur pose de repos.
+- **Son de pas au sol.** Nouveau `FootstepController` : coupe le "vieux" son de marche par defaut de Roblox
+  (volume du son "Running" a 0) et joue `GroundStepSound` (SoundService.Sounds.Environnement.FootSteps) tous les
+  `STEP_LENGTH` studs REELLEMENT parcourus au sol. En l'air ou sur l'echelle (perso ancre, distance nulle), rien.
+- **Outil range pendant la grimpe.** L'anim de grimpe cle desormais tous les membres (mains comprises) : un outil
+  dans la main flaillerait. Le serveur (`HedgeService.syncLadderTool`) DESEQUIPE l'outil en montant et le REND en
+  haut (pour tailler) et a la sortie, en memorisant son nom. Fait cote serveur -> vu par tous. L'auto-equip du
+  taille-haie est bloque sur l'echelle (attribut client `LeafiaOnLadder`) pour ne pas se battre avec ce rangement.
+  NOTE : le re-equip remet l'outil a zero (nickel pour la cisaille, prete a l'equip ; le taille-haie perdrait son
+  moteur en haut -> a revoir si on veut le garder allume la-haut).
+- **Plus besoin d'un outil pour monter.** L'ancienne condition "taille-haie obligatoire pour monter" + le toast
+  "Equipe ton taille-haie pour monter" sont supprimes. On monte les mains vides ; si on avait un outil, il est
+  rendu en haut pour tailler (sinon on monte juste, sans tailler).
+
+## 0.0.99 — Prompt d'interaction "[E] PRENDRE" (module reutilisable)
+
+Nouveau module UI `Modules/UI/Core/InteractionPrompt` : un badge "[touche] LIBELLE" qui flotte au-dessus d'un
+objet quand une action est possible. Reutilisable (E, F, ...), construit EN CODE (pas de template Studio), il
+SUIT sa cible a l'ecran via `WorldAnchor` (ScreenGui projete : pixels constants, lisible a toute distance).
+
+- API : `InteractionPrompt.show(target, key, label, offset, onActivate)` / `.hide()`. Un seul prompt a la fois.
+- APPARITION "slime" : le prompt part de 0 et rebondit en Elastic (overshoot + oscillations amorties), avec le
+  son `SoundService.Sounds.UI.PopSound_1` (clone via SoundUtils). Disparition : un pop-out court.
+- MOBILE (tactile sans clavier) : pas de touche a afficher -> le badge est cache, le prompt devient un BOUTON a
+  taper. `onActivate` gere le tap (et le clic, partout, en bonus) ; au clavier c'est la feature qui ecoute sa
+  touche, le prompt n'est qu'un indicateur. Responsive via UIScale sur la hauteur d'ecran.
+- Branche sur l'echelle (`LadderMoveController`) : quand on entre dans une zone de prise (et qu'on ne porte pas),
+  "[E] PRENDRE" s'affiche au-dessus de l'echelle ; il disparait en sortant. Le tap mobile prend l'echelle.
+- Perf : la detection de zone tourne desormais EN CONTINU (throttle 0.2 s), donc `ladderAt` passe par un CACHE
+  des echelles (invalide a l'ajout / retrait d'une echelle) au lieu de balayer tous les descendants du workspace.
+
+## 0.0.98 — Zones de detection de l'echelle generees par code (2 cotes lateraux)
+
+La zone "prise d'echelle" (`box_detecte_For_Move`) etait posee a la main dans Studio, sur UN seul cote. Nouveau
+service `LadderZoneService` (serveur) qui GENERE deux box, sur les cotes LATERAUX (gauche / droite) de chaque
+echelle. Cote serveur -> repliquees, detectees et vues par tous (co-op). Construit en step-by-step : ici juste
+les deux box (visibles pour valider le placement) ; le marquage au sol (attachments + beams) et l'invisibilite
+viendront ensuite.
+
+- Chaque box est soudee a la RootPart (WeldConstraint) : elle suit l'echelle au portage / a la repose, sans
+  tomber. Placee le long de l'axe X local (lateral), a `LATERAL_OFFSET` de chaque cote.
+- La HAUTEUR n'est pas devinee : un raycast vers le bas trouve le vrai SOL sous chaque zone et l'y pose a plat
+  (au 1er jet, une hauteur en dur envoyait les box sous la map).
+- Detection (`LadderMoveController.ladderAt`) : cherche les zones par PREFIXE `box_detecte_For_Move`, donc les
+  deux (`_A` / `_B`) comptent. E prend l'echelle depuis l'un OU l'autre cote.
+- A FAIRE cote Studio : SUPPRIMER la box `box_detecte_For_Move` posee a la main (sinon elle s'ajoute aux generees).
+
+## 0.0.97 — Sons de l'echelle (prise, repose, pas de montee)
+
+Du son pour la satisfaction. Sons ranges dans `SoundService.Sounds.Engins.Ladder`, CLONES au declenchement
+(volume / pitch se reglent donc dans Studio, pas en code).
+
+- **Prise / repose** : `LadderTakeSound` a la prise (E), `LadderDeposeSound` a la repose. Le cablage existait
+  deja (`playLadderSound`) mais pointait sur un SoundId vide ; il clone maintenant le Sound par NOM.
+- **Pas de montee** : un pas tous les X de PROGRESSION de la grimpe (montee ET descente), qui tire
+  `LadderClimbStepOne` / `LadderClimbStepTwo` AU HASARD. Base sur la progression et non sur des marqueurs d'anim
+  (fragiles : nom exact + ne tirent pas fiablement sur une anim pilotee a la main) -> se declenche a coup sur.
+  Reglable : `CLIMB_STEP_COUNT` (~ nombre de marches).
+- Nouveau module partage `Modules/Utils/SoundUtils` : `SoundUtils.play(chemin, host)` clone un Sound de
+  SoundService et le joue (spatial si un host est donne), avec nettoyage Debris. Utilise par les deux controllers
+  d'echelle ; reutilisable ailleurs.
+
+## 0.0.96 — Tourner l'echelle portee (R)
+
+En portant l'echelle, la touche **R** la fait pivoter de 180 degres (pour l'aborder ou la poser dans l'autre
+sens). Toggle : R rebascule a l'orientation de depart.
+
+- Cote SERVEUR (`LadderMoveService`) : l'echelle est soudee au HRP (weld). Un nouveau cas `"rotate"` tween le
+  `C0` du weld entre l'orientation de base (`baseC0`, memorisee a la prise) et une rotation de 180 degres autour
+  de la verticale. Comme le weld est serveur, la rotation se REPLIQUE a tous (co-op). Le tween est annule a la
+  repose / mort, et a chaque nouveau R (on repart de la position courante, sans a-coup). Pas d'accumulation :
+  on repart toujours de `baseC0`, donc pas de derive.
+- Cote CLIENT (`LadderMoveController`) : R (en portant seulement) joue `RotateLadderAnimation` sur le PERSO
+  (geste de main), en Action3 par-dessus la pose de portage (Action2). La rotation est demandee au serveur AU
+  MARQUEUR `RotateAnimEvent` (l'echelle tourne pile quand la main la tourne), avec un secours a l'arret de la
+  piste si le marqueur ne tire pas (1re lecture, asset pas charge). Anti-spam a la duree du tween.
+- Axe de rotation reglable dans `LadderMoveService` (`ROTATE_FLIP`) si l'echelle tourne autour du mauvais axe.
+
+## 0.0.95 — Le repere de coupe devient un disque plaque, plus une masse blanche
+
+L'ancien repere de zone de coupe (`HedgeCutZoneDebug`) etait un cylindre-capsule en Neon + Highlight
+always-on-top, dessine le long de la lame. Avec la cisaille (lame qui pointe vers la haie), il faisait face a la
+camera : une grosse masse blanche qui bouffait la vue et empechait de voir ce qu'on taille.
+
+Remplace par un `VisualCutCylinder` : un disque FIN et translucide (transparence 0.8), plaque a plat CONTRE la
+surface visee (son axe suit la normale de la haie), pose juste sur les feuilles. Materiau SmoothPlastic (le Neon
+rebrillait meme transparent), plus de Highlight always-on-top. Le disque garde les trois etats (guide / coupe /
+hors haie) par couleur + transparence, et son diametre couvre la coupe (longueur de lame + largeur taillee).
+
+Concerne LES DEUX outils (meme code de repere). Sur l'echelle (coupe du dessus), le disque se pose a plat sur le
+haut de la haie (normale = verticale).
+
+## 0.0.94 — La cisaille coupe CLIC-PAR-CLIC, avec sa propre gestuelle
+
+La cisaille est l'outil de DEPART (avant l'achat du taille-haie). Elle taillait deja, mais en reprenant tout
+du taille-haie : meme pose de bras, et coupe en maintenu. Deux corrections pour qu'elle SOIT un autre outil.
+
+**Pose de hauteur propre a l'outil.** La pose up/down (les bras qui montent avec la visee) etait chargee depuis
+un chemin fige (`HedgeTrimmer/UpDownAnimation`), donc la cisaille prenait la pose du taille-haie. Elle se charge
+maintenant depuis le dossier de l'outil TENU (`Shear/UpDownAnimation` pour la cisaille), et se recharge au
+changement d'outil. Un outil qui n'a pas telle pose (la cisaille n'a pas de pose du DESSUS) retombe sur celle du
+taille-haie, sans warn. Cote code : `HedgeController` lit l'outil tenu (attribut `LeafiaTool` + `ToolConfigs`)
+et ne charge plus les poses en dur.
+
+**Coupe clic-par-clic.** Le taille-haie coupe en CONTINU tant qu'on maintient la gachette. La cisaille, elle,
+coupe un COUP par clic, et ses LAMES claquent a chaque clic. C'est ca la difference d'outil : l'un ronronne,
+l'autre claque coup par coup.
+
+- Nouveau champ config `cutPerClick` (nombre) : nil = maintenu (taille-haie), un nombre = clic-par-clic ET
+  taille de la bouchee retiree par clic. Cisaille = 0.4 (a regler pour la sensation "outil de merde").
+- Nouveau remote `Hedge/CutSnip` : le client dit "j'ai clique", le serveur decide (outil clic-par-clic ? pret ?
+  en contact ? portee ?) et applique une bouchee fixe. Anti-spam borne cote serveur (12 clics/s max).
+- `cutWith` ne calcule plus la coupe depuis le temps : il recoit un montant. La boucle continue lui passe
+  `taux * dt`, le clic une bouchee fixe. Meme geometrie, deux cadences.
+- `setThrottle` ignore les outils clic-par-clic : pas de gachette maintenue, donc pas de camera qui se resserre
+  a chaque clic.
+
+**Le geste des lames.** `CutLamesAnimation` anime le MODEL de la cisaille (les lames Lame / LameB), PAS les bras
+du joueur : c'est le meme principe que les lames du taille-haie. Elle se charge donc sur l'animator du MODEL
+(nouveau champ config `cutAnimation` + `toolRunAnimations`) et se joue une fois par clic, cote SERVEUR
+(`ToolService.playToolAnimationOnce`) -> elle se replique a tous, comme le repli de l'echelle. Le taille-haie n'a
+pas de `cutAnimation` : ses lames TOURNENT en continu, elles ne claquent pas.
+
+Pose de bras : la cisaille garde sa pose de hauteur (`Shear/UpDownAnimation`) et son idle (`IdleAnimation`) sur
+le PERSO, comme avant. Les lames (model) et les bras (perso) sont deux animateurs distincts.
+
 ## 0.0.93 — Le repli / depli de l'echelle se voit aussi en co-op
 
 Suite du 0.0.92. La POSITION de l'echelle se repliquait (weld), mais son REPLI / DEPLI restait invisible aux

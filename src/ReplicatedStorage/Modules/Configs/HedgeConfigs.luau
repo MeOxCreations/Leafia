@@ -182,9 +182,11 @@ local HedgeConfigs = {
 	-- sortir en diagonale, assez strict pour qu'un pas de cote ne decroche pas par accident.
 	EXIT_DOT = 0.5,
 	-- Amplitude minimale pour qu'un deplacement compte comme une VOLONTE de sortir. Une correction d'aimant est
-	-- faible (0.45 au maximum), une vraie poussee au clavier vaut 1. Ce seuil les separe : les deux arrivent au
-	-- serveur par le meme canal, seule leur ampleur les distingue.
-	EXIT_MIN_INPUT = 0.7,
+	-- faible (0.45 au maximum), une vraie poussee vaut ~1. Ce seuil les separe : les deux arrivent au serveur par le
+	-- meme canal, seule leur ampleur les distingue. Baisse a 0.55 (au lieu de 0.7) : un JOYSTICK analogique tire en
+	-- arriere n'atteignait pas 0.7 (contrairement a la touche S = 1.0 pile), donc on ne pouvait pas sortir sur MOBILE.
+	-- On reste juste au-dessus du max de l'aimant (0.45) pour ne pas confondre une correction avec une sortie.
+	EXIT_MIN_INPUT = 0.55,
 	-- Temps mort apres une sortie VOLONTAIRE, avant de pouvoir se raccrocher.
 	--
 	-- Sans lui : le joueur appuie sur S, le serveur decroche, mais la frame suivante le volume touche encore la
@@ -192,6 +194,11 @@ local HedgeConfigs = {
 	-- bascules par seconde, et la camera fait l'aller-retour entre Scriptable et Custom a chaque fois.
 	-- Assez long pour s'eloigner d'un pas, assez court pour pouvoir revenir tout de suite.
 	EXIT_COOLDOWN = 0.5,
+	-- Temps mort apres avoir QUITTE L'ECHELLE, avant que l'accroche au sol puisse se declencher. La base de l'echelle
+	-- est souvent DANS la zone d'une haie : sans ce delai, descendre de l'echelle re-agriperait le joueur d'emblee
+	-- (aimant + orientation forcee + camera iso), pile quand il veut s'en aller -> la camera "bloque" un instant.
+	-- Assez long pour s'eloigner d'abord. A REGLER si la base des echelles est plus / moins pres des haies.
+	LADDER_EXIT_GRACE = 0.9,
 
 	-- ===== PAS CHASSE =====
 	-- A L'ESSAI, pas encore valide : l'effet peut etre retire. Tout ce qui le concerne (SLIDE_* et STEP_*) est
@@ -284,7 +291,7 @@ local HedgeConfigs = {
 	-- Mesure du temps pour parcourir toute la hauteur d'une haie : 12 -> 0.33 s, 9 -> 0.45 s, 6.5 -> 0.62 s,
 	-- 5 -> 0.78 s, 4 -> 0.98 s.
 	-- En dessous de 4 l'outil ne suit plus la souris, il la subit : viser devient un combat.
-	UPDOWN_FOLLOW_SPEED = 6.5,
+	UPDOWN_FOLLOW_SPEED = 10,
 
 	-- Debordement accepte au-dela des bords de la haie, en studs. La visee reste valide dans cette marge.
 	--
@@ -364,15 +371,37 @@ local HedgeConfigs = {
 	-- Decalage lateral : c'est lui qui donne l'angle 3/4 isometrique. Le SIGNE choisit le cote, negatif pour la
 	-- droite du joueur, positif pour sa gauche. Zero pour une vue bien en face.
 	CAMERA_SIDE = -10,
+	-- MOBILE : depart plus DE FACE (moins de decalage lateral). Sur petit ecran, l'angle 3/4 se lit moins bien et
+	-- la visee au doigt est plus naturelle bien en face. Le joueur peut ensuite tourner librement (orbite tactile).
+	CAMERA_SIDE_TOUCH = -5,
 	CAMERA_LOOK_HEIGHT = 2, -- point vise, au-dessus des pieds du joueur
-	-- Recul quand le joueur ACCELERE : la camera se rapproche, l'attention se resserre sur le geste.
-	-- Le lerp existant fait la transition, il n'y a rien de plus a ecrire.
+	-- Recul quand le joueur ACCELERE : la camera se rapproche, l'attention se resserre sur le geste. La transition
+	-- est lissee EN PARAMETRE (CAMERA_DISTANCE_LERP), pas via la position de la camera (placee direct, cf orbite).
 	CAMERA_DISTANCE_THROTTLE = 9.5,
+	-- Vitesse de lissage du recul (rapproche / ressort a l'acceleration). En parametre : ne deforme pas l'orbite.
+	CAMERA_DISTANCE_LERP = 8,
+
+	-- PREMIERE PERSONNE (experimental). Vrai -> la camera de travail passe A LA TETE du joueur, regard vers la haie, au
+	-- lieu de la vue iso 3/4. La visee (souris / doigt) suit toute seule (le rayon part de cette camera). L'orbite est
+	-- DESACTIVEE dans ce mode ; on peut voir ses bras / son corps (une cam scriptee ne cache pas le perso comme la 1re
+	-- personne native de Roblox -- a affiner si ca gene). Repasser a false pour retrouver la vue iso.
+	CAMERA_FIRST_PERSON = true,
+	-- Vue RAPPROCHEE DE COTE (near-first-person). Droit dans la haie = plat et illisible ; on DECALE l'oeil sur le cote
+	-- pour voir la surface taillee DE BIAIS. FP_SIDE est le knob principal (l'angle "de cote").
+	FP_SIDE = -4, -- decalage lateral de l'oeil (studs). Signe = cote (negatif = droite du joueur). PLUS GRAND = plus de biais
+	FP_BACK = 2.5, -- recul de l'oeil DERRIERE la tete (loin de la haie), pour englober le geste
+	FP_HEIGHT = 2, -- hauteur de l'oeil au-dessus de la tete
+	FP_LOOK_FORWARD = 1, -- le point VISE est ce nombre de studs DEVANT le joueur (dans la haie)
+	FP_LOOK_HEIGHT = 0, -- ajustement vertical du point vise (studs)
 	-- Attribut pose par ToolStartService sur le personnage.
 	THROTTLE_ATTRIBUTE = "LeafiaThrottle",
-	-- Vitesse d'arrivee et de retour de la camera. Volontairement lente : une camera qui claque en place donne
-	-- la nausee, meme quand la position finale est bonne.
+	-- Vitesse du GLISSE d'arrivee a l'engage (depuis la cam de jeu jusqu'a la vue de travail). Volontairement lente :
+	-- une camera qui claque en place donne la nausee. Une fois arrivee, la camera n'est PLUS lissee : elle se place
+	-- direct sur son cercle (orbite 1:1) car lisser la position deformait l'orbite (cf HedgeController).
 	CAMERA_LERP_SPEED = 5,
+	-- Distance a la cible (studs) sous laquelle l'arrivee est TERMINEE : en dessous, la camera passe en placement
+	-- direct (fin du glisse d'engage).
+	CAMERA_SETTLE_DIST = 4,
 
 	-- ZOOM A LA MOLETTE, pendant le travail seulement.
 	--
@@ -390,8 +419,18 @@ local HedgeConfigs = {
 	-- libre pour viser la haie : le bouton droit ne sert a rien d'autre, c'est le seul de disponible.
 	-- Le personnage, lui, ne tourne pas : seule la camera pivote autour de lui.
 	CAMERA_YAW_SENSITIVITY = 0.35, -- degres par pixel de souris
+	-- TACTILE : degres par pixel de GLISSEMENT du doigt (hors de la haie = orbite). Un doigt parcourt plus de
+	-- pixels qu'une souris, donc plus BAS pour ne pas tourner trop vite. A REGLER a l'oeil.
+	CAMERA_YAW_TOUCH_SENSITIVITY = 0.22,
 	-- Butee de chaque cote. Sans elle le joueur passerait derriere la haie et travaillerait a l'aveugle.
 	CAMERA_YAW_LIMIT = 70,
+	-- RUBBER-BAND de la butee : au lieu d'un mur sec, on peut ETIRER l'orbite de tant de degres au-dela de la
+	-- limite, avec une resistance croissante (marge elastique). Au relachement, retour a la limite par ressort.
+	CAMERA_YAW_MARGIN = 12,
+	-- Ressort de retour a la limite quand on relache au-dela. Raideur haute = revient vite. L'amortissement SOUS
+	-- 2*sqrt(raideur) (ici 2*sqrt(220) ~ 29.7) laisse un REBOND : c'est ce rebond qui donne le "slime". A REGLER a l'oeil.
+	CAMERA_YAW_SNAP_STIFFNESS = 220,
+	CAMERA_YAW_SNAP_DAMPING = 16,
 
 	-- ===== CURSEUR SUR LA HAIE =====
 	-- Bille posee la ou le curseur touche la haie. C'est le point qui deviendra l'endroit ou l'on taille.
@@ -650,6 +689,20 @@ local HedgeConfigs = {
 	CUT_RADIUS_SCALE = 0.8,
 	-- Marge ajoutee aux deux, en studs.
 	CUT_MARGIN = 0.6,
+	-- COINS / ARETES plus faciles a finir. Les cellules de BORDURE (marquees EDGE_ATTRIBUTE a la construction)
+	-- recoivent DEUX bonus : un peu plus de PORTEE, et une TOLERANCE de surface plus large (lame plus rasante
+	-- acceptee). C'est aux coutures entre deux faces que la lame, calee sur une face, arrive DE BIAIS sur les
+	-- cellules de la face d'a cote : sans ces bonus, des feuillus de coin restent hors d'atteinte et finir une haie
+	-- devient un combat (cf regle d'or : tailler doit rester jouissif). N'affecte QUE les bordures : la coupe en
+	-- pleine face ne bouge pas d'un poil. A REGLER a l'oeil (monter si des coins resistent encore).
+	CUT_EDGE_REACH_BONUS = 0.6,
+	CUT_EDGE_SURFACE_BONUS = 0.5,
+	-- BAS des cotes (rangee du sol). Dur a atteindre : la pose la plus BASSE des bras (frame 0 de l'anim) arrive
+	-- AU-DESSUS de cette rangee, donc sans aide une frange de feuillus reste au ras du sol. Marquee BASE_ATTRIBUTE
+	-- et PAS Edge (on ne DETRUIT pas ces feuilles : ca ouvrirait la haie par en dessous). Bonus de portee plus
+	-- GENEREUX que les aretes, pour que le geste bas attrape enfin la frange. A REGLER a l'oeil.
+	CUT_BASE_REACH_BONUS = 1.2,
+	CUT_BASE_SURFACE_BONUS = 0.5,
 	-- De combien la lame peut etre EN DECA de la surface d'un carreau et le couper quand meme, en studs.
 	--
 	-- Sans cette marge, il fallait etre strictement du cote exterieur. Sur le DESSUS d'une haie basse, la lame
@@ -717,6 +770,9 @@ local HedgeConfigs = {
 
 	-- Carreau de BORDURE. Marque a la creation, parce que c'est la seule fois ou on connait la grille.
 	EDGE_ATTRIBUTE = "Edge",
+	-- Carreau de la rangee du SOL (bas d'un cote). Distinct de Edge : il recoit un bonus de PORTEE a la coupe
+	-- (frange dure a atteindre), mais SANS destruction de feuille (garder la haie fermee par en dessous).
+	BASE_ATTRIBUTE = "Base",
 	-- Sur une arete, une feuille arrivee au ras est DETRUITE au lieu de rester rase.
 	--
 	-- La silhouette d'une haie, c'est ses aretes : les faces se voient de face, les aretes se decoupent sur le
@@ -834,6 +890,15 @@ local HedgeConfigs = {
 
 	-- Avancement de la haie, de 0 a 1, pose sur la HAIE. Servira a la jauge et a l'experience.
 	TRIMMED_ATTRIBUTE = "LeafiaTrimmed",
+	-- AUTO-COMPLETION : au-dela de ce ratio (les derniers % chiants a aller chercher : dessus, recoins), on finit la
+	-- haie TOUT SEUL. Le joueur a fait le gros du travail, on lui epargne la chasse aux carreaux perdus (equilibre
+	-- patient / impatient). Sur une haie HAUTE, atteindre ce seuil exige deja l'echelle (le dessus fait plus que ca) ->
+	-- l'echelle reste necessaire, l'auto-completion ne mange que la derniere frange.
+	AUTO_COMPLETE_THRESHOLD = 0.95,
+	-- Garde "paye une fois" pose sur la HAIE : true des qu'elle a verse son cheque de fin (100%). Sans lui, continuer
+	-- a passer la lame sur une haie deja finie la re-paierait. HedgeCutService le lit / le pose. (Si un jour les haies
+	-- repoussent et doivent re-payer, c'est ici qu'on remettra l'attribut a nil au moment de la repousse.)
+	PAID_ATTRIBUTE = "LeafiaPaid",
 
 	-- ===== HOLOGRAMME DE CHANTIER =====
 	-- Une etiquette accrochee au-dessus de chaque haie a faire. Elle disparait quand la haie est finie : ce qui
@@ -849,6 +914,9 @@ local HedgeConfigs = {
 	-- Au-dela, l'etiquette est cachee. Un jardin entier d'etiquettes lisibles a cinquante studs ne montre plus
 	-- rien : c'est du bruit, pas de l'information.
 	HOLOGRAM_RANGE = 70,
+	-- MOBILE : le cartouche est en PIXELS fixes, donc enorme sur un petit ecran. On le retrecit d'un coup via un
+	-- UIScale pose a la creation sur tactile. 1 = pas de changement. A REGLER a l'oeil.
+	HOLOGRAM_TOUCH_SCALE = 0.55,
 	-- Titre affiche au-dessus de la valeur.
 	HOLOGRAM_TITLE = "Taille",
 	HOLOGRAM_COLOR = Color3.fromRGB(255, 255, 255),
@@ -870,27 +938,21 @@ local HedgeConfigs = {
 	-- Le support de l'effet est cree UNE fois puis deplace : pas de duree de vie a regler, rien a detruire.
 	CUT_EFFECT_COUNT = 8,
 
-	-- ===== FEUILLES QUI VOLENT VERS LA ZONE =====
-	-- Une trainee qui part de la lame et retombe dans la bande de depot. C'est elle qui RELIE le geste au tas :
-	-- sans elle, des feuilles apparaissent au sol sans qu'on ait vu comment elles y sont allees.
-	--
-	-- Entierement COTE CLIENT : une trajectoire est du ressenti. La calculer sur le serveur repliquerait une
-	-- CFrame par frame et par feuille, pour un resultat que chaque machine sait produire seule.
-	FLY_ASSET = { "Assets", "Contents", "FlyDebrisTrail" },
-	FLY_TIME = 1.2,
-	-- Hauteur du sommet de la courbe au-dessus de la corde, en studs. Une feuille qui MONTE avant de retomber
-	-- se lit comme un envol ; en ligne droite elle se lirait comme un projectile.
-	FLY_ARC = 8,
-	-- Nombre maximal en vol. Au-dela, les suivantes sont ignorees : mieux vaut en rater une que perdre des
-	-- images pendant le geste.
-	FLY_MAX = 24,
-	-- Tours par seconde pendant le vol.
-	FLY_SPIN = 2.5,
 	-- Couper exige-t-il de MAINTENIR l'accelerateur ?
 	--
 	-- true : le clic sert a quelque chose, et la boucle devient "je vise, j'accelere, ca tombe". false : les
 	-- lames coupent des qu'elles tournent, le clic ne sert plus qu'au bruit.
 	CUT_NEEDS_THROTTLE = true,
+	-- Intervalle minimal entre deux bouchees clic-par-clic (cisaille), en secondes. Anti-spam serveur : un clic
+	-- humain ne depasse pas une douzaine par seconde, au-dela c'est un script qui veut tailler en rafale. 0.08 =
+	-- environ douze clics par seconde, large pour la main, ferme pour le reste.
+	CUT_CLICK_MIN_INTERVAL = 0.08,
+
+	-- TACTILE : cadence a laquelle la cisaille RE-declenche toute seule quand on glisse le doigt (drag-to-cut). C'est
+	-- une cadence DELIBEREE, pas le plancher anti-triche : la cisaille doit rester lente (l'outil pourri du debut).
+	-- Tirer au plancher (0.08) la rendait aussi rapide qu'un spam-clic, donc "beaucoup trop vite" sur mobile.
+	-- A REGLER a l'oeil (monter = plus lent). Le serveur borne toujours en dessous a CUT_CLICK_MIN_INTERVAL.
+	CUT_TOUCH_SNIP_INTERVAL = 0.3,
 
 	-- Compteur pose sur le PERSONNAGE a chaque fois que des feuilles tombent. Le client s'y branche pour ses
 	-- retours. Un COMPTEUR et non un booleen : deux coupes d'affilee ecriraient la meme valeur, l'attribut ne
@@ -999,29 +1061,47 @@ local HedgeConfigs = {
 	-- pour qu'une vraie sortie juste apres un coin reste immediate.
 	FACE_CHANGE_GRACE = 0.35,
 
-	-- DEBUG : dessine la ZONE DE COUPE sur la face, telle que le SERVEUR la calcule.
+	-- REPERE DE COUPE (guide visuel joueur). Un disque translucide plaque SUR la surface, a l'endroit vise :
+	-- "tu couperas ici". Remplace l'ancien cylindre-capsule debug (Neon + Highlight always-on-top) qui faisait une
+	-- grosse masse blanche devant la vue. Construit depuis la DERNIERE visee ENVOYEE (ce que le serveur a en main),
+	-- pour rester fidele a ou ca coupe reellement.
+	VISUAL_CUT_ENABLED = true,
+	-- Modele CLONE pour le repere : une Part FINE (Y = epaisseur) avec un SurfaceGui sur sa face du HAUT (le cercle
+	-- OutlineFrame + PointCenterFrame). Vit dans ReplicatedStorage.Assets.Effects (cote Studio). On le clone, on
+	-- l'oriente A PLAT contre la surface visee (sa face du haut suit la NORMALE) et on redimensionne X / Z pour couvrir
+	-- la coupe. Le DESSUS d'une haie devient donc plat tout seul, la face reste verticale.
+	VISUAL_CUT_TEMPLATE = "VisualRootTarget",
+	-- TROIS ETATS : la couleur et la transparence changent selon ce que fait le joueur, la forme non. Toujours
+	-- assez transparent pour ne JAMAIS masquer la haie qu'on travaille.
 	--
-	-- Elle est construite a partir de la DERNIERE visee ENVOYEE, pas de la visee courante : c'est exactement ce
-	-- que le serveur a en main. Dessiner la visee courante montrerait ce qu'on croit lui avoir dit, ce qui ne
-	-- sert a rien quand on cherche justement un ecart entre les deux.
-	DEBUG_CUT = true,
-	-- TROIS ETATS du repere, selon ce que fait le joueur. La couleur et la transparence changent, la forme non.
-	-- La transparence sert AUSSI au remplissage du Highlight : guide bien plein, coupe discrete.
-	--
-	-- GUIDE : il vise la haie mais ne taille pas encore. Bien visible, c'est un reperage "tu couperas ici".
-	DEBUG_CUT_GUIDE_COLOR = Color3.fromRGB(255, 255, 255),
-	DEBUG_CUT_GUIDE_TRANSPARENCY = 0.25,
-	-- COUPE : il taille (gachette pressee). Discret, pour ne pas masquer le travail qu'on est en train de voir.
-	DEBUG_CUT_CUT_COLOR = Color3.fromRGB(255, 255, 255),
-	DEBUG_CUT_CUT_TRANSPARENCY = 0.85,
-	-- HORS HAIE : la souris est sortie de la haie. Orange = avertissement, la coupe ne mordra rien.
-	DEBUG_CUT_OFF_COLOR = Color3.fromRGB(255, 140, 20),
-	DEBUG_CUT_OFF_TRANSPARENCY = 0.55,
-	-- Le repere est ENFOUI dans les feuilles qui depassent : on ne le voit plus une fois le joueur en place. Un
-	-- Highlight en AlwaysOnTop le redessine PAR-DESSUS tout, a travers les feuilles.
-	DEBUG_CUT_ALWAYS_ON_TOP = true,
-	-- Transparence du CONTOUR du Highlight. 0 = plein : un anneau net, quel que soit l'etat.
-	DEBUG_CUT_OUTLINE = 0,
+	-- COULEUR SELON LA MATIERE sous la lame : BLANC s'il reste des feuilles a couper, ORANGE si c'est NU (rien a faire).
+	-- Approximation cote client : quand on TAILLE sans qu'aucun coup ne morde depuis VISUAL_CUT_DRY_TIME, on est sur du
+	-- nu -> orange. Sinon (des feuilles tombent, ou on ne fait que viser) -> blanc.
+	VISUAL_CUT_FOLIAGE_COLOR = Color3.fromRGB(255, 255, 255), -- il reste a couper -> blanc
+	VISUAL_CUT_BARE_COLOR = Color3.fromRGB(255, 140, 25), -- deja nu -> orange
+	VISUAL_CUT_DRY_TIME = 0.2, -- temps a tailler SANS qu'un coup morde avant de passer en "nu" (orange), en secondes
+	-- (anciens etats guide/coupe, gardes pour la transparence ; la couleur vient maintenant de la matiere ci-dessus)
+	VISUAL_CUT_GUIDE_TRANSPARENCY = 0.8,
+	VISUAL_CUT_CUT_TRANSPARENCY = 0.7,
+	-- HORS HAIE : rare (souris sortie -> le repere est deja cache). Orange d'avertissement, au cas ou.
+	VISUAL_CUT_OFF_COLOR = Color3.fromRGB(255, 140, 20),
+	VISUAL_CUT_OFF_TRANSPARENCY = 0.8,
+	-- Epaisseur du disque le long de la normale (fin = plaque contre la surface). Le diametre, lui, est CALCULE
+	-- pour couvrir la coupe (longueur de lame + largeur taillee).
+	VISUAL_CUT_THICKNESS = 0.15,
+	-- Recul du disque hors de la surface, pour qu'il pose SUR les feuilles au lieu de vibrer dedans (z-fighting).
+	VISUAL_CUT_SURFACE_OFFSET = 0.1,
+	-- Facteur sur la taille du cercle (le diametre couvre la coupe : longueur de lame + largeur taillee). < 1 pour un
+	-- repere plus PETIT et discret ; ne change QUE le visuel, pas la coupe reelle. A REGLER a l'oeil.
+	VISUAL_CUT_SIZE_SCALE = 0.55,
+	-- SLIME + PRESSAGE du cercle : un ressort amorti pilote son echelle. Il JAILLIT de 0 a l'apparition (rebond slime),
+	-- et se PRESSE (retrecit un peu) tant qu'on taille, puis rebondit a l'arret. Amortissement BAS = rebond visible.
+	VISUAL_CUT_SLIME_STIFFNESS = 350, -- raideur (haut = pop plus rapide / plus sec)
+	VISUAL_CUT_SLIME_DAMPING = 11, -- amortissement (bas = rebondit plus, effet slime ; haut = se pose vite)
+	VISUAL_CUT_PRESS_SCALE = 0.9, -- echelle cible tant qu'on TAILLE (pressage leger). 1 = pas de pressage.
+	-- Impulsion donnee au ressort a CHAQUE coup (tick de coupe / clic) : le cercle gonfle d'un coup puis rebondit ->
+	-- un slime a chaque coupe. Vitesse en echelle/s. 0 = pas de pop au coup. A REGLER a l'oeil.
+	VISUAL_CUT_CLICK_KICK = 4,
 
 	DEBUG_RAY = false,
 	-- Les boites gardent leur TAILLE REELLE, celle qui est testee : la retrecir pour mieux voir ferait mentir

@@ -146,6 +146,238 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   0.59 stud du point cible : tout un systeme de "marche forcee" (Humanoid:Move a priorite Camera + marqueurs
   d'anim + secours distance/timeout) etait inutile, l'arrivee par distance tirait des la 1re frame (log a
   l'appui). Mesurer la distance REELLE avant de coder un trajet. La solution etait : ancrer + jouer la pose.
+- **Un outil qui court-circuite la boucle par defaut doit etre re-branche dans CHAQUE contexte.** La cisaille
+  coupe au CLIC (remote CutSnip) et non par la boucle continue (qui la saute). Elle marchait au sol mais PAS
+  depuis l'echelle : le clic ne tirait CutSnip que dans le contexte "engaged" (travail au sol), jamais dans le
+  contexte ladder-trim. Le taille-haie, lui, passe par la boucle continue, presente dans les DEUX contextes,
+  donc le trou ne se voyait pas sur lui. Regle : quand un cas special remplace le chemin par defaut, auditer
+  TOUS les contextes qui utilisent le chemin par defaut et y cabler le cas special aussi.
+- **Un objet PORTE qui doit revenir "pareil" a chaque prise : capturer l'offset UNE FOIS et le reutiliser, pas le
+  recalculer.** Piege a tiroirs vecu sur l'echelle. Recalculer l'offset a chaque prise en gardant la rotation
+  ENTIERE : chaque pose la laisse a un poil pres droite, la reprise recapture ce poil, ca s'accumule, elle finit
+  couchee. Ne garder que le YAW supprime l'accumulation MAIS preserve encore le sens de repose -> reposee de
+  travers, reprise de travers. Or le vrai besoin n'etait PAS de garder le sens de repose : c'etait qu'elle revienne
+  DROITE DEVANT le porteur a chaque fois. La bonne reponse : capturer l'offset (yaw + position) UNE SEULE FOIS a la
+  1re prise et le reutiliser -> meme offset relatif au porteur a chaque prise, donc toujours pareil, sans derive ni
+  dependance a la pose. Bien distinguer "garder l'orientation de l'objet" de "toujours le meme rendu chez le porteur"
+  AVANT de coder : ce sont deux besoins opposes. Nuance finale : caler sur une orientation fixe fait faire un
+  DEMI-TOUR brusque de 180 quand on prend l'objet du cote ou il fait deja face. Corriger en choisissant, parmi les
+  deux sens (0 / 180 autour de la verticale), le plus PROCHE de la pose actuelle (somme des dots des 3 axes entre
+  deux CFrames = leur proximite d'orientation, sans supposer quel axe est le "devant"). SUITE (le piege a un
+  tiroir de plus) : capturer meme le YAW D'ORIGINE de l'objet a la 1re prise reste faux, parce que cette pose vient
+  de son placement Studio, souvent DE TRAVERS -> l'objet est alors porte ET repose de travers pour toujours. La
+  vraie reponse pour un objet dont la repose doit toujours bien s'orienter vers une cible (l'echelle vers la
+  haie) : une orientation FIXE et reglable RELATIVE au repere de travail (face a la cible), pas une valeur capturee.
+  Le recul (encombrement arriere) doit alors etre remesure POUR cette orientation, en repere objet.
+- **Une UI de StarterGui n'existe dans PlayerGui qu'au SPAWN, et le spawn peut TARDER.** Chargement des donnees /
+  session lock ProfileStore : le perso peut apparaitre 15 s apres le join. Un controller qui cherche sa ScreenGui au
+  boot avec un `WaitForChild` court (10 s) la RATE, et croit a tort l'UI absente (warning "introuvable" alors qu'elle
+  arrive juste plus tard). Attendre le perso (`player.Character or player.CharacterAdded:Wait()`) AVANT de chercher
+  l'UI, en `task.spawn` (sinon ce WaitForChild bloque le reste du boot). Symptome trompeur : la meme UI marche une
+  session sur deux, selon la vitesse du spawn. Et pour survivre aux RESPAWNS : ResetOnSpawn = false sur la ScreenGui,
+  sinon elle est recreee a chaque mort et les references gardees en cache pointent sur du detruit.
+- **`Model:GetPivot()` suit la BOUNDING BOX quand le model n'a pas de PrimaryPart.** Ajouter des parts enfants,
+  MEME invisibles (zones de detection, hitbox), DECALE et DESORIENTE ce pivot. Tout ce qui calcule un portage / un
+  placement dessus part alors de travers, sans que rien ne le signale (les parts sont transparentes). Symptome
+  trompeur : on cherche le bug dans le calcul d'orientation alors que c'est le pivot, sous les pieds, qui a bouge
+  quand on a ajoute une part ailleurs. Baser ces calculs sur une PART REELLE et fixe (la RootPart), jamais sur le
+  GetPivot d'un model dont on modifie les enfants.
+- **Un tween de camera vers une CFrame FIXE laisse la camera plantee si le sujet BOUGE.** Pour finir une camera
+  scriptee et rendre la main a la camera de jeu qui suit un joueur qui s'en va : pas un `TweenService:Create` vers une
+  cible calculee une fois (pendant la transition plus rien ne suit le joueur -> ~0.2 s "sans camera", moche), et pas
+  une bascule directe vers Custom (coup sec sur la distance/zoom). Il faut GLISSER image par image en re-ancrant le
+  focus sur la position LIVE du sujet a chaque frame, et n'easer que l'OFFSET (point vise + distance), pas la CFrame
+  absolue. Depart = la vue exacte (offset capture a la sortie) -> aucun pop ; fin = la camera de jeu reprend pile la,
+  ayant deja suivi -> aucun trou. Pour que la reprise Custom ne re-snappe RIEN (sinon micro-saut ~0.05 s, visible et
+  stressant) : capturer A L'ENTREE l'etat EXACT de la cam de jeu via `camera.Focus` -- la distance `camera->Focus` (le
+  VRAI zoom, PAS la distance au HRP) ET l'offset `Focus - sujet` (~tete). Le glissement doit finir sur CES valeurs.
+  Une cible approximee (hauteur du regard devinee, distance mesuree au HRP) laisse un saut sub-perceptible mais bien
+  visible. La reprise Custom garde l'ANGLE courant (elle lit la LookVector de la camera), donc caler focus + zoom suffit.
+- **WorldAnchor va avec `ScreenInsets = None`, jamais l'inset par defaut.** `WorldToViewportPoint` rend des coords
+  VIEWPORT dont l'origine est le coin ABSOLU de l'ecran (l'inset de la barre est DEDANS). Le ScreenGui qui recoit ces
+  coords doit donc couvrir tout l'ecran (`ScreenInsets = None`, equivaut a `IgnoreGuiInset = true`). Avec l'inset par
+  defaut, l'origine du GUI est ~36 px plus bas et l'element suit 36 px trop bas. Piege a tiroirs : le commentaire
+  d'origine de WorldAnchor affirmait le CONTRAIRE (IgnoreGuiInset FAUX) et m'a fait poser le mauvais reglage sur le
+  combo ; c'est l'ecran (le joueur) qui a tranche. Meme famille que GetMouseLocation / ViewportPointToRay.
+- **Lisser (lerp) la POSITION d'une camera qui ORBITE un point coupe la corde de l'arc.** La cible tourne sur un
+  cercle ; interpoler la position en ligne droite vers elle fait plonger la camera vers l'interieur puis ressortir
+  (une "courbe" degueulasse), et la distance a la cible varie pendant le pivot. Pour une orbite propre : placer la
+  camera DIRECTEMENT sur le cercle au yaw courant (1:1), et ne lisser que les PARAMETRES (distance, angle) ou
+  l'ARRIVEE, jamais la position monde. Piege jumeau vecu dans le meme code : un seuil "proche = rapide / loin =
+  lent" rend le pivot PLUS lent quand on glisse vite (la cible saute loin, donc "loin", donc mode lent) : l'exact
+  inverse du ressenti voulu. Le "smooth" n'etait pas trop fort, il etait applique a la mauvaise grandeur.
+- **Les zones de detection ENFANTS d'un objet PORTE suivent le porteur, donc restent declenchees en permanence.**
+  Les zones de grimpe de l'echelle sont enfants de son model ; portee, l'echelle est soudee au HRP -> ses zones
+  entourent le joueur en continu -> le systeme de grimpe l'accrochait a sa propre echelle. Regle : un systeme qui
+  reagit a des zones doit etre coupe explicitement dans les etats ou l'objet qui les porte change de role (ici :
+  drapeau `LeafiaCarryingLadder` pose pendant le portage, lu par la grimpe pour se desactiver). Meme famille que
+  "un cas special doit etre re-branche dans chaque contexte".
+- **`GetKeyframeSequenceAsync` est un appel RESEAU capricieux : quand il rate au boot, la feature est morte pour
+  TOUTE la session.** Symptome trompeur : "parfois ca marche, parfois pas DU TOUT" (pas intermittent DANS une
+  session : c'est binaire PAR session, selon que l'async a reussi ou non). La boite aux lettres lisait le temps du
+  marqueur IsOpenEvent a l'avance par cette API ; en cas d'echec, `openTime = 0`, cible d'ouverture 0, la boite ne
+  s'ouvrait jamais. Aggrave par la concurrence : l'echelle appelle la meme API au meme boot. Regle : quand on a
+  juste besoin de REAGIR a un marqueur (pas de connaitre son temps a l'avance), utiliser `GetMarkerReachedSignal`
+  pendant la lecture de l'anim (lecture LOCALE, pas d'appel reseau) plutot que lire la KeyframeSequence. Si on doit
+  vraiment lire l'async, prevoir un retry (ce que fait l'echelle : boucle de fond tant que ce n'est pas charge).
+- **Mapper une souris sur un geste CENTRE SUR LE CORPS : le repere est la position du JOUEUR a l'ecran, pas le
+  centre de l'ecran.** La visee de la taille du DESSUS (echelle) a coute des JOURS, a travers une pile de systemes
+  de plus en plus compliques qui marchaient tous "presque" : angle / champ de vision (`atan2` regard->curseur),
+  zones colorees de la haie (Jaune/Rose/Bleu + bouts), offset player-relatif en repere HAIE, mapping par les 3
+  evenements d'anim (MaxLeft/Middle/MaxRight)... La vraie regle tenait en UNE ligne : `ratio = 0.5 + (sourisX -
+  WorldToViewportPoint(joueur).X) / largeurEcran * sensibilite`. Souris pile DEVANT le corps = pose centrale, quel
+  que soit le cadrage. Symptome trompeur qui a envoye chercher partout ailleurs : ca "marchait quand le joueur
+  etait cadre au CENTRE de l'ecran" (la, centre-ecran == centre-joueur par hasard), donc on cherchait des bugs de
+  sensibilite / camera / geometrie de haie au lieu du REPERE. Double lecon : (1) un geste centre sur le corps se
+  mappe sur le corps a l'ecran ; (2) quand on empile trois systemes qui corrigent chacun un SYMPTOME, s'arreter et
+  chercher la cause -- la solution la plus simple etait la bonne depuis le debut. (`WorldToViewportPoint` et
+  `GetMouseLocation` sont dans le meme repere viewport : leurs X se comparent direct.)
+- **Un drop de FPS vu DANS Studio n'est pas forcement un bug du jeu.** Studio ouvert avec le MicroProfiler :
+  bouger la souris fait des pics de ms (survol / highlight de Studio + redraw du profiler) qui n'existent PAS
+  dans le client. Le meme build tournait a 200 FPS parfait dans l'appli Roblox. Regle : avant de traquer un
+  drop de FPS vu dans Studio, le REPRODUIRE dans un vrai client. Sinon on optimise un fantome. (M'a fait passer
+  la camera d'orbite de `RenderStepped:Connect` a `BindToRenderStep` a la priorite Camera : le changement reste
+  correct en soi -- c'est le pattern d'une cam scriptee -- mais il n'a rien repare, il n'y avait rien a reparer.)
+- **Un effet de camera qui passe par `Humanoid.CameraOffset` est INVISIBLE tant que la camera est Scriptable, puis
+  POPE d'un coup au passage en Custom.** Seule la camera par defaut (Custom) applique CameraOffset ; une camera
+  scriptee l'ignore. Piege vecu a l'entree du plot : on teleporte le joueur quelques studs au-dessus du spawn, il
+  tombe et ATTERRIT -> la plongee d'atterrissage (LandDip) part, mais elle est masquee pendant le tween scripte ;
+  a l'instant ou on rend la main a Custom, elle apparait -> un "bump / pump" juste avant que la vue se pose.
+  Regle : une teleportation scriptee qui provoque une reception doit COUPER les effets qui transitent par
+  CameraOffset (drapeau lu par CameraController), sinon ils ressurgissent au handoff. Meme famille que "une
+  propriete, un seul ecrivain" et que le residu de fondu qui traverse le rendu transparent.
+- **En passant de Scriptable a Custom, Custom garde le YAW mais REMET son propre PITCH de repos ; il ne conserve
+  PAS l'inclinaison qu'on lui donne.** (Corrige une note plus haut qui disait "caler focus + zoom suffit, l'angle
+  est garde" : vrai pour le yaw, FAUX pour le pitch.) Symptome : un tween d'arrivee fini a 12 deg alors que le repos
+  de Custom est a 15 -> au handoff la camera remonte de 3 deg d'un coup, ressenti comme un "zoom in-out". Regle : un
+  handoff scripte -> Custom sans saut doit finir sur l'etat de repos COMPLET de Custom (distance + hauteur de focus
+  + pitch), et ces trois valeurs se MESURENT, elles ne se devinent pas. Mesure faite ici en posant Custom puis en
+  lisant apres ~0.4 s `(camera.CFrame.Position - camera.Focus.Position)` (distance + pitch) et `Focus - HRP`
+  (hauteur du focus) : distance 12.5, focus +1.4, pitch 15. Deviner (j'avais mis pitch 12) a coute une iteration.
+- **Un helper partage qui cache un `WaitForChild` (ex `RemoteSetup.getRemote`) BLOQUE son appelant jusqu'au
+  timeout.** Appele en SYNCHRONE dans un `init()` de boot, il gele TOUT le boot : mesure d'un trou de 10 s entre
+  deux controllers, le temps que le WaitForChild d'un remote timeoute (course de replication rare ; le remote existe
+  pourtant, le serveur le cree en premier). Symptome trompeur = un boot lent SANS erreur, juste un TROU dans les
+  horodatages des logs. Regle : dans un init de boot, tout appel qui peut ATTENDRE (remote, asset, UI de spawn) va
+  en `task.spawn`, jamais en ligne droite. Piege a tiroir : le meme fichier faisait deja son resolve d'UI en
+  task.spawn "pour ne pas bloquer le boot" mais avait oublie de proteger l'appel getRemote juste au-dessus.
+- **Generaliser un `WaitForChild` unique en enumeration de PLUSIEURS enfants ne se fait PAS en le remplacant par
+  `FindFirstChild`.** Le delai de replication est toujours la : un `WaitForChild("Slot1")` attendait, un
+  `GetChildren()` + `FindFirstChild("PrimaryGround")` par enfant, lui, tombe sur du vide tant que ce n'est pas
+  replique -> zero resultat, et (ici) joueur GELE dans sa box de spawn sans orbite ni sortie. On ne peut pas non
+  plus `WaitForChild` chaque candidat (un enfant qui n'est pas un plot ferait attendre le timeout entier). La bonne
+  forme : RE-SCANNER en boucle (FindFirstChild, instantane) jusqu'a trouver au moins un resultat, ou timeout. Regle :
+  quand on passe de "un" a "plusieurs", re-verifier que la garantie d'attente du cas unique existe encore.
+- **`TouchEnabled and not KeyboardEnabled` NE marche PAS dans l'emulateur d'appareil de Studio.** Le PC garde son
+  clavier physique, donc `KeyboardEnabled` reste TRUE meme en emulant un iPhone -> `not KeyboardEnabled` = false ->
+  toute la branche "mobile" est SAUTEE en test. Symptome trompeur : le layout mobile "n'est pas applique" alors que le
+  code est bon ; on cherche le bug dans l'application des valeurs, pas dans la detection. Pour une decision de LAYOUT
+  (stable, mobile vs PC), utiliser `TouchEnabled` SEUL : c'est une CAPACITE, vraie dans l'emulateur ET sur vrai mobile
+  (faux sur PC sans ecran tactile). Le combo `and not KeyboardEnabled` ne sert qu'a distinguer un VRAI mobile d'un PC,
+  et casse le test en emulateur. Ne pas confondre CAPACITE (TouchEnabled, stable) et input ACTIF (dernier utilise, cf
+  `InputDevice` : bon pour les hints dynamiques, PAS pour un layout qui ne doit pas changer quand on prend la souris).
+- **Un "wipe" par UIGradient (animer son Offset) a une DIRECTION qu'on ne peut pas deduire au raisonnement : seul
+  l'ecran tranche.** Meme famille que GetMouseLocation / ViewportPointToRay. Le sens de l'offset est faux une fois sur
+  deux, et un wipe a l'envers laisse le rideau OPAQUE (il BLOQUE le jeu) ou revele d'un coup. Pour une fermeture / un
+  reveal FIABLE et DANS L'ORDRE : fondre les VRAIES proprietes de transparence (`ImageTransparency` des images,
+  `BackgroundTransparency` des parts, `GroupTransparency` d'un CanvasGroup pour le fond), enchainees par un delai ou un
+  `Completed`, plutot qu'un gradient directionnel. Corollaire de comportement (le vrai cout ici) : ne pas EMBELLIR un
+  effet simple demande par un plus malin non demande. Le joueur voulait "contenu transparent puis fond" ; j'ai ajoute un
+  wipe par gradient jamais demande, dont le sens imprevisible a brouille l'ordre et coute plusieurs iterations.
+- **`Instance.new("UICorner")` n'est PAS resolu vers le type `UICorner` par luau-lsp ici (UICorner absent du dump
+  d'API des overloads d'`Instance.new`) : il renvoie `Instance`, et poser `.CornerRadius` / `.BottomLeftRadius`
+  dessus donne "Expected this to be 'UICorner', but got 'Instance'" (Luau1000).** Fix : caster a la creation,
+  `Instance.new("UICorner") :: UICorner`. Le passer par le helper `create()` puis `:: UICorner` marche aussi ; c'est
+  le `Instance.new("UICorner")` NU suivi d'un acces de propriete qui casse. Double lecon : ces 3 vraies erreurs
+  etaient NOYEES sous un flot de soulignements ROUGES du correcteur d'orthographe (extension cSpell, sans config ->
+  souligne tous les identifiants et le francais, y compris DANS les strings). Un vrai type-checker ne souligne JAMAIS
+  le contenu d'une string valide : c'est le test pour distinguer erreur luau (rouge, onglet Problems) de bruit
+  d'orthographe. Couper cSpell (`"cSpell.enabled": false` dans `.vscode/settings.json`) a revele les vraies erreurs.
+- **Un tableau literal (ex `Children = { ... }`) prend le TYPE de son 1er element, et REJETTE les suivants qui n'y
+  collent pas.** luau-lsp deduit `{ UICorner }` d'un premier enfant `corner()` (annote `: UICorner`), puis crache
+  "Expected this to be 'UICorner', but got 'Instance' / 'UIScale' / 'TextLabel'..." sur CHAQUE autre enfant -- alors
+  que le code tourne parfaitement (Luau ignore ca a l'execution). Fix : que les helpers "fabrique un enfant a
+  PARENTER" renvoient `Instance`, pas leur classe precise (le type exact ne sert a aucun appelant) -> le tableau
+  reste homogene. Piege JUMEAU : un `{ Instance }` rempli de valeurs `X?` NILABLES (ex deux `TextLabel?` module,
+  pourtant assignes plus haut mais non narrowes car upvalues) donne "Expected 'Instance', got 'TextLabel?'" ->
+  inserer sous garde `if x then table.insert(t, x) end` (le `if` enleve le nil), pas en literal direct.
+- **Une action clavier-only est INVISIBLE sur mobile -> la feature n'existe pas pour la moitie des joueurs Roblox.**
+  Deposer / tourner l'echelle ne tenaient qu'a E / R via `UserInputService` : increachables sans clavier. La PRISE, elle,
+  marchait deja sur mobile parce que son declencheur est un bouton CLIQUABLE (le prompt d'interaction), pas une touche.
+  Symptome trompeur : "la moitie de la feature marche sur mobile" (la partie qui passe par un bouton), l'autre non.
+  Fix idiomatique : `ContextActionService:BindAction(nom, fn, true, touche)` -- `createTouchButton = true` cree un bouton
+  a l'ecran UNIQUEMENT sur tactile ET bind la touche sur PC, d'un seul geste. Le lier au CONTEXTE (bind a l'entree d'un
+  etat, unbind a la sortie) pour que le bouton n'apparaisse que quand l'action a un sens. Anti-double sur PC : la meme
+  touche cablee en CAS (qui la Sink) et en UIS -> passer chaque action par un declencheur central anti-spam rend un
+  eventuel double appel (notamment l'emulateur d'appareil, qui garde un clavier) sans effet. Regle : tout input clavier
+  doit avoir son pendant tactile, sinon auditer aussi les autres inputs clavier du meme systeme (ici R = tourner, oublie
+  en meme temps que E = deposer).
+- **Une place SECONDAIRE (multi-place) n'herite NI des reglages Studio par-place (StarterPlayer / Workspace / Lighting),
+  NI des services qu'on a gates hors d'elle par PlaceId.** Deux symptomes vecus au 1er lancement du tuto (place a part) :
+  (1) l'auto-jump degueulasse etait "regle" dans Leafia par un reglage StarterPlayer (`AutoJumpEnabled`), PAS par du code
+  -> absent du tuto. (2) L'AUTO-EQUIP du taille-haie (approcher une haie l'equipe) etait planque dans `LadderMoveController`,
+  gate hors du tuto -> plus d'auto-equip, donc un "delai enorme avant de pouvoir tailler". Regles : un comportement de
+  GAMEPLAY qui doit valoir dans TOUS les lieux se met en CODE (ex `humanoid.AutoJumpEnabled = false` dans CharacterService),
+  jamais dans un reglage Studio par-place (il ne suit pas le teleport). Et quand on gate par PlaceId, se mefier des features
+  COUPLEES a un module au nom trompeur (l'auto-equip dans le controller d'ECHELLE). Rojo synchronise le CODE dans les deux
+  lieux, mais PAS le Workspace/map ni les assets `$ignoreUnknownInstances` (Assets, Animations) : ca se copie a la main.
+- **Un `WaitForChild` (ou tout appel qui YIELD) dans une fonction appelee PAR FRAME gele TOUTE la boucle le temps du
+  yield.** Une connexion (Heartbeat/RenderStep) qui yield ne re-fire pas tant que son callback n'a pas rendu : elle reste
+  bloquee. Vecu : `getMoveVector` (pas chasse / rail d'echelle, appele chaque frame) faisait un `require(PlayerModule)`
+  LAZY -- et ce require peut yield 10-20s (`WaitForChild("PlayerModule", 10)`) quand PlayerModule tarde a etre pret. Au 1er
+  appel, toute la boucle de travail gelait -> "delai enorme avant de pouvoir tailler / ca.la camera de travail" -- et
+  SEULEMENT dans une place secondaire (le tuto), ou PlayerModule met plus de temps a apparaitre/etre requerable. Symptome
+  trompeur : "un WaitForChild qui cherchecherche", place-specifique, alors que le code est le meme partout -- c'est le
+  TIMING de la dependance qui change selon le lieu. Regle : tout ce qui peut YIELD (require lourd, WaitForChild, remote)
+  se resout UNE fois EN TACHE DE FOND (`task.spawn` au boot), jamais dans le chemin par-frame ; la fonction par-frame rend
+  une valeur neutre (zero) tant que ce n'est pas pret. Meme famille que "un getRemote synchrone dans un init gele le boot".
+
+- **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
+  throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
+  en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les
+  deux places sous la MEME experience. Symptome vecu : "le START me teleporte pas au tuto" -- vrai en Studio, faux en
+  jeu. Corollaire utile : ce fallback "game" est VOULU ici, il laisse tester le hub en Studio sans etre bloque.
+
+- **Avec `StreamingEnabled`, un client ne recoit que le contenu PROCHE de lui ; le lointain ne se replique JAMAIS tant
+  qu'il ne s'en approche pas.** Plus serre sur MOBILE (moins de memoire). Symptome vecu : l'ecran de selection de plot ne
+  montrait que 2 plots sur mobile (les autres, eloignes, jamais repliques -> introuvables par l'enumeration). Un
+  re-scan cote client n'y change rien : le contenu n'arrive tout simplement pas. Regle : tout ce qui doit etre visible
+  QUELLE QUE SOIT la position du joueur (plots a choisir, hub distant, decor scenarise) doit etre force en
+  `ModelStreamingMode = Persistent` (cote serveur, sur des MODELS) -> toujours replique a tous. Symptome trompeur : ca
+  marche sur PC (streaming plus large) et casse sur mobile, donc on cherche un bug mobile alors que c'est la carte qui
+  n'est pas la.
+
+- **Un seuil d'input regle pour le CLAVIER (valeur binaire 1.0) est trop haut pour un JOYSTICK analogique (valeurs
+  partielles).** Vecu : on ne pouvait pas sortir de la haie sur mobile en reculant le joystick, parce que le seuil de
+  sortie (0.7) etait facile a atteindre a la touche S (= 1.0 pile) mais pas au stick tire a moitie. Symptome trompeur :
+  marche au clavier / en emulateur, casse au doigt. Regle : un seuil partage clavier + tactile doit viser une valeur de
+  stick CONFORTABLE (pas la butee), tout en restant au-dessus des corrections automatiques (aimant) qui passent par le
+  meme canal. Ici : borne entre le max de l'aimant (0.45) et la butee clavier (1.0) -> 0.55.
+
+- **`GuiService:GetScreenResolution()` est reserve aux CoreScripts** (capacite `RobloxScript`) : appele depuis un script
+  normal il THROW "The current thread cannot call 'GetScreenResolution' (lacking capability RobloxScript)". Pour la
+  resolution / le viewport, lire `workspace.CurrentCamera.ViewportSize` (accessible partout ; nil tot au boot -> garder un
+  garde). Meme famille : plusieurs methodes de GuiService / des CoreGui sont CoreScript-only. Astuce bonus : distinguer
+  TELEPHONE de TABLETTE se fait par le RATIO d'ecran (cote long / court : ~2:1 = phone, ~4:3 = tablette), pas par un seuil
+  en pixels (le DPI le fausse). `TouchEnabled` seul ne suffit pas (il englobe les tablettes).
+
+- **`ControlModule:GetMoveVector()` rend un vecteur en repere CAMERA-monde, PAS en repere monde absolu.** "Pousser le stick
+  vers le haut" (ou W) = la direction AVANT de la camera, dont les composantes MONDE (X/Z) dependent de l'orientation. Tester
+  un axe monde en dur (ex `mv.Z < -0.2` pour "avance") ne marche donc que dans UNE orientation. Vecu sur la grimpe d'echelle :
+  ca montait sur PC (secours clavier `IsKeyDown(W)` qui, lui, est direct) mais PAS sur mobile des que l'echelle/camera ne
+  faisait pas face a -Z. Regle : pour detecter "pousser vers l'avant" independamment de l'orientation, PROJETER le move
+  vector sur le regard horizontal de la camera (`mv:Dot(camLookFlat)`), jamais lire un axe monde brut. Symptome trompeur :
+  "marche au clavier, pas au doigt" -> on cherche un input tactile manquant alors que l'input arrive, c'est le REPERE du test
+  qui est faux. Meme famille que le geste centre-corps mappe sur la position ecran du joueur.
+
+- **Un prompt "suis-je PRES de X" se detecte par distance RADIALE, pas par une BOX orientee.** Deux box laterales (posees
+  a un offset, orientees sur la longueur de l'objet) laissent des ANGLES MORTS : colle a un BOUT de l'objet, on tombe HORS
+  box -> pas de prompt, et GROSSIR la box ne bouche pas le trou (elle reste au mauvais endroit). Vecu sur la PRISE d'echelle
+  (prompt visible seulement colle a l'echelle). Fix : distance HORIZONTALE (X/Z) a une PART FIXE (RootPart, PAS `GetPivot`
+  qui suit la bounding box decalee par les zones welded), sous un rayon reglable. Un seul nombre, aucun angle mort,
+  independant de l'orientation du rig. Corollaire de COMMUNICATION : quand le joueur dit "mets le prompt plus LOIN", c'est
+  la DETECTION qu'il veut etendre, pas la hauteur d'AFFICHAGE (offset Y) -- deux reglages sans rapport. J'avais monte
+  l'offset (mauvais), il fallait etendre le rayon de detection.
 
 ## Design emotionnel
 
@@ -326,5 +558,8 @@ donc ils ne sont jamais ecrases.
 ## Contenu joueur (textes affiches)
 
 - **Ne jamais citer de noms de jeux connus.** Formulations generiques.
+- **Le public, c'est des ENFANTS (Roblox).** Vocabulaire simple, mots du quotidien. Eviter les termes d'adulte qu'un
+  gosse ne connait pas (ex : "retraite", "releve", jargon). Dans le doute, dire la chose CONCRETEMENT (ex : "trop vieux,
+  mal au dos" plutot que "en retraite"). Un mot qu'un enfant ne comprend pas casse l'immersion.
 - Pas de tiret cadratin en milieu de phrase. Couper en phrases nettes.
 - Tenir `CHANGELOG.md` (append-only, ne jamais effacer) a chaque feature.

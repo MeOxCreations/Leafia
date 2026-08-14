@@ -3,6 +3,8 @@
 --   PRISE (E)   : le joueur joue MoveForwardLadderAnimation ; au marqueur TakeLadderEvent, on demande au SERVEUR de
 --                 souder l'echelle a notre HRP et de jouer son REPLI. Puis pose de portage.
 --   PORTAGE     : rail le long de la haie (on deplace + oriente le JOUEUR) ; l'echelle, SOUDEE, le suit toute seule.
+--   ROTATION (R): on joue RotateLadderAnimation (geste de main) et on demande au serveur de tourner l'echelle 180 deg
+--                 (tween du C0 du weld -> vu par tous). Toggle : R rebascule a l'orientation de depart.
 --   REPOSE (E)  : on demande au serveur de retirer le weld, re-ancrer, et jouer le DEPLI. Puis on lache tout.
 -- Ce module (client) fait le rail JOUEUR, les animations JOUEUR (prise, portage, repose) et DECLENCHE le serveur. Le
 -- serveur (LadderMoveService) fait tout ce qui doit se repliquer sur l'echelle : le WELD (position) et son anim
@@ -13,26 +15,45 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local CollectionService = game:GetService("CollectionService")
-local Debris = game:GetService("Debris")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
+local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+
+-- Sons de l'echelle, ranges dans SoundService. On les CLONE au declenchement (SoundUtils), donc leur volume /
+-- pitch se reglent dans Studio.
+local LADDER_SOUND_PATH = { "Sounds", "Engins", "Ladder" }
 
 local player = Players.LocalPlayer
 
 -- Meme prefixe que LadderController : les modeles d'echelle s'appellent Escabaut_xxx.
 local LADDER_PREFIX = "Escabaut"
--- La zone de prise, posee comme enfant de CHAQUE model d'echelle.
-local MOVE_ZONE_NAME = "box_detecte_For_Move"
+-- Prompt "[F] PRENDRE" affiche quand le joueur est assez PRES d'une echelle. Verifie a intervalle (pas chaque frame :
+-- la detection balaie les echelles). Detection RADIALE (DETECT_RADIUS), pas une box : aucun angle mort. Cf ladderAt.
+local PROMPT_KEY = "F" -- PRENDRE l'echelle sur F (E est reserve a MONTER, cote LadderController)
+local PROMPT_LABEL = "PRENDRE"
+local PROMPT_TITLE = "LADDER" -- titre au-dessus du prompt (comme "MAILBOX" sur la boite), meme objet que la montee
+local PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-dessus de la racine (pas la distance de detection)
+local DETECT_RADIUS = 8 -- distance HORIZONTALE (studs) sous laquelle le prompt PRENDRE apparait. LE knob "detecter plus loin"
+local PROMPT_INTERVAL = 0.2
 -- Les deux anims sont dans un sous-dossier ModelAnimate (echelle + joueur).
 local ANIM_FOLDER = { "Animations", "Player", "Tools", "Ladder", "ModelAnimate" }
 local PLAYER_ANIM = "MoveForwardLadderAnimation" -- geste de PRISE (une fois) : le joueur attrape l'echelle
 local PLAYER_CARRY_ANIM = "IsReadyForMoveLadderAnimation" -- pose de PORTAGE, en boucle : jouee A LA FIN de la prise
+local PLAYER_ROTATE_ANIM = "RotateLadderAnimation" -- geste de MAIN a la rotation (R), joue une fois par-dessus le portage
 -- L'anim de l'echelle (repli / depli, ActionLadderAnimation) est jouee cote SERVEUR (LadderMoveService), pour se
 -- repliquer a tous. Ici on garde juste le marqueur du geste de prise qui declenche le repli, et l'attribut d'etat (lu).
 local TAKE_EVENT = "TakeLadderEvent" -- marqueur dans PLAYER_ANIM : instant ou on demande au serveur le repli
+local ROTATE_EVENT = "RotateAnimEvent" -- marqueur dans PLAYER_ROTATE_ANIM : instant ou on demande au serveur de tourner
 local CLOSED_ATTR = "LeafiaLadderClosed" -- attribut pose par le SERVEUR : true = repliee (lu a la prise / repose)
-local TAKE_KEY = Enum.KeyCode.E
+-- Pose sur le PERSO pendant qu'on porte une echelle (client-local). LadderController le lit pour NE PAS grimper :
+-- une echelle portee est soudee a nous, donc ses zones de grimpe nous suivent et on grimperait sa propre echelle.
+-- Meme nom cote LadderController (les deux doivent rester d'accord).
+local CARRYING_ATTR = "LeafiaCarryingLadder"
+local TAKE_KEY = Enum.KeyCode.F -- prendre / reposer l'echelle (E est reserve a MONTER, cote LadderController)
+local ROTATE_KEY = Enum.KeyCode.R -- tourne l'echelle 180 degres pendant qu'on la porte
+local ROTATE_DEBOUNCE = 0.45 -- anti-spam de R : environ la duree du tween serveur, pour ne pas relancer en plein tour
 -- Pendant le portage, le joueur est sur un RAIL comme en taille : il glisse LE LONG de la haie a distance
 -- constante, face a elle. Il ne peut pas partir dans la map.
 local FACE_SPEED = 10 -- lissage du pivot vers la haie
@@ -47,6 +68,12 @@ local MAGNET_K = 1.2 -- force de rappel a la distance de travail (proportionnell
 -- l'echelle et on la pousse DEVANT de sorte que son bord le plus proche soit a cette distance du joueur : le perso
 -- n'est donc JAMAIS dans l'echelle, quelle que soit sa taille (fini le reglage au pif). Monter = echelle plus loin devant.
 local CARRY_CLEARANCE = 1
+-- ORIENTATION de l'echelle quand on la porte, en degres autour de la verticale, RELATIVE a "face a la haie" (0 =
+-- l'echelle alignee comme le joueur qui regarde la haie). On ne capture plus la pose Studio d'origine (souvent de
+-- travers) : c'est CETTE valeur qui fixe le sens, donc la repose est toujours pareille et bien orientee vers la
+-- haie. A REGLER a l'oeil : prends l'echelle, si elle fait face de travers essaie 90, 180 ou 270 jusqu'a ce que
+-- son cote de grimpe soit bien vers la haie.
+local CARRY_YAW_DEGREES = 90
 local DETACH_INPUT = 0.5 -- pousse arriere (part Z de l'input) au-dela de laquelle on se detache de la haie
 -- Portee du FOCUS : au-dela, la haie est ignoree (pas d'aimant vers une haie lointaine). DOIT rester > WORK_DIST (5),
 -- sinon l'aimant tiendrait le joueur juste HORS de la portee et le focus se couperait aussitot. Baisser = il faut
@@ -67,15 +94,16 @@ local PICKUP_DEBOUNCE = 0.6
 -- SONS de l'echelle. A REMPLIR : mets l'ID de tes sons ("rbxassetid://..."). Vide = aucun son (pas d'erreur). Le son
 -- est SPATIAL (joue a l'endroit de l'echelle). Pour l'instant client-local (le porteur l'entend) : quand on fera le
 -- co-op de l'echelle, il passera cote serveur pour que les autres l'entendent aussi.
-local PICKUP_SOUND = "" -- son joue quand on PREND l'echelle
-local PLACE_SOUND = "" -- son joue quand on REPOSE l'echelle
-local LADDER_SOUND_VOLUME = 0.6
+local PICKUP_SOUND = "LadderTakeSound" -- son joue quand on PREND l'echelle (dans LADDER_SOUND_PATH)
+local PICKUP_SOUND_DELAY = 0.15 -- retard du son de prise : le geste attrape l'echelle un poil apres l'appui (0.1 a 0.2)
+local PLACE_SOUND = "LadderDeposeSound" -- son joue quand on REPOSE l'echelle
 
 -- Etat : non-nil = on est en train de porter (ou de prendre) une echelle.
 local carriedLadder: Instance? = nil
 local playerTrack: AnimationTrack? = nil -- geste de prise (une fois)
 local carryTrack: AnimationTrack? = nil -- pose de portage (jouee une fois puis figee a la derniere image)
 local placeTrack: AnimationTrack? = nil -- geste de repose = geste de prise joue A L'ENVERS (one-shot)
+local rotateTrack: AnimationTrack? = nil -- geste de main a la rotation (R), joue une fois par-dessus le portage
 local takeConn: RBXScriptConnection? = nil
 local endConn: RBXScriptConnection? = nil
 -- Rail de portage : bind RenderStep actif ? + AutoRotate d'origine a rendre a la fin. controlModule = le module de
@@ -88,10 +116,6 @@ local RAIL_NAME = "LadderCarryRail"
 -- instant (os.clock) avant lequel le re-focus est bloque, pose apres un detachement volontaire (le temps de s'ecarter).
 local carryMode = "focus"
 local refocusBlockUntil = 0
--- Offset CANONIQUE de l'echelle dans les mains, capture UNE SEULE FOIS (a la 1re prise, echelle a sa pose d'origine
--- carree). Reutilise a chaque prise : l'echelle est donc TOUJOURS reprise droite, meme si une pose libre l'a laissee
--- de travers (sinon le travers se recapturait et s'accumulait). Constante de rig : jamais remis a zero.
-local canonicalOffset: CFrame? = nil
 -- ToggleTool bascule l'outil (equipe <-> range). On ne le declenche QUE quand le taille-haie est en main, pour le
 -- RANGER a la prise (sinon on l'equiperait par erreur). Prendre l'echelle ne demande PAS d'avoir l'outil.
 local toggleToolRemote: RemoteEvent? = nil
@@ -103,6 +127,17 @@ local carryRemote: RemoteEvent? = nil
 local ownsLadder = false
 local lastEquipCheck = 0 -- throttle du test de proximite haie pour l'auto-equip
 local lastActionAt = 0 -- instant de la derniere prise/repose, pour l'anti-spam de E (PICKUP_DEBOUNCE)
+local lastRotateAt = 0 -- instant de la derniere rotation, pour l'anti-spam de R (ROTATE_DEBOUNCE)
+
+-- Boutons tactiles de portage (mobile), lies au portage : bind au debut, unbind a la fin. Assignes plus bas, une fois
+-- placeLadder / rotateCarry definis (interdit d'appeler une fonction au-dessus de sa definition -> forward declare).
+local bindCarryButtons: () -> () = function() end
+local unbindCarryButtons: () -> () = function() end
+local lastPromptAt = 0 -- throttle du test de zone pour le prompt
+local currentPromptLadder: Instance? = nil -- echelle dont le prompt est affiche (pour ne (re)montrer qu'au CHANGEMENT)
+-- Cache des modeles d'echelle : detecter la zone chaque tick sans balayer tous les descendants du workspace
+-- (des milliers de carreaux de haie). Reconstruit quand une echelle apparait / disparait.
+local laddersCache: { Instance }? = nil
 
 local LadderMoveController = {}
 
@@ -112,21 +147,17 @@ local function getRoot(): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
--- Joue un son ponctuel a l'endroit de l'echelle (spatial). soundId vide = rien. On cree un Sound jetable sur une part
--- de l'echelle, on le joue, et Debris le detruit apres (garde-fou si Ended ne tire pas, ex : ID absent).
-local function playLadderSound(soundId: string, ladder: Instance?)
-	if soundId == "" then
+-- Joue un son ponctuel de l'echelle (clone depuis SoundService, spatial sur l'echelle). Nom vide = rien.
+local function playLadderSound(soundName: string, ladder: Instance?)
+	if soundName == "" then
 		return
 	end
 	local host: BasePart? = if ladder and ladder:IsA("Model")
 		then (ladder.PrimaryPart or ladder:FindFirstChildWhichIsA("BasePart", true))
-		else nil
-	local sound = Instance.new("Sound")
-	sound.SoundId = soundId
-	sound.Volume = LADDER_SOUND_VOLUME
-	sound.Parent = host or getRoot() -- a defaut d'echelle, sur le perso (le son reste audible)
-	sound:Play()
-	Debris:AddItem(sound, 5)
+		else getRoot() -- a defaut d'echelle, sur le perso (le son reste audible)
+	local path = table.clone(LADDER_SOUND_PATH)
+	table.insert(path, soundName)
+	SoundUtils.play(path, host)
 end
 
 -- Taille-haie en main ? La lame (HitBoxRoot) n'existe dans le perso QUE quand l'outil est equipe (meme signal que
@@ -160,22 +191,56 @@ end
 -- Input BRUT du joueur (camera-relatif) : X = pas de cote, Z = avant/arriere (negatif vers l'avant). On passe par le
 -- module de controle car une fois qu'on contraint le deplacement avec humanoid:Move, humanoid.MoveDirection ne reflete
 -- plus l'intention du joueur mais notre contrainte.
-local function getMoveVector(): Vector3
-	if not controlModule then
+-- ControlModule recupere UNE fois EN TACHE DE FOND. require(PlayerModule) peut YIELD longtemps (WaitForChild ~10-20s en
+-- place secondaire). Le laisser dans getMoveVector -- appele PAR FRAME dans carryStep -- gelait la boucle de portage tout
+-- le temps du WaitForChild. Ici zero yield par frame : getMoveVector rend zero tant que ce n'est pas pret.
+task.spawn(function()
+	while not controlModule do
 		local ok, result = pcall(function()
 			local scripts = player:WaitForChild("PlayerScripts", 10)
 			local playerModule = scripts and require(scripts:WaitForChild("PlayerModule", 10)) :: any
 			return playerModule and playerModule:GetControls()
 		end)
-		if not (ok and result) then
-			return Vector3.zero
+		if ok and result then
+			controlModule = result
+		else
+			task.wait(0.3) -- RETRY : au boot (surtout place secondaire) PlayerModule / GetControls peut ne pas etre pret
 		end
-		controlModule = result
 	end
-	local ok, vector = pcall(function()
-		return controlModule:GetMoveVector()
-	end)
-	return if ok and typeof(vector) == "Vector3" then vector else Vector3.zero
+end)
+
+local function getMoveVector(): Vector3
+	local vec = Vector3.zero
+	local cm = controlModule
+	if cm then
+		local ok, v = pcall(function()
+			return cm:GetMoveVector()
+		end)
+		if ok and typeof(v) == "Vector3" then
+			vec = v
+		end
+	end
+	-- SECOURS CLAVIER : si le module de controle custom rend du VIDE (place secondaire / tuto), on lit WASD en direct
+	-- pour que le portage reponde quand meme. X = pas de cote (D +, A -), Z = avant/arriere (W -, S +, convention Roblox).
+	if vec.Magnitude < 0.05 then
+		local x, z = 0, 0
+		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+			z -= 1
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+			z += 1
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+			x -= 1
+		end
+		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+			x += 1
+		end
+		if x ~= 0 or z ~= 0 then
+			vec = Vector3.new(x, 0, z)
+		end
+	end
+	return vec
 end
 
 -- Normale SORTANTE de la face de haie la plus proche (on ignore Y : la haie est un mur vertical). Discrete : elle
@@ -234,10 +299,13 @@ local function isDetectionPart(part: Instance, ladder: Instance): boolean
 	return false
 end
 
--- Z le plus vers le JOUEUR (bord ARRIERE de l'echelle) parmi ses parts STRUCTURELLES, exprime dans le repere carre.
--- Sert a reculer le joueur juste derriere l'echelle, quelle que soit sa taille. On parcourt les 8 coins de chaque part
--- (hors zones) : robuste a l'orientation du rig. Appele UNE fois a la 1re prise (capture de canonicalOffset).
-local function ladderBackEdgeZ(ladder: Instance, square: CFrame): number
+-- Encombrement ARRIERE de l'echelle (vers le joueur) quand elle est portee a un YAW donne, en distance depuis sa
+-- RootPart. On mesure les 8 coins de chaque part STRUCTURELLE en repere ECHELLE (relatif a sa RootPart, donc
+-- INDEPENDANT de son orientation actuelle), puis on applique le yaw de portage : ca donne de combien reculer
+-- l'echelle pour que son dos soit a CARRY_CLEARANCE du joueur, a CE yaw. Robuste au rig (aucune supposition sur
+-- quel axe est le devant).
+local function ladderBackOffsetForYaw(ladder: Instance, ladderRoot: BasePart, yaw: number): number
+	local rot = CFrame.Angles(0, yaw, 0)
 	local maxZ = -math.huge
 	for _, part in ipairs(ladder:GetDescendants()) do
 		if part:IsA("BasePart") and not isDetectionPart(part, ladder) then
@@ -245,8 +313,9 @@ local function ladderBackEdgeZ(ladder: Instance, square: CFrame): number
 			for _, sx in ipairs({ -1, 1 }) do
 				for _, sy in ipairs({ -1, 1 }) do
 					for _, sz in ipairs({ -1, 1 }) do
-						local corner = part.CFrame * Vector3.new(sx * half.X, sy * half.Y, sz * half.Z)
-						maxZ = math.max(maxZ, square:PointToObjectSpace(corner).Z)
+						local world = part.CFrame * Vector3.new(sx * half.X, sy * half.Y, sz * half.Z)
+						local localCorner = ladderRoot.CFrame:PointToObjectSpace(world)
+						maxZ = math.max(maxZ, (rot * localCorner).Z)
 					end
 				end
 			end
@@ -254,6 +323,7 @@ local function ladderBackEdgeZ(ladder: Instance, square: CFrame): number
 	end
 	return if maxZ > -math.huge then maxZ else 0
 end
+
 
 -- PORTAGE (priorite Camera, apres le module de controle -> notre Move ecrase ses touches). Deux modes :
 --   FOCUS : rail le long de la haie (distance constante, face a elle), l'echelle reste carree avec la haie.
@@ -336,6 +406,7 @@ end
 -- On DECLENCHE les actions serveur sur l'echelle par phase :
 --   "grab"    : soude l'echelle a notre HRP (offset c0) -> elle suit + se replique.
 --   "close"   : le serveur joue le REPLI (au marqueur de prise). Joue serveur pour se repliquer a tous.
+--   "rotate"  : le serveur tween le C0 du weld -> l'echelle tourne 180 degres pour tous (toggle).
 --   "place"   : retire le weld, re-ancre, et joue le DEPLI.
 --   "release" : retire le weld + re-ancre sans depli (mort / respawn).
 local function fireCarry(ladder: Instance, phase: string, c0: CFrame?)
@@ -347,6 +418,12 @@ end
 -- PRISE : on soude (grab). ownsLadder retient qu'on tient l'echelle, pour la relacher meme sur une mort.
 local function grabCarry(ladder: Instance, c0: CFrame)
 	ownsLadder = true
+	-- On PORTE : bloque la grimpe (LadderController lit cet attribut). Pose des la prise, avant que le weld ne
+	-- fasse suivre les zones de grimpe.
+	local character = player.Character
+	if character then
+		character:SetAttribute(CARRYING_ATTR, true)
+	end
 	fireCarry(ladder, "grab", c0)
 end
 
@@ -356,6 +433,11 @@ local function endCarry(ladder: Instance, phase: string)
 		return
 	end
 	ownsLadder = false
+	-- Fin de portage : on rend la grimpe possible.
+	local character = player.Character
+	if character then
+		character:SetAttribute(CARRYING_ATTR, nil)
+	end
 	fireCarry(ladder, phase)
 end
 
@@ -374,6 +456,7 @@ local function startCarry()
 	refocusBlockUntil = 0
 	carryBound = true
 	RunService:BindToRenderStep(RAIL_NAME, Enum.RenderPriority.Camera.Value, carryStep)
+	bindCarryButtons() -- pose les boutons tactiles DROP / TURN (mobile) le temps du portage
 end
 
 -- Beams de l'echelle (le rectangle de zone area_color_action) : caches pendant le portage, remontres a la repose.
@@ -393,6 +476,7 @@ local function stopCarry()
 		RunService:UnbindFromRenderStep(RAIL_NAME)
 		carryBound = false
 	end
+	unbindCarryButtons() -- retire les boutons tactiles DROP / TURN (mobile)
 	local humanoid = getHumanoid()
 	if humanoid and savedAutoRotate ~= nil then
 		humanoid.AutoRotate = savedAutoRotate
@@ -413,6 +497,10 @@ local function stopCarry()
 	if carryTrack then
 		carryTrack:Stop(0.1)
 		carryTrack = nil
+	end
+	if rotateTrack then
+		rotateTrack:Stop(0)
+		rotateTrack = nil
 	end
 	if carriedLadder then
 		setLadderBeams(carriedLadder, true) -- l'echelle est reposee (ou on est mort) : la zone redevient visible
@@ -501,25 +589,56 @@ local function placeLadder()
 	playPlaceGesture()
 end
 
--- Echelle dont le box_detecte_For_Move contient la position donnee, ou nil.
+-- Modeles d'echelle du Workspace, EN CACHE. ladderAt tourne maintenant EN CONTINU (pour le prompt), on ne peut
+-- plus balayer tous les descendants (des milliers de carreaux) a chaque appel. Le cache se reconstruit quand une
+-- echelle apparait / disparait (voir init, filtre par nom : les carreaux ne le touchent pas). GetDescendants (une
+-- fois) : l'echelle reste trouvee meme rangee dans un dossier.
+local function getLadders(): { Instance }
+	local cached = laddersCache
+	if cached then
+		return cached
+	end
+	local list: { Instance } = {}
+	for _, d in ipairs(workspace:GetDescendants()) do
+		if d:IsA("Model") and d.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
+			table.insert(list, d)
+		end
+	end
+	laddersCache = list
+	return list
+end
+
+-- RootPart de l'echelle (PrimaryPart, sinon enfant "RootPart"). Reference FIXE, contrairement a GetPivot qui suit la
+-- bounding box (que les zones welded decalent). Meme source que le portage.
+local function ladderRootPart(ladder: Instance): BasePart?
+	if ladder:IsA("Model") then
+		local r = ladder.PrimaryPart or ladder:FindFirstChild("RootPart")
+		return if r and r:IsA("BasePart") then r else nil
+	end
+	return nil
+end
+
+-- Echelle PRENABLE la plus proche de la position, ou nil. Detection RADIALE : distance HORIZONTALE (X/Z) a la RootPart
+-- de l'echelle, sous DETECT_RADIUS. Un seul rayon -> AUCUN angle mort, independant de l'orientation du rig. Les anciennes
+-- box laterales (offset 3) laissaient des trous : colle a un bout de l'echelle, on tombait HORS zone -> pas de prompt.
+-- On rend la PLUS PROCHE dans le rayon.
 local function ladderAt(position: Vector3): Instance?
-	-- GetDescendants (et pas GetChildren) : l'echelle reste detectee meme rangee dans un dossier d'organisation.
-	-- Cout OK : ladderAt ne tourne qu'a l'appui sur E, pas chaque frame (contrairement a la grimpe, qui elle cache).
-	for _, child in ipairs(workspace:GetDescendants()) do
-		if child.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
-			local zone = child:FindFirstChild(MOVE_ZONE_NAME)
-			if zone and zone:IsA("BasePart") then
-				local rel = zone.CFrame:PointToObjectSpace(position)
-				local half = zone.Size * 0.5
-				-- On IGNORE Y (comme les zones de grimpe) : la zone n'a pas besoin d'englober le torse en hauteur, seul
-				-- l'emplacement au sol (X/Z) compte. Tester Y faisait rater la detection quand la box etait basse.
-				if math.abs(rel.X) <= half.X and math.abs(rel.Z) <= half.Z then
-					return child
+	local best: Instance? = nil
+	local bestDist = DETECT_RADIUS
+	for _, ladder in ipairs(getLadders()) do
+		if ladder.Parent then
+			local root = ladderRootPart(ladder)
+			if root then
+				local flat = (root.Position - position) * Vector3.new(1, 0, 1) -- Y ignore : une echelle se prend au sol
+				local dist = flat.Magnitude
+				if dist <= bestDist then
+					best = ladder
+					bestDist = dist
 				end
 			end
 		end
 	end
-	return nil
+	return best
 end
 
 local function pickUp(ladder: Instance)
@@ -536,7 +655,13 @@ local function pickUp(ladder: Instance)
 		placeTrack = nil
 	end
 	carriedLadder = ladder
-	playLadderSound(PICKUP_SOUND, ladder) -- son de prise
+	-- Son de prise RETARDE : le geste (MoveForwardLadderAnimation) attrape l'echelle un peu apres l'appui, le son colle
+	-- mieux decale. Garde : si on ne porte plus CETTE echelle a l'echeance (respawn, repose eclair), on ne joue rien.
+	task.delay(PICKUP_SOUND_DELAY, function()
+		if carriedLadder == ladder then
+			playLadderSound(PICKUP_SOUND, ladder)
+		end
+	end)
 	setLadderBeams(ladder, false) -- on cache la zone (Beams) tant qu'on porte l'echelle
 
 	-- L'echelle est-elle DEJA repliee ? (pose par FermerEvenement lors d'un repli precedent). Si oui, on ne rejoue
@@ -561,28 +686,25 @@ local function pickUp(ladder: Instance)
 		local square0 = if hedge0
 			then CFrame.lookAt(root0.Position, root0.Position - faceNormal(hedge0, root0.Position))
 			else root0.CFrame
-		-- Offset CANONIQUE (pivot de l'echelle dans le repere carre), capture UNE seule fois (1re prise, echelle droite).
-		-- On le REUTILISE ensuite : l'echelle est donc toujours reprise droite, meme si une pose libre l'a laissee de
-		-- travers. On ANNULE le decalage lateral (X : echelle centree), on garde la hauteur (Y), la rotation captee, et
-		-- on calcule la profondeur (Z) INTELLIGEMMENT : bord arriere de l'echelle a CARRY_CLEARANCE studs du joueur.
-		if canonicalOffset == nil then
-			local pivotInSquare = square0:ToObjectSpace(ladder:GetPivot())
-			local p = pivotInSquare.Position
-			local backOffset = ladderBackEdgeZ(ladder, square0) - p.Z -- distance pivot -> bord arriere (constante du rig)
-			-- Le joueur est a Z=0, la haie vers -Z. On pose l'echelle a -Z pour que son bord arriere tombe a -CLEARANCE :
-			-- le perso reste donc CARRY_CLEARANCE studs derriere l'echelle, jamais dedans, quelle que soit sa taille.
-			canonicalOffset = CFrame.new(0, p.Y, -(CARRY_CLEARANCE + backOffset)) * pivotInSquare.Rotation
-		end
+		-- Offset base sur la ROOTPART, PAS sur ladder:GetPivot() : GetPivot suit la BOUNDING BOX du model, que les
+		-- zones de detection generees (box_detecte_For_Move, soudees a la racine, decalees sur les cotes + au sol)
+		-- DECALENT et DESORIENTENT -> l'echelle partait de travers. La RootPart, elle, ne bouge pas.
+		-- ORIENTATION DE PORTAGE FIXE et reglable (CARRY_YAW_DEGREES), relative au repere carre (face a la haie). On ne
+		-- capture PLUS le yaw d'origine de l'echelle : il venait de sa pose Studio, souvent de travers -> portee ET
+		-- reposee de travers pour toujours. Ici le sens est CONNU, donc la repose est toujours pareille et bien orientee
+		-- vers la haie. X centre, Y garde la hauteur, Z recule pour que le dos soit a CARRY_CLEARANCE du joueur.
+		local heightY = square0:ToObjectSpace(ladderRoot.CFrame).Position.Y
+		-- SENS DETERMINISTE : toujours CARRY_YAW_DEGREES, jamais son oppose. On avait un flip 0/180 "le plus proche de la
+		-- pose plantee", mais l'echelle REPLIEE est ~symetrique : le flip choisissait parfois l'oppose sans que ca se voie
+		-- a la prise, et au DEPLI (repose) l'echelle se retrouvait a 180 de travers. Un sens unique = repose toujours bonne.
+		local yaw = math.rad(CARRY_YAW_DEGREES)
+		-- Bord arriere mesure A CE yaw : l'echelle recule pile ce qu'il faut, quelle que soit l'orientation choisie.
+		local backOffset = ladderBackOffsetForYaw(ladder, ladderRoot, yaw)
+		local offset = CFrame.new(0, heightY, -(CARRY_CLEARANCE + backOffset)) * CFrame.Angles(0, yaw, 0)
 
-		-- OFFSET DE SOUDURE (c0) : la CFrame de la RootPart a la position de portage voulue, exprimee dans le REPERE CARRE
-		-- (face a la haie), PAS dans le HRP courant. C'est crucial : la soudure fige l'echelle relative au HRP, et le HRP
-		-- fait face a la haie EN PORTAGE (le rail l'y tient). Si on prenait le HRP de la PRISE (pas encore tourne vers la
-		-- haie), l'echelle finirait de travers une fois le joueur retourne. En calant sur le repere carre, l'echelle est
-		-- alignee sur la haie des que le joueur l'est. Le serveur soude : RootPart = HRP.CFrame * c0.
-		local desiredPivot = square0 * (canonicalOffset :: CFrame)
-		local rootRelPivot = ladder:GetPivot():ToObjectSpace(ladderRoot.CFrame) -- constante du rig (racine vs pivot)
-		local c0 = square0:ToObjectSpace(desiredPivot * rootRelPivot)
-		grabCarry(ladder, c0) -- le serveur soude l'echelle a notre HRP : elle suit + se replique a tous
+		-- SOUDURE : le serveur fige RootPart = HRP.CFrame * offset. Le HRP fait face a la haie EN PORTAGE (square0, le
+		-- rail l'y tient), donc l'echelle se cale droite devant et bien orientee des que le joueur l'est.
+		grabCarry(ladder, offset) -- soude l'echelle au HRP : elle suit + se replique a tous
 	end
 
 	-- Stance FOCUS : rail le long de la haie, face a elle, tant qu'on porte l'echelle.
@@ -639,6 +761,204 @@ local function pickUp(ladder: Instance)
 	end)
 end
 
+-- ROTATION (touche R) pendant le portage. Le SERVEUR tourne l'echelle (tween du weld -> vu par tous) ; ICI on
+-- joue le geste de main par-dessus la pose de portage, et on demande la rotation au marqueur RotateAnimEvent
+-- (l'echelle tourne PILE quand la main la fait tourner). Le geste, joue sur SON propre perso, se replique aussi
+-- aux autres.
+local function rotateCarry()
+	local ladder = carriedLadder
+	if not ladder then
+		return
+	end
+
+	local animator = getPlayerAnimator()
+	if not animator then
+		-- Pas d'animator (respawn en cours) : on tourne quand meme, le geste n'est qu'un plus.
+		fireCarry(ladder, "rotate")
+		return
+	end
+	-- Rechargee a chaque fois (action rare) ; on coupe la precedente pour que deux R rapproches ne se chevauchent pas.
+	if rotateTrack then
+		rotateTrack:Stop(0)
+		rotateTrack = nil
+	end
+	local track = loadTrack(animator, PLAYER_ROTATE_ANIM)
+	if not track then
+		fireCarry(ladder, "rotate")
+		return
+	end
+	rotateTrack = track
+	-- Action3 : AU-DESSUS de la pose de portage (Action2). Le geste prend le pas pendant qu'il joue, puis rend la
+	-- main a la pose de portage figee. Une seule fois.
+	track.Priority = Enum.AnimationPriority.Action3
+	track.Looped = false
+
+	-- On tourne l'echelle AU MARQUEUR (sync avec la main), une seule fois. Secours a l'arret de la piste : a la
+	-- 1re lecture de la session, l'asset peut ne pas etre charge et le marqueur ne pas tirer -> sans ce secours,
+	-- l'echelle ne tournerait pas du tout ce coup-la.
+	local fired = false
+	local markerConn: RBXScriptConnection? = nil
+	local stopConn: RBXScriptConnection? = nil
+	local function doRotate()
+		if fired then
+			return
+		end
+		fired = true
+		fireCarry(ladder, "rotate")
+		if markerConn then
+			markerConn:Disconnect()
+		end
+		if stopConn then
+			stopConn:Disconnect()
+		end
+	end
+	markerConn = track:GetMarkerReachedSignal(ROTATE_EVENT):Connect(doRotate)
+	stopConn = track.Stopped:Connect(doRotate)
+	track:Play(0.1)
+end
+
+-- Prompt "[E] PRENDRE" : affiche quand on ENTRE dans une zone (et qu'on ne porte pas), cache sinon. On ne
+-- (re)montre qu'au CHANGEMENT d'echelle. Throttle car detecter la zone balaie les echelles. Sur mobile, le tap
+-- du prompt prend l'echelle (meme chose que E), avec le meme anti-spam.
+local function updatePrompt()
+	if os.clock() - lastPromptAt < PROMPT_INTERVAL then
+		return
+	end
+	lastPromptAt = os.clock()
+
+	local root = getRoot()
+	local ladder: Instance? = if root and not carriedLadder then ladderAt(root.Position) else nil
+	if ladder == currentPromptLadder then
+		return
+	end
+	currentPromptLadder = ladder
+
+	if ladder and ladder:IsA("Model") then
+		local model = ladder
+		local target = model.PrimaryPart or model:FindFirstChild("RootPart")
+		if target and target:IsA("BasePart") then
+			InteractionPrompt.show(target, PROMPT_KEY, PROMPT_LABEL, PROMPT_OFFSET, function()
+				if os.clock() - lastActionAt < PICKUP_DEBOUNCE then
+					return
+				end
+				lastActionAt = os.clock()
+				pickUp(model)
+			end, PROMPT_TITLE)
+			return
+		end
+	end
+	InteractionPrompt.hide()
+end
+
+-- Declencheurs CENTRAUX des 3 actions, chacun anti-spammé. Clavier (UserInputService) ET tactile (ContextActionService,
+-- mobile) tapent ces memes fonctions : appeler deux fois dans la meme frame est sans risque, le debounce absorbe le 2e.
+local function tryPickup()
+	if carriedLadder or os.clock() - lastActionAt < PICKUP_DEBOUNCE then
+		return
+	end
+	local root = getRoot()
+	if not root then
+		return
+	end
+	local ladder = ladderAt(root.Position)
+	if ladder then
+		lastActionAt = os.clock()
+		pickUp(ladder)
+	end
+end
+
+local function tryPlace()
+	if not carriedLadder or os.clock() - lastActionAt < PICKUP_DEBOUNCE then
+		return
+	end
+	lastActionAt = os.clock()
+	placeLadder()
+end
+
+local function tryRotate()
+	if not (carriedLadder and ownsLadder) or os.clock() - lastRotateAt < ROTATE_DEBOUNCE then
+		return
+	end
+	lastRotateAt = os.clock()
+	rotateCarry()
+end
+
+-- Boutons tactiles DROP / TURN du portage (MOBILE uniquement). ScreenGui custom (PAS ContextActionService, dont les
+-- boutons ronds plats sont moches et auto-alignes cote a cote) : on maitrise la POSITION (en DIAGONALE, a gauche du
+-- bouton de saut, sans le chevaucher) et le STYLE. Crees UNE fois, caches par defaut ; bindCarryButtons les montre le
+-- temps du portage, unbindCarryButtons les cache. Le clavier (F / R) reste gere par UserInputService (voir init), donc
+-- rien a l'ecran sur PC. La PRISE se fait au tap du prompt d'interaction (updatePrompt), pas ici.
+local IS_TOUCH = UserInputService.TouchEnabled
+local carryButtonsGui: ScreenGui? = nil
+local CARRY_BTN_SIZE = 54 -- diametre d'un bouton (px GUI). Plus petit = moins encombrant
+-- Positions : AnchorPoint bas-droite (1,1), offsets en px GUI depuis le coin bas-droite (ou vit le bouton de saut Roblox).
+-- ATTENTION : px GUI (points), PAS px physiques -- sur ce type d'ecran l'unite GUI fait ~2.4x le pixel d'une CAPTURE, donc
+-- de gros offsets propulsent les boutons au CENTRE. DIAGONALE "/" : TURN en BAS a gauche, DROP en HAUT a droite (vers le
+-- pouce / le saut). Valeurs calibrees sur capture, A affiner a l'oeil.
+local DROP_BTN_POS = UDim2.new(1, -93, 1, -148)
+local TURN_BTN_POS = UDim2.new(1, -153, 1, -68)
+local DROP_BTN_COLOR = Color3.fromRGB(255, 146, 237) -- rose (fond du bouton DROP)
+local TURN_BTN_COLOR = Color3.fromRGB(164, 73, 221) -- violet (fond du bouton TURN)
+local CARRY_BTN_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy) -- Heavy = Black (900)
+
+local function makeCarryButton(name: string, label: string, pos: UDim2, bg: Color3, onPress: () -> ()): TextButton
+	local btn = Instance.new("TextButton")
+	btn.Name = name
+	btn.AnchorPoint = Vector2.new(1, 1)
+	btn.Position = pos
+	btn.Size = UDim2.fromOffset(CARRY_BTN_SIZE, CARRY_BTN_SIZE)
+	btn.BackgroundColor3 = bg
+	btn.BackgroundTransparency = 0
+	btn.Text = label
+	btn.TextColor3 = Color3.new(1, 1, 1)
+	btn.FontFace = CARRY_BTN_FONT
+	btn.TextScaled = true
+	btn.BorderSizePixel = 0
+	local corner = Instance.new("UICorner") :: UICorner
+	corner.CornerRadius = UDim.new(1, 0) -- cercle plein
+	corner.Parent = btn
+	local pad = Instance.new("UIPadding") -- marge interne pour que le texte ne colle pas au bord du rond
+	pad.PaddingTop = UDim.new(0.3, 0)
+	pad.PaddingBottom = UDim.new(0.3, 0)
+	pad.PaddingLeft = UDim.new(0.16, 0)
+	pad.PaddingRight = UDim.new(0.16, 0)
+	pad.Parent = btn
+	btn.Activated:Connect(onPress)
+	return btn
+end
+
+local function ensureCarryButtonsGui()
+	if carryButtonsGui or not IS_TOUCH then
+		return
+	end
+	local sg = Instance.new("ScreenGui")
+	sg.Name = "LeafiaLadderCarry"
+	sg.ResetOnSpawn = false -- survit aux respawns : on ne veut pas la recreer a chaque mort
+	sg.DisplayOrder = 5
+	sg.Enabled = false
+	sg:SetAttribute("LeafiaNoSlime", true) -- pas de slime auto (ButtonSlimeController) sur ces boutons
+	makeCarryButton("Turn", "TURN", TURN_BTN_POS, TURN_BTN_COLOR, tryRotate).Parent = sg
+	makeCarryButton("Drop", "DROP", DROP_BTN_POS, DROP_BTN_COLOR, tryPlace).Parent = sg
+	sg.Parent = player:WaitForChild("PlayerGui")
+	carryButtonsGui = sg
+end
+
+bindCarryButtons = function()
+	if not IS_TOUCH then
+		return -- PC : le clavier (F / R) gere tout, aucun bouton a l'ecran
+	end
+	ensureCarryButtonsGui()
+	if carryButtonsGui then
+		carryButtonsGui.Enabled = true
+	end
+end
+
+unbindCarryButtons = function()
+	if carryButtonsGui then
+		carryButtonsGui.Enabled = false
+	end
+end
+
 function LadderMoveController.init()
 	local toggle = RemoteSetup.getRemote("ToggleTool", "Tool")
 	if toggle and toggle:IsA("RemoteEvent") then
@@ -651,32 +971,25 @@ function LadderMoveController.init()
 	if carry and carry:IsA("RemoteEvent") then
 		carryRemote = carry
 	else
-		warn("[LadderMove] Remote Ladder/SetLadderCarry introuvable : le portage ne sera pas visible des autres joueurs")
+		warn(
+			"[LadderMove] Remote Ladder/SetLadderCarry introuvable : le portage ne sera pas visible des autres joueurs"
+		)
 	end
 
+	-- Clavier (PC). Sur mobile, les boutons tactiles DROP / TURN (ScreenGui custom) tapent les memes tryXxx pendant le
+	-- portage ; la PRISE, elle, se fait au tap du prompt d'interaction (updatePrompt). F = prendre / reposer, R = tourner.
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
-		if gameProcessed or input.KeyCode ~= TAKE_KEY then
+		if gameProcessed then
 			return
 		end
-		-- ANTI-SPAM : on ignore E s'il suit de trop pres la derniere prise/repose. Sinon un double-tap posait l'echelle
-		-- avant que son repli ait joue, et l'anim etait zappee.
-		if os.clock() - lastActionAt < PICKUP_DEBOUNCE then
-			return
-		end
-		if carriedLadder then
-			-- Deja en train de porter : ce 2e appui REPOSE l'echelle (deplie + arret du portage).
-			lastActionAt = os.clock()
-			placeLadder()
-			return
-		end
-		local root = getRoot()
-		if not root then
-			return
-		end
-		local ladder = ladderAt(root.Position)
-		if ladder then
-			lastActionAt = os.clock()
-			pickUp(ladder)
+		if input.KeyCode == ROTATE_KEY then
+			tryRotate()
+		elseif input.KeyCode == TAKE_KEY then
+			if carriedLadder then
+				tryPlace()
+			else
+				tryPickup()
+			end
 		end
 	end)
 
@@ -684,17 +997,37 @@ function LadderMoveController.init()
 	-- pistes lachees). Sans ca, le rail tournerait sur un root disparu et carriedLadder resterait bloque.
 	player.CharacterAdded:Connect(function()
 		stopCarry()
+		-- Nouveau perso : on repart sans prompt (l'ancien pointait sur l'ancienne position).
+		currentPromptLadder = nil
+		InteractionPrompt.hide()
 	end)
+
+	-- Cache des echelles : invalide des qu'une echelle apparait / disparait (filtre par nom : les carreaux de
+	-- haie qui s'ajoutent ne le touchent pas).
+	local function invalidateIfLadder(inst: Instance)
+		if inst:IsA("Model") and inst.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
+			laddersCache = nil
+		end
+	end
+	workspace.DescendantAdded:Connect(invalidateIfLadder)
+	workspace.DescendantRemoving:Connect(invalidateIfLadder)
 
 	-- AUTO-EQUIP DU TAILLE-HAIE en approchant une haie. Confort : plus besoin de l'equiper a la main avant de tailler.
 	-- Garde-fous : jamais si on PORTE une echelle (on veut les mains libres pour l'echelle), jamais si l'outil est deja
 	-- en main. On n'auto-DESEQUIPE pas (seul le portage range l'outil). ToggleTool sans outil en main = il equipe.
 	RunService.Heartbeat:Connect(function()
+		updatePrompt() -- son propre throttle (PROMPT_INTERVAL), independant de l'auto-equip ci-dessous
 		if os.clock() - lastEquipCheck < AUTO_EQUIP_INTERVAL then
 			return
 		end
 		lastEquipCheck = os.clock()
 		if carriedLadder or isTrimmerEquipped() or not toggleToolRemote then
+			return
+		end
+		-- Sur l'echelle : l'outil est RANGE le temps de la grimpe (cote serveur). On NE le re-sort pas ici, sinon
+		-- l'auto-equip se battrait avec ce rangement et l'outil reviendrait en pleine montee.
+		local character = player.Character
+		if character and character:GetAttribute("LeafiaOnLadder") then
 			return
 		end
 		local root = getRoot()

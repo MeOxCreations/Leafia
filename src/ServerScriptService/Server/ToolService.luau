@@ -25,7 +25,7 @@ local ToolService = {}
 local TOOL_ATTRIBUTE = "LeafiaTool"
 local GRIP_NAME = "ToolGrip"
 
-local DEFAULT_TOOL = "HedgeTrimmer"
+local DEFAULT_TOOL = "Shear"
 
 local ASSET_TIMEOUT = 10
 -- Court expres : l'Animator arrive quelques frames apres le personnage, pas quelques secondes.
@@ -301,15 +301,16 @@ local function applyGrip(current: Held, hand: BasePart, attachmentName: string, 
 		return
 	end
 	-- Les deux mains R15 ont leur propre Attachment de prise, nommee d'apres le cote.
-	local handAttachment = hand:FindFirstChild(
-		hand.Name == current.config.offHandPart and "LeftGripAttachment" or "RightGripAttachment"
-	)
+	local handAttachment =
+		hand:FindFirstChild(hand.Name == current.config.offHandPart and "LeftGripAttachment" or "RightGripAttachment")
 	-- Repli sur la prise principale si l'Attachment demandee n'existe pas. Sans ce repli, C1 vaudrait identity
 	-- et l'outil se collerait a l'origine du Handle : le joueur le tiendrait par le vide, et on chercherait
 	-- l'erreur du cote de l'orientation alors que c'est un nom qui manque.
 	local toolAttachment = handle:FindFirstChild(attachmentName)
 	if not toolAttachment then
-		warn(`[ToolService] Attachment "{attachmentName}" absente du Handle, repli sur "{current.config.gripAttachment}"`)
+		warn(
+			`[ToolService] Attachment "{attachmentName}" absente du Handle, repli sur "{current.config.gripAttachment}"`
+		)
 		toolAttachment = handle:FindFirstChild(current.config.gripAttachment)
 	end
 
@@ -442,7 +443,9 @@ function ToolService.equip(player: Player, toolName: string): boolean
 
 	-- Sons : on clone les originaux dans le Handle. L'original reste intact dans SoundService, et chaque
 	-- joueur a les siens, donc deux joueurs qui tirent en meme temps ne se coupent pas le son.
-	do
+	-- soundFolder vide = outil sans son (une cisaille) : on ne descend pas, sinon `folder` resterait SoundService et
+	-- on clonerait tous ses sons directs.
+	if #config.soundFolder > 0 then
 		local folder: Instance? = SoundService
 		for _, name in ipairs(config.soundFolder) do
 			folder = folder and folder:FindFirstChild(name)
@@ -634,6 +637,29 @@ function ToolService.setToolAnimationsPlaying(player: Player, playing: boolean, 
 			track:Stop(fadeOut or 0)
 		end
 	end
+end
+
+-- Joue UNE animation du MODEL de l'outil une seule fois, depuis le debut. Pour un geste PONCTUEL de l'outil :
+-- la cisaille qui claque ses lames a chaque clic, la ou setToolAnimationsPlaying fait TOURNER en boucle (moteur
+-- du taille-haie). Jouee cote SERVEUR sur le model -> se replique a tous, comme le repli de l'echelle. Rejoue
+-- franchement si deja en cours : deux clics rapproches donnent deux coups nets, pas un chevauchement.
+function ToolService.playToolAnimationOnce(player: Player, animName: string, fadeIn: number?): boolean
+	local current = held[player]
+	if not current then
+		return false
+	end
+	local track = current.toolTracks[animName]
+	if not track then
+		return false
+	end
+	-- Ponctuelle : JAMAIS bouclee. Une piste bouclee par erreur resterait a plein poids pour toujours et
+	-- polluerait tout ce qui partage sa priorite (lecon du journal).
+	track.Looped = false
+	track.Priority = Enum.AnimationPriority.Action
+	track:Stop(0)
+	track.TimePosition = 0
+	track:Play(fadeIn or 0)
+	return true
 end
 
 -- Annule le fondu en cours sur un son. Sans ca, un fondu sortant continuerait de baisser le volume d'un son
@@ -840,6 +866,27 @@ function ToolService.toggle(player: Player)
 	end
 end
 
+-- Selectionne un outil par NOM (emplacement d'inventaire clavier). Meme outil deja en main -> on le RANGE (toggle) ;
+-- sinon on l'equipe (equip range l'actuel avant, donc changer d'outil est propre). Le nom est valide cote serveur.
+-- ATTENTION (a faire) : quand le taille-haie deviendra un UPGRADE PAYANT, gater ICI sur la POSSESSION avant d'equiper.
+-- Aujourd'hui aucune propriete d'outil n'existe -> n'importe qui peut sortir n'importe quel outil (ok en dev, PAS en live).
+function ToolService.selectTool(player: Player, toolName: string)
+	if not ToolConfigs[toolName] then
+		return
+	end
+	local now = os.clock()
+	if now - (lastToggle[player] or 0) < TOGGLE_COOLDOWN then
+		return
+	end
+	lastToggle[player] = now
+	local current = held[player]
+	if current and current.toolName == toolName then
+		ToolService.unequip(player)
+	else
+		ToolService.equip(player, toolName)
+	end
+end
+
 local function onCharacterAdded(player: Player, character: Model)
 	-- La mort detruit le personnage donc l'outil, mais la table garderait une entree pointant sur un modele
 	-- mort : le toggle suivant croirait ranger un outil deja disparu, et il faudrait appuyer deux fois.
@@ -870,6 +917,17 @@ function ToolService.init()
 		end)
 	else
 		warn("[ToolService] Remote Tool/ToggleTool introuvable")
+	end
+
+	local selectRemote = RemoteSetup.getRemote("SelectTool", "Tool")
+	if selectRemote and selectRemote:IsA("RemoteEvent") then
+		selectRemote.OnServerEvent:Connect(function(player: Player, toolName: any)
+			if type(toolName) == "string" then
+				ToolService.selectTool(player, toolName)
+			end
+		end)
+	else
+		warn("[ToolService] Remote Tool/SelectTool introuvable")
 	end
 
 	Players.PlayerAdded:Connect(onPlayerAdded)

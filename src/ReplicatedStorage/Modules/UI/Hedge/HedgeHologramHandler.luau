@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local WorldAnchor = require(ReplicatedStorage.Modules.UI.Core.WorldAnchor)
+local InputDevice = require(ReplicatedStorage.Modules.Utils.InputDevice)
 
 local HedgeHologramHandler = {}
 
@@ -67,7 +68,7 @@ local function buildFallback(): GuiObject
 	dot.BorderSizePixel = 0
 	dot.Parent = root
 
-	local round = Instance.new("UICorner")
+	local round = Instance.new("UICorner") :: UICorner
 	round.CornerRadius = UDim.new(1, 0)
 	round.Parent = dot
 
@@ -199,6 +200,14 @@ local function add(hedge: BasePart)
 	local gui = if source then source:Clone() else buildFallback()
 	gui.Name = hedge.Name
 	gui.Visible = false
+	-- MOBILE : le cartouche est en pixels fixes, il parait enorme sur petit ecran. On le retrecit d'un coup via un
+	-- UIScale. Fige a la creation (le device change rarement en session) ; on reutilise un UIScale d'un eventuel
+	-- template plutot que d'en empiler un deuxieme.
+	if InputDevice.isTouch() then
+		local uiScale = gui:FindFirstChildOfClass("UIScale") or Instance.new("UIScale")
+		uiScale.Scale = HedgeConfigs.HOLOGRAM_TOUCH_SCALE
+		uiScale.Parent = gui
+	end
 
 	local label = gui:FindFirstChild(HedgeConfigs.HOLOGRAM_VALUE)
 	if not (label and label:IsA("TextLabel")) then
