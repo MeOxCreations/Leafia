@@ -64,8 +64,9 @@ version qui TOURNE, sans avoir a demander.
   module qui appelle une fonction pas encore ecrite.
 - **Jamais de push au milieu d'un chantier.** Un etat intermediaire casse coute plus cher au collaborateur que
   pas de push du tout : il debug un travail en cours au lieu du sien.
-- Tirer AVANT de pousser (`git pull --rebase`). En cas de conflit ou de push refuse : **stop, me le dire**.
-  Jamais de `--force`.
+- Ordre exact : **commit -> `git pull --rebase origin main` -> push**. Le rebase REFUSE de tourner avec des
+  fichiers non commites (« cannot pull with rebase: You have unstaged changes ») : rebaser d'abord ne marche
+  pas. En cas de conflit ou de push refuse : **stop, me le dire**. Jamais de `--force`.
 - Message de commit court, en francais, qui dit ce que ca change **pour le joueur**, pas quels fichiers ont
   bouge.
 - Mise a jour du `CHANGELOG.md` dans le **meme** commit que la feature.
