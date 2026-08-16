@@ -49,12 +49,12 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.LadderMoveController).init()
 	require(script.AdminCommandController).init()
 
-	-- Musique de fond du TUTO : MusicBuild3 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
+	-- Musique de fond du TUTO : MusicBuild4 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
 	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.
 	task.spawn(function()
 		local SoundService = game:GetService("SoundService")
 		local node: Instance? = SoundService
-		for _, name in ipairs({ "Sounds", "Game", "Musics", "Build", "MusicBuild3" }) do
+		for _, name in ipairs({ "Sounds", "Game", "Musics", "Build", "MusicBuild4" }) do
 			node = node and node:WaitForChild(name, 10)
 		end
 		if node and node:IsA("Sound") then
