@@ -352,6 +352,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   se resout UNE fois EN TACHE DE FOND (`task.spawn` au boot), jamais dans le chemin par-frame ; la fonction par-frame rend
   une valeur neutre (zero) tant que ce n'est pas pret. Meme famille que "un getRemote synchrone dans un init gele le boot".
 
+- **A deux sur le projet, le CHANGELOG entre en conflit A CHAQUE push : les numeros de version se collisionnent.**
+  Les entrees s'inserent toutes au MEME endroit du fichier (le bloc du haut, en ordre decroissant), donc git ne peut
+  pas fusionner tout seul, et pire : deux personnes fabriquent la meme version en meme temps (vecu, mon 0.0.199 contre
+  le 0.0.199 du collaborateur, qui avait deja pousse jusqu'a 0.0.201). Regle : `git pull --rebase` AVANT d'ecrire
+  l'entree, pas apres -- on lit le dernier numero REEL et on prend le suivant. Et en cas de conflit, on garde les DEUX
+  entrees en renumerotant la sienne, jamais `--ours` / `--theirs` (le CHANGELOG est append-only : une entree effacee
+  est une info perdue pour de bon).
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les
