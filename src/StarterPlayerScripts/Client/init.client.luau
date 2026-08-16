@@ -80,12 +80,37 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 		end
 		task.wait(3) -- puis 3 s avant d'afficher le dialogue
 		Dialogue.play({
-			{ speaker = "Finn", emotion = "hello", text = "Oh, salut " .. plr.DisplayName .. " ! Comment tu vas ?" },
-			{ speaker = "Finn", emotion = "intrigued", text = "Dis, ton papi t'a laisse tout son matos. De quoi t'occuper de ses clients." },
-			{ speaker = "Finn", emotion = "sad", text = "Maintenant il est trop vieux, son dos lui fait mal... il peut plus tailler." },
-			{ speaker = "Finn", emotion = "happy", text = "Du coup c'est a toi de continuer son travail ! Je te fais confiance, mon pote." },
-			{ speaker = "Finn", emotion = "happy", text = "Et qui sait... avec assez de coins, tu pourras batir ta PROPRE entreprise !" },
-			{ speaker = "Finn", emotion = "happy", text = "Justement, t'y es deja : c'est chez ton premier client. Sa haie t'attend, montre-moi ce que tu sais faire !" },
+			{ speaker = "Papi", emotion = "wink", text = "Ah, te voila " .. plr.DisplayName .. " ! Je savais que tu viendrais." },
+			{
+				speaker = "Papi",
+				emotion = "happy",
+				text = "Regarde. Mon vieux taille-haie. Il a coupe plus de haies que tu peux en compter.",
+			},
+			{
+				speaker = "Papi",
+				emotion = "sad",
+				text = "Moi je peux plus m'en servir. Mon dos me fait trop mal.",
+			},
+			{
+				speaker = "Papi",
+				emotion = "sad",
+				text = "Et mes clients sont tous partis. Leurs jardins sont a l'abandon.",
+			},
+			{
+				speaker = "Papi",
+				emotion = "normal",
+				text = "Alors je te donne mon entreprise. Les outils, les clients, tout.",
+			},
+			{
+				speaker = "Papi",
+				emotion = "happy",
+				text = "Commence par cette haie-la. Montre-moi ce que tu sais faire.",
+			},
+			{
+				speaker = "Papi",
+				emotion = "wink",
+				text = "Et fais pas honte a mon nom, petit !",
+			},
 		})
 	end)
 
@@ -167,7 +192,8 @@ HudNavHandler.init()
 
 -- Notifications laterales (bas droite). Step 1 : ouverture / fermeture au clic (resize + arrondi + contour). Ordre
 -- indifferent, elle ne fait que cabler les boutons des notifications existantes.
-local SideNotificationHandler = require(game:GetService("ReplicatedStorage").Modules.UI.Notification.SideNotificationHandler)
+local SideNotificationHandler =
+	require(game:GetService("ReplicatedStorage").Modules.UI.Notification.SideNotificationHandler)
 SideNotificationHandler.init()
 
 -- PROTOTYPE escabeau (socle minimal) : entrer dans une zone de detection -> aimant + anim UpDown. A promouvoir en

@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.203 — C'est PAPI qui parle, plus un inconnu
+
+Le tuto faisait parler un personnage ("Finn") qui n'existe nulle part ailleurs dans le jeu, et qui racontait
+l'histoire du grand-pere A LA PLACE du grand-pere. Un narrateur inconnu qui resume l'emotion, c'est exactement ce
+qu'il ne faut pas : le joueur doit ENTENDRE Papi, pas un intermediaire.
+
+Les 8 portraits de Finn sont remplaces par les 6 dessins de Papi (normal, happy, sad, angry, shocked, wink), et les
+repliques du tuto sont reecrites A LA PREMIERE PERSONNE : Papi tend ses outils, dit que son dos l'empeche de
+travailler, que ses clients sont partis, et donne son entreprise. Derniere ligne en clin d'oeil : "fais pas honte a
+mon nom, petit !".
+
+Vocabulaire volontairement enfantin (public Roblox) : pas de "retraite", pas de "parts d'entreprise". "Mon dos me
+fait trop mal", "je te donne mon entreprise".
+
+Le texte reste NEUTRE sur le decor : aucune mention de porte, de maison ou de camion. La cinematique d'arrivee
+(camion -> toquer -> Papi ouvre) n'existe pas encore ; ecrire "j'ouvre ma porte" maintenant donnerait un dialogue
+qui ment sur ce qui est a l'ecran. A reecrire quand la scene existera.
+
+Table EMOTIONS toujours PLATE (un seul personnage). Elle devra passer en table par speaker quand les PNJ clients
+arriveront -- pas avant : aujourd'hui elle n'aurait qu'une entree.
+
 ## 0.0.202 — La pose tient hors visee, haie invisible en jeu, reglages du tuto
 
 Cinq retouches accumulees, poussees ensemble.

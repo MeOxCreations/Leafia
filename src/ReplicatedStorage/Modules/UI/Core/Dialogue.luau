@@ -25,17 +25,17 @@ local player = Players.LocalPlayer
 
 export type Line = { speaker: string?, text: string, emotion: string? }
 
--- Emotions du personnage (le meme dessin, plusieurs expressions). Une replique choisit son emotion par NOM (lisible),
+-- Emotions de PAPI (le meme dessin, plusieurs expressions). Une replique choisit son emotion par NOM (lisible),
 -- pas par asset id brut. Emotion absente sur une ligne = on garde le dessin precedent.
+-- Un seul personnage pour l'instant : le tuto ne fait parler que Papi. Quand les PNJ clients arriveront, cette table
+-- devra passer en table PAR SPEAKER (EMOTIONS[speaker][emotion]) -- pas avant, ca n'aurait qu'une seule entree.
 local EMOTIONS: { [string]: string } = {
-	hello = "rbxassetid://131854820846580", -- salue de la main, sourire
-	intrigued = "rbxassetid://132175858469606", -- intrigue
-	shocked = "rbxassetid://138281484729210", -- choque
-	angry = "rbxassetid://104268679746511", -- enerve, bras croises
-	happy = "rbxassetid://133259707526283", -- vraiment heureux
-	sad = "rbxassetid://72021115749538", -- triste
-	why = "rbxassetid://117092395318985", -- "pourquoi t'as fait ca ?!"
-	embarrassed = "rbxassetid://121124556843521", -- embarrasse
+	normal = "rbxassetid://128272912708514", -- neutre, au repos
+	happy = "rbxassetid://74164548907866", -- content
+	sad = "rbxassetid://132527109682757", -- triste
+	angry = "rbxassetid://88353059391033", -- pas content
+	shocked = "rbxassetid://89073402854323", -- choque
+	wink = "rbxassetid://112230427558414", -- clin d'oeil, complice
 }
 
 -- ===== Style =====
