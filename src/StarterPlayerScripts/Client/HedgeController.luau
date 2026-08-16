@@ -714,6 +714,11 @@ local heldPerClick = false
 -- La visee pointe-t-elle une surface de haie taillable en ce moment ? Retenu pour n'autoriser le coup de cisaille
 -- que quand il a une cible : cliquer en visant le vide ne doit rien declencher.
 local aimActive = false
+-- Derniere hauteur (0..1) et dernier cote (dessus / cote) REELLEMENT vises sur la haie. Retenus pour TENIR la pose
+-- UpDown quand le curseur quitte la surface : on ne retombe pas en Idle et on ne saute pas a 0, on garde la pose la
+-- ou elle etait. Distinct de aimActive (la coupe, elle, exige une vraie cible).
+local lastPoseRatio = 0
+local lastPoseOnTop = false
 -- TACTILE : temps accumule depuis le dernier coup de cisaille au glissement. Sur mobile la cisaille ne se joue pas au
 -- tap (aimActive est faux a l'instant du contact) : on re-declenche le coup tant que le doigt glisse sur la haie.
 local touchSnipClock = 0
@@ -1497,6 +1502,9 @@ local function release(humanoid: Humanoid?)
 	setSlide(0)
 	-- Meme raison pour la pose de coupe : elle est en Action2, elle bloquerait les bras sur toute la carte.
 	setPose(false, 0, false, 0, 0)
+	-- Pose relachee : la hauteur tenue repart de zero au prochain engage (sinon on garderait celle du chantier precedent).
+	lastPoseRatio = 0
+	lastPoseOnTop = false
 	-- Plus de cible : un clic ne doit plus declencher de coup de cisaille en quittant la haie.
 	aimActive = false
 	-- Le joystick tactile n'a de sens qu'au pied d'une haie : on le cache et on coupe le deplacement.
@@ -1955,9 +1963,19 @@ local function update(dt: number)
 	local poseFollow = if toolConfig and toolConfig.poseFollowSpeed ~= nil
 		then toolConfig.poseFollowSpeed
 		else HedgeConfigs.UPDOWN_FOLLOW_SPEED
-	setPose(engine and aim ~= nil, aim or 0, onTop, dt, poseFollow)
-	-- Meme etat que la pose : le coup de cisaille (clic) n'est autorise que moteur pret ET visee sur une surface
-	-- taillable. Sinon un clic jouerait le geste dans le vide et enverrait un CutSnip que le serveur rejetterait.
+	-- La pose reste en UpDown tant que le MOTEUR tourne (engage), MEME curseur hors de la haie : sortir la souris ne doit
+	-- pas faire retomber le joueur en Idle. Curseur hors surface -> on TIENT la derniere hauteur et le dernier cote vises
+	-- (pas de retour brusque a 0 ni de bascule dessus/cote). La coupe, elle, reste gatee sur une vraie cible (aimActive).
+	if aim ~= nil then
+		lastPoseRatio = aim
+		lastPoseOnTop = onTop
+	end
+	local poseRatio = if aim ~= nil then aim else lastPoseRatio
+	local poseOnTop = if aim ~= nil then onTop else lastPoseOnTop
+	setPose(engine, poseRatio, poseOnTop, dt, poseFollow)
+	-- Le coup de cisaille (clic) n'est autorise que moteur pret ET visee sur une surface taillable. Sinon un clic
+	-- jouerait le geste dans le vide et enverrait un CutSnip que le serveur rejetterait. Distinct de la pose ci-dessus,
+	-- qui, elle, se maintient meme curseur sorti.
 	aimActive = engine and aim ~= nil
 
 	-- CISAILLE AU DOIGT (tactile). Le tap seul ne coupe jamais : a l'instant du contact, aimActive est encore faux

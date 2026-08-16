@@ -327,6 +327,11 @@ end
 local function buildHedge(hedge: BasePart): number
 	clearHedge(hedge)
 
+	-- La HAIE (la boite taguee) n'est qu'un REPERE : le visuel vient des carreaux / feuilles. En Studio on la laisse
+	-- semi-transparente pour la voir en editant ; EN JEU on la rend INVISIBLE d'office (ecrit cote serveur -> repliquee a
+	-- tous). On ne touche PAS a CanQuery : le Blockcast de detection (HedgeService) doit toujours la voir.
+	hedge.Transparency = 1
+
 	local folder = Instance.new("Folder")
 	folder.Name = hedge.Name
 

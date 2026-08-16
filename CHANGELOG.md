@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.202 — La pose tient hors visee, haie invisible en jeu, reglages du tuto
+
+Cinq retouches accumulees, poussees ensemble.
+
+TAILLE. La pose UpDown ne retombe PLUS en Idle quand le curseur quitte la surface de la haie : tant que le moteur
+tourne, on TIENT la derniere hauteur et le dernier cote reellement vises (lastPoseRatio / lastPoseOnTop). Avant, sortir
+la souris d'un poil faisait replonger les bras en position neutre, puis remonter -- un a-coup permanent en bord de haie.
+La COUPE, elle, reste gatee sur une vraie cible (aimActive) : cliquer dans le vide ne declenche toujours rien. Les deux
+etats sont maintenant distincts, ils etaient confondus. Relacher le chantier (release) remet la pose a zero, sinon on
+reprendrait la hauteur du chantier precedent.
+
+HAIE. La boite taguee `hedge_` passe en `Transparency = 1` cote serveur a la construction : en Studio on la laisse
+semi-transparente pour la voir en editant, en jeu elle disparait (le visuel vient des carreaux / feuilles). Ecrit cote
+serveur donc repliquee a tous. On ne touche PAS a `CanQuery` : le Blockcast de detection doit continuer a la voir.
+
+TUTO. Musique de fond ajoutee (MusicBuild3 clonee, bouclee, volume 0.15, resolue en `task.spawn` -- le Sound peut
+arriver apres le boot). Bandeau de dialogue plus large et moins haut (680x180 -> 800x120). Duree mini du rideau de
+chargement montee de 6.5 a 10.5 s.
+
 ## 0.0.201 — Un plancher de glisse PAR ALLURE, et la bille visait la mauvaise haie
 
 **La compensation de 0.0.200 etait fausse, et elle ne pouvait pas etre juste.** Baisser CUT_SPEED (5 -> 3.5) pour

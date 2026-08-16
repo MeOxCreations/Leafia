@@ -42,8 +42,8 @@ local EMOTIONS: { [string]: string } = {
 -- Tailles de REFERENCE, pensees pour un ecran 1080p de haut. Un UIScale (voir refreshScale) agrandit / retrecit TOUT le
 -- bandeau (dessin + texte compris) selon la hauteur reelle de l'ecran -> lisible du petit mobile a l'ultrawide, fini le
 -- bandeau minuscule bloque a une largeur en pixels.
-local REF_WIDTH = 680 -- largeur du bandeau a l'echelle 1
-local HEIGHT = 180 -- hauteur du bandeau a l'echelle 1
+local REF_WIDTH = 800 -- largeur du bandeau a l'echelle 1
+local HEIGHT = 120 -- hauteur du bandeau a l'echelle 1
 local REF_HEIGHT = 1080 -- hauteur d'ecran de reference (echelle = hauteur reelle / REF_HEIGHT)
 local MIN_SCALE, MAX_SCALE = 0.85, 2.4 -- bornes de l'echelle
 local WIDTH_MAX_FRAC = 0.92 -- le bandeau ne depasse jamais cette fraction de la largeur ecran (ecrans etroits)

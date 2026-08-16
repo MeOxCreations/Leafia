@@ -49,6 +49,24 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.LadderMoveController).init()
 	require(script.AdminCommandController).init()
 
+	-- Musique de fond du TUTO : MusicBuild3 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
+	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.
+	task.spawn(function()
+		local SoundService = game:GetService("SoundService")
+		local node: Instance? = SoundService
+		for _, name in ipairs({ "Sounds", "Game", "Musics", "Build", "MusicBuild3" }) do
+			node = node and node:WaitForChild(name, 10)
+		end
+		if node and node:IsA("Sound") then
+			local music = node:Clone()
+			music.Name = "LeafiaTutoMusic"
+			music.Looped = true
+			music.Volume = 0.15 -- a regler a l'oreille (0.15 = le niveau confortable de la musique de build)
+			music.Parent = SoundService
+			music:Play()
+		end
+	end)
+
 	-- TEMP (test de la boite de dialogue) : joue la narration d'intro UNE fois, ~1.5 s apres le 1er spawn, pour regler
 	-- le visuel et le texte avec le joueur. A RETIRER quand le tuto la declenchera pour de vrai (mission / TutorialService).
 	task.spawn(function()

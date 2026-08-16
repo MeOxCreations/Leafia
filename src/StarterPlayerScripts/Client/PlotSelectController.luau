@@ -52,7 +52,7 @@ local ORBIT_BIND = "LeafiaPlotOrbit"
 local CAM_TWEEN = TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 -- Duree MINI d'affichage du rideau de chargement (clic CREATE -> jeu). Volontairement un peu longue (~6-7 s) : ca pose
 -- un vrai temps de chargement facon Sims, meme si techniquement le plot est deja pret derriere.
-local LOADING_MIN = 6.5
+local LOADING_MIN = 10.5
 -- Valeurs MESUREES sur l'etat de repos reel de la camera de jeu (Custom) : le tween doit finir la pour que Custom
 -- n'ait RIEN a corriger au handoff (ni zoom, ni saut). Important : Custom REMET sa propre inclinaison au repos
 -- (~15 deg), il ne garde PAS celle qu'on lui donne -- d'ou l'obligation de finir deja a cette inclinaison.
