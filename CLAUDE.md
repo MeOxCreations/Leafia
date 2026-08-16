@@ -54,6 +54,26 @@ une deuxieme sans qu'on leur demande". Tant que la reponse est non, on ne constr
 - **Verifier avant d'affirmer.** Ne pas dire "cette fonction n'est pas utilisee" sans avoir grep le projet
   entier. Une affirmation fausse coute plus cher qu'une verification lente.
 
+## Git & collaboration
+
+Le projet est partage : un collaborateur tire le code depuis GitHub. Il doit toujours pouvoir recuperer une
+version qui TOURNE, sans avoir a demander.
+
+- **Des qu'un bloc coherent est fini, je commit ET je push sur `main`, sans qu'on me le demande.**
+- « Fini » = la feature ou le fix est complet et le jeu se lance. Pas un fichier a moitie modifie, pas un
+  module qui appelle une fonction pas encore ecrite.
+- **Jamais de push au milieu d'un chantier.** Un etat intermediaire casse coute plus cher au collaborateur que
+  pas de push du tout : il debug un travail en cours au lieu du sien.
+- Tirer AVANT de pousser (`git pull --rebase`). En cas de conflit ou de push refuse : **stop, me le dire**.
+  Jamais de `--force`.
+- Message de commit court, en francais, qui dit ce que ca change **pour le joueur**, pas quels fichiers ont
+  bouge.
+- Mise a jour du `CHANGELOG.md` dans le **meme** commit que la feature.
+- **Un push ne transporte QUE le code de `src/`.** Rojo ne synchronise ni le Workspace/map, ni les assets en
+  `$ignoreUnknownInstances` (Assets, Animations, ScreenGui de StarterGui). Quand un changement depend d'un
+  asset ou d'un objet pose dans Studio, le DIRE dans le message de commit et me le rappeler : sinon le
+  collaborateur croit avoir la bonne version et il ne l'a pas.
+
 ## Journal d'apprentissage
 
 Quand l'assistant apprend quelque chose de non evident pendant une session (piege d'outil, comportement
