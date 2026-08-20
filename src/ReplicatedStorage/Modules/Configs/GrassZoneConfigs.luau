@@ -112,12 +112,10 @@ local GrassZoneConfigs = {
 	-- A regler en regardant la hauteur de l'herbe autour : la fleur doit depasser, pas leviter.
 	FLOWER_LIFT = 2.2,
 
-	-- NIVEAU DE DETAIL des touffes. A `Automatic`, Roblox change le maillage selon la taille de la part A L'ECRAN.
-	-- Or une touffe ecrasee passe de sa hauteur pleine a quelques pour cent en une fraction de seconde : Roblox
-	-- re-decide donc du niveau en plein mouvement et ECHANGE le mesh, ce qui se voit comme un clignotement.
-	-- On le FIGE pour supprimer l'echange. `Precise` garde le detail complet ; `Performance` fige au niveau bas et
-	-- coute moins cher -- a essayer si le FPS baisse, la difference se voit peu sur une touffe d'herbe.
-	RENDER_FIDELITY = Enum.RenderFidelity.Precise,
+	-- PAS DE REGLAGE DE RENDERFIDELITY ICI : cette propriete est reservee aux plugins, un script normal ne peut pas
+	-- l'ecrire ("lacking capability Plugin"). Elle se met A LA MAIN dans Studio, sur le mesh GrassMesh, et les clones
+	-- en heritent. Mettre `Precise` (ou `Performance`) plutot que `Automatic` : ce dernier echange le maillage quand
+	-- la taille change, ce qui fait CLIGNOTER une touffe qui s'ecrase.
 
 	-- ===== Couleur de l'herbe =====
 	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur

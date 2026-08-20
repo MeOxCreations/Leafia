@@ -443,6 +443,13 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   aucune constante a garder d'accord avec l'autre. Regle generale : preferer une difference qui s'annule a un
   complement qui suppose que l'autre grandeur atteint son maximum.
 
+- **`BasePart.RenderFidelity` ne s'ecrit PAS depuis un script normal** : "The current thread cannot write
+  'RenderFidelity' (lacking capability Plugin)". Elle se regle a la main dans Studio, sur le mesh SOURCE ; les clones
+  en heritent. Meme famille que `GuiService:GetScreenResolution`, reserve aux CoreScripts. Et elle compte pour tout
+  mesh qu'on REDIMENSIONNE en jeu : a `Automatic`, Roblox echange le maillage selon la taille a l'ecran, donc une
+  part qui change fortement de taille en une fraction de seconde CLIGNOTE. La figer (`Precise` ou `Performance`)
+  supprime l'echange.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les
