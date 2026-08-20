@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.219 — Densite CONSTANTE quelle que soit la taille de la zone
+
+Demande du joueur, et elle vise juste : redimensionner une zone ne doit JAMAIS obliger a revenir toucher une config.
+Deux fois de suite (0.0.210, 0.0.218) le plafond de touffes a rabote la densite dans le dos du joueur, qui voyait
+son herbe se clairsemer en agrandissant son terrain -- l'inverse de ce que la config annoncait.
+
+MAX_CLUMPS cesse d'etre un reglage. Il passe a 20000, volontairement hors de portee de toute zone reelle, et redevient
+ce qu'il aurait toujours du etre : un filet contre une part posee par erreur a 500x500, qui ferait tomber le client.
+S'il se declenche, ce n'est pas un bouton a tourner, c'est le signe que la zone est anormale -- le message le dit
+maintenant dans ces termes.
+
+### Le vrai correctif ergonomique : la taille des touffes compense la densite
+
+Le probleme de fond, c'est que DENSITY etait a la fois le bouton de PERFORMANCE et le bouton de "trous dans l'herbe".
+Impossible d'alleger un grand terrain sans le degarnir.
+
+Les touffes grandissent donc dans le rapport exact de l'espacement (AUTO_SCALE_WITH_DENSITY). A DENSITY 0.25, elles
+sont deux fois plus grosses : meme couverture a l'ecran, quatre fois moins de parts. DENSITY devient un bouton de
+performance PUR, qu'on peut baisser sur un grand terrain sans que ca se voie.
+
+A DENSITY = 1 le facteur vaut exactement 1 : le rendu actuel ne bouge pas.
+
+Le facteur se calcule sur l'espacement REEL, apres le filet de securite, pas sur celui demande. Si le filet devait un
+jour espacer la grille, les touffes compenseraient aussi -- sinon ce cas rare rouvrirait exactement les trous qu'on
+vient de fermer.
+
+Lecon generale : quand un seul reglage porte deux responsabilites opposees (ici la qualite visuelle ET le cout), on
+ne l'equilibre pas, on les DECOUPLE. Meme raisonnement que le plancher de glisse dedouble par allure en 0.0.201.
+
 ## 0.0.218 — Le plafond rabotait encore la densite des grandes zones
 
 Herbe clairsemee sur un grand terrain. Meme cause qu'en 0.0.210, un cran plus haut : MAX_CLUMPS (1500) mordait de

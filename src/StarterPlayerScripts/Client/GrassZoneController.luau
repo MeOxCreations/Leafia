@@ -232,13 +232,18 @@ local function populate(zone: Zone)
 		warn(
 			`[GrassZone] "{zone.part.Name}" PLAFONNE : densite {string.format("%.2f", got)} au lieu de `
 				.. `{GrassZoneConfigs.DENSITY} (grille {cols}x{rows} sur {math.floor(size.X)}x{math.floor(size.Z)} studs). `
-				.. `Monte MAX_CLUMPS, ou grossis les touffes (SCALE_MIN/MAX) et baisse DENSITY.`
+				.. `Cette zone est anormalement grande : verifie sa taille dans Studio.`
 		)
 	end
 
 	local stepX = size.X / cols
 	local stepZ = size.Z / rows
 	local jitter = GrassZoneConfigs.JITTER
+	-- Les touffes grossissent quand l'espacement grandit : la surface reste couverte pareil avec moins de parts.
+	-- Calcule sur l'espacement REEL (apres le filet de securite), pas sur celui demande : si le filet a du espacer la
+	-- grille, les touffes compensent aussi -- sinon ce cas rare rouvrirait des trous.
+	-- A DENSITY = 1 sans plafond, le pas vaut 1 et le facteur est neutre : le rendu actuel ne bouge pas.
+	local densityScale = if GrassZoneConfigs.AUTO_SCALE_WITH_DENSITY then math.sqrt(stepX * stepZ) else 1
 
 	for ix = 0, cols - 1 do
 		for iz = 0, rows - 1 do
@@ -248,7 +253,7 @@ local function populate(zone: Zone)
 			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
 			part.CanTouch = false
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
-			part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
+			part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX) * densityScale
 
 			-- Centre de la case, dans le repere de la ZONE.
 			-- QUINCONCE : une rangee sur deux est poussee d'un quart de case a droite, l'autre d'un quart a gauche.

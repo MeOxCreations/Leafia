@@ -34,20 +34,24 @@ local GrassZoneConfigs = {
 	-- se voit. Les rangees en quinconce (voir GrassZoneController) cassent deja la regularite, donc une valeur
 	-- moderee suffit : on garde le desordre sans ouvrir de trou.
 	JITTER = 0.45,
-	-- GARDE-FOU, pas un bouton de densite. La densite, c'est DENSITY, et elle est la meme partout : le nombre de
-	-- touffes suit donc la surface de la zone, une grande zone en recoit proportionnellement plus.
-	-- Ce plafond n'existe que pour qu'une part posee par erreur a 500x500 ne fabrique pas 250 000 instances. Le laisser
-	-- trop bas RABOTE la densite des grandes zones (l'herbe devient clairsemee a mesure qu'on agrandit), ce qui est
-	-- exactement l'inverse de ce qu'on veut. Au plafond on ESPACE la grille plutot que de couper la liste : couper
-	-- laisserait une moitie de zone chauve. Quand il mord, la console DIT la densite reellement obtenue.
-	--
-	-- POUR UN GRAND TERRAIN, le bon reflexe n'est PAS de monter ce chiffre indefiniment : le nombre de parts suit la
-	-- surface, il n'y a pas de repas gratuit. Le vrai levier, c'est des touffes PLUS GROSSES (SCALE_MIN / SCALE_MAX)
-	-- avec une DENSITY plus basse : meme couverture a l'ecran, deux a trois fois moins de parts.
-	MAX_CLUMPS = 4000,
+	-- FILET DE SECURITE, jamais un reglage. La densite est CONSTANTE quelle que soit la taille de la zone : une zone
+	-- deux fois plus grande recoit deux fois plus de touffes, point. Redimensionner une zone ne doit JAMAIS obliger a
+	-- revenir toucher une config.
+	-- Ce nombre est volontairement place hors de portee des zones reelles : il n'existe que pour qu'une part posee par
+	-- erreur a 500x500 ne fabrique pas 250 000 instances et ne fasse pas tomber le client. S'il se declenche, la
+	-- console le DIT avec la densite reellement obtenue -- ce n'est pas un reglage a tourner, c'est un signal que la
+	-- zone est anormale.
+	MAX_CLUMPS = 20000,
 	-- Taille de chaque touffe, en fraction de la taille du mesh d'origine. Un peu de variete casse l'effet "copie".
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.25,
+	-- La taille des touffes COMPENSE la densite : a DENSITY 0.25 elles sont deux fois plus grosses, donc la surface
+	-- reste couverte pareil avec quatre fois moins de parts.
+	-- C'est ce qui rend DENSITY ergonomique : il devient un bouton de PERFORMANCE pur, pas un bouton de "trous dans
+	-- l'herbe". On le baisse sur un grand terrain sans que ca se voie a l'ecran.
+	-- A DENSITY = 1 le facteur vaut 1 : le rendu actuel ne bouge pas. Mettre a false pour retrouver l'ancien
+	-- comportement (touffes de taille fixe, densite qui creuse des trous quand on la baisse).
+	AUTO_SCALE_WITH_DENSITY = true,
 	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement droites, ce qui se lit comme du faux.
 	REST_TILT = 6,
 
