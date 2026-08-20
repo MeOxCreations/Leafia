@@ -2185,6 +2185,24 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.231 — L'herbe FONCE la ou on a marche
+
+L'herbe ecrasee s'assombrit. Un chemin apparait derriere le joueur, en plus du creux.
+
+Le point qui compte : la teinte assombrie part de la COULEUR DE LA TOUFFE, pas d'un gris impose. Chaque touffe
+garde donc la nuance de SA bande de tonte, juste plus sombre -- le motif raye reste lisible SOUS la trace, au lieu
+d'etre efface par un chemin d'une seule couleur.
+
+La couleur de base est relevee APRES la pose des rayures, sinon on assombrirait la teinte du mesh d'origine et
+toutes les traces sortiraient identiques.
+
+Pilote par le meme ecrasement que l'aplatissement (CRUSH_DARKEN, 0.25). Trois effets maintenant tires de la meme
+grandeur -- hauteur, couleur, extinction du vent -- donc aucun ne peut se desynchroniser des autres, et la trace
+permanente reste sombre exactement la ou elle reste basse.
+
+Ecritures quantifiees comme celles de la taille : un pour cent de clarte ne se voit pas, mais ecrire une couleur par
+image sur des centaines de touffes coute pour rien.
+
 ## 0.0.230 — Des nuages traversent le ciel
 
 Nouveau CloudController (client) + CloudConfigs. Un troupeau de nuages derive au-dessus de la carte, en boucle et

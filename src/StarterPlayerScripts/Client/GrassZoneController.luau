@@ -61,6 +61,8 @@ type Clump = {
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
 	baseSize: Vector3, -- taille au repos ; l'ecrasement ne fait que RABOTER son Y, jamais l'ecraser definitivement
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
+	baseColor: Color3, -- couleur au repos (sa bande de tonte) : l'assombrissement part de LA, pas d'un gris impose
+	lastDarken: number, -- dernier assombrissement REELLEMENT ecrit
 	tiltDir: Vector3, -- direction d'une eventuelle bascule (inutilisee tant que CRUSH_TILT_ANGLE vaut 0)
 	crush: number, -- ECRASEMENT courant, en fraction (0 = debout, 1 = ecrase a fond). LA valeur d'etat de la touffe.
 	flattened: number, -- TRACE : ecrasement permanent (0 a 1). Ne fait que monter, et sert de plancher a `crush`.
@@ -118,7 +120,7 @@ end
 -- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
 -- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle: number)
+local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle: number, crush: number)
 	-- La taille ne s'ECRIT que si elle a change : redimensionner une part coute plus cher que la deplacer, et une
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
@@ -127,6 +129,16 @@ local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle:
 	if squash ~= clump.lastSquash then
 		clump.part.Size = Vector3.new(clump.baseSize.X, clump.baseSize.Y * squash, clump.baseSize.Z)
 		clump.lastSquash = squash
+	end
+
+	-- ASSOMBRISSEMENT. Meme quantification, meme raison : ecrire une couleur a chaque image sur des centaines de
+	-- touffes coute pour rien, alors qu'un pour cent de clarte ne se voit pas.
+	local darken = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
+	if darken ~= clump.lastDarken then
+		local base = clump.baseColor
+		local factor = 1 - darken * GrassZoneConfigs.CRUSH_DARKEN
+		clump.part.Color = Color3.new(base.R * factor, base.G * factor, base.B * factor)
+		clump.lastDarken = darken
 	end
 
 	local cf = CFrame.new(clump.basePos)
@@ -415,6 +427,9 @@ local function populate(zone: Zone)
 				yaw = if GrassZoneConfigs.RANDOM_YAW then CFrame.Angles(0, yawAngle, 0) else CFrame.identity,
 				baseSize = part.Size,
 				lastSquash = 1,
+				-- Relevee APRES la pose des rayures : c'est bien la couleur de SA bande qu'on assombrira.
+				baseColor = part.Color,
+				lastDarken = 0,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				crush = 0,
 				flattened = 0,
@@ -423,7 +438,7 @@ local function populate(zone: Zone)
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
-			apply(clump, WIND_ANGLE, 1, 0)
+			apply(clump, WIND_ANGLE, 1, 0, 0)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
 
@@ -587,7 +602,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
 		if windScale > 0 or clump.crush ~= clump.lastCrush then
-			apply(clump, wind, squash * gustSquash, crushed * TILT_ANGLE)
+			apply(clump, wind, squash * gustSquash, crushed * TILT_ANGLE, crushed)
 			clump.lastCrush = clump.crush
 		end
 	end

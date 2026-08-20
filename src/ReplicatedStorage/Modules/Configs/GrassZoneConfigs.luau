@@ -150,6 +150,11 @@ local GrassZoneConfigs = {
 	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur.
 	-- 0.8 = la touffe descend a 20 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
 	CRUSH_SQUASH = 0.8,
+	-- ASSOMBRISSEMENT sous le pied, en fraction de la couleur de base. 0.25 = la touffe perd un quart de sa clarte
+	-- au maximum de l'ecrasement. La teinte est celle de la touffe (sa bande de tonte), pas une couleur imposee :
+	-- chaque rayure s'assombrit donc dans SA propre nuance, et le motif de tonte reste lisible sous la trace.
+	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee reste sombre elle aussi.
+	CRUSH_DARKEN = 0.25,
 	-- Inclinaison maxi, en degres, pile sous les pieds. A ZERO, et c'est voulu.
 	-- Le mesh d'herbe est un RECTANGLE de brins, pas un brin isole. Un brin qui se couche est joli ; une plaque
 	-- entiere qui bascule se lit comme un decor pose de travers -- on voit la touffe penchee sur le cote au lieu
