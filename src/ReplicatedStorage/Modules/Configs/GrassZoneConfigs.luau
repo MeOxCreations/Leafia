@@ -93,7 +93,10 @@ local GrassZoneConfigs = {
 	-- Des fleurs poussent parmi l'herbe. Ce sont des touffes comme les autres, avec un autre mesh : elles heritent
 	-- donc du vent, de l'ecrasement au passage et de tous les tris de performance, sans une ligne de plus.
 	-- Elles vivent dans le MEME dossier que GrassMesh.
-	FLOWER_NAMES = { "Petal_2", "Petal_4", "Petal_5" },
+	-- Retirer un nom d'ici, ou retirer le mesh de Studio, sont deux facons valables d'enlever une fleur : une absence
+	-- est un CHOIX, elle ne declenche donc aucun avertissement. Seule une liste entierement introuvable en produit un,
+	-- parce que la, c'est le chemin qui est faux.
+	FLOWER_NAMES = { "Petal_2", "Petal_5" },
 	-- Fraction des cases de la grille qui recoivent une fleur au lieu d'une touffe.
 	-- 0.09 = une case sur onze : on est passe de fleurs rares a un semis de petites fleurs sauvages. Ca tient parce
 	-- qu'elles sont PETITES ; a cette frequence avec de grosses fleurs, la pelouse disparaitrait dessous.

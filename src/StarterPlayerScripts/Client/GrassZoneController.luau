@@ -853,9 +853,17 @@ function GrassZoneController.init()
 				local mesh = foliages:FindFirstChild(name)
 				if mesh and mesh:IsA("BasePart") then
 					flowerTemplates[#flowerTemplates + 1] = mesh
-				else
-					warn(`[GrassZone] Fleur "{name}" introuvable a cote de GrassMesh. Elle ne poussera pas.`)
 				end
+			end
+			-- Une fleur manquante ne dit RIEN : la retirer de Studio est une facon valable de l'enlever, et prevenir
+			-- pour un choix delibere finit par noyer les vrais messages.
+			-- En revanche, une liste NON VIDE dont on ne trouve AUCUN element, ca c'est anormal et actionnable : le
+			-- chemin est faux, ou les meshes ont ete deplaces.
+			if #GrassZoneConfigs.FLOWER_NAMES > 0 and #flowerTemplates == 0 then
+				warn(
+					`[GrassZone] Aucune des fleurs listees n'existe a cote de GrassMesh `
+						.. `({table.concat(GrassZoneConfigs.FLOWER_NAMES, ", ")}). Verifie ou elles sont rangees.`
+				)
 			end
 		end
 
