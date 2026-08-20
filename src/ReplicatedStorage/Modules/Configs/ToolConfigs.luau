@@ -294,7 +294,11 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- avance visiblement. A REGLER a l'oeil pour la sensation avant l'upgrade.
 		cutPerClick = 0.4,
 		-- LEGERE : aucun smooth, la pose colle a la visee (reactivite max, la ou est le curseur sur la face).
-		poseFollowSpeed = 0,
+		-- LEGERE, mais pas instantanee. Elle etait a 0, c'est-a-dire AUCUN lissage : la pose sautait
+		-- litteralement d'une position a l'autre. Meme un outil leger a besoin d'un peu de retard pour que le
+		-- geste se lise comme un bras qui bouge. 14 reste nettement plus vif que le taille-haie (8) : la
+		-- difference de poids se sent toujours, elle ne passe simplement plus par l'absence de lissage.
+		poseFollowSpeed = 14,
 	}),
 	HedgeTrimmer = {
 		assetName = "HedgeTrimmer",
@@ -380,7 +384,11 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- Monte a 13 : le retard se sentait comme une visee qui ne repond pas, plus que comme du poids.
 		-- Si en montant plus haut la visee se met a sauter toute seule, ce n'est pas un bug : en vue iso le rayon
 		-- arrive de biais, le signal est nerveux, et un ressort raide AMPLIFIE ce bruit au lieu de l'absorber.
-		poseFollowSpeed = 13,
+		-- 8 : essaye a 13, trop sec. Le bras claquait sur sa position au lieu de la rejoindre, et le poids de
+		-- la machine ne se lisait plus. Si en remontant la visee se met a sauter toute seule, ce n'est pas un
+		-- bug : en vue iso le rayon arrive de biais, le signal est nerveux, et un ressort raide AMPLIFIE ce
+		-- bruit au lieu de l'absorber.
+		poseFollowSpeed = 8,
 	},
 }
 
