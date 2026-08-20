@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.244 — Deplacer une haie refait le semis d'herbe sous elle
+
+L'herbe poussait au travers d'une haie qu'on venait de redimensionner. L'emprise des objets poses fonctionnait bien
+-- le log l'attestait -- mais elle se calcule AU SEMIS, une seule fois. Bouger l'obstacle apres coup ne prevenait
+personne.
+
+Le semis se refait donc quand un obstacle change de position ou de taille. On n'ecoute que les obstacles DEJA trouves
+(une poignee par zone), pas toute la map : une haie posee AILLEURS pendant la partie demande encore un relancement,
+mais la retailler ou la deplacer se voit tout de suite -- et c'est le geste qu'on fait cent fois en reglant un jardin.
+
+La reconstruction passe par un chemin UNIQUE et differe (`queueRebuild`), partage avec le redimensionnement de la
+zone elle-meme. Necessaire : tirer une poignee a la souris emet des dizaines de changements par seconde, et chacun
+relancerait sinon un semis complet de plusieurs milliers de touffes.
+
+Les ecoutes sont reposees a chaque semis, sur la NOUVELLE liste d'obstacles : sans ca elles s'empileraient a chaque
+reconstruction, et une haie retiree resterait surveillee pour rien.
+
 ## 0.0.243 — Le repere lachait le curseur sur le DESSUS, et un mot quand il faut un escabeau
 
 Trois choses, dont une regression de la veille.

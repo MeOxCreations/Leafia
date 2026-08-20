@@ -90,11 +90,18 @@ type Zone = {
 	part: BasePart,
 	clumps: { Clump }, -- toutes les touffes a plat : sert au comptage, au log et au nettoyage
 	buckets: { Bucket }, -- les memes, regroupees par pave : c'est CA que la boucle parcourt
+	blockers: { BasePart }, -- objets poses dessus au dernier semis : on les surveille pour refaire le semis s'ils bougent
 	radius: number, -- rayon de la zone, pour l'ecarter d'un coup quand personne n'est autour
 	settling: boolean, -- des touffes encore en mouvement ? on continue alors meme sans joueur pres
 	generation: number, -- le semis etant etale sur plusieurs images, ce compteur permet a un nouveau semis d'abandonner
 	-- proprement celui d'avant au lieu de remplir la meme zone a deux
+	watchers: { RBXScriptConnection }, -- ecoutes posees sur les OBSTACLES : bouger une haie doit refaire le semis
+	rebuildPending: boolean, -- une reconstruction est deja programmee : on ne l'empile pas
 }
+
+-- Declaration en avance : `watchBlockers` la referme, et elle rappelle `populate` qui rappelle `watchBlockers`.
+-- Le cycle est reel, il est resolu ici par une seule ligne plutot que par un detour artificiel.
+local queueRebuild: (zone: Zone) -> ()
 
 local zones: { Zone } = {}
 local connections: { RBXScriptConnection } = {}
@@ -363,6 +370,7 @@ local function populate(zone: Zone)
 	local densityScale = if GrassZoneConfigs.AUTO_SCALE_WITH_DENSITY then math.sqrt(stepX * stepZ) else 1
 
 	local blockers = collectBlockers(zone)
+	zone.blockers = blockers
 	local skipped = 0
 	local budget = GrassZoneConfigs.CREATE_BUDGET
 	local made = 0
@@ -582,6 +590,25 @@ local function populate(zone: Zone)
 	zone.settling = true
 end
 
+-- SURVEILLE LES OBSTACLES. L'emprise des objets poses est calculee AU SEMIS : sans ces ecoutes, deplacer ou
+-- redimensionner une haie laisse l'herbe pousser au travers, et rien ne le signale.
+-- On n'ecoute que les obstacles DEJA trouves (une poignee), pas toute la map : une haie posee ailleurs pendant la
+-- partie demande encore un relancement, mais la retailler ou la bouger se voit tout de suite.
+local function watchBlockers(zone: Zone)
+	for _, connection in ipairs(zone.watchers) do
+		connection:Disconnect()
+	end
+	table.clear(zone.watchers)
+
+	for _, blocker in ipairs(zone.blockers) do
+		for _, property in ipairs({ "CFrame", "Size" }) do
+			zone.watchers[#zone.watchers + 1] = blocker:GetPropertyChangedSignal(property):Connect(function()
+				queueRebuild(zone)
+			end)
+		end
+	end
+end
+
 -- Log detaille, appele a CHAQUE pose (pas seulement au boot : une zone peut arriver bien plus tard par le streaming).
 -- Ces nombres disent tout de suite si c'est le semis ou la zone qui est en cause quand l'herbe atterrit de travers.
 local function logZone(zone: Zone)
@@ -591,6 +618,24 @@ local function logZone(zone: Zone)
 		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) en {#zone.buckets} pave(s) | zone {zone.part.Size} @ `
 			.. `{zone.part.Position} | 1re touffe @ {where}`
 	)
+end
+
+-- Refait le semis, EN DIFFERE et UNE SEULE FOIS. Un redimensionnement a la souris emet des dizaines de changements
+-- par seconde : sans ce garde, chacun relancerait un semis complet de plusieurs milliers de touffes.
+queueRebuild = function(zone: Zone)
+	if zone.rebuildPending then
+		return
+	end
+	zone.rebuildPending = true
+	task.delay(REBUILD_DELAY, function()
+		zone.rebuildPending = false
+		if zone.part.Parent ~= nil then
+			populate(zone)
+			-- Les obstacles ont pu changer : on repose les ecoutes sur la nouvelle liste.
+			watchBlockers(zone)
+			logZone(zone)
+		end
+	end)
 end
 
 -- La zone a bouge : on retraduit les pieds en monde et on reveille les touffes pour qu'elles se reposent au bon
@@ -888,12 +933,23 @@ function GrassZoneController.init()
 				return -- deja remplie
 			end
 
-			local zone: Zone = { part = instance, clumps = {}, buckets = {}, radius = 0, settling = true, generation = 0 }
+			local zone: Zone = {
+				part = instance,
+				clumps = {},
+				buckets = {},
+				blockers = {},
+				radius = 0,
+				settling = true,
+				generation = 0,
+				watchers = {},
+				rebuildPending = false,
+			}
 			zones[#zones + 1] = zone
 			-- EN TACHE DE FOND : le semis est etale sur plusieurs images, donc il YIELD. Cette fonction est aussi
 			-- branchee sur DescendantAdded : y attendre bloquerait ce signal pour tout le reste de la map.
 			task.spawn(function()
 				populate(zone)
+				watchBlockers(zone)
 				logZone(zone)
 			end)
 
@@ -903,22 +959,11 @@ function GrassZoneController.init()
 				refresh(zone)
 			end)
 
-			-- Le semis se refait en DIFFERE. Une part qui arrive par le streaming recoit ses proprietes en plusieurs
-			-- fois : Size a change trois fois en 80 ms, donc 570 touffes reconstruites trois fois pour rien. On attend
-			-- que ca se calme, puis on reconstruit une seule fois, sur la taille finale.
-			local rebuildPending = false
+			-- Le semis se refait en DIFFERE, par le meme chemin que les obstacles qui bougent. Une part qui arrive par
+			-- le streaming recoit ses proprietes en plusieurs fois : Size a change trois fois en 80 ms, donc 570
+			-- touffes reconstruites trois fois pour rien. On attend que ca se calme, puis on reconstruit une fois.
 			connections[#connections + 1] = instance:GetPropertyChangedSignal("Size"):Connect(function()
-				if rebuildPending then
-					return
-				end
-				rebuildPending = true
-				task.delay(REBUILD_DELAY, function()
-					rebuildPending = false
-					if zone.part.Parent ~= nil then
-						populate(zone)
-						logZone(zone)
-					end
-				end)
+				queueRebuild(zone)
 			end)
 		end
 
@@ -953,6 +998,10 @@ function GrassZoneController.stop()
 	end
 	table.clear(connections)
 	for _, zone in ipairs(zones) do
+		for _, watcher in ipairs(zone.watchers) do
+			watcher:Disconnect()
+		end
+		table.clear(zone.watchers)
 		local folder = zone.part:FindFirstChild(FOLDER_NAME)
 		if folder then
 			folder:Destroy()
