@@ -51,6 +51,8 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- Herbe de zone (remplissage + ecrasement au passage). Ici AUSSI : tout est local et pilote par la config,
 	-- donc il n'y a rien a recopier dans cette place. Ordre indifferent.
 	require(script.GrassZoneController).init()
+	-- Nuages : du ciel, rien d'autre. Local, aucun reseau. Ordre indifferent.
+	require(script.CloudController).init()
 
 	-- Musique de fond du TUTO : MusicBuild4 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
 	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.
@@ -164,6 +166,11 @@ HedgeLeafController.init()
 -- transite), contrairement au decor vegetal qui, lui, est joue par le serveur. Ordre indifferent.
 local GrassZoneController = require(script.GrassZoneController)
 GrassZoneController.init()
+
+-- Nuages qui traversent le ciel en boucle. 100% LOCAL, comme l'herbe : c'est du decor, rien ne transite.
+-- Ordre indifferent, il ne partage rien avec les autres.
+local CloudController = require(script.CloudController)
+CloudController.init()
 
 -- HedgeMeshController n'est PLUS demarre : il a servi de banc d'essai a la texture repetee, qui est maintenant
 -- dans HedgeBranchService. Le laisser tourner poserait une plaque flottante devant le joueur a chaque spawn.

@@ -2185,6 +2185,36 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.230 — Des nuages traversent le ciel
+
+Nouveau CloudController (client) + CloudConfigs. Un troupeau de nuages derive au-dessus de la carte, en boucle et
+sans fin.
+
+Deux choix portent tout l'effet :
+
+Les nuages derivent en coordonnees MONDE et NE SUIVENT PAS le joueur. Coller le ciel au joueur serait plus simple,
+mais donnerait des nuages qui avancent avec lui : plus aucune parallaxe, donc plus aucune impression de distance.
+Ils vivent leur vie, on les traverse.
+
+Le RECYCLAGE est cache par le FONDU. Quand un nuage s'eloigne trop, il est remis en amont du vent, a une place tiree
+au hasard. Mais sa transparence monte bien avant cette limite : il s'efface, il revient ailleurs, deja efface. On ne
+voit jamais ni la disparition ni la reapparition. Sans ce fondu, le meme systeme ferait clignoter des nuages aux
+bords de l'ecran.
+
+Details qui evitent des defauts visibles :
+- vitesse propre a chaque nuage (SPEED_VARIATION) : sans elle le ciel derive d'un bloc, comme une image qu'on
+  ferait glisser ;
+- altitude dispersee (ALTITUDE_SPREAD) : sans elle les nuages forment une nappe plate ;
+- au recyclage, un ecart lateral au hasard sur le bord amont : sinon ils arrivent tous par le meme point ;
+- a la premiere mise en place, la distance est tiree en RACINE du hasard, ce qui repartit egalement sur le disque.
+  Un tirage direct entasserait les nuages au centre, au-dessus du joueur ;
+- rotation au hasard autour de la VERTICALE seulement : un nuage reste a plat.
+
+100 % client, comme l'herbe : c'est du ciel, ca ne change aucune regle du jeu et rien ne transite.
+
+Premier bouton a regler : ALTITUDE (250), qui depend entierement de l'echelle de la carte. Puis COUNT et
+FIELD_RADIUS ensemble -- agrandir le rayon sans monter le nombre donne un ciel vide.
+
 ## 0.0.229 — L'herbe s'ECRASE en hauteur au lieu de basculer sur le cote
 
 Le joueur voyait ses touffes pencher de travers en marchant dessus. Raison, donnee par lui : **le mesh d'herbe est un
