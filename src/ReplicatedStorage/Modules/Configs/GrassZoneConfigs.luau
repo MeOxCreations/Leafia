@@ -145,8 +145,8 @@ local GrassZoneConfigs = {
 	-- au coeur d'une rafale. Volontairement petite : c'est un appui, pas un pied. 0 = pas de tassement.
 	GUST_SQUASH = 0.12,
 
-	WIND_FADE_START = 25,
-	WIND_VIEW_DISTANCE = 40,
+	WIND_FADE_START = 10,
+	WIND_VIEW_DISTANCE = 26,
 
 	-- ===== Ecrasement =====
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
