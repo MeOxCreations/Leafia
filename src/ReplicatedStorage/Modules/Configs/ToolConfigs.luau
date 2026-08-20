@@ -388,7 +388,7 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- la machine ne se lisait plus. Si en remontant la visee se met a sauter toute seule, ce n'est pas un
 		-- bug : en vue iso le rayon arrive de biais, le signal est nerveux, et un ressort raide AMPLIFIE ce
 		-- bruit au lieu de l'absorber.
-		poseFollowSpeed = 8,
+		poseFollowSpeed = 10,
 	},
 }
 

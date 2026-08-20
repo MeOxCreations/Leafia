@@ -324,7 +324,7 @@ local HedgeConfigs = {
 	-- geste a besoin d'un peu de retard pour se lire comme un bras qui se leve, et non comme une valeur qui saute.
 	-- Trop bas (6.5 et moins) donne l'inverse : une visee qui ne repond pas. La zone jouable est etroite.
 	-- NB : le taille-haie a sa PROPRE valeur (ToolConfigs.HedgeTrimmer.poseFollowSpeed), qui prime sur celle-ci.
-	UPDOWN_FOLLOW_SPEED = 8,
+	UPDOWN_FOLLOW_SPEED = 10,
 
 	-- Debordement accepte au-dela des bords de la haie, en studs. La visee reste valide dans cette marge.
 	--
