@@ -320,10 +320,11 @@ local HedgeConfigs = {
 	-- etre sec. En vue iso le rayon arrive DE BIAIS, le meme pixel de souris couvre bien plus de hauteur de haie
 	-- et le signal est plus nerveux -- un ressort raide amplifie ce bruit au lieu de l'absorber, et la visee parait
 	-- sauter toute seule. Elle etait redescendue a 6.5, la valeur d'avant la 1re personne.
-	-- Remontee a 12 a la demande : le retard se sentait comme une visee qui ne repond pas. Si la visee se met a
-	-- sauter d'elle-meme, c'est ce bruit-la qui ressort -- redescendre plutot que chercher ailleurs.
+	-- 8 : essayee a 12, c'etait trop SEC -- le bras claquait sur sa nouvelle position au lieu de la rejoindre. Le
+	-- geste a besoin d'un peu de retard pour se lire comme un bras qui se leve, et non comme une valeur qui saute.
+	-- Trop bas (6.5 et moins) donne l'inverse : une visee qui ne repond pas. La zone jouable est etroite.
 	-- NB : le taille-haie a sa PROPRE valeur (ToolConfigs.HedgeTrimmer.poseFollowSpeed), qui prime sur celle-ci.
-	UPDOWN_FOLLOW_SPEED = 12,
+	UPDOWN_FOLLOW_SPEED = 8,
 
 	-- Debordement accepte au-dela des bords de la haie, en studs. La visee reste valide dans cette marge.
 	--
