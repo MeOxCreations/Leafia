@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.242 — Le repere de coupe suit le CURSEUR
+
+Demande du joueur : le cercle blanc doit se poser la ou l'on pointe sur la haie, pas sur la lame.
+
+Nouveau reglage VISUAL_CUT_FOLLOWS_CURSOR (vrai par defaut). Le cercle garde toujours la LONGUEUR et l'ORIENTATION
+du segment de lame -- c'est elle qui lui donne sa taille et son inclinaison -- il est seulement TRANSLATE sous le
+point vise. On ne fabrique donc pas un repere d'une autre forme, on deplace le meme.
+
+### Ce que ce choix coute, et pourquoi c'est un reglage
+
+Les deux reperes ne coincident pas, et c'etait DELIBERE. Le serveur coupe sur le segment de LAME, et rien ne garantit
+qu'a 80 % de visee le bras place la lame a 80 % de la hauteur de la haie -- surtout lateralement, ou le curseur peut
+etre loin des mains. A `true`, le cercle designe donc parfois un endroit qui ne sera pas coupe.
+
+C'est un arbitrage entre LISIBILITE (on regarde ou on vise) et HONNETETE (le repere montre ce qui sera coupe), pas un
+bug d'un cote ou de l'autre. D'ou le reglage plutot qu'un remplacement : un seul mot pour revenir.
+
+Le dernier point vise est oublie quand le curseur quitte la haie, sinon le repere resterait plante a l'endroit ou
+l'on est sorti.
+
 ## 0.0.241 — Les fleurs ne levitent plus : leur tige suit l'herbe voisine
 
 Certaines fleurs flottaient nettement au-dessus du gazon, d'autres restaient invisibles dedans.

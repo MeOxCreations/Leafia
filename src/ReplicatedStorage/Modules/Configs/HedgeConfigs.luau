@@ -1115,6 +1115,15 @@ local HedgeConfigs = {
 	VISUAL_CUT_FOLIAGE_COLOR = Color3.fromRGB(255, 255, 255), -- il reste a couper -> blanc
 	VISUAL_CUT_BARE_COLOR = Color3.fromRGB(255, 140, 25), -- deja nu -> orange
 	VISUAL_CUT_DRY_TIME = 0.2, -- temps a tailler SANS qu'un coup morde avant de passer en "nu" (orange), en secondes
+	-- OU SE PLACE LE REPERE DE COUPE (le cercle blanc).
+	-- true  : il suit le CURSEUR, la ou on pointe sur la haie. Plus direct a lire, on regarde ou on vise.
+	-- false : il suit la LAME, c'est-a-dire ce que le serveur va REELLEMENT couper.
+	--
+	-- A savoir avant de basculer : les deux ne coincident pas. Le serveur coupe sur le segment de LAME, et rien ne
+	-- garantit qu'a 80 pour cent de visee le bras place la lame a 80 pour cent de la hauteur de la haie -- surtout
+	-- lateralement, ou le curseur peut etre loin des mains. A `true`, le cercle designe donc parfois un endroit qui
+	-- ne sera pas coupe. C'est un choix de LISIBILITE contre un choix d'HONNETETE, pas un bug d'un cote ou de l'autre.
+	VISUAL_CUT_FOLLOWS_CURSOR = true,
 	-- (anciens etats guide/coupe, gardes pour la transparence ; la couleur vient maintenant de la matiere ci-dessus)
 	VISUAL_CUT_GUIDE_TRANSPARENCY = 0.8,
 	VISUAL_CUT_CUT_TRANSPARENCY = 0.7,

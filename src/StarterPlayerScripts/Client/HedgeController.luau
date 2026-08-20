@@ -130,6 +130,9 @@ local snipRemote: RemoteEvent? = nil
 -- Les deux bouts de la lame REELLEMENT envoyes : ce que le serveur a en main, pour le debug.
 local lastAimBase: Vector3? = nil
 local lastAimTip: Vector3? = nil
+-- Dernier point VISE sur la haie par le curseur. Distinct du segment de lame ci-dessus : c'est ou l'on POINTE, pas
+-- ou l'outil se trouve. Sert a poser le repere de coupe quand VISUAL_CUT_FOLLOWS_CURSOR est vrai.
+local lastCursorPoint: Vector3? = nil
 local lastAimAt = 0
 
 local function sendAim(base: Vector3?, tip: Vector3?)
@@ -1141,6 +1144,8 @@ local function getCursorPart(): BasePart
 end
 
 local function hideCursor()
+	-- On oublie AUSSI le dernier point vise : sinon le repere resterait plante la ou le curseur a quitte la haie.
+	lastCursorPoint = nil
 	if cursorPart then
 		cursorPart:Destroy()
 		cursorPart = nil
@@ -1352,6 +1357,7 @@ local function updateCursor(character: Model, normal: Vector3, workHedge: BasePa
 	end
 
 	getCursorPart().Position = hitPoint
+	lastCursorPoint = hitPoint
 
 	-- ZONES MORTES. On remappe [deadzone, hauteur - deadzone] sur [0, 1] : tout ce qui est plus bas vaut le bas
 	-- franc, tout ce qui est plus haut vaut le haut franc. Ce sont les positions les plus utilisees, elles
@@ -2024,7 +2030,17 @@ local function update(dt: number)
 	-- surface travaillee. Le DESSUS a une normale VERTICALE, la face une horizontale : on passe la bonne pour que le
 	-- repere se pose A PLAT sur ce qu'on taille (a plat sur le dessus, plaque contre la face).
 	local surfaceNormal = if onTop then Vector3.yAxis else normal
-	drawCutZone(lastAimBase, lastAimTip, cutState, surfaceNormal)
+
+	-- OU POSER LE CERCLE. On garde toujours la LONGUEUR et l'ORIENTATION du segment de lame -- c'est elle qui donne
+	-- au repere sa taille et son inclinaison. Suivre le curseur ne fait que le TRANSLATER sous le point vise, au lieu
+	-- de le laisser sur les mains. On ne fabrique donc pas un repere d'une autre forme, on deplace le meme.
+	local drawBase, drawTip = lastAimBase, lastAimTip
+	if HedgeConfigs.VISUAL_CUT_FOLLOWS_CURSOR and drawBase and drawTip and lastCursorPoint then
+		local offset = lastCursorPoint - (drawBase + drawTip) * 0.5
+		drawBase += offset
+		drawTip += offset
+	end
+	drawCutZone(drawBase, drawTip, cutState, surfaceNormal)
 end
 
 function HedgeController.init()
