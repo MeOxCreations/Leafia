@@ -44,9 +44,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 	local LEAF_ID = "rbxassetid://117703108607506"
 	local LEAF_TINT = Color3.fromRGB(81, 81, 81)
-	local N, SIZE, GAP, HOP = 4, 14, 12, 16
-	local HOP_TWEEN = TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1, true)
-	local STAGGER = 0.11
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
 	-- d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`, le
 	-- rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
@@ -89,34 +86,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	TweenService:Create(leaf, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 10 }):Play()
 	TweenService:Create(leaf, TweenInfo.new(2.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(0.5, 0.46) }):Play()
 
-	-- 4 boules qui rebondissent (onde decalee, comme LoadingOverlay).
-	local width = N * SIZE + (N - 1) * GAP
-	local h = SIZE + HOP
-	local loader = Instance.new("Frame")
-	loader.BackgroundTransparency = 1
-	loader.AnchorPoint = Vector2.new(0.5, 0.5)
-	loader.Position = UDim2.fromScale(0.5, 0.78)
-	loader.Size = UDim2.fromOffset(width, h)
-	loader.Parent = curtain
-	for i = 0, N - 1 do
-		local home = UDim2.fromOffset(SIZE / 2 + i * (SIZE + GAP), h - SIZE / 2)
-		local ball = Instance.new("Frame")
-		ball.AnchorPoint = Vector2.new(0.5, 0.5)
-		ball.Position = home
-		ball.Size = UDim2.fromOffset(SIZE, SIZE)
-		ball.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		ball.BorderSizePixel = 0
-		local c = Instance.new("UICorner") :: UICorner
-		c.CornerRadius = UDim.new(1, 0)
-		c.Parent = ball
-		ball.Parent = loader
-		local up = UDim2.new(home.X.Scale, home.X.Offset, home.Y.Scale, home.Y.Offset - HOP)
-		task.delay(i * STAGGER, function()
-			if ball.Parent then
-				TweenService:Create(ball, HOP_TWEEN, { Position = up }):Play()
-			end
-		end)
-	end
+	-- Plus de boules qui rebondissent : la feuille qui oscille suffit a dire que ca charge, et deux animations qui
+	-- disent la meme chose se volent l'attention. Le rideau tenant maintenant dix secondes, il vaut mieux qu'il soit
+	-- calme.
 
 	-- Chat + liste joueurs : la CoreGui passe AU-DESSUS des ScreenGui, le rideau ne la couvre pas -> on la coupe.
 	pcall(function()
