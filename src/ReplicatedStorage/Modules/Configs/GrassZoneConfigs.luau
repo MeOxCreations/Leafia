@@ -166,8 +166,9 @@ local GrassZoneConfigs = {
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
 	CRUSH_RADIUS = 4.5,
 	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur.
-	-- 0.8 = la touffe descend a 20 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
-	CRUSH_SQUASH = 0.8,
+	-- 0.9 = la touffe descend a 10 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
+	-- Au-dela de 0.95 elle devient une lamelle collee au sol : on ne voit plus qu'elle a ete de l'herbe.
+	CRUSH_SQUASH = 0.9,
 	-- COULEUR DE L'HERBE ECRASEE. La touffe glisse en douceur de BASE_COLOR vers celle-ci quand on marche dessus, et
 	-- revient quand elle se releve. Deux couleurs choisies plutot qu'un pourcentage d'assombrissement : on regle ce
 	-- qu'on voit, et rien n'empeche de faire une trace plus CLAIRE que l'herbe -- c'est d'ailleurs ce que fait une
@@ -175,7 +176,7 @@ local GrassZoneConfigs = {
 	-- Les TACHES de Perlin s'appliquent aussi a cette teinte : la trace garde donc le relief du terrain au lieu de
 	-- devenir un aplat uniforme.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee garde sa couleur.
-	CRUSHED_COLOR = Color3.fromRGB(88, 125, 39),
+	CRUSHED_COLOR = Color3.fromRGB(113, 159, 49),
 	-- Inclinaison maxi, en degres, atteinte au MILIEU du geste.
 	-- C'est un PASSAGE, pas un etat : elle monte avec l'inclinaison rapide, puis s'efface a mesure que le tassement
 	-- la rattrape. Une touffe completement tassee est A PLAT, elle ne penche plus. On voit donc l'herbe pencher dans
