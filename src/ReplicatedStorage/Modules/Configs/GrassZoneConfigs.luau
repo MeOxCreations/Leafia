@@ -79,8 +79,11 @@ local GrassZoneConfigs = {
 	-- Automatique : rien a taguer, rien a declarer. Tout ce qui touche le dessus de la zone compte, SAUF l'herbe
 	-- elle-meme, les autres zones, et les personnages (un joueur qui traverse ne doit pas creuser un trou definitif).
 	CLEAR_UNDER_PARTS = true,
-	-- Degagement AUTOUR de l'emprise, en studs, pour qu'aucun brin ne depasse du bord de l'objet.
-	CLEAR_MARGIN = 0.4,
+	-- Degagement AUTOUR de l'emprise, en studs. Ce n'est pas qu'une securite contre les brins qui depassent : une
+	-- haie posee sur la pelouse a un PIED, de la terre autour, et de l'herbe qui viendrait coller a sa base la ferait
+	-- paraitre plantee au chausse-pied. Un peu d'air autour l'assied dans le decor.
+	-- Trop grand laisse en revanche un anneau chauve visible : 1.5 degage sans deshabiller.
+	CLEAR_MARGIN = 1.5,
 	-- Hauteur au-dessus de la zone dans laquelle on cherche les objets. Au-dela, une part qui vole loin du sol ne doit
 	-- pas trouer la pelouse.
 	CLEAR_HEIGHT = 14,
