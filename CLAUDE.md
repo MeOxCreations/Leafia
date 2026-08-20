@@ -406,6 +406,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   ce sont des details de l'objet parent, elles saturent la limite de resultats et font RATER le vrai objet. Corollaire
   de diagnostic : un log qui compte les objets sans les NOMMER ne sert a rien le jour ou ca derape.
 
+- **Un service qui balaye le monde pour y trouver des choses doit dire ce qu'il N'A PAS trouve.** Vecu deux fois dans
+  la meme session : une zone d'herbe puis un PNJ poses a la racine du Workspace au lieu du dossier attendu, donc
+  jamais vus, et RIEN a l'ecran ni dans les logs ne le signalait -- on debug l'animation ou le semis alors que
+  l'objet n'est simplement pas dans le perimetre. Un compteur global ("8 modeles animes") ne revele jamais l'absence
+  du neuvieme. Regle : boucler sur les entrees de CONFIG et prevenir nommement pour chacune qui n'a rien produit, et
+  distinguer "pas trouve" de "trouve mais inutilisable" (nom bon mais Animator absent). Corollaire : preferer une
+  racine de recherche LARGE avec un filtre cheap (`IsA("Model")` ecarte des milliers de parts pour rien) plutot
+  qu'une racine etroite qui oblige a ranger les objets au bon endroit -- l'ergonomie prime, le cout est nul.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les

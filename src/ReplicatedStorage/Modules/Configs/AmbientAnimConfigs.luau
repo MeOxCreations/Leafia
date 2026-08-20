@@ -21,11 +21,13 @@ local ANIMATIONS: { [string]: string } = {
 local AmbientAnimConfigs = {
 	ANIMATIONS = ANIMATIONS,
 
-	-- Ou chercher, sous Workspace. Toute la map : les plantes sont rangees dans Assets.Foliages, mais les PNJ sont
-	-- poses directement dans la map, et d'autres viendront ailleurs.
-	-- Le cout de cette racine large est nul : les milliers de carreaux de haie qui y naissent sont ecartes par un
-	-- IsA("Model") avant meme le test de nom.
-	ROOT = { "Worlds", "Maps" },
+	-- Ou chercher, sous Workspace. VIDE = tout le Workspace, et c'est VOULU : les plantes sont dans Assets.Foliages,
+	-- les PNJ sont poses directement dans la map ou a la racine, et la prochaine chose sera encore ailleurs. Obliger a
+	-- ranger un modele au bon endroit pour qu'il s'anime est un piege qui a deja coute deux diagnostics.
+	-- Le cout est nul : tout ce qui naît dans le Workspace (des milliers de carreaux de haie, les debris de coupe) est
+	-- ecarte par un `IsA("Model")` avant meme le test de nom, et un Model porte toujours un nom a comparer.
+	-- Remettre un chemin ici (ex { "Worlds", "Maps" }) si un jour il faut restreindre.
+	ROOT = {},
 
 	-- DESYNCHRONISATION. Sans elle, dix buissons jouent la MEME boucle a la MEME image : ils ondulent tous ensemble,
 	-- au meme instant, et l'oeil lit ca comme du faux immediatement. Vaut aussi pour deux PNJ cote a cote.

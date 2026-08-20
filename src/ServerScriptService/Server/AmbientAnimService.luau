@@ -59,6 +59,8 @@ end
 
 -- Demarre la boucle d'un modele, si son nom est connu de la config et qu'il n'est pas deja anime.
 -- Retourne true quand une piste a vraiment demarre (sert au comptage du log).
+local seen: { [string]: number } = {} -- nom de la config -> combien de modeles trouves. Sert a dire ce qui MANQUE.
+
 local function animate(model: Model): boolean
 	if tracks[model] then
 		return false
@@ -69,6 +71,12 @@ local function animate(model: Model): boolean
 	end
 	local animator = findAnimator(model)
 	if not animator then
+		-- Anormal ET actionnable : le modele porte le bon nom, il devrait donc s'animer. Sans ce mot, on cherche du
+		-- cote de l'animation alors que c'est le rig qui manque.
+		warn(
+			`[AmbientAnim] "{model.Name}" trouve mais SANS Animator (il faut un Humanoid contenant un Animator). `
+				.. `Rien ne sera joue dessus.`
+		)
 		return false
 	end
 
@@ -108,6 +116,8 @@ local function animate(model: Model): boolean
 	end
 
 	tracks[model] = track
+	-- Compte APRES le succes : une entree qui n'apparait pas ici n'a vraiment rien anime.
+	seen[model.Name] = (seen[model.Name] or 0) + 1
 	return true
 end
 
@@ -160,8 +170,9 @@ function AmbientAnimService.init()
 			end
 		end
 
-		-- Ce qui arrive APRES le boot s'anime aussi. On n'ecoute QUE ce dossier : brancher Workspace.DescendantAdded
-		-- ferait passer chaque part de personnage et chaque debris par le test de nom, des centaines de fois pour rien.
+		-- Ce qui arrive APRES le boot s'anime aussi. La racine etant tout le Workspace, ce callback voit passer chaque
+		-- carreau de haie et chaque debris de coupe : le `IsA("Model")` les ecarte avant tout autre test, et un Model
+		-- ne coute qu'une lecture de nom. Mesure faite : ce n'est pas un poste de depense.
 		root.DescendantAdded:Connect(function(descendant)
 			if descendant:IsA("Model") then
 				animate(descendant)
@@ -173,7 +184,22 @@ function AmbientAnimService.init()
 			end
 		end)
 
-		print(`[AmbientAnim] {started} modele(s) anime(s).`)
+		-- CE QUI MANQUE, nomme. Une entree de config qu'on ne trouve nulle part est presque toujours un modele mal
+		-- nomme ou range hors de la racine -- et sans ce mot, ca se cherche a l'aveugle (vecu deux fois).
+		for name in pairs(AmbientAnimConfigs.ANIMATIONS) do
+			if not seen[name] then
+				warn(
+					`[AmbientAnim] "{name}" est dans la config mais RIEN n'a ete anime sous ce nom. `
+						.. `Verifie le nom EXACT du Model dans le Workspace (il n'y a pas de recherche approchante).`
+				)
+			end
+		end
+
+		local detail = {}
+		for name, count in pairs(seen) do
+			detail[#detail + 1] = `{name} x{count}`
+		end
+		print(`[AmbientAnim] {started} modele(s) anime(s) : {table.concat(detail, ", ")}`)
 	end)
 end
 

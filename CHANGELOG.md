@@ -2185,6 +2185,31 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.225 — Papi ne s'animait pas : il n'etait pas SOUS la racine cherchee
+
+L'animation de Papi ne partait pas. Le modele OldManIdle est pose en enfant DIRECT du Workspace, pas sous
+`Worlds.Maps` ou la recherche s'arretait. Il n'etait donc jamais vu.
+
+Deuxieme fois de suite (la ZoneGrassHandle avait exactement le meme souci). Obliger a ranger un modele au bon endroit
+pour qu'il s'anime est un piege : rien a l'ecran ne dit pourquoi ca ne marche pas, et le code a l'air juste.
+
+La racine passe donc a tout le WORKSPACE. Le cout est nul : tout ce qui y naît -- des milliers de carreaux de haie,
+les debris de coupe -- est ecarte par un `IsA("Model")` avant meme le test de nom.
+
+### Le vrai correctif est le DIAGNOSTIC
+
+Elargir la racine ne repare que ce cas-la. Ce qui manquait vraiment, c'est que le service se taisait quand il ne
+trouvait rien. Deux avertissements ajoutes :
+
+- une entree de config sous laquelle RIEN n'a ete anime le dit en clair, avec son nom ;
+- un modele trouve au bon nom mais SANS Animator le dit aussi -- sinon on cherche du cote de l'animation alors que
+  c'est le rig qui manque.
+
+Et le log de demarrage detaille ce qui a ete anime, par nom et par nombre : `Bush1 x5, Tree1 x3, OldManIdle x1`.
+
+Regle : un service qui parcourt le monde pour y trouver des choses doit dire ce qu'il N'A PAS trouve. Un compteur
+global ("8 modeles animes") ne revele jamais l'absence de la neuvieme.
+
 ## 0.0.224 — Papi respire, et FoliageService devient AmbientAnimService
 
 Papi (le modele OldManIdle pose dans la map) joue son animation d'attente en boucle.
