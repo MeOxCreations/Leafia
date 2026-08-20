@@ -50,9 +50,15 @@ local ORBIT_BIND = "LeafiaPlotOrbit"
 
 -- Glisse de fin orbite -> joueur au clic Start. Sine InOut = depart ET arrivee DOUX (pas de coup sec ni de plongeon).
 local CAM_TWEEN = TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
--- Duree MINI d'affichage du rideau de chargement (clic CREATE -> jeu). Volontairement un peu longue (~6-7 s) : ca pose
--- un vrai temps de chargement facon Sims, meme si techniquement le plot est deja pret derriere.
+-- PLANCHER d'affichage du rideau de chargement, compte depuis le clic CREATE. Volontairement long : ca pose un vrai
+-- temps de chargement facon Sims, meme si techniquement le plot est deja pret derriere.
 local LOADING_MIN = 10.5
+-- Compte a rebours SUPPLEMENTAIRE, lance seulement une fois le personnage en place.
+-- Le plancher ci-dessus part du CLIC : si le personnage arrive tard (donnees, session lock, teleportation sur le plot),
+-- ce plancher est deja presque ecoule quand il apparait, et le rideau se leve dans la seconde qui suit -> transition
+-- brutale, et un rideau qui parait beaucoup trop court. Ce delai-la, lui, couvre TOUJOURS la mise en place du
+-- personnage, quelle que soit sa duree. Les deux se cumulent : on part au plus tard des deux.
+local LOADING_AFTER_CHARACTER = 5
 -- Valeurs MESUREES sur l'etat de repos reel de la camera de jeu (Custom) : le tween doit finir la pour que Custom
 -- n'ait RIEN a corriger au handoff (ni zoom, ni saut). Important : Custom REMET sa propre inclinaison au repos
 -- (~15 deg), il ne garde PAS celle qu'on lui donne -- d'ou l'obligation de finir deja a cette inclinaison.
@@ -437,6 +443,20 @@ local function enterGame(gui: ScreenGui)
 	local loadingStart = os.clock()
 	local function finishLoading()
 		task.spawn(function()
+			-- 1) ATTENDRE LE PERSONNAGE. Le rideau doit couvrir sa mise en place, pas se lever pile au moment ou il
+			-- apparait. WaitForChild avec timeout sur la RootPart : a CharacterAdded le personnage est parente mais
+			-- pas complet, ses parts arrivent quelques images plus tard.
+			local character: Instance? = player.Character
+			if not character then
+				character = player.CharacterAdded:Wait()
+			end
+			if character then
+				character:WaitForChild("HumanoidRootPart", 10)
+			end
+			-- 2) Puis le compte a rebours supplementaire, qui part de CE moment.
+			task.wait(LOADING_AFTER_CHARACTER)
+			-- 3) Et le plancher depuis le clic, conserve : si le personnage etait deja pret, le rideau reste quand
+			-- meme affiche ce minimum.
 			local elapsed = os.clock() - loadingStart
 			if elapsed < LOADING_MIN then
 				task.wait(LOADING_MIN - elapsed)

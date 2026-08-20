@@ -389,6 +389,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   `GetPropertyChangedSignal` d'une part repliquee doit etre DIFFERE et coalesce (task.delay + drapeau), jamais
   immediat.
 
+- **Un plancher de duree compte depuis un instant qui n'a rien a voir avec l'evenement qu'il doit couvrir ne garantit
+  RIEN.** Le rideau de chargement gardait un minimum de 10.5 s depuis le CLIC ; quand le personnage mettait 8 s a se
+  mettre en place, il ne restait qu'une seconde de rideau apres lui. Le plancher protegeait donc les cas rapides et
+  laissait tomber les cas lents -- exactement ceux qui en avaient besoin. Symptome trompeur : on monte le chiffre
+  (6.5 -> 10.5) et ca ne change presque rien, parce que ce n'est pas la duree qui est fausse mais son POINT DE DEPART.
+  Regle : faire partir le compte a rebours de l'EVENEMENT a couvrir (ici l'arrivee du personnage), et garder l'autre
+  plancher en plus si on veut un minimum absolu. Meme famille que le plancher en studs qui inversait l'effet qu'il
+  devait borner.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les

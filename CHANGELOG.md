@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.214 — Le rideau de chargement attend le PERSONNAGE avant de compter
+
+Le rideau paraissait beaucoup trop court, malgre un LOADING_MIN deja monte a 10.5 s. La raison : ce plancher etait
+compte depuis le CLIC, pas depuis l'arrivee du personnage. Quand celui-ci met plusieurs secondes a se mettre en place
+(chargement des donnees, session lock ProfileStore, teleportation sur le plot), le plancher est deja presque ecoule
+quand il apparait -- le rideau se leve dans la seconde qui suit, et la transition est brutale.
+
+Un plancher compte depuis un instant qui n'a rien a voir avec l'evenement qu'il doit couvrir ne garantit rien : il
+protege les cas rapides et laisse tomber les cas lents, c'est-a-dire exactement ceux qui en avaient besoin.
+
+`finishLoading` attend maintenant le personnage (et sa RootPart, via WaitForChild avec timeout -- a CharacterAdded le
+personnage est parente mais pas complet), PUIS lance un compte a rebours de LOADING_AFTER_CHARACTER (5 s). Le plancher
+depuis le clic est conserve : les deux se cumulent, on part au plus tard des deux. Le rideau couvre donc toujours la
+mise en place du personnage, quelle que soit sa duree.
+
+Commentaire de LOADING_MIN remis a jour au passage : il annoncait "~6-7 s" pour une valeur passee a 10.5.
+
 ## 0.0.213 — Le champ d'action du vent est centre sur MON PERSONNAGE
 
 Le tri du vent se mesurait depuis la CAMERA. Il se mesure maintenant depuis le personnage du joueur local.
