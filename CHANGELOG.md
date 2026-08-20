@@ -2185,6 +2185,51 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.220 — L'herbe s'enleve sous les objets poses, et le semis cesse de geler le client
+
+Trois choses, dont deux dictees par une MESURE en jeu.
+
+### L'herbe s'enleve sous ce qu'on pose dessus
+
+Une part posee sur la zone (une haie, plus tard un objet de construction) chasse l'herbe sous elle : sans ca, des
+brins traversent le pied de l'objet et ca se voit immediatement.
+
+Automatique, rien a taguer : tout ce qui touche le dessus de la zone compte, sauf trois familles -- l'herbe
+elle-meme, les autres zones (ce sont des marqueurs), et les PERSONNAGES. Ce dernier point n'est pas un detail : un
+joueur qui traverse la pelouse pendant le semis y creuserait sinon un trou definitif.
+
+Le test se fait en repere OBJET (`PointToObjectSpace`), pas en boite alignee sur le monde : une haie posee de travers
+chasse l'herbe sous ELLE. Et tous les tirages au sort sont faits AVANT le test d'emprise, pour que la disposition
+reste identique chez tous les joueurs meme si l'un d'eux n'a pas encore recu l'objet par le streaming -- il verra une
+touffe de plus, jamais un semis different.
+
+### La mesure qui change tout
+
+Log d'une vraie carte, quatre pelouses (133x50, 133x52, 81x53, 32x7) : **18 546 touffes**. Injouable, et la creation
+gelait le client environ 600 ms par zone.
+
+DENSITY passe de 1.0 a 0.2 -> environ 3 700 parts, avec des touffes 2.2x plus grosses (AUTO_SCALE_WITH_DENSITY pose
+en 0.0.219 sert exactement a ca) donc une couverture visuelle equivalente. Le decouplage densite / taille rend cet
+arbitrage gratuit a l'ecran.
+
+### Le semis s'etale sur plusieurs images
+
+Fabriquer des milliers de parts d'un coup gele le client. La creation cede la main toutes les CREATE_BUDGET touffes
+(500), et le dossier est parente des la premiere pause : l'herbe se remplit en une fraction de seconde au lieu de
+surgir apres un a-coup.
+
+Deux pieges que ca ouvre, et qui sont bouches :
+- Un semis qui demarre pendant qu'un autre tourne remplirait la meme zone A DEUX. Un compteur de generation par zone
+  fait abandonner proprement l'ancien.
+- `populate` peut desormais YIELD, donc tous ses appelants doivent etre dans un thread a part. `consider` est branche
+  sur DescendantAdded : y attendre bloquerait ce signal pour toute la map. Il passe en task.spawn.
+
+### Ce que la mesure ne resout pas
+
+Meme a 3 700 parts, une part par touffe ne passera pas a l'echelle d'une carte entiere. Le sujet reste ouvert : soit
+un pool de touffes qui SUIT le joueur (cout constant, surface illimitee), soit l'herbe du moteur (Terrain.Decoration),
+qui est gratuite mais ne s'ecrase pas sous les pieds.
+
 ## 0.0.219 — Densite CONSTANTE quelle que soit la taille de la zone
 
 Demande du joueur, et elle vise juste : redimensionner une zone ne doit JAMAIS obliger a revenir toucher une config.

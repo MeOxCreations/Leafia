@@ -85,6 +85,8 @@ type Zone = {
 	buckets: { Bucket }, -- les memes, regroupees par pave : c'est CA que la boucle parcourt
 	radius: number, -- rayon de la zone, pour l'ecarter d'un coup quand personne n'est autour
 	settling: boolean, -- des touffes encore en mouvement ? on continue alors meme sans joueur pres
+	generation: number, -- le semis etant etale sur plusieurs images, ce compteur permet a un nouveau semis d'abandonner
+	-- proprement celui d'avant au lieu de remplir la meme zone a deux
 }
 
 local zones: { Zone } = {}
@@ -152,6 +154,67 @@ end
 
 -- (Re)cree les touffes d'une zone. Appele au boot, et de nouveau si la zone est REDIMENSIONNEE : la nouvelle surface
 -- veut un autre nombre de touffes, reposer les anciennes ne suffirait pas.
+-- Cette part doit-elle chasser l'herbe ? Tout ce qui touche le dessus de la zone compte, SAUF trois familles.
+local function isBlocker(part: BasePart, zonePart: BasePart): boolean
+	if part == zonePart then
+		return false
+	end
+	-- Une autre zone d'herbe est un simple marqueur, pas un objet pose.
+	if part.Name:sub(1, #GrassZoneConfigs.ZONE_PREFIX) == GrassZoneConfigs.ZONE_PREFIX then
+		return false
+	end
+	-- Une touffe d'herbe ne se chasse pas elle-meme.
+	local parent = part.Parent
+	if parent and parent.Name == FOLDER_NAME then
+		return false
+	end
+	-- Un PERSONNAGE qui traverse la pelouse ne doit pas y creuser un trou definitif : l'emprise est calculee une fois,
+	-- elle ne se refait pas quand il repart.
+	local model = part:FindFirstAncestorOfClass("Model")
+	if model and model:FindFirstChildOfClass("Humanoid") then
+		return false
+	end
+	return true
+end
+
+-- Les objets poses sur la zone, releves UNE fois par semis.
+local function collectBlockers(zone: Zone): { BasePart }
+	local blockers: { BasePart } = {}
+	if not GrassZoneConfigs.CLEAR_UNDER_PARTS then
+		return blockers
+	end
+
+	local size = zone.part.Size
+	local height = GrassZoneConfigs.CLEAR_HEIGHT
+	-- Boite posee SUR la face du dessus, de la hauteur ou l'herbe peut etre genee.
+	local box = zone.part.CFrame * CFrame.new(0, size.Y * 0.5 + height * 0.5, 0)
+	local params = OverlapParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { zone.part }
+	params.MaxParts = 500
+
+	for _, part in ipairs(workspace:GetPartBoundsInBox(box, Vector3.new(size.X, height, size.Z), params)) do
+		if isBlocker(part, zone.part) then
+			blockers[#blockers + 1] = part
+		end
+	end
+	return blockers
+end
+
+-- Ce point est-il sous un objet pose ? Test en repere OBJET : une haie posee de travers chasse l'herbe sous ELLE, pas
+-- sous une boite alignee sur le monde. Seul le sol compte (X/Z), la hauteur est deja bornee par la boite de recherche.
+local function isCovered(worldPos: Vector3, blockers: { BasePart }): boolean
+	local margin = GrassZoneConfigs.CLEAR_MARGIN
+	for _, blocker in ipairs(blockers) do
+		local p = blocker.CFrame:PointToObjectSpace(worldPos)
+		local half = blocker.Size * 0.5
+		if math.abs(p.X) <= half.X + margin and math.abs(p.Z) <= half.Z + margin then
+			return true
+		end
+	end
+	return false
+end
+
 -- Regroupe les touffes deja creees en paves. Appele en fin de semis, et jamais dans le chemin par-image.
 local function buildBuckets(zone: Zone, zoneCFrame: CFrame, localY: number)
 	local side = GrassZoneConfigs.BUCKET_SIZE
@@ -195,11 +258,18 @@ local function buildBuckets(zone: Zone, zoneCFrame: CFrame, localY: number)
 	end
 end
 
+-- ETALE SUR PLUSIEURS IMAGES. Fabriquer des milliers de parts d'un coup gele le client (mesure : ~600 ms pour 7 000).
+-- Peut donc YIELD : tous les appelants doivent etre dans un thread a part.
 local function populate(zone: Zone)
 	local source = template
 	if not source then
 		return
 	end
+
+	-- Un semis qui demarre ANNULE celui d'avant. Sans ce compteur, deux semis etales se rempliraient en meme temps
+	-- dans la meme zone et on aurait le double de touffes, moitie a la mauvaise place.
+	zone.generation += 1
+	local generation = zone.generation
 
 	local previous = zone.part:FindFirstChild(FOLDER_NAME)
 	if previous then
@@ -245,15 +315,23 @@ local function populate(zone: Zone)
 	-- A DENSITY = 1 sans plafond, le pas vaut 1 et le facteur est neutre : le rendu actuel ne bouge pas.
 	local densityScale = if GrassZoneConfigs.AUTO_SCALE_WITH_DENSITY then math.sqrt(stepX * stepZ) else 1
 
+	local blockers = collectBlockers(zone)
+	local skipped = 0
+	local budget = GrassZoneConfigs.CREATE_BUDGET
+	local made = 0
+
 	for ix = 0, cols - 1 do
 		for iz = 0, rows - 1 do
-			local part = source:Clone()
-			part.Anchored = true
-			part.CanCollide = false
-			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
-			part.CanTouch = false
-			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
-			part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX) * densityScale
+			-- TOUS LES TIRAGES D'ABORD, avant le test d'emprise. Ainsi la disposition reste identique chez tous les
+			-- joueurs meme si l'un d'eux n'a pas encore recu l'objet qui chasse l'herbe (streaming) : il verra une
+			-- touffe de plus, jamais un semis different.
+			local jx = rng:NextNumber(-0.5, 0.5)
+			local jz = rng:NextNumber(-0.5, 0.5)
+			local scale = rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
+			local restTilt = rng:NextNumber(0, REST_TILT)
+			local restAngle = rng:NextNumber(0, math.pi * 2)
+			local yawAngle = rng:NextNumber(0, math.pi * 2)
+			local windPhase = rng:NextNumber(0, math.pi * 2)
 
 			-- Centre de la case, dans le repere de la ZONE.
 			-- QUINCONCE : une rangee sur deux est poussee d'un quart de case a droite, l'autre d'un quart a gauche.
@@ -263,6 +341,26 @@ local function populate(zone: Zone)
 			local stagger = if iz % 2 == 0 then stepX * 0.25 else -stepX * 0.25
 			local cellX = -size.X * 0.5 + (ix + 0.5) * stepX + stagger
 			local cellZ = -size.Z * 0.5 + (iz + 0.5) * stepZ
+
+			-- Position finale : le centre de case plus l'ecart au hasard DANS la case. Gardee dans le repere de la
+			-- ZONE : une zone tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire
+			-- ce point.
+			local localPos = Vector3.new(cellX + jx * stepX * jitter, size.Y * 0.5, cellZ + jz * stepZ * jitter)
+			local basePos = zoneCFrame:PointToWorldSpace(localPos)
+
+			-- Sous un objet pose : pas de touffe DU TOUT. On ne la cree pas pour la detruire ensuite.
+			if isCovered(basePos, blockers) then
+				skipped += 1
+				continue
+			end
+
+			local part = source:Clone()
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
+			part.CanTouch = false
+			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
+			part.Size = source.Size * scale * densityScale
 
 			-- RAYURES. La bande se decide sur le centre de CASE, pas sur la position finale : sinon l'ecart au hasard
 			-- ferait baver les bandes l'une dans l'autre et on perdrait la ligne nette d'un terrain tondu.
@@ -277,30 +375,17 @@ local function populate(zone: Zone)
 				end
 			end
 
-			-- Position finale : le centre de case plus un ecart au hasard DANS la case. Gardee dans le repere de la
-			-- ZONE : une zone tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire
-			-- ce point.
-			local localPos = Vector3.new(
-				cellX + rng:NextNumber(-0.5, 0.5) * stepX * jitter,
-				size.Y * 0.5,
-				cellZ + rng:NextNumber(-0.5, 0.5) * stepZ * jitter
-			)
-
-			-- Inclinaison de repos : une direction au hasard, un petit angle.
-			local restTilt = rng:NextNumber(0, REST_TILT)
-			local restAngle = rng:NextNumber(0, math.pi * 2)
-
 			local clump: Clump = {
 				part = part,
 				localPos = localPos,
-				basePos = zoneCFrame:PointToWorldSpace(localPos),
-				yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0),
+				basePos = basePos,
+				yaw = CFrame.Angles(0, yawAngle, 0),
 				baseSize = part.Size,
 				lastSquash = 1,
 				restTilt = restTilt,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				tilt = restTilt,
-				windPhase = rng:NextNumber(0, math.pi * 2),
+				windPhase = windPhase,
 				lastTilt = restTilt,
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
@@ -308,7 +393,25 @@ local function populate(zone: Zone)
 			apply(clump, WIND_ANGLE, 1)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
+
+			made += 1
+			if made % budget == 0 then
+				task.wait()
+				if zone.generation ~= generation then
+					-- Un autre semis a pris la main (zone redimensionnee). On abandonne SANS rien detruire : c'est lui
+					-- qui a deja vide la liste et qui pose le nouveau dossier.
+					folder:Destroy()
+					return
+				end
+				-- Le dossier n'est parente qu'a la fin ; on le rend visible des la 1re pause pour que l'herbe
+				-- apparaisse progressivement au lieu de surgir d'un bloc.
+				folder.Parent = zone.part
+			end
 		end
+	end
+
+	if skipped > 0 then
+		print(`[GrassZone] "{zone.part.Name}" : {skipped} touffe(s) retirees sous {#blockers} objet(s) pose(s).`)
 	end
 
 	folder.Parent = zone.part
@@ -555,10 +658,14 @@ function GrassZoneController.init()
 				return -- deja remplie
 			end
 
-			local zone: Zone = { part = instance, clumps = {}, buckets = {}, radius = 0, settling = true }
-			populate(zone)
+			local zone: Zone = { part = instance, clumps = {}, buckets = {}, radius = 0, settling = true, generation = 0 }
 			zones[#zones + 1] = zone
-			logZone(zone)
+			-- EN TACHE DE FOND : le semis est etale sur plusieurs images, donc il YIELD. Cette fonction est aussi
+			-- branchee sur DescendantAdded : y attendre bloquerait ce signal pour tout le reste de la map.
+			task.spawn(function()
+				populate(zone)
+				logZone(zone)
+			end)
 
 			-- L'herbe SUIT sa zone. Deplacer la part (dans Studio, pendant un test, ou par du code) retraduit les
 			-- pieds ; la redimensionner refait le semis, parce que la nouvelle surface veut un autre nombre de touffes.

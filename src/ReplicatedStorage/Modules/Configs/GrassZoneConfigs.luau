@@ -27,7 +27,10 @@ local GrassZoneConfigs = {
 	-- toute la surface est prise, et le JITTER casse l'alignement en damier.
 	-- Touffes par stud carre. C'EST LE PREMIER BOUTON A REGLER : trop bas ca fait chauve, trop haut ca coute des parts
 	-- pour rien (l'oeil ne voit plus la difference bien avant le processeur).
-	DENSITY = 1.0,
+	-- MESURE : a 1.0 sur une carte de 4 pelouses (133x50, 133x52, 81x53, 32x7) le total montait a 18 546 parts.
+	-- Injouable. A 0.2 on retombe autour de 3 700, avec des touffes 2.2x plus grosses (voir AUTO_SCALE_WITH_DENSITY)
+	-- donc une couverture visuelle equivalente. C'est LE bouton pour arbitrer entre finesse et nombre de parts.
+	DENSITY = 0.2,
 	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = alignement parfaitement
 	-- regulier, 1 = la touffe peut aller jusqu'au bord de sa case.
 	-- ATTENTION, c'est LUI qui fait les trous : a 0.8, deux voisines peuvent s'ecarter de 80 % d'une case, et l'ecart
@@ -55,6 +58,18 @@ local GrassZoneConfigs = {
 	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement droites, ce qui se lit comme du faux.
 	REST_TILT = 6,
 
+	-- ===== Emprise des objets poses =====
+	-- Une part posee sur la zone (une haie, un objet de construction) CHASSE l'herbe sous elle. Sans ca, des brins
+	-- traversent le pied de l'objet et ca se voit immediatement.
+	-- Automatique : rien a taguer, rien a declarer. Tout ce qui touche le dessus de la zone compte, SAUF l'herbe
+	-- elle-meme, les autres zones, et les personnages (un joueur qui traverse ne doit pas creuser un trou definitif).
+	CLEAR_UNDER_PARTS = true,
+	-- Degagement AUTOUR de l'emprise, en studs, pour qu'aucun brin ne depasse du bord de l'objet.
+	CLEAR_MARGIN = 0.4,
+	-- Hauteur au-dessus de la zone dans laquelle on cherche les objets. Au-dela, une part qui vole loin du sol ne doit
+	-- pas trouer la pelouse.
+	CLEAR_HEIGHT = 14,
+
 	-- ===== Rayures de tonte (facon terrain de foot) =====
 	-- Une bande sur deux prend l'autre couleur. Decide UNE fois a la pose, a partir de la case de la touffe dans la
 	-- grille : aucun cout en jeu.
@@ -72,6 +87,11 @@ local GrassZoneConfigs = {
 	-- dans Studio, donc c'est elle qui pilote ce qu'on voit. Si les rayures n'apparaissent pas, passer a false (on
 	-- ecrira BasePart.Color a la place).
 	STRIPE_ON_SURFACE = true,
+
+	-- Touffes creees par image pendant le semis. Fabriquer 7 000 parts d'un coup gele le client environ 600 ms ; on
+	-- etale donc la creation sur plusieurs images. Le joueur voit l'herbe se remplir en une fraction de seconde au
+	-- lieu de subir un a-coup.
+	CREATE_BUDGET = 500,
 
 	-- Cote d'un PAVE, en studs. Les touffes sont regroupees par paves, et c'est le PAVE qu'on teste, pas la touffe :
 	-- un pave hors de vue est ecarte d'un bloc, et un pave loin de tout joueur ne fait meme pas tourner le test
