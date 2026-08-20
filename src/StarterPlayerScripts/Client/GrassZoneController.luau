@@ -416,6 +416,9 @@ local function populate(zone: Zone)
 			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
 			part.CanTouch = false
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
+			-- FIGE pour ne pas que Roblox echange le maillage pendant l'ecrasement : la part change de taille d'un
+			-- facteur 25 en une fraction de seconde, et un niveau de detail recalcule en plein mouvement clignote.
+			part.RenderFidelity = GrassZoneConfigs.RENDER_FIDELITY
 			if isFlower then
 				-- On vise une LARGEUR en studs et on en deduit le facteur. La largeur, PAS la hauteur : le mesh d'une
 				-- fleur est plat, donc viser sa hauteur demande un facteur enorme et fait exploser sa largeur.
