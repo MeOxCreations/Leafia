@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.238 — L'herbe pousse plus haut par endroits
+
+Idee du joueur. Des zones ou l'herbe monte, d'autres ou elle reste rase, en bruit de Perlin -- comme les taches de
+couleur, mais sur la hauteur. Une pelouse d'une seule hauteur se lit comme une moquette ; c'est le relief qui fait
+la matiere.
+
+Champ de bruit SEPARE de celui des couleurs (troisieme argument de `math.noise` decale), et c'est voulu : partage,
+les zones hautes tomberaient exactement sur les zones sombres et l'oeil y verrait un motif au lieu d'un terrain.
+
+Plancher a 0.2 sur le facteur : une touffe de hauteur nulle serait invisible, une hauteur negative la retournerait.
+
+Calcule UNE fois a la pose, aucun cout en jeu. Et comme la taille de repos sert de reference a l'ecrasement, une
+touffe haute s'ecrase de plus haut sans qu'on ait rien a brancher.
+
+Interet au-dela du decor : c'est le socle de la TONTE. Une pelouse a hauteur variable donne au joueur quelque chose
+a EGALISER, ce qu'une moquette uniforme ne peut pas offrir.
+
 ## 0.0.237 — L'herbe ecrasee restait de travers de 4.5 degres
 
 Le joueur a mesure une touffe pietinee : orientation -5.8 / 0.15 / -3.3 au lieu de zero. Elle restait penchee pour

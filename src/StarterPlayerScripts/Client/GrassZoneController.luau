@@ -399,11 +399,18 @@ local function populate(zone: Zone)
 			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
 			part.CanTouch = false
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
+			-- ZONES DE HAUTEUR. Deuxieme champ de bruit, DECALE du premier (le 3e argument de math.noise change de
+			-- plan) : les zones hautes ne tombent donc pas sur les zones sombres, ce qui se lirait comme un motif.
+			local hScale = GrassZoneConfigs.HEIGHT_PATCH_SCALE
+			local heightPatch = math.noise(basePos.X * hScale, basePos.Z * hScale, 17.3)
+			-- Plancher a 0.2 : une touffe de hauteur nulle ou negative serait invisible ou retournee.
+			local heightFactor = math.max(1 + heightPatch * 2 * GrassZoneConfigs.HEIGHT_PATCH_AMOUNT, 0.2)
+
 			-- Le grossissement de compensation ne touche QUE X et Z. Couvrir le sol est une affaire HORIZONTALE : une
 			-- touffe plus large cache plus de terre, une touffe plus haute ne cache rien de plus et noie le joueur.
 			part.Size = Vector3.new(
 				source.Size.X * scale * densityScale,
-				source.Size.Y * scale * GrassZoneConfigs.HEIGHT_SCALE,
+				source.Size.Y * scale * GrassZoneConfigs.HEIGHT_SCALE * heightFactor,
 				source.Size.Z * scale * densityScale
 			)
 

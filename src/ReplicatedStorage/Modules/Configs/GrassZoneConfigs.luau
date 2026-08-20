@@ -52,6 +52,13 @@ local GrassZoneConfigs = {
 	-- C'est le bouton a tourner quand l'herbe est trop haute. Passer par SCALE_MIN / SCALE_MAX retrecirait aussi la
 	-- LARGEUR, donc la couverture, et rouvrirait des trous : hauteur et couverture n'ont rien a voir.
 	HEIGHT_SCALE = 1.0,
+	-- ZONES DE HAUTEUR. Des endroits ou l'herbe pousse plus haut, d'autres ou elle reste rase, en bruit de Perlin.
+	-- Une pelouse d'une seule hauteur se lit comme une moquette ; c'est le RELIEF qui fait la matiere.
+	-- Champ de bruit SEPARE de celui des couleurs, et c'est voulu : partage, les zones hautes tomberaient exactement
+	-- sur les zones sombres et l'oeil y verrait un motif au lieu d'un terrain.
+	-- Calcule UNE fois a la pose, comme les taches : aucun cout en jeu.
+	HEIGHT_PATCH_SCALE = 0.03, -- taille des zones. Plus BAS = zones plus LARGES (0.03 = environ 30 studs)
+	HEIGHT_PATCH_AMOUNT = 0.35, -- ecart de hauteur maxi, en fraction (0.35 = de 65 % a 135 % de la hauteur)
 	-- La taille des touffes COMPENSE la densite : a DENSITY 0.25 elles sont deux fois plus LARGES, donc la surface
 	-- reste couverte pareil avec quatre fois moins de parts.
 	-- Seuls X et Z grossissent. La HAUTEUR ne bouge jamais : couvrir le sol est horizontal, et une herbe qui grandit
