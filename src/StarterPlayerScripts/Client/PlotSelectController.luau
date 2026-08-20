@@ -52,13 +52,13 @@ local ORBIT_BIND = "LeafiaPlotOrbit"
 local CAM_TWEEN = TweenInfo.new(1.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 -- PLANCHER d'affichage du rideau de chargement, compte depuis le clic CREATE. Volontairement long : ca pose un vrai
 -- temps de chargement facon Sims, meme si techniquement le plot est deja pret derriere.
-local LOADING_MIN = 10.5
+local LOADING_MIN = 12
 -- Compte a rebours SUPPLEMENTAIRE, lance seulement une fois le personnage en place.
 -- Le plancher ci-dessus part du CLIC : si le personnage arrive tard (donnees, session lock, teleportation sur le plot),
 -- ce plancher est deja presque ecoule quand il apparait, et le rideau se leve dans la seconde qui suit -> transition
 -- brutale, et un rideau qui parait beaucoup trop court. Ce delai-la, lui, couvre TOUJOURS la mise en place du
 -- personnage, quelle que soit sa duree. Les deux se cumulent : on part au plus tard des deux.
-local LOADING_AFTER_CHARACTER = 5
+local LOADING_AFTER_CHARACTER = 10
 -- Temps pendant lequel le rideau reste seul a l'ecran AVANT qu'on demande au serveur ou aller.
 -- Sur le chemin TELEPORT (nouvelle save -> tuto), le rideau n'a pas de fin a lui : la bascule de lieu le remplace.
 -- Sans cette attente il n'aurait que le temps de son fondu d'entree, on ne verrait passer que la feuille.
