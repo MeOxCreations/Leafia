@@ -7,6 +7,8 @@
 -- image. Repliquer ca chargerait le reseau pour un detail que chacun peut calculer chez lui.
 --
 -- Les touffes sont enfants de leur zone : si le streaming retire la zone, elles partent avec, sans nettoyage a ecrire.
+-- Mais etre ENFANT ne veut PAS dire etre soude : une part ancree posee en coordonnees monde ne suit pas son parent.
+-- D'ou la position de chaque touffe gardee dans le repere de la ZONE (localPos) et recalculee des que la zone bouge.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -19,13 +21,18 @@ local GrassZoneController = {}
 local FOLDER_NAME = "GrassClumpsLocal"
 local MAX_ANGLE = math.rad(GrassZoneConfigs.CRUSH_MAX_ANGLE)
 local REST_TILT = math.rad(GrassZoneConfigs.REST_TILT)
+-- Constante plutot que Vector3.yAxis : selene ne reconnait pas ce dernier comme un Vector3 et refuse Cross.
+local UP = Vector3.new(0, 1, 0)
 
--- Une touffe. On garde son PIED (basePos) et sa rotation propre (yaw) : le CFrame se recompose a chaque image a
--- partir de ces deux valeurs, JAMAIS a partir du CFrame precedent -- sinon l'inclinaison s'accumulerait et les
--- touffes finiraient couchees pour toujours.
+-- Une touffe. On garde son PIED et sa rotation propre : le CFrame se recompose a chaque image a partir de ces
+-- valeurs, JAMAIS a partir du CFrame precedent -- sinon l'inclinaison s'accumulerait et les touffes finiraient
+-- couchees pour toujours.
+-- localPos est dans le repere de la ZONE, basePos est sa traduction en monde (gardee en cache pour ne pas refaire
+-- la multiplication a chaque image ; elle se recalcule quand la zone bouge, pas avant).
 type Clump = {
 	part: BasePart,
-	basePos: Vector3, -- position du pied, en monde
+	localPos: Vector3, -- position du pied, dans le repere de la zone
+	basePos: Vector3, -- la meme, en monde (cache)
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
 	halfHeight: number, -- demi-hauteur, pour remonter le CENTRE au-dessus du pied
 	restTilt: number, -- inclinaison AU REPOS (radians) : une herbe parfaitement droite se lit comme du faux
@@ -42,6 +49,8 @@ type Zone = {
 }
 
 local zones: { Zone } = {}
+local connections: { RBXScriptConnection } = {}
+local template: BasePart? = nil
 local heartbeat: RBXScriptConnection? = nil
 
 -- ===== Resolution des dependances =====
@@ -73,12 +82,26 @@ local function seedFor(part: BasePart): number
 	return math.abs(raw) % 2147483647
 end
 
-local function fill(zonePart: BasePart, source: BasePart): Zone
+-- (Re)cree les touffes d'une zone. Appele au boot, et de nouveau si la zone est REDIMENSIONNEE : la nouvelle surface
+-- veut un autre nombre de touffes, reposer les anciennes ne suffirait pas.
+local function populate(zone: Zone)
+	local source = template
+	if not source then
+		return
+	end
+
+	local previous = zone.part:FindFirstChild(FOLDER_NAME)
+	if previous then
+		previous:Destroy()
+	end
+	table.clear(zone.clumps)
+
 	local folder = Instance.new("Folder")
 	folder.Name = FOLDER_NAME
 
-	local size = zonePart.Size
-	local rng = Random.new(seedFor(zonePart))
+	local size = zone.part.Size
+	local zoneCFrame = zone.part.CFrame
+	local rng = Random.new(seedFor(zone.part))
 
 	local wanted = math.floor(size.X * size.Z * GrassZoneConfigs.DENSITY)
 	local count = math.min(wanted, GrassZoneConfigs.MAX_CLUMPS)
@@ -86,12 +109,11 @@ local function fill(zonePart: BasePart, source: BasePart): Zone
 		-- Anormal ET actionnable : sans ce mot, une zone plafonnee ressemble a une densite mal reglee, et on tourne
 		-- le bouton DENSITY dans le vide sans que rien ne change.
 		warn(
-			`[GrassZone] "{zonePart.Name}" plafonne a {count} touffes (il en faudrait {wanted}). `
+			`[GrassZone] "{zone.part.Name}" plafonne a {count} touffes (il en faudrait {wanted}). `
 				.. `Monte MAX_CLUMPS ou baisse DENSITY.`
 		)
 	end
 
-	local clumps: { Clump } = {}
 	for _ = 1, count do
 		local part = source:Clone()
 		part.Anchored = true
@@ -101,22 +123,22 @@ local function fill(zonePart: BasePart, source: BasePart): Zone
 		part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
 		part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
 
-		-- Un point au hasard sur la face du DESSUS de la zone, exprime dans le repere de la zone : une zone tournee
-		-- ou legerement inclinee marche donc sans cas particulier.
-		local offset = Vector3.new(
+		-- Un point au hasard sur la face du DESSUS de la zone, garde dans le repere de la zone : une zone tournee ou
+		-- inclinee marche donc sans cas particulier, et deplacer la zone n'oblige qu'a retraduire ce point.
+		local localPos = Vector3.new(
 			rng:NextNumber(-0.5, 0.5) * size.X,
 			size.Y * 0.5,
 			rng:NextNumber(-0.5, 0.5) * size.Z
 		)
-		local basePos = zonePart.CFrame:PointToWorldSpace(offset)
 
 		-- Inclinaison de repos : une direction au hasard, un petit angle.
 		local restTilt = rng:NextNumber(0, REST_TILT)
 		local restAngle = rng:NextNumber(0, math.pi * 2)
 
-		clumps[#clumps + 1] = {
+		zone.clumps[#zone.clumps + 1] = {
 			part = part,
-			basePos = basePos,
+			localPos = localPos,
+			basePos = zoneCFrame:PointToWorldSpace(localPos),
 			yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0),
 			halfHeight = part.Size.Y * 0.5,
 			restTilt = restTilt,
@@ -127,15 +149,22 @@ local function fill(zonePart: BasePart, source: BasePart): Zone
 		part.Parent = folder
 	end
 
-	folder.Parent = zonePart
+	folder.Parent = zone.part
 
 	local half = size * 0.5
-	return {
-		part = zonePart,
-		clumps = clumps,
-		radius = math.sqrt(half.X * half.X + half.Z * half.Z),
-		settling = true,
-	}
+	zone.radius = math.sqrt(half.X * half.X + half.Z * half.Z)
+	zone.settling = true
+end
+
+-- La zone a bouge : on retraduit les pieds en monde et on reveille les touffes pour qu'elles se reposent au bon
+-- endroit. Etre enfant d'une part ne suffit pas a suivre : une part ancree vit en coordonnees monde.
+local function refresh(zone: Zone)
+	local zoneCFrame = zone.part.CFrame
+	for _, clump in ipairs(zone.clumps) do
+		clump.basePos = zoneCFrame:PointToWorldSpace(clump.localPos)
+		clump.resting = false
+	end
+	zone.settling = true
 end
 
 -- ===== Ecrasement =====
@@ -144,7 +173,7 @@ end
 -- L'ordre compte : la bascule est calculee en MONDE (elle fuit le joueur), elle doit donc etre a gauche du yaw.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
 local function apply(clump: Clump)
-	local axis = Vector3.yAxis:Cross(clump.tiltDir)
+	local axis = UP:Cross(clump.tiltDir)
 	if axis.Magnitude < 1e-4 then
 		return
 	end
@@ -252,6 +281,7 @@ function GrassZoneController.init()
 			)
 			return
 		end
+		template = source
 
 		local root = resolvePath(workspace, GrassZoneConfigs.ROOT)
 		if not root then
@@ -271,7 +301,19 @@ function GrassZoneController.init()
 			if instance:FindFirstChild(FOLDER_NAME) then
 				return -- deja remplie
 			end
-			zones[#zones + 1] = fill(instance, source)
+
+			local zone: Zone = { part = instance, clumps = {}, radius = 0, settling = true }
+			populate(zone)
+			zones[#zones + 1] = zone
+
+			-- L'herbe SUIT sa zone. Deplacer la part (dans Studio, pendant un test, ou par du code) retraduit les
+			-- pieds ; la redimensionner refait le semis, parce que la nouvelle surface veut un autre nombre de touffes.
+			connections[#connections + 1] = instance:GetPropertyChangedSignal("CFrame"):Connect(function()
+				refresh(zone)
+			end)
+			connections[#connections + 1] = instance:GetPropertyChangedSignal("Size"):Connect(function()
+				populate(zone)
+			end)
 		end
 
 		for _, descendant in ipairs(root:GetDescendants()) do
@@ -279,7 +321,7 @@ function GrassZoneController.init()
 		end
 		-- Les zones qui arrivent apres (streaming, edition en live) se remplissent aussi. On n'ecoute QUE ce dossier :
 		-- brancher workspace.DescendantAdded ferait passer chaque part de personnage par le test pour rien.
-		root.DescendantAdded:Connect(consider)
+		connections[#connections + 1] = root.DescendantAdded:Connect(consider)
 
 		if #zones == 0 then
 			print(`[GrassZone] Aucune zone "{prefix}..." dans cette place.`)
@@ -296,13 +338,17 @@ function GrassZoneController.init()
 	end)
 end
 
--- Coupe la boucle et rend les touffes. La connexion vit sur RunService, qui SURVIT a ce script : sans ce Disconnect
--- explicite elle tournerait toute la session.
+-- Coupe TOUT ce que ce module a cree : la boucle, les ecoutes et les touffes. Ces connexions vivent sur RunService et
+-- sur des parts de la map, qui SURVIVENT a ce script : sans Disconnect explicite elles tourneraient toute la session.
 function GrassZoneController.stop()
 	if heartbeat then
 		heartbeat:Disconnect()
 		heartbeat = nil
 	end
+	for _, connection in ipairs(connections) do
+		connection:Disconnect()
+	end
+	table.clear(connections)
 	for _, zone in ipairs(zones) do
 		local folder = zone.part:FindFirstChild(FOLDER_NAME)
 		if folder then

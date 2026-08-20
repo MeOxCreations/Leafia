@@ -361,6 +361,20 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   entrees en renumerotant la sienne, jamais `--ours` / `--theirs` (le CHANGELOG est append-only : une entree effacee
   est une info perdue pour de bon).
 
+- **Etre ENFANT d'une part ne veut PAS dire etre SOUDE a elle : une part ancree vit en coordonnees MONDE et ne suit
+  pas son parent.** Vecu sur l'herbe de zone : les touffes sont enfants de leur ZoneGrass, mais deplacer la zone
+  pendant un test les a laissees sur place -- un carre d'herbe a la bonne forme et a la bonne orientation, a dix
+  metres de la zone. Symptome trompeur : ca ressemble a un calcul de position FAUX (on va relire la projection, le
+  repere, le PointToWorldSpace) alors que le calcul etait juste, il etait juste PERIME. Regle : tout semis calcule
+  depuis un objet de reference doit garder ses positions dans le REPERE de cet objet et se retraduire quand il bouge
+  (`GetPropertyChangedSignal("CFrame")`), pas stocker un resultat monde fige. Et si la reference peut CHANGER DE
+  TAILLE, ecouter `Size` aussi et REFAIRE le semis : reposer les anciennes ne remplit pas la nouvelle surface.
+- **Selene ne reconnait pas `Vector3.yAxis` (ni ses jumeaux) comme un Vector3 : `Vector3.yAxis:Cross(v)` sort en
+  ERREUR rouge** ("does not contain the field `Cross`"). C'est un faux positif de sa bibliotheque standard, le code
+  tourne. Passer par une constante locale (`local UP = Vector3.new(0, 1, 0)`) au lieu de discuter. Meme famille que
+  le `Instance.new("UICorner")` non resolu par luau-lsp : un faux positif rouge finit par masquer les vraies erreurs,
+  donc on le supprime plutot que de le tolerer.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les

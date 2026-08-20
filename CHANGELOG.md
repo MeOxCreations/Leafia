@@ -2185,6 +2185,29 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.206 — L'herbe suit sa zone quand on la deplace
+
+Suite directe de 0.0.205. En bougeant ZoneGrassHandle PENDANT un test, l'herbe est restee sur place : un carre de
+touffes a la bonne forme et a la bonne orientation, mais a dix metres de la zone.
+
+Cause : etre ENFANT d'une part ne veut pas dire etre SOUDE a elle. Les touffes sont ancrees et posees en coordonnees
+MONDE ; deplacer leur parent ne les emmene pas. Le semis etait calcule une fois au demarrage et jamais retraduit.
+
+Correction : la position de chaque touffe est desormais gardee dans le repere de la ZONE (localPos), et sa traduction
+en monde est recalculee quand la zone bouge. Deux ecoutes sur la part :
+- `CFrame` change -> on retraduit les pieds et on reveille les touffes (elles se reposent au bon endroit).
+- `Size` change -> on REFAIT le semis : une autre surface veut un autre nombre de touffes, reposer les anciennes ne
+  suffirait pas.
+
+Le cache monde est garde : la multiplication CFrame ne se refait QUE quand la zone bouge, pas a chaque image.
+
+Au passage, `stop()` coupe maintenant aussi ces ecoutes (elles vivent sur des parts de la map, qui survivent au
+script), pas seulement la boucle Heartbeat.
+
+Detail d'outil : `Vector3.yAxis` remplace par une constante `UP`. Selene ne reconnait pas `Vector3.yAxis` comme un
+Vector3 et refuse `:Cross()` dessus -- faux positif, mais un faux positif rouge dans l'editeur finit par masquer les
+vraies erreurs.
+
 ## 0.0.205 — L'herbe se couche sous les pieds
 
 Nouveau GrassZoneController (client) + GrassZoneConfigs. Toute part de la map dont le nom commence par "ZoneGrass"
