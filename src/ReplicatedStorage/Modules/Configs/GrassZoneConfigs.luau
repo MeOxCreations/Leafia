@@ -173,9 +173,11 @@ local GrassZoneConfigs = {
 	-- chaque rayure s'assombrit donc dans SA propre nuance, et le motif de tonte reste lisible sous la trace.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee reste sombre elle aussi.
 	CRUSH_DARKEN = 0.25,
-	-- Inclinaison maxi, en degres, pile sous les pieds. Elle se CUMULE avec l'aplatissement : la touffe se tasse ET
-	-- part dans le sens du pas. C'est la combinaison qui rend le passage lisible -- le tassement dit "on a marche
-	-- ici", l'inclinaison dit "on venait de la".
+	-- Inclinaison maxi, en degres, atteinte au MILIEU du geste.
+	-- C'est un PASSAGE, pas un etat : elle monte avec l'inclinaison rapide, puis s'efface a mesure que le tassement
+	-- la rattrape. Une touffe completement tassee est A PLAT, elle ne penche plus. On voit donc l'herbe pencher dans
+	-- le sens du pas, puis se coucher droite -- au lieu de rester figee de travers.
+	-- Le retour a zero est lisse tout seul : il suit le tassement, qui l'est deja.
 	-- Volontairement MODEREE. Le mesh est un RECTANGLE de brins, pas un brin isole : a 78 degres (l'ancienne valeur,
 	-- du temps ou l'inclinaison etait le seul effet) la plaque se couchait sur le flanc et se lisait comme un decor
 	-- pose de travers. Maintenant que l'aplatissement fait le gros du travail, un angle discret suffit.

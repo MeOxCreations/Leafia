@@ -634,7 +634,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
 		-- On compare les DEUX valeurs : la lente peut encore bouger alors que la rapide est deja posee.
 		if windScale > 0 or clump.crush ~= clump.lastCrush or clump.squashCrush ~= clump.lastSquashCrush then
-			apply(clump, wind, squash * gustSquash, crushed * TILT_ANGLE, clump.squashCrush)
+			-- L'INCLINAISON EST UN PASSAGE, PAS UN ETAT. Elle monte avec `crush` (rapide) et s'efface a mesure que
+			-- `squashCrush` (lent) rattrape : une touffe completement tassee est A PLAT, elle ne penche plus.
+			-- Le retour a zero est donc lisse gratuitement, puisque squashCrush l'est deja.
+			local tilt = crushed * TILT_ANGLE * (1 - clump.squashCrush)
+			apply(clump, wind, squash * gustSquash, tilt, clump.squashCrush)
 			clump.lastCrush = clump.crush
 			clump.lastSquashCrush = clump.squashCrush
 		end
