@@ -415,10 +415,11 @@ local function populate(zone: Zone)
 			part.CanTouch = false
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
 			if isFlower then
-				-- On vise une HAUTEUR en studs et on en deduit le facteur, plutot que de multiplier a l'aveugle une
-				-- taille de mesh qu'on ne maitrise pas. Proportions gardees, et pas de compensation de densite.
-				local height = rng:NextNumber(GrassZoneConfigs.FLOWER_HEIGHT_MIN, GrassZoneConfigs.FLOWER_HEIGHT_MAX)
-				part.Size = source.Size * (height / math.max(source.Size.Y, 1e-3))
+				-- On vise une LARGEUR en studs et on en deduit le facteur. La largeur, PAS la hauteur : le mesh d'une
+				-- fleur est plat, donc viser sa hauteur demande un facteur enorme et fait exploser sa largeur.
+				-- Proportions gardees, et pas de compensation de densite.
+				local width = rng:NextNumber(GrassZoneConfigs.FLOWER_WIDTH_MIN, GrassZoneConfigs.FLOWER_WIDTH_MAX)
+				part.Size = source.Size * (width / math.max(source.Size.X, 1e-3))
 			else
 				-- ZONES DE HAUTEUR. Deuxieme champ de bruit, DECALE du premier (le 3e argument de math.noise change
 				-- de plan) : les zones hautes ne tombent donc pas sur les zones sombres, ce qui se lirait comme un
