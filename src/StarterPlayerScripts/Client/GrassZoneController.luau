@@ -18,6 +18,8 @@ local GrassZoneConfigs = require(ReplicatedStorage.Modules.Configs.GrassZoneConf
 
 local GrassZoneController = {}
 
+local localPlayer = Players.LocalPlayer
+
 local FOLDER_NAME = "GrassClumpsLocal"
 local MAX_ANGLE = math.rad(GrassZoneConfigs.CRUSH_MAX_ANGLE)
 local REST_TILT = math.rad(GrassZoneConfigs.REST_TILT)
@@ -378,7 +380,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 	return moving
 end
 
-local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, now: number, dt: number)
+local function updateZone(zone: Zone, positions: { Vector3 }, anchor: Vector3, now: number, dt: number)
 	local windReach = GrassZoneConfigs.WIND_VIEW_DISTANCE
 	local crushReach = GrassZoneConfigs.CRUSH_RADIUS
 	local zoneMoving = 0
@@ -388,7 +390,7 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 	local fadeSpan = math.max(windReach - fadeStart, 1e-3)
 
 	for _, bucket in ipairs(zone.buckets) do
-		local d = bucket.center - camPos
+		local d = bucket.center - anchor
 		-- On retranche le rayon du pave : sinon un pave a cheval sur la limite serait ecarte alors qu'une partie de ses
 		-- touffes est bien visible.
 		local dist = d.Magnitude - bucket.radius
@@ -420,11 +422,20 @@ local function update(dt: number)
 		return
 	end
 
-	local camera = workspace.CurrentCamera
-	if not camera then
-		return -- tot au boot la camera peut ne pas exister encore
+	-- ANCRE DU CHAMP D'ACTION : mon personnage. La camera ne sert que de repli tant qu'il n'a pas spawn -- sans elle
+	-- le champ serait centre sur l'origine du monde et toute l'herbe serait figee au premier chargement.
+	local anchor: Vector3
+	local character = localPlayer.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		anchor = root.Position
+	else
+		local camera = workspace.CurrentCamera
+		if not camera then
+			return -- tot au boot, ni perso ni camera : rien a ancrer
+		end
+		anchor = camera.CFrame.Position
 	end
-	local camPos = camera.CFrame.Position
 	local now = os.clock()
 
 	-- Positions des personnages, relevees UNE fois par image et partagees par toutes les zones.
@@ -441,10 +452,10 @@ local function update(dt: number)
 		if zone.part.Parent ~= nil then
 			-- Ecarte d'un bloc les zones hors de vue. Une zone dont des touffes se relevent encore garde la main, sinon
 			-- elles se figeraient couchees des qu'on tourne la camera.
-			local d = zone.part.Position - camPos
+			local d = zone.part.Position - anchor
 			local reach = zone.radius + GrassZoneConfigs.WIND_VIEW_DISTANCE
 			if d.Magnitude < reach or zone.settling then
-				updateZone(zone, positions, camPos, now, dt)
+				updateZone(zone, positions, anchor, now, dt)
 			end
 		end
 	end

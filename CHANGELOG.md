@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.213 — Le champ d'action du vent est centre sur MON PERSONNAGE
+
+Le tri du vent se mesurait depuis la CAMERA. Il se mesure maintenant depuis le personnage du joueur local.
+
+La camera peut balayer loin, dezoomer, ou etre scriptee (chantier, arrivee sur le plot, cinematique) : elle ne dit
+pas ou est le joueur. Ce qui definit "autour de moi" c'est ou JE suis. En prime, l'ecrasement etait deja ancre sur
+les personnages : les deux tris regardent enfin la meme chose.
+
+Repli sur la camera tant que le personnage n'a pas spawn. Sans lui, le champ serait centre sur l'origine du monde et
+toute l'herbe resterait figee pendant le chargement -- exactement le genre de detail qui se decouvre en jeu publie et
+pas en Studio.
+
+Champ resserre : WIND_FADE_START 30 -> 25, WIND_VIEW_DISTANCE 60 -> 40. Le fondu s'etalait de 30 a 60 studs, donc
+l'herbe bougeait encore un peu a 45 studs et ca se voyait. Hors des 40 studs, elle est maintenant STATIQUE au sens
+strict : plus un calcul, plus une ecriture. Les 15 studs de fondu restants suffisent a ce que la limite ne se voie
+pas ; en dessous de cet ecart, l'anneau reapparait.
+
 ## 0.0.212 — Le vent s'ETEINT avec la distance au lieu d'etre coupe net
 
 Retour du joueur : l'herbe lointaine ondule encore. Ce n'etait pas un oubli mais le REGLAGE : WIND_VIEW_DISTANCE

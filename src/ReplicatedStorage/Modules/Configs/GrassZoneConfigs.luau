@@ -61,14 +61,16 @@ local GrassZoneConfigs = {
 	WIND_GUST = 5, -- amplitude de l'oscillation autour de cette inclinaison, en degres
 	WIND_SPEED = 1.7, -- vitesse de l'oscillation
 	WIND_WAVE = 0.09, -- serrage des vagues : plus haut = vagues plus courtes, qui defilent plus visiblement
-	-- FONDU DU VENT AVEC LA DISTANCE. Le vent est a pleine amplitude jusqu'a WIND_FADE_START, puis s'eteint
-	-- progressivement pour atteindre ZERO pile a WIND_VIEW_DISTANCE, ou l'on cesse tout calcul.
-	-- Une simple coupure nette a la place ferait apparaitre un ANNEAU autour du joueur, ou l'herbe se fige d'un coup
-	-- quand il avance. Avec le fondu, la coupure tombe la ou l'amplitude est deja nulle : rien a voir a l'ecran, et
-	-- l'economie est la meme.
+	-- CHAMP D'ACTION DU VENT, mesure depuis MON PERSONNAGE (pas depuis la camera : elle peut balayer loin ou
+	-- dezoomer, alors que "autour de moi" se definit par ou je suis). Hors du champ, l'herbe est STATIQUE : plus un
+	-- seul calcul, plus une seule ecriture.
+	-- Le vent est a pleine amplitude jusqu'a WIND_FADE_START, puis s'eteint progressivement pour atteindre ZERO pile
+	-- a WIND_VIEW_DISTANCE. Ce fondu n'est pas cosmetique : sans lui, une coupure nette dessine un ANNEAU autour du
+	-- joueur, ou l'herbe se fige d'un coup quand il avance. Avec, la coupure tombe la ou l'amplitude est deja nulle.
+	-- Garder au moins 15 studs d'ecart entre les deux, sinon le fondu redevient visible.
 	-- C'EST LE COUPLE A BAISSER si le FPS tombe : on perd du mouvement au loin, jamais de l'herbe.
-	WIND_FADE_START = 30,
-	WIND_VIEW_DISTANCE = 60,
+	WIND_FADE_START = 25,
+	WIND_VIEW_DISTANCE = 40,
 
 	-- ===== Ecrasement =====
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
