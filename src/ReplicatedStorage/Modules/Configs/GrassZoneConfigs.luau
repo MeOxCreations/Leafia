@@ -232,12 +232,13 @@ local GrassZoneConfigs = {
 	-- Volontairement LENT : c'est la remontee qu'on regarde. Une herbe qui se redresse doucement derriere le joueur
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	RECOVER_SPEED = 1.8,
-	-- TRACE. L'herbe RESTE couchee la ou on a marche : un chemin se dessine derriere le joueur.
-	-- Fraction de l'inclinaison maximale que le passage laisse DEFINITIVEMENT. 1 = elle reste aussi couchee que sous
-	-- le pied, 0 = elle se releve entierement (l'ancien comportement, sans trace).
-	-- Ce niveau ne fait que MONTER : repasser au meme endroit ne releve rien, et s'eloigner ne l'efface pas. Il sert
-	-- de PLANCHER a l'ecrasement elastique, qui garde son coup sec sous le pied par-dessus.
-	FLATTEN_AMOUNT = 0.8,
+	-- TRACE PERMANENTE. Fraction de l'ecrasement que le passage laisse DEFINITIVEMENT derriere le joueur.
+	-- A ZERO : tout revient au repos quand il s'en va -- la hauteur, l'inclinaison et la couleur. L'ecrasement
+	-- redevient un effet de PASSAGE de bout en bout.
+	-- Ce niveau ne fait que MONTER : le remettre au-dessus de 0 grave un chemin qui ne s'efface plus (sauf via
+	-- FLATTEN_RECOVER). C'est LUI qui empechait la taille de remonter, et c'est le seul bouton a toucher pour
+	-- retrouver une trace le jour ou la tonte en aura besoin.
+	FLATTEN_AMOUNT = 0,
 	-- Vitesse a laquelle la trace s'efface, en fraction par seconde. 0 = elle ne s'efface JAMAIS.
 	-- 0.02 fait disparaitre une trace en une cinquantaine de secondes.
 	FLATTEN_RECOVER = 0,
