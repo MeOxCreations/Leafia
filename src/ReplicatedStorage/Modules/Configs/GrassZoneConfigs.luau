@@ -53,7 +53,7 @@ local GrassZoneConfigs = {
 	-- 0 = bandes le long du petit cote, 45 = diagonales, 90 = bandes le long du grand cote.
 	-- Attention en tournant : le nombre de bandes = la longueur de la zone DANS CETTE DIRECTION divisee par STRIPE_WIDTH.
 	-- Passer de 0 a 90 sur une zone de 44 x 18 fait tomber 5 bandes a 2 -- il faut alors baisser STRIPE_WIDTH avec.
-	STRIPE_HEADING = 45,
+	STRIPE_HEADING = 0,
 	STRIPE_COLOR_A = Color3.fromRGB(155, 165, 121),
 	STRIPE_COLOR_B = Color3.fromRGB(192, 203, 127),
 	-- OU ecrire la couleur. Avec AlphaMode = TintMask, la teinte peut venir du SurfaceAppearance OU du Color de la
@@ -87,6 +87,18 @@ local GrassZoneConfigs = {
 	-- joueur, ou l'herbe se fige d'un coup quand il avance. Avec, la coupure tombe la ou l'amplitude est deja nulle.
 	-- Garder au moins 15 studs d'ecart entre les deux, sinon le fondu redevient visible.
 	-- C'EST LE COUPLE A BAISSER si le FPS tombe : on perd du mouvement au loin, jamais de l'herbe.
+	-- RAFALES. Un champ de bruit de Perlin (math.noise, integre a Roblox) qui DERIVE dans la direction du vent : des
+	-- zones de vent fort et des zones calmes roulent sur le champ, au lieu d'un souffle identique partout. C'est ce
+	-- qui fait la difference entre "ca bouge" et "il y a du vent".
+	-- L'oscillation rapide (WIND_SPEED / WIND_GUST) reste par-dessus : elle donne le fremissement de chaque touffe,
+	-- la rafale donne la respiration large du champ.
+	GUST_SCALE = 0.035, -- taille des rafales. Plus BAS = rafales plus LARGES (0.035 = des zones d'environ 30 studs)
+	GUST_SPEED = 9, -- vitesse a laquelle les rafales traversent le champ, en studs par seconde
+	GUST_FLOOR = 0.35, -- force du vent dans les zones les plus calmes (0 = arret complet entre deux rafales)
+	-- La rafale TASSE l'herbe en plus de la coucher, et elle remonte quand la rafale passe. Fraction de hauteur perdue
+	-- au coeur d'une rafale. Volontairement petite : c'est un appui, pas un pied. 0 = pas de tassement.
+	GUST_SQUASH = 0.12,
+
 	WIND_FADE_START = 25,
 	WIND_VIEW_DISTANCE = 40,
 

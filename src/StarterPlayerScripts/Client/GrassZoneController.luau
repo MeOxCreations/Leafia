@@ -39,6 +39,12 @@ local WIND_GUST = math.rad(GrassZoneConfigs.WIND_GUST)
 -- Delai avant de refaire un semis apres un changement de taille. Assez long pour absorber une part qui recoit ses
 -- proprietes en plusieurs etapes (streaming), assez court pour suivre un redimensionnement a la main dans Studio.
 local REBUILD_DELAY = 0.25
+-- Pas de quantification de l'APLATISSEMENT. Redimensionner une part coute plus cher que la deplacer, et la rafale
+-- fait varier la hauteur en continu sur toutes les touffes visibles. On arrondit donc a ce pas : 1 % de hauteur est
+-- invisible a l'oeil (0.05 stud sur une touffe de 5), mais ca divise le nombre d'ecritures de Size par dix.
+-- Le pas divise 1 exactement, donc au repos l'aplatissement retombe sur 1 PILE : pas de residu fige, contrairement a
+-- un garde-fou "ne pas reecrire si le delta est infime".
+local SQUASH_STEP = 0.01
 -- Repere des rayures, calcule une fois. Projeter la case sur cette direction donne la bande a laquelle elle appartient.
 local STRIPE_COS = math.cos(math.rad(GrassZoneConfigs.STRIPE_HEADING))
 local STRIPE_SIN = math.sin(math.rad(GrassZoneConfigs.STRIPE_HEADING))
@@ -116,6 +122,7 @@ local function apply(clump: Clump, windAngle: number, squash: number)
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
 	-- figerait justement le residu au lieu de le laisser finir de remonter.
+	squash = math.floor(squash / SQUASH_STEP + 0.5) * SQUASH_STEP
 	if squash ~= clump.lastSquash then
 		clump.part.Size = Vector3.new(clump.baseSize.X, clump.baseSize.Y * squash, clump.baseSize.Z)
 		clump.lastSquash = squash
@@ -379,7 +386,20 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		local squash = 1 - crushed * GrassZoneConfigs.CRUSH_SQUASH
 
 		local wind = 0
+		local gustSquash = 1
 		if windScale > 0 then
+			-- RAFALE. Champ de bruit de Perlin qui DERIVE dans la direction du vent : des zones fortes et des zones
+			-- calmes roulent sur le champ. Sans lui, toutes les touffes recoivent exactement le meme souffle et ca se
+			-- lit comme un ventilateur, pas comme du vent.
+			local drift = now * GrassZoneConfigs.GUST_SPEED
+			local gust = math.noise(
+				(clump.basePos.X - WIND_DIR.X * drift) * GrassZoneConfigs.GUST_SCALE,
+				(clump.basePos.Z - WIND_DIR.Z * drift) * GrassZoneConfigs.GUST_SCALE,
+				0
+			) * 2 -- math.noise rend environ [-0.5, 0.5] : on ramene a [-1, 1]
+			local floor = GrassZoneConfigs.GUST_FLOOR
+			local gustStrength = floor + (1 - floor) * math.clamp(gust * 0.5 + 0.5, 0, 1)
+
 			-- Le decalage depend de la POSITION le long du vent : les touffes en amont bougent avant celles en aval,
 			-- donc des vagues traversent le champ au lieu qu'il respire en bloc. windPhase casse ce qui resterait
 			-- d'identique entre deux voisines exactement alignees.
@@ -387,13 +407,17 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 				- (clump.basePos.X * WIND_DIR.X + clump.basePos.Z * WIND_DIR.Z) * GrassZoneConfigs.WIND_WAVE
 				+ clump.windPhase
 			-- Une touffe couchee sous un pied ne doit plus onduler, et une touffe lointaine ondule de moins en moins.
-			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * (1 - crushed) * windScale
+			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * gustStrength * (1 - crushed) * windScale
+
+			-- La rafale TASSE l'herbe au passage, puis la laisse remonter. Seule la partie FORTE de la rafale ecrase
+			-- (math.max(gust, 0)) : une zone calme ne doit pas tasser l'herbe en permanence.
+			gustSquash = 1 - GrassZoneConfigs.GUST_SQUASH * math.max(gust, 0) * (1 - crushed) * windScale
 		end
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
 		if windScale > 0 or clump.tilt ~= clump.lastTilt then
-			apply(clump, wind, squash)
+			apply(clump, wind, squash * gustSquash)
 			clump.lastTilt = clump.tilt
 		end
 	end

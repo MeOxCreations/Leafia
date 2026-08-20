@@ -2185,6 +2185,36 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.216 — Le vent souffle par RAFALES (Perlin), et la rafale tasse l'herbe
+
+Le vent etait une seule sinusoide : toutes les touffes recevaient exactement le meme souffle au meme moment, decale
+par leur position. Ca bougeait, mais ca se lisait comme un ventilateur, pas comme du vent.
+
+RAFALES. Un champ de bruit de Perlin (`math.noise`, integre a Roblox) qui DERIVE dans la direction du vent : des
+zones de vent fort et des zones calmes roulent sur le champ. L'oscillation rapide reste PAR-DESSUS -- elle donne le
+fremissement de chaque touffe, la rafale donne la respiration large du champ. Deux echelles superposees, c'est ce
+qui distingue un mouvement organique d'un mouvement periodique.
+
+GUST_SCALE (taille des zones, plus bas = plus larges), GUST_SPEED (vitesse de deplacement des rafales), GUST_FLOOR
+(force du vent dans les zones les plus calmes -- a 0 le champ s'arrete completement entre deux rafales).
+
+TASSEMENT. La rafale ecrase legerement l'herbe au passage, puis la laisse remonter (GUST_SQUASH, 0.12). Seule la
+partie FORTE de la rafale tasse : une zone calme ne doit pas maintenir l'herbe basse en permanence. Le tassement se
+multiplie avec celui de l'ecrasement au pied, et s'efface quand la touffe est deja couchee sous un joueur.
+
+### Le cout, et ce qui a ete fait pour le tenir
+
+Le tassement fait varier la HAUTEUR en continu sur toutes les touffes visibles, alors qu'avant seules celles sous un
+pied changeaient de taille. Redimensionner une part coute plus cher que la deplacer : c'etait le risque du
+changement.
+
+L'aplatissement est donc arrondi a un pas de 1 % (SQUASH_STEP). Un pour cent de hauteur est invisible a l'oeil
+(0.05 stud sur une touffe de 5) mais divise le nombre d'ecritures de Size par dix. Le pas divise 1 exactement, donc
+au repos l'aplatissement retombe sur 1 PILE : pas de residu fige. C'est la difference avec un garde-fou "ne pas
+reecrire si le delta est infime", qui lui figerait justement ce residu.
+
+Rayures remises droites (STRIPE_HEADING 45 -> 0).
+
 ## 0.0.215 — Rayures de tonte dans l'herbe, facon terrain de foot
 
 Demande du joueur, pour le plaisir. Une bande sur deux prend une teinte differente : (212, 179, 152) et
