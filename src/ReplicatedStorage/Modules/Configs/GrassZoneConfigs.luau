@@ -202,18 +202,18 @@ local GrassZoneConfigs = {
 	-- devenir un aplat uniforme.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee garde sa couleur.
 	CRUSHED_COLOR = Color3.fromRGB(140, 179, 98),
-	-- Inclinaison maxi, en degres, atteinte au MILIEU du geste.
-	-- C'est un PASSAGE, pas un etat : elle vaut l'ECART entre l'ecrasement rapide et le tassement lent. Au moment du
-	-- pas cet ecart est maximal (le rapide a saute, le lent n'a pas suivi) ; une fois le lent arrive, l'ecart est nul
-	-- et la touffe est parfaitement DROITE.
-	-- Cette formulation par ECART est ce qui garantit le zero. La precedente s'effacait avec (1 - tassement), donc
-	-- elle laissait un residu des que le tassement plafonnait sous 1 -- ce qui est toujours le cas a cause de la trace
-	-- permanente (FLATTEN_AMOUNT). Mesure a l'ecran : 4.5 degres de travers qui ne partaient jamais.
+	-- Inclinaison au passage. A ZERO : l'herbe s'APLATIT, elle ne penche pas.
+	-- Elle valait l'ECART entre l'ecrasement rapide et le tassement lent. Defaut vu a l'ecran : en traversant vite, on
+	-- part avant que les deux se soient rejoints, donc l'ecart existe encore PENDANT la remontee -- une inclinaison
+	-- surgit et disparait alors que le joueur n'est plus la. Un effet cense raconter le pas se declenchait apres lui.
+	-- La remettre au-dessus de zero ramene ce defaut, sauf a faire remonter les deux valeurs a la meme vitesse.
+	-- (A ne pas confondre avec l'aplatissement : il ne depend plus de cet angle depuis 0.0.229, le mettre a zero ne
+	-- supprime donc plus l'ecrasement.)
 	-- Volontairement MODEREE. Le mesh est un RECTANGLE de brins, pas un brin isole : a 78 degres (l'ancienne valeur,
 	-- du temps ou l'inclinaison etait le seul effet) la plaque se couchait sur le flanc et se lisait comme un decor
 	-- pose de travers. Maintenant que l'aplatissement fait le gros du travail, un angle discret suffit.
 	-- Monter au-dela de 45 ramene le defaut.
-	CRUSH_TILT_ANGLE = 28,
+	CRUSH_TILT_ANGLE = 0,
 	-- Vitesses du ressort. Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,
