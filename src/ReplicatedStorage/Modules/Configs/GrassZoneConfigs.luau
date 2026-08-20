@@ -233,16 +233,17 @@ local GrassZoneConfigs = {
 	-- Volontairement LENT : c'est la remontee qu'on regarde. Une herbe qui se redresse doucement derriere le joueur
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	RECOVER_SPEED = 1.8,
-	-- TRACE PERMANENTE. Fraction de l'ecrasement que le passage laisse DEFINITIVEMENT derriere le joueur.
-	-- A ZERO : tout revient au repos quand il s'en va -- la hauteur, l'inclinaison et la couleur. L'ecrasement
-	-- redevient un effet de PASSAGE de bout en bout.
-	-- Ce niveau ne fait que MONTER : le remettre au-dessus de 0 grave un chemin qui ne s'efface plus (sauf via
-	-- FLATTEN_RECOVER). C'est LUI qui empechait la taille de remonter, et c'est le seul bouton a toucher pour
-	-- retrouver une trace le jour ou la tonte en aura besoin.
-	FLATTEN_AMOUNT = 0,
-	-- Vitesse a laquelle la trace s'efface, en fraction par seconde. 0 = elle ne s'efface JAMAIS.
-	-- 0.02 fait disparaitre une trace en une cinquantaine de secondes.
-	FLATTEN_RECOVER = 0,
+	-- TRAINEE. Fraction de l'ecrasement que le passage laisse derriere le joueur, une fois qu'il n'est plus dessus.
+	-- 0.3 = l'herbe remonte tout de suite l'essentiel, mais garde un tiers de son tassement -- un chemin discret
+	-- reste lisible dans son dos au lieu de s'effacer dans la seconde.
+	-- A 0 elle se redresse entierement ; a 1 elle reste ecrasee a fond.
+	FLATTEN_AMOUNT = 0.3,
+	-- Vitesse a laquelle la trainee s'efface, en fraction par seconde. 0 = elle ne s'efface JAMAIS.
+	-- 0.04 la fait disparaitre en une huitaine de secondes : assez pour qu'on voie son chemin en se retournant, pas
+	-- assez pour que la pelouse garde la memoire de tout un apres-midi.
+	-- Ce couple (AMOUNT, RECOVER) est ce qui distingue une trainee d'une trace : la premiere s'en va, la seconde
+	-- reste. La tonte, elle, voudra une VRAIE trace -- ce sera un autre mecanisme, pas ce reglage-ci.
+	FLATTEN_RECOVER = 0.04,
 
 	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.
