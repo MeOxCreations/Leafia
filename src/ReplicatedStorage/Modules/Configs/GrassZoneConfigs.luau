@@ -51,7 +51,7 @@ local GrassZoneConfigs = {
 	-- HAUTEUR de l'herbe, a part. Multiplie UNIQUEMENT le Y de la touffe.
 	-- C'est le bouton a tourner quand l'herbe est trop haute. Passer par SCALE_MIN / SCALE_MAX retrecirait aussi la
 	-- LARGEUR, donc la couverture, et rouvrirait des trous : hauteur et couverture n'ont rien a voir.
-	HEIGHT_SCALE = 0.65,
+	HEIGHT_SCALE = 1.0,
 	-- La taille des touffes COMPENSE la densite : a DENSITY 0.25 elles sont deux fois plus LARGES, donc la surface
 	-- reste couverte pareil avec quatre fois moins de parts.
 	-- Seuls X et Z grossissent. La HAUTEUR ne bouge jamais : couvrir le sol est horizontal, et une herbe qui grandit
@@ -83,9 +83,14 @@ local GrassZoneConfigs = {
 	CLEAR_MIN_HEIGHT = 0.5,
 
 	-- ===== Rayures de tonte (facon terrain de foot) =====
-	-- Une bande sur deux prend l'autre couleur. Decide UNE fois a la pose, a partir de la case de la touffe dans la
-	-- grille : aucun cout en jeu.
-	STRIPE_ENABLED = true,
+	-- COUPEES, et c'est un choix de conception, pas un abandon.
+	-- Sur un vrai terrain, les bandes claires et sombres ne sont pas peintes : elles viennent du SENS dans lequel la
+	-- tondeuse a couche les brins. Les dessiner d'avance donnerait un motif fixe, identique quoi que fasse le joueur,
+	-- et qui contredirait sa propre tonte des qu'il coupe en travers.
+	-- Elles naitront donc de la TONTE elle-meme. La donnee necessaire existe deja : chaque touffe garde `tiltDir`, la
+	-- direction de son dernier passage.
+	-- Remettre a true seulement pour un decor fige, jamais sur une pelouse qui se tond.
+	STRIPE_ENABLED = false,
 	STRIPE_WIDTH = 9, -- largeur d'une bande, en studs
 	-- Orientation des bandes, en degres, DANS LE REPERE DE LA ZONE : tourner la part fait donc tourner les rayures avec.
 	-- 0 = bandes le long du petit cote, 45 = diagonales, 90 = bandes le long du grand cote.

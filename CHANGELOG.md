@@ -2185,6 +2185,20 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.232 — Les rayures peintes disparaissent, elles naitront de la TONTE
+
+Deux reglages, dont un qui est une decision de conception.
+
+STRIPE_ENABLED passe a false. Ce n'est pas un abandon : sur un vrai terrain, les bandes claires et sombres ne sont
+pas peintes, elles viennent du SENS dans lequel la tondeuse a couche les brins. Les dessiner d'avance donnait un
+motif FIXE, identique quoi que fasse le joueur, et qui aurait contredit sa propre tonte des qu'il coupe en travers.
+
+Elles naitront donc de la tonte elle-meme. Et la donnee necessaire EXISTE DEJA : chaque touffe garde `tiltDir`, la
+direction de son dernier passage, devenue inutilisee depuis que la bascule est passee a zero en 0.0.229. Le jour ou
+on branchera la couleur par sens de tonte, ce sera quelques lignes, pas un systeme.
+
+HEIGHT_SCALE remonte de 0.65 a 1.0 : l'herbe reprend la hauteur native de son mesh.
+
 ## 0.0.231 — L'herbe FONCE la ou on a marche
 
 L'herbe ecrasee s'assombrit. Un chemin apparait derriere le joueur, en plus du creux.
