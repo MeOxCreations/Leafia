@@ -47,7 +47,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local N, SIZE, GAP, HOP = 4, 14, 12, 16
 	local HOP_TWEEN = TweenInfo.new(0.34, Enum.EasingStyle.Quad, Enum.EasingDirection.Out, -1, true)
 	local STAGGER = 0.11
-	local MIN_ARRIVAL = 1.4 -- l'arrivee est rapide : on garde le rideau juste assez pour le voir
+	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
+	-- d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`, le
+	-- rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
+	local MIN_ARRIVAL = 10
 
 	local sg = Instance.new("ScreenGui")
 	sg.Name = "LoadingScreen"
@@ -121,11 +124,22 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, false)
 	end)
 
-	-- Attente : jeu charge ET duree minimale (que le rideau se voie un instant).
-	local startT = os.clock()
+	-- Attente, dans l'ORDRE : le jeu charge, PUIS le personnage arrive, PUIS seulement le compte a rebours part.
+	-- C'est cet ordre qui compte. Le personnage peut mettre plusieurs secondes a se mettre en place (donnees, session
+	-- lock) : un compte lance avant lui serait deja ecoule quand il apparait, et le rideau se leverait dans la
+	-- seconde -- exactement le defaut qu'on corrige ici.
 	if not game:IsLoaded() then
 		game.Loaded:Wait()
 	end
+	local character: Instance? = player.Character
+	if not character then
+		character = player.CharacterAdded:Wait()
+	end
+	if character then
+		-- A CharacterAdded le personnage est parente mais pas complet : ses parts arrivent quelques images plus tard.
+		character:WaitForChild("HumanoidRootPart", 10)
+	end
+	local startT = os.clock()
 	while os.clock() - startT < MIN_ARRIVAL do
 		RunService.Heartbeat:Wait()
 	end
