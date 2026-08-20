@@ -2185,6 +2185,32 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.210 — L'herbe s'APLATIT sous le pied, et la densite ne depend plus de la taille de la zone
+
+APLATISSEMENT. La touffe ne fait plus que se coucher : elle s'ECRASE aussi en hauteur sous le pied, puis remonte.
+CRUSH_SQUASH (0.45) = la fraction de hauteur perdue au maximum de l'ecrasement.
+
+Le point de conception : l'aplatissement est tire du MEME angle d'ecrasement que la bascule, pas d'un second
+lissage. Une seule valeur (`crushed`, 0 a 1) qui sert deux fois -- elle efface le vent et elle rabote la hauteur.
+Consequences gratuites : les deux ne peuvent pas se desynchroniser, et l'aplatissement herite du ressort deja regle
+(sec a la descente, lent a la remontee) sans avoir ses propres boutons. Meme raisonnement que le knob par allure de
+0.0.201 pris a l'envers : ici il n'y a qu'UNE cause, donc UNE valeur, et surtout pas deux a maintenir d'accord.
+
+La demi-hauteur suit l'aplatissement dans le calcul du CFrame, sinon une touffe ecrasee flotterait au-dessus de son
+pied. Et la taille ne s'ECRIT que si elle a change : redimensionner une part coute plus cher que la deplacer, donc
+une touffe debout ne paye rien. Pas de garde-fou "delta infime" sur cette comparaison : l'angle se cle exactement sur
+sa cible, donc l'aplatissement retombe exactement a 1 ; un seuil figerait le residu au lieu de le laisser remonter.
+
+DENSITE. MAX_CLUMPS passe de 600 a 1500. Ce n'etait pas un reglage de densite mais un garde-fou, et il etait trop
+bas : la zone de test voulait 792 touffes (44x18 studs a une touffe par stud carre) et n'en recevait que 570. Donc
+plus une zone etait grande, plus son herbe devenait CLAIRSEMEE -- l'inverse de ce qu'on veut. La densite est portee
+par DENSITY seule, identique partout ; le nombre de touffes suit la surface. Le plafond ne sert plus qu'a empecher
+qu'une part posee par erreur a 500x500 fabrique 250 000 instances.
+
+A surveiller : une grande zone peut maintenant monter a 1500 parts. Repere d'avant : 6.37 ms de moyenne avec 570
+touffes (4.71 ms a vide). Si le FPS tombe, baisser WIND_VIEW_DISTANCE avant DENSITY -- on perd du mouvement au loin,
+pas de l'herbe.
+
 ## 0.0.209 — L'herbe ne bougeait pas : la boucle n'etait jamais branchee
 
 Ni vent ni ecrasement sur l'herbe de zone. Le log a donne la reponse en deux lignes :

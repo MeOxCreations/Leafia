@@ -31,9 +31,13 @@ local GrassZoneConfigs = {
 	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = damier parfaitement regulier,
 	-- 1 = la touffe peut aller jusqu'au bord de sa case.
 	JITTER = 0.8,
-	-- Plafond par zone, garde-fou contre une part geante posee par erreur. Au plafond on ESPACE la grille au lieu de
-	-- couper la liste : couper laisserait une moitie de zone chauve, ce qui est le contraire du but.
-	MAX_CLUMPS = 600,
+	-- GARDE-FOU, pas un bouton de densite. La densite, c'est DENSITY, et elle est la meme partout : le nombre de
+	-- touffes suit donc la surface de la zone, une grande zone en recoit proportionnellement plus.
+	-- Ce plafond n'existe que pour qu'une part posee par erreur a 500x500 ne fabrique pas 250 000 instances. Le laisser
+	-- trop bas RABOTE la densite des grandes zones (l'herbe devient clairsemee a mesure qu'on agrandit), ce qui est
+	-- exactement l'inverse de ce qu'on veut. Au plafond on ESPACE la grille plutot que de couper la liste : couper
+	-- laisserait une moitie de zone chauve.
+	MAX_CLUMPS = 1500,
 	-- Taille de chaque touffe, en fraction de la taille du mesh d'origine. Un peu de variete casse l'effet "copie".
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.25,
@@ -58,6 +62,11 @@ local GrassZoneConfigs = {
 	CRUSH_RADIUS = 4.5,
 	-- Inclinaison maxi, en degres, pile sous les pieds. 90 = a plat par terre.
 	CRUSH_MAX_ANGLE = 78,
+	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur. 0.45 = la touffe descend a 55 % de
+	-- sa hauteur sous le pied, puis remonte. 0 = elle se couche sans s'ecraser.
+	-- Pilote par le MEME angle d'ecrasement que la bascule : les deux ne peuvent donc pas se desynchroniser, et
+	-- l'aplatissement herite gratuitement du ressort (brutal a la descente, lent a la remontee).
+	CRUSH_SQUASH = 0.45,
 	-- Vitesses du ressort. Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,

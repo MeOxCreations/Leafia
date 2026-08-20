@@ -49,7 +49,8 @@ type Clump = {
 	localPos: Vector3, -- position du pied, dans le repere de la zone
 	basePos: Vector3, -- la meme, en monde (cache)
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
-	halfHeight: number, -- demi-hauteur, pour remonter le CENTRE au-dessus du pied
+	baseSize: Vector3, -- taille au repos ; l'ecrasement ne fait que RABOTER son Y, jamais l'ecraser definitivement
+	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	restTilt: number, -- inclinaison AU REPOS (radians) : une herbe parfaitement droite se lit comme du faux
 	tiltDir: Vector3, -- direction horizontale de la bascule en cours
 	tilt: number, -- angle d'ecrasement courant, en radians
@@ -94,7 +95,16 @@ end
 -- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
 -- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump, windAngle: number)
+local function apply(clump: Clump, windAngle: number, squash: number)
+	-- La taille ne s'ECRIT que si elle a change : redimensionner une part coute plus cher que la deplacer, et une
+	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
+	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
+	-- figerait justement le residu au lieu de le laisser finir de remonter.
+	if squash ~= clump.lastSquash then
+		clump.part.Size = Vector3.new(clump.baseSize.X, clump.baseSize.Y * squash, clump.baseSize.Z)
+		clump.lastSquash = squash
+	end
+
 	local cf = CFrame.new(clump.basePos)
 	local crushAxis = UP:Cross(clump.tiltDir)
 	if crushAxis.Magnitude > 1e-4 then
@@ -103,7 +113,8 @@ local function apply(clump: Clump, windAngle: number)
 	if windAngle ~= 0 then
 		cf = cf * CFrame.fromAxisAngle(WIND_AXIS, windAngle)
 	end
-	clump.part.CFrame = cf * clump.yaw * CFrame.new(0, clump.halfHeight, 0)
+	-- La demi-hauteur suit l'aplatissement : sinon une touffe ecrasee flotterait au-dessus de son pied.
+	clump.part.CFrame = cf * clump.yaw * CFrame.new(0, clump.baseSize.Y * squash * 0.5, 0)
 end
 
 -- ===== Remplissage =====
@@ -185,7 +196,8 @@ local function populate(zone: Zone)
 				localPos = localPos,
 				basePos = zoneCFrame:PointToWorldSpace(localPos),
 				yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0),
-				halfHeight = part.Size.Y * 0.5,
+				baseSize = part.Size,
+				lastSquash = 1,
 				restTilt = restTilt,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				tilt = restTilt,
@@ -194,7 +206,7 @@ local function populate(zone: Zone)
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
-			apply(clump, WIND_ANGLE)
+			apply(clump, WIND_ANGLE, 1)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
 		end
@@ -275,6 +287,13 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 		local toCam = clump.basePos - camPos
 		local far = toCam.X * toCam.X + toCam.Y * toCam.Y + toCam.Z * toCam.Z > WIND_VIEW_SQ
 
+		-- FRACTION D'ECRASEMENT : 0 = debout au repos, 1 = a plat sous le pied. Une SEULE valeur, tiree de l'angle
+		-- deja lisse, qui sert DEUX fois -- elle efface le vent et elle aplatit la touffe. Les deux ne peuvent donc
+		-- pas se desynchroniser, et l'aplatissement herite gratuitement du ressort (sec a la descente, lent a la
+		-- remontee) sans avoir son propre lissage a regler.
+		local crushed = math.clamp((clump.tilt - clump.restTilt) / math.max(MAX_ANGLE - clump.restTilt, 1e-3), 0, 1)
+		local squash = 1 - crushed * GrassZoneConfigs.CRUSH_SQUASH
+
 		local wind = 0
 		if not far then
 			-- Le decalage depend de la POSITION le long du vent : les touffes en amont bougent avant celles en aval,
@@ -283,16 +302,14 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 			local phase = now * GrassZoneConfigs.WIND_SPEED
 				- (clump.basePos.X * WIND_DIR.X + clump.basePos.Z * WIND_DIR.Z) * GrassZoneConfigs.WIND_WAVE
 				+ clump.windPhase
-			wind = WIND_ANGLE + WIND_GUST * math.sin(phase)
-			-- Une touffe couchee sous un pied ne doit plus onduler : le vent s'efface a mesure qu'elle est ecrasee.
-			local crushed = (clump.tilt - clump.restTilt) / math.max(MAX_ANGLE - clump.restTilt, 1e-3)
-			wind *= 1 - math.clamp(crushed, 0, 1)
+			-- Une touffe couchee sous un pied ne doit plus onduler.
+			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * (1 - crushed)
 		end
 
 		-- Pres de la camera on ecrit TOUJOURS (le vent bouge en permanence). Loin, on n'ecrit que si l'ecrasement a
 		-- change : une touffe lointaine et immobile ne coute alors plus rien du tout.
 		if not far or clump.tilt ~= clump.lastTilt then
-			apply(clump, wind)
+			apply(clump, wind, squash)
 			clump.lastTilt = clump.tilt
 		end
 	end
