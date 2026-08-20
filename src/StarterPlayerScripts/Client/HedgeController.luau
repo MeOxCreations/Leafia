@@ -21,6 +21,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local InputDevice = require(ReplicatedStorage.Modules.Utils.InputDevice)
+local Toast = require(ReplicatedStorage.Modules.UI.Core.Toast)
 
 -- Attribut pose par ToolService sur le modele de l'outil tenu (sa valeur = le nom de l'outil).
 local TOOL_ATTRIBUTE = "LeafiaTool"
@@ -133,6 +134,13 @@ local lastAimTip: Vector3? = nil
 -- Dernier point VISE sur la haie par le curseur. Distinct du segment de lame ci-dessus : c'est ou l'on POINTE, pas
 -- ou l'outil se trouve. Sert a poser le repere de coupe quand VISUAL_CUT_FOLLOWS_CURSOR est vrai.
 local lastCursorPoint: Vector3? = nil
+-- Le curseur vise-t-il le DESSUS de la haie ? Distinct du `onTop` renvoye par updateCursor : celui-ci ne devient vrai
+-- que si le dessus est ATTEIGNABLE (il pilote la pose, qui reste bras leves sur une haie trop haute). Le repere
+-- visuel, lui, doit se poser a plat des qu'on vise une surface horizontale, atteignable ou non.
+local lastAimOnTopSurface = false
+-- Le dessus vise est-il HORS D'ATTEINTE (haie trop haute, pas d'escabeau) ? Sert a expliquer au clic.
+local topOutOfReach = false
+local lastLadderHintClock = 0
 local lastAimAt = 0
 
 local function sendAim(base: Vector3?, tip: Vector3?)
@@ -1146,6 +1154,8 @@ end
 local function hideCursor()
 	-- On oublie AUSSI le dernier point vise : sinon le repere resterait plante la ou le curseur a quitte la haie.
 	lastCursorPoint = nil
+	lastAimOnTopSurface = false
+	topOutOfReach = false
 	if cursorPart then
 		cursorPart:Destroy()
 		cursorPart = nil
@@ -1264,8 +1274,11 @@ local function updateCursor(character: Model, normal: Vector3, workHedge: BasePa
 				-- par-dessus depuis le sol : la pose gauche-droite ne se joue pas, et on reste sur la pose
 				-- VERTICALE au maximum, comme un joueur qui tend les bras vers le haut sans atteindre le sommet.
 				-- Meme seuil que la coupe du dessus (voir HedgeCellService). L'escabeau viendra lever ca.
+				lastAimOnTopSurface = true
 				if hit.Size.Y > HedgeConfigs.TOP_CUT_MAX_HEIGHT then
 					getCursorPart().Position = result.Position
+					lastCursorPoint = result.Position
+					topOutOfReach = true
 					return 1, false
 				end
 
@@ -1276,6 +1289,7 @@ local function updateCursor(character: Model, normal: Vector3, workHedge: BasePa
 				local offset = (result.Position - root.Position):Dot(right)
 				local reach = HedgeConfigs.TOP_REACH
 				getCursorPart().Position = result.Position
+				lastCursorPoint = result.Position
 				-- 0.5 = pile devant le joueur. Un ecart borne, et non la longueur de la haie : la piste doit
 				-- couvrir ce que le BRAS peut atteindre, pas ce que la haie mesure.
 				return math.clamp(0.5 + offset / (reach * 2), 0, 1), true
@@ -1358,6 +1372,8 @@ local function updateCursor(character: Model, normal: Vector3, workHedge: BasePa
 
 	getCursorPart().Position = hitPoint
 	lastCursorPoint = hitPoint
+	lastAimOnTopSurface = false
+	topOutOfReach = false
 
 	-- ZONES MORTES. On remappe [deadzone, hauteur - deadzone] sur [0, 1] : tout ce qui est plus bas vaut le bas
 	-- franc, tout ce qui est plus haut vaut le haut franc. Ce sont les positions les plus utilisees, elles
@@ -2029,7 +2045,10 @@ local function update(dt: number)
 	-- Dessine le repere AVEC LE DERNIER SEGMENT ENVOYE (ce que le serveur a en main), plaque selon la normale de la
 	-- surface travaillee. Le DESSUS a une normale VERTICALE, la face une horizontale : on passe la bonne pour que le
 	-- repere se pose A PLAT sur ce qu'on taille (a plat sur le dessus, plaque contre la face).
-	local surfaceNormal = if onTop then Vector3.yAxis else normal
+	-- A PLAT des qu'on vise le DESSUS, meme hors d'atteinte : un repere vertical pose sur une surface horizontale
+	-- ferait croire a un bug de visee. C'est la notification au clic qui dit pourquoi ca ne coupe pas, pas le repere.
+	local aimingTop = onTop or (HedgeConfigs.TOP_VISUAL_ALWAYS_FLAT and lastAimOnTopSurface)
+	local surfaceNormal = if aimingTop then Vector3.yAxis else normal
 
 	-- OU POSER LE CERCLE. On garde toujours la LONGUEUR et l'ORIENTATION du segment de lame -- c'est elle qui donne
 	-- au repere sa taille et son inclinaison. Suivre le curseur ne fait que le TRANSLATER sous le point vise, au lieu
@@ -2127,6 +2146,12 @@ function HedgeController.init()
 		-- s'engage pas la-haut). heldPerClick est faux pour le taille-haie (coupe continue par la gachette) : ce
 		-- bloc ne le touche pas. Le serveur revalide tout (outil, contact, portee, anti-spam) ; le client declenche.
 		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+			-- DESSUS HORS D'ATTEINTE : on l'explique. Le joueur voit son repere bien pose a plat et clique ; sans un
+			-- mot, il conclut que la coupe est cassee. Cadence limitee : trois clics ne font pas trois messages.
+			if topOutOfReach and os.clock() - lastLadderHintClock > HedgeConfigs.TOP_NEEDS_LADDER_COOLDOWN then
+				lastLadderHintClock = os.clock()
+				Toast.show("warn", HedgeConfigs.TOP_NEEDS_LADDER_TEXT)
+			end
 			local character = player.Character
 			local ladderTrim = character ~= nil
 				and character:GetAttribute(HedgeConfigs.LADDER_TRIM_ATTRIBUTE) == true

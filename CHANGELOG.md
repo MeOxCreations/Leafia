@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.243 — Le repere lachait le curseur sur le DESSUS, et un mot quand il faut un escabeau
+
+Trois choses, dont une regression de la veille.
+
+REGRESSION. Le repere cessait de suivre le curseur des qu'on visait le dessus de la haie. Le curseur se pose a TROIS
+endroits differents dans updateCursor -- le dessus atteignable, le dessus trop haut, et le repli sur le plan -- et je
+n'avais enregistre le point visé qu'au troisieme. Les deux autres laissaient le repere sur la lame.
+Lecon : quand on ajoute un effet de bord a une valeur, chercher TOUS ses points d'ecriture avant de croire avoir fini.
+Un `grep` sur `getCursorPart().Position` le disait en une ligne.
+
+REPERE A PLAT SUR LE DESSUS, meme hors d'atteinte. Sur une haie trop haute, le code renvoie deliberement "pas sur le
+dessus" pour garder la pose bras leves -- mais le repere heritait de ce choix et se dressait a la verticale sur une
+surface horizontale, ce qui se lit comme un bug de visee. Le VISUEL suit maintenant la surface reellement visee, la
+POSE garde sa regle. Deux besoins distincts, deux valeurs (TOP_VISUAL_ALWAYS_FLAT).
+
+UN MOT AU CLIC. Le joueur voit son repere bien pose et clique : sans explication, il conclut que la coupe est cassee.
+Un toast le dit maintenant -- "Trop haut ! Il te faut un escabeau pour tailler le dessus." -- avec un delai mini de
+3 secondes pour que trois clics ne fassent pas trois messages.
+
+C'est plus qu'un confort : ca transforme une panne apparente en OBJECTIF. Le joueur apprend l'existence de l'escabeau
+au moment exact ou il en a besoin, ce qu'aucun tutoriel ne fera aussi bien.
+
 ## 0.0.242 — Le repere de coupe suit le CURSEUR
 
 Demande du joueur : le cercle blanc doit se poser la ou l'on pointe sur la haie, pas sur la lame.

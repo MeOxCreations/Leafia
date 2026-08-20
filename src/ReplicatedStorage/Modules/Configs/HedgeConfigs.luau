@@ -1127,6 +1127,16 @@ local HedgeConfigs = {
 	-- lateralement, ou le curseur peut etre loin des mains. A `true`, le cercle designe donc parfois un endroit qui
 	-- ne sera pas coupe. C'est un choix de LISIBILITE contre un choix d'HONNETETE, pas un bug d'un cote ou de l'autre.
 	VISUAL_CUT_FOLLOWS_CURSOR = true,
+	-- Le repere se pose A PLAT sur le dessus de la haie des que le curseur y est, MEME si le joueur ne peut pas
+	-- l'atteindre. Montrer un repere vertical la ou l'on vise une surface horizontale ferait croire a un bug de
+	-- visee ; a plat, il dit "c'est bien la que tu vises" -- et c'est la notification qui explique pourquoi ca ne
+	-- coupe pas.
+	TOP_VISUAL_ALWAYS_FLAT = true,
+	-- Message quand on tente de couper un dessus hors d'atteinte. Le joueur voit son repere bien pose et clique :
+	-- sans un mot, il croit que la coupe est cassee.
+	TOP_NEEDS_LADDER_TEXT = "Trop haut ! Il te faut un escabeau pour tailler le dessus.",
+	-- Delai mini entre deux affichages de ce message : cliquer trois fois de suite ne doit pas empiler trois toasts.
+	TOP_NEEDS_LADDER_COOLDOWN = 3,
 	-- (anciens etats guide/coupe, gardes pour la transparence ; la couleur vient maintenant de la matiere ci-dessus)
 	VISUAL_CUT_GUIDE_TRANSPARENCY = 0.8,
 	VISUAL_CUT_CUT_TRANSPARENCY = 0.7,
