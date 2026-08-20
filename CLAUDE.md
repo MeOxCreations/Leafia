@@ -398,6 +398,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   plancher en plus si on veut un minimum absolu. Meme famille que le plancher en studs qui inversait l'effet qu'il
   devait borner.
 
+- **Une detection "qu'est-ce qui est POSE sur X" par boites englobantes attrape TOUJOURS le support sur lequel X
+  repose.** Vecu sur l'herbe : la recherche des objets poses sur la pelouse ramenait le SOL lui-meme (grosse part dont
+  le dessus affleure la zone, donc boites qui se touchent de quelques centiemes de stud), et son emprise effacait la
+  totalite de l'herbe -- plus rien ne se generait. Regle : exiger que l'objet DEPASSE d'une hauteur minimale, pas
+  seulement qu'il touche. Et exclure les parts rangees SOUS une autre part (`FindFirstAncestorWhichIsA("BasePart")`) :
+  ce sont des details de l'objet parent, elles saturent la limite de resultats et font RATER le vrai objet. Corollaire
+  de diagnostic : un log qui compte les objets sans les NOMMER ne sert a rien le jour ou ca derape.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les

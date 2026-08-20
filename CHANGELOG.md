@@ -2185,6 +2185,31 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.221 — Le SOL passait pour un objet pose et effacait toute l'herbe
+
+Regression introduite juste avant : plus une seule touffe ne se generait.
+
+La recherche des objets poses se fait dans une boite posee SUR le dessus de la zone. Or `GetPartBoundsInBox` teste
+des BOITES ENGLOBANTES, et le sol de la carte (la grosse part verte sous la pelouse) a son dessus qui AFFLEURE la
+zone : sa boite touchait la mienne de quelques centiemes de stud. Il etait donc compte comme un objet pose, et son
+emprise couvre la totalite de la pelouse -> toute l'herbe effacee.
+
+Il manquait une condition evidente une fois vue : un objet doit DEPASSER de la pelouse, pas seulement la toucher.
+Nouveau CLEAR_MIN_HEIGHT (0.5 stud). Le depassement se mesure en projetant la demi-taille de l'objet sur la verticale
+de la zone, ce qui reste juste meme pose de travers.
+
+Second garde-fou ajoute dans la foulee : une part rangee SOUS une autre part (les carreaux d'une haie, les touffes
+sous leur propre zone) n'est plus prise comme objet. C'est l'objet parent qui porte l'emprise. Sans ca, les milliers
+de carreaux de haie saturaient la limite de la recherche et faisaient RATER la haie elle-meme -- un bug qui serait
+apparu plus tard, et bien plus difficile a lire.
+
+Le log NOMME desormais les objets qui ont chasse de l'herbe, pas seulement leur nombre. Le jour ou une pelouse se vide
+encore, la ligne dira qui l'a mangee au lieu de laisser deviner. C'est ce qui manquait ici.
+
+Lecon : un test de proximite base sur des boites englobantes attrape TOUJOURS le support sur lequel la chose repose.
+Toute detection "qu'est-ce qui est POSE sur X" doit exclure X et tout ce qui affleure X, sinon le sol se designe
+lui-meme.
+
 ## 0.0.220 — L'herbe s'enleve sous les objets poses, et le semis cesse de geler le client
 
 Trois choses, dont deux dictees par une MESURE en jeu.

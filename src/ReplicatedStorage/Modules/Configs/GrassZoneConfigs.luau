@@ -69,6 +69,10 @@ local GrassZoneConfigs = {
 	-- Hauteur au-dessus de la zone dans laquelle on cherche les objets. Au-dela, une part qui vole loin du sol ne doit
 	-- pas trouer la pelouse.
 	CLEAR_HEIGHT = 14,
+	-- Hauteur MINIMALE dont un objet doit DEPASSER du dessus de la zone pour compter.
+	-- Sans ce seuil, le SOL lui-meme (la grosse part verte sous la pelouse, dont le dessus affleure la zone) est vu
+	-- comme un objet pose, et son emprise couvre toute la zone : plus une seule touffe. Vecu.
+	CLEAR_MIN_HEIGHT = 0.5,
 
 	-- ===== Rayures de tonte (facon terrain de foot) =====
 	-- Une bande sur deux prend l'autre couleur. Decide UNE fois a la pose, a partir de la case de la touffe dans la

@@ -174,6 +174,12 @@ local function isBlocker(part: BasePart, zonePart: BasePart): boolean
 	if model and model:FindFirstChildOfClass("Humanoid") then
 		return false
 	end
+	-- Une part rangee SOUS une autre part (les carreaux d'une haie, les touffes sous leur zone) est un detail de cet
+	-- objet : c'est l'objet lui-meme qui porte l'emprise. Les prendre en plus ferait des milliers de tests pour rien,
+	-- et saturerait la limite de la recherche au point de faire RATER le vrai objet.
+	if part:FindFirstAncestorWhichIsA("BasePart") then
+		return false
+	end
 	return true
 end
 
@@ -193,9 +199,25 @@ local function collectBlockers(zone: Zone): { BasePart }
 	params.FilterDescendantsInstances = { zone.part }
 	params.MaxParts = 500
 
+	-- Plan du DESSUS de la zone, et sa verticale : c'est par rapport a lui qu'on mesure de combien un objet depasse.
+	local up = zone.part.CFrame.UpVector
+	local topPlane = zone.part.Position + up * (size.Y * 0.5)
+
 	for _, part in ipairs(workspace:GetPartBoundsInBox(box, Vector3.new(size.X, height, size.Z), params)) do
 		if isBlocker(part, zone.part) then
-			blockers[#blockers + 1] = part
+			-- De combien le SOMMET de cet objet depasse-t-il la pelouse ? On projette sa demi-taille sur la verticale
+			-- de la zone, ce qui reste juste meme si l'objet est pose de travers.
+			local cf = part.CFrame
+			local half = part.Size * 0.5
+			local reach = math.abs(cf.RightVector:Dot(up)) * half.X
+				+ math.abs(cf.UpVector:Dot(up)) * half.Y
+				+ math.abs(cf.LookVector:Dot(up)) * half.Z
+			local top = (part.Position - topPlane):Dot(up) + reach
+			-- SANS CE TEST, le sol sous la pelouse (dont le dessus affleure la zone) passe pour un objet pose et son
+			-- emprise efface toute l'herbe.
+			if top >= GrassZoneConfigs.CLEAR_MIN_HEIGHT then
+				blockers[#blockers + 1] = part
+			end
 		end
 	end
 	return blockers
@@ -411,7 +433,19 @@ local function populate(zone: Zone)
 	end
 
 	if skipped > 0 then
-		print(`[GrassZone] "{zone.part.Name}" : {skipped} touffe(s) retirees sous {#blockers} objet(s) pose(s).`)
+		-- On NOMME les objets, pas seulement leur nombre : le jour ou une pelouse se vide entierement, cette ligne dit
+		-- tout de suite QUI l'a mangee. Vecu -- c'etait le sol lui-meme.
+		local names = {}
+		for i = 1, math.min(#blockers, 6) do
+			names[i] = blockers[i].Name
+		end
+		if #blockers > 6 then
+			names[#names + 1] = `... +{#blockers - 6}`
+		end
+		print(
+			`[GrassZone] "{zone.part.Name}" : {skipped} touffe(s) retirees sous {#blockers} objet(s) `
+				.. `[{table.concat(names, ", ")}]`
+		)
 	end
 
 	folder.Parent = zone.part
