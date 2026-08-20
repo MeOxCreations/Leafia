@@ -671,17 +671,19 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			clump.squashCrush = target
 		end
 
-		-- COULEUR : elle vise le CONTACT SEUL (`best`), pas la cible commune. C'est ce qui la rend passagere -- la
-		-- cible commune inclut la trace permanente, qui ne redescend jamais, donc la couleur ne reviendrait jamais.
-		local colorSpeed = if best > clump.colorCrush
+		-- COULEUR : elle vise la MEME cible que le tassement, donc elle garde la teinte ecrasee sur la TRAINEE. Elle
+		-- a en revanche sa propre vitesse de retour, plus vive : en quittant la touffe, la couleur retombe vite au
+		-- niveau de la trainee, puis s'efface avec elle. On voit donc un point clair sous le pied, un chemin plus
+		-- discret derriere, et une pelouse qui redevient uniforme en une minute.
+		local colorSpeed = if target > clump.colorCrush
 			then GrassZoneConfigs.CRUSH_SPEED
 			else GrassZoneConfigs.COLOR_RECOVER_SPEED
-		clump.colorCrush += (best - clump.colorCrush) * (1 - math.exp(-colorSpeed * dt))
-		if math.abs(best - clump.colorCrush) < GrassZoneConfigs.SNAP_EPSILON then
-			clump.colorCrush = best
+		clump.colorCrush += (target - clump.colorCrush) * (1 - math.exp(-colorSpeed * dt))
+		if math.abs(target - clump.colorCrush) < GrassZoneConfigs.SNAP_EPSILON then
+			clump.colorCrush = target
 		end
 
-		if clump.crush ~= target or clump.squashCrush ~= target or clump.colorCrush ~= best then
+		if clump.crush ~= target or clump.squashCrush ~= target or clump.colorCrush ~= target then
 			moving += 1
 		end
 
