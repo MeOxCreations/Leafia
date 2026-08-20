@@ -2185,6 +2185,29 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.241 — Les fleurs ne levitent plus : leur tige suit l'herbe voisine
+
+Certaines fleurs flottaient nettement au-dessus du gazon, d'autres restaient invisibles dedans.
+
+Cause : je les surelevais d'une hauteur FIXE en studs. Or la hauteur de l'herbe VARIE par zones (le bruit de Perlin
+pose en 0.0.238). Un chiffre absolu ne peut donc convenir nulle part : trop haut la ou l'herbe est courte, trop bas
+la ou elle est haute. Le reglage etait condamne quelle que soit sa valeur.
+
+L'elevation devient une FRACTION de la hauteur qu'aurait l'herbe a cet endroit precis (FLOWER_LIFT_RATIO, 0.75) :
+la corolle se pose aux trois quarts de l'herbe locale, donc elle emerge pareil PARTOUT.
+
+Regle a garder : un decalage absolu pose sur une grandeur qui varie ne peut jamais etre juste. Il faut l'exprimer
+dans l'unite de ce qu'il accompagne. Meme famille que la taille des nuages et des fleurs reglee en studs plutot
+qu'en multiplicateur d'un mesh inconnu, et que le plancher en studs qui inversait l'effet qu'il devait borner.
+
+Reorganisation qui va avec : la position AU SOL est calculee d'abord, sans elevation. C'est elle qui sert a lire les
+deux bruits de Perlin (couleur et hauteur), qui ne regardent que X et Z. Sans ca une fleur surelevee lisait un point
+different de l'herbe qui l'entoure, et n'appartenait pas a la meme tache qu'elle.
+
+Fleurs au passage : trois fois plus nombreuses (FLOWER_CHANCE 0.025 -> 0.09) et deux fois plus petites
+(0.55 a 1.0 stud de large). Les deux vont ensemble : c'est parce qu'elles sont discretes que la frequence peut
+monter sans que la pelouse disparaisse dessous.
+
 ## 0.0.240 — Le changement de couleur devient un PASSAGE
 
 La teinte d'herbe ecrasee ne revenait jamais. Elle suivait l'ecrasement commun, qui a pour plancher la trace

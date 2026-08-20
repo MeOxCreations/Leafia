@@ -400,12 +400,31 @@ local function populate(zone: Zone)
 				flowersMade += 1
 			end
 
-			-- Position finale : le centre de case plus l'ecart au hasard DANS la case. Gardee dans le repere de la
-			-- ZONE : une zone tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire
-			-- ce point.
-			local lift = if isFlower then GrassZoneConfigs.FLOWER_LIFT else 0
-			local localPos =
-				Vector3.new(cellX + jx * stepX * jitter, size.Y * 0.5 + lift, cellZ + jz * stepZ * jitter)
+			-- Position AU SOL d'abord, sans elevation : c'est elle qui sert a lire les bruits de Perlin (qui ne
+			-- regardent que X et Z) et a savoir quelle hauteur fait l'herbe ICI.
+			local groundLocal =
+				Vector3.new(cellX + jx * stepX * jitter, size.Y * 0.5, cellZ + jz * stepZ * jitter)
+			local groundPos = zoneCFrame:PointToWorldSpace(groundLocal)
+
+			-- ZONES DE HAUTEUR. Deuxieme champ de bruit, DECALE du premier (le 3e argument de math.noise change de
+			-- plan) : les zones hautes ne tombent donc pas sur les zones sombres, ce qui se lirait comme un motif.
+			local hScale = GrassZoneConfigs.HEIGHT_PATCH_SCALE
+			local heightPatch = math.noise(groundPos.X * hScale, groundPos.Z * hScale, 17.3)
+			-- Plancher a 0.2 : une touffe de hauteur nulle ou negative serait invisible ou retournee.
+			local heightFactor = math.max(1 + heightPatch * 2 * GrassZoneConfigs.HEIGHT_PATCH_AMOUNT, 0.2)
+
+			-- ELEVATION DE LA FLEUR, en fraction de la hauteur qu'aurait l'HERBE a cet endroit precis. Une elevation
+			-- fixe ne peut pas marcher : l'herbe varie par zones, donc la fleur leviterait la ou elle est courte et
+			-- disparaitrait la ou elle est haute. En la calant sur l'herbe voisine, elle emerge pareil PARTOUT.
+			local lift = 0
+			if isFlower then
+				local grassHeight = grassSource.Size.Y * scale * GrassZoneConfigs.HEIGHT_SCALE * heightFactor
+				lift = grassHeight * GrassZoneConfigs.FLOWER_LIFT_RATIO
+			end
+
+			-- Position finale, gardee dans le repere de la ZONE : une zone tournee ou inclinee marche sans cas
+			-- particulier, et la deplacer n'oblige qu'a retraduire ce point.
+			local localPos = groundLocal + Vector3.new(0, lift, 0)
 			local basePos = zoneCFrame:PointToWorldSpace(localPos)
 
 			-- Sous un objet pose : pas de touffe DU TOUT. On ne la cree pas pour la detruire ensuite.
@@ -431,14 +450,6 @@ local function populate(zone: Zone)
 				local width = rng:NextNumber(GrassZoneConfigs.FLOWER_WIDTH_MIN, GrassZoneConfigs.FLOWER_WIDTH_MAX)
 				part.Size = source.Size * (width / math.max(source.Size.X, 1e-3))
 			else
-				-- ZONES DE HAUTEUR. Deuxieme champ de bruit, DECALE du premier (le 3e argument de math.noise change
-				-- de plan) : les zones hautes ne tombent donc pas sur les zones sombres, ce qui se lirait comme un
-				-- motif.
-				local hScale = GrassZoneConfigs.HEIGHT_PATCH_SCALE
-				local heightPatch = math.noise(basePos.X * hScale, basePos.Z * hScale, 17.3)
-				-- Plancher a 0.2 : une touffe de hauteur nulle ou negative serait invisible ou retournee.
-				local heightFactor = math.max(1 + heightPatch * 2 * GrassZoneConfigs.HEIGHT_PATCH_AMOUNT, 0.2)
-
 				-- Le grossissement de compensation ne touche QUE X et Z. Couvrir le sol est une affaire HORIZONTALE :
 				-- une touffe plus large cache plus de terre, une touffe plus haute ne cache rien de plus et noie le
 				-- joueur.
@@ -463,7 +474,7 @@ local function populate(zone: Zone)
 			-- TACHES. Le bruit se lit sur la position MONDE, donc deux touffes voisines tombent dans la meme tache et
 			-- les zones traversent les bords de la grille sans se voir. Calcule une fois ici, jamais en jeu.
 			local patchScale = GrassZoneConfigs.PATCH_SCALE
-			local patch = math.noise(basePos.X * patchScale, basePos.Z * patchScale, 0)
+			local patch = math.noise(groundPos.X * patchScale, groundPos.Z * patchScale, 0)
 			local tint = 1 + patch * 2 * GrassZoneConfigs.PATCH_AMOUNT -- math.noise rend environ [-0.5, 0.5]
 			local function tinted(c: Color3): Color3
 				return Color3.new(

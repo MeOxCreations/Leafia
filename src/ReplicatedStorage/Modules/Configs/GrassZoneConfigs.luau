@@ -108,11 +108,12 @@ local GrassZoneConfigs = {
 	-- l'herbe autour est plus clairsemee.
 	FLOWER_WIDTH_MIN = 0.55,
 	FLOWER_WIDTH_MAX = 1.0,
-	-- HAUTEUR DE TIGE, en studs : de combien la fleur est SURELEVEE au-dessus du sol.
-	-- Sans elle, la fleur est posee au ras comme une touffe, donc NOYEE dans une herbe qui la depasse largement --
-	-- on ne la voit pas du tout. Une vraie fleur pousse sur une tige : il faut qu'elle sorte du gazon.
-	-- A regler en regardant la hauteur de l'herbe autour : la fleur doit depasser, pas leviter.
-	FLOWER_LIFT = 2.2,
+	-- HAUTEUR DE TIGE, en fraction de la hauteur de l'HERBE VOISINE. Pas en studs, et c'est le point important :
+	-- la hauteur de l'herbe VARIE par zones (HEIGHT_PATCH), donc une elevation fixe fait leviter la fleur la ou
+	-- l'herbe est courte et la noie la ou elle est haute. Aucun chiffre absolu ne peut convenir partout.
+	-- 0.75 = la corolle se pose aux trois quarts de l'herbe locale : elle emerge sans se detacher du gazon.
+	-- Au-dela de 1 elle flotte au-dessus ; en dessous de 0.5 elle disparait dedans.
+	FLOWER_LIFT_RATIO = 0.75,
 
 	-- PAS DE REGLAGE DE RENDERFIDELITY ICI : cette propriete est reservee aux plugins, un script normal ne peut pas
 	-- l'ecrire ("lacking capability Plugin"). Elle se met A LA MAIN dans Studio, sur le mesh GrassMesh, et les clones
