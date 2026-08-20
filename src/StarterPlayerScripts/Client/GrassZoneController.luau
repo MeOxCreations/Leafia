@@ -60,6 +60,7 @@ type Clump = {
 	basePos: Vector3, -- la meme, en monde (cache)
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
 	baseSize: Vector3, -- taille au repos ; l'ecrasement ne fait que RABOTER son Y, jamais l'ecraser definitivement
+	lift: number, -- hauteur de TIGE au repos (fleurs seulement, 0 pour l'herbe). Se comprime avec l'ecrasement.
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	baseColor: Color3, -- couleur au repos, TACHE comprise
 	crushedColor: Color3, -- couleur une fois ecrasee, tachee de la MEME facon : la trace garde le relief du terrain
@@ -147,7 +148,9 @@ local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle:
 		clump.lastDarken = blend
 	end
 
-	local cf = CFrame.new(clump.basePos)
+	-- LA TIGE SE COMPRIME comme le reste : au meme facteur que la hauteur. Une fleur ecrasee doit descendre AU SOL,
+	-- pas s'aplatir en restant perchee. A l'arret (squash = 1) la tige fait sa taille pleine.
+	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash))
 	-- L'ecrasement se fait en HAUTEUR (la taille, juste au-dessus). Cette bascule ne sert que si on remet un angle
 	-- dans la config, ce qui n'a de sens que sur un mesh d'UN SEUL BRIN.
 	if tiltAngle ~= 0 then
@@ -284,7 +287,8 @@ local function buildBuckets(zone: Zone, zoneCFrame: CFrame, localY: number)
 			maxX = math.max(maxX, clump.localPos.X)
 			minZ = math.min(minZ, clump.localPos.Z)
 			maxZ = math.max(maxZ, clump.localPos.Z)
-			tallest = math.max(tallest, clump.baseSize.Y)
+			-- La tige compte dans la hauteur : une fleur perchee depasse, et le rayon doit l'englober.
+			tallest = math.max(tallest, clump.baseSize.Y + clump.lift)
 		end
 		local cx, cz = (minX + maxX) * 0.5, (minZ + maxZ) * 0.5
 		local dx, dz = maxX - cx, maxZ - cz
@@ -422,10 +426,10 @@ local function populate(zone: Zone)
 				lift = grassHeight * GrassZoneConfigs.FLOWER_LIFT_RATIO
 			end
 
-			-- Position finale, gardee dans le repere de la ZONE : une zone tournee ou inclinee marche sans cas
-			-- particulier, et la deplacer n'oblige qu'a retraduire ce point.
-			local localPos = groundLocal + Vector3.new(0, lift, 0)
-			local basePos = zoneCFrame:PointToWorldSpace(localPos)
+			-- Position gardee = celle du SOL, PAS le sommet de la tige. L'elevation est appliquee A LA POSE, ou elle
+			-- peut se comprimer avec l'ecrasement : figee dans le point, la fleur s'aplatirait en restant perchee.
+			local localPos = groundLocal
+			local basePos = groundPos
 
 			-- Sous un objet pose : pas de touffe DU TOUT. On ne la cree pas pour la detruire ensuite.
 			if isCovered(basePos, blockers) then
@@ -512,6 +516,7 @@ local function populate(zone: Zone)
 				-- donc basculer ce reglage ne redistribue PAS toute la pelouse.
 				yaw = if GrassZoneConfigs.RANDOM_YAW then CFrame.Angles(0, yawAngle, 0) else CFrame.identity,
 				baseSize = part.Size,
+				lift = lift,
 				lastSquash = 1,
 				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
 				baseColor = part.Color,
