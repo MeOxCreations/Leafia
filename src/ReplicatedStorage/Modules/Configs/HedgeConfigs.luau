@@ -1157,7 +1157,7 @@ local HedgeConfigs = {
 	VISUAL_CUT_SURFACE_OFFSET = 0.1,
 	-- Facteur sur la taille du cercle (le diametre couvre la coupe : longueur de lame + largeur taillee). < 1 pour un
 	-- repere plus PETIT et discret ; ne change QUE le visuel, pas la coupe reelle. A REGLER a l'oeil.
-	VISUAL_CUT_SIZE_SCALE = 0.75,
+	VISUAL_CUT_SIZE_SCALE = 0.5, -- 0.28 etait trop petit, 0.75 trop gros : essayes a l'ecran, le milieu tient
 	-- SLIME + PRESSAGE du cercle : un ressort amorti pilote son echelle. Il JAILLIT de 0 a l'apparition (rebond slime),
 	-- et se PRESSE (retrecit un peu) tant qu'on taille, puis rebondit a l'arret. Amortissement BAS = rebond visible.
 	VISUAL_CUT_SLIME_STIFFNESS = 350, -- raideur (haut = pop plus rapide / plus sec)
