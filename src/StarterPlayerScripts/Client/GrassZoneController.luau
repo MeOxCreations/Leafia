@@ -225,9 +225,14 @@ local function populate(zone: Zone)
 		local factor = math.sqrt((cols * rows) / GrassZoneConfigs.MAX_CLUMPS)
 		cols = math.max(1, math.floor(cols / factor))
 		rows = math.max(1, math.floor(rows / factor))
+		-- On annonce la DENSITE REELLEMENT obtenue, pas seulement la taille de la grille : c'est ce chiffre-la qui
+		-- explique une herbe clairsemee, et sans lui on tourne le bouton DENSITY dans le vide en se demandant
+		-- pourquoi rien ne change.
+		local got = (cols * rows) / math.max(size.X * size.Z, 1e-3)
 		warn(
-			`[GrassZone] "{zone.part.Name}" plafonne : grille ramenee a {cols}x{rows}. `
-				.. `Monte MAX_CLUMPS si tu veux plus dense.`
+			`[GrassZone] "{zone.part.Name}" PLAFONNE : densite {string.format("%.2f", got)} au lieu de `
+				.. `{GrassZoneConfigs.DENSITY} (grille {cols}x{rows} sur {math.floor(size.X)}x{math.floor(size.Z)} studs). `
+				.. `Monte MAX_CLUMPS, ou grossis les touffes (SCALE_MIN/MAX) et baisse DENSITY.`
 		)
 	end
 

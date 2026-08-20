@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.218 — Le plafond rabotait encore la densite des grandes zones
+
+Herbe clairsemee sur un grand terrain. Meme cause qu'en 0.0.210, un cran plus haut : MAX_CLUMPS (1500) mordait de
+nouveau. Une zone de 70x70 demande 4900 touffes a une par stud carre ; le plafond en autorisait 1500, donc la grille
+etait espacee pour couvrir quand meme toute la surface -- et la densite tombait autour de 0.3 au lieu de 1.0.
+
+MAX_CLUMPS passe a 4000. Mais le vrai correctif est dans le MESSAGE : il annonce desormais la DENSITE REELLEMENT
+obtenue, pas seulement la taille de la grille. C'est ce chiffre-la qui explique une herbe clairsemee. Sans lui, on
+tourne le bouton DENSITY sans que rien ne change, et on cherche le probleme dans le semis alors qu'il est dans le
+plafond.
+
+Note ajoutee dans la config, parce que la question va revenir a la prochaine grande zone : monter MAX_CLUMPS
+indefiniment n'est pas la reponse. Le nombre de parts suit la surface, il n'y a pas de repas gratuit. Le vrai levier
+pour un grand terrain, c'est des touffes PLUS GROSSES (SCALE_MIN / SCALE_MAX) avec une DENSITY plus basse : meme
+couverture a l'ecran, deux a trois fois moins de parts.
+
+Lecon generale : un garde-fou qui, lorsqu'il mord, DEGRADE silencieusement la qualite au lieu de refuser, doit dire
+en clair ce qu'il a degrade et de combien. Sinon il se fait passer pour un reglage mal tourne.
+
 ## 0.0.217 — Plus de trous dans l'herbe : semis en QUINCONCE
 
 Des trous apparaissaient par endroits dans l'herbe. Le quadrillage etait pourtant parfaitement regulier : une case,

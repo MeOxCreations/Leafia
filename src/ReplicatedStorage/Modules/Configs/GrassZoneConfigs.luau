@@ -39,8 +39,12 @@ local GrassZoneConfigs = {
 	-- Ce plafond n'existe que pour qu'une part posee par erreur a 500x500 ne fabrique pas 250 000 instances. Le laisser
 	-- trop bas RABOTE la densite des grandes zones (l'herbe devient clairsemee a mesure qu'on agrandit), ce qui est
 	-- exactement l'inverse de ce qu'on veut. Au plafond on ESPACE la grille plutot que de couper la liste : couper
-	-- laisserait une moitie de zone chauve.
-	MAX_CLUMPS = 1500,
+	-- laisserait une moitie de zone chauve. Quand il mord, la console DIT la densite reellement obtenue.
+	--
+	-- POUR UN GRAND TERRAIN, le bon reflexe n'est PAS de monter ce chiffre indefiniment : le nombre de parts suit la
+	-- surface, il n'y a pas de repas gratuit. Le vrai levier, c'est des touffes PLUS GROSSES (SCALE_MIN / SCALE_MAX)
+	-- avec une DENSITY plus basse : meme couverture a l'ecran, deux a trois fois moins de parts.
+	MAX_CLUMPS = 4000,
 	-- Taille de chaque touffe, en fraction de la taille du mesh d'origine. Un peu de variete casse l'effet "copie".
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.25,
