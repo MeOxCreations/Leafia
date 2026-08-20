@@ -1115,8 +1115,12 @@ local HedgeConfigs = {
 	-- COULEUR SELON LA MATIERE sous la lame : BLANC s'il reste des feuilles a couper, ORANGE si c'est NU (rien a faire).
 	-- Approximation cote client : quand on TAILLE sans qu'aucun coup ne morde depuis VISUAL_CUT_DRY_TIME, on est sur du
 	-- nu -> orange. Sinon (des feuilles tombent, ou on ne fait que viser) -> blanc.
-	VISUAL_CUT_FOLIAGE_COLOR = Color3.fromRGB(255, 255, 255), -- il reste a couper -> blanc
+	VISUAL_CUT_FOLIAGE_COLOR = Color3.fromRGB(150, 255, 150), -- il reste a couper -> vert pale ("vas-y")
 	VISUAL_CUT_BARE_COLOR = Color3.fromRGB(255, 140, 25), -- deja nu -> orange
+	-- HORS D'ATTEINTE : le dessus d'une haie trop haute, sans etre sur l'escabeau. Rouge, parce que ce n'est pas
+	-- "il n'y a rien a couper" (orange) mais "tu ne PEUX pas couper la". Le repere le dit AVANT le clic ; la
+	-- notification, elle, n'arrive qu'apres.
+	VISUAL_CUT_BLOCKED_COLOR = Color3.fromRGB(255, 70, 60),
 	VISUAL_CUT_DRY_TIME = 0.2, -- temps a tailler SANS qu'un coup morde avant de passer en "nu" (orange), en secondes
 	-- OU SE PLACE LE REPERE DE COUPE (le cercle blanc).
 	-- true  : il suit le CURSEUR, la ou on pointe sur la haie. Plus direct a lire, on regarde ou on vise.
@@ -1152,7 +1156,7 @@ local HedgeConfigs = {
 	VISUAL_CUT_SURFACE_OFFSET = 0.1,
 	-- Facteur sur la taille du cercle (le diametre couvre la coupe : longueur de lame + largeur taillee). < 1 pour un
 	-- repere plus PETIT et discret ; ne change QUE le visuel, pas la coupe reelle. A REGLER a l'oeil.
-	VISUAL_CUT_SIZE_SCALE = 0.55,
+	VISUAL_CUT_SIZE_SCALE = 0.28,
 	-- SLIME + PRESSAGE du cercle : un ressort amorti pilote son echelle. Il JAILLIT de 0 a l'apparition (rebond slime),
 	-- et se PRESSE (retrecit un peu) tant qu'on taille, puis rebondit a l'arret. Amortissement BAS = rebond visible.
 	VISUAL_CUT_SLIME_STIFFNESS = 350, -- raideur (haut = pop plus rapide / plus sec)

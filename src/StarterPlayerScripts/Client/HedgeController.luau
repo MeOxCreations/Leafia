@@ -2040,7 +2040,14 @@ local function update(dt: number)
 		lastCutTickClock = os.clock()
 	end
 	local dry = throttling and (os.clock() - lastCutTickClock) > HedgeConfigs.VISUAL_CUT_DRY_TIME
-	cutZoneTargetColor = if dry then HedgeConfigs.VISUAL_CUT_BARE_COLOR else HedgeConfigs.VISUAL_CUT_FOLIAGE_COLOR
+	-- HORS D'ATTEINTE en ROUGE. Sur l'escabeau le dessus redevient taillable, donc on ne bloque pas : c'est bien
+	-- "trop haut POUR L'INSTANT" que le repere annonce, pas "interdit".
+	local onLadder = character:GetAttribute(HedgeConfigs.LADDER_TRIM_ATTRIBUTE) == true
+	if topOutOfReach and not onLadder then
+		cutZoneTargetColor = HedgeConfigs.VISUAL_CUT_BLOCKED_COLOR
+	else
+		cutZoneTargetColor = if dry then HedgeConfigs.VISUAL_CUT_BARE_COLOR else HedgeConfigs.VISUAL_CUT_FOLIAGE_COLOR
+	end
 
 	-- Dessine le repere AVEC LE DERNIER SEGMENT ENVOYE (ce que le serveur a en main), plaque selon la normale de la
 	-- surface travaillee. Le DESSUS a une normale VERTICALE, la face une horizontale : on passe la bonne pour que le
