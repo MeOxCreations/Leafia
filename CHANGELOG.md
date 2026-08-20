@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.208 — Le vent passe dans l'herbe
+
+L'herbe de zone ondule. Le vent souffle dans une direction reglable (WIND_HEADING) et chaque touffe oscille autour
+d'une inclinaison moyenne.
+
+Le point qui fait tout : le decalage de l'oscillation depend de la POSITION de la touffe le long du vent. Des VAGUES
+traversent donc le champ, les touffes en amont bougent avant celles en aval. Sans ce decalage, tout le champ respire
+en bloc au meme instant, et l'oeil lit ca comme du faux immediatement -- meme famille que les buissons qui se
+balancaient a l'unisson en 0.0.204. Un decalage propre a chaque touffe (windPhase) casse ce qui resterait d'identique
+entre deux voisines exactement alignees.
+
+Vent et ecrasement se COMPOSENT au lieu de se disputer la meme valeur : deux rotations enchainees sur le meme CFrame,
+l'ecrasement d'abord (fort, direction variable), le vent ensuite (faible, direction fixe). Et le vent s'EFFACE a
+mesure que la touffe est ecrasee : une touffe couchee sous un pied ne doit plus onduler.
+
+### Le tri qui rend ca abordable
+
+Le vent oblige a reecrire chaque touffe VISIBLE a chaque image, alors que l'ecrasement ne touchait qu'une vingtaine
+de touffes autour du joueur. Sans tri, un grand champ deviendrait cher.
+
+Tri par distance a la CAMERA (WIND_VIEW_DISTANCE, 80 studs), a deux etages : une zone entierement hors de vue est
+ecartee d'un bloc, et dans une zone visible, une touffe trop lointaine ne calcule pas son vent. Mieux : une touffe
+lointaine ET immobile n'est plus reecrite du tout (`lastTilt` remplace le drapeau `resting`, qui ne voulait plus rien
+dire une fois que le vent bouge tout en permanence). Le mouvement d'un brin ne se voit pas a 80 studs mais il coute
+exactement le meme prix a calculer : WIND_VIEW_DISTANCE est donc le premier bouton a baisser si le FPS tombe.
+
+Mesure d'avant, pour comparer apres : 6.37 ms de moyenne avec le semis seul (contre 4.71 ms a vide et 6.92 ms avec le
+systeme de taille). L'herbe ne coutait rien de mesurable ; a verifier maintenant que tout bouge.
+
 ## 0.0.207 — Le semis passe en GRILLE, et la touffe est posee des sa creation
 
 Deux changements sur l'herbe de zone, apres un retour ou toutes les touffes etaient empilees au meme point, loin de

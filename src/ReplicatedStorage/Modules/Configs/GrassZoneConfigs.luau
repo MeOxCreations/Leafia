@@ -40,6 +40,19 @@ local GrassZoneConfigs = {
 	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement droites, ce qui se lit comme du faux.
 	REST_TILT = 6,
 
+	-- ===== Vent =====
+	-- Le vent souffle dans UNE direction, et chaque touffe oscille autour d'une inclinaison moyenne. Le decalage de
+	-- l'oscillation depend de la POSITION de la touffe le long du vent : ca fabrique des VAGUES qui traversent le
+	-- champ. Sans ce decalage, tout le champ respire en bloc, au meme instant, et ca se lit comme du faux.
+	WIND_HEADING = 45, -- direction du vent, en degres (0 = vers +X, 90 = vers +Z)
+	WIND_ANGLE = 6, -- inclinaison MOYENNE dans le sens du vent, en degres
+	WIND_GUST = 5, -- amplitude de l'oscillation autour de cette inclinaison, en degres
+	WIND_SPEED = 1.7, -- vitesse de l'oscillation
+	WIND_WAVE = 0.09, -- serrage des vagues : plus haut = vagues plus courtes, qui defilent plus visiblement
+	-- Au-dela de cette distance a la CAMERA, une touffe cesse de bouger. Le mouvement d'un brin ne se voit pas a
+	-- 80 studs, mais il coute exactement le meme prix a calculer. C'EST LE BOUTON A BAISSER si le FPS tombe.
+	WIND_VIEW_DISTANCE = 80,
+
 	-- ===== Ecrasement =====
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
 	CRUSH_RADIUS = 4.5,

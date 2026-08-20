@@ -24,6 +24,18 @@ local REST_TILT = math.rad(GrassZoneConfigs.REST_TILT)
 -- Constante plutot que Vector3.yAxis : selene ne reconnait pas ce dernier comme un Vector3 et refuse Cross.
 local UP = Vector3.new(0, 1, 0)
 
+-- Repere du vent, calcule UNE fois. WIND_DIR est la direction horizontale du souffle ; WIND_AXIS est l'axe autour
+-- duquel tourner pour que le HAUT de la touffe parte dans cette direction.
+local WIND_DIR = Vector3.new(
+	math.cos(math.rad(GrassZoneConfigs.WIND_HEADING)),
+	0,
+	math.sin(math.rad(GrassZoneConfigs.WIND_HEADING))
+)
+local WIND_AXIS = UP:Cross(WIND_DIR).Unit
+local WIND_ANGLE = math.rad(GrassZoneConfigs.WIND_ANGLE)
+local WIND_GUST = math.rad(GrassZoneConfigs.WIND_GUST)
+local WIND_VIEW_SQ = GrassZoneConfigs.WIND_VIEW_DISTANCE * GrassZoneConfigs.WIND_VIEW_DISTANCE
+
 -- Une touffe. On garde son PIED et sa rotation propre : le CFrame se recompose a chaque image a partir de ces
 -- valeurs, JAMAIS a partir du CFrame precedent -- sinon l'inclinaison s'accumulerait et les touffes finiraient
 -- couchees pour toujours.
@@ -37,8 +49,9 @@ type Clump = {
 	halfHeight: number, -- demi-hauteur, pour remonter le CENTRE au-dessus du pied
 	restTilt: number, -- inclinaison AU REPOS (radians) : une herbe parfaitement droite se lit comme du faux
 	tiltDir: Vector3, -- direction horizontale de la bascule en cours
-	tilt: number, -- angle courant, en radians
-	resting: boolean, -- au repos ? une touffe au repos ne se reecrit pas
+	tilt: number, -- angle d'ecrasement courant, en radians
+	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
+	lastTilt: number, -- dernier angle REELLEMENT ecrit : sert a ne pas reecrire une touffe lointaine immobile
 }
 
 type Zone = {
@@ -75,15 +88,19 @@ end
 -- ===== Pose =====
 
 -- Pose la touffe. On repart TOUJOURS du pied et de la rotation propre, jamais du CFrame precedent.
--- L'ordre compte : la bascule est calculee en MONDE (elle fuit le joueur), elle doit donc etre a gauche du yaw.
+-- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
+-- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump)
-	local axis = UP:Cross(clump.tiltDir)
-	if axis.Magnitude < 1e-4 then
-		return
+local function apply(clump: Clump, windAngle: number)
+	local cf = CFrame.new(clump.basePos)
+	local crushAxis = UP:Cross(clump.tiltDir)
+	if crushAxis.Magnitude > 1e-4 then
+		cf = cf * CFrame.fromAxisAngle(crushAxis.Unit, clump.tilt)
 	end
-	local tilt = CFrame.fromAxisAngle(axis.Unit, clump.tilt)
-	clump.part.CFrame = CFrame.new(clump.basePos) * tilt * clump.yaw * CFrame.new(0, clump.halfHeight, 0)
+	if windAngle ~= 0 then
+		cf = cf * CFrame.fromAxisAngle(WIND_AXIS, windAngle)
+	end
+	clump.part.CFrame = cf * clump.yaw * CFrame.new(0, clump.halfHeight, 0)
 end
 
 -- ===== Remplissage =====
@@ -169,11 +186,12 @@ local function populate(zone: Zone)
 				restTilt = restTilt,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				tilt = restTilt,
-				resting = true, -- posee des maintenant, la boucle n'a rien a rattraper
+				windPhase = rng:NextNumber(0, math.pi * 2),
+				lastTilt = restTilt,
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
-			apply(clump)
+			apply(clump, WIND_ANGLE)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
 		end
@@ -192,14 +210,14 @@ local function refresh(zone: Zone)
 	local zoneCFrame = zone.part.CFrame
 	for _, clump in ipairs(zone.clumps) do
 		clump.basePos = zoneCFrame:PointToWorldSpace(clump.localPos)
-		clump.resting = false
+		clump.lastTilt = math.huge -- force une reecriture : la touffe doit se reposer au nouvel endroit
 	end
 	zone.settling = true
 end
 
 -- ===== Ecrasement =====
 
-local function updateZone(zone: Zone, positions: { Vector3 }, dt: number)
+local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, now: number, dt: number)
 	local radius = GrassZoneConfigs.CRUSH_RADIUS
 	local moving = 0
 
@@ -234,16 +252,34 @@ local function updateZone(zone: Zone, positions: { Vector3 }, dt: number)
 		if math.abs(target - clump.tilt) < GrassZoneConfigs.SNAP_EPSILON then
 			clump.tilt = target -- un lerp exponentiel n'atteint jamais sa cible : sans ce clic, on reecrirait a vie
 		end
-
-		local resting = clump.tilt == target and best <= 0
-		-- Le "not clump.resting" fait la DERNIERE ecriture, celle qui repose la touffe. Sans elle, elle se figerait a
-		-- un cheveu de sa pose de repos.
-		if not resting or not clump.resting then
-			apply(clump)
-		end
-		clump.resting = resting
-		if not resting then
+		if clump.tilt ~= target then
 			moving += 1
+		end
+
+		-- VENT. Trop loin de la CAMERA, on ne calcule rien : le mouvement d'un brin ne se voit pas a cette distance,
+		-- mais il coute exactement le meme prix. C'est ce tri qui rend un grand champ abordable.
+		local toCam = clump.basePos - camPos
+		local far = toCam.X * toCam.X + toCam.Y * toCam.Y + toCam.Z * toCam.Z > WIND_VIEW_SQ
+
+		local wind = 0
+		if not far then
+			-- Le decalage depend de la POSITION le long du vent : les touffes en amont bougent avant celles en aval,
+			-- donc des vagues traversent le champ au lieu qu'il respire en bloc. windPhase casse ce qui resterait
+			-- d'identique entre deux voisines exactement alignees.
+			local phase = now * GrassZoneConfigs.WIND_SPEED
+				- (clump.basePos.X * WIND_DIR.X + clump.basePos.Z * WIND_DIR.Z) * GrassZoneConfigs.WIND_WAVE
+				+ clump.windPhase
+			wind = WIND_ANGLE + WIND_GUST * math.sin(phase)
+			-- Une touffe couchee sous un pied ne doit plus onduler : le vent s'efface a mesure qu'elle est ecrasee.
+			local crushed = (clump.tilt - clump.restTilt) / math.max(MAX_ANGLE - clump.restTilt, 1e-3)
+			wind *= 1 - math.clamp(crushed, 0, 1)
+		end
+
+		-- Pres de la camera on ecrit TOUJOURS (le vent bouge en permanence). Loin, on n'ecrit que si l'ecrasement a
+		-- change : une touffe lointaine et immobile ne coute alors plus rien du tout.
+		if not far or clump.tilt ~= clump.lastTilt then
+			apply(clump, wind)
+			clump.lastTilt = clump.tilt
 		end
 	end
 
@@ -254,6 +290,13 @@ local function update(dt: number)
 	if #zones == 0 then
 		return
 	end
+
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return -- tot au boot la camera peut ne pas exister encore
+	end
+	local camPos = camera.CFrame.Position
+	local now = os.clock()
 
 	-- Positions des personnages, relevees UNE fois par image et partagees par toutes les zones.
 	local positions: { Vector3 } = {}
@@ -267,20 +310,12 @@ local function update(dt: number)
 
 	for _, zone in ipairs(zones) do
 		if zone.part.Parent ~= nil then
-			-- Ecarte d'un coup les zones ou personne ne marche. Une zone dont des touffes se relevent encore continue
-			-- d'etre traitee, sinon elles se figeraient couchees des que le joueur s'eloigne.
-			local near = false
-			local center = zone.part.Position
-			local reach = zone.radius + GrassZoneConfigs.CRUSH_RADIUS
-			for _, pos in ipairs(positions) do
-				local d = center - pos
-				if Vector3.new(d.X, 0, d.Z).Magnitude < reach then
-					near = true
-					break
-				end
-			end
-			if near or zone.settling then
-				updateZone(zone, positions, dt)
+			-- Ecarte d'un bloc les zones hors de vue. Une zone dont des touffes se relevent encore garde la main, sinon
+			-- elles se figeraient couchees des qu'on tourne la camera.
+			local d = zone.part.Position - camPos
+			local reach = zone.radius + GrassZoneConfigs.WIND_VIEW_DISTANCE
+			if d.Magnitude < reach or zone.settling then
+				updateZone(zone, positions, camPos, now, dt)
 			end
 		end
 	end
