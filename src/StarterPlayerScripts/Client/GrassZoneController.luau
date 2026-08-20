@@ -58,9 +58,20 @@ type Clump = {
 	lastTilt: number, -- dernier angle REELLEMENT ecrit : sert a ne pas reecrire une touffe lointaine immobile
 }
 
+-- Un PAVE : un paquet de touffes voisines, teste EN BLOC. C'est lui l'unite de travail de la boucle, pas la touffe.
+-- Hors de vue, tout le pave est saute ; loin des joueurs, ses touffes ne font meme pas tourner le test d'ecrasement.
+type Bucket = {
+	clumps: { Clump },
+	localCenter: Vector3, -- centre du pave, dans le repere de la zone
+	center: Vector3, -- le meme, en monde (recalcule quand la zone bouge)
+	radius: number, -- de quoi englober toutes ses touffes, hauteur comprise
+	settling: boolean, -- des touffes encore en mouvement dans CE pave ?
+}
+
 type Zone = {
 	part: BasePart,
-	clumps: { Clump },
+	clumps: { Clump }, -- toutes les touffes a plat : sert au comptage, au log et au nettoyage
+	buckets: { Bucket }, -- les memes, regroupees par pave : c'est CA que la boucle parcourt
 	radius: number, -- rayon de la zone, pour l'ecarter d'un coup quand personne n'est autour
 	settling: boolean, -- des touffes encore en mouvement ? on continue alors meme sans joueur pres
 }
@@ -129,6 +140,49 @@ end
 
 -- (Re)cree les touffes d'une zone. Appele au boot, et de nouveau si la zone est REDIMENSIONNEE : la nouvelle surface
 -- veut un autre nombre de touffes, reposer les anciennes ne suffirait pas.
+-- Regroupe les touffes deja creees en paves. Appele en fin de semis, et jamais dans le chemin par-image.
+local function buildBuckets(zone: Zone, zoneCFrame: CFrame, localY: number)
+	local side = GrassZoneConfigs.BUCKET_SIZE
+	local byKey: { [string]: { Clump } } = {}
+	for _, clump in ipairs(zone.clumps) do
+		local key = `{math.floor(clump.localPos.X / side)}:{math.floor(clump.localPos.Z / side)}`
+		local list = byKey[key]
+		if not list then
+			list = {}
+			byKey[key] = list
+		end
+		list[#list + 1] = clump
+	end
+
+	table.clear(zone.buckets)
+	for _, list in pairs(byKey) do
+		-- Bornes REELLES des touffes du pave, pas celles de la case theorique : l'ecart au hasard peut pousser une
+		-- touffe hors de sa case, et un rayon trop court la ferait disparaitre des tests sans qu'on comprenne pourquoi.
+		local minX, maxX = math.huge, -math.huge
+		local minZ, maxZ = math.huge, -math.huge
+		local tallest = 0
+		for _, clump in ipairs(list) do
+			minX = math.min(minX, clump.localPos.X)
+			maxX = math.max(maxX, clump.localPos.X)
+			minZ = math.min(minZ, clump.localPos.Z)
+			maxZ = math.max(maxZ, clump.localPos.Z)
+			tallest = math.max(tallest, clump.baseSize.Y)
+		end
+		local cx, cz = (minX + maxX) * 0.5, (minZ + maxZ) * 0.5
+		local dx, dz = maxX - cx, maxZ - cz
+		local localCenter = Vector3.new(cx, localY, cz)
+		zone.buckets[#zone.buckets + 1] = {
+			clumps = list,
+			localCenter = localCenter,
+			center = zoneCFrame:PointToWorldSpace(localCenter),
+			-- Demi-diagonale du pave PLUS la touffe la plus haute : le rayon doit englober ce qu'on VOIT, pas
+			-- seulement les pieds.
+			radius = math.sqrt(dx * dx + dz * dz) + tallest,
+			settling = true,
+		}
+	end
+end
+
 local function populate(zone: Zone)
 	local source = template
 	if not source then
@@ -213,6 +267,7 @@ local function populate(zone: Zone)
 	end
 
 	folder.Parent = zone.part
+	buildBuckets(zone, zoneCFrame, size.Y * 0.5)
 
 	local half = size * 0.5
 	zone.radius = math.sqrt(half.X * half.X + half.Z * half.Z)
@@ -225,7 +280,7 @@ local function logZone(zone: Zone)
 	local first = zone.clumps[1]
 	local where = if first then tostring(first.part.Position) else "aucune"
 	print(
-		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) | zone {zone.part.Size} @ `
+		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) en {#zone.buckets} pave(s) | zone {zone.part.Size} @ `
 			.. `{zone.part.Position} | 1re touffe @ {where}`
 	)
 end
@@ -238,21 +293,32 @@ local function refresh(zone: Zone)
 		clump.basePos = zoneCFrame:PointToWorldSpace(clump.localPos)
 		clump.lastTilt = math.huge -- force une reecriture : la touffe doit se reposer au nouvel endroit
 	end
+	-- Les centres de paves servent a TOUS les tests de distance : les oublier ici trierait sur l'ancienne position,
+	-- et l'herbe cesserait de reagir sans qu'on voie pourquoi.
+	for _, bucket in ipairs(zone.buckets) do
+		bucket.center = zoneCFrame:PointToWorldSpace(bucket.localCenter)
+		bucket.settling = true
+	end
 	zone.settling = true
 end
 
 -- ===== Ecrasement =====
 
-local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, now: number, dt: number)
+-- Anime UN pave. `players` ne contient que les joueurs capables de toucher ce pave : elle est VIDE pour la quasi
+-- totalite d'entre eux, et c'est tout l'interet -- la recherche d'ecrasement se reduit alors a rien.
+-- `far` vaut pour tout le pave : a 6 studs de cote, ses touffes sont toutes a la meme distance de la camera, inutile
+-- de mesurer chacune.
+-- Retourne le nombre de touffes encore en mouvement.
+local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, dt: number, far: boolean): number
 	local radius = GrassZoneConfigs.CRUSH_RADIUS
 	local moving = 0
 
-	for _, clump in ipairs(zone.clumps) do
+	for _, clump in ipairs(bucket.clumps) do
 		-- Le joueur le PLUS proche gagne. On ne MOYENNE pas les directions : deux joueurs de part et d'autre d'une
 		-- touffe la redresseraient, ce qui est l'inverse du sens voulu.
 		local best = 0
 		local bestDir = clump.tiltDir
-		for _, pos in ipairs(positions) do
+		for _, pos in ipairs(players) do
 			local d = clump.basePos - pos
 			d = Vector3.new(d.X, 0, d.Z) -- horizontal : sauter ne doit pas relever l'herbe
 			local dist = d.Magnitude
@@ -282,11 +348,6 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 			moving += 1
 		end
 
-		-- VENT. Trop loin de la CAMERA, on ne calcule rien : le mouvement d'un brin ne se voit pas a cette distance,
-		-- mais il coute exactement le meme prix. C'est ce tri qui rend un grand champ abordable.
-		local toCam = clump.basePos - camPos
-		local far = toCam.X * toCam.X + toCam.Y * toCam.Y + toCam.Z * toCam.Z > WIND_VIEW_SQ
-
 		-- FRACTION D'ECRASEMENT : 0 = debout au repos, 1 = a plat sous le pied. Une SEULE valeur, tiree de l'angle
 		-- deja lisse, qui sert DEUX fois -- elle efface le vent et elle aplatit la touffe. Les deux ne peuvent donc
 		-- pas se desynchroniser, et l'aplatissement herite gratuitement du ressort (sec a la descente, lent a la
@@ -314,7 +375,38 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 		end
 	end
 
-	zone.settling = moving > 0
+	return moving
+end
+
+local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, now: number, dt: number)
+	local windReach = GrassZoneConfigs.WIND_VIEW_DISTANCE
+	local crushReach = GrassZoneConfigs.CRUSH_RADIUS
+	local zoneMoving = 0
+	local near: { Vector3 } = {} -- reutilisee d'un pave a l'autre : pas une table neuve par pave et par image
+
+	for _, bucket in ipairs(zone.buckets) do
+		local d = bucket.center - camPos
+		-- On retranche le rayon du pave : sinon un pave a cheval sur la limite serait ecarte alors qu'une partie de ses
+		-- touffes est bien visible.
+		local far = d.Magnitude - bucket.radius > windReach
+		-- Un pave dont des touffes se relevent encore garde la main meme hors de vue, sinon elles se figeraient
+		-- couchees des qu'on tourne la camera.
+		if not far or bucket.settling then
+			table.clear(near)
+			for _, pos in ipairs(positions) do
+				local h = bucket.center - pos
+				if math.sqrt(h.X * h.X + h.Z * h.Z) - bucket.radius < crushReach then
+					near[#near + 1] = pos
+				end
+			end
+
+			local moving = updateBucket(bucket, near, now, dt, far)
+			bucket.settling = moving > 0
+			zoneMoving += moving
+		end
+	end
+
+	zone.settling = zoneMoving > 0
 end
 
 local function update(dt: number)
@@ -386,7 +478,7 @@ function GrassZoneController.init()
 				return -- deja remplie
 			end
 
-			local zone: Zone = { part = instance, clumps = {}, radius = 0, settling = true }
+			local zone: Zone = { part = instance, clumps = {}, buckets = {}, radius = 0, settling = true }
 			populate(zone)
 			zones[#zones + 1] = zone
 			logZone(zone)

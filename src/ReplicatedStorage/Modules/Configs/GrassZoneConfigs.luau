@@ -44,6 +44,14 @@ local GrassZoneConfigs = {
 	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement droites, ce qui se lit comme du faux.
 	REST_TILT = 6,
 
+	-- Cote d'un PAVE, en studs. Les touffes sont regroupees par paves, et c'est le PAVE qu'on teste, pas la touffe :
+	-- un pave hors de vue est ecarte d'un bloc, et un pave loin de tout joueur ne fait meme pas tourner le test
+	-- d'ecrasement sur ses touffes. Sans ca, une zone de 1500 touffes les parcourt toutes a chaque image alors qu'au
+	-- plus une vingtaine peut etre ecrasee.
+	-- Plus petit = tri plus fin (moins de touffes traitees pour rien) mais plus de paves a tester. 6 studs tient les
+	-- deux : un pave couvre a peu pres le rayon d'ecrasement.
+	BUCKET_SIZE = 6,
+
 	-- ===== Vent =====
 	-- Le vent souffle dans UNE direction, et chaque touffe oscille autour d'une inclinaison moyenne. Le decalage de
 	-- l'oscillation depend de la POSITION de la touffe le long du vent : ca fabrique des VAGUES qui traversent le

@@ -2185,6 +2185,38 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.211 — L'herbe se trie par PAVES au lieu d'etre parcourue en entier
+
+Demande du joueur : "une zone d'action pour animer l'herbe, comme la haie". Le defaut etait reel. La boucle
+parcourait TOUTES les touffes de toute zone visible -- jusqu'a 1500 -- et faisait tourner pour CHACUNE la recherche
+du joueur le plus proche, alors qu'au plus une vingtaine peut etre ecrasee a un instant donne.
+
+Les touffes sont desormais regroupees en PAVES (BUCKET_SIZE, 6 studs de cote), et c'est le pave qui est teste, pas
+la touffe. Deux gains, de natures differentes :
+
+- Un pave hors de vue est saute EN BLOC. Avant, chaque touffe payait sa propre mesure de distance a la camera. A
+  6 studs de cote, toutes les touffes d'un pave sont a la meme distance : une mesure par pave suffit.
+- Surtout : pour chaque pave on etablit d'abord la liste des joueurs capables de l'atteindre. Cette liste est VIDE
+  pour la quasi-totalite des paves, donc la boucle d'ecrasement de leurs touffes ne s'execute pas du tout. C'est le
+  vrai gain : le cout de l'ecrasement suit le nombre de touffes REELLEMENT sous un pied, plus le nombre total.
+
+Details qui evitent des bugs silencieux :
+- Le rayon d'un pave vient des bornes REELLES de ses touffes, pas de la case theorique. L'ecart au hasard du semis
+  peut pousser une touffe hors de sa case ; un rayon trop court la ferait disparaitre des tests sans rien signaler.
+- Ce rayon inclut la HAUTEUR de la plus grande touffe : le tri doit englober ce qu'on VOIT, pas seulement les pieds.
+- Il est retranche des deux tests de distance, sinon un pave a cheval sur la limite serait ecarte alors qu'une
+  partie de ses touffes est visible.
+- Le `settling` descend au niveau du pave : un pave dont des touffes se relevent garde la main meme hors de vue,
+  sinon elles se figeraient couchees des qu'on tourne la camera.
+- `refresh` (zone deplacee) recalcule AUSSI les centres de paves. Les oublier trierait sur l'ancienne position et
+  l'herbe cesserait de reagir sans qu'on voie pourquoi.
+
+Le log de pose annonce maintenant le nombre de paves.
+
+Note d'honnetete : ce changement est fait parce que c'est la bonne structure, pas parce qu'une mesure a montre un
+probleme. Le dernier chiffre connu est 6.37 ms avec 570 touffes, avant le vent, l'aplatissement et le passage a 1500.
+A mesurer avant / apres plutot qu'a supposer.
+
 ## 0.0.210 — L'herbe s'APLATIT sous le pied, et la densite ne depend plus de la taille de la zone
 
 APLATISSEMENT. La touffe ne fait plus que se coucher : elle s'ECRASE aussi en hauteur sous le pied, puis remonte.
