@@ -2185,6 +2185,39 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.209 — L'herbe ne bougeait pas : la boucle n'etait jamais branchee
+
+Ni vent ni ecrasement sur l'herbe de zone. Le log a donne la reponse en deux lignes :
+
+```
+15:49:49.855  [GrassZone] Aucune zone "ZoneGrass..." dans cette place.
+15:49:52.802  [GrassZone] "ZoneGrassHandle" plafonne : grille ramenee a 38x15
+```
+
+La zone n'existe PAS au demarrage : elle arrive 3 secondes plus tard par le STREAMING. Or `init` faisait un `return`
+sur "aucune zone au demarrage", et ce `return` etait pose JUSTE AVANT le `Heartbeat:Connect`. La zone arrivait
+ensuite par DescendantAdded, se remplissait correctement -- l'herbe s'affichait, bien posee, bien dense -- mais plus
+aucune boucle ne tournait dessus.
+
+Symptome trompeur au possible : tout ce qui est VISIBLE est parfait, donc on cherche le bug du cote de l'animation
+(le calcul du vent, la composition des rotations, le seuil d'ecrasement) alors que rien n'est jamais appele. Et ca
+explique retroactivement le tas de touffes empilees de 0.0.207 : a l'epoque la pose initiale venait de cette meme
+boucle jamais branchee.
+
+Regle : un `return` pose sur "rien a faire POUR L'INSTANT" ne doit jamais court-circuiter l'ABONNEMENT a ce qui
+arrivera plus tard. Avec du streaming, "absent au demarrage" est un etat NORMAL, pas une fin de non-recevoir. La
+boucle se branche maintenant dans tous les cas ; `update` sort immediatement tant que la liste est vide, donc ne pas
+la brancher n'economisait rien.
+
+### Deux corollaires du meme log
+
+Le semis se refaisait TROIS fois en 80 ms (38x15, 39x15, 30x19). Une part qui arrive par le streaming recoit ses
+proprietes en plusieurs etapes, donc `Size` change plusieurs fois de suite, et chaque changement reconstruisait 570
+touffes. La reconstruction passe en DIFFERE (0.25 s, coalescee) : une seule, sur la taille finale.
+
+Le log detaille ne sortait qu'au boot, donc jamais pour une zone arrivee apres. Il sort maintenant a CHAQUE pose. Un
+diagnostic qui ne se declenche pas dans le cas qui pose probleme ne sert a rien.
+
 ## 0.0.208 — Le vent passe dans l'herbe
 
 L'herbe de zone ondule. Le vent souffle dans une direction reglable (WIND_HEADING) et chaque touffe oscille autour

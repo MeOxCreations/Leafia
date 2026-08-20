@@ -34,6 +34,9 @@ local WIND_DIR = Vector3.new(
 local WIND_AXIS = UP:Cross(WIND_DIR).Unit
 local WIND_ANGLE = math.rad(GrassZoneConfigs.WIND_ANGLE)
 local WIND_GUST = math.rad(GrassZoneConfigs.WIND_GUST)
+-- Delai avant de refaire un semis apres un changement de taille. Assez long pour absorber une part qui recoit ses
+-- proprietes en plusieurs etapes (streaming), assez court pour suivre un redimensionnement a la main dans Studio.
+local REBUILD_DELAY = 0.25
 local WIND_VIEW_SQ = GrassZoneConfigs.WIND_VIEW_DISTANCE * GrassZoneConfigs.WIND_VIEW_DISTANCE
 
 -- Une touffe. On garde son PIED et sa rotation propre : le CFrame se recompose a chaque image a partir de ces
@@ -204,6 +207,17 @@ local function populate(zone: Zone)
 	zone.settling = true
 end
 
+-- Log detaille, appele a CHAQUE pose (pas seulement au boot : une zone peut arriver bien plus tard par le streaming).
+-- Ces nombres disent tout de suite si c'est le semis ou la zone qui est en cause quand l'herbe atterrit de travers.
+local function logZone(zone: Zone)
+	local first = zone.clumps[1]
+	local where = if first then tostring(first.part.Position) else "aucune"
+	print(
+		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) | zone {zone.part.Size} @ `
+			.. `{zone.part.Position} | 1re touffe @ {where}`
+	)
+end
+
 -- La zone a bouge : on retraduit les pieds en monde et on reveille les touffes pour qu'elles se reposent au bon
 -- endroit. Etre enfant d'une part ne suffit pas a suivre : une part ancree vit en coordonnees monde.
 local function refresh(zone: Zone)
@@ -358,14 +372,30 @@ function GrassZoneController.init()
 			local zone: Zone = { part = instance, clumps = {}, radius = 0, settling = true }
 			populate(zone)
 			zones[#zones + 1] = zone
+			logZone(zone)
 
 			-- L'herbe SUIT sa zone. Deplacer la part (dans Studio, pendant un test, ou par du code) retraduit les
 			-- pieds ; la redimensionner refait le semis, parce que la nouvelle surface veut un autre nombre de touffes.
 			connections[#connections + 1] = instance:GetPropertyChangedSignal("CFrame"):Connect(function()
 				refresh(zone)
 			end)
+
+			-- Le semis se refait en DIFFERE. Une part qui arrive par le streaming recoit ses proprietes en plusieurs
+			-- fois : Size a change trois fois en 80 ms, donc 570 touffes reconstruites trois fois pour rien. On attend
+			-- que ca se calme, puis on reconstruit une seule fois, sur la taille finale.
+			local rebuildPending = false
 			connections[#connections + 1] = instance:GetPropertyChangedSignal("Size"):Connect(function()
-				populate(zone)
+				if rebuildPending then
+					return
+				end
+				rebuildPending = true
+				task.delay(REBUILD_DELAY, function()
+					rebuildPending = false
+					if zone.part.Parent ~= nil then
+						populate(zone)
+						logZone(zone)
+					end
+				end)
 			end)
 		end
 
@@ -377,21 +407,13 @@ function GrassZoneController.init()
 		connections[#connections + 1] = root.DescendantAdded:Connect(consider)
 
 		if #zones == 0 then
-			print(`[GrassZone] Aucune zone "{prefix}..." dans cette place.`)
-			return
+			print(`[GrassZone] Aucune zone "{prefix}..." au demarrage (elles peuvent arriver ensuite par le streaming).`)
 		end
 
-		-- Log detaille EXPRES : quand l'herbe se pose au mauvais endroit, ces trois nombres (taille de la zone, centre
-		-- de la zone, position de la 1re touffe) disent tout de suite si c'est le semis ou la zone qui est en cause.
-		for _, zone in ipairs(zones) do
-			local first = zone.clumps[1]
-			local where = if first then tostring(first.part.Position) else "aucune"
-			print(
-				`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) | zone {zone.part.Size} @ `
-					.. `{zone.part.Position} | 1re touffe @ {where}`
-			)
-		end
-
+		-- LA BOUCLE SE BRANCHE DE TOUTE FACON, meme sans une seule zone au demarrage. Un `return` etait pose ici sur
+		-- "aucune zone", et il sautait ce Connect : une zone arrivee 3 s plus tard par le streaming etait bien remplie
+		-- (l'herbe s'affichait, jolie) mais plus rien ne l'animait ni ne l'ecrasait. `update` sort tout de suite tant
+		-- que la liste est vide, donc ne rien brancher n'economisait rien.
 		heartbeat = RunService.Heartbeat:Connect(update)
 	end)
 end

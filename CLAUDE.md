@@ -375,6 +375,20 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   le `Instance.new("UICorner")` non resolu par luau-lsp : un faux positif rouge finit par masquer les vraies erreurs,
   donc on le supprime plutot que de le tolerer.
 
+- **Un `return` pose sur "rien a faire POUR L'INSTANT" ne doit JAMAIS court-circuiter l'ABONNEMENT a ce qui arrivera
+  plus tard.** Vecu sur l'herbe de zone : `if #zones == 0 then print(...) return end` etait juste AVANT le
+  `Heartbeat:Connect`. Avec StreamingEnabled la zone arrivait 3 s apres le boot, se remplissait bien par
+  DescendantAdded -- l'herbe s'affichait, dense et bien posee -- mais aucune boucle ne tournait dessus : ni vent ni
+  ecrasement. Symptome trompeur au possible : tout ce qui est VISIBLE est parfait, donc on va debugger le calcul de
+  l'animation alors que rien n'est jamais appele. Regle : avec du streaming, "absent au demarrage" est un etat NORMAL.
+  Brancher la boucle DE TOUTE FACON (elle sort en une ligne tant que la liste est vide) coute zero. Corollaire :
+  un log de diagnostic qui ne sort qu'au boot ne se declenche jamais dans le cas qui pose probleme -- le mettre sur
+  l'evenement (a chaque pose), pas sur le demarrage.
+- **Une part qui arrive par le STREAMING recoit ses proprietes en PLUSIEURS ETAPES.** `Size` a change trois fois en
+  80 ms sur la meme part, et chaque changement relancait une reconstruction de 570 instances. Tout rebuild branche sur
+  `GetPropertyChangedSignal` d'une part repliquee doit etre DIFFERE et coalesce (task.delay + drapeau), jamais
+  immediat.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les
