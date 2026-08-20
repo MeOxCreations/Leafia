@@ -193,6 +193,7 @@ end
 -- FIN DU CHARGEMENT : le CONTENU (la feuille) s'efface d'abord, PUIS (seulement une fois qu'il est parti) le fond ;
 -- ensuite on DETRUIT LeafiaLoadingOverlay et ses tweens. Aucun gradient tween pour fermer.
 function LoadingOverlay.hide(onRevealed: (() -> ())?)
+	print(`[Loading] rideau : hide() appele (rideau present : {gui ~= nil})`)
 	if not (gui and curtain) then
 		if onRevealed then
 			onRevealed()

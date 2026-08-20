@@ -445,7 +445,9 @@ end
 -- ENTREE reelle dans le jeu (transition camera + handoff), jouee DERRIERE le rideau deja affiche par onStart.
 local function enterGame(gui: ScreenGui)
 	local loadingStart = os.clock()
+	print("[Loading] 4/6 entree dans le jeu (transition camera)")
 	local function finishLoading()
+		print(`[Loading] 5/6 transition finie a {string.format("%.1f", os.clock() - loadingStart)}s, on attend le perso`)
 		task.spawn(function()
 			-- 1) ATTENDRE LE PERSONNAGE. Le rideau doit couvrir sa mise en place, pas se lever pile au moment ou il
 			-- apparait. WaitForChild avec timeout sur la RootPart : a CharacterAdded le personnage est parente mais
@@ -466,6 +468,7 @@ local function enterGame(gui: ScreenGui)
 				task.wait(LOADING_MIN - elapsed)
 			end
 			-- La notif de bienvenue part SEULEMENT quand le rideau a fini de reveler le jeu (sinon elle popait derriere).
+			print(`[Loading] 6/6 rideau baisse a {string.format("%.1f", os.clock() - loadingStart)}s apres l'entree`)
 			LoadingOverlay.hide(notifyEntered)
 		end)
 	end
@@ -667,9 +670,12 @@ local function setup(gui: ScreenGui)
 					-- Rideau D'ABORD : il couvre l'ecran AVANT qu'on cache le menu ou qu'on bouge la camera. Sinon on verrait
 					-- toute la mecanique (cartes qui disparaissent, camera qui glisse) -> pas pro. Tout se joue DERRIERE.
 					LoadingOverlay.show()
+					local t0 = os.clock()
+					print("[Loading] 1/6 rideau demande (clic START)")
 					task.delay(LoadingOverlay.showTime, function()
 						-- Le rideau est OPAQUE : on ferme le menu (invisible dessous) puis on demande au serveur ou aller.
 						LoadCompanyController.close()
+						print(`[Loading] 2/6 menu ferme a {string.format("%.1f", os.clock() - t0)}s, pause de {START_HOLD}s`)
 						-- On LAISSE LE RIDEAU VIVRE avant de partir. Cote teleport, la bascule de lieu le remplace des
 						-- que le serveur repond : sans cette pause, il disparait avant d'avoir ete vu.
 						task.wait(START_HOLD)
@@ -687,8 +693,11 @@ local function setup(gui: ScreenGui)
 						end
 						-- teleport : le rideau reste affiche, le serveur nous bascule vers l'autre place. game : on entre ici,
 						-- la transition camera se joue DERRIERE le rideau (enterGame le baisse a la fin via finishLoading).
+						print(`[Loading] 3/6 serveur repond "{action}" a {string.format("%.1f", os.clock() - t0)}s`)
 						if action ~= "teleport" then
 							enterGame(gui)
+						else
+							print("[Loading] 3b/6 TELEPORT : la bascule de lieu remplace le rideau, plus rien ne le pilote ici")
 						end
 					end)
 				end,
