@@ -97,10 +97,13 @@ local GrassZoneConfigs = {
 	-- Fraction des cases de la grille qui recoivent une fleur au lieu d'une touffe. Volontairement BASSE : une fleur
 	-- qu'on voit partout n'est plus une fleur, c'est un tapis. Monter au-dela de 0.06 et la pelouse devient un pre.
 	FLOWER_CHANCE = 0.025,
-	-- Taille d'une fleur, en fraction de son mesh d'origine. Reglee a part de celle de l'herbe, et SANS la
-	-- compensation de densite : une fleur n'a aucune raison de grossir parce que l'herbe est plus clairsemee.
-	FLOWER_SCALE_MIN = 0.85,
-	FLOWER_SCALE_MAX = 1.3,
+	-- HAUTEUR d'une fleur, en STUDS. Pas un multiplicateur de son mesh : on ne sait pas a quelle echelle il a ete
+	-- exporte, et un facteur ne dit rien de ce qu'on verra. Cette erreur a deja donne des nuages microscopiques.
+	-- A regler pour que la fleur DEPASSE de l'herbe : noyee dedans, elle n'existe pas.
+	-- Proportions gardees : la fleur grandit en entier, elle ne s'etire pas. Et pas de compensation de densite --
+	-- une fleur n'a aucune raison de grossir parce que l'herbe autour est plus clairsemee.
+	FLOWER_HEIGHT_MIN = 2.5,
+	FLOWER_HEIGHT_MAX = 4.5,
 
 	-- ===== Couleur de l'herbe =====
 	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur
