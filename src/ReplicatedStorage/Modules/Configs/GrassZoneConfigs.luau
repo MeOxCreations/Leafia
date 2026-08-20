@@ -94,18 +94,20 @@ local GrassZoneConfigs = {
 	-- donc du vent, de l'ecrasement au passage et de tous les tris de performance, sans une ligne de plus.
 	-- Elles vivent dans le MEME dossier que GrassMesh.
 	FLOWER_NAMES = { "Petal_2", "Petal_4", "Petal_5" },
-	-- Fraction des cases de la grille qui recoivent une fleur au lieu d'une touffe. Volontairement BASSE : une fleur
-	-- qu'on voit partout n'est plus une fleur, c'est un tapis. Monter au-dela de 0.06 et la pelouse devient un pre.
-	FLOWER_CHANCE = 0.025,
+	-- Fraction des cases de la grille qui recoivent une fleur au lieu d'une touffe.
+	-- 0.09 = une case sur onze : on est passe de fleurs rares a un semis de petites fleurs sauvages. Ca tient parce
+	-- qu'elles sont PETITES ; a cette frequence avec de grosses fleurs, la pelouse disparaitrait dessous.
+	-- Les deux reglages vont donc ensemble : plus il y en a, plus elles doivent etre discretes.
+	FLOWER_CHANCE = 0.09,
 	-- LARGEUR d'une fleur, en STUDS. Pas un multiplicateur de son mesh : on ne sait pas a quelle echelle il a ete
 	-- exporte, et un facteur ne dit rien de ce qu'on verra.
 	-- La LARGEUR et pas la hauteur, parce que le mesh d'une fleur est PLAT : des petales etales, peu epais. Viser
 	-- une hauteur oblige a un facteur enorme, et la largeur explose avec -- des fleurs plus grandes que le joueur.
-	-- Repere : un personnage fait environ 2 studs de large.
+	-- Repere : un personnage fait environ 2 studs de large, donc a 0.55-1.0 une fleur en fait le quart a la moitie.
 	-- Proportions gardees, et pas de compensation de densite : une fleur n'a aucune raison de grossir parce que
 	-- l'herbe autour est plus clairsemee.
-	FLOWER_WIDTH_MIN = 1.2,
-	FLOWER_WIDTH_MAX = 2.2,
+	FLOWER_WIDTH_MIN = 0.55,
+	FLOWER_WIDTH_MAX = 1.0,
 	-- HAUTEUR DE TIGE, en studs : de combien la fleur est SURELEVEE au-dessus du sol.
 	-- Sans elle, la fleur est posee au ras comme une touffe, donc NOYEE dans une herbe qui la depasse largement --
 	-- on ne la voit pas du tout. Une vraie fleur pousse sur une tige : il faut qu'elle sorte du gazon.
