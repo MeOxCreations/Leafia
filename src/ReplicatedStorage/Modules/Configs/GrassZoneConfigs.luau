@@ -22,12 +22,18 @@ local GrassZoneConfigs = {
 	RESOLVE_TIMEOUT = 15,
 
 	-- ===== Remplissage =====
-	-- Touffes par stud carre de zone. C'EST LE PREMIER BOUTON A REGLER : trop bas ca fait chauve, trop haut ca coute
-	-- des parts pour rien (l'oeil ne voit plus la difference bien avant le processeur).
-	DENSITY = 0.5,
-	-- Plafond par zone, garde-fou contre une part geante posee par erreur. Si une zone plafonne, on le dit dans la
-	-- console : sinon on croirait a une densite mal reglee.
-	MAX_CLUMPS = 400,
+	-- Le semis est une GRILLE, pas un tirage au hasard. Un tirage purement aleatoire laisse des trous a un endroit et
+	-- des paquets a un autre : sur une surface qu'on veut COUVERTE, ca se voit tout de suite. La grille garantit que
+	-- toute la surface est prise, et le JITTER casse l'alignement en damier.
+	-- Touffes par stud carre. C'EST LE PREMIER BOUTON A REGLER : trop bas ca fait chauve, trop haut ca coute des parts
+	-- pour rien (l'oeil ne voit plus la difference bien avant le processeur).
+	DENSITY = 1.0,
+	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = damier parfaitement regulier,
+	-- 1 = la touffe peut aller jusqu'au bord de sa case.
+	JITTER = 0.8,
+	-- Plafond par zone, garde-fou contre une part geante posee par erreur. Au plafond on ESPACE la grille au lieu de
+	-- couper la liste : couper laisserait une moitie de zone chauve, ce qui est le contraire du but.
+	MAX_CLUMPS = 600,
 	-- Taille de chaque touffe, en fraction de la taille du mesh d'origine. Un peu de variete casse l'effet "copie".
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.25,

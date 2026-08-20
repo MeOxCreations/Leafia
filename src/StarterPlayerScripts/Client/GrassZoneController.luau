@@ -72,6 +72,20 @@ local function resolvePath(from: Instance, path: { string }): Instance?
 	return nil
 end
 
+-- ===== Pose =====
+
+-- Pose la touffe. On repart TOUJOURS du pied et de la rotation propre, jamais du CFrame precedent.
+-- L'ordre compte : la bascule est calculee en MONDE (elle fuit le joueur), elle doit donc etre a gauche du yaw.
+-- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
+local function apply(clump: Clump)
+	local axis = UP:Cross(clump.tiltDir)
+	if axis.Magnitude < 1e-4 then
+		return
+	end
+	local tilt = CFrame.fromAxisAngle(axis.Unit, clump.tilt)
+	clump.part.CFrame = CFrame.new(clump.basePos) * tilt * clump.yaw * CFrame.new(0, clump.halfHeight, 0)
+end
+
 -- ===== Remplissage =====
 
 -- Graine calculee sur la POSITION de la zone : le tirage au sort donne donc la MEME disposition chez tous les
@@ -103,50 +117,66 @@ local function populate(zone: Zone)
 	local zoneCFrame = zone.part.CFrame
 	local rng = Random.new(seedFor(zone.part))
 
-	local wanted = math.floor(size.X * size.Z * GrassZoneConfigs.DENSITY)
-	local count = math.min(wanted, GrassZoneConfigs.MAX_CLUMPS)
-	if count < wanted then
-		-- Anormal ET actionnable : sans ce mot, une zone plafonnee ressemble a une densite mal reglee, et on tourne
-		-- le bouton DENSITY dans le vide sans que rien ne change.
+	-- GRILLE. Une case par touffe, sur TOUTE la surface du dessus : c'est ce qui garantit qu'aucun coin ne reste
+	-- chauve. `spacing` est le cote d'une case, deduit de la densite voulue.
+	local spacing = 1 / math.sqrt(GrassZoneConfigs.DENSITY)
+	local cols = math.max(1, math.ceil(size.X / spacing))
+	local rows = math.max(1, math.ceil(size.Z / spacing))
+	if cols * rows > GrassZoneConfigs.MAX_CLUMPS then
+		-- Au plafond on ESPACE la grille, on ne coupe PAS la liste : couper laisserait une moitie de zone chauve, ce
+		-- qui est exactement ce qu'on veut eviter.
+		local factor = math.sqrt((cols * rows) / GrassZoneConfigs.MAX_CLUMPS)
+		cols = math.max(1, math.floor(cols / factor))
+		rows = math.max(1, math.floor(rows / factor))
 		warn(
-			`[GrassZone] "{zone.part.Name}" plafonne a {count} touffes (il en faudrait {wanted}). `
-				.. `Monte MAX_CLUMPS ou baisse DENSITY.`
+			`[GrassZone] "{zone.part.Name}" plafonne : grille ramenee a {cols}x{rows}. `
+				.. `Monte MAX_CLUMPS si tu veux plus dense.`
 		)
 	end
 
-	for _ = 1, count do
-		local part = source:Clone()
-		part.Anchored = true
-		part.CanCollide = false
-		part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
-		part.CanTouch = false
-		part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
-		part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
+	local stepX = size.X / cols
+	local stepZ = size.Z / rows
+	local jitter = GrassZoneConfigs.JITTER
 
-		-- Un point au hasard sur la face du DESSUS de la zone, garde dans le repere de la zone : une zone tournee ou
-		-- inclinee marche donc sans cas particulier, et deplacer la zone n'oblige qu'a retraduire ce point.
-		local localPos = Vector3.new(
-			rng:NextNumber(-0.5, 0.5) * size.X,
-			size.Y * 0.5,
-			rng:NextNumber(-0.5, 0.5) * size.Z
-		)
+	for ix = 0, cols - 1 do
+		for iz = 0, rows - 1 do
+			local part = source:Clone()
+			part.Anchored = true
+			part.CanCollide = false
+			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
+			part.CanTouch = false
+			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
+			part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
 
-		-- Inclinaison de repos : une direction au hasard, un petit angle.
-		local restTilt = rng:NextNumber(0, REST_TILT)
-		local restAngle = rng:NextNumber(0, math.pi * 2)
+			-- Centre de la case, plus un ecart au hasard DANS la case. Garde dans le repere de la ZONE : une zone
+			-- tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire ce point.
+			local localPos = Vector3.new(
+				-size.X * 0.5 + (ix + 0.5) * stepX + rng:NextNumber(-0.5, 0.5) * stepX * jitter,
+				size.Y * 0.5,
+				-size.Z * 0.5 + (iz + 0.5) * stepZ + rng:NextNumber(-0.5, 0.5) * stepZ * jitter
+			)
 
-		zone.clumps[#zone.clumps + 1] = {
-			part = part,
-			localPos = localPos,
-			basePos = zoneCFrame:PointToWorldSpace(localPos),
-			yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0),
-			halfHeight = part.Size.Y * 0.5,
-			restTilt = restTilt,
-			tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
-			tilt = restTilt,
-			resting = false, -- false expres : la 1re passe ecrit la pose de repos
-		}
-		part.Parent = folder
+			-- Inclinaison de repos : une direction au hasard, un petit angle.
+			local restTilt = rng:NextNumber(0, REST_TILT)
+			local restAngle = rng:NextNumber(0, math.pi * 2)
+
+			local clump: Clump = {
+				part = part,
+				localPos = localPos,
+				basePos = zoneCFrame:PointToWorldSpace(localPos),
+				yaw = CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0),
+				halfHeight = part.Size.Y * 0.5,
+				restTilt = restTilt,
+				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
+				tilt = restTilt,
+				resting = true, -- posee des maintenant, la boucle n'a rien a rattraper
+			}
+			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
+			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
+			apply(clump)
+			zone.clumps[#zone.clumps + 1] = clump
+			part.Parent = folder
+		end
 	end
 
 	folder.Parent = zone.part
@@ -168,18 +198,6 @@ local function refresh(zone: Zone)
 end
 
 -- ===== Ecrasement =====
-
--- Pose la touffe. On repart TOUJOURS du pied et de la rotation propre, jamais du CFrame precedent.
--- L'ordre compte : la bascule est calculee en MONDE (elle fuit le joueur), elle doit donc etre a gauche du yaw.
--- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump)
-	local axis = UP:Cross(clump.tiltDir)
-	if axis.Magnitude < 1e-4 then
-		return
-	end
-	local tilt = CFrame.fromAxisAngle(axis.Unit, clump.tilt)
-	clump.part.CFrame = CFrame.new(clump.basePos) * tilt * clump.yaw * CFrame.new(0, clump.halfHeight, 0)
-end
 
 local function updateZone(zone: Zone, positions: { Vector3 }, dt: number)
 	local radius = GrassZoneConfigs.CRUSH_RADIUS
@@ -328,11 +346,16 @@ function GrassZoneController.init()
 			return
 		end
 
-		local total = 0
+		-- Log detaille EXPRES : quand l'herbe se pose au mauvais endroit, ces trois nombres (taille de la zone, centre
+		-- de la zone, position de la 1re touffe) disent tout de suite si c'est le semis ou la zone qui est en cause.
 		for _, zone in ipairs(zones) do
-			total += #zone.clumps
+			local first = zone.clumps[1]
+			local where = if first then tostring(first.part.Position) else "aucune"
+			print(
+				`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) | zone {zone.part.Size} @ `
+					.. `{zone.part.Position} | 1re touffe @ {where}`
+			)
 		end
-		print(`[GrassZone] {#zones} zone(s), {total} touffe(s).`)
 
 		heartbeat = RunService.Heartbeat:Connect(update)
 	end)

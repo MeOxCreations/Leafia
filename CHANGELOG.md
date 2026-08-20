@@ -2185,6 +2185,32 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.207 — Le semis passe en GRILLE, et la touffe est posee des sa creation
+
+Deux changements sur l'herbe de zone, apres un retour ou toutes les touffes etaient empilees au meme point, loin de
+la zone.
+
+POSE IMMEDIATE. Chaque touffe recoit son CFrame dans `populate`, a l'instant ou elle est creee. Avant, la pose
+initiale etait laissee a la 1re passe de la boucle Heartbeat : si cette passe ne tombait pas (zone ecartee, ordre de
+boot, quoi que ce soit), les touffes restaient a la position du CLONE, c'est-a-dire la ou dort GrassMesh dans
+ReplicatedStorage -- toutes au meme endroit, ce qui est exactement le symptome observe. Regle : ne jamais dependre
+d'une passe ULTERIEURE pour un placement INITIAL. Ce qui doit etre pose l'est a la creation ; la boucle ne fait plus
+que l'animation.
+
+SEMIS EN GRILLE. Le tirage etait purement aleatoire sur la surface : ca laisse des trous a un endroit et des paquets
+a un autre, et sur une surface qu'on veut COUVERTE ca se voit immediatement. Desormais une case par touffe sur toute
+la face du dessus, plus un ecart au hasard DANS la case (JITTER 0.8) pour casser l'alignement en damier. Couverture
+garantie jusqu'aux bords, sans regularite visible.
+
+Au plafond (MAX_CLUMPS), on ESPACE la grille au lieu de couper la liste. Couper aurait laisse une moitie de zone
+chauve -- le contraire du but. La zone reste couverte, juste moins dense.
+
+Reglages revus pour une vraie couverture : DENSITY 0.5 -> 1.0 (une touffe par stud carre), MAX_CLUMPS 400 -> 600.
+
+Le log de demarrage devient bavard EXPRES : taille de la zone, centre de la zone, position de la 1re touffe. Quand
+l'herbe atterrit au mauvais endroit, ces trois nombres disent tout de suite si c'est le semis ou la zone qui est en
+cause, au lieu de raisonner sur une capture d'ecran.
+
 ## 0.0.206 — L'herbe suit sa zone quand on la deplace
 
 Suite directe de 0.0.205. En bougeant ZoneGrassHandle PENDANT un test, l'herbe est restee sur place : un carre de
