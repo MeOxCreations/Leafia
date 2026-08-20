@@ -306,10 +306,10 @@ end
 
 -- Anime UN pave. `players` ne contient que les joueurs capables de toucher ce pave : elle est VIDE pour la quasi
 -- totalite d'entre eux, et c'est tout l'interet -- la recherche d'ecrasement se reduit alors a rien.
--- `far` vaut pour tout le pave : a 6 studs de cote, ses touffes sont toutes a la meme distance de la camera, inutile
--- de mesurer chacune.
+-- `windScale` (0 a 1) vaut pour TOUT le pave : a 6 studs de cote, ses touffes sont toutes a la meme distance de la
+-- camera, inutile de mesurer chacune. A 0, le pave ne calcule plus de vent du tout.
 -- Retourne le nombre de touffes encore en mouvement.
-local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, dt: number, far: boolean): number
+local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, dt: number, windScale: number): number
 	local radius = GrassZoneConfigs.CRUSH_RADIUS
 	local moving = 0
 
@@ -356,20 +356,20 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		local squash = 1 - crushed * GrassZoneConfigs.CRUSH_SQUASH
 
 		local wind = 0
-		if not far then
+		if windScale > 0 then
 			-- Le decalage depend de la POSITION le long du vent : les touffes en amont bougent avant celles en aval,
 			-- donc des vagues traversent le champ au lieu qu'il respire en bloc. windPhase casse ce qui resterait
 			-- d'identique entre deux voisines exactement alignees.
 			local phase = now * GrassZoneConfigs.WIND_SPEED
 				- (clump.basePos.X * WIND_DIR.X + clump.basePos.Z * WIND_DIR.Z) * GrassZoneConfigs.WIND_WAVE
 				+ clump.windPhase
-			-- Une touffe couchee sous un pied ne doit plus onduler.
-			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * (1 - crushed)
+			-- Une touffe couchee sous un pied ne doit plus onduler, et une touffe lointaine ondule de moins en moins.
+			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * (1 - crushed) * windScale
 		end
 
-		-- Pres de la camera on ecrit TOUJOURS (le vent bouge en permanence). Loin, on n'ecrit que si l'ecrasement a
-		-- change : une touffe lointaine et immobile ne coute alors plus rien du tout.
-		if not far or clump.tilt ~= clump.lastTilt then
+		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
+		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
+		if windScale > 0 or clump.tilt ~= clump.lastTilt then
 			apply(clump, wind, squash)
 			clump.lastTilt = clump.tilt
 		end
@@ -384,14 +384,20 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 	local zoneMoving = 0
 	local near: { Vector3 } = {} -- reutilisee d'un pave a l'autre : pas une table neuve par pave et par image
 
+	local fadeStart = GrassZoneConfigs.WIND_FADE_START
+	local fadeSpan = math.max(windReach - fadeStart, 1e-3)
+
 	for _, bucket in ipairs(zone.buckets) do
 		local d = bucket.center - camPos
 		-- On retranche le rayon du pave : sinon un pave a cheval sur la limite serait ecarte alors qu'une partie de ses
 		-- touffes est bien visible.
-		local far = d.Magnitude - bucket.radius > windReach
-		-- Un pave dont des touffes se relevent encore garde la main meme hors de vue, sinon elles se figeraient
-		-- couchees des qu'on tourne la camera.
-		if not far or bucket.settling then
+		local dist = d.Magnitude - bucket.radius
+		-- Plein vent jusqu'a fadeStart, puis extinction progressive, zero pile a windReach. Au-dela on ne calcule plus
+		-- rien -- et comme l'amplitude y est deja nulle, la coupure ne se voit pas.
+		local windScale = math.clamp((windReach - dist) / fadeSpan, 0, 1)
+		-- Un pave dont des touffes se relevent encore garde la main meme sans vent, sinon elles se figeraient couchees
+		-- des qu'on tourne la camera.
+		if windScale > 0 or bucket.settling then
 			table.clear(near)
 			for _, pos in ipairs(positions) do
 				local h = bucket.center - pos
@@ -400,7 +406,7 @@ local function updateZone(zone: Zone, positions: { Vector3 }, camPos: Vector3, n
 				end
 			end
 
-			local moving = updateBucket(bucket, near, now, dt, far)
+			local moving = updateBucket(bucket, near, now, dt, windScale)
 			bucket.settling = moving > 0
 			zoneMoving += moving
 		end

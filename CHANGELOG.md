@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.212 — Le vent s'ETEINT avec la distance au lieu d'etre coupe net
+
+Retour du joueur : l'herbe lointaine ondule encore. Ce n'etait pas un oubli mais le REGLAGE : WIND_VIEW_DISTANCE
+valait 80, plus le rayon du pave, soit une coupure vers 90 studs -- alors que la zone de test fait 44 studs de long.
+On ne sortait jamais du rayon, donc on ne voyait jamais la coupure.
+
+Baisser simplement le chiffre aurait fabrique un ANNEAU autour du joueur, ou l'herbe se fige d'un coup quand il
+avance. Un tri de perf ne doit pas devenir un artefact visible.
+
+Le vent est donc a pleine amplitude jusqu'a WIND_FADE_START (30), puis s'eteint progressivement pour atteindre ZERO
+pile a WIND_VIEW_DISTANCE (60), ou l'on cesse tout calcul. La coupure tombe la ou l'amplitude est deja nulle :
+invisible a l'ecran, et l'economie est exactement la meme.
+
+L'echelle de vent se calcule PAR PAVE, pas par touffe (a 6 studs de cote, elles sont toutes a la meme distance de la
+camera) : une division par pave, pas 1500. Et un pave a vent nul retombe sur le regime economique deja en place --
+plus aucune ecriture tant que l'ecrasement ne bouge pas.
+
+Regle a garder : quand un tri par distance devient visible, ce n'est pas le seuil qu'il faut deplacer, c'est la
+transition qu'il faut fondre. Meme famille que la surface a distance constante d'une boite qui EST deja un rectangle
+arrondi : la bonne correction supprime la bascule au lieu de l'interpoler apres coup.
+
 ## 0.0.211 — L'herbe se trie par PAVES au lieu d'etre parcourue en entier
 
 Demande du joueur : "une zone d'action pour animer l'herbe, comme la haie". Le defaut etait reel. La boucle
