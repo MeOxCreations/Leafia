@@ -30,8 +30,12 @@ local CloudConfigs = {
 	SPEED_VARIATION = 0.35, -- ecart de vitesse entre nuages : sans lui le ciel derive d'un bloc, comme une image
 
 	-- ===== A quoi ils ressemblent =====
-	SCALE_MIN = 0.7,
-	SCALE_MAX = 1.9,
+	-- LARGEUR d'un nuage, en STUDS, tiree entre ces deux valeurs. Pas un multiplicateur : le mesh d'origine fait
+	-- 4.4 studs de large, donc un facteur ne dit rien de ce qu'on verra, et re-exporter le mesh a une autre echelle
+	-- casserait le reglage sans prevenir. Ici on regle ce qu'on VOIT, quelle que soit la taille du mesh.
+	-- Les proportions sont conservees : le nuage grandit en entier, il ne s'etire pas.
+	WIDTH_MIN = 45,
+	WIDTH_MAX = 120,
 	-- Transparence au plus PRES : jamais tout a fait opaque, un nuage dur a l'air d'un bloc.
 	NEAR_TRANSPARENCY = 0.15,
 	-- A partir de quelle fraction du rayon le nuage commence a disparaitre. En dessous il est a NEAR_TRANSPARENCY,

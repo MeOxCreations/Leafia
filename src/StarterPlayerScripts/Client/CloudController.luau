@@ -141,7 +141,10 @@ function CloudController.init()
 			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
 			part.CanTouch = false
 			part.CastShadow = false -- une ombre de nuage coute cher et ne se voit pas d'en bas
-			part.Size = source.Size * rng:NextNumber(CloudConfigs.SCALE_MIN, CloudConfigs.SCALE_MAX)
+			-- On vise une LARGEUR en studs et on en deduit le facteur, plutot que de multiplier a l'aveugle une
+			-- taille de mesh qu'on ne maitrise pas. Proportions gardees : le nuage grandit en entier.
+			local width = rng:NextNumber(CloudConfigs.WIDTH_MIN, CloudConfigs.WIDTH_MAX)
+			part.Size = source.Size * (width / math.max(source.Size.X, 1e-3))
 			-- Rotation au hasard AUTOUR DE LA VERTICALE seulement : un nuage reste a plat.
 			part.CFrame = CFrame.new(part.Position) * CFrame.Angles(0, rng:NextNumber(0, math.pi * 2), 0)
 
