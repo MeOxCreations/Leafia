@@ -266,7 +266,12 @@ local GrassZoneConfigs = {
 	-- est ecrase, plus rien ne se distingue.
 	-- Ce couple (AMOUNT, RECOVER) est ce qui distingue une trainee d'une trace : la premiere s'en va, la seconde
 	-- reste. La tonte, elle, voudra une VRAIE trace -- ce sera un autre mecanisme, pas ce reglage-ci.
-	FLATTEN_RECOVER = 0.06,
+	-- 0.25 : la trainee tient environ trois secondes et demie. C'est court -- on voit son chemin en se retournant
+	-- tout de suite, plus en traversant le jardin. En montant encore, l'effet finit par s'annuler : il ne restera
+	-- qu'un halo autour des pieds, sans chemin derriere. A ce moment-la c'est FLATTEN_AMOUNT qu'il faut baisser,
+	-- pas cette valeur -- une trainee faible mais lisible vaut mieux qu'une trainee forte qu'on n'a pas le temps
+	-- de voir.
+	FLATTEN_RECOVER = 0.25,
 
 	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.
