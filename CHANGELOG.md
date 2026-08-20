@@ -2185,6 +2185,22 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.236 — L'herbe change de COULEUR quand on marche dessus
+
+L'assombrissement en pourcentage laisse place a DEUX couleurs choisies : BASE_COLOR au repos, CRUSHED_COLOR une fois
+ecrasee, et un glissement doux entre les deux.
+
+Meilleur sur deux points. On regle ce qu'on VOIT au lieu d'un facteur dont le resultat depend de la teinte de depart.
+Et rien n'oblige la trace a etre plus SOMBRE : la valeur choisie ici (88, 125, 39) est plus claire que l'herbe (66,
+94, 30), ce qui est d'ailleurs ce que fait une vraie pelouse -- les brins couches renvoient plus de lumiere.
+
+Detail qui evite un aplat : les TACHES de Perlin s'appliquent AUSSI a la couleur d'ecrasement, avec exactement la
+meme valeur de bruit. Sans ca, tout le chemin parcouru virerait a l'uniforme et effacerait le relief que les taches
+viennent de donner -- le joueur laisserait une trace plus plate que l'herbe autour.
+
+Meme quantification que la taille pour les ecritures : un pour cent d'ecart de couleur ne se voit pas, mais ecrire
+une teinte par image sur des centaines de touffes coute pour rien.
+
 ## 0.0.235 — L'herbe penche D'ABORD, elle se tasse ENSUITE
 
 Le joueur a voulu retrouver l'inclinaison au passage, sans perdre l'aplatissement. Les deux ensemble arrivaient

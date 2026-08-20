@@ -61,8 +61,9 @@ type Clump = {
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
 	baseSize: Vector3, -- taille au repos ; l'ecrasement ne fait que RABOTER son Y, jamais l'ecraser definitivement
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
-	baseColor: Color3, -- couleur au repos (sa bande de tonte) : l'assombrissement part de LA, pas d'un gris impose
-	lastDarken: number, -- dernier assombrissement REELLEMENT ecrit
+	baseColor: Color3, -- couleur au repos, TACHE comprise
+	crushedColor: Color3, -- couleur une fois ecrasee, tachee de la MEME facon : la trace garde le relief du terrain
+	lastDarken: number, -- dernier melange REELLEMENT ecrit
 	tiltDir: Vector3, -- sens du DERNIER passage : c'est la direction dans laquelle la touffe penche
 	crush: number, -- ECRASEMENT courant (0 = debout, 1 = a fond). Reagit VITE : c'est lui qui donne l'inclinaison.
 	squashCrush: number, -- le meme, mais qui TRAINE derriere : c'est lui qui donne le tassement et l'assombrissement.
@@ -133,14 +134,13 @@ local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle:
 		clump.lastSquash = squash
 	end
 
-	-- ASSOMBRISSEMENT. Meme quantification, meme raison : ecrire une couleur a chaque image sur des centaines de
-	-- touffes coute pour rien, alors qu'un pour cent de clarte ne se voit pas.
-	local darken = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
-	if darken ~= clump.lastDarken then
-		local base = clump.baseColor
-		local factor = 1 - darken * GrassZoneConfigs.CRUSH_DARKEN
-		clump.part.Color = Color3.new(base.R * factor, base.G * factor, base.B * factor)
-		clump.lastDarken = darken
+	-- COULEUR. Glissement de la teinte au repos vers celle d'une touffe ecrasee. Meme quantification que la taille,
+	-- meme raison : ecrire une couleur a chaque image sur des centaines de touffes coute pour rien, alors qu'un pour
+	-- cent d'ecart ne se voit pas.
+	local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
+	if blend ~= clump.lastDarken then
+		clump.part.Color = clump.baseColor:Lerp(clump.crushedColor, blend)
+		clump.lastDarken = blend
 	end
 
 	local cf = CFrame.new(clump.basePos)
@@ -421,11 +421,17 @@ local function populate(zone: Zone)
 			local patchScale = GrassZoneConfigs.PATCH_SCALE
 			local patch = math.noise(basePos.X * patchScale, basePos.Z * patchScale, 0)
 			local tint = 1 + patch * 2 * GrassZoneConfigs.PATCH_AMOUNT -- math.noise rend environ [-0.5, 0.5]
-			color = Color3.new(
-				math.clamp(color.R * tint, 0, 1),
-				math.clamp(color.G * tint, 0, 1),
-				math.clamp(color.B * tint, 0, 1)
-			)
+			local function tinted(c: Color3): Color3
+				return Color3.new(
+					math.clamp(c.R * tint, 0, 1),
+					math.clamp(c.G * tint, 0, 1),
+					math.clamp(c.B * tint, 0, 1)
+				)
+			end
+			color = tinted(color)
+			-- La couleur d'ecrasement recoit la MEME tache : sans ca, tout le chemin parcouru virerait a l'aplat
+			-- uniforme et effacerait le relief que les taches viennent de donner.
+			local crushedColor = tinted(GrassZoneConfigs.CRUSHED_COLOR)
 
 			local surface = part:FindFirstChildOfClass("SurfaceAppearance")
 			if surface and GrassZoneConfigs.STRIPE_ON_SURFACE then
@@ -443,8 +449,9 @@ local function populate(zone: Zone)
 				yaw = if GrassZoneConfigs.RANDOM_YAW then CFrame.Angles(0, yawAngle, 0) else CFrame.identity,
 				baseSize = part.Size,
 				lastSquash = 1,
-				-- Relevee APRES la pose des rayures : c'est bien la couleur de SA bande qu'on assombrira.
+				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
 				baseColor = part.Color,
+				crushedColor = crushedColor,
 				lastDarken = 0,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				crush = 0,
