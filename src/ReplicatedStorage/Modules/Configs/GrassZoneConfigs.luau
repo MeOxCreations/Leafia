@@ -61,8 +61,14 @@ local GrassZoneConfigs = {
 	-- A DENSITY = 1 le facteur vaut 1 : le rendu actuel ne bouge pas. Mettre a false pour retrouver l'ancien
 	-- comportement (touffes de taille fixe, densite qui creuse des trous quand on la baisse).
 	AUTO_SCALE_WITH_DENSITY = true,
-	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement droites, ce qui se lit comme du faux.
-	REST_TILT = 6,
+	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement DROITES.
+	-- A zero ici, parce que le desordre est deja MODELE dans le mesh (les brins partent dans tous les sens cote
+	-- Blender). Incliner la touffe entiere par-dessus ne fait que la coucher sans rien gagner.
+	REST_TILT = 0,
+	-- Fait tourner chaque touffe d'un angle au hasard autour de la verticale.
+	-- A false pour la meme raison : quand le mesh porte deja son propre desordre, cette rotation ne casse rien de plus
+	-- et donne des touffes qui semblent "posees de travers" au lieu de pousser droit.
+	RANDOM_YAW = false,
 
 	-- ===== Emprise des objets poses =====
 	-- Une part posee sur la zone (une haie, un objet de construction) CHASSE l'herbe sous elle. Sans ca, des brins

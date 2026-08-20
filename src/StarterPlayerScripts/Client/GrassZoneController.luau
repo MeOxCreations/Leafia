@@ -407,7 +407,9 @@ local function populate(zone: Zone)
 				part = part,
 				localPos = localPos,
 				basePos = basePos,
-				yaw = CFrame.Angles(0, yawAngle, 0),
+				-- Le tirage a bien lieu meme quand RANDOM_YAW est faux : la suite de nombres au hasard reste identique,
+				-- donc basculer ce reglage ne redistribue PAS toute la pelouse.
+				yaw = if GrassZoneConfigs.RANDOM_YAW then CFrame.Angles(0, yawAngle, 0) else CFrame.identity,
 				baseSize = part.Size,
 				lastSquash = 1,
 				restTilt = restTilt,
