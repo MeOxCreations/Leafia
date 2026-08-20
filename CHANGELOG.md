@@ -2185,6 +2185,62 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.205 — L'herbe se couche sous les pieds
+
+Nouveau GrassZoneController (client) + GrassZoneConfigs. Toute part de la map dont le nom commence par "ZoneGrass"
+se remplit de touffes d'herbe (le mesh ReplicatedStorage.Assets.Contents.Foliages.GrassMesh), et ces touffes se
+couchent quand un joueur marche dessus, puis se relevent.
+
+TOUT EST LOCAL, et c'est le point important. Les touffes sont creees par CHAQUE client dans SA copie du Workspace :
+rien ne transite, ni a la creation ni a l'ecrasement. C'est l'INVERSE du choix fait la veille pour le decor vegetal
+(FoliageService, serveur) et les deux sont justes : le balancement d'un arbre est le meme pour tout le monde et se
+replique une fois, l'ecrasement de l'herbe depend de qui marche ou, a chaque image. La regle a retenir : ce qui est
+IDENTIQUE pour tous et rare va au serveur, ce qui depend de la POSITION de chacun et change chaque image reste chez
+le client.
+
+Pour que la disposition reste la meme chez tout le monde sans envoyer un octet, le tirage au sort part d'une GRAINE
+calculee sur la position de la zone. Deux joueurs cote a cote voient exactement la meme herbe.
+
+### Pourquoi pas EditableMesh (la question posee)
+
+EditableMesh existe et fait bien ce qu'on croit : bouger les sommets d'un mesh en direct. Mais une touffe fait
+plusieurs centaines de sommets, une zone en contient des centaines, et il faudrait bouger tous ceux du rayon d'ecrasement
+A CHAQUE IMAGE, en Lua, sur le processeur. Des dizaines de milliers d'appels par frame, quand on dispose de 16 ms pour
+faire tourner tout le jeu.
+
+En basculant la TOUFFE ENTIERE, on ecrit UN CFrame par touffe, et seule une vingtaine est pres du joueur a un instant
+donne. Mille fois moins cher, et a l'ecran ca se lit pareil. Regle generale : avant d'aller chercher un outil qui
+donne un controle fin, verifier que le controle fin est vraiment necessaire pour l'effet voulu.
+
+Corollaire pour la tonte, quand elle viendra : elle n'aura pas besoin d'EditableMesh non plus. Passer du mesh long au
+mesh court (ou ecraser la touffe en hauteur) est une modification unique et permanente, donc gratuite.
+
+### Details
+
+- La bascule se recompose a chaque image depuis le PIED et la rotation propre de la touffe, jamais depuis le CFrame
+  precedent : sinon l'inclinaison s'accumulerait et les touffes finiraient couchees pour toujours (meme piege que
+  l'offset de l'echelle recapture a chaque prise).
+- La cible de repos n'est PAS zero mais une petite inclinaison tiree au sort : une herbe parfaitement droite se lit
+  comme du faux, et un joueur qui passe laisserait derriere lui un couloir trop propre.
+- Ecraser est brutal (CRUSH_SPEED 18), se relever est lent (RECOVER_SPEED 3.5). Deux boutons SEPARES : un reglage
+  partage forcerait a compenser dans l'autre, et le compensateur serait toujours une estimation.
+- L'angle se CLE sur sa cible sous SNAP_EPSILON. Un lerp exponentiel n'atteint jamais sa cible : sans ce clic, chaque
+  touffe garderait un residu minuscule et on reecrirait son CFrame a vie, pour rien.
+- Culling a deux etages : une zone dont aucun joueur n'approche est ecartee d'un bloc, et une touffe au repos ne se
+  reecrit pas du tout. Une zone garde la main tant que des touffes se relevent, sinon elles se figeraient couchees des
+  que le joueur s'eloigne.
+- Le joueur le PLUS PROCHE gagne, on ne moyenne pas : deux joueurs de part et d'autre d'une touffe la redresseraient.
+- Distance mesuree a l'HORIZONTALE : sauter ne doit pas relever l'herbe.
+- Les touffes sont enfants de leur zone. Si le streaming retire la zone, elles partent avec, sans nettoyage a ecrire.
+- CastShadow a faux sur les touffes : des centaines d'ombres de brins coutent cher et ne se voient pas.
+
+### A faire dans Studio
+
+Poser des parts nommees "ZoneGrass..." DANS `Workspace.Worlds.Maps` (la racine est reglable dans GrassZoneConfigs.ROOT).
+Une part posee a la racine du Workspace ne sera PAS trouvee. Elles peuvent rester invisibles, sans collision : seules
+leur taille, leur position et leur orientation comptent. Le client affiche au demarrage combien de zones et de touffes
+il a posees.
+
 ## 0.0.204 — Les arbres et les buissons bougent
 
 Nouveau FoliageService (serveur) + FoliageConfigs. Chaque modele de la map dont le nom est liste dans la config

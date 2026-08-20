@@ -48,6 +48,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.LadderController).init()
 	require(script.LadderMoveController).init()
 	require(script.AdminCommandController).init()
+	-- Herbe de zone (remplissage + ecrasement au passage). Ici AUSSI : tout est local et pilote par la config,
+	-- donc il n'y a rien a recopier dans cette place. Ordre indifferent.
+	require(script.GrassZoneController).init()
 
 	-- Musique de fond du TUTO : MusicBuild4 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
 	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.
@@ -156,6 +159,11 @@ HedgeController.init()
 -- les autres controllers.
 local HedgeLeafController = require(script.HedgeLeafController)
 HedgeLeafController.init()
+
+-- Herbe de zone : remplit les parts "ZoneGrass..." de touffes et les couche sous les pieds. 100% LOCAL (rien ne
+-- transite), contrairement au decor vegetal qui, lui, est joue par le serveur. Ordre indifferent.
+local GrassZoneController = require(script.GrassZoneController)
+GrassZoneController.init()
 
 -- HedgeMeshController n'est PLUS demarre : il a servi de banc d'essai a la texture repetee, qui est maintenant
 -- dans HedgeBranchService. Le laisser tourner poserait une plaque flottante devant le joueur a chaque spawn.
