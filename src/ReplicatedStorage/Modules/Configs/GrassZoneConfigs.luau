@@ -28,9 +28,12 @@ local GrassZoneConfigs = {
 	-- Touffes par stud carre. C'EST LE PREMIER BOUTON A REGLER : trop bas ca fait chauve, trop haut ca coute des parts
 	-- pour rien (l'oeil ne voit plus la difference bien avant le processeur).
 	DENSITY = 1.0,
-	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = damier parfaitement regulier,
-	-- 1 = la touffe peut aller jusqu'au bord de sa case.
-	JITTER = 0.8,
+	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = alignement parfaitement
+	-- regulier, 1 = la touffe peut aller jusqu'au bord de sa case.
+	-- ATTENTION, c'est LUI qui fait les trous : a 0.8, deux voisines peuvent s'ecarter de 80 % d'une case, et l'ecart
+	-- se voit. Les rangees en quinconce (voir GrassZoneController) cassent deja la regularite, donc une valeur
+	-- moderee suffit : on garde le desordre sans ouvrir de trou.
+	JITTER = 0.45,
 	-- GARDE-FOU, pas un bouton de densite. La densite, c'est DENSITY, et elle est la meme partout : le nombre de
 	-- touffes suit donc la surface de la zone, une grande zone en recoit proportionnellement plus.
 	-- Ce plafond n'existe que pour qu'une part posee par erreur a 500x500 ne fabrique pas 250 000 instances. Le laisser

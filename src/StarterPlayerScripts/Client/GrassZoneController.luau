@@ -246,7 +246,12 @@ local function populate(zone: Zone)
 			part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
 
 			-- Centre de la case, dans le repere de la ZONE.
-			local cellX = -size.X * 0.5 + (ix + 0.5) * stepX
+			-- QUINCONCE : une rangee sur deux est poussee d'un quart de case a droite, l'autre d'un quart a gauche.
+			-- L'ecart entre deux rangees voisines fait donc une DEMI-case, ce qui est l'empilement qui couvre le mieux
+			-- un plan a nombre egal de touffes -- une grille carree laisse des losanges vides entre quatre voisines.
+			-- Le decalage est symetrique (et pas +0.5 sur une rangee sur deux) pour qu'aucune touffe ne sorte de la zone.
+			local stagger = if iz % 2 == 0 then stepX * 0.25 else -stepX * 0.25
+			local cellX = -size.X * 0.5 + (ix + 0.5) * stepX + stagger
 			local cellZ = -size.Z * 0.5 + (iz + 0.5) * stepZ
 
 			-- RAYURES. La bande se decide sur le centre de CASE, pas sur la position finale : sinon l'ecart au hasard

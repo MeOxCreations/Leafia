@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.217 — Plus de trous dans l'herbe : semis en QUINCONCE
+
+Des trous apparaissaient par endroits dans l'herbe. Le quadrillage etait pourtant parfaitement regulier : une case,
+une touffe, cases identiques. Le coupable etait le JITTER, l'ecart au hasard applique DANS chaque case. A 0.8, deux
+voisines pouvaient s'ecarter de 80 % d'une case -- et cet ecart-la se voit.
+
+Baisser simplement le jitter aurait ramene un alignement visible en damier. La vraie correction porte sur la FORME du
+quadrillage : les rangees passent en QUINCONCE, une sur deux decalee d'une demi-case par rapport a l'autre. C'est
+l'empilement qui couvre le mieux un plan a nombre egal de points ; une grille carree, elle, laisse un losange vide au
+milieu de chaque groupe de quatre voisines.
+
+Le decalage est SYMETRIQUE (un quart de case a droite sur une rangee, un quart a gauche sur la suivante) plutot qu'une
+demi-case sur une rangee sur deux : l'ecart entre rangees est le meme, mais aucune touffe ne deborde de la zone.
+
+Le quinconce cassant deja la regularite a lui seul, le JITTER redescend a 0.45 : on garde le desordre sans rouvrir de
+trou.
+
+Regle a retenir : quand un semis laisse des trous, regarder la MAILLE avant de tripoter la quantite d'aleatoire. Ici
+la bonne correction ne coute aucune touffe de plus.
+
 ## 0.0.216 — Le vent souffle par RAFALES (Perlin), et la rafale tasse l'herbe
 
 Le vent etait une seule sinusoide : toutes les touffes recevaient exactement le meme souffle au meme moment, decale
