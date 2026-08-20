@@ -390,24 +390,28 @@ local function populate(zone: Zone)
 			local cellX = -size.X * 0.5 + (ix + 0.5) * stepX + stagger
 			local cellZ = -size.Z * 0.5 + (iz + 0.5) * stepZ
 
+			-- FLEUR ou touffe d'herbe ? Decide AVANT la position, parce qu'une fleur est SURELEVEE : posee au ras
+			-- comme une touffe, elle serait noyee dans une herbe qui la depasse.
+			-- Pour le reste c'est une touffe comme les autres : elle herite du vent, de l'ecrasement et de tous les
+			-- tris sans rien de special.
+			local isFlower = #flowerTemplates > 0 and flowerRoll < GrassZoneConfigs.FLOWER_CHANCE
+			local source = if isFlower then flowerTemplates[flowerPick] else grassSource
+			if isFlower then
+				flowersMade += 1
+			end
+
 			-- Position finale : le centre de case plus l'ecart au hasard DANS la case. Gardee dans le repere de la
 			-- ZONE : une zone tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire
 			-- ce point.
-			local localPos = Vector3.new(cellX + jx * stepX * jitter, size.Y * 0.5, cellZ + jz * stepZ * jitter)
+			local lift = if isFlower then GrassZoneConfigs.FLOWER_LIFT else 0
+			local localPos =
+				Vector3.new(cellX + jx * stepX * jitter, size.Y * 0.5 + lift, cellZ + jz * stepZ * jitter)
 			local basePos = zoneCFrame:PointToWorldSpace(localPos)
 
 			-- Sous un objet pose : pas de touffe DU TOUT. On ne la cree pas pour la detruire ensuite.
 			if isCovered(basePos, blockers) then
 				skipped += 1
 				continue
-			end
-
-			-- FLEUR ou touffe d'herbe ? Une fleur est une touffe comme les autres, avec un autre mesh : elle herite
-			-- du vent, de l'ecrasement et de tous les tris sans rien de special.
-			local isFlower = #flowerTemplates > 0 and flowerRoll < GrassZoneConfigs.FLOWER_CHANCE
-			local source = if isFlower then flowerTemplates[flowerPick] else grassSource
-			if isFlower then
-				flowersMade += 1
 			end
 
 			local part = source:Clone()

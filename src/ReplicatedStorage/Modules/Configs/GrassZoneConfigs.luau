@@ -106,6 +106,11 @@ local GrassZoneConfigs = {
 	-- l'herbe autour est plus clairsemee.
 	FLOWER_WIDTH_MIN = 1.2,
 	FLOWER_WIDTH_MAX = 2.2,
+	-- HAUTEUR DE TIGE, en studs : de combien la fleur est SURELEVEE au-dessus du sol.
+	-- Sans elle, la fleur est posee au ras comme une touffe, donc NOYEE dans une herbe qui la depasse largement --
+	-- on ne la voit pas du tout. Une vraie fleur pousse sur une tige : il faut qu'elle sorte du gazon.
+	-- A regler en regardant la hauteur de l'herbe autour : la fleur doit depasser, pas leviter.
+	FLOWER_LIFT = 2.2,
 
 	-- NIVEAU DE DETAIL des touffes. A `Automatic`, Roblox change le maillage selon la taille de la part A L'ECRAN.
 	-- Or une touffe ecrasee passe de sa hauteur pleine a quelques pour cent en une fraction de seconde : Roblox
@@ -198,10 +203,10 @@ local GrassZoneConfigs = {
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
 	CRUSH_RADIUS = 4.5,
 	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur.
-	-- 0.96 = la touffe descend a 4 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
-	-- Volontairement tres marque : a ce niveau elle est ecrasee au sol, ce qui rend le passage evident. La limite
-	-- reste 1.0, ou elle disparaitrait completement -- garder une marge pour qu'on voie encore de l'herbe.
-	CRUSH_SQUASH = 0.96,
+	-- 0.98 = la touffe descend a 2 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
+	-- Ecrasee au ras du sol. La limite est 1.0, ou elle disparaitrait tout a fait : au-dela de 0.98 il ne reste
+	-- quasiment plus rien a voir, et l'effet se perd faute de matiere.
+	CRUSH_SQUASH = 0.98,
 	-- COULEUR DE L'HERBE ECRASEE. La touffe glisse en douceur de BASE_COLOR vers celle-ci quand on marche dessus, et
 	-- revient quand elle se releve. Deux couleurs choisies plutot qu'un pourcentage d'assombrissement : on regle ce
 	-- qu'on voit, et rien n'empeche de faire une trace plus CLAIRE que l'herbe -- c'est d'ailleurs ce que fait une
@@ -209,7 +214,7 @@ local GrassZoneConfigs = {
 	-- Les TACHES de Perlin s'appliquent aussi a cette teinte : la trace garde donc le relief du terrain au lieu de
 	-- devenir un aplat uniforme.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee garde sa couleur.
-	CRUSHED_COLOR = Color3.fromRGB(140, 179, 98),
+	CRUSHED_COLOR = Color3.fromRGB(186, 219, 128),
 	-- Inclinaison au passage. A ZERO : l'herbe s'APLATIT, elle ne penche pas.
 	-- Elle valait l'ECART entre l'ecrasement rapide et le tassement lent. Defaut vu a l'ecran : en traversant vite, on
 	-- part avant que les deux se soient rejoints, donc l'ecart existe encore PENDANT la remontee -- une inclinaison
