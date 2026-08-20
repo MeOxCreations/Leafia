@@ -2185,6 +2185,42 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.204 — Les arbres et les buissons bougent
+
+Nouveau FoliageService (serveur) + FoliageConfigs. Chaque modele de la map dont le nom est liste dans la config
+recoit sa boucle d'animation. Aujourd'hui : Bush1 et Tree1. Poser dix "Bush1" dans la map les anime tous les dix,
+sans rien taguer et sans rien brancher a la main -- le NOM du modele est la cle.
+
+Les IDs vivent dans du CODE, pas dans des Instances Animation rangees en ReplicatedStorage. Raison : Rojo synchronise
+le code dans TOUTES les places, les Instances non (elles sont en $ignoreUnknownInstances et se recopient a la main,
+place par place). Le tuto recoit donc le meme decor anime sans qu'on y importe quoi que ce soit. Une nouvelle plante
+= UNE ligne dans FoliageConfigs.ANIMATIONS.
+
+Joue COTE SERVEUR : la boucle se replique a tous, y compris aux joueurs qui arrivent apres, et le serveur voit toute
+la map quoi que fasse le streaming chez le client. A savoir pour plus tard : chaque plante animee est un Humanoid de
+plus au serveur. Sur une dizaine c'est gratuit, a plusieurs centaines il faudra passer ces boucles cote client.
+
+DESYNCHRONISATION (SPEED_VARIATION 0.15, RANDOM_START). Dix buissons qui jouent la meme boucle a la meme image
+ondulent tous ensemble, et l'oeil lit ca comme du faux immediatement. Chaque plante demarre donc a un point au hasard
+de sa boucle et a une vitesse legerement differente. Les deux knobs se coupent (0 / false) si le mouvement synchrone
+est voulu.
+
+Deux pieges evites en ecrivant, deja connus du journal :
+- `AnimationTrack.Length` vaut 0 tant que l'asset n'est pas telecharge. Tirer le point de depart au hasard tout de
+  suite aurait donne 0 pour tout le monde, donc un demarrage synchrone -- exactement ce qu'on cherchait a eviter. Le
+  tirage attend la vraie longueur dans un thread a part, borne dans le temps.
+- Le dossier se resout par RE-SCAN en boucle sous UN seul delai, pas par une chaine de quatre `WaitForChild` : avec
+  un WaitForChild par segment, un chemin absent ferait attendre le timeout quatre fois avant de prevenir.
+
+Racine de recherche volontairement SERREE (`Worlds.Maps.Assets.Foliages`) et pas `Worlds.Maps` : ce dernier contient
+les milliers de carreaux de haie, et y brancher DescendantAdded ferait passer chacun d'eux par le test de nom pour
+rien. Consequence a connaitre : une plante posee HORS de ce dossier ne s'animera pas.
+
+### A faire dans Studio
+
+Rien cote code. Il faut juste que les plantes vivent dans `Workspace.Worlds.Maps.Assets.Foliages`, gardent leur nom
+exact (Bush1, Tree1) et contiennent leur Humanoid + Animator. Le serveur affiche au demarrage combien il en a animees.
+
 ## 0.0.203 — C'est PAPI qui parle, plus un inconnu
 
 Le tuto faisait parler un personnage ("Finn") qui n'existe nulle part ailleurs dans le jeu, et qui racontait
