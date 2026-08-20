@@ -377,7 +377,10 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- Par pas de 45 degres pour trouver le bon axe, puis par 10 pour affiner.
 		cutGripOffset = CFrame.Angles(math.rad(-50), math.rad(162), math.rad(80)),
 		-- LOURD : la pose suit la visee avec un smooth (le poids de la machine). Plus bas = plus lourd / plus de retard.
-		poseFollowSpeed = 7,
+		-- Monte a 13 : le retard se sentait comme une visee qui ne repond pas, plus que comme du poids.
+		-- Si en montant plus haut la visee se met a sauter toute seule, ce n'est pas un bug : en vue iso le rayon
+		-- arrive de biais, le signal est nerveux, et un ressort raide AMPLIFIE ce bruit au lieu de l'absorber.
+		poseFollowSpeed = 13,
 	},
 }
 
