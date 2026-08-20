@@ -59,7 +59,10 @@ local ROTATE_DEBOUNCE = 0.45 -- anti-spam de R : environ la duree du tween serve
 local FACE_SPEED = 10 -- lissage du pivot vers la haie
 -- Distance joueur <-> face de la haie pendant le portage. PLUS GRANDE qu'en taille (1.9) : pour porter/poser l'echelle
 -- on se tient EN RETRAIT, un peu en dehors de la zone, pas colle a la haie. Monte / baisse cette valeur pour ajuster.
-local WORK_DIST = 5 -- distance perso <-> face de la haie en portage focus. Monter = perso plus RECULE de la haie.
+-- 3.5 : l'echelle se posait trop loin de la surface. C'est ce reglage-ci qu'il faut bouger et pas CARRY_CLEARANCE :
+-- il rapproche le joueur ET l'echelle en gardant leur ecart, alors que l'autre pousserait l'echelle plus loin devant
+-- un joueur reste en arriere -- elle finirait par entrer dans la haie.
+local WORK_DIST = 3.5 -- distance perso <-> face de la haie en portage focus. Monter = perso plus RECULE de la haie.
 local MAGNET_K = 1.2 -- force de rappel a la distance de travail (proportionnelle a l'ecart)
 -- DEUX MODES de portage : FOCUS (rail le long de la haie) et LIBRE (detache, on se balade et on pose ou on veut).
 -- On DETACHE en poussant fort vers l'arriere (S) ; on RE-FOCUS en revenant pres d'une haie. Deux distances (entree /
