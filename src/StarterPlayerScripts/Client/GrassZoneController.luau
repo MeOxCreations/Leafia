@@ -63,11 +63,13 @@ type Clump = {
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	baseColor: Color3, -- couleur au repos (sa bande de tonte) : l'assombrissement part de LA, pas d'un gris impose
 	lastDarken: number, -- dernier assombrissement REELLEMENT ecrit
-	tiltDir: Vector3, -- direction d'une eventuelle bascule (inutilisee tant que CRUSH_TILT_ANGLE vaut 0)
-	crush: number, -- ECRASEMENT courant, en fraction (0 = debout, 1 = ecrase a fond). LA valeur d'etat de la touffe.
+	tiltDir: Vector3, -- sens du DERNIER passage : c'est la direction dans laquelle la touffe penche
+	crush: number, -- ECRASEMENT courant (0 = debout, 1 = a fond). Reagit VITE : c'est lui qui donne l'inclinaison.
+	squashCrush: number, -- le meme, mais qui TRAINE derriere : c'est lui qui donne le tassement et l'assombrissement.
 	flattened: number, -- TRACE : ecrasement permanent (0 a 1). Ne fait que monter, et sert de plancher a `crush`.
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
-	lastCrush: number, -- dernier ecrasement REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
+	lastCrush: number, -- dernier etat REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
+	lastSquashCrush: number, -- idem pour la valeur retardee : elle peut bouger alors que l'autre est deja posee
 }
 
 -- Un PAVE : un paquet de touffes voisines, teste EN BLOC. C'est lui l'unite de travail de la boucle, pas la touffe.
@@ -446,9 +448,11 @@ local function populate(zone: Zone)
 				lastDarken = 0,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				crush = 0,
+				squashCrush = 0,
 				flattened = 0,
 				windPhase = windPhase,
 				lastCrush = 0,
+				lastSquashCrush = 0,
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
@@ -568,12 +572,24 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		local target = math.max(best, clump.flattened)
 
 		-- Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui fait lire le poids.
+		-- DEUX VITESSES, une seule cible. L'inclinaison suit `crush`, qui claque ; le tassement suit `squashCrush`,
+		-- qui traine. On lit donc l'herbe pencher PUIS se tasser, au lieu de recevoir les deux en bloc.
+		-- La montee est commune : rien ne gagne a ce que la touffe se redresse en deux temps.
 		local speed = if target > clump.crush then GrassZoneConfigs.CRUSH_SPEED else GrassZoneConfigs.RECOVER_SPEED
 		clump.crush += (target - clump.crush) * (1 - math.exp(-speed * dt))
 		if math.abs(target - clump.crush) < GrassZoneConfigs.SNAP_EPSILON then
 			clump.crush = target -- un lerp exponentiel n'atteint jamais sa cible : sans ce clic, on reecrirait a vie
 		end
-		if clump.crush ~= target then
+
+		local squashSpeed = if target > clump.squashCrush
+			then GrassZoneConfigs.SQUASH_SPEED
+			else GrassZoneConfigs.RECOVER_SPEED
+		clump.squashCrush += (target - clump.squashCrush) * (1 - math.exp(-squashSpeed * dt))
+		if math.abs(target - clump.squashCrush) < GrassZoneConfigs.SNAP_EPSILON then
+			clump.squashCrush = target
+		end
+
+		if clump.crush ~= target or clump.squashCrush ~= target then
 			moving += 1
 		end
 
@@ -582,7 +598,8 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- et chaque effet herite gratuitement du ressort (sec a la descente, lent a la remontee).
 		-- C'etait l'inverse avant : tout etait tire de l'ANGLE, donc mettre l'angle a zero tuait l'aplatissement avec.
 		local crushed = clump.crush
-		local squash = 1 - crushed * GrassZoneConfigs.CRUSH_SQUASH
+		-- Le tassement et l'assombrissement partent de la valeur RETARDEE : ils arrivent apres l'inclinaison.
+		local squash = 1 - clump.squashCrush * GrassZoneConfigs.CRUSH_SQUASH
 
 		local wind = 0
 		local gustSquash = 1
@@ -615,9 +632,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
-		if windScale > 0 or clump.crush ~= clump.lastCrush then
-			apply(clump, wind, squash * gustSquash, crushed * TILT_ANGLE, crushed)
+		-- On compare les DEUX valeurs : la lente peut encore bouger alors que la rapide est deja posee.
+		if windScale > 0 or clump.crush ~= clump.lastCrush or clump.squashCrush ~= clump.lastSquashCrush then
+			apply(clump, wind, squash * gustSquash, crushed * TILT_ANGLE, clump.squashCrush)
 			clump.lastCrush = clump.crush
+			clump.lastSquashCrush = clump.squashCrush
 		end
 	end
 

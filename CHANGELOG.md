@@ -2185,6 +2185,24 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.235 — L'herbe penche D'ABORD, elle se tasse ENSUITE
+
+Le joueur a voulu retrouver l'inclinaison au passage, sans perdre l'aplatissement. Les deux ensemble arrivaient
+pourtant en bloc, et l'inclinaison disparaissait sous le tassement -- on ne voyait plus qu'un ecrasement.
+
+Triche assumee, et efficace : les deux effets partent de la MEME cible mais ne la rejoignent pas a la meme vitesse.
+L'inclinaison claque (CRUSH_SPEED 18), le tassement traine (SQUASH_SPEED 4). On lit donc l'herbe pencher, PUIS se
+tasser. L'inclinaison a le temps d'exister avant d'etre recouverte.
+
+Deux valeurs lissees au lieu d'une, comme le plancher de glisse dedouble par allure en 0.0.201 : quand un seul
+reglage doit produire deux ressentis differents, on ne cherche pas le compromis, on dedouble.
+
+La MONTEE reste commune (RECOVER_SPEED) : rien ne gagne a ce que la touffe se redresse en deux temps.
+
+CRUSH_TILT_ANGLE remis a 28 (il valait 78 du temps ou l'inclinaison etait le seul effet, ce qui couchait la plaque
+sur le flanc ; a zero depuis, ce qui la supprimait). Couleur de base passee a (133, 195, 95), et taches un peu plus
+marquees (PATCH_AMOUNT 0.14 -> 0.18).
+
 ## 0.0.234 — L'herbe retrouve sa couleur, et se couvre de taches
 
 Regression de 0.0.232 : en coupant les rayures, j'ai coupe LA SEULE CHOSE qui donnait sa couleur a l'herbe. Elle

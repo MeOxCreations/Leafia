@@ -85,7 +85,7 @@ local GrassZoneConfigs = {
 	-- ===== Couleur de l'herbe =====
 	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur
 	-- est basse plus c'est sombre.
-	BASE_COLOR = Color3.fromRGB(173, 184, 124),
+	BASE_COLOR = Color3.fromRGB(133, 195, 95),
 	-- TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin.
 	-- Sans elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint. Le bruit de
 	-- Perlin donne de vraies ZONES ; un tirage au hasard par touffe donnerait du poivre et sel, ce qui est pire que
@@ -93,7 +93,7 @@ local GrassZoneConfigs = {
 	-- Calculees UNE fois a la pose, a partir de la position monde : aucun cout en jeu, et deux touffes voisines
 	-- appartiennent bien a la meme tache.
 	PATCH_SCALE = 0.06, -- taille des taches. Plus BAS = taches plus LARGES (0.06 = des zones d'environ 15 studs)
-	PATCH_AMOUNT = 0.14, -- ecart de clarte maxi, en fraction. Monter au-dela de 0.25 fait tacheter, pas nuancer.
+	PATCH_AMOUNT = 0.18, -- ecart de clarte maxi, en fraction. Monter au-dela de 0.3 fait tacheter, pas nuancer.
 
 	-- ===== Rayures de tonte (facon terrain de foot) =====
 	-- COUPEES, et c'est un choix de conception, pas un abandon.
@@ -184,6 +184,12 @@ local GrassZoneConfigs = {
 	-- Vitesses du ressort. Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,
+	-- Vitesse a laquelle l'APLATISSEMENT s'installe, separee de celle de l'inclinaison ci-dessus.
+	-- Beaucoup plus basse EXPRES : l'herbe penche d'abord, elle se tasse ensuite. Les deux effets arrivent decales,
+	-- donc on les lit l'un APRES l'autre au lieu de les recevoir en bloc -- l'inclinaison a le temps d'exister.
+	-- La montee, elle, reste commune (RECOVER_SPEED) : rien ne gagne a ce que la touffe se redresse en deux temps.
+	-- Monter cette valeur vers CRUSH_SPEED efface le decalage ; la baisser retarde encore le tassement.
+	SQUASH_SPEED = 4,
 	-- Volontairement LENT : c'est la remontee qu'on regarde. Une herbe qui se redresse doucement derriere le joueur
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	RECOVER_SPEED = 1.8,
