@@ -28,7 +28,13 @@ local OUT = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 
 -- Son joue a chaque toast, cherche sous SoundService a ce chemin. ABSENT = pas de son, sans bruit dans la
 -- console : un son de confort qui manque n'est ni anormal ni actionnable. Depose un Sound la pour l'activer.
-local SOUND_PATH = { "UI", "Notification" }
+--
+-- C'est le MEME que la notification laterale (SideNotificationHandler) : les deux annoncent la meme chose au joueur,
+-- deux sons differents lui feraient croire a deux evenements differents.
+-- Le chemin pointait avant sur "UI.Notification", qui n'existe pas -- il manquait le dossier "Sounds" et le nom
+-- n'etait pas le bon. Le toast etait donc muet depuis toujours, et le silence volontaire sur son absence empechait
+-- de s'en apercevoir. A verifier a l'oreille apres tout changement de ce chemin.
+local SOUND_PATH = { "Sounds", "UI", "NotificationSound" }
 
 -- Couleur d'accent (UIStroke + UIGradient) selon le TYPE de notif. Type inconnu -> pas de teinte, le modele
 -- garde ses couleurs de Studio.
