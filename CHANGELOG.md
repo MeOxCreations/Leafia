@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.222 — L'herbe ne grandit plus quand on baisse la densite
+
+Personnage completement noye dans l'herbe apres le passage a DENSITY 0.2.
+
+Le grossissement de compensation pose en 0.0.219 s'appliquait a la taille ENTIERE, hauteur comprise : a densite 0.2,
+les touffes devenaient 2.24 fois plus grosses, donc 2.24 fois plus HAUTES. Le joueur disparaissait dedans.
+
+Erreur de raisonnement simple une fois vue : couvrir le sol est une affaire HORIZONTALE. Une touffe plus large cache
+plus de terre ; une touffe plus haute ne cache rien de plus et mange le personnage. Le facteur ne touche donc plus
+que X et Z, jamais Y. La hauteur de l'herbe ne depend plus du tout du nombre de touffes -- ce sont deux reglages
+independants, comme ils auraient toujours du l'etre.
+
+STRIPE_ON_SURFACE passe a false : VERIFIE A L'ECRAN, sur ce mesh c'est le Color de la MeshPart qui donne la bonne
+teinte. Ecrire sur le SurfaceAppearance rendait l'herbe BLEUE quelles que soient les couleurs demandees -- le
+TintMask ne se combine pas comme on l'imagine. Le doute etait signale dans la config en 0.0.215 faute d'avoir pu
+tester ; l'ecran a tranche, la config dit maintenant la reponse au lieu de la question.
+
 ## 0.0.221 — Le SOL passait pour un objet pose et effacait toute l'herbe
 
 Regression introduite juste avant : plus une seule touffe ne se generait.

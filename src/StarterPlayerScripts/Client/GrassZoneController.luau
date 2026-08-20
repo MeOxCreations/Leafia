@@ -382,7 +382,13 @@ local function populate(zone: Zone)
 			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
 			part.CanTouch = false
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
-			part.Size = source.Size * scale * densityScale
+			-- Le grossissement de compensation ne touche QUE X et Z. Couvrir le sol est une affaire HORIZONTALE : une
+			-- touffe plus large cache plus de terre, une touffe plus haute ne cache rien de plus et noie le joueur.
+			part.Size = Vector3.new(
+				source.Size.X * scale * densityScale,
+				source.Size.Y * scale,
+				source.Size.Z * scale * densityScale
+			)
 
 			-- RAYURES. La bande se decide sur le centre de CASE, pas sur la position finale : sinon l'ecart au hasard
 			-- ferait baver les bandes l'une dans l'autre et on perdrait la ligne nette d'un terrain tondu.

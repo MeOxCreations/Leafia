@@ -48,8 +48,10 @@ local GrassZoneConfigs = {
 	-- Taille de chaque touffe, en fraction de la taille du mesh d'origine. Un peu de variete casse l'effet "copie".
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.25,
-	-- La taille des touffes COMPENSE la densite : a DENSITY 0.25 elles sont deux fois plus grosses, donc la surface
+	-- La taille des touffes COMPENSE la densite : a DENSITY 0.25 elles sont deux fois plus LARGES, donc la surface
 	-- reste couverte pareil avec quatre fois moins de parts.
+	-- Seuls X et Z grossissent. La HAUTEUR ne bouge jamais : couvrir le sol est horizontal, et une herbe qui grandit
+	-- quand on baisse la densite finit par noyer le joueur (vecu).
 	-- C'est ce qui rend DENSITY ergonomique : il devient un bouton de PERFORMANCE pur, pas un bouton de "trous dans
 	-- l'herbe". On le baisse sur un grand terrain sans que ca se voie a l'ecran.
 	-- A DENSITY = 1 le facteur vaut 1 : le rendu actuel ne bouge pas. Mettre a false pour retrouver l'ancien
@@ -86,11 +88,10 @@ local GrassZoneConfigs = {
 	STRIPE_HEADING = 0,
 	STRIPE_COLOR_A = Color3.fromRGB(155, 165, 121),
 	STRIPE_COLOR_B = Color3.fromRGB(192, 203, 127),
-	-- OU ecrire la couleur. Avec AlphaMode = TintMask, la teinte peut venir du SurfaceAppearance OU du Color de la
-	-- part, selon le mesh. On ecrit par defaut sur le SurfaceAppearance : c'est la que la couleur de base est reglee
-	-- dans Studio, donc c'est elle qui pilote ce qu'on voit. Si les rayures n'apparaissent pas, passer a false (on
-	-- ecrira BasePart.Color a la place).
-	STRIPE_ON_SURFACE = true,
+	-- OU ecrire la couleur. VERIFIE A L'ECRAN : sur ce mesh, c'est le Color de la MESHPART qui donne la bonne teinte.
+	-- Ecrire sur le SurfaceAppearance rendait l'herbe BLEUE, quelles que soient les couleurs demandees -- le TintMask
+	-- ne se combine pas comme on l'imagine. Laisser a false. (true = ecrire sur le SurfaceAppearance.)
+	STRIPE_ON_SURFACE = false,
 
 	-- Touffes creees par image pendant le semis. Fabriquer 7 000 parts d'un coup gele le client environ 600 ms ; on
 	-- etale donc la creation sur plusieurs images. Le joueur voit l'herbe se remplir en une fraction de seconde au
