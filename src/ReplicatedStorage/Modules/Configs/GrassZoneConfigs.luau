@@ -48,10 +48,10 @@ local GrassZoneConfigs = {
 	-- Une bande sur deux prend l'autre couleur. Decide UNE fois a la pose, a partir de la case de la touffe dans la
 	-- grille : aucun cout en jeu.
 	STRIPE_ENABLED = true,
-	STRIPE_WIDTH = 4, -- largeur d'une bande, en studs
+	STRIPE_WIDTH = 9, -- largeur d'une bande, en studs
 	STRIPE_HEADING = 0, -- orientation des bandes, en degres, DANS LE REPERE DE LA ZONE (45 = rayures en diagonale)
-	STRIPE_COLOR_A = Color3.fromRGB(212, 179, 152),
-	STRIPE_COLOR_B = Color3.fromRGB(212, 203, 157),
+	STRIPE_COLOR_A = Color3.fromRGB(119, 127, 93),
+	STRIPE_COLOR_B = Color3.fromRGB(209, 223, 164),
 	-- OU ecrire la couleur. Avec AlphaMode = TintMask, la teinte peut venir du SurfaceAppearance OU du Color de la
 	-- part, selon le mesh. On ecrit par defaut sur le SurfaceAppearance : c'est la que la couleur de base est reglee
 	-- dans Studio, donc c'est elle qui pilote ce qu'on voit. Si les rayures n'apparaissent pas, passer a false (on
