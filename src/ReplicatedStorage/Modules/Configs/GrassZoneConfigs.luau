@@ -234,16 +234,16 @@ local GrassZoneConfigs = {
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	RECOVER_SPEED = 1.8,
 	-- TRAINEE. Fraction de l'ecrasement que le passage laisse derriere le joueur, une fois qu'il n'est plus dessus.
-	-- 0.3 = l'herbe remonte tout de suite l'essentiel, mais garde un tiers de son tassement -- un chemin discret
-	-- reste lisible dans son dos au lieu de s'effacer dans la seconde.
+	-- 0.6 = l'herbe ne remonte qu'a moitie derriere le joueur : le chemin est franchement lisible, on suit ses pas
+	-- des metres plus loin.
 	-- A 0 elle se redresse entierement ; a 1 elle reste ecrasee a fond.
-	FLATTEN_AMOUNT = 0.3,
+	FLATTEN_AMOUNT = 0.6,
 	-- Vitesse a laquelle la trainee s'efface, en fraction par seconde. 0 = elle ne s'efface JAMAIS.
-	-- 0.04 la fait disparaitre en une huitaine de secondes : assez pour qu'on voie son chemin en se retournant, pas
-	-- assez pour que la pelouse garde la memoire de tout un apres-midi.
+	-- 0.02 la fait tenir une trentaine de secondes : le temps de traverser le jardin et de voir tout son parcours
+	-- derriere soi, mais la pelouse finit quand meme par oublier.
 	-- Ce couple (AMOUNT, RECOVER) est ce qui distingue une trainee d'une trace : la premiere s'en va, la seconde
 	-- reste. La tonte, elle, voudra une VRAIE trace -- ce sera un autre mecanisme, pas ce reglage-ci.
-	FLATTEN_RECOVER = 0.04,
+	FLATTEN_RECOVER = 0.02,
 
 	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.
