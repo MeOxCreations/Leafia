@@ -386,7 +386,7 @@ local function populate(zone: Zone)
 			-- touffe plus large cache plus de terre, une touffe plus haute ne cache rien de plus et noie le joueur.
 			part.Size = Vector3.new(
 				source.Size.X * scale * densityScale,
-				source.Size.Y * scale,
+				source.Size.Y * scale * GrassZoneConfigs.HEIGHT_SCALE,
 				source.Size.Z * scale * densityScale
 			)
 

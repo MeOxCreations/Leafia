@@ -30,7 +30,7 @@ local GrassZoneConfigs = {
 	-- MESURE : a 1.0 sur une carte de 4 pelouses (133x50, 133x52, 81x53, 32x7) le total montait a 18 546 parts.
 	-- Injouable. A 0.2 on retombe autour de 3 700, avec des touffes 2.2x plus grosses (voir AUTO_SCALE_WITH_DENSITY)
 	-- donc une couverture visuelle equivalente. C'est LE bouton pour arbitrer entre finesse et nombre de parts.
-	DENSITY = 0.2,
+	DENSITY = 0.35,
 	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = alignement parfaitement
 	-- regulier, 1 = la touffe peut aller jusqu'au bord de sa case.
 	-- ATTENTION, c'est LUI qui fait les trous : a 0.8, deux voisines peuvent s'ecarter de 80 % d'une case, et l'ecart
@@ -48,6 +48,10 @@ local GrassZoneConfigs = {
 	-- Taille de chaque touffe, en fraction de la taille du mesh d'origine. Un peu de variete casse l'effet "copie".
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.25,
+	-- HAUTEUR de l'herbe, a part. Multiplie UNIQUEMENT le Y de la touffe.
+	-- C'est le bouton a tourner quand l'herbe est trop haute. Passer par SCALE_MIN / SCALE_MAX retrecirait aussi la
+	-- LARGEUR, donc la couverture, et rouvrirait des trous : hauteur et couverture n'ont rien a voir.
+	HEIGHT_SCALE = 0.65,
 	-- La taille des touffes COMPENSE la densite : a DENSITY 0.25 elles sont deux fois plus LARGES, donc la surface
 	-- reste couverte pareil avec quatre fois moins de parts.
 	-- Seuls X et Z grossissent. La HAUTEUR ne bouge jamais : couvrir le sol est horizontal, et une herbe qui grandit
@@ -85,9 +89,9 @@ local GrassZoneConfigs = {
 	-- 0 = bandes le long du petit cote, 45 = diagonales, 90 = bandes le long du grand cote.
 	-- Attention en tournant : le nombre de bandes = la longueur de la zone DANS CETTE DIRECTION divisee par STRIPE_WIDTH.
 	-- Passer de 0 a 90 sur une zone de 44 x 18 fait tomber 5 bandes a 2 -- il faut alors baisser STRIPE_WIDTH avec.
-	STRIPE_HEADING = 0,
-	STRIPE_COLOR_A = Color3.fromRGB(155, 165, 121),
-	STRIPE_COLOR_B = Color3.fromRGB(192, 203, 127),
+	STRIPE_HEADING = 90,
+	STRIPE_COLOR_A = Color3.fromRGB(143, 172, 97),
+	STRIPE_COLOR_B = Color3.fromRGB(106, 140, 54),
 	-- OU ecrire la couleur. VERIFIE A L'ECRAN : sur ce mesh, c'est le Color de la MESHPART qui donne la bonne teinte.
 	-- Ecrire sur le SurfaceAppearance rendait l'herbe BLEUE, quelles que soient les couleurs demandees -- le TintMask
 	-- ne se combine pas comme on l'imagine. Laisser a false. (true = ecrire sur le SurfaceAppearance.)
