@@ -141,6 +141,39 @@ local function travel(walker: Walker, path: Path): boolean
 	return false
 end
 
+-- CONTROLE : l'animation bouge-t-elle vraiment le rig ?
+-- Une animation dont les noms ne collent pas au rig joue avec un poids de 1 et n'ecrit RIEN. Le PNJ glisse comme un
+-- mannequin, et aucune erreur n'apparait. On mesure donc l'etat des joints, on attend, et on compare.
+local function checkAnimationBites(walker: Walker, label: string)
+	local joints = {}
+	for _, descendant in ipairs(walker.model:GetDescendants()) do
+		if descendant:IsA("Motor6D") then
+			joints[#joints + 1] = descendant
+		end
+	end
+	if #joints == 0 then
+		return
+	end
+
+	local before = {}
+	for index, joint in ipairs(joints) do
+		before[index] = joint.Transform
+	end
+
+	task.wait(NpcWanderConfigs.ANIM_CHECK_DELAY)
+
+	for index, joint in ipairs(joints) do
+		if joint.Transform ~= before[index] then
+			return -- au moins un membre a bouge : l'animation mord bien
+		end
+	end
+
+	warn(
+		`[NpcWander] L'animation "{label}" de "{walker.model.Name}" JOUE mais ne bouge AUCUN membre. `
+			.. `Les noms qu'elle contient ne correspondent pas a ceux du rig (voir scripts/studio/ComparerAnimEtRig).`
+	)
+end
+
 -- Prepare un PNJ : verifie qu'il a de quoi marcher, charge ses deux animations. nil si quelque chose manque.
 local function buildWalker(config: NpcWanderConfigs.Npc, deadline: number): Walker?
 	local found = findByName(config.model, deadline)
@@ -250,6 +283,10 @@ function NpcWanderService.init()
 	for _, config in ipairs(NpcWanderConfigs.NPCS) do
 		-- UN THREAD PAR PNJ : chacun a son rythme, et rien de tout ca ne doit retarder le boot.
 		task.spawn(function()
+			if not config.enabled then
+				print(`[NpcWander] "{config.model}" est COUPE dans la config : il ne se promenera pas.`)
+				return
+			end
 			local deadline = os.clock() + NpcWanderConfigs.RESOLVE_TIMEOUT
 			local walker = buildWalker(config, deadline)
 			if not walker then
@@ -266,6 +303,8 @@ function NpcWanderService.init()
 
 			setMoving(walker, false)
 			walkers[#walkers + 1] = walker
+			-- Controle de l'idle sans bloquer la balade : elle demarre pendant que la mesure se fait.
+			task.spawn(checkAnimationBites, walker, "idle")
 			print(`[NpcWander] "{config.model}" se promene dans "{config.zone}".`)
 
 			while walker.model.Parent do

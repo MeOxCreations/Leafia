@@ -2185,6 +2185,47 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.228 — L'animation de Papi jouait DANS LE VIDE : deux rigs differents
+
+Papi glissait sur la pelouse sans remuer un membre. La mesure a tranche en deux etapes.
+
+D'abord, en pleine partie : la piste de marche tournait avec un poids de 1, et les DOUZE Motor6D restaient a zero.
+Une animation qui joue et n'ecrit rien.
+
+Ensuite, en comparant les noms :
+
+```
+RIG  "OldManIdle" (12) : Body, Chaussure, ClotheUp1, Eyes, Hairs, Head, Lunette, Moustache, Nez, Pantalon, Sourcil
+ANIM "Idle"       (29) : RootPart, mixamorig:Hips, mixamorig:Spine, mixamorig:LeftArm, mixamorig:RightFoot, ...
+```
+
+Zero nom en commun. Les animations viennent de MIXAMO et parlent a un squelette complet de 29 os ; le modele pose
+dans la map est un assemblage de 12 morceaux de mesh, SANS bras ni jambes. Deux personnages differents.
+
+Une animation Roblox retrouve les membres PAR LEUR NOM. Quand aucun ne correspond, elle joue normalement, avec un
+poids de 1, et n'ecrit rien -- sans la moindre erreur nulle part. C'est le silence qui a coute l'enquete, pas la
+panne.
+
+### Ce qui change dans le code
+
+Le PNJ passe a `enabled = false` : il glissait comme un mannequin, c'est pire que de le laisser immobile. A repasser
+a true quand Papi sera exporte de Blender AVEC son squelette.
+
+Et surtout, un CONTROLE APRES DEMARRAGE : le service releve l'etat des joints, attend, et compare. Si rien n'a bouge
+alors que la piste tourne, il le DIT, en nommant l'animation et en renvoyant vers l'outil de comparaison. Cette
+famille de panne ne coutera plus une enquete.
+
+### Trois outils d'atelier nes de ce bug (scripts/studio/)
+
+- `RedresserPnj` : redresse un corps penche en nettoyant l'inclinaison des Motor6D (a lu le C0, la pose de repos).
+- `LirePenchePnj` : mesure `Transform` PENDANT une partie -- c'est la que les animations ecrivent, pas dans C0.
+  C'est lui qui a montre que rien ne bougeait.
+- `ComparerAnimEtRig` : telecharge l'animation, liste ses noms, liste ceux du rig, dit lesquels ne collent pas.
+  C'est lui qui a donne la reponse.
+
+Chacun repond a une question DIFFERENTE, et les trois ensemble couvrent la chaine : pose de repos, pose animee,
+correspondance des noms.
+
 ## 0.0.227 — La cadence de marche de Papi suit sa vitesse reelle
 
 Papi marchait trop vite : sa vitesse de reference passe de 5 a 3.

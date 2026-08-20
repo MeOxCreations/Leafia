@@ -423,6 +423,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   racine de recherche LARGE avec un filtre cheap (`IsA("Model")` ecarte des milliers de parts pour rien) plutot
   qu'une racine etroite qui oblige a ranger les objets au bon endroit -- l'ergonomie prime, le cout est nul.
 
+- **Une animation Roblox retrouve les membres PAR LEUR NOM : si aucun ne correspond au rig, elle joue avec un poids
+  de 1 et n'ecrit RIEN, sans la moindre erreur.** Vecu sur Papi : la piste tournait, les douze Motor6D restaient a
+  zero, le PNJ glissait comme un mannequin. Cause : animations MIXAMO (29 os, `mixamorig:Hips`, `Spine`, `LeftArm`...)
+  sur un modele fait de 12 morceaux de mesh rigides sans bras ni jambes. Deux rigs differents, zero nom commun.
+  Symptome trompeur : ca ressemble a une animation mal faite ou a un probleme d'orientation, et on va regler le rig,
+  alors que rien n'est jamais applique. Diagnostic dans cet ordre : (1) la piste joue-t-elle (`GetPlayingAnimationTracks`),
+  (2) les `Motor6D.Transform` bougent-ils PENDANT la lecture -- les animations ecrivent dans `Transform`, PAS dans
+  `C0`, donc un controle en mode edition ne voit jamais rien, (3) comparer les noms de poses de la KeyframeSequence
+  aux noms des `Part1` du rig. Les trois outils sont dans `scripts/studio/`. Regle generale : quand un systeme peut
+  echouer EN SILENCE, lui ajouter un controle qui mesure le RESULTAT et parle (ici : les joints ont-ils bouge une
+  seconde apres le demarrage).
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les

@@ -7,6 +7,7 @@
 -- vitesse qui varie, des arrets sans raison. C'est la que sont les reglages ci-dessous.
 
 export type Npc = {
+	enabled: boolean, -- a false, ce PNJ ne bouge pas du tout (rig pas encore pret, par exemple)
 	model: string, -- nom du Model dans le Workspace
 	zone: string, -- nom de la Part qui borne la balade (marqueur : elle doit etre SANS collision)
 	idle: string, -- animation jouee a l'arret
@@ -16,6 +17,12 @@ export type Npc = {
 
 local NPCS: { Npc } = {
 	{
+		-- COUPE pour l'instant. Le rig "OldManIdle" est un assemblage de 12 morceaux SANS bras ni jambes : c'est un
+		-- decor, il n'a rien a faire bouger. Les animations reglees ici viennent de Mixamo et parlent a un squelette
+		-- complet (mixamorig:Hips, Spine, LeftArm...) : aucun nom ne correspond, elles jouent donc dans le vide et il
+		-- glissait sur la pelouse sans remuer un membre.
+		-- A repasser a true quand Papi sera exporte de Blender AVEC son squelette (skinning).
+		enabled = false,
 		model = "OldManIdle",
 		zone = "ZoneWalking",
 		idle = "rbxassetid://136244394563436",
@@ -40,6 +47,12 @@ local NpcWanderConfigs = {
 	MIN_TRAVEL = 12,
 	-- Nombre de tirages tentes pour trouver un point atteignable avant de laisser tomber ce tour.
 	TARGET_TRIES = 6,
+
+	-- CONTROLE APRES DEMARRAGE. Une animation Roblox retrouve les membres PAR LEUR NOM : si les noms ne correspondent
+	-- pas au rig, elle joue avec un poids de 1 et ne bouge RIEN, sans la moindre erreur. Le PNJ glisse alors comme un
+	-- mannequin et rien ne dit pourquoi (ca a coute une longue enquete).
+	-- On regarde donc, ce delai apres le premier pas, si les joints ont bouge. Sinon on le DIT.
+	ANIM_CHECK_DELAY = 1.5,
 
 	-- ===== Animation de marche accordee a la vitesse =====
 	-- Vitesse a laquelle l'animation de marche est JUSTE a sa cadence d'origine. En dessous elle est ralentie, au
