@@ -2185,6 +2185,30 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.239 — Des fleurs poussent parmi l'herbe
+
+Idee du joueur. Trois meshes de fleurs (Petal_2, Petal_4, Petal_5) apparaissent ca et la dans les pelouses.
+
+Presque aucun code : une fleur est une TOUFFE comme les autres, avec un autre mesh. Elle herite donc du vent, de
+l'ecrasement au passage, du fondu au loin et de tous les tris de performance, sans une ligne de plus. Le systeme
+etait deja bon pour ca sans qu'on l'ait prevu.
+
+Trois differences seulement, chacune pour une raison precise :
+- une fleur garde EXACTEMENT sa couleur : ni teinte d'herbe, ni tache de Perlin, ni virage au vert en s'ecrasant.
+  Implemente en donnant la MEME couleur aux deux etats, ce qui rend le melange sans effet -- pas un seul test
+  ajoute dans la boucle par-image ;
+- pas de compensation de densite sur sa taille : une fleur n'a aucune raison de grossir parce que l'herbe autour est
+  plus clairsemee ;
+- pas de zone de hauteur non plus : elle a sa propre echelle.
+
+FLOWER_CHANCE (0.025) reste volontairement BASSE. Une fleur qu'on voit partout n'est plus une fleur, c'est un tapis.
+Au-dela de 0.06 la pelouse devient un pre.
+
+Le tirage qui decide fleur-ou-herbe est fait AVEC les autres tirages, en tete de boucle : la suite du hasard reste
+donc identique, et changer FLOWER_CHANCE ne redistribue pas toute la pelouse.
+
+Une fleur introuvable est signalee par son nom et n'empeche rien -- une place peut ne pas les avoir.
+
 ## 0.0.238 — L'herbe pousse plus haut par endroits
 
 Idee du joueur. Des zones ou l'herbe monte, d'autres ou elle reste rase, en bruit de Perlin -- comme les taches de

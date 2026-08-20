@@ -96,6 +96,8 @@ type Zone = {
 local zones: { Zone } = {}
 local connections: { RBXScriptConnection } = {}
 local template: BasePart? = nil
+-- Meshes de fleurs, resolus au boot. Vide = pas de fleurs, et ce n'est pas une erreur.
+local flowerTemplates: { BasePart } = {}
 local heartbeat: RBXScriptConnection? = nil
 
 -- ===== Resolution des dependances =====
@@ -300,8 +302,8 @@ end
 -- ETALE SUR PLUSIEURS IMAGES. Fabriquer des milliers de parts d'un coup gele le client (mesure : ~600 ms pour 7 000).
 -- Peut donc YIELD : tous les appelants doivent etre dans un thread a part.
 local function populate(zone: Zone)
-	local source = template
-	if not source then
+	local grassSource = template
+	if not grassSource then
 		return
 	end
 
@@ -358,6 +360,7 @@ local function populate(zone: Zone)
 	local skipped = 0
 	local budget = GrassZoneConfigs.CREATE_BUDGET
 	local made = 0
+	local flowersMade = 0
 
 	for ix = 0, cols - 1 do
 		for iz = 0, rows - 1 do
@@ -371,6 +374,10 @@ local function populate(zone: Zone)
 			local restAngle = rng:NextNumber(0, math.pi * 2)
 			local yawAngle = rng:NextNumber(0, math.pi * 2)
 			local windPhase = rng:NextNumber(0, math.pi * 2)
+			-- Tire ici avec les autres : la suite du hasard reste identique qu'il y ait des fleurs ou non, donc
+			-- changer FLOWER_CHANCE ne redistribue pas toute la pelouse.
+			local flowerRoll = rng:NextNumber()
+			local flowerPick = rng:NextInteger(1, math.max(#flowerTemplates, 1))
 
 			-- Centre de la case, dans le repere de la ZONE.
 			-- QUINCONCE : une rangee sur deux est poussee d'un quart de case a droite, l'autre d'un quart a gauche.
@@ -393,28 +400,47 @@ local function populate(zone: Zone)
 				continue
 			end
 
+			-- FLEUR ou touffe d'herbe ? Une fleur est une touffe comme les autres, avec un autre mesh : elle herite
+			-- du vent, de l'ecrasement et de tous les tris sans rien de special.
+			local isFlower = #flowerTemplates > 0 and flowerRoll < GrassZoneConfigs.FLOWER_CHANCE
+			local source = if isFlower then flowerTemplates[flowerPick] else grassSource
+			if isFlower then
+				flowersMade += 1
+			end
+
 			local part = source:Clone()
 			part.Anchored = true
 			part.CanCollide = false
 			part.CanQuery = false -- n'a d'effet QUE parce que CanCollide est faux
 			part.CanTouch = false
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
-			-- ZONES DE HAUTEUR. Deuxieme champ de bruit, DECALE du premier (le 3e argument de math.noise change de
-			-- plan) : les zones hautes ne tombent donc pas sur les zones sombres, ce qui se lirait comme un motif.
-			local hScale = GrassZoneConfigs.HEIGHT_PATCH_SCALE
-			local heightPatch = math.noise(basePos.X * hScale, basePos.Z * hScale, 17.3)
-			-- Plancher a 0.2 : une touffe de hauteur nulle ou negative serait invisible ou retournee.
-			local heightFactor = math.max(1 + heightPatch * 2 * GrassZoneConfigs.HEIGHT_PATCH_AMOUNT, 0.2)
+			if isFlower then
+				-- Taille propre, et SANS la compensation de densite : une fleur n'a aucune raison de grossir parce
+				-- que l'herbe autour est plus clairsemee. Proportions gardees.
+				local flowerScale = rng:NextNumber(GrassZoneConfigs.FLOWER_SCALE_MIN, GrassZoneConfigs.FLOWER_SCALE_MAX)
+				part.Size = source.Size * flowerScale
+			else
+				-- ZONES DE HAUTEUR. Deuxieme champ de bruit, DECALE du premier (le 3e argument de math.noise change
+				-- de plan) : les zones hautes ne tombent donc pas sur les zones sombres, ce qui se lirait comme un
+				-- motif.
+				local hScale = GrassZoneConfigs.HEIGHT_PATCH_SCALE
+				local heightPatch = math.noise(basePos.X * hScale, basePos.Z * hScale, 17.3)
+				-- Plancher a 0.2 : une touffe de hauteur nulle ou negative serait invisible ou retournee.
+				local heightFactor = math.max(1 + heightPatch * 2 * GrassZoneConfigs.HEIGHT_PATCH_AMOUNT, 0.2)
 
-			-- Le grossissement de compensation ne touche QUE X et Z. Couvrir le sol est une affaire HORIZONTALE : une
-			-- touffe plus large cache plus de terre, une touffe plus haute ne cache rien de plus et noie le joueur.
-			part.Size = Vector3.new(
-				source.Size.X * scale * densityScale,
-				source.Size.Y * scale * GrassZoneConfigs.HEIGHT_SCALE * heightFactor,
-				source.Size.Z * scale * densityScale
-			)
+				-- Le grossissement de compensation ne touche QUE X et Z. Couvrir le sol est une affaire HORIZONTALE :
+				-- une touffe plus large cache plus de terre, une touffe plus haute ne cache rien de plus et noie le
+				-- joueur.
+				part.Size = Vector3.new(
+					source.Size.X * scale * densityScale,
+					source.Size.Y * scale * GrassZoneConfigs.HEIGHT_SCALE * heightFactor,
+					source.Size.Z * scale * densityScale
+				)
+			end
 
 			-- COULEUR. Teinte de base, eventuellement remplacee par celle de sa bande de tonte.
+			-- Une FLEUR garde exactement la sienne : ni teinte d'herbe, ni tache, ni virage au vert en s'ecrasant.
+			-- Elle s'aplatit et se penche comme le reste, mais elle ne change pas de couleur sous le pied.
 			local color = GrassZoneConfigs.BASE_COLOR
 			-- RAYURES. La bande se decide sur le centre de CASE, pas sur la position finale : sinon l'ecart au hasard
 			-- ferait baver les bandes l'une dans l'autre et on perdrait la ligne nette d'un terrain tondu.
@@ -435,10 +461,19 @@ local function populate(zone: Zone)
 					math.clamp(c.B * tint, 0, 1)
 				)
 			end
-			color = tinted(color)
-			-- La couleur d'ecrasement recoit la MEME tache : sans ca, tout le chemin parcouru virerait a l'aplat
-			-- uniforme et effacerait le relief que les taches viennent de donner.
-			local crushedColor = tinted(GrassZoneConfigs.CRUSHED_COLOR)
+
+			local crushedColor: Color3
+			if isFlower then
+				-- Les deux couleurs sont IDENTIQUES : le melange devient un non-evenement, sans un seul test a
+				-- ajouter dans la boucle par-image.
+				color = source.Color
+				crushedColor = color
+			else
+				color = tinted(color)
+				-- La couleur d'ecrasement recoit la MEME tache : sans ca, tout le chemin parcouru virerait a l'aplat
+				-- uniforme et effacerait le relief que les taches viennent de donner.
+				crushedColor = tinted(GrassZoneConfigs.CRUSHED_COLOR)
+			end
 
 			local surface = part:FindFirstChildOfClass("SurfaceAppearance")
 			if surface and GrassZoneConfigs.STRIPE_ON_SURFACE then
@@ -488,6 +523,10 @@ local function populate(zone: Zone)
 				folder.Parent = zone.part
 			end
 		end
+	end
+
+	if flowersMade > 0 then
+		print(`[GrassZone] "{zone.part.Name}" : {flowersMade} fleur(s) parmi l'herbe.`)
 	end
 
 	if skipped > 0 then
@@ -760,6 +799,20 @@ function GrassZoneController.init()
 			return
 		end
 		template = source
+
+		-- FLEURS. Elles vivent a cote de GrassMesh : on remonte d'un cran depuis son chemin. Aucune n'est trouvee ->
+		-- pas de fleurs, et ce n'est PAS une erreur (une place peut ne pas les avoir).
+		local foliages = source.Parent
+		if foliages then
+			for _, name in ipairs(GrassZoneConfigs.FLOWER_NAMES) do
+				local mesh = foliages:FindFirstChild(name)
+				if mesh and mesh:IsA("BasePart") then
+					flowerTemplates[#flowerTemplates + 1] = mesh
+				else
+					warn(`[GrassZone] Fleur "{name}" introuvable a cote de GrassMesh. Elle ne poussera pas.`)
+				end
+			end
+		end
 
 		local root = resolvePath(workspace, GrassZoneConfigs.ROOT)
 		if not root then

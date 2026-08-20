@@ -89,6 +89,19 @@ local GrassZoneConfigs = {
 	-- comme un objet pose, et son emprise couvre toute la zone : plus une seule touffe. Vecu.
 	CLEAR_MIN_HEIGHT = 0.5,
 
+	-- ===== Fleurs =====
+	-- Des fleurs poussent parmi l'herbe. Ce sont des touffes comme les autres, avec un autre mesh : elles heritent
+	-- donc du vent, de l'ecrasement au passage et de tous les tris de performance, sans une ligne de plus.
+	-- Elles vivent dans le MEME dossier que GrassMesh.
+	FLOWER_NAMES = { "Petal_2", "Petal_4", "Petal_5" },
+	-- Fraction des cases de la grille qui recoivent une fleur au lieu d'une touffe. Volontairement BASSE : une fleur
+	-- qu'on voit partout n'est plus une fleur, c'est un tapis. Monter au-dela de 0.06 et la pelouse devient un pre.
+	FLOWER_CHANCE = 0.025,
+	-- Taille d'une fleur, en fraction de son mesh d'origine. Reglee a part de celle de l'herbe, et SANS la
+	-- compensation de densite : une fleur n'a aucune raison de grossir parce que l'herbe est plus clairsemee.
+	FLOWER_SCALE_MIN = 0.85,
+	FLOWER_SCALE_MAX = 1.3,
+
 	-- ===== Couleur de l'herbe =====
 	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur
 	-- est basse plus c'est sombre.
