@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.227 — La cadence de marche de Papi suit sa vitesse reelle
+
+Papi marchait trop vite : sa vitesse de reference passe de 5 a 3.
+
+Mais baisser la vitesse seule aurait cree un defaut plus visible que celui qu'on corrige : une animation de marche
+gardee a sa cadence d'origine sur un personnage ralenti donne l'impression qu'il PATINE. Les pieds avancent plus vite
+que le corps. L'oeil le voit immediatement, meme sans savoir le nommer.
+
+La cadence de l'animation suit donc la vitesse. WALK_ANIM_REFERENCE (3.5) est la vitesse a laquelle l'animation est
+juste a sa cadence d'origine ; en dessous elle ralentit, au-dessus elle accelere, proportionnellement.
+
+Deux choix qui comptent :
+- la cadence suit la vitesse MESUREE (`AssemblyLinearVelocity`), pas la vitesse demandee. Au demarrage et a l'arret le
+  personnage n'est pas encore, ou plus, a son allure : la cadence monte et redescend avec lui au lieu de claquer ;
+- elle est LISSEE (WALK_ANIM_SMOOTH), et bornee (WALK_ANIM_MIN / MAX) pour qu'un a-coup de physique ne la fasse
+  jamais partir en vrille.
+
+UNE seule boucle Heartbeat accorde tous les PNJ, pas une par PNJ : elle ne fait rien tant qu'aucun ne marche.
+
+Reglage a l'oeil : si les pieds glissent en avant, BAISSER WALK_ANIM_REFERENCE ; s'ils pietinent, la MONTER.
+
 ## 0.0.226 — Papi se promene autour de sa maison
 
 Nouveau NpcWanderService + NpcWanderConfigs. Papi choisit un point au hasard dans sa zone (ZoneWalking), calcule un

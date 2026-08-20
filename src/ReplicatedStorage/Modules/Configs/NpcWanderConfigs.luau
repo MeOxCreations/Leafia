@@ -20,7 +20,7 @@ local NPCS: { Npc } = {
 		zone = "ZoneWalking",
 		idle = "rbxassetid://136244394563436",
 		walk = "rbxassetid://101745125575203",
-		speed = 5,
+		speed = 3,
 	},
 }
 
@@ -40,6 +40,19 @@ local NpcWanderConfigs = {
 	MIN_TRAVEL = 12,
 	-- Nombre de tirages tentes pour trouver un point atteignable avant de laisser tomber ce tour.
 	TARGET_TRIES = 6,
+
+	-- ===== Animation de marche accordee a la vitesse =====
+	-- Vitesse a laquelle l'animation de marche est JUSTE a sa cadence d'origine. En dessous elle est ralentie, au
+	-- dessus acceleree, proportionnellement. Sans ca, un PNJ qui ralentit garde une cadence de pas trop rapide et
+	-- semble PATINER -- l'oeil le voit tout de suite, meme sans savoir le nommer.
+	-- A regler a l'oeil : si les pieds glissent en avant, BAISSER ; s'ils pietinent, MONTER.
+	WALK_ANIM_REFERENCE = 3.5,
+	-- Vitesse a laquelle la cadence rejoint sa cible. La cadence suit la vitesse REELLE, pas la vitesse demandee :
+	-- au demarrage et a l'arret, elle monte et redescend progressivement au lieu de claquer.
+	WALK_ANIM_SMOOTH = 6,
+	-- Bornes de la cadence, pour qu'un a-coup de physique ne fasse jamais partir l'animation en vrille.
+	WALK_ANIM_MIN = 0.35,
+	WALK_ANIM_MAX = 2,
 
 	-- ===== Reglages techniques =====
 	-- Gabarit du personnage, pour que le chemin calcule tienne compte de sa largeur : trop petit et il rase les murs,

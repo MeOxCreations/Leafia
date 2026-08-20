@@ -11,6 +11,7 @@
 
 local PathfindingService = game:GetService("PathfindingService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 
 local NpcWanderConfigs = require(ReplicatedStorage.Modules.Configs.NpcWanderConfigs)
 
@@ -76,7 +77,11 @@ type Walker = {
 	idleTrack: AnimationTrack,
 	walkTrack: AnimationTrack,
 	baseSpeed: number,
+	animSpeed: number, -- cadence courante de la marche, lissee vers la vitesse reelle
 }
+
+-- Tous les promeneurs, pour qu'UNE seule boucle accorde leurs animations au lieu d'une par PNJ.
+local walkers: { Walker } = {}
 
 -- Passe de la pose d'arret a la marche, ou l'inverse. Une seule des deux pistes tourne a la fois : les laisser
 -- toutes les deux jouer les melangerait (a priorite egale, Roblox fait la MOYENNE, il ne choisit pas).
@@ -214,10 +219,34 @@ local function buildWalker(config: NpcWanderConfigs.Npc, deadline: number): Walk
 		idleTrack = idle,
 		walkTrack = walk,
 		baseSpeed = config.speed,
+		animSpeed = 1,
 	}
 end
 
+-- ACCORDE LA CADENCE DE MARCHE A LA VITESSE REELLE, pour tous les promeneurs a la fois.
+-- On lit la vitesse MESUREE (AssemblyLinearVelocity) et pas la vitesse demandee : au demarrage et a l'arret le
+-- personnage n'est pas encore, ou plus, a son allure de croisiere. La cadence monte et redescend donc avec lui, au
+-- lieu de claquer d'un coup a chaque depart.
+local function tuneAnimations(dt: number)
+	for _, walker in ipairs(walkers) do
+		if walker.model.Parent and walker.walkTrack.IsPlaying then
+			local velocity = walker.root.AssemblyLinearVelocity
+			local speed = Vector3.new(velocity.X, 0, velocity.Z).Magnitude
+			local target = math.clamp(
+				speed / NpcWanderConfigs.WALK_ANIM_REFERENCE,
+				NpcWanderConfigs.WALK_ANIM_MIN,
+				NpcWanderConfigs.WALK_ANIM_MAX
+			)
+			walker.animSpeed += (target - walker.animSpeed) * (1 - math.exp(-NpcWanderConfigs.WALK_ANIM_SMOOTH * dt))
+			walker.walkTrack:AdjustSpeed(walker.animSpeed)
+		end
+	end
+end
+
 function NpcWanderService.init()
+	-- UNE seule boucle pour tous les PNJ : elle ne fait rien tant qu'aucun ne marche.
+	RunService.Heartbeat:Connect(tuneAnimations)
+
 	for _, config in ipairs(NpcWanderConfigs.NPCS) do
 		-- UN THREAD PAR PNJ : chacun a son rythme, et rien de tout ca ne doit retarder le boot.
 		task.spawn(function()
@@ -236,6 +265,7 @@ function NpcWanderService.init()
 			})
 
 			setMoving(walker, false)
+			walkers[#walkers + 1] = walker
 			print(`[NpcWander] "{config.model}" se promene dans "{config.zone}".`)
 
 			while walker.model.Parent do
