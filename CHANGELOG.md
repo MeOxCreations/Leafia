@@ -2185,6 +2185,50 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.226 — Papi se promene autour de sa maison
+
+Nouveau NpcWanderService + NpcWanderConfigs. Papi choisit un point au hasard dans sa zone (ZoneWalking), calcule un
+chemin, y va en contournant la maison, les arbres et les haies, puis s'arrete un moment avant de repartir.
+
+### Pas de pathfinding maison
+
+Demande initiale : "un pathfinding custom stylé de ouf naturel". Refusee, et voila pourquoi. PathfindingService
+(Roblox) connait deja tous les obstacles de la map et gere le contournement ; le reecrire couterait des jours pour un
+resultat moins bon.
+
+Surtout, le "naturel" ne vient PAS du calcul de chemin. Un PNJ qui suit un chemin parfait a l'air d'un robot, custom
+ou pas. Ce qui donne la vie est au-dessus, et c'est la que sont les reglages :
+- une PAUSE de duree variable entre deux trajets (PAUSE_MIN / PAUSE_MAX). C'est le reglage le plus important du lot :
+  arriver puis repartir aussitot, toujours au meme rythme, se lit immediatement comme une machine ;
+- une VITESSE differente a chaque trajet (SPEED_VARIATION) ;
+- une distance MINIMALE de trajet (MIN_TRAVEL), sans quoi un tirage tombe parfois a deux pas et le PNJ fait des
+  micro-deplacements qui n'ont l'air de rien.
+
+### Details qui evitent des pannes muettes
+
+- Le point d'arrivee est trouve par un RAYON vers le bas depuis le dessus de la zone : viser le centre en hauteur
+  d'une zone volumineuse donnerait un point flottant, et aucun chemin.
+- Une seule des deux animations tourne a la fois. A priorite EGALE Roblox MELANGE deux pistes au lieu de choisir,
+  d'ou des priorites distinctes (Idle pour l'arret, Movement pour la marche) qui tranchent pendant les fondus.
+- Un seul objet Path, reutilise a chaque trajet.
+- Papi SORT de AmbientAnimConfigs : ce service possede maintenant ses deux animations. Deux services sur le meme
+  Animator finiraient par se battre pour la meme piste (une propriete, un seul ecrivain).
+
+### Ce que le service DIT quand ca ne marche pas
+
+Chaque panne possible a son message nomme, parce qu'aucune ne se devine depuis le symptome ("il ne bouge pas") :
+model introuvable, zone introuvable, zone AVEC collision (elle bloque alors tous les chemins), pas de Humanoid, pas
+d'Animator, animations non chargeables, et surtout **pas de part nommee `HumanoidRootPart`** -- Roblox cherche ce nom
+EXACT pour deplacer un personnage, et sans elle l'animation joue pendant que MoveTo ne fait rien.
+
+### A faire dans Studio
+
+- Renommer la `RootPart` de Papi en `HumanoidRootPart`, et la mettre en PrimaryPart du Model.
+- Aucune part ancree sur lui (l'inverse de ce qu'il fallait pour un PNJ statique).
+- `ZoneWalking` sans collision : sinon elle devient un obstacle et aucun chemin ne passe a l'interieur.
+
+Reste a faire : qu'il REMARQUE le joueur (venir vers lui, le regarder, puis reprendre sa balade).
+
 ## 0.0.225 — Papi ne s'animait pas : il n'etait pas SOUS la racine cherchee
 
 L'animation de Papi ne partait pas. Le modele OldManIdle est pose en enfant DIRECT du Workspace, pas sous

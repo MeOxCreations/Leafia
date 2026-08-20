@@ -34,6 +34,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- Animations d'ambiance (plantes + PNJ qui respirent, dont Papi). Ici AUSSI : les IDs sont dans la config (donc
 	-- synces par Rojo), il n'y a rien a recopier dans cette place. Ordre indifferent.
 	require(script.AmbientAnimService).init()
+	-- Papi se promene autour de sa maison. Apres AmbientAnimService, dont il ne depend pas, mais qui ne doit PLUS
+	-- piloter son Animator : c'est ce service qui possede ses deux animations.
+	require(script.NpcWanderService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end
@@ -132,6 +135,12 @@ GrassService.init()
 -- il ne fait que balayer la map.
 local AmbientAnimService = require(script.AmbientAnimService)
 AmbientAnimService.init()
+
+-- PNJ qui se promenent (Papi autour de sa maison). Le chemin vient de PathfindingService, qui connait deja les
+-- obstacles de la map. Ce service POSSEDE les animations de ses PNJ : AmbientAnimService ne doit pas les toucher,
+-- deux ecrivains sur le meme Animator finiraient par se battre. Ordre indifferent.
+local NpcWanderService = require(script.NpcWanderService)
+NpcWanderService.init()
 
 -- Console admin : recoit les commandes tapees (remote Admin/AdminCommand), verifie l'acces et dispatche vers les
 -- services (Currency, Experience, Data). En dernier : il APPELLE ces services au moment des commandes, pas a l'init.

@@ -15,7 +15,8 @@
 local ANIMATIONS: { [string]: string } = {
 	Bush1 = "rbxassetid://78047203094778",
 	Tree1 = "rbxassetid://130136106070231",
-	OldManIdle = "rbxassetid://136244394563436", -- Papi, respiration sur place
+	-- Papi n'est PLUS ici : il se promene, donc NpcWanderService pilote ses deux animations (idle ET marche).
+	-- Deux services sur le meme Animator finiraient par se battre pour la meme piste.
 }
 
 local AmbientAnimConfigs = {
