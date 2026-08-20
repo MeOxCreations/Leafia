@@ -2,15 +2,19 @@
 
 ## Le jeu en une phrase
 
-Le joueur est **paysagiste**. Il va chez des clients, taille des haies et des arbustes, repart avec un cheque,
-et fait grandir son entreprise — seul ou en CO-OP.
+Le joueur est **paysagiste**. Il va chez des clients, **tond leur pelouse**, taille leurs haies, repart avec un
+cheque, et fait grandir son entreprise — seul ou en CO-OP.
 
 ## LA REGLE D'OR DE CE PROJET
 
-**Le geste de tailler doit etre jouissif AVANT qu'on code quoi que ce soit d'autre.**
+**Le geste de TONDRE doit etre jouissif AVANT qu'on code quoi que ce soit d'autre.**
 
-Pas d'UI, pas de tycoon, pas de coop, pas de monetisation, pas de sauvegarde tant que tailler une haie et voir
-la forme changer ne donne pas envie d'en tailler une deuxieme.
+La TONTE est le geste central du jeu. C'est par elle que le joueur commence, c'est elle qu'il repetera le plus, et
+c'est elle qui doit donner envie de faire un deuxieme jardin. La taille de haie reste dans le jeu, mais comme
+**chantier SECONDAIRE** : un autre outil, une autre mission, pas le coeur.
+
+Pas d'UI, pas de tycoon, pas de coop, pas de monetisation, pas de sauvegarde tant que passer la tondeuse et voir la
+pelouse devenir nette ne donne pas envie d'en tondre une deuxieme.
 
 Cette regle vient de deux echecs reels (Bird Game, League Of BattleCar). Dans les deux cas le meme motif : un
 probleme au coeur du jeu, recouvert par des interfaces de plus en plus soignees, et une retention au sol. Les
@@ -18,8 +22,12 @@ interfaces etaient belles. Elles n'ont jamais rien repare.
 
 **Si l'assistant voit qu'on ajoute une feature alors que le coeur n'est pas valide, il doit le dire.**
 
-Corollaire : le test n'est pas "est-ce que ca marche" mais "est-ce que trois personnes reelles en retaillent
-une deuxieme sans qu'on leur demande". Tant que la reponse est non, on ne construit pas par-dessus.
+Corollaire : le test n'est pas "est-ce que ca marche" mais "est-ce que trois personnes reelles en tondent une
+deuxieme sans qu'on leur demande". Tant que la reponse est non, on ne construit pas par-dessus.
+
+Note de bascule (20/08/2026) : la regle visait la TAILLE jusqu'ici. Le joueur a tranche que la tonte passe devant.
+Consequence directe : le systeme d'herbe de zone (touffes qui s'ecrasent et RESTENT couchees) n'est plus de
+l'habillage, c'est le substrat du geste central.
 
 ## Comportement assistant
 

@@ -41,8 +41,8 @@ local FADE_IN = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.
 local LEAF_POP = TweenInfo.new(0.9, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
 
 -- Fermeture en 2 temps, en TRANSPARENCE pure : d'abord le CONTENU (la feuille), PUIS le fond. Puis destruction.
-local CONTENT_FADE = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-local FOND_FADE = TweenInfo.new(0.45, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+local CONTENT_FADE = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local FOND_FADE = TweenInfo.new(0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
 
 local gui: ScreenGui? = nil
 local curtain: CanvasGroup? = nil

@@ -59,6 +59,10 @@ local LOADING_MIN = 10.5
 -- brutale, et un rideau qui parait beaucoup trop court. Ce delai-la, lui, couvre TOUJOURS la mise en place du
 -- personnage, quelle que soit sa duree. Les deux se cumulent : on part au plus tard des deux.
 local LOADING_AFTER_CHARACTER = 5
+-- Temps pendant lequel le rideau reste seul a l'ecran AVANT qu'on demande au serveur ou aller.
+-- Sur le chemin TELEPORT (nouvelle save -> tuto), le rideau n'a pas de fin a lui : la bascule de lieu le remplace.
+-- Sans cette attente il n'aurait que le temps de son fondu d'entree, on ne verrait passer que la feuille.
+local START_HOLD = 4
 -- Valeurs MESUREES sur l'etat de repos reel de la camera de jeu (Custom) : le tween doit finir la pour que Custom
 -- n'ait RIEN a corriger au handoff (ni zoom, ni saut). Important : Custom REMET sa propre inclinaison au repos
 -- (~15 deg), il ne garde PAS celle qu'on lui donne -- d'ou l'obligation de finir deja a cette inclinaison.
@@ -666,6 +670,9 @@ local function setup(gui: ScreenGui)
 					task.delay(LoadingOverlay.showTime, function()
 						-- Le rideau est OPAQUE : on ferme le menu (invisible dessous) puis on demande au serveur ou aller.
 						LoadCompanyController.close()
+						-- On LAISSE LE RIDEAU VIVRE avant de partir. Cote teleport, la bascule de lieu le remplace des
+						-- que le serveur repond : sans cette pause, il disparait avant d'avoir ete vu.
+						task.wait(START_HOLD)
 						-- Le SERVEUR decide : nouvelle save (tuto pas fini) -> il nous teleporte au didacticiel ; sinon on entre
 						-- dans le jeu ici (transition camera). En Studio le teleport echoue cote serveur -> reponse "game".
 						local action = "game"
