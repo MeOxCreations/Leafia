@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.245 — REGLE : tout texte vu par le joueur s'ecrit en ANGLAIS
+
+Regle posee par le joueur, et elle vaut pour tout le projet : dialogues, notifications, boutons, titres, messages
+d'erreur. Raison : le traducteur automatique de Roblox part de l'ANGLAIS. Un texte ecrit en francais n'est traduit
+nulle part -- il reste en francais pour la quasi-totalite des joueurs de la plateforme.
+
+Ecrite dans CLAUDE.md, section Contenu joueur. Les COMMENTAIRES de code, eux, restent en francais.
+
+Appliquee tout de suite aux deux textes que la regle invalidait : le message d'escabeau ("Too high! You need a
+stepladder to trim the top.") et le dialogue d'ouverture de Papi, traduit en entier. Vocabulaire garde volontairement
+simple : le public est jeune, et un mot qu'on ne comprend pas casse l'immersion aussi surement qu'une faute.
+
+Deux autres corrections du meme passage :
+- le repere de coupe devient nettement plus discret (transparences 0.8 -> 0.92 en visee, 0.7 -> 0.85 en coupe). Il
+  doit indiquer, pas masquer ce qu'on taille ;
+- la notification d'escabeau passe en "Warning" (rouge). Elle utilisait "warn", qui ne correspond a AUCUNE cle de
+  KIND_COLORS : le toast s'affichait donc sans sa couleur, en silence. Un nom de cle inexistant ne leve rien, il
+  retombe sur le defaut -- c'est le genre de faute qui ne se voit qu'a l'oeil.
+
 ## 0.0.244 — Deplacer une haie refait le semis d'herbe sous elle
 
 L'herbe poussait au travers d'une haie qu'on venait de redimensionner. L'emprise des objets poses fonctionnait bien

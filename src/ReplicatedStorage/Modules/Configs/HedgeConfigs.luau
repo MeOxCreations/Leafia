@@ -1134,15 +1134,17 @@ local HedgeConfigs = {
 	TOP_VISUAL_ALWAYS_FLAT = true,
 	-- Message quand on tente de couper un dessus hors d'atteinte. Le joueur voit son repere bien pose et clique :
 	-- sans un mot, il croit que la coupe est cassee.
-	TOP_NEEDS_LADDER_TEXT = "Trop haut ! Il te faut un escabeau pour tailler le dessus.",
+	-- EN ANGLAIS : tout texte vu par le joueur l'est, pour que le traducteur automatique de Roblox le prenne en
+	-- charge. Voir CLAUDE.md, section Contenu joueur.
+	TOP_NEEDS_LADDER_TEXT = "Too high! You need a stepladder to trim the top.",
 	-- Delai mini entre deux affichages de ce message : cliquer trois fois de suite ne doit pas empiler trois toasts.
 	TOP_NEEDS_LADDER_COOLDOWN = 3,
 	-- (anciens etats guide/coupe, gardes pour la transparence ; la couleur vient maintenant de la matiere ci-dessus)
-	VISUAL_CUT_GUIDE_TRANSPARENCY = 0.8,
-	VISUAL_CUT_CUT_TRANSPARENCY = 0.7,
+	VISUAL_CUT_GUIDE_TRANSPARENCY = 0.92,
+	VISUAL_CUT_CUT_TRANSPARENCY = 0.85,
 	-- HORS HAIE : rare (souris sortie -> le repere est deja cache). Orange d'avertissement, au cas ou.
 	VISUAL_CUT_OFF_COLOR = Color3.fromRGB(255, 140, 20),
-	VISUAL_CUT_OFF_TRANSPARENCY = 0.8,
+	VISUAL_CUT_OFF_TRANSPARENCY = 0.92,
 	-- Epaisseur du disque le long de la normale (fin = plaque contre la surface). Le diametre, lui, est CALCULE
 	-- pour couvrir la coupe (longueur de lame + largeur taillee).
 	VISUAL_CUT_THICKNESS = 0.15,

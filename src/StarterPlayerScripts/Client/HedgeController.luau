@@ -2150,7 +2150,7 @@ function HedgeController.init()
 			-- mot, il conclut que la coupe est cassee. Cadence limitee : trois clics ne font pas trois messages.
 			if topOutOfReach and os.clock() - lastLadderHintClock > HedgeConfigs.TOP_NEEDS_LADDER_COOLDOWN then
 				lastLadderHintClock = os.clock()
-				Toast.show("warn", HedgeConfigs.TOP_NEEDS_LADDER_TEXT)
+				Toast.show("Warning", HedgeConfigs.TOP_NEEDS_LADDER_TEXT)
 			end
 			local character = player.Character
 			local ladderTrim = character ~= nil

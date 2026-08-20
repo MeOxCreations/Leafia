@@ -85,36 +85,38 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 		end
 		task.wait(3) -- puis 3 s avant d'afficher le dialogue
 		Dialogue.play({
-			{ speaker = "Papi", emotion = "wink", text = "Ah, te voila " .. plr.DisplayName .. " ! Je savais que tu viendrais." },
+			-- EN ANGLAIS, comme tout texte vu par le joueur : le traducteur automatique de Roblox part de l'anglais.
+			-- Vocabulaire simple : le public est jeune, et une phrase qu'on ne comprend pas casse l'immersion.
+			{ speaker = "Papi", emotion = "wink", text = "There you are, " .. plr.DisplayName .. "! I knew you'd come." },
 			{
 				speaker = "Papi",
 				emotion = "happy",
-				text = "Regarde. Mon vieux taille-haie. Il a coupe plus de haies que tu peux en compter.",
+				text = "Look at this. My old hedge trimmer. It has cut more hedges than you can count.",
 			},
 			{
 				speaker = "Papi",
 				emotion = "sad",
-				text = "Moi je peux plus m'en servir. Mon dos me fait trop mal.",
+				text = "I can't use it anymore. My back hurts too much.",
 			},
 			{
 				speaker = "Papi",
 				emotion = "sad",
-				text = "Et mes clients sont tous partis. Leurs jardins sont a l'abandon.",
+				text = "And all my customers are gone. Their gardens are a mess now.",
 			},
 			{
 				speaker = "Papi",
 				emotion = "normal",
-				text = "Alors je te donne mon entreprise. Les outils, les clients, tout.",
+				text = "So I am giving you my business. The tools, the customers, everything.",
 			},
 			{
 				speaker = "Papi",
 				emotion = "happy",
-				text = "Commence par cette haie-la. Montre-moi ce que tu sais faire.",
+				text = "Start with that hedge over there. Show me what you can do.",
 			},
 			{
 				speaker = "Papi",
 				emotion = "wink",
-				text = "Et fais pas honte a mon nom, petit !",
+				text = "And don't make me look bad, kid!",
 			},
 		})
 	end)

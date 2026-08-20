@@ -716,6 +716,10 @@ donc ils ne sont jamais ecrases.
 
 ## Contenu joueur (textes affiches)
 
+- **TOUT texte vu par le joueur s'ecrit en ANGLAIS.** Dialogues, notifications, boutons, titres, messages d'erreur :
+  tout. Raison : le traducteur automatique de Roblox part de l'anglais. Un texte ecrit en francais n'est traduit
+  nulle part, et le jeu devient illisible pour la quasi-totalite des joueurs de la plateforme.
+  Les COMMENTAIRES de code, eux, restent en francais (voir la section Commentaires).
 - **Ne jamais citer de noms de jeux connus.** Formulations generiques.
 - **Le public, c'est des ENFANTS (Roblox).** Vocabulaire simple, mots du quotidien. Eviter les termes d'adulte qu'un
   gosse ne connait pas (ex : "retraite", "releve", jargon). Dans le doute, dire la chose CONCRETEMENT (ex : "trop vieux,
