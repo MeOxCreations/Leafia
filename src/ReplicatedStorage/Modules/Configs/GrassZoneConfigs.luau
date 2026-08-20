@@ -82,6 +82,19 @@ local GrassZoneConfigs = {
 	-- comme un objet pose, et son emprise couvre toute la zone : plus une seule touffe. Vecu.
 	CLEAR_MIN_HEIGHT = 0.5,
 
+	-- ===== Couleur de l'herbe =====
+	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur
+	-- est basse plus c'est sombre.
+	BASE_COLOR = Color3.fromRGB(173, 184, 124),
+	-- TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin.
+	-- Sans elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint. Le bruit de
+	-- Perlin donne de vraies ZONES ; un tirage au hasard par touffe donnerait du poivre et sel, ce qui est pire que
+	-- rien.
+	-- Calculees UNE fois a la pose, a partir de la position monde : aucun cout en jeu, et deux touffes voisines
+	-- appartiennent bien a la meme tache.
+	PATCH_SCALE = 0.06, -- taille des taches. Plus BAS = taches plus LARGES (0.06 = des zones d'environ 15 studs)
+	PATCH_AMOUNT = 0.14, -- ecart de clarte maxi, en fraction. Monter au-dela de 0.25 fait tacheter, pas nuancer.
+
 	-- ===== Rayures de tonte (facon terrain de foot) =====
 	-- COUPEES, et c'est un choix de conception, pas un abandon.
 	-- Sur un vrai terrain, les bandes claires et sombres ne sont pas peintes : elles viennent du SENS dans lequel la

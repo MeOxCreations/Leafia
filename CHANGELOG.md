@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.234 — L'herbe retrouve sa couleur, et se couvre de taches
+
+Regression de 0.0.232 : en coupant les rayures, j'ai coupe LA SEULE CHOSE qui donnait sa couleur a l'herbe. Elle
+retombait sur la teinte grise du mesh source -- une pelouse blanche.
+
+La teinte de base est desormais un reglage a part (BASE_COLOR), independant des rayures. Ces dernieres, quand elles
+sont actives, la remplacent ; quand elles ne le sont pas, elle s'applique seule. Faire porter une couleur de base par
+une feature optionnelle etait le vrai defaut : couper l'option ne devait pas repeindre la pelouse.
+
+TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin (PATCH_SCALE, PATCH_AMOUNT). Sans
+elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint.
+
+Deux choix :
+- du bruit de PERLIN, pas un tirage au hasard par touffe. Le hasard pur donne du poivre et sel, ce qui est pire que
+  rien ; Perlin donne de vraies ZONES, ce que l'oeil lit comme de la matiere ;
+- le bruit se lit sur la position MONDE, pas sur la case de la grille. Deux touffes voisines tombent donc dans la
+  meme tache, et les zones traversent les bords des zones d'herbe sans qu'on voie la couture.
+
+Calcule UNE fois a la pose : aucun cout en jeu. L'assombrissement au passage du joueur s'applique par-dessus, sur la
+couleur tachee, donc la trace garde la nuance locale.
+
 ## 0.0.233 — Le joueur spawn FACE a la maison du grand-pere
 
 Le didacticiel posait le joueur au bon endroit mais dans un sens quelconque : il pouvait tres bien arriver dos a la

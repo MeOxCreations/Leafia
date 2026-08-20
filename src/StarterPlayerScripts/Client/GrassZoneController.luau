@@ -405,17 +405,31 @@ local function populate(zone: Zone)
 				source.Size.Z * scale * densityScale
 			)
 
+			-- COULEUR. Teinte de base, eventuellement remplacee par celle de sa bande de tonte.
+			local color = GrassZoneConfigs.BASE_COLOR
 			-- RAYURES. La bande se decide sur le centre de CASE, pas sur la position finale : sinon l'ecart au hasard
 			-- ferait baver les bandes l'une dans l'autre et on perdrait la ligne nette d'un terrain tondu.
 			if GrassZoneConfigs.STRIPE_ENABLED then
 				local band = math.floor((cellX * STRIPE_COS + cellZ * STRIPE_SIN) / GrassZoneConfigs.STRIPE_WIDTH) % 2
-				local color = if band == 0 then GrassZoneConfigs.STRIPE_COLOR_A else GrassZoneConfigs.STRIPE_COLOR_B
-				local surface = part:FindFirstChildOfClass("SurfaceAppearance")
-				if surface and GrassZoneConfigs.STRIPE_ON_SURFACE then
-					surface.Color = color
-				else
-					part.Color = color
-				end
+				color = if band == 0 then GrassZoneConfigs.STRIPE_COLOR_A else GrassZoneConfigs.STRIPE_COLOR_B
+			end
+
+			-- TACHES. Le bruit se lit sur la position MONDE, donc deux touffes voisines tombent dans la meme tache et
+			-- les zones traversent les bords de la grille sans se voir. Calcule une fois ici, jamais en jeu.
+			local patchScale = GrassZoneConfigs.PATCH_SCALE
+			local patch = math.noise(basePos.X * patchScale, basePos.Z * patchScale, 0)
+			local tint = 1 + patch * 2 * GrassZoneConfigs.PATCH_AMOUNT -- math.noise rend environ [-0.5, 0.5]
+			color = Color3.new(
+				math.clamp(color.R * tint, 0, 1),
+				math.clamp(color.G * tint, 0, 1),
+				math.clamp(color.B * tint, 0, 1)
+			)
+
+			local surface = part:FindFirstChildOfClass("SurfaceAppearance")
+			if surface and GrassZoneConfigs.STRIPE_ON_SURFACE then
+				surface.Color = color
+			else
+				part.Color = color
 			end
 
 			local clump: Clump = {
