@@ -191,9 +191,10 @@ local GrassZoneConfigs = {
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
 	CRUSH_RADIUS = 4.5,
 	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur.
-	-- 0.9 = la touffe descend a 10 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
-	-- Au-dela de 0.95 elle devient une lamelle collee au sol : on ne voit plus qu'elle a ete de l'herbe.
-	CRUSH_SQUASH = 0.9,
+	-- 0.96 = la touffe descend a 4 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
+	-- Volontairement tres marque : a ce niveau elle est ecrasee au sol, ce qui rend le passage evident. La limite
+	-- reste 1.0, ou elle disparaitrait completement -- garder une marge pour qu'on voie encore de l'herbe.
+	CRUSH_SQUASH = 0.96,
 	-- COULEUR DE L'HERBE ECRASEE. La touffe glisse en douceur de BASE_COLOR vers celle-ci quand on marche dessus, et
 	-- revient quand elle se releve. Deux couleurs choisies plutot qu'un pourcentage d'assombrissement : on regle ce
 	-- qu'on voit, et rien n'empeche de faire une trace plus CLAIRE que l'herbe -- c'est d'ailleurs ce que fait une
