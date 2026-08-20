@@ -162,6 +162,16 @@ local GrassZoneConfigs = {
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,
 	RECOVER_SPEED = 3.5,
+	-- TRACE. L'herbe RESTE couchee la ou on a marche : un chemin se dessine derriere le joueur.
+	-- Fraction de l'inclinaison maximale que le passage laisse DEFINITIVEMENT. 1 = elle reste aussi couchee que sous
+	-- le pied, 0 = elle se releve entierement (l'ancien comportement, sans trace).
+	-- Ce niveau ne fait que MONTER : repasser au meme endroit ne releve rien, et s'eloigner ne l'efface pas. Il sert
+	-- de PLANCHER a l'ecrasement elastique, qui garde son coup sec sous le pied par-dessus.
+	FLATTEN_AMOUNT = 0.8,
+	-- Vitesse a laquelle la trace s'efface, en fraction par seconde. 0 = elle ne s'efface JAMAIS.
+	-- 0.02 fait disparaitre une trace en une cinquantaine de secondes.
+	FLATTEN_RECOVER = 0,
+
 	-- En dessous de cet ecart (radians) on CLE l'angle sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.
 	SNAP_EPSILON = 0.001,

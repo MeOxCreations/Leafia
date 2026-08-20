@@ -65,6 +65,7 @@ type Clump = {
 	restTilt: number, -- inclinaison AU REPOS (radians) : une herbe parfaitement droite se lit comme du faux
 	tiltDir: Vector3, -- direction horizontale de la bascule en cours
 	tilt: number, -- angle d'ecrasement courant, en radians
+	flattened: number, -- TRACE : couchage permanent (0 a 1). Ne fait que monter, et sert de plancher a `tilt`.
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
 	lastTilt: number, -- dernier angle REELLEMENT ecrit : sert a ne pas reecrire une touffe lointaine immobile
 }
@@ -415,6 +416,7 @@ local function populate(zone: Zone)
 				restTilt = restTilt,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				tilt = restTilt,
+				flattened = 0,
 				windPhase = windPhase,
 				lastTilt = restTilt,
 			}
@@ -521,12 +523,19 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			end
 		end
 
-		-- La cible retombe sur l'inclinaison de REPOS, pas sur zero : sinon le passage du joueur "repasserait" l'herbe
-		-- parfaitement droite derriere lui, ce qui se voit comme un couloir trop propre.
-		local target = if best > 0 then math.max(best * MAX_ANGLE, clump.restTilt) else clump.restTilt
+		-- TRACE. Le passage laisse un couchage PERMANENT. On ne garde que le maximum jamais atteint : repasser au
+		-- meme endroit ne releve rien, et s'eloigner ne l'efface pas.
 		if best > 0 then
+			clump.flattened = math.max(clump.flattened, best * GrassZoneConfigs.FLATTEN_AMOUNT)
+			-- La direction est celle du DERNIER passage : la trace garde le sens du pas qui l'a faite.
 			clump.tiltDir = bestDir
+		elseif GrassZoneConfigs.FLATTEN_RECOVER > 0 then
+			clump.flattened = math.max(0, clump.flattened - GrassZoneConfigs.FLATTEN_RECOVER * dt)
 		end
+
+		-- La cible est le PLUS COUCHE des trois : le pied en cours, la trace laissee, et l'inclinaison de repos.
+		-- Quand le pied repart, l'herbe remonte donc jusqu'a la TRACE et s'y arrete, pas jusqu'a la verticale.
+		local target = math.max(best * MAX_ANGLE, clump.flattened * MAX_ANGLE, clump.restTilt)
 
 		-- Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui fait lire le poids.
 		local speed = if target > clump.tilt then GrassZoneConfigs.CRUSH_SPEED else GrassZoneConfigs.RECOVER_SPEED

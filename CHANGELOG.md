@@ -2185,6 +2185,32 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.223 — L'herbe RESTE couchee la ou on a marche
+
+Un chemin se dessine derriere le joueur. C'est la premiere fois que le monde GARDE la trace d'un geste : jusqu'ici
+tout revenait a son etat d'avant.
+
+Deux effets SEPARES, et c'est la separation qui fait tout marcher :
+- l'ecrasement ELASTIQUE, inchange, garde son coup sec sous le pied ;
+- par-dessus, un couchage PERMANENT (`flattened`, 0 a 1) qui ne fait que MONTER.
+
+La cible d'inclinaison devient le plus couche des trois : le pied en cours, la trace deja laissee, l'inclinaison de
+repos. Quand le pied repart, l'herbe remonte donc jusqu'a la TRACE et s'y arrete, au lieu de revenir droite. On garde
+le ressort ou il sert (le contact) sans qu'il efface ce qu'on veut retenir.
+
+Le niveau ne descend jamais tout seul : repasser au meme endroit ne releve rien, s'eloigner ne l'efface pas. La
+direction gardee est celle du DERNIER passage, donc la trace suit le sens du pas.
+
+FLATTEN_AMOUNT (0.8) regle a quel point la trace reste couchee ; 0 rend l'ancien comportement sans trace.
+FLATTEN_RECOVER (0) permet de la faire disparaitre lentement si on prefere -- 0.02 l'efface en une cinquantaine de
+secondes.
+
+Cout : nul. Une touffe couchee atteint sa cible et cesse d'etre reecrite, exactement comme une touffe au repos. Le
+tassement vertical et l'extinction du vent suivent d'eux-memes, puisqu'ils sont deja tires de l'angle d'ecrasement.
+
+A savoir : la trace est LOCALE, comme tout ce systeme. Un chemin trace pendant qu'un autre joueur etait loin
+n'existera pas chez lui. Sans importance pour du decor ; a revoir le jour ou la tonte devra etre partagee.
+
 ## 0.0.222 — L'herbe ne grandit plus quand on baisse la densite
 
 Personnage completement noye dans l'herbe apres le passage a DENSITY 0.2.
