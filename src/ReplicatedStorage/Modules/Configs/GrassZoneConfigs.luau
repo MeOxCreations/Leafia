@@ -223,6 +223,12 @@ local GrassZoneConfigs = {
 	-- La montee, elle, reste commune (RECOVER_SPEED) : rien ne gagne a ce que la touffe se redresse en deux temps.
 	-- Monter cette valeur vers CRUSH_SPEED efface le decalage ; la baisser retarde encore le tassement.
 	SQUASH_SPEED = 8,
+	-- Vitesse a laquelle la COULEUR revient a la normale une fois le joueur parti. Volontairement RAPIDE : le
+	-- changement de teinte est un effet de PASSAGE, pas une trace. La touffe reste couchee derriere le joueur, mais
+	-- elle reprend sa couleur des qu'il n'est plus dessus.
+	-- Elle suit donc le CONTACT seul, sans le plancher de l'ecrasement permanent -- sinon elle ne pourrait jamais
+	-- revenir, ce plancher ne redescendant pas.
+	COLOR_RECOVER_SPEED = 7,
 	-- Volontairement LENT : c'est la remontee qu'on regarde. Une herbe qui se redresse doucement derriere le joueur
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	RECOVER_SPEED = 1.8,

@@ -66,11 +66,13 @@ type Clump = {
 	lastDarken: number, -- dernier melange REELLEMENT ecrit
 	tiltDir: Vector3, -- sens du DERNIER passage : c'est la direction dans laquelle la touffe penche
 	crush: number, -- ECRASEMENT courant (0 = debout, 1 = a fond). Reagit VITE : c'est lui qui donne l'inclinaison.
-	squashCrush: number, -- le meme, mais qui TRAINE derriere : c'est lui qui donne le tassement et l'assombrissement.
+	squashCrush: number, -- le meme, mais qui TRAINE derriere : c'est lui qui donne le tassement.
+	colorCrush: number, -- suit le CONTACT SEUL, sans la trace permanente : la couleur revient quand on s'en va.
 	flattened: number, -- TRACE : ecrasement permanent (0 a 1). Ne fait que monter, et sert de plancher a `crush`.
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
 	lastCrush: number, -- dernier etat REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
 	lastSquashCrush: number, -- idem pour la valeur retardee : elle peut bouger alors que l'autre est deja posee
+	lastColorCrush: number, -- idem pour la couleur, qui redescend alors que les deux autres restent en place
 }
 
 -- Un PAVE : un paquet de touffes voisines, teste EN BLOC. C'est lui l'unite de travail de la boucle, pas la touffe.
@@ -499,10 +501,12 @@ local function populate(zone: Zone)
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
 				crush = 0,
 				squashCrush = 0,
+				colorCrush = 0,
 				flattened = 0,
 				windPhase = windPhase,
 				lastCrush = 0,
 				lastSquashCrush = 0,
+				lastColorCrush = 0,
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
@@ -643,7 +647,17 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			clump.squashCrush = target
 		end
 
-		if clump.crush ~= target or clump.squashCrush ~= target then
+		-- COULEUR : elle vise le CONTACT SEUL (`best`), pas la cible commune. C'est ce qui la rend passagere -- la
+		-- cible commune inclut la trace permanente, qui ne redescend jamais, donc la couleur ne reviendrait jamais.
+		local colorSpeed = if best > clump.colorCrush
+			then GrassZoneConfigs.CRUSH_SPEED
+			else GrassZoneConfigs.COLOR_RECOVER_SPEED
+		clump.colorCrush += (best - clump.colorCrush) * (1 - math.exp(-colorSpeed * dt))
+		if math.abs(best - clump.colorCrush) < GrassZoneConfigs.SNAP_EPSILON then
+			clump.colorCrush = best
+		end
+
+		if clump.crush ~= target or clump.squashCrush ~= target or clump.colorCrush ~= best then
 			moving += 1
 		end
 
@@ -687,7 +701,12 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
 		-- On compare les DEUX valeurs : la lente peut encore bouger alors que la rapide est deja posee.
-		if windScale > 0 or clump.crush ~= clump.lastCrush or clump.squashCrush ~= clump.lastSquashCrush then
+		if
+			windScale > 0
+			or clump.crush ~= clump.lastCrush
+			or clump.squashCrush ~= clump.lastSquashCrush
+			or clump.colorCrush ~= clump.lastColorCrush
+		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
 			-- Au moment du pas l'ecart est maximal ; une fois le lent arrive, il est NUL et la touffe est droite.
 			-- Ecrire ca en (1 - tassement) laissait un residu permanent : le tassement plafonne a FLATTEN_AMOUNT a
@@ -696,9 +715,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			if target > 1e-3 then
 				tilt = TILT_ANGLE * math.clamp((clump.crush - clump.squashCrush) / target, 0, 1)
 			end
-			apply(clump, wind, squash * gustSquash, tilt, clump.squashCrush)
+			apply(clump, wind, squash * gustSquash, tilt, clump.colorCrush)
 			clump.lastCrush = clump.crush
 			clump.lastSquashCrush = clump.squashCrush
+			clump.lastColorCrush = clump.colorCrush
 		end
 	end
 

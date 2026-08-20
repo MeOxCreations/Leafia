@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.240 — Le changement de couleur devient un PASSAGE
+
+La teinte d'herbe ecrasee ne revenait jamais. Elle suivait l'ecrasement commun, qui a pour plancher la trace
+PERMANENTE (FLATTEN_AMOUNT) : ce plancher ne redescend pas, donc la couleur restait changee pour toujours.
+
+Demande du joueur, et elle est juste : le changement de teinte est un effet de PASSAGE, pas une trace. L'herbe reste
+couchee derriere lui -- ca, c'est la trace -- mais elle reprend sa couleur des qu'il n'est plus dessus.
+
+La couleur suit donc une TROISIEME valeur lissee, qui vise le CONTACT SEUL au lieu de la cible commune, avec sa
+propre vitesse de retour (COLOR_RECOVER_SPEED, 7 : rapide).
+
+Trois grandeurs maintenant, une par ressenti, et c'est le decoupage qui rend chacun reglable seul :
+- `crush` : rapide, donne l'INCLINAISON (par son ecart avec la suivante) ;
+- `squashCrush` : lent, donne le TASSEMENT, et garde la trace permanente ;
+- `colorCrush` : contact seul, donne la COULEUR, et revient vite.
+
+Meme raisonnement qu'a chaque fois cette semaine : quand une valeur unique doit produire des comportements qui
+divergent, on la dedouble plutot que de chercher un compromis. Ici la divergence etait totale -- l'un doit RESTER,
+l'autre doit PARTIR.
+
 ## 0.0.239 — Des fleurs poussent parmi l'herbe
 
 Idee du joueur. Trois meshes de fleurs (Petal_2, Petal_4, Petal_5) apparaissent ca et la dans les pelouses.
