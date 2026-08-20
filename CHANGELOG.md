@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.233 — Le joueur spawn FACE a la maison du grand-pere
+
+Le didacticiel posait le joueur au bon endroit mais dans un sens quelconque : il pouvait tres bien arriver dos a la
+maison, et rater la premiere chose qu'il devrait voir.
+
+L'orientation de la part de spawn etait ignoree VOLONTAIREMENT, pour ne pas coucher le joueur si elle etait posee de
+travers. La correction ne consiste donc pas a reprendre la CFrame entiere -- ce qui aurait exactement produit ce
+degat -- mais a n'en garder que le CAP, la rotation autour de la verticale, et a jeter l'inclinaison.
+
+Meme operation que pour redresser un PNJ penche (`scripts/studio/RedresserPnj`). Elle revient assez souvent pour
+etre notee : quand on veut le SENS d'une reference sans son assiette, on projette sur la verticale, on ne copie pas.
+
+### A faire dans Studio
+
+Tourner la part `RootSpawnPlayer` pour que sa FACE AVANT regarde la maison. C'est elle qui donne desormais la
+direction du regard au spawn, y compris apres une mort.
+
 ## 0.0.232 — Les rayures peintes disparaissent, elles naitront de la TONTE
 
 Deux reglages, dont un qui est une decision de conception.

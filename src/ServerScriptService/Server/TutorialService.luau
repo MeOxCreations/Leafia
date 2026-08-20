@@ -1,5 +1,5 @@
 --!strict
--- DIDACTICIEL (place Tutorial uniquement). Pour l'instant : place le joueur au bon endroit. Le spawn par defaut
+-- DIDACTICIEL (place Tutorial uniquement). Pour l'instant : place le joueur au bon endroit ET DANS LE BON SENS. Le spawn par defaut
 -- (SpawnLocationOriginal) est SOUS la map -- il sert au flow de la place principale (selection de plot). Ici on repose
 -- le perso sur RootSpawnPlayer a CHAQUE spawn (mort comprise). Le deplacement se fait derriere le rideau de chargement,
 -- donc invisible. La 1re haie guidee viendra s'ajouter ici plus tard.
@@ -34,8 +34,13 @@ local function placeCharacter(character: Model)
 		warn(`[Tutorial] Point de spawn introuvable : Workspace.{table.concat(SPAWN_PATH, ".")}`)
 		return
 	end
-	-- Position seule (droit) : on ignore l'orientation de la part pour ne pas coucher le joueur si elle est tournee.
-	character:PivotTo(CFrame.new(spawn.Position + Vector3.new(0, SPAWN_HEIGHT, 0)))
+	-- On garde le CAP de la part (sa rotation autour de la verticale) et on JETTE son inclinaison : le joueur regarde
+	-- donc dans le sens ou la part est tournee -- vers la maison du grand-pere -- sans risquer d'etre couche si elle
+	-- est posee de travers. Reprendre la CFrame entiere ferait exactement ce degat.
+	local _, yaw = spawn.CFrame:ToEulerAnglesYXZ()
+	character:PivotTo(
+		CFrame.new(spawn.Position + Vector3.new(0, SPAWN_HEIGHT, 0)) * CFrame.fromEulerAnglesYXZ(0, yaw, 0)
+	)
 end
 
 local function onPlayerAdded(player: Player)
