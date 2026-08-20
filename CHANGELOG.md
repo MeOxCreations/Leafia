@@ -2185,6 +2185,30 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.237 — L'herbe ecrasee restait de travers de 4.5 degres
+
+Le joueur a mesure une touffe pietinee : orientation -5.8 / 0.15 / -3.3 au lieu de zero. Elle restait penchee pour
+toujours.
+
+Le chiffre s'explique exactement. L'inclinaison s'effacait par `(1 - tassement)`. Or le tassement PLAFONNE a
+FLATTEN_AMOUNT (0.8), a cause de la trace permanente : il n'atteint jamais 1. Il restait donc
+`0.8 x 28 x 0.2 = 4.5 degres`, indefiniment.
+
+Formulation corrigee : l'inclinaison est l'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
+Au moment du pas l'ecart est maximal (le rapide a saute, le lent n'a pas suivi) ; une fois le lent arrive, l'ecart
+est NUL. Zero garanti, quel que soit le plafond, et sans constante a accorder avec FLATTEN_AMOUNT.
+
+Regle : une valeur qui doit finir a ZERO ne doit pas etre calculee comme un COMPLEMENT (1 - x) d'une grandeur qui
+peut plafonner ailleurs qu'a 1. La rendre comme un ECART entre deux valeurs qui convergent la fait tomber a zero par
+construction. Meme famille que le residu du lerp exponentiel de 0.0.229, mais l'inverse : ici ce n'etait pas la
+convergence qui manquait, c'etait la CIBLE qui n'etait pas atteignable.
+
+SQUASH_SPEED monte de 4 a 8 (le tassement s'installait trop lentement) et CRUSHED_COLOR passe a (140, 179, 98).
+
+Rappel au passage, verifie a cette occasion : le vent souffle DEJA moins fort sur une touffe ecrasee -- son amplitude
+est multipliee par (1 - ecrasement), donc une touffe a plat ne garde qu'une fraction du mouvement. C'etait en place
+depuis 0.0.208.
+
 ## 0.0.236 — L'herbe change de COULEUR quand on marche dessus
 
 L'assombrissement en pourcentage laisse place a DEUX couleurs choisies : BASE_COLOR au repos, CRUSHED_COLOR une fois

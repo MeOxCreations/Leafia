@@ -641,10 +641,14 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
 		-- On compare les DEUX valeurs : la lente peut encore bouger alors que la rapide est deja posee.
 		if windScale > 0 or clump.crush ~= clump.lastCrush or clump.squashCrush ~= clump.lastSquashCrush then
-			-- L'INCLINAISON EST UN PASSAGE, PAS UN ETAT. Elle monte avec `crush` (rapide) et s'efface a mesure que
-			-- `squashCrush` (lent) rattrape : une touffe completement tassee est A PLAT, elle ne penche plus.
-			-- Le retour a zero est donc lisse gratuitement, puisque squashCrush l'est deja.
-			local tilt = crushed * TILT_ANGLE * (1 - clump.squashCrush)
+			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
+			-- Au moment du pas l'ecart est maximal ; une fois le lent arrive, il est NUL et la touffe est droite.
+			-- Ecrire ca en (1 - tassement) laissait un residu permanent : le tassement plafonne a FLATTEN_AMOUNT a
+			-- cause de la trace, donc il n'atteint jamais 1 et l'inclinaison ne tombait jamais a zero.
+			local tilt = 0
+			if target > 1e-3 then
+				tilt = TILT_ANGLE * math.clamp((clump.crush - clump.squashCrush) / target, 0, 1)
+			end
 			apply(clump, wind, squash * gustSquash, tilt, clump.squashCrush)
 			clump.lastCrush = clump.crush
 			clump.lastSquashCrush = clump.squashCrush

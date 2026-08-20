@@ -176,12 +176,14 @@ local GrassZoneConfigs = {
 	-- Les TACHES de Perlin s'appliquent aussi a cette teinte : la trace garde donc le relief du terrain au lieu de
 	-- devenir un aplat uniforme.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee garde sa couleur.
-	CRUSHED_COLOR = Color3.fromRGB(113, 159, 49),
+	CRUSHED_COLOR = Color3.fromRGB(140, 179, 98),
 	-- Inclinaison maxi, en degres, atteinte au MILIEU du geste.
-	-- C'est un PASSAGE, pas un etat : elle monte avec l'inclinaison rapide, puis s'efface a mesure que le tassement
-	-- la rattrape. Une touffe completement tassee est A PLAT, elle ne penche plus. On voit donc l'herbe pencher dans
-	-- le sens du pas, puis se coucher droite -- au lieu de rester figee de travers.
-	-- Le retour a zero est lisse tout seul : il suit le tassement, qui l'est deja.
+	-- C'est un PASSAGE, pas un etat : elle vaut l'ECART entre l'ecrasement rapide et le tassement lent. Au moment du
+	-- pas cet ecart est maximal (le rapide a saute, le lent n'a pas suivi) ; une fois le lent arrive, l'ecart est nul
+	-- et la touffe est parfaitement DROITE.
+	-- Cette formulation par ECART est ce qui garantit le zero. La precedente s'effacait avec (1 - tassement), donc
+	-- elle laissait un residu des que le tassement plafonnait sous 1 -- ce qui est toujours le cas a cause de la trace
+	-- permanente (FLATTEN_AMOUNT). Mesure a l'ecran : 4.5 degres de travers qui ne partaient jamais.
 	-- Volontairement MODEREE. Le mesh est un RECTANGLE de brins, pas un brin isole : a 78 degres (l'ancienne valeur,
 	-- du temps ou l'inclinaison etait le seul effet) la plaque se couchait sur le flanc et se lisait comme un decor
 	-- pose de travers. Maintenant que l'aplatissement fait le gros du travail, un angle discret suffit.
@@ -195,7 +197,7 @@ local GrassZoneConfigs = {
 	-- donc on les lit l'un APRES l'autre au lieu de les recevoir en bloc -- l'inclinaison a le temps d'exister.
 	-- La montee, elle, reste commune (RECOVER_SPEED) : rien ne gagne a ce que la touffe se redresse en deux temps.
 	-- Monter cette valeur vers CRUSH_SPEED efface le decalage ; la baisser retarde encore le tassement.
-	SQUASH_SPEED = 4,
+	SQUASH_SPEED = 8,
 	-- Volontairement LENT : c'est la remontee qu'on regarde. Une herbe qui se redresse doucement derriere le joueur
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	RECOVER_SPEED = 1.8,

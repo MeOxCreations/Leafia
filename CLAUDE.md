@@ -435,6 +435,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   echouer EN SILENCE, lui ajouter un controle qui mesure le RESULTAT et parle (ici : les joints ont-ils bouge une
   seconde apres le demarrage).
 
+- **Une valeur qui doit finir a ZERO ne se calcule pas comme un COMPLEMENT `(1 - x)` d'une grandeur qui peut
+  plafonner ailleurs qu'a 1.** Vecu sur l'herbe : l'inclinaison au passage s'effacait en `(1 - tassement)`, mais le
+  tassement plafonne a FLATTEN_AMOUNT (0.8) a cause de la trace permanente. Il restait donc `0.8 x 28 x 0.2 = 4.5`
+  degres de travers POUR TOUJOURS -- mesure a l'ecran par le joueur, jamais visible dans le code. La rendre comme un
+  ECART entre deux valeurs qui CONVERGENT (ici le rapide moins le lent) la fait tomber a zero par construction, sans
+  aucune constante a garder d'accord avec l'autre. Regle generale : preferer une difference qui s'annule a un
+  complement qui suppose que l'autre grandeur atteint son maximum.
+
 - **Les teleports (`TeleportService`) ne partent JAMAIS en Studio** (Play Solo / serveur local) : `TeleportAsync`
   throw, notre `pcall` retombe -> rien ne se passe (ou fallback "game"). Un bouton qui teleporte semble donc "casse"
   en Studio alors qu'il marche en jeu publie. Toujours tester un teleport dans l'experience PUBLIEE (app Roblox), les
