@@ -1,20 +1,23 @@
 --!strict
--- Anime le DECOR VEGETAL de la map. Chaque modele dont le nom est liste dans FoliageConfigs.ANIMATIONS recoit sa
--- boucle, jouee COTE SERVEUR : elle se replique donc a tout le monde, y compris aux joueurs qui arrivent plus tard,
--- et le serveur voit toute la map quoi que fasse le streaming chez le client.
+-- Joue les ANIMATIONS D'AMBIANCE de la map. Chaque modele dont le nom est liste dans AmbientAnimConfigs.ANIMATIONS
+-- recoit sa boucle : les plantes (buissons, arbres) et les PNJ qui respirent sur place (Papi). Meme mecanique pour
+-- les deux, d'ou un seul service -- un buisson et un grand-pere qui respirent, c'est le meme besoin.
+--
+-- Joue COTE SERVEUR : la boucle se replique a tout le monde, y compris aux joueurs qui arrivent plus tard, et le
+-- serveur voit toute la map quoi que fasse le streaming chez le client.
 --
 -- Aucune Instance Animation n'est rangee dans ReplicatedStorage : elles sont creees ici a partir des IDs de la
--- config. Une place secondaire (le tuto) recoit donc le meme decor anime sans qu'on y recopie quoi que ce soit.
+-- config. Une place secondaire (le tuto) recoit donc la meme ambiance sans qu'on y recopie quoi que ce soit.
 --
--- A savoir si le decor grossit beaucoup : chaque plante animee est un Humanoid de plus a faire tourner au serveur.
--- Sur une dizaine de modeles c'est gratuit ; a plusieurs centaines, il faudra jouer ces boucles cote CLIENT (c'est
--- purement cosmetique) plutot que de les repliquer.
+-- A savoir si ca grossit beaucoup : chaque modele anime est un Humanoid de plus a faire tourner au serveur. Sur une
+-- dizaine c'est gratuit ; a plusieurs centaines, il faudra jouer ces boucles cote CLIENT (c'est purement cosmetique)
+-- plutot que de les repliquer.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
-local FoliageConfigs = require(ReplicatedStorage.Modules.Configs.FoliageConfigs)
+local AmbientAnimConfigs = require(ReplicatedStorage.Modules.Configs.AmbientAnimConfigs)
 
-local FoliageService = {}
+local AmbientAnimService = {}
 
 local rng = Random.new()
 
@@ -37,7 +40,7 @@ local function getAnimation(id: string): Animation
 	return animation
 end
 
--- L'Animator d'un modele de decor, ou nil s'il n'en a pas. Le WaitForChild couvre les modeles ajoutes en cours de
+-- L'Animator d'un modele, ou nil s'il n'en a pas. Le WaitForChild couvre les modeles ajoutes en cours de
 -- partie, dont l'Animator arrive quelques frames apres l'Humanoid.
 local function findAnimator(model: Model): Animator?
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -46,7 +49,7 @@ local function findAnimator(model: Model): Animator?
 	end
 	local found: Instance? = humanoid:FindFirstChildOfClass("Animator")
 	if not found then
-		found = humanoid:WaitForChild("Animator", FoliageConfigs.ANIMATOR_TIMEOUT)
+		found = humanoid:WaitForChild("Animator", AmbientAnimConfigs.ANIMATOR_TIMEOUT)
 	end
 	if found and found:IsA("Animator") then
 		return found
@@ -60,7 +63,7 @@ local function animate(model: Model): boolean
 	if tracks[model] then
 		return false
 	end
-	local id = FoliageConfigs.ANIMATIONS[model.Name]
+	local id = AmbientAnimConfigs.ANIMATIONS[model.Name]
 	if not id then
 		return false
 	end
@@ -74,7 +77,7 @@ local function animate(model: Model): boolean
 	end)
 	if not ok or typeof(result) ~= "Instance" then
 		-- Anormal ET actionnable : l'ID est peut-etre faux ou l'asset pas publie sous le bon proprietaire.
-		warn(`[FoliageService] Animation non chargeable pour "{model.Name}" ({id}).`)
+		warn(`[AmbientAnim] Animation non chargeable pour "{model.Name}" ({id}).`)
 		return false
 	end
 	local track = result :: AnimationTrack
@@ -85,11 +88,11 @@ local function animate(model: Model): boolean
 	track.Priority = Enum.AnimationPriority.Idle
 	track:Play()
 
-	if FoliageConfigs.SPEED_VARIATION > 0 then
-		track:AdjustSpeed(1 + (rng:NextNumber() * 2 - 1) * FoliageConfigs.SPEED_VARIATION)
+	if AmbientAnimConfigs.SPEED_VARIATION > 0 then
+		track:AdjustSpeed(1 + (rng:NextNumber() * 2 - 1) * AmbientAnimConfigs.SPEED_VARIATION)
 	end
 
-	if FoliageConfigs.RANDOM_START then
+	if AmbientAnimConfigs.RANDOM_START then
 		-- Length vaut 0 tant que l'asset n'est pas telecharge : le lire tout de suite rendrait toujours 0, donc un
 		-- depart identique pour toutes les plantes. On attend la vraie longueur dans un thread a part, borne dans le
 		-- temps pour ne pas tourner pour toujours si l'asset ne vient jamais.
@@ -108,7 +111,7 @@ local function animate(model: Model): boolean
 	return true
 end
 
--- Celui qui a lance la piste est celui qui la coupe : une plante retiree de la map (build, streaming serveur, edition
+-- Celui qui a lance la piste est celui qui la coupe : un modele retire de la map (build, streaming serveur, edition
 -- en live) ne doit pas laisser sa piste tourner dans le vide.
 local function stop(model: Model)
 	local track = tracks[model]
@@ -119,14 +122,14 @@ local function stop(model: Model)
 	tracks[model] = nil
 end
 
--- Le dossier des plantes, ou nil s'il n'existe pas dans cette place.
+-- La racine a balayer, ou nil si elle n'existe pas dans cette place.
 -- Re-scan en boucle plutot qu'une chaine de WaitForChild : avec un WaitForChild PAR SEGMENT, un chemin absent ferait
 -- attendre le timeout QUATRE fois avant de prevenir. Ici, un seul delai couvre tout le chemin.
 local function resolveRoot(): Instance?
-	local deadline = os.clock() + FoliageConfigs.ROOT_TIMEOUT
+	local deadline = os.clock() + AmbientAnimConfigs.ROOT_TIMEOUT
 	repeat
 		local node: Instance? = workspace
-		for _, name in ipairs(FoliageConfigs.ROOT) do
+		for _, name in ipairs(AmbientAnimConfigs.ROOT) do
 			node = node and node:FindFirstChild(name)
 		end
 		if node then
@@ -137,15 +140,15 @@ local function resolveRoot(): Instance?
 	return nil
 end
 
-function FoliageService.init()
+function AmbientAnimService.init()
 	-- EN TACHE DE FOND : resolveRoot et l'attente des Animator peuvent YIELD. Un init de boot ne doit jamais attendre,
 	-- et surement pas ROOT_TIMEOUT secondes pour du decor.
 	task.spawn(function()
 		local root = resolveRoot()
 		if not root then
 			warn(
-				`[FoliageService] Dossier introuvable : Workspace.{table.concat(FoliageConfigs.ROOT, ".")}. `
-					.. `Aucune plante animee dans cette place.`
+				`[AmbientAnim] Dossier introuvable : Workspace.{table.concat(AmbientAnimConfigs.ROOT, ".")}. `
+					.. `Aucune animation d'ambiance dans cette place.`
 			)
 			return
 		end
@@ -170,8 +173,8 @@ function FoliageService.init()
 			end
 		end)
 
-		print(`[FoliageService] {started} plante(s) animee(s).`)
+		print(`[AmbientAnim] {started} modele(s) anime(s).`)
 	end)
 end
 
-return FoliageService
+return AmbientAnimService

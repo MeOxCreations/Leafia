@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.224 — Papi respire, et FoliageService devient AmbientAnimService
+
+Papi (le modele OldManIdle pose dans la map) joue son animation d'attente en boucle.
+
+AUCUN code nouveau : FoliageService faisait deja exactement ce travail -- un modele avec Humanoid et Animator dans la
+map, une boucle qui tourne. Un buisson qui se balance et un grand-pere qui respire, c'est le meme besoin. Il a suffi
+d'une ligne dans la config.
+
+Mais un service appele "Foliage" qui anime un grand-pere est un nom qui MENT, et le journal a deja paye ce piege une
+fois (l'auto-equip du taille-haie planque dans le controller d'ECHELLE, introuvable pendant des heures). Renommage
+donc : FoliageService -> AmbientAnimService, FoliageConfigs -> AmbientAnimConfigs.
+
+La racine de recherche s'elargit de `Worlds.Maps.Assets.Foliages` a `Worlds.Maps` : les plantes sont rangees dans un
+dossier, les PNJ sont poses directement dans la map, et d'autres viendront ailleurs. Le cout est nul -- les milliers
+de carreaux de haie qui naissent sous cette racine sont ecartes par un `IsA("Model")` avant meme le test de nom.
+
+### A faire dans Studio
+
+Les parts du modele NE DOIVENT PAS etre ancrees : une part ancree ignore son Motor6D, donc l'animation joue sans que
+rien ne bouge (piege deja au journal). Pour un PNJ qui doit rester plante au meme endroit, ancrer UNIQUEMENT la
+RootPart : le reste suit l'animation et le personnage ne derive pas.
+
 ## 0.0.223 — L'herbe RESTE couchee la ou on a marche
 
 Un chemin se dessine derriere le joueur. C'est la premiere fois que le monde GARDE la trace d'un geste : jusqu'ici

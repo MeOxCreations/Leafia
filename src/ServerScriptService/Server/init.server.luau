@@ -31,9 +31,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.TeleportService).init()
 	require(script.AdminCommandService).init() -- pour les commandes de test tuto / hub
 	require(script.TutorialService).init() -- place le joueur sur RootSpawnPlayer (+ 1re haie guidee a venir)
-	-- Decor vegetal anime. Ici AUSSI : les IDs sont dans la config (donc synces par Rojo), il n'y a rien a recopier
-	-- dans cette place. Ordre indifferent, il ne depend d'aucun autre service.
-	require(script.FoliageService).init()
+	-- Animations d'ambiance (plantes + PNJ qui respirent, dont Papi). Ici AUSSI : les IDs sont dans la config (donc
+	-- synces par Rojo), il n'y a rien a recopier dans cette place. Ordre indifferent.
+	require(script.AmbientAnimService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end
@@ -127,10 +127,11 @@ MailboxService.init()
 local GrassService = require(script.GrassService)
 GrassService.init()
 
--- Decor vegetal anime (arbres, buissons). Joue les boucles cote serveur, donc repliquees a tous. Habillage, pas du
--- gameplay. Ordre indifferent : il ne lit aucun autre service, il ne fait que balayer le dossier des plantes.
-local FoliageService = require(script.FoliageService)
-FoliageService.init()
+-- Animations d'ambiance : les plantes (arbres, buissons) et les PNJ qui respirent sur place. Boucles jouees cote
+-- serveur, donc repliquees a tous. Habillage, pas du gameplay. Ordre indifferent : il ne lit aucun autre service,
+-- il ne fait que balayer la map.
+local AmbientAnimService = require(script.AmbientAnimService)
+AmbientAnimService.init()
 
 -- Console admin : recoit les commandes tapees (remote Admin/AdminCommand), verifie l'acces et dispatche vers les
 -- services (Currency, Experience, Data). En dernier : il APPELLE ces services au moment des commandes, pas a l'init.

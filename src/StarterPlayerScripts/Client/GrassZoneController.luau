@@ -2,7 +2,7 @@
 -- HERBE DE ZONE. Remplit chaque part "ZoneGrass..." de touffes, et couche celles sur lesquelles un joueur marche.
 --
 -- TOUT EST LOCAL. Les touffes sont creees par CE client, dans SA copie du Workspace : rien ne part sur le reseau, ni
--- a la creation ni a l'ecrasement. C'est l'inverse du decor vegetal (FoliageService, serveur) et c'est voulu : le
+-- a la creation ni a l'ecrasement. C'est l'inverse des animations d'ambiance (AmbientAnimService, serveur) et c'est voulu : le
 -- balancement d'un arbre est le meme pour tout le monde, l'ecrasement de l'herbe depend de qui marche ou, a chaque
 -- image. Repliquer ca chargerait le reseau pour un detail que chacun peut calculer chez lui.
 --
