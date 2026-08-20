@@ -82,8 +82,9 @@ local GrassZoneConfigs = {
 	-- Degagement AUTOUR de l'emprise, en studs. Ce n'est pas qu'une securite contre les brins qui depassent : une
 	-- haie posee sur la pelouse a un PIED, de la terre autour, et de l'herbe qui viendrait coller a sa base la ferait
 	-- paraitre plantee au chausse-pied. Un peu d'air autour l'assied dans le decor.
-	-- Trop grand laisse en revanche un anneau chauve visible : 1.5 degage sans deshabiller.
-	CLEAR_MARGIN = 1.5,
+	-- Trop grand laisse en revanche un ANNEAU CHAUVE visible autour de chaque objet, d'autant plus que le sol dessous
+	-- est d'un vert uni : c'est ce defaut-la qui borne la valeur, pas le calcul.
+	CLEAR_MARGIN = 2.8,
 	-- Hauteur au-dessus de la zone dans laquelle on cherche les objets. Au-dela, une part qui vole loin du sol ne doit
 	-- pas trouer la pelouse.
 	CLEAR_HEIGHT = 14,
