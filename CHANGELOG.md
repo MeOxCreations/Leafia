@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.215 — Rayures de tonte dans l'herbe, facon terrain de foot
+
+Demande du joueur, pour le plaisir. Une bande sur deux prend une teinte differente : (212, 179, 152) et
+(212, 203, 157).
+
+La grille du semis rendait ca presque gratuit : chaque touffe connait deja sa case, il suffit de projeter le centre
+de cette case sur la direction des rayures et de regarder si on tombe sur une bande paire ou impaire. Decide UNE
+fois a la pose, aucun cout par image.
+
+Detail qui compte : la bande se calcule sur le CENTRE DE CASE, pas sur la position finale de la touffe. L'ecart au
+hasard du semis (JITTER) ferait sinon baver les bandes l'une dans l'autre, et on perdrait la ligne nette qui fait
+tout l'effet d'un terrain tondu.
+
+STRIPE_HEADING donne l'orientation des bandes dans le repere de la ZONE, en degres : 0 pour des rayures droites, 45
+pour des diagonales. STRIPE_WIDTH leur largeur en studs.
+
+Point a verifier a l'ecran : la couleur est ecrite sur le SurfaceAppearance de chaque touffe, parce que c'est la que
+la couleur de base est reglee dans Studio. Avec AlphaMode = TintMask, la teinte peut aussi venir du Color de la part
+selon la configuration du mesh -- STRIPE_ON_SURFACE bascule entre les deux si les rayures n'apparaissent pas.
+
 ## 0.0.214 — Le rideau de chargement attend le PERSONNAGE avant de compter
 
 Le rideau paraissait beaucoup trop court, malgre un LOADING_MIN deja monte a 10.5 s. La raison : ce plancher etait

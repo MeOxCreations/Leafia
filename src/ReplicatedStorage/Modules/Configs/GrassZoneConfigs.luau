@@ -44,6 +44,20 @@ local GrassZoneConfigs = {
 	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement droites, ce qui se lit comme du faux.
 	REST_TILT = 6,
 
+	-- ===== Rayures de tonte (facon terrain de foot) =====
+	-- Une bande sur deux prend l'autre couleur. Decide UNE fois a la pose, a partir de la case de la touffe dans la
+	-- grille : aucun cout en jeu.
+	STRIPE_ENABLED = true,
+	STRIPE_WIDTH = 4, -- largeur d'une bande, en studs
+	STRIPE_HEADING = 0, -- orientation des bandes, en degres, DANS LE REPERE DE LA ZONE (45 = rayures en diagonale)
+	STRIPE_COLOR_A = Color3.fromRGB(212, 179, 152),
+	STRIPE_COLOR_B = Color3.fromRGB(212, 203, 157),
+	-- OU ecrire la couleur. Avec AlphaMode = TintMask, la teinte peut venir du SurfaceAppearance OU du Color de la
+	-- part, selon le mesh. On ecrit par defaut sur le SurfaceAppearance : c'est la que la couleur de base est reglee
+	-- dans Studio, donc c'est elle qui pilote ce qu'on voit. Si les rayures n'apparaissent pas, passer a false (on
+	-- ecrira BasePart.Color a la place).
+	STRIPE_ON_SURFACE = true,
+
 	-- Cote d'un PAVE, en studs. Les touffes sont regroupees par paves, et c'est le PAVE qu'on teste, pas la touffe :
 	-- un pave hors de vue est ecarte d'un bloc, et un pave loin de tout joueur ne fait meme pas tourner le test
 	-- d'ecrasement sur ses touffes. Sans ca, une zone de 1500 touffes les parcourt toutes a chaque image alors qu'au

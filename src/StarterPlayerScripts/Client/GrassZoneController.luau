@@ -39,6 +39,9 @@ local WIND_GUST = math.rad(GrassZoneConfigs.WIND_GUST)
 -- Delai avant de refaire un semis apres un changement de taille. Assez long pour absorber une part qui recoit ses
 -- proprietes en plusieurs etapes (streaming), assez court pour suivre un redimensionnement a la main dans Studio.
 local REBUILD_DELAY = 0.25
+-- Repere des rayures, calcule une fois. Projeter la case sur cette direction donne la bande a laquelle elle appartient.
+local STRIPE_COS = math.cos(math.rad(GrassZoneConfigs.STRIPE_HEADING))
+local STRIPE_SIN = math.sin(math.rad(GrassZoneConfigs.STRIPE_HEADING))
 local WIND_VIEW_SQ = GrassZoneConfigs.WIND_VIEW_DISTANCE * GrassZoneConfigs.WIND_VIEW_DISTANCE
 
 -- Une touffe. On garde son PIED et sa rotation propre : le CFrame se recompose a chaque image a partir de ces
@@ -235,12 +238,30 @@ local function populate(zone: Zone)
 			part.CastShadow = false -- des centaines d'ombres de brins coutent cher et ne se voient pas
 			part.Size = source.Size * rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
 
-			-- Centre de la case, plus un ecart au hasard DANS la case. Garde dans le repere de la ZONE : une zone
-			-- tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire ce point.
+			-- Centre de la case, dans le repere de la ZONE.
+			local cellX = -size.X * 0.5 + (ix + 0.5) * stepX
+			local cellZ = -size.Z * 0.5 + (iz + 0.5) * stepZ
+
+			-- RAYURES. La bande se decide sur le centre de CASE, pas sur la position finale : sinon l'ecart au hasard
+			-- ferait baver les bandes l'une dans l'autre et on perdrait la ligne nette d'un terrain tondu.
+			if GrassZoneConfigs.STRIPE_ENABLED then
+				local band = math.floor((cellX * STRIPE_COS + cellZ * STRIPE_SIN) / GrassZoneConfigs.STRIPE_WIDTH) % 2
+				local color = if band == 0 then GrassZoneConfigs.STRIPE_COLOR_A else GrassZoneConfigs.STRIPE_COLOR_B
+				local surface = part:FindFirstChildOfClass("SurfaceAppearance")
+				if surface and GrassZoneConfigs.STRIPE_ON_SURFACE then
+					surface.Color = color
+				else
+					part.Color = color
+				end
+			end
+
+			-- Position finale : le centre de case plus un ecart au hasard DANS la case. Gardee dans le repere de la
+			-- ZONE : une zone tournee ou inclinee marche sans cas particulier, et la deplacer n'oblige qu'a retraduire
+			-- ce point.
 			local localPos = Vector3.new(
-				-size.X * 0.5 + (ix + 0.5) * stepX + rng:NextNumber(-0.5, 0.5) * stepX * jitter,
+				cellX + rng:NextNumber(-0.5, 0.5) * stepX * jitter,
 				size.Y * 0.5,
-				-size.Z * 0.5 + (iz + 0.5) * stepZ + rng:NextNumber(-0.5, 0.5) * stepZ * jitter
+				cellZ + rng:NextNumber(-0.5, 0.5) * stepZ * jitter
 			)
 
 			-- Inclinaison de repos : une direction au hasard, un petit angle.
