@@ -173,12 +173,14 @@ local GrassZoneConfigs = {
 	-- chaque rayure s'assombrit donc dans SA propre nuance, et le motif de tonte reste lisible sous la trace.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee reste sombre elle aussi.
 	CRUSH_DARKEN = 0.25,
-	-- Inclinaison maxi, en degres, pile sous les pieds. A ZERO, et c'est voulu.
-	-- Le mesh d'herbe est un RECTANGLE de brins, pas un brin isole. Un brin qui se couche est joli ; une plaque
-	-- entiere qui bascule se lit comme un decor pose de travers -- on voit la touffe penchee sur le cote au lieu
-	-- d'un creux dans la pelouse. L'ecrasement se fait donc PUREMENT en hauteur.
-	-- A remonter seulement si le mesh devient un brin unique.
-	CRUSH_TILT_ANGLE = 0,
+	-- Inclinaison maxi, en degres, pile sous les pieds. Elle se CUMULE avec l'aplatissement : la touffe se tasse ET
+	-- part dans le sens du pas. C'est la combinaison qui rend le passage lisible -- le tassement dit "on a marche
+	-- ici", l'inclinaison dit "on venait de la".
+	-- Volontairement MODEREE. Le mesh est un RECTANGLE de brins, pas un brin isole : a 78 degres (l'ancienne valeur,
+	-- du temps ou l'inclinaison etait le seul effet) la plaque se couchait sur le flanc et se lisait comme un decor
+	-- pose de travers. Maintenant que l'aplatissement fait le gros du travail, un angle discret suffit.
+	-- Monter au-dela de 45 ramene le defaut.
+	CRUSH_TILT_ANGLE = 28,
 	-- Vitesses du ressort. Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,
