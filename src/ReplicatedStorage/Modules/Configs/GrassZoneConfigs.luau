@@ -61,10 +61,6 @@ local GrassZoneConfigs = {
 	-- A DENSITY = 1 le facteur vaut 1 : le rendu actuel ne bouge pas. Mettre a false pour retrouver l'ancien
 	-- comportement (touffes de taille fixe, densite qui creuse des trous quand on la baisse).
 	AUTO_SCALE_WITH_DENSITY = true,
-	-- Inclinaison AU REPOS, en degres. Zero = toutes les touffes parfaitement DROITES.
-	-- A zero ici, parce que le desordre est deja MODELE dans le mesh (les brins partent dans tous les sens cote
-	-- Blender). Incliner la touffe entiere par-dessus ne fait que la coucher sans rien gagner.
-	REST_TILT = 0,
 	-- Fait tourner chaque touffe d'un angle au hasard autour de la verticale.
 	-- A false pour la meme raison : quand le mesh porte deja son propre desordre, cette rotation ne casse rien de plus
 	-- et donne des touffes qui semblent "posees de travers" au lieu de pousser droit.
@@ -151,17 +147,21 @@ local GrassZoneConfigs = {
 	-- ===== Ecrasement =====
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
 	CRUSH_RADIUS = 4.5,
-	-- Inclinaison maxi, en degres, pile sous les pieds. 90 = a plat par terre.
-	CRUSH_MAX_ANGLE = 78,
-	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur. 0.45 = la touffe descend a 55 % de
-	-- sa hauteur sous le pied, puis remonte. 0 = elle se couche sans s'ecraser.
-	-- Pilote par le MEME angle d'ecrasement que la bascule : les deux ne peuvent donc pas se desynchroniser, et
-	-- l'aplatissement herite gratuitement du ressort (brutal a la descente, lent a la remontee).
-	CRUSH_SQUASH = 0.45,
+	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur.
+	-- 0.8 = la touffe descend a 20 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
+	CRUSH_SQUASH = 0.8,
+	-- Inclinaison maxi, en degres, pile sous les pieds. A ZERO, et c'est voulu.
+	-- Le mesh d'herbe est un RECTANGLE de brins, pas un brin isole. Un brin qui se couche est joli ; une plaque
+	-- entiere qui bascule se lit comme un decor pose de travers -- on voit la touffe penchee sur le cote au lieu
+	-- d'un creux dans la pelouse. L'ecrasement se fait donc PUREMENT en hauteur.
+	-- A remonter seulement si le mesh devient un brin unique.
+	CRUSH_TILT_ANGLE = 0,
 	-- Vitesses du ressort. Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,
-	RECOVER_SPEED = 3.5,
+	-- Volontairement LENT : c'est la remontee qu'on regarde. Une herbe qui se redresse doucement derriere le joueur
+	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
+	RECOVER_SPEED = 1.8,
 	-- TRACE. L'herbe RESTE couchee la ou on a marche : un chemin se dessine derriere le joueur.
 	-- Fraction de l'inclinaison maximale que le passage laisse DEFINITIVEMENT. 1 = elle reste aussi couchee que sous
 	-- le pied, 0 = elle se releve entierement (l'ancien comportement, sans trace).
@@ -172,7 +172,7 @@ local GrassZoneConfigs = {
 	-- 0.02 fait disparaitre une trace en une cinquantaine de secondes.
 	FLATTEN_RECOVER = 0,
 
-	-- En dessous de cet ecart (radians) on CLE l'angle sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
+	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.
 	SNAP_EPSILON = 0.001,
 }

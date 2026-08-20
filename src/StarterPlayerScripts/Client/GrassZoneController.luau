@@ -21,8 +21,7 @@ local GrassZoneController = {}
 local localPlayer = Players.LocalPlayer
 
 local FOLDER_NAME = "GrassClumpsLocal"
-local MAX_ANGLE = math.rad(GrassZoneConfigs.CRUSH_MAX_ANGLE)
-local REST_TILT = math.rad(GrassZoneConfigs.REST_TILT)
+local TILT_ANGLE = math.rad(GrassZoneConfigs.CRUSH_TILT_ANGLE)
 -- Constante plutot que Vector3.yAxis : selene ne reconnait pas ce dernier comme un Vector3 et refuse Cross.
 local UP = Vector3.new(0, 1, 0)
 
@@ -62,12 +61,11 @@ type Clump = {
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
 	baseSize: Vector3, -- taille au repos ; l'ecrasement ne fait que RABOTER son Y, jamais l'ecraser definitivement
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
-	restTilt: number, -- inclinaison AU REPOS (radians) : une herbe parfaitement droite se lit comme du faux
-	tiltDir: Vector3, -- direction horizontale de la bascule en cours
-	tilt: number, -- angle d'ecrasement courant, en radians
-	flattened: number, -- TRACE : couchage permanent (0 a 1). Ne fait que monter, et sert de plancher a `tilt`.
+	tiltDir: Vector3, -- direction d'une eventuelle bascule (inutilisee tant que CRUSH_TILT_ANGLE vaut 0)
+	crush: number, -- ECRASEMENT courant, en fraction (0 = debout, 1 = ecrase a fond). LA valeur d'etat de la touffe.
+	flattened: number, -- TRACE : ecrasement permanent (0 a 1). Ne fait que monter, et sert de plancher a `crush`.
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
-	lastTilt: number, -- dernier angle REELLEMENT ecrit : sert a ne pas reecrire une touffe lointaine immobile
+	lastCrush: number, -- dernier ecrasement REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
 }
 
 -- Un PAVE : un paquet de touffes voisines, teste EN BLOC. C'est lui l'unite de travail de la boucle, pas la touffe.
@@ -120,7 +118,7 @@ end
 -- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
 -- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump, windAngle: number, squash: number)
+local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle: number)
 	-- La taille ne s'ECRIT que si elle a change : redimensionner une part coute plus cher que la deplacer, et une
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
@@ -132,9 +130,13 @@ local function apply(clump: Clump, windAngle: number, squash: number)
 	end
 
 	local cf = CFrame.new(clump.basePos)
-	local crushAxis = UP:Cross(clump.tiltDir)
-	if crushAxis.Magnitude > 1e-4 then
-		cf = cf * CFrame.fromAxisAngle(crushAxis.Unit, clump.tilt)
+	-- L'ecrasement se fait en HAUTEUR (la taille, juste au-dessus). Cette bascule ne sert que si on remet un angle
+	-- dans la config, ce qui n'a de sens que sur un mesh d'UN SEUL BRIN.
+	if tiltAngle ~= 0 then
+		local crushAxis = UP:Cross(clump.tiltDir)
+		if crushAxis.Magnitude > 1e-4 then
+			cf = cf * CFrame.fromAxisAngle(crushAxis.Unit, tiltAngle)
+		end
 	end
 	if windAngle ~= 0 then
 		cf = cf * CFrame.fromAxisAngle(WIND_AXIS, windAngle)
@@ -351,7 +353,7 @@ local function populate(zone: Zone)
 			local jx = rng:NextNumber(-0.5, 0.5)
 			local jz = rng:NextNumber(-0.5, 0.5)
 			local scale = rng:NextNumber(GrassZoneConfigs.SCALE_MIN, GrassZoneConfigs.SCALE_MAX)
-			local restTilt = rng:NextNumber(0, REST_TILT)
+			local _ = rng:NextNumber(0, 1) -- tirage conserve pour que la disposition ne change pas (ancien restTilt)
 			local restAngle = rng:NextNumber(0, math.pi * 2)
 			local yawAngle = rng:NextNumber(0, math.pi * 2)
 			local windPhase = rng:NextNumber(0, math.pi * 2)
@@ -413,16 +415,15 @@ local function populate(zone: Zone)
 				yaw = if GrassZoneConfigs.RANDOM_YAW then CFrame.Angles(0, yawAngle, 0) else CFrame.identity,
 				baseSize = part.Size,
 				lastSquash = 1,
-				restTilt = restTilt,
 				tiltDir = Vector3.new(math.cos(restAngle), 0, math.sin(restAngle)),
-				tilt = restTilt,
+				crush = 0,
 				flattened = 0,
 				windPhase = windPhase,
-				lastTilt = restTilt,
+				lastCrush = 0,
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
-			apply(clump, WIND_ANGLE, 1)
+			apply(clump, WIND_ANGLE, 1, 0)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
 
@@ -483,7 +484,7 @@ local function refresh(zone: Zone)
 	local zoneCFrame = zone.part.CFrame
 	for _, clump in ipairs(zone.clumps) do
 		clump.basePos = zoneCFrame:PointToWorldSpace(clump.localPos)
-		clump.lastTilt = math.huge -- force une reecriture : la touffe doit se reposer au nouvel endroit
+		clump.lastCrush = math.huge -- force une reecriture : la touffe doit se reposer au nouvel endroit
 	end
 	-- Les centres de paves servent a TOUS les tests de distance : les oublier ici trierait sur l'ancienne position,
 	-- et l'herbe cesserait de reagir sans qu'on voie pourquoi.
@@ -523,7 +524,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			end
 		end
 
-		-- TRACE. Le passage laisse un couchage PERMANENT. On ne garde que le maximum jamais atteint : repasser au
+		-- TRACE. Le passage laisse un ecrasement PERMANENT. On ne garde que le maximum jamais atteint : repasser au
 		-- meme endroit ne releve rien, et s'eloigner ne l'efface pas.
 		if best > 0 then
 			clump.flattened = math.max(clump.flattened, best * GrassZoneConfigs.FLATTEN_AMOUNT)
@@ -533,25 +534,25 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			clump.flattened = math.max(0, clump.flattened - GrassZoneConfigs.FLATTEN_RECOVER * dt)
 		end
 
-		-- La cible est le PLUS COUCHE des trois : le pied en cours, la trace laissee, et l'inclinaison de repos.
-		-- Quand le pied repart, l'herbe remonte donc jusqu'a la TRACE et s'y arrete, pas jusqu'a la verticale.
-		local target = math.max(best * MAX_ANGLE, clump.flattened * MAX_ANGLE, clump.restTilt)
+		-- CIBLE D'ECRASEMENT, en fraction : le plus ecrase entre le pied EN COURS et la trace DEJA laissee.
+		-- Quand le pied repart, l'herbe remonte donc jusqu'a la trace et s'y arrete, pas jusqu'a sa hauteur pleine.
+		local target = math.max(best, clump.flattened)
 
 		-- Ecraser est BRUTAL (le pied arrive d'un coup), se relever est LENT : c'est cet ecart qui fait lire le poids.
-		local speed = if target > clump.tilt then GrassZoneConfigs.CRUSH_SPEED else GrassZoneConfigs.RECOVER_SPEED
-		clump.tilt += (target - clump.tilt) * (1 - math.exp(-speed * dt))
-		if math.abs(target - clump.tilt) < GrassZoneConfigs.SNAP_EPSILON then
-			clump.tilt = target -- un lerp exponentiel n'atteint jamais sa cible : sans ce clic, on reecrirait a vie
+		local speed = if target > clump.crush then GrassZoneConfigs.CRUSH_SPEED else GrassZoneConfigs.RECOVER_SPEED
+		clump.crush += (target - clump.crush) * (1 - math.exp(-speed * dt))
+		if math.abs(target - clump.crush) < GrassZoneConfigs.SNAP_EPSILON then
+			clump.crush = target -- un lerp exponentiel n'atteint jamais sa cible : sans ce clic, on reecrirait a vie
 		end
-		if clump.tilt ~= target then
+		if clump.crush ~= target then
 			moving += 1
 		end
 
-		-- FRACTION D'ECRASEMENT : 0 = debout au repos, 1 = a plat sous le pied. Une SEULE valeur, tiree de l'angle
-		-- deja lisse, qui sert DEUX fois -- elle efface le vent et elle aplatit la touffe. Les deux ne peuvent donc
-		-- pas se desynchroniser, et l'aplatissement herite gratuitement du ressort (sec a la descente, lent a la
-		-- remontee) sans avoir son propre lissage a regler.
-		local crushed = math.clamp((clump.tilt - clump.restTilt) / math.max(MAX_ANGLE - clump.restTilt, 1e-3), 0, 1)
+		-- L'ECRASEMENT EST LA VALEUR MAITRESSE, et tout en decoule : l'aplatissement en hauteur, l'extinction du
+		-- vent, et l'inclinaison si on en remet une. Une seule grandeur lissee, donc rien ne peut se desynchroniser,
+		-- et chaque effet herite gratuitement du ressort (sec a la descente, lent a la remontee).
+		-- C'etait l'inverse avant : tout etait tire de l'ANGLE, donc mettre l'angle a zero tuait l'aplatissement avec.
+		local crushed = clump.crush
 		local squash = 1 - crushed * GrassZoneConfigs.CRUSH_SQUASH
 
 		local wind = 0
@@ -585,9 +586,9 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
 		-- on n'ecrit plus que si l'ecrasement a change : une touffe lointaine et immobile ne coute alors plus rien.
-		if windScale > 0 or clump.tilt ~= clump.lastTilt then
-			apply(clump, wind, squash * gustSquash)
-			clump.lastTilt = clump.tilt
+		if windScale > 0 or clump.crush ~= clump.lastCrush then
+			apply(clump, wind, squash * gustSquash, crushed * TILT_ANGLE)
+			clump.lastCrush = clump.crush
 		end
 	end
 

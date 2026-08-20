@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.229 — L'herbe s'ECRASE en hauteur au lieu de basculer sur le cote
+
+Le joueur voyait ses touffes pencher de travers en marchant dessus. Raison, donnee par lui : **le mesh d'herbe est un
+RECTANGLE de brins, pas un brin isole.** Un brin qui se couche est joli ; une plaque entiere qui bascule se lit comme
+un decor pose de travers, pas comme un creux dans la pelouse.
+
+L'ecrasement devient donc PUREMENT vertical. CRUSH_TILT_ANGLE tombe a 0 (la bascule reste dans le code, elle
+n'aurait de sens que sur un mesh d'un seul brin), CRUSH_SQUASH monte de 0.45 a 0.8 : la touffe descend a 20 % de sa
+hauteur sous le pied. RECOVER_SPEED ralentit de 3.5 a 1.8, parce que c'est la REMONTEE qu'on regarde -- une herbe
+qui rebondit en un quart de seconde ne se lit pas.
+
+### Le renversement qui rendait ca possible
+
+Mettre l'angle a zero ne suffisait PAS : tout l'effet en decoulait. L'aplatissement etait calcule a partir de
+l'inclinaison, donc un angle nul donnait un aplatissement nul. Le reglage evident aurait supprime l'effet entier.
+
+La valeur maitresse devient donc l'ECRASEMENT lui-meme, une fraction de 0 a 1. L'aplatissement, l'extinction du
+vent et l'inclinaison eventuelle en decoulent tous les trois. Une seule grandeur lissee : rien ne peut se
+desynchroniser, et chaque effet herite gratuitement du ressort.
+
+Regle : quand un reglage a zero doit desactiver UN effet et qu'il en tue trois, c'est que la grandeur d'etat n'est
+pas la bonne. Ce n'est pas le reglage qu'il faut contourner, c'est la dependance qu'il faut retourner.
+
+Pas d'EditableMesh dans l'affaire, ni de bones : ecraser en hauteur, c'est changer la taille de la part. Meme
+conclusion qu'en 0.0.205, verifiee cette fois par l'usage.
+
+REST_TILT disparait (l'inclinaison de repos au hasard) : elle faisait double emploi avec le desordre deja modele
+dans le mesh. Son tirage aleatoire est CONSERVE a vide, pour que la disposition de la pelouse ne change pas.
+
 ## 0.0.228 — L'animation de Papi jouait DANS LE VIDE : deux rigs differents
 
 Papi glissait sur la pelouse sans remuer un membre. La mesure a tranche en deux etapes.
