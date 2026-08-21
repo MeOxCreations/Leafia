@@ -204,16 +204,25 @@ local GrassZoneConfigs = {
 	-- au coeur d'une rafale. Volontairement petite : c'est un appui, pas un pied. 0 = pas de tassement.
 	GUST_SQUASH = 0.12,
 
-	-- LA RAFALE ECLAIRCIT L'HERBE. Un brin qui se couche ne renvoie pas la lumiere de la meme facon : c'est CA qui
-	-- rend le vent visible dans un vrai champ. Le mouvement seul se lit a peine ; le contraste, lui, saute aux yeux.
+	-- LA CRETE DE LA VAGUE CHANGE DE COULEUR. Un brin qui se couche ne renvoie pas la lumiere de la meme facon :
+	-- c'est CA qui rend le vent visible dans un vrai champ. Le mouvement seul se lit a peine, surtout de loin.
 	--
-	-- On ECLAIRCIT la teinte de chaque touffe (facteur sur ses canaux) au lieu de la fondre vers une couleur fixe :
-	-- chaque touffe garde ainsi sa nuance et les taches de Perlin, sans qu'il faille stocker une couleur de plus.
+	-- Premiere version : on ECLAIRCISSAIT la teinte de 10 %. Invisible -- sur un vert deja vif, quelques pour cent
+	-- de luminosite se noient. Il faut une couleur FRANCHE pour que la vague se detache.
 	--
-	-- 0 = effet coupe. Volontairement DISCRET : au-dela de ~0.2 la vague se lit comme un projecteur qui balaie la
-	-- pelouse, pas comme du vent. A REGLER A L'OEIL, c'est le genre d'effet qui passe vite de "joli" a "faux".
-	GUST_LIGHTEN = 0.1,
-	-- Pas de quantification de cet eclaircissement. Ecrire une couleur coute, et un pour cent d'ecart ne se voit pas.
+	-- Couleur du HAUT de la vague. Lue via BrickColor pour ne pas recopier des valeurs a la main.
+	-- ATTENTION : un nom de BrickColor inconnu retombe SILENCIEUSEMENT sur "Medium stone grey". Si la crete vire au
+	-- gris, c'est le NOM qui est faux, pas le reglage.
+	GUST_COLOR = BrickColor.new("Shamrock").Color,
+	-- Quelle PART de cette couleur au sommet de la vague. 0 = effet coupe, 1 = la crete prend la couleur pleine et
+	-- perd la nuance propre de chaque touffe. A REGLER A L'OEIL : c'est le genre d'effet qui passe vite de "vivant"
+	-- a "peinture".
+	GUST_TINT = 0.55,
+	-- CONCENTRE l'effet sur la CRETE. La rafale est un champ doux ; applique tel quel, le teintage bave sur toute la
+	-- pelouse et se lit comme un aplat, pas comme une vague. On eleve donc la valeur a cette puissance : plus HAUT
+	-- = bande plus fine et plus nette, 1 = pas de concentration du tout.
+	GUST_TINT_SHARPNESS = 2.2,
+	-- Pas de quantification du teintage. Ecrire une couleur coute, et un pour cent d'ecart ne se voit pas.
 	-- Plus GRAND = moins d'ecritures (meilleur FPS) mais la vague avance par marches. 0.02 = 50 niveaux.
 	GUST_LIGHT_STEP = 0.02,
 

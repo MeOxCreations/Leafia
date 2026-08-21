@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.268 — La crete de la vague passe en Shamrock
+
+L'eclaircissement du 0.0.265 ne se voyait PAS. Cause : quelques pour cent de luminosite sur un vert deja vif se
+noient. Il fallait une couleur FRANCHE pour que la vague se detache, pas une nuance de la meme.
+
+La crete fond donc vers `GUST_COLOR` (Shamrock) au lieu d'etre eclaircie. Le fondu reste PARTIEL (`GUST_TINT`),
+donc la nuance propre de chaque touffe et sa tache de Perlin survivent dessous : la vague passe SUR le terrain,
+elle ne le repeint pas.
+
+`GUST_TINT_SHARPNESS` concentre l'effet sur le HAUT de la vague. Sans lui, le champ de bruit etant doux, le
+teintage bave sur toute la pelouse et se lit comme un aplat au lieu d'une vague qui passe. Plus haut = bande plus
+fine et plus nette.
+
+Seule la moitie POSITIVE du bruit teinte : le creux d'une vague ne doit rien changer.
+
+### Piege a connaitre
+
+`BrickColor.new()` retombe SILENCIEUSEMENT sur "Medium stone grey" quand le nom n'existe pas. Si la crete vire au
+GRIS, ce n'est pas le reglage qui est faux, c'est le NOM de la couleur. Le commentaire de la config le dit.
+
 ## 0.0.267 — Le recul de camera devient LENT
 
 Il etait agressif : la vue sautait en arriere au lieu de s'installer. Recul et resserrement passent de 4 et 3 a

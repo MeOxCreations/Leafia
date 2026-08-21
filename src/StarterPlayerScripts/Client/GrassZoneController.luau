@@ -189,15 +189,11 @@ local function apply(
 			-- tondue PUIS pietinee revient a sa couleur de TONDUE quand le pied repart, pas a celle de l'herbe haute.
 			local rest = clump.baseColor:Lerp(clump.mownColor, mowBlend)
 			local final = rest:Lerp(clump.crushedColor, blend)
-			-- LA RAFALE ECLAIRCIT. On multiplie les canaux plutot que de fondre vers une couleur fixe : chaque touffe
-			-- garde ainsi sa nuance et sa tache de Perlin, et il n'y a aucune couleur de plus a stocker par touffe.
+			-- LA CRETE PREND SA COULEUR. Un fondu VERS une couleur franche, pas un eclaircissement : quelques pour
+			-- cent de luminosite sur un vert deja vif ne se voient pas, une teinte differente si.
+			-- Le fondu reste PARTIEL, donc la nuance propre de chaque touffe et sa tache de Perlin survivent dessous.
 			if light > 0 then
-				local k = 1 + light
-				final = Color3.new(
-					math.min(final.R * k, 1),
-					math.min(final.G * k, 1),
-					math.min(final.B * k, 1)
-				)
+				final = final:Lerp(GrassZoneConfigs.GUST_COLOR, light)
 			end
 			clump.part.Color = final
 			clump.lastDarken = blend
@@ -850,7 +846,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			gustSquash = 1 - GrassZoneConfigs.GUST_SQUASH * math.max(gust, 0) * (1 - crushed) * windScale
 			-- MEME champ que le tassement, donc la vague qu'on VOIT est exactement celle qui couche l'herbe.
 			-- Une touffe deja couchee (pied) ou tondue ne scintille pas : elle ne bouge plus, elle n'a pas a briller.
-			lighten = GrassZoneConfigs.GUST_LIGHTEN * math.max(gust, 0) * (1 - crushed) * windScale * mowWind
+			-- On ne garde que la moitie POSITIVE du bruit : le creux d'une vague ne doit rien teinter.
+			-- La puissance CONCENTRE l'effet sur la crete -- sans elle le teintage bave sur toute la pelouse et se
+			-- lit comme un aplat au lieu d'une vague qui passe.
+			local crest = math.max(gust, 0) ^ GrassZoneConfigs.GUST_TINT_SHARPNESS
+			lighten = GrassZoneConfigs.GUST_TINT * crest * (1 - crushed) * windScale * mowWind
 		end
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
