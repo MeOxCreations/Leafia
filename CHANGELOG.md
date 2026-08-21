@@ -2185,6 +2185,21 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.298 — La tondeuse se met franchement en travers quand on tourne en roulant
+
+Un seul angle servait les deux cas. En pleine avance, 10 degres de travers ne racontaient rien : une machine
+lancee qu'on braque doit se mettre EN TRAVERS, c'est de la que viennent le poids et l'inertie.
+
+Deux amplitudes, une par etat : 26 degres en roulant, 10 en manoeuvre. Un reglage par etat et jamais une fraction
+de l'autre -- sinon regler l'un force a compenser l'autre, et le compensateur est toujours une estimation.
+
+Le passage d'un angle a l'autre n'a demande AUCUN lissage supplementaire : c'est la CIBLE qui change, et
+l'approche vers elle (`SWING_RECOVER`) faisait deja tout le travail. Poser un second lissage par-dessus aurait
+ajoute du retard sans rien gagner.
+
+`SWING_MAX` monte de 28 a 40 : a 28 il aurait ecrete les 26 degres au moindre depassement et les regler n'aurait
+plus rien change. Un plafond doit rester un FILET, pas devenir la valeur qui decide.
+
 ## 0.0.297 — La tondeuse ne bouge plus a la prise : c'est le joueur qui va a elle
 
 En appuyant sur E, la machine sautait devant le joueur. Deux causes distinctes, toutes deux corrigees.

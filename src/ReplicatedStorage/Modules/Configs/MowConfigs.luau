@@ -273,13 +273,19 @@ return {
 	-- de l'autre cote -- un zig-zag a l'arret du virage. Aucun lissage ne rattrape une inversion reelle du signal.
 	-- L'input, lui, est propre : il vaut ce que le joueur demande, sans bruit et sans depassement.
 	--
-	-- Angle de traine a FOND de braquage, en degres. C'est le seul bouton d'amplitude.
+	-- DEUX AMPLITUDES, selon qu'on ROULE ou qu'on manoeuvre. En pleine avance la machine se met franchement en
+	-- travers -- c'est ce qui donne le poids et l'inertie ; a l'arret elle ne fait que s'orienter.
+	-- Un reglage par etat, jamais une fraction de l'autre : sinon regler l'un force a compenser l'autre.
+	-- Angle a fond de braquage EN ROULANT, en degres.
+	SWING_ANGLE_DRIVE = 26,
+	-- Angle a fond de braquage EN MANOEUVRE (a l'arret ou presque), en degres.
 	SWING_ANGLE = 10,
 	-- Vitesse a laquelle la machine rejoint cet angle, puis revient droite, en fraction par seconde.
 	-- BAS = elle traine plus longtemps, et c'est ce retard qui se lit comme du poids.
 	SWING_RECOVER = 6,
-	-- Plafond absolu, en degres. Filet : SWING_ANGLE devrait rester en dessous.
-	SWING_MAX = 28,
+	-- Plafond absolu, en degres. Filet : les deux angles ci-dessus doivent rester EN DESSOUS, sinon c'est lui qui
+	-- decide a leur place et les regler ne change plus rien.
+	SWING_MAX = 40,
 
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).

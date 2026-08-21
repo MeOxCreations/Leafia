@@ -597,8 +597,12 @@ local function grab(player: Player, model: Model)
 		-- Un seul chemin pour les deux cas (en roulant ET a l'arret) : ils ne peuvent donc plus se contredire.
 		local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
 		local maxSwing = math.rad(MowConfigs.SWING_MAX)
+		-- AMPLITUDE selon l'etat : franche en roulant (poids, inertie), discrete en manoeuvre (on s'oriente).
+		-- Le passage d'un angle a l'autre n'a pas besoin d'etre lisse a la main : c'est la CIBLE qui change, et
+		-- l'approche vers elle (SWING_RECOVER) fait deja tout le travail.
+		local swingAngle = if moving then MowConfigs.SWING_ANGLE_DRIVE else MowConfigs.SWING_ANGLE
 		local target = math.clamp(
-			-state.steerInput * steerSign * math.rad(MowConfigs.SWING_ANGLE),
+			-state.steerInput * steerSign * math.rad(swingAngle),
 			-maxSwing,
 			maxSwing
 		)
