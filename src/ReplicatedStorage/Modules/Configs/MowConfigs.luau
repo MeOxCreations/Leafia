@@ -77,6 +77,21 @@ return {
 	-- A REGLER A L'OEIL : le sens depend de l'orientation du modele dans Studio, il ne se deduit pas.
 	CARRY_YAW = 0,
 
+	-- ===== POSE DE MAINTIEN =====
+	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.
+	--
+	-- L'ID vit ICI, en CODE, et pas dans une Instance Animation rangee en ReplicatedStorage : Rojo synchronise le
+	-- code dans TOUTES les places, les Instances non (Animations est en $ignoreUnknownInstances, il se recopie a la
+	-- main place par place). Meme raison que AmbientAnimConfigs.
+	HOLD_ANIM_ID = "rbxassetid://85076820474751",
+	-- Marqueur pose a la fin de l'animation : les mains sont sur le guidon. On FIGE la pose la (vitesse 0) au lieu
+	-- de laisser la piste finir. Lu par GetMarkerReachedSignal PENDANT la lecture (local, aucun appel reseau) et
+	-- jamais par GetKeyframeSequenceAsync, qui rate parfois au boot et tue la feature pour toute la session.
+	-- Plus tard, c'est de ce marqueur que partira le demarrage moteur (tirer la corde).
+	HOLD_READY_EVENT = "ReadyToLaunch",
+	-- Fondu d'entree / de sortie de la pose, en secondes. Court : prendre une tondeuse est un geste franc.
+	HOLD_FADE = 0.15,
+
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).
 	FALLBACK_RADIUS = 2.2,

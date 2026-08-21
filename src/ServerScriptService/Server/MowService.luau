@@ -23,7 +23,10 @@ type CarryState = {
 	owner: Player,
 	parts: { [BasePart]: PartState },
 	weld: Weld?,
+	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
 }
+
+local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
 
 local carried: { [Model]: CarryState } = {}
 
@@ -43,6 +46,75 @@ local function isMower(inst: Instance?): Model?
 		return nil
 	end
 	return model
+end
+
+-- Une SEULE Instance Animation pour tout le serveur : c'est un porteur d'ID, pas un etat. La creer par prise
+-- multiplierait les instances sans rien apporter.
+local holdAnim: Animation? = nil
+local function getHoldAnimation(): Animation
+	if not holdAnim then
+		local a = Instance.new("Animation")
+		a.Name = "LeafiaMowerHold"
+		a.AnimationId = MowConfigs.HOLD_ANIM_ID
+		holdAnim = a
+	end
+	return holdAnim :: Animation
+end
+
+-- POSE DE MAINTIEN : le joueur attrape le guidon, et TIENT la pose tant qu'il pousse.
+--
+-- Jouee cote SERVEUR -> elle se replique a tous, comme les animations de l'echelle.
+--
+-- Priorite Action : en dessous (Movement) la marche l'ecraserait. L'animation ne cle QUE le torse, la tete et les
+-- bras -- si elle clait aussi les jambes, Action les figerait et le joueur glisserait sans marcher.
+--
+-- Looped = TRUE et non false : une piste non bouclee se RELACHE en arrivant au bout et la pose saute. On la fige
+-- donc au marqueur (vitesse 0) AVANT la fin, et elle ne boucle jamais puisqu'elle n'avance plus.
+local function playHold(character: Model, state: CarryState)
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return
+	end
+	-- A CharacterAdded l'Animator arrive quelques frames apres l'Humanoid : un FindFirstChildOfClass nu rend nil.
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+		or humanoid:WaitForChild("Animator", ANIMATOR_TIMEOUT)
+	if not (animator and animator:IsA("Animator")) then
+		warn("[MowService] Pas d'Animator sur le porteur : pose de maintien non jouee.")
+		return
+	end
+
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(getHoldAnimation())
+	end)
+	if not ok or typeof(result) ~= "Instance" then
+		warn(`[MowService] Pose de maintien non chargeable ({MowConfigs.HOLD_ANIM_ID}).`)
+		return
+	end
+
+	local track = result :: AnimationTrack
+	track.Looped = true
+	track.Priority = Enum.AnimationPriority.Action
+	track:GetMarkerReachedSignal(MowConfigs.HOLD_READY_EVENT):Connect(function()
+		track:AdjustSpeed(0) -- mains sur le guidon : on TIENT
+	end)
+	track:Play(MowConfigs.HOLD_FADE)
+	track.TimePosition = 0
+	state.hold = track
+end
+
+local function stopHold(state: CarryState)
+	local track = state.hold
+	if not track then
+		return
+	end
+	state.hold = nil
+	-- pcall : on passe aussi par ici quand le joueur MEURT en poussant. Son Animator est alors deja detruit, et
+	-- couper une piste morte leve. Ce n'est pas un cas anormal, donc on ne warn pas -- on nettoie, point.
+	pcall(function()
+		-- On rend la vitesse AVANT d'arreter : une piste figee a 0 ne fondrait pas, elle disparaitrait d'un coup.
+		track:AdjustSpeed(1)
+		track:Stop(MowConfigs.HOLD_FADE)
+	end)
 end
 
 -- Le point le plus BAS de la tondeuse, en monde. Les 8 coins de chaque part, pas seulement son centre : une part
@@ -115,6 +187,7 @@ local function release(model: Model)
 			part.AssemblyAngularVelocity = Vector3.zero
 		end
 	end
+	stopHold(state)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
 end
@@ -142,7 +215,7 @@ local function grab(player: Player, model: Model)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local c0 = carryC0(model, root, hrp :: BasePart, humanoid)
 
-	local state: CarryState = { owner = player, parts = {}, weld = nil }
+	local state: CarryState = { owner = player, parts = {}, weld = nil, hold = nil }
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }
@@ -161,6 +234,8 @@ local function grab(player: Player, model: Model)
 	carried[model] = state
 	-- Lu par le client pour savoir si c'est LUI qui pousse (donc s'il doit couper et tourner les roues).
 	model:SetAttribute("LeafiaCarriedBy", player.UserId)
+
+	playHold(character :: Model, state)
 end
 
 -- Toutes les tondeuses portees par ce joueur. Il n'en porte qu'une, mais boucler evite qu'un etat orphelin

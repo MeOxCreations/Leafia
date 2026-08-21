@@ -2185,6 +2185,41 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.254 — Le joueur attrape le guidon quand il prend la tondeuse
+
+Nouvelle pose de maintien (`holdingTheHandleAnimation`), jouee des la prise et TENUE tant qu'on pousse. Coupee en
+fondu a la repose.
+
+Jouee cote SERVEUR, donc repliquee a tous : les autres joueurs voient les mains sur le guidon, comme pour les
+animations de l'echelle.
+
+### Les trois pieges du maintien de pose, tous deja au journal
+
+**Priorite `Action`.** En dessous (`Movement`), la marche ecraserait la pose. L'animation ne cle QUE le torse, la
+tete et les bras -- si elle clait aussi les jambes, `Action` les figerait et le joueur glisserait sans marcher.
+Elle est bien faite de ce cote-la.
+
+**`Looped = true`, pas false.** Une piste non bouclee se RELACHE en arrivant au bout, et la pose saute. On la fige
+donc au marqueur (`AdjustSpeed(0)`) AVANT la fin : elle n'avance plus, donc elle ne boucle jamais non plus.
+
+**Le marqueur se lit par `GetMarkerReachedSignal` pendant la lecture**, jamais par `GetKeyframeSequenceAsync` :
+cet appel reseau rate parfois au boot et tue la feature pour TOUTE la session. Meme motif que la boite aux
+lettres.
+
+Detail de sortie : on rend la vitesse a 1 AVANT d'arreter. Une piste figee a 0 ne fond pas, elle disparait d'un
+coup. Et l'arret passe par un `pcall` : mourir en poussant detruit l'Animator, et couper une piste morte leve --
+ce n'est pas un cas anormal, donc on nettoie sans warn.
+
+### L'ID de l'animation vit dans la CONFIG, pas dans une Instance
+
+`HOLD_ANIM_ID` dans `MowConfigs`. Rojo synchronise le CODE dans toutes les places, mais PAS les Instances de
+`ReplicatedStorage.Animations` (`$ignoreUnknownInstances`, recopiees a la main place par place). Pointer vers
+l'Instance aurait donc marche dans Leafia et casse dans le tuto -- soit exactement le bug du 0.0.249. Meme choix
+que `AmbientAnimConfigs`.
+
+`HOLD_READY_EVENT` reste nomme d'apres le marqueur du joueur ("ReadyToLaunch") : c'est de la que partira le
+demarrage moteur, tirer la corde. Le nom sera bon le jour ou cette suite existera.
+
 ## 0.0.253 — La tondeuse se pose sur le sol, et la distance ne se regle plus a l'oeil
 
 Deux defauts du portage, une seule cause : les deux distances etaient des CHIFFRES DEVINES, ignorant la geometrie
