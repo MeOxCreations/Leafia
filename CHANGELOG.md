@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.274 — L'herbe redevient verte PARTOUT quand on lache G
+
+En lachant la touche, seule l'herbe autour du joueur reprenait sa couleur. Tout le reste restait bleu, pour de bon.
+
+La condition qui decide de redessiner une touffe testait encore un BOOLEEN ("allume ou non") herite d'avant le
+fondu, compare au drapeau du materiau Neon -- lui-meme toujours faux depuis que Neon est coupe. Un fondu passe par
+des valeurs INTERMEDIAIRES : une comparaison binaire ne les voit pas.
+
+D'ou un comportement asymetrique trompeur : a l'ALLUMAGE ca marchait par accident (l'etat changeait a la premiere
+image), a l'EXTINCTION plus rien ne se redessinait hors de la portee du vent.
+
+La condition teste maintenant `fading` -- exactement "la revelation est en train de changer". Meme drapeau que
+celui qui reveille deja les paves et les zones : une seule notion, un seul test, aux trois endroits.
+
+Lecon : quand un etat passe de BINAIRE a CONTINU, il faut relire TOUS ses tests. Il en restait un, et il etait a
+l'etage du dessus.
+
 ## 0.0.273 — La pose du guidon ne se fige plus a l'image ZERO
 
 Le joueur restait parfois droit comme un R15 sans animation, la piste bloquee a `TimePosition` 0.

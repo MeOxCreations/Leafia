@@ -890,14 +890,16 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- On compare les DEUX valeurs : la lente peut encore bouger alors que la rapide est deja posee.
 		-- La REVELATION change l'aspect sans qu'aucune valeur d'animation ne bouge : sans ce test, une touffe
 		-- immobile et loin du joueur ne serait jamais repeinte, et la moitie de la pelouse resterait eteinte.
-		local lit = highlight and clump.mown < GrassZoneConfigs.HIGHLIGHT_THRESHOLD
+		-- `fading` et non un booleen "allume ou non" : le fondu passe par des valeurs INTERMEDIAIRES, et une
+		-- comparaison binaire ne les voit pas. Avec elle, l'allumage passait par accident (l'etat changeait) mais
+		-- l'EXTINCTION ne redessinait rien : l'herbe hors du vent restait bleue pour toujours.
 		if
 			windScale > 0
+			or fading
 			or clump.crush ~= clump.lastCrush
 			or clump.squashCrush ~= clump.lastSquashCrush
 			or clump.colorCrush ~= clump.lastColorCrush
 			or clump.mown ~= clump.lastMown
-			or lit ~= clump.lastHighlight
 		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
 			-- Au moment du pas l'ecart est maximal ; une fois le lent arrive, il est NUL et la touffe est droite.
