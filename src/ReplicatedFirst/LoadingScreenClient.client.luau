@@ -44,6 +44,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 	local LEAF_ID = "rbxassetid://117703108607506"
 	local LEAF_TINT = Color3.fromRGB(81, 81, 81)
+	-- Teinte et transparence du fond tuile. A peine detachees du fond (31, 31, 31) : on veut sentir une matiere,
+	-- pas lire un papier peint. Monter TILE_TRANSPARENCY l'efface encore, la baisser le fait ressortir.
+	local TILE_TINT = Color3.fromRGB(48, 48, 48)
+	local TILE_TRANSPARENCY = 0.55
+	-- Taille d'une tuile, en fraction de l'ecran. Deux valeurs car un ecran n'est pas carre.
+	local TILE_SCALE_X = 0.075
+	local TILE_SCALE_Y = 0.13
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
 	-- d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`, le
 	-- rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
@@ -62,6 +69,29 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	curtain.Size = UDim2.fromScale(1, 1)
 	curtain.Active = true -- absorbe les clics tant que le rideau couvre
 	curtain.Parent = sg
+
+	-- FOND TUILE, avec la MEME feuille : le rideau tient dix secondes, un aplat gris pendant dix secondes se lit
+	-- comme un ecran fige. Une texture dit que la page est VIVANTE meme quand rien ne bouge.
+	--
+	-- Volontairement A PEINE plus clair que le fond : c'est une TEXTURE, pas un motif. La feuille du milieu doit
+	-- rester la seule chose qu'on regarde -- deux elements qui reclament l'attention se la volent, et on ne voit
+	-- plus ni l'un ni l'autre.
+	--
+	-- Enfant du CanvasGroup, donc il s'efface AVEC le rideau : rien de plus a fondre.
+	local pattern = Instance.new("ImageLabel")
+	pattern.Name = "Pattern"
+	pattern.BackgroundTransparency = 1
+	pattern.Size = UDim2.fromScale(1, 1)
+	pattern.Image = LEAF_ID
+	pattern.ImageColor3 = TILE_TINT
+	pattern.ImageTransparency = TILE_TRANSPARENCY
+	pattern.ScaleType = Enum.ScaleType.Tile
+	-- TileSize en SCALE (fraction de l'ImageLabel, qui couvre l'ecran) : la tuile suit donc la taille de l'ecran.
+	-- X et Y sont SEPARES parce qu'un ecran n'est pas carre : a valeur egale la feuille serait etiree.
+	-- A REGLER A L'OEIL, il n'y a pas de bonne valeur calculable.
+	pattern.TileSize = UDim2.fromScale(TILE_SCALE_X, TILE_SCALE_Y)
+	pattern.ZIndex = 0 -- derriere la feuille du milieu, qui reste le sujet
+	pattern.Parent = curtain
 
 	-- La feuille : oscille (Rotation) + flotte (Position), deux periodes -> organique.
 	local logo = Instance.new("Frame")

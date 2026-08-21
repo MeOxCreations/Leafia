@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.311 — Un fond tuile derriere le rideau de chargement
+
+Le rideau gris (celui de tous les lieux sauf le 1er lancement) avait un aplat uni. Il tient DIX secondes, et un
+aplat pendant dix secondes se lit comme un ecran fige : on croit que le jeu a plante. Une texture dit que la page
+est vivante meme quand rien ne bouge.
+
+Tuile avec la MEME feuille que celle du milieu, teintee A PEINE au-dessus du fond. C'est une TEXTURE, pas un
+motif : la feuille centrale doit rester la seule chose qu'on regarde. Deux elements qui reclament l'attention se
+la volent, et on ne voit plus ni l'un ni l'autre.
+
+Enfant du CanvasGroup, donc il s'efface AVEC le rideau -- rien de plus a fondre.
+
+`TileSize` en SCALE (fraction de l'ecran) pour suivre toutes les resolutions, avec X et Y SEPARES : un ecran n'est
+pas carre, a valeur egale la feuille serait etiree. Ces deux valeurs se reglent a l'oeil, il n'y a rien de
+calculable.
+
+Pas d'animation dessus, et c'est un choix : la feuille du milieu oscille deja, et le commentaire du fichier note
+justement qu'on a retire les boules qui rebondissaient parce que deux animations qui disent la meme chose se
+volent l'attention.
+
 ## 0.0.310 — Les bandes de tonte se voient enfin : l'axe s'APPREND
 
 Le joueur ne voyait aucune difference entre un aller et un retour. Deux causes.
