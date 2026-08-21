@@ -41,15 +41,20 @@ local function getAnimation(id: string): Animation
 end
 
 -- L'Animator d'un modele, ou nil s'il n'en a pas. Le WaitForChild couvre les modeles ajoutes en cours de
--- partie, dont l'Animator arrive quelques frames apres l'Humanoid.
+-- partie, dont l'Animator arrive quelques frames apres son porteur.
+--
+-- DEUX PORTEURS possibles, et l'AnimationController passe EN PREMIER. Un mesh riggé importe par le 3D Importer
+-- arrive avec un AnimationController, pas un Humanoid ; et c'est tant mieux, un Humanoid coute bien plus cher au
+-- serveur (voir la note de perf en tete de fichier). On accepte le Humanoid pour les modeles plus anciens.
 local function findAnimator(model: Model): Animator?
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
+	local holder: Instance? = model:FindFirstChildOfClass("AnimationController")
+		or model:FindFirstChildOfClass("Humanoid")
+	if not holder then
 		return nil
 	end
-	local found: Instance? = humanoid:FindFirstChildOfClass("Animator")
+	local found: Instance? = holder:FindFirstChildOfClass("Animator")
 	if not found then
-		found = humanoid:WaitForChild("Animator", AmbientAnimConfigs.ANIMATOR_TIMEOUT)
+		found = holder:WaitForChild("Animator", AmbientAnimConfigs.ANIMATOR_TIMEOUT)
 	end
 	if found and found:IsA("Animator") then
 		return found
@@ -74,7 +79,8 @@ local function animate(model: Model): boolean
 		-- Anormal ET actionnable : le modele porte le bon nom, il devrait donc s'animer. Sans ce mot, on cherche du
 		-- cote de l'animation alors que c'est le rig qui manque.
 		warn(
-			`[AmbientAnim] "{model.Name}" trouve mais SANS Animator (il faut un Humanoid contenant un Animator). `
+			`[AmbientAnim] "{model.Name}" trouve mais SANS Animator (il faut un AnimationController OU un `
+				.. `Humanoid, contenant un Animator). `
 				.. `Rien ne sera joue dessus.`
 		)
 		return false

@@ -9,12 +9,17 @@
 
 -- NOM DU MODELE -> animation jouee en boucle. Le nom du modele dans Studio EST la cle : poser dix "Bush1" dans la map
 -- les anime tous les dix, sans rien taguer ni rien brancher a la main.
--- Le modele doit contenir un Humanoid avec son Animator, et ses parts NE DOIVENT PAS etre ancrees : une part ancree
--- ignore son Motor6D, donc l'animation joue sans que rien ne bouge. Pour un PNJ qui doit rester plante au meme
--- endroit, ancrer UNIQUEMENT la RootPart : le reste suit l'animation et le personnage ne derive pas.
+-- Le modele doit contenir un AnimationController OU un Humanoid, avec son Animator. Un mesh rigge importe par le
+-- 3D Importer arrive avec un AnimationController : c'est le cas normal, et c'est le moins cher des deux.
+--
+-- SES PARTS NE DOIVENT PAS ETRE ANCREES : une part ancree ignore son Motor6D, donc l'animation joue et RIEN ne
+-- bouge -- sans la moindre erreur, ce qui envoie chercher le bug du cote de l'animation. Pour un objet qui doit
+-- rester plante au meme endroit (un arbre, un PNJ), ancrer UNIQUEMENT la RootPart : le reste suit l'animation et
+-- l'objet ne derive pas. Piege a l'import : cocher "Ancre" dans le 3D Importer ancre TOUT, donc tue l'animation.
 local ANIMATIONS: { [string]: string } = {
 	Bush1 = "rbxassetid://78047203094778",
 	Tree1 = "rbxassetid://130136106070231",
+	CommonTree_3 = "rbxassetid://78769164571724",
 	-- Papi n'est PLUS ici : il se promene, donc NpcWanderService pilote ses deux animations (idle ET marche).
 	-- Deux services sur le meme Animator finiraient par se battre pour la meme piste.
 }

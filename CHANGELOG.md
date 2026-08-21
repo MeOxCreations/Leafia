@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.247 — Les arbres riggés respirent, et pas seulement ceux a Humanoid
+
+`CommonTree_3` joue sa boucle de balancement (une ligne dans `AmbientAnimConfigs`, comme Bush1 et Tree1 : le NOM
+du modele est la cle, donc en poser dix dans la map les anime tous les dix).
+
+`AmbientAnimService` cherchait un Humanoid pour trouver l'Animator. Or un mesh RIGGE importe par le 3D Importer
+arrive avec un AnimationController, pas un Humanoid : l'arbre etait donc trouve, mais rien n'etait joue dessus.
+Il accepte maintenant les deux, et l'AnimationController EN PREMIER -- c'est le cas normal pour un mesh rigge, et
+il coute bien moins cher au serveur qu'un Humanoid.
+
+Le warn qui prevenait "il faut un Humanoid" disait donc quelque chose de faux : corrige.
+
+### Cote Studio (ne se synchronise PAS par Rojo)
+
+Le modele anime ne doit PAS avoir toutes ses parts ancrees : une part ancree ignore son Motor6D, donc l'animation
+joue et RIEN ne bouge, sans la moindre erreur. Pour un arbre qui doit rester plante au meme endroit, ancrer
+UNIQUEMENT la RootPart.
+
+Attention : cocher "Ancre" dans le 3D Importer ancre TOUT, donc tue l'animation. C'est le reglage a ne pas prendre
+pour un modele anime.
+
 ## 0.0.246 — On peut pousser la tondeuse, et l'herbe RESTE tondue
 
 Premier increment du geste central. Le joueur s'approche de la tondeuse, un prompt `[E] TAKE` apparait, il la
