@@ -2185,6 +2185,20 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.264 — Papi cligne des yeux
+
+Son idle (pour l'instant : juste les yeux) est jouee en boucle par `AmbientAnimService`. Une ligne dans
+`AmbientAnimConfigs`, comme Bush1, Tree1 et CommonTree_3.
+
+Il n'etait anime par PERSONNE. Le commentaire de la config affirmait le contraire -- "Papi n'est plus ici, il se
+promene, NpcWanderService pilote ses deux animations" -- mais l'entree de `NpcWanderConfigs` est DESACTIVEE
+depuis qu'on a constate que l'ancien rig "OldManIdle" n'a ni bras ni jambes. Le commentaire etait devenu faux, et
+un commentaire faux coute plus cher que pas de commentaire : corrige, avec la condition de sortie ecrite noir sur
+blanc (retirer la ligne le jour ou il se promenera, sinon deux services se battront pour le meme Animator).
+
+Le corps viendra quand l'animation sera faite. En attendant, un PNJ qui cligne des yeux est deja vivant -- et
+c'est exactement le genre de detail qui se voit sans qu'on sache le nommer.
+
 ## 0.0.263 — La canne de Papi devient animable
 
 `scripts/studio/AttacherCanneAuPapi.lua` : cree le Motor6D entre la main de Papi et sa canne, d'ou une PISTE
