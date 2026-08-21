@@ -2185,6 +2185,18 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.306 — La tondeuse va encore moins vite
+
+`SPEED_MIN` passe de 8 a 6, `SPEED_MAX` de 13 a 10.
+
+Le plafond est desormais cale sur la MARCHE du jeu (10) et non au-dessus : pousser une tondeuse ne doit jamais
+aller plus vite que marcher les mains vides. C'est ce qui donne le poids, et ca garde la marche libre comme
+reference lisible.
+
+L'ecart passe de 5 a 4, donc la montee en regime tombe a environ 2.7 s sans toucher a `SPEED_RAMP_UP` : reduire
+l'ecart raccourcit la duree. Le commentaire de la config le dit maintenant, parce que c'est le genre de couplage
+qu'on oublie au reglage suivant.
+
 ## 0.0.305 — Les bandes de tonte naissent enfin de la TONTE
 
 Promesse tenue. La config l'annoncait depuis le debut, dans le bloc "Rayures de tonte" :

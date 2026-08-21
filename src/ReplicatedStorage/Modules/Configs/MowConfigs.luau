@@ -177,10 +177,13 @@ return {
 	-- SPRINT_SPEED = 17. Les premieres valeurs (13 -> 20) etaient au-dessus des DEUX : le joueur poussait sa
 	-- tondeuse plus vite qu'il ne court, ce qui se lisait comme une course, pas comme un travail.
 	-- Une tondeuse est LOURDE : on demarre plus lentement qu'a pied, et meme a plein regime on ne sprinte pas.
-	SPEED_MIN = 8, -- au demarrage et apres chaque arret. Sous la marche : la machine resiste
-	SPEED_MAX = 13, -- plafond. Au-dessus de la marche, bien en dessous du sprint
+	SPEED_MIN = 6, -- au demarrage et apres chaque arret. Bien SOUS la marche : la machine resiste
+	-- Plafond cale sur la MARCHE du jeu (10), pas au-dessus. Pousser une tondeuse ne doit jamais aller plus vite
+	-- que marcher les mains vides : c'est ce qui donne le poids, et ca laisse la marche libre comme reference.
+	SPEED_MAX = 10,
 	-- Studs/s gagnes par seconde de marche. A REGLER AVEC L'ECART, pas tout seul : sur 5 studs d'ecart (8 -> 13),
-	-- 1.5 met environ 3.3 s a atteindre le plein regime. C'est CETTE duree qu'on ressent, pas le chiffre.
+	-- Sur l'ecart actuel (6 -> 10, soit 4), 1.5 met environ 2.7 s a atteindre le plein regime. C'est CETTE
+	-- duree qu'on ressent, pas le chiffre : reduire l'ecart raccourcit la montee sans toucher a la rampe.
 	-- Plus haut = monte plus vite, et l'effet de montee en regime disparait.
 	SPEED_RAMP_UP = 1.5,
 	SPEED_RAMP_DOWN = 14, -- redescente a l'arret. VIVE expres : repartir doit se meriter, ralentir non
