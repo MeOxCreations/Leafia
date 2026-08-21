@@ -556,6 +556,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   va de l'origine jusqu'au modele -- l'objet apparait minuscule dans un coin d'une enorme selection. Ne pas
   confondre avec l'ecart NORMAL entre l'os racine (au pied du tronc) et le centre de la boite (a mi-hauteur).
 
+- **`rojo build` ne VALIDE PAS le Luau : il empaquette, il ne parse pas.** Un fichier avec une faute de syntaxe
+  grossiere (ici une deuxieme ligne de commentaire sans son `--`) passe le build sans un mot, et l'erreur ne sort
+  qu'au LANCEMENT, dans la console Studio, sous la forme d'un module qui refuse de se charger. Ne jamais annoncer
+  "build OK donc la syntaxe est bonne" -- c'est faux, et ca a ete affirme trois fois de suite ici. Le vrai controle
+  est `selene src` (0 parse errors). Il est declare dans `rokit.toml` mais peut ne pas etre INSTALLE : `rokit
+  install` refuse tant que l'outil n'est pas approuve (`rokit trust <auteur>/<outil>`). Corollaire : nettoyer les
+  warnings de selene au fur et a mesure, un linter qui crie pour rien finit ignore -- meme lecon que cSpell.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

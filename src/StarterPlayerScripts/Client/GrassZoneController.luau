@@ -49,7 +49,6 @@ local highlight = false
 -- Repere des rayures, calcule une fois. Projeter la case sur cette direction donne la bande a laquelle elle appartient.
 local STRIPE_COS = math.cos(math.rad(GrassZoneConfigs.STRIPE_HEADING))
 local STRIPE_SIN = math.sin(math.rad(GrassZoneConfigs.STRIPE_HEADING))
-local WIND_VIEW_SQ = GrassZoneConfigs.WIND_VIEW_DISTANCE * GrassZoneConfigs.WIND_VIEW_DISTANCE
 
 -- Une touffe. On garde son PIED et sa rotation propre : le CFrame se recompose a chaque image a partir de ces
 -- valeurs, JAMAIS a partir du CFrame precedent -- sinon l'inclinaison s'accumulerait et les touffes finiraient

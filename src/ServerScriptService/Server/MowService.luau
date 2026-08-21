@@ -211,7 +211,7 @@ local function grab(player: Player, model: Model)
 	end
 
 	-- MESURE AVANT DE TOUCHER A QUOI QUE CE SOIT : des qu'on desancre, la physique peut deja avoir fait bouger
-	la tondeuse d'un poil, et l'offset serait calcule sur une pose qui n'existe plus.
+	-- la tondeuse d'un poil, et l'offset serait calcule sur une pose qui n'existe plus.
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local c0 = carryC0(model, root, hrp :: BasePart, humanoid)
 

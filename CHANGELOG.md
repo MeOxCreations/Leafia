@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.255 — Le serveur repart : faute de syntaxe dans MowService
+
+`MowService` ne se chargeait plus ("Incomplete statement", ligne 214), donc le bootstrap serveur tombait avec lui.
+Cause : un commentaire ecrit sur deux lignes dont la seconde avait perdu son `--`. Corrige.
+
+### La vraie lecon : `rojo build` ne valide PAS le Luau
+
+Il empaquette, il ne parse pas. Le fichier casse passait le build sans un mot, et l'erreur ne sortait qu'au
+LANCEMENT. "Build OK donc la syntaxe est bonne" a ete affirme trois fois ici, et c'etait faux les trois fois.
+
+`selene` etait declare dans `rokit.toml` mais jamais INSTALLE (`rokit install` refuse tant que l'outil n'est pas
+approuve : `rokit trust Kampfkarren/selene`). Il l'est maintenant, et `selene src` rend 0 erreur, 0 warning,
+0 parse error. C'est LUI le controle avant de dire qu'un fichier est bon.
+
+Au passage, `WIND_VIEW_SQ` disparait de `GrassZoneController` : plus utilisee depuis que le tri se fait par paves.
+Un linter qui crie pour rien finit ignore -- meme lecon que cSpell.
+
 ## 0.0.254 — Le joueur attrape le guidon quand il prend la tondeuse
 
 Nouvelle pose de maintien (`holdingTheHandleAnimation`), jouee des la prise et TENUE tant qu'on pousse. Coupee en
