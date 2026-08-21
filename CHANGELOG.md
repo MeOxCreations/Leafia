@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.263 — La canne de Papi devient animable
+
+`scripts/studio/AttacherCanneAuPapi.lua` : cree le Motor6D entre la main de Papi et sa canne, d'ou une PISTE
+"Canne" dans l'editeur d'animation.
+
+Rappel de la regle, deja au journal : parenter un objet a un personnage ne cree AUCUN joint, et sans joint
+l'editeur d'animation ne voit meme pas l'objet. Un Tool y arrive parce que ROBLOX lui fabrique un Motor6D a
+l'equipement ; un Model ne declenche rien.
+
+Difference avec `AttacherOutilAuRig` : la prise du taille-haie est CALCULEE en jeu par ToolService, donc la poser
+a l'oeil donnerait des poses justes dans l'editeur et fausses en jeu. La canne n'est calculee par personne --
+c'est du decor sur un PNJ. Le placement fait a la main EST la source de verite, et le script se contente de le
+figer dans le C0. On peut donc corriger la prise et relancer.
+
+Le script desancre TOUTE la canne, pas seulement la part soudee : une part ancree ignore son Motor6D, et une
+seule suffit a bloquer l'ensemble -- l'animation jouerait alors sans que rien ne bouge, sans erreur.
+
+### Cote Studio (ne se synchronise PAS par Rojo)
+
+Le joint vit dans le Workspace. Il doit etre refait dans CHAQUE place (Leafia ET le tuto), sinon Papi tiendra sa
+canne dans l'une et pas dans l'autre.
+
 ## 0.0.262 — La tondeuse monte en regime, et le levier le raconte
 
 ### Le joueur gagne sa vitesse
