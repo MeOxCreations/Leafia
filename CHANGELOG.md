@@ -2185,6 +2185,33 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.248 — L'Animator manquant se cree tout seul, et l'ancrage se dit tout haut
+
+Suite directe du 0.0.247, qui ne suffisait pas : `CommonTree_3` etait bien trouve, son AnimationController etait
+bien la, mais il etait VIDE. Le 3D Importer de Roblox cree un AnimationController SANS Animator dedans. Le service
+attendait donc 5 secondes puis abandonnait.
+
+Il le CREE maintenant au lieu de l'attendre. Et s'il n'y a aucun porteur, il pose un AnimationController (pas un
+Humanoid : bien moins cher au serveur, et suffisant pour une boucle d'ambiance). Un modele nomme dans la config
+est CENSE s'animer -- autant lui donner ce qui lui manque plutot que de refuser.
+
+Plus aucun yield au passage : cote serveur, un modele pose dans Studio est complet des le boot, il n'y a rien a
+attendre. (Un personnage JOUEUR, lui, a bien son Animator qui arrive apres l'Humanoid -- CharacterService et
+ToolService gardent donc leur attente, c'est un cas different.)
+
+`ANIMATOR_TIMEOUT` disparait de la config : plus personne ne l'utilise, et une config morte finit par mentir.
+
+### Le piege suivant, dit tout haut
+
+Une part ANCREE ignore son Motor6D : l'animation joue, les os bougent, et rien ne se deplace a l'ecran -- sans la
+moindre erreur. C'est l'echec silencieux type de cette feature, et on ne le voit qu'a l'oeil.
+
+Le service compte donc les parts ancrees hors RootPart au demarrage de chaque boucle, et le DIT nommement. La
+RootPart, elle, doit rester ancree : c'est ce qui empeche l'objet de deriver.
+
+Regle generale (deja au journal) : quand un systeme peut echouer en silence, lui ajouter un controle qui mesure le
+resultat et parle.
+
 ## 0.0.247 — Les arbres riggés respirent, et pas seulement ceux a Humanoid
 
 `CommonTree_3` joue sa boucle de balancement (une ligne dans `AmbientAnimConfigs`, comme Bush1 et Tree1 : le NOM

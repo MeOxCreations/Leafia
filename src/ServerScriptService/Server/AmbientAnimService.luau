@@ -40,26 +40,50 @@ local function getAnimation(id: string): Animation
 	return animation
 end
 
--- L'Animator d'un modele, ou nil s'il n'en a pas. Le WaitForChild couvre les modeles ajoutes en cours de
--- partie, dont l'Animator arrive quelques frames apres son porteur.
+-- L'Animator d'un modele. On le CREE s'il manque, au lieu d'attendre puis d'abandonner.
 --
--- DEUX PORTEURS possibles, et l'AnimationController passe EN PREMIER. Un mesh riggé importe par le 3D Importer
--- arrive avec un AnimationController, pas un Humanoid ; et c'est tant mieux, un Humanoid coute bien plus cher au
--- serveur (voir la note de perf en tete de fichier). On accepte le Humanoid pour les modeles plus anciens.
-local function findAnimator(model: Model): Animator?
+-- Un mesh RIGGE importe par le 3D Importer arrive avec un AnimationController VIDE : Roblox n'y met pas d'Animator.
+-- Sans cette creation, tout est juste par ailleurs (le rig, l'anim, le nom du modele) et RIEN ne joue -- exactement
+-- le genre d'echec silencieux qui envoie chercher le bug dans l'animation pendant une heure.
+--
+-- On ne YIELD pas : cote serveur, un modele pose dans Studio est complet des le boot, il n'y a rien a attendre.
+-- (Different d'un personnage joueur, dont l'Animator arrive bien quelques frames apres l'Humanoid.)
+local function findAnimator(model: Model): Animator
 	local holder: Instance? = model:FindFirstChildOfClass("AnimationController")
 		or model:FindFirstChildOfClass("Humanoid")
 	if not holder then
-		return nil
+		-- Le modele est NOMME dans la config : il est donc cense s'animer. On lui pose un porteur.
+		-- AnimationController et pas Humanoid : bien moins cher au serveur, et suffisant pour une boucle d'ambiance.
+		local controller = Instance.new("AnimationController")
+		controller.Parent = model
+		holder = controller
 	end
-	local found: Instance? = holder:FindFirstChildOfClass("Animator")
-	if not found then
-		found = holder:WaitForChild("Animator", AmbientAnimConfigs.ANIMATOR_TIMEOUT)
-	end
-	if found and found:IsA("Animator") then
+	local found = (holder :: Instance):FindFirstChildOfClass("Animator")
+	if found then
 		return found
 	end
-	return nil
+	local animator = Instance.new("Animator")
+	animator.Parent = holder
+	return animator
+end
+
+-- UNE PART ANCREE IGNORE SON MOTOR6D : l'animation joue, les os bougent, et rien ne se deplace a l'ecran, sans la
+-- moindre erreur. C'est LE piege de cette feature, et il ne se voit qu'a l'oeil -- donc on le dit.
+-- La RootPart, elle, DOIT rester ancree : c'est ce qui empeche l'objet de deriver. On ne compte donc pas celle-la.
+local function warnIfAnchored(model: Model)
+	local root = model.PrimaryPart
+	local anchored = 0
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Anchored and d ~= root then
+			anchored += 1
+		end
+	end
+	if anchored > 0 then
+		warn(
+			`[AmbientAnim] "{model.Name}" : {anchored} part(s) ANCREE(S) hors RootPart. Une part ancree ignore son `
+				.. `Motor6D : l'animation va jouer sans que rien ne bouge. N'ancrer QUE la RootPart.`
+		)
+	end
 end
 
 -- Demarre la boucle d'un modele, si son nom est connu de la config et qu'il n'est pas deja anime.
@@ -75,16 +99,7 @@ local function animate(model: Model): boolean
 		return false
 	end
 	local animator = findAnimator(model)
-	if not animator then
-		-- Anormal ET actionnable : le modele porte le bon nom, il devrait donc s'animer. Sans ce mot, on cherche du
-		-- cote de l'animation alors que c'est le rig qui manque.
-		warn(
-			`[AmbientAnim] "{model.Name}" trouve mais SANS Animator (il faut un AnimationController OU un `
-				.. `Humanoid, contenant un Animator). `
-				.. `Rien ne sera joue dessus.`
-		)
-		return false
-	end
+	warnIfAnchored(model)
 
 	local ok, result = pcall(function()
 		return animator:LoadAnimation(getAnimation(id))

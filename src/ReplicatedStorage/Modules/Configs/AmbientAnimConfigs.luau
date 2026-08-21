@@ -41,10 +41,6 @@ local AmbientAnimConfigs = {
 	SPEED_VARIATION = 0.15, -- ecart de vitesse maxi, en fraction (0.15 = chacun entre 0.85x et 1.15x)
 	RANDOM_START = true, -- demarrer chacun a un point au hasard de sa boucle
 
-	-- L'Animator peut arriver quelques frames apres le modele (meme piege qu'a CharacterAdded). Au-dela, on abandonne
-	-- ce modele plutot que d'attendre pour toujours.
-	ANIMATOR_TIMEOUT = 5,
-
 	-- Delai TOTAL pour trouver le dossier au demarrage (un seul delai pour tout le chemin, pas un par segment).
 	-- Au-dela : on previent, et cette place n'a pas d'animation d'ambiance.
 	ROOT_TIMEOUT = 10,
