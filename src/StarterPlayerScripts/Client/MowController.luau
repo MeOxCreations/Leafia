@@ -47,6 +47,8 @@ local player = Players.LocalPlayer
 
 local carryRemote: RemoteEvent? = nil
 local steerRemote: RemoteEvent? = nil
+local pullRemote: RemoteEvent? = nil
+local pullBound = false
 -- Dernier braquage ENVOYE. On ne renvoie que sur un vrai changement : tenir une touche ne doit pas remplir
 -- le reseau d'un message par image pour une valeur qui ne bouge pas.
 local lastSteerSent = 0
@@ -574,6 +576,26 @@ end
 -- La touche n'est branchee QUE quand l'action a un sens (pres d'une tondeuse, ou en train d'en pousser une).
 -- createTouchButton fait apparaitre un bouton a l'ecran sur tactile, et bind la touche sur PC, d'un seul geste :
 -- sans lui, deposer la tondeuse serait injouable sans clavier.
+-- TIRAGE DE CORDE au CLIC. Branche uniquement quand il y a une corde a tirer : une tondeuse deja lancee ne doit
+-- pas laisser un bouton a l'ecran, et un clic sans effet apprend au joueur a ne plus cliquer.
+-- createTouchButton fait apparaitre un bouton sur tactile ET bind le clic sur PC, d'un seul geste.
+local function setPullBound(active: boolean)
+	if active == pullBound then
+		return
+	end
+	pullBound = active
+	if active then
+		ContextActionService:BindAction(MowConfigs.START_ACTION, function(_, state: Enum.UserInputState)
+			if state == Enum.UserInputState.Begin and pullRemote then
+				pullRemote:FireServer()
+			end
+			return Enum.ContextActionResult.Pass
+		end, true, Enum.UserInputType.MouseButton1)
+	else
+		ContextActionService:UnbindAction(MowConfigs.START_ACTION)
+	end
+end
+
 local function setActionBound(active: boolean)
 	if active == actionBound then
 		return
@@ -697,9 +719,16 @@ local function update(dt: number)
 	applyCameraRig(hrp :: BasePart, mine ~= nil)
 
 	if not mine then
+		setPullBound(false)
 		lastCutPos = nil
 		return
 	end
+
+	-- UNE MACHINE A L'ARRET NE COUPE RIEN. Tant que la corde n'a pas ete tiree, on pousse un objet, pas une
+	-- tondeuse. C'est aussi ce qui donne du SENS au demarrage : sans ca, tirer la corde ne serait qu'une
+	-- animation de plus.
+	local running = mine:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
+	setPullBound(not running)
 
 	local point, radius = cutPointOf(mine)
 	if not point then
@@ -722,7 +751,9 @@ local function update(dt: number)
 	spinWheels(mine, distance)
 	-- La coupe tourne MEME A L'ARRET : rester sur place finit de tondre la touffe sous le carter, au lieu de laisser
 	-- un rond a moitie coupe qu'on ne comprend pas.
-	GrassZoneController.mowAt(point, radius, dt)
+	if running then
+		GrassZoneController.mowAt(point, radius, dt)
+	end
 end
 
 function MowController.init()
@@ -730,6 +761,7 @@ function MowController.init()
 	task.spawn(function()
 		carryRemote = RemoteSetup.getRemote("SetMowerCarry", "Mow") :: RemoteEvent
 		steerRemote = RemoteSetup.getRemote("SetMowSteer", "Mow") :: RemoteEvent
+		pullRemote = RemoteSetup.getRemote("PullMowStarter", "Mow") :: RemoteEvent
 	end)
 
 	-- On branche la boucle MEME si aucune tondeuse n'est encore la : avec le streaming, "absente au demarrage" est
@@ -739,6 +771,7 @@ function MowController.init()
 	-- Nouveau perso : le prompt d'avant pointait sur une position morte, et on ne porte plus rien.
 	player.CharacterAdded:Connect(function()
 		hideOurs()
+		setPullBound(false)
 		lastCutPos = nil
 		steering = false -- nouveau perso : il arrive avec son AutoRotate, notre etat ne le concerne plus
 		setReveal(false)
@@ -752,6 +785,7 @@ function MowController.stop()
 		connection = nil
 	end
 	setActionBound(false)
+	setPullBound(false)
 	hideOurs()
 	-- On rend la camera : sans ca, arreter le controller laisserait la vue reculee et decalee pour toujours.
 	CameraEffects.SetZoomBoost(0)

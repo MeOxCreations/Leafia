@@ -122,6 +122,9 @@ local REMOTES: { { any } } = {
 	-- mentir sur l'intensite, pas sur le resultat -- l'angle final est clampe cote serveur.
 	-- Envoye seulement quand la valeur CHANGE assez, pas a chaque image : tenir une touche n'envoie qu'un message.
 	{ "SetMowSteer", E, "Mow" },
+	-- TIRAGE DE CORDE. Aucun argument : le serveur sait deja ce que le joueur porte et dans quel etat, donc il n'y
+	-- a rien a valider et rien a falsifier. Il ignore le message si la tondeuse est deja lancee.
+	{ "PullMowStarter", E, "Mow" },
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder

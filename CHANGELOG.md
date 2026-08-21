@@ -2185,6 +2185,30 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.303 — C'est le JOUEUR qui tire la corde, pas le jeu
+
+L'animation de demarrage se jouait toute seule a la prise. Elle est desormais FIGEE a sa premiere image : le
+personnage TIENT la corde, pret a tirer. Le CLIC du joueur la relance a vitesse normale.
+
+Meme mecanique que le lanceur du taille-haie, et le service le documentait deja : "Ready et Pulling partagent la
+meme piste, on ne fait que changer sa vitesse". La posture etant deja la bonne, il n'y a aucune transition a
+fondre entre les deux.
+
+Nouveau remote `PullMowStarter`, sans aucun argument : le serveur sait deja ce que le joueur porte et dans quel
+etat. Rien a valider, rien a falsifier. Il ignore le message si la machine est deja lancee.
+
+Le bouton n'est branche QUE tant qu'il y a une corde a tirer. Une tondeuse lancee ne laisse donc pas un bouton a
+l'ecran, et un clic sans effet n'apprend pas au joueur a ne plus cliquer.
+
+### Une machine a l'arret ne coupe rien
+
+Consequence directe, et elle n'a pas ete demandee : tant que la corde n'a pas ete tiree, on POUSSE un objet -- on
+ne tond pas. Nouvel attribut `LeafiaMowerRunning`, pose par le serveur au demarrage du moteur et lu par le client
+avant de couper.
+
+C'est aussi ce qui donne du SENS au demarrage. Sans ca, tirer la corde ne serait qu'une animation de plus : jolie,
+et sans consequence.
+
 ## 0.0.302 — On TIRE LA CORDE avant de pousser, et le moteur s'entend
 
 Nouvelle animation de demarrage, jouee UNE fois a la prise. La pose du guidon prend le relais quand elle se

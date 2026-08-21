@@ -214,7 +214,22 @@ local function playStart(model: Model, character: Model, state: CarryState, onDo
 			onDone()
 		end
 	end)
+	-- FIGEE A SA PREMIERE IMAGE : le personnage TIENT la corde, pret a tirer. C'est le CLIC du joueur qui la
+	-- relance (voir MowService.pull) -- on ne demarre pas une tondeuse en la regardant.
+	-- Meme mecanique que le lanceur du taille-haie : les deux etats partagent la piste, seule la vitesse change.
 	track:Play(MowConfigs.START_FADE)
+	track:AdjustSpeed(0)
+	track.TimePosition = 0
+end
+
+-- TIRAGE DE CORDE : le joueur a clique. On relance la piste figee -- c'est le seul changement, la posture etait
+-- deja la bonne, donc il n'y a aucune transition a fondre.
+local function pullStarter(model: Model, state: CarryState)
+	local track = state.start
+	if not track or track.Speed ~= 0 then
+		return -- pas de corde a tirer, ou deja en train de la tirer
+	end
+	track:AdjustSpeed(1)
 	-- Le son part AVEC le geste, pas a la prise : c'est le tirage qu'on entend.
 	local root = rootOf(model)
 	if root then
@@ -402,6 +417,8 @@ local function startMachine(model: Model, state: CarryState)
 		sound:Play()
 		state.run = sound
 	end
+	-- Lu par le client : une machine a l'arret ne coupe rien.
+	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, true)
 
 	local animator = machineAnimator(model)
 	if not animator then
@@ -595,6 +612,7 @@ local function release(model: Model)
 	restoreJump(state)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
+	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, nil)
 end
 
 local function grab(player: Player, model: Model)
@@ -836,6 +854,17 @@ function MowService.init()
 			local state = carried[model]
 			if state and state.owner == player then
 				release(model)
+			end
+		end
+	end)
+
+	-- TIRAGE DE CORDE. Aucun argument : le serveur sait deja ce que le joueur porte et dans quel etat. Il ignore
+	-- le message si la machine est deja lancee -- un clic de plus ne relance pas le geste.
+	local pullRemote = RemoteSetup.getRemote("PullMowStarter", "Mow") :: RemoteEvent
+	pullRemote.OnServerEvent:Connect(function(player: Player)
+		for model, state in pairs(carried) do
+			if state.owner == player then
+				pullStarter(model, state)
 			end
 		end
 	end)

@@ -132,6 +132,13 @@ return {
 	START_PRIORITY = Enum.AnimationPriority.Action,
 	-- Fondu d'entree. La sortie est geree par le fondu de la pose qui prend le relais.
 	START_FADE = 0.1,
+	-- La piste est FIGEE a sa premiere image des la prise : le personnage tient la corde, pret a tirer. C'est le
+	-- CLIC du joueur qui la relance a vitesse normale -- on ne demarre pas une tondeuse en la regardant.
+	-- Meme mecanique que le lanceur du taille-haie (voir ToolStartService : Ready puis Pulling partagent la meme
+	-- piste, seule la vitesse change).
+	START_ACTION = "LeafiaMowPull",
+	-- Attribut pose sur la tondeuse quand le moteur TOURNE. Lu par le client : une machine a l'arret ne coupe rien.
+	RUNNING_ATTRIBUTE = "LeafiaMowerRunning",
 
 	-- ===== POSE DE MAINTIEN =====
 	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.
