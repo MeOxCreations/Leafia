@@ -44,13 +44,18 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 	local LEAF_ID = "rbxassetid://117703108607506"
 	local LEAF_TINT = Color3.fromRGB(81, 81, 81)
-	-- Teinte et transparence du fond tuile. A peine detachees du fond (31, 31, 31) : on veut sentir une matiere,
-	-- pas lire un papier peint. Monter TILE_TRANSPARENCY l'efface encore, la baisser le fait ressortir.
-	local TILE_TINT = Color3.fromRGB(48, 48, 48)
-	local TILE_TRANSPARENCY = 0.55
+	-- Prefixe CURTAIN_ : l'ecran d'INTRO a deja ses propres TILE_* en haut du fichier, et un local du meme nom
+	-- les MASQUERAIT ici. On croirait alors regler l'un en reglant l'autre.
+	-- Teinte et transparence du fond tuile, sur un fond a (31, 31, 31).
+	-- PREMIERE VERSION INVISIBLE : 48 a 55 % de transparence donnait 39 a l'ecran, soit 8 points d'ecart sur
+	-- 255. Le calcul se fait de tete et aurait evite le tour : couleur RENDUE = fond + (teinte - fond) x
+	-- (1 - transparence). Un ecart de moins de ~20 points ne se voit pas.
+	-- Ici : 31 + (78 - 31) x 0.75 = 66, soit 35 points d'ecart. Visible, et ca reste une texture.
+	local CURTAIN_TILE_TINT = Color3.fromRGB(78, 78, 78)
+	local CURTAIN_TILE_TRANSPARENCY = 0.25
 	-- Taille d'une tuile, en fraction de l'ecran. Deux valeurs car un ecran n'est pas carre.
-	local TILE_SCALE_X = 0.075
-	local TILE_SCALE_Y = 0.13
+	local CURTAIN_TILE_SCALE_X = 0.075
+	local CURTAIN_TILE_SCALE_Y = 0.13
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
 	-- d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`, le
 	-- rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
@@ -83,14 +88,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	pattern.BackgroundTransparency = 1
 	pattern.Size = UDim2.fromScale(1, 1)
 	pattern.Image = LEAF_ID
-	pattern.ImageColor3 = TILE_TINT
-	pattern.ImageTransparency = TILE_TRANSPARENCY
+	pattern.ImageColor3 = CURTAIN_TILE_TINT
+	pattern.ImageTransparency = CURTAIN_TILE_TRANSPARENCY
 	pattern.ScaleType = Enum.ScaleType.Tile
 	-- TileSize en SCALE (fraction de l'ImageLabel, qui couvre l'ecran) : la tuile suit donc la taille de l'ecran.
 	-- X et Y sont SEPARES parce qu'un ecran n'est pas carre : a valeur egale la feuille serait etiree.
 	-- A REGLER A L'OEIL, il n'y a pas de bonne valeur calculable.
-	pattern.TileSize = UDim2.fromScale(TILE_SCALE_X, TILE_SCALE_Y)
-	pattern.ZIndex = 0 -- derriere la feuille du milieu, qui reste le sujet
+	pattern.TileSize = UDim2.fromScale(CURTAIN_TILE_SCALE_X, CURTAIN_TILE_SCALE_Y)
+	pattern.ZIndex = 1 -- ordre EXPLICITE des deux cotes : compter sur la valeur par defaut d'un seul se lit mal
 	pattern.Parent = curtain
 
 	-- La feuille : oscille (Rotation) + flotte (Position), deux periodes -> organique.
@@ -99,6 +104,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	logo.AnchorPoint = Vector2.new(0.5, 0.5)
 	logo.Position = UDim2.fromScale(0.5, 0.48)
 	logo.Size = UDim2.fromScale(0.267, 0.2)
+	logo.ZIndex = 2 -- au-dessus du fond tuile
 	logo.Parent = curtain
 	local leaf = Instance.new("ImageLabel")
 	leaf.BackgroundTransparency = 1

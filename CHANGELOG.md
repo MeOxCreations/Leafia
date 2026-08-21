@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.312 — Le fond tuile du rideau se voit vraiment
+
+Il etait invisible, et le calcul le disait deja : teinte 48 a 55 % de transparence sur un fond a 31 rend 39 --
+8 points d'ecart sur 255. Sous ~20 points, l'oeil ne voit rien.
+
+Formule a garder : `couleur RENDUE = fond + (teinte - fond) x (1 - transparence)`. Elle se fait de tete et evite
+de livrer un effet qui n'existe pas.
+
+Nouvelles valeurs : 78 a 25 % de transparence, soit 66 a l'ecran -- 35 points d'ecart. Visible, et ca reste une
+texture.
+
+L'ordre des calques est maintenant EXPLICITE des deux cotes (fond a 1, feuille a 2) au lieu de reposer sur la
+valeur par defaut de l'un des deux.
+
+### Un masquage de nom evite
+
+Les reglages du rideau prennent le prefixe `CURTAIN_`. L'ecran d'INTRO a deja ses propres `TILE_TINT`,
+`TILE_TRANSPARENCY` et `TILE_SCALE_*` en haut du fichier : des locaux du meme nom les MASQUAIENT dans le bloc du
+rideau. Ca marchait, mais on aurait fini par croire regler l'un en reglant l'autre.
+
 ## 0.0.311 — Un fond tuile derriere le rideau de chargement
 
 Le rideau gris (celui de tous les lieux sauf le 1er lancement) avait un aplat uni. Il tient DIX secondes, et un
