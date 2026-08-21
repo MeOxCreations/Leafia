@@ -821,9 +821,17 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- calmes roulent sur le champ. Sans lui, toutes les touffes recoivent exactement le meme souffle et ca se
 			-- lit comme un ventilateur, pas comme du vent.
 			local drift = now * GrassZoneConfigs.GUST_SPEED
+			-- Projection de la touffe sur les deux axes du vent. `across` utilise la perpendiculaire de WIND_DIR
+			-- (on tourne de 90 degres : x,z -> -z,x), donc les deux axes restent coherents si le vent change.
+			local along = clump.basePos.X * WIND_DIR.X + clump.basePos.Z * WIND_DIR.Z
+			local across = clump.basePos.X * -WIND_DIR.Z + clump.basePos.Z * WIND_DIR.X
 			local gust = math.noise(
-				(clump.basePos.X - WIND_DIR.X * drift) * GrassZoneConfigs.GUST_SCALE,
-				(clump.basePos.Z - WIND_DIR.Z * drift) * GrassZoneConfigs.GUST_SCALE,
+				-- ECHANTILLONNE DANS LE REPERE DU VENT, pas en X/Z du monde. En X/Z, la meme frequence part dans les
+				-- deux directions et le bruit ne peut faire que des taches RONDES : une masse de vent. Ici on
+				-- separe le long du souffle (fin) et le travers (etire) -> des lamelles qui roulent.
+				-- Le defilement (drift) ne s'applique qu'a l'axe du vent : c'est par la que la vague avance.
+				(along - drift) * GrassZoneConfigs.GUST_SCALE,
+				across * GrassZoneConfigs.GUST_SCALE / GrassZoneConfigs.GUST_STRETCH,
 				0
 			) * 2 -- math.noise rend environ [-0.5, 0.5] : on ramene a [-1, 1]
 			local floor = GrassZoneConfigs.GUST_FLOOR

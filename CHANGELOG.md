@@ -2185,6 +2185,23 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.270 — Le vent fait des LAMELLES, plus une grosse masse
+
+Le champ de rafales etait echantillonne en X/Z du monde, a la MEME frequence dans les deux directions. Un bruit
+isotrope ne peut produire que des taches RONDES : ca respirait comme une masse, ca ne roulait pas comme du vent.
+
+Il est desormais echantillonne dans le REPERE DU VENT : fin le long du souffle, etire en travers. Les rafales
+deviennent des lamelles qui traversent la pelouse.
+
+`GUST_SCALE` passe de 0.035 a 0.09 : c'est l'EPAISSEUR d'une lamelle dans le sens du vent (environ 11 studs au
+lieu de 30). C'est ce chiffre qui decide entre "vagues qui roulent" et "masse qui respire".
+
+`GUST_STRETCH` (nouveau, 6) est l'etirement en travers. A 1 on retrouve exactement l'ancien comportement -- des
+taches rondes. Plus haut = lamelles plus longues et plus franches.
+
+Le defilement ne s'applique qu'a l'axe du vent, comme avant : c'est par la que la vague avance. Et les deux axes
+sont derives de WIND_DIR (rotation de 90 degres), donc changer la direction du vent les emmene tous les deux.
+
 ## 0.0.269 — Plus de coup de frein a l'atterrissage
 
 Le personnage tombait a 4 studs/s en touchant le sol, puis remontait. Ca donnait du POIDS au saut, mais ca rendait

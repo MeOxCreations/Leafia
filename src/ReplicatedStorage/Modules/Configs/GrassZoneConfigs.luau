@@ -197,7 +197,15 @@ local GrassZoneConfigs = {
 	-- qui fait la difference entre "ca bouge" et "il y a du vent".
 	-- L'oscillation rapide (WIND_SPEED / WIND_GUST) reste par-dessus : elle donne le fremissement de chaque touffe,
 	-- la rafale donne la respiration large du champ.
-	GUST_SCALE = 0.035, -- taille des rafales. Plus BAS = rafales plus LARGES (0.035 = des zones d'environ 30 studs)
+	-- EPAISSEUR d'une rafale DANS LE SENS DU VENT. Plus HAUT = lamelles plus FINES (0.09 = environ 11 studs).
+	-- C'est ce chiffre qui decide si on voit des vagues qui roulent ou une grosse masse qui respire.
+	GUST_SCALE = 0.09,
+	-- ETIREMENT en TRAVERS du vent. C'est lui qui transforme des taches rondes en LAMELLES.
+	-- Le bruit etait echantillonne a la meme frequence dans les deux directions, donc il ne pouvait produire que
+	-- des paquets ronds -- une masse de vent, pas des vagues. On l'ecrase maintenant dans le repere du VENT :
+	-- fin le long du souffle, long en travers.
+	-- 1 = taches rondes (l'ancien comportement). Plus HAUT = lamelles plus longues et plus franches.
+	GUST_STRETCH = 6,
 	GUST_SPEED = 9, -- vitesse a laquelle les rafales traversent le champ, en studs par seconde
 	GUST_FLOOR = 0.35, -- force du vent dans les zones les plus calmes (0 = arret complet entre deux rafales)
 	-- La rafale TASSE l'herbe en plus de la coucher, et elle remonte quand la rafale passe. Fraction de hauteur perdue
