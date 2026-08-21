@@ -28,6 +28,23 @@ local fovBaseTarget = DEFAULT_FOV
 local fovPunch = 0
 local fovPunchDecay = 6
 
+-- OFFSET DE FOV, persistant. Distinct du "fond" (pilote par CameraController selon repos / mouvement) et de
+-- l'a-coup (transitoire) : c'est un TROISIEME terme, qu'un appelant peut tenir aussi longtemps qu'il veut sans
+-- se battre avec les deux autres. Negatif = la vue se resserre.
+local fovOffset = 0
+local fovOffsetTarget = 0
+
+-- ===== Recul de camera =====
+-- La camera Custom de Roblox ne se recule pas : c'est le JOUEUR qui possede sa distance de zoom. On deplace donc
+-- ses bornes de zoom, en douceur, et on les rend telles quelles a la fin. Bouger la borne PROGRESSIVEMENT evite
+-- le coup sec qu'un clamp pose d'un coup produirait.
+-- Pendant le recul le joueur ne peut plus zoomer : c'est voulu, l'effet dure le temps d'une touche maintenue.
+local ZOOM_LERP_SPEED = 4
+local zoomBoost = 0
+local zoomBoostTarget = 0
+local zoomBase: number? = nil -- distance du joueur AU MOMENT ou le recul commence
+local zoomMinWas, zoomMaxWas = 0, 0
+
 -- ===== Secousse (impact) =====
 -- Ecrite par la tache de Shake, lue par la boucle. Revient a zero quand la secousse est finie.
 local shakeOffset = Vector3.zero
@@ -72,6 +89,18 @@ end
 -- Cible du fond de FOV. Valeur ABSOLUE ; la douceur vient du lerp de la boucle. nil = valeur par defaut.
 function CameraEffects.SetFovBase(fov: number?)
 	fovBaseTarget = fov or DEFAULT_FOV
+end
+
+-- Offset de FOV TENU. S'ajoute au fond et n'en bouge plus jusqu'au prochain appel. Negatif = vue resserree.
+-- A remettre a 0 par l'appelant : ce module ne devine pas quand un effet tenu doit s'arreter.
+function CameraEffects.SetFovOffset(amount: number)
+	fovOffsetTarget = amount
+end
+
+-- RECUL de camera TENU, en studs. 0 = la camera revient a la distance qu'avait choisie le joueur.
+-- Meme regle : c'est l'appelant qui l'eteint.
+function CameraEffects.SetZoomBoost(studs: number)
+	zoomBoostTarget = studs
 end
 
 -- A-coup de FOV : s'ajoute au fond puis s'efface. Negatif = la vue se resserre.
@@ -137,7 +166,32 @@ function CameraEffects.init()
 		if camera then
 			fovBase += (fovBaseTarget - fovBase) * math.min(1, FOV_LERP_SPEED * dt)
 			fovPunch += (0 - fovPunch) * math.min(1, fovPunchDecay * dt)
-			camera.FieldOfView = fovBase + fovPunch
+			fovOffset += (fovOffsetTarget - fovOffset) * math.min(1, FOV_LERP_SPEED * dt)
+			camera.FieldOfView = fovBase + fovPunch + fovOffset
+
+			-- RECUL. On capture la distance du joueur AU DEMARRAGE, pas a chaque image : la relire en continu
+			-- pendant qu'on la modifie ferait fuir la camera toujours plus loin.
+			-- La VRAIE distance est camera -> Focus, jamais camera -> personnage : c'est elle, le zoom.
+			zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, ZOOM_LERP_SPEED * dt)
+			if zoomBoostTarget > 0 and not zoomBase then
+				zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
+				zoomMinWas = player.CameraMinZoomDistance
+				zoomMaxWas = player.CameraMaxZoomDistance
+			end
+			if zoomBase then
+				if zoomBoostTarget <= 0 and zoomBoost < 0.05 then
+					-- Fini : on rend ses bornes au joueur. La camera est deja revenue a sa distance, rien ne saute.
+					player.CameraMinZoomDistance = zoomMinWas
+					player.CameraMaxZoomDistance = zoomMaxWas
+					zoomBoost = 0
+					zoomBase = nil
+				else
+					-- Min ET max sur la MEME valeur : la camera Custom s'y cale, et comme la valeur glisse, elle glisse.
+					local d = (zoomBase :: number) + zoomBoost
+					player.CameraMinZoomDistance = d
+					player.CameraMaxZoomDistance = d
+				end
+			end
 		end
 
 		bobAmplitude += (bobTarget - bobAmplitude) * math.min(1, BOB_LERP_SPEED * dt)

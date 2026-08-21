@@ -2185,6 +2185,38 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.266 — La camera prend du recul pendant la revelation
+
+Maintenir G ne fait plus qu'allumer l'herbe : la camera RECULE et se RESSERRE, en douceur. C'est le geste de
+quelqu'un qui prend du recul pour evaluer son travail.
+
+Les deux ensemble, et c'est le point : reculer seul ne fait qu'eloigner, resserrer seul montre MOINS. Combines,
+on voit plus de pelouse ET la perspective s'aplatit -- ce qui rend justement les bandes oubliees lisibles.
+
+### Deux nouveaux termes dans le SEUL ecrivain de la camera
+
+`CameraEffects` porte la regle "chaque propriete de camera a un seul ecrivain". On ne pouvait donc pas ecrire dans
+`FieldOfView` depuis la tondeuse, ni meme appeler `SetFovBase` : ce fond est pilote par CameraController selon
+repos / mouvement, les deux se seraient battus.
+
+`SetFovOffset` : un TROISIEME terme de FOV, additif et TENU, a cote du fond et de l'a-coup. Il ne se bat avec
+personne, et le lissage vient de la boucle qui existait deja.
+
+`SetZoomBoost` : le recul. La camera Custom de Roblox ne se recule pas -- c'est le JOUEUR qui possede sa distance
+de zoom. On deplace donc ses BORNES, progressivement (min et max sur la meme valeur qui glisse), et on les lui
+rend a la fin. Poser le clamp d'un coup aurait fait un a-coup sec.
+
+La distance de depart est capturee UNE FOIS au demarrage du recul, jamais relue en continu : la lire pendant
+qu'on la modifie ferait fuir la camera toujours plus loin. Et c'est la distance camera -> Focus qui est lue, pas
+camera -> personnage : c'est elle, le vrai zoom (deja au journal).
+
+Pendant le recul le joueur ne peut plus zoomer. C'est assume : l'effet dure le temps d'une touche maintenue.
+
+### Un seul point d'entree
+
+`setReveal(on)` dans MowController allume l'herbe ET la camera. Les appeler separement aurait fini par laisser la
+camera reculee alors que l'herbe est deja eteinte -- au respawn, a la sortie de contexte, a l'arret.
+
 ## 0.0.265 — On VOIT le vent traverser la pelouse
 
 Les rafales ECLAIRCISSENT l'herbe en plus de la coucher. Idee du joueur, et elle est physiquement juste : un brin

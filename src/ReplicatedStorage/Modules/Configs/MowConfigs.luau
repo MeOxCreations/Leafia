@@ -48,6 +48,12 @@ return {
 	-- Maintenue et non bascule : on jette un oeil, on ne joue pas dedans. Un mode qu'on peut laisser allume
 	-- deviendrait le mode NORMAL, et la pelouse ne serait plus jamais regardee pour elle-meme.
 	HIGHLIGHT_ACTION = "LeafiaMowHighlight",
+	-- La camera RECULE et se RESSERRE pendant la revelation : on prend du recul pour evaluer le travail. Les deux
+	-- ensemble, c'est important -- reculer seul eloigne, resserrer seul montre MOINS. Combines, on voit plus de
+	-- pelouse ET la perspective s'aplatit, ce qui rend les bandes oubliees lisibles.
+	-- Le lissage vient de CameraEffects, il n'y a rien a animer ici.
+	HIGHLIGHT_ZOOM = 9, -- studs de recul. 0 = la camera ne bouge pas
+	HIGHLIGHT_FOV = -10, -- degres retires au champ de vision. Negatif = la vue se resserre
 	-- Distance MAX joueur <-> tondeuse acceptee par le SERVEUR a la prise. Anti-triche : le client demande, le
 	-- serveur verifie. Volontairement plus large que DETECT_RADIUS, pour tolerer la latence.
 	MAX_GRAB_DIST = 20,

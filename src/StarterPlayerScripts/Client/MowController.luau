@@ -21,6 +21,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
+local CameraEffects = require(script.Parent.Utils.CameraEffects)
 
 local MowController = {}
 
@@ -50,6 +51,14 @@ local actionBound = false
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
 local wheelAngle = 0
 local connection: RBXScriptConnection? = nil
+
+-- REVELATION : l'herbe s'allume ET la camera prend du recul. UN SEUL point d'entree pour les deux -- les
+-- appeler separement finirait par laisser la camera reculee alors que l'herbe est deja eteinte.
+local function setReveal(on: boolean)
+	GrassZoneController.setHighlight(on)
+	CameraEffects.SetZoomBoost(if on then MowConfigs.HIGHLIGHT_ZOOM else 0)
+	CameraEffects.SetFovOffset(if on then MowConfigs.HIGHLIGHT_FOV else 0)
+end
 
 local function rootOf(model: Model): BasePart?
 	local root = model.PrimaryPart or model:FindFirstChild(MowConfigs.ROOT_NAME)
@@ -332,14 +341,14 @@ local function setActionBound(active: boolean)
 		-- deviendrait le mode NORMAL, et la pelouse ne serait plus jamais regardee pour elle-meme.
 		-- End ET Cancel : perdre le focus (alt-tab, une UI qui s'ouvre) doit eteindre, sinon ca reste allume a vie.
 		ContextActionService:BindAction(MowConfigs.HIGHLIGHT_ACTION, function(_, state: Enum.UserInputState)
-			GrassZoneController.setHighlight(state == Enum.UserInputState.Begin)
+			setReveal(state == Enum.UserInputState.Begin)
 			return Enum.ContextActionResult.Pass
 		end, true, HIGHLIGHT_KEY)
 	else
 		ContextActionService:UnbindAction(ACTION_NAME)
 		ContextActionService:UnbindAction(MowConfigs.HIGHLIGHT_ACTION)
 		-- On s'eloigne la touche enfoncee : sans ca la pelouse resterait allumee pour de bon.
-		GrassZoneController.setHighlight(false)
+		setReveal(false)
 	end
 end
 
@@ -445,7 +454,7 @@ function MowController.init()
 	player.CharacterAdded:Connect(function()
 		hideOurs()
 		lastCutPos = nil
-		GrassZoneController.setHighlight(false)
+		setReveal(false)
 		setActionBound(false)
 	end)
 end
@@ -458,7 +467,7 @@ function MowController.stop()
 	setActionBound(false)
 	hideOurs()
 	lastCutPos = nil
-	GrassZoneController.setHighlight(false)
+	setReveal(false)
 end
 
 return MowController
