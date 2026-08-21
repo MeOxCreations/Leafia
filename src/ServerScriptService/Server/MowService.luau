@@ -583,7 +583,9 @@ local function grab(player: Player, model: Model)
 		-- amene la tondeuse a un angle STABLE au lieu de la faire tourner sans fin.
 		if not moving and state.steerInput ~= 0 then
 			local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
-			state.swing += state.steerInput * steerSign * MowConfigs.PIVOT_GAIN * dt
+			-- SIGNE FIXE PAR L'ECRAN, pas par le raisonnement : la premiere version envoyait la machine a droite
+			-- quand le joueur poussait a gauche. Pour le retourner a nouveau, un PIVOT_GAIN negatif suffit.
+			state.swing -= state.steerInput * steerSign * MowConfigs.PIVOT_GAIN * dt
 		end
 
 		-- Rattrapage, puis plafond : sans lui une pirouette enverrait la machine repasser devant par l'autre cote.

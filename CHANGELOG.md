@@ -2185,6 +2185,20 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.286 — Le braquage sur place partait du mauvais cote
+
+Pousser a gauche envoyait la tondeuse a droite. Sens retourne.
+
+Rien a comprendre ici : le sens d'un braquage depend de la convention d'angle de Roblox ET de la facon dont le
+ballant est signe. Il ne se DEDUIT pas, il se voit -- c'est le joueur qui a tranche, comme pour le sens du wipe de
+gradient et l'axe des roues.
+
+`PIVOT_GAIN` accepte une valeur NEGATIVE pour le retourner a nouveau, sans toucher au code.
+
+Le braquage EN ROULANT n'a pas ete touche : il passe par un autre chemin (le cap du personnage, puis le ballant
+derive de sa rotation), et rien n'indique qu'il soit faux. On ne retourne pas a l'aveugle ce qui n'a pas ete
+signale.
+
 ## 0.0.285 — Avancer ne fait plus tourner tout seul : deux reperes melanges
 
 En appuyant SEULEMENT sur avancer, la tondeuse partait parfois en virage. Le joueur avait raison de soupconner la

@@ -178,6 +178,8 @@ return {
 	-- Poussee angulaire donnee a la machine quand on braque A L'ARRET, en radians par seconde a fond de course.
 	-- Elle est RAPPELEE par SWING_RECOVER : les deux s'equilibrent, donc tenir la touche amene la tondeuse a un
 	-- angle stable au lieu de la faire tourner sans fin. L'angle atteint vaut PIVOT_GAIN / SWING_RECOVER radians.
+	-- Une valeur NEGATIVE retourne le sens du braquage sur place. Le sens ne se deduit pas : il a ete fixe a
+	-- l'ecran (la premiere version partait du mauvais cote).
 	PIVOT_GAIN = 2.6,
 	-- RECUL DE CAMERA A LA VITESSE. La vue s'ecarte a mesure qu'on prend du regime : on voit venir la bande a
 	-- tondre, et l'acceleration se RESSENT au lieu de se deviner au chiffre.
