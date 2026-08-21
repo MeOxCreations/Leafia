@@ -29,16 +29,16 @@ return {
 	PROMPT_KEY = "E",
 	PROMPT_LABEL = "TAKE",
 	PROMPT_TITLE = "MOWER",
-	-- Part sur laquelle le badge est ACCROCHE. Rien a voir avec la DETECTION, qui reste sur la RootPart (une part
-	-- fixe, qui ne bouge pas quand on ajoute des enfants au modele). Ici c'est purement OU on le voit.
-	-- "Handle" = le guidon, a hauteur des mains : c'est la qu'on lit "prendre". La RootPart, elle, est a l'avant-bas
-	-- du carter, donc le badge y flottait devant la machine.
-	-- Introuvable -> on retombe sur la RootPart, sans rien casser.
-	PROMPT_PART_NAME = "Handle",
-	-- Hauteur d'AFFICHAGE du badge au-dessus de la part d'ancrage. N'A RIEN A VOIR avec DETECT_RADIUS : monter
-	-- celui-ci ne fait pas detecter plus loin, il ne fait que lever le badge.
-	-- Petit depuis que l'ancrage est le guidon : il est deja a bonne hauteur, il n'y a plus a rattraper.
-	PROMPT_OFFSET = Vector3.new(0, 5, 3),
+	-- Hauteur d'AFFICHAGE du badge AU-DESSUS DU DESSUS de la machine. Le point d'ancrage est CALCULE par
+	-- MowController (milieu en X/Z, sommet en Y, parts visibles seulement), donc il ne depend d'aucune orientation.
+	--
+	-- GARDER UN OFFSET PUREMENT VERTICAL. Il est exprime en repere MONDE, pas dans celui de la tondeuse : une
+	-- composante X ou Z pousse le badge toujours vers le meme point cardinal, donc il se decale par rapport a la
+	-- machine des qu'elle n'est pas posee dans le bon sens. C'est ce qui donnait l'impression que le badge
+	-- "dependait de l'angle".
+	--
+	-- N'A RIEN A VOIR avec DETECT_RADIUS : monter celui-ci ne fait pas detecter plus loin, il leve juste le badge.
+	PROMPT_OFFSET = Vector3.new(0, 1.5, 0),
 	-- Deux prises ne peuvent pas s'enchainer plus vite que ca (secondes). Le meme geste part sinon en double quand
 	-- la touche ET le bouton tactile tirent tous les deux.
 	ACTION_DEBOUNCE = 0.35,

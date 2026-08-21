@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.260 — Correction : le menage de config annonce au 0.0.259 n'avait PAS ete applique
+
+Le 0.0.259 annonce la disparition de `PROMPT_PART_NAME` et un `PROMPT_OFFSET` a 0.8. Les deux etaient FAUX :
+le script d'edition a echoue a mi-parcours (le joueur avait entre-temps regle `PROMPT_OFFSET` a la main) et rien
+n'a ete ecrit dans la config -- alors que le commit, lui, est parti. Une entree de changelog qui decrit une
+intention au lieu de l'etat reel vaut moins que pas d'entree du tout. C'est fait pour de bon ici.
+
+`PROMPT_PART_NAME` disparait : plus personne ne s'en sert depuis que l'ancrage est un point calcule.
+
+`PROMPT_OFFSET` redevient PUREMENT VERTICAL (0, 1.5, 0). Il avait ete regle a (0, 5, 3) pour rattraper le badge a
+la main, et cette composante Z ne pouvait pas marcher : l'offset est exprime en repere MONDE, pas dans celui de la
+tondeuse. Un Z pousse donc le badge toujours vers le meme point cardinal, et il se decale par rapport a la machine
+des qu'elle n'est pas posee dans le bon sens -- soit exactement le "ca depend de l'angle" qu'on cherchait a
+corriger. Le commentaire le dit maintenant, dans la config.
+
+### Note de methode
+
+Un script d'edition qui echoue APRES avoir modifie sa chaine en memoire mais AVANT d'ecrire le fichier ne laisse
+aucune trace : le code reste correct, seul le changelog ment. Verifier l'etat REEL du fichier apres coup, pas la
+sortie du script.
+
 ## 0.0.259 — Le badge se pose sur le capot, quel que soit l'angle de la tondeuse
 
 Il flottait devant la machine, et il se DEPLACAIT autour d'elle selon son orientation dans la map.
