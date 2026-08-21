@@ -2185,6 +2185,36 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.315 — La bande de tonte ne s'efface plus derriere le joueur
+
+Diagnostic du joueur, et il etait juste : la couleur de la bande apparaissait puis disparaissait aussitot. Deux
+effets passaient PAR-DESSUS elle dans la chaine de couleurs.
+
+### L'ecrasement, et c'etait systematique
+
+L'ordre des melanges est : repos, tondue (+ bande), ECRASEMENT, rafale, revelation. L'ecrasement fond vers une
+couleur FIXE, donc il lavait la bande.
+
+Et ca arrivait a chaque fois, pas de temps en temps : le joueur marche JUSTE DERRIERE la tondeuse, et son rayon
+d'ecrasement (4.5) couvre exactement ce qu'il vient de couper. Il effacait sa propre bande a chaque pas.
+
+`MOW_CRUSH_DAMP` retire 90 % de la teinte d'ecrasement sur une touffe tondue. C'est aussi le bon sens : on
+n'ecrase pas de l'herbe deja rase. L'APLATISSEMENT continue, lui -- il est geometrique, pas colorimetrique.
+
+### Le teintage de rafale
+
+Il gardait 15 % de son effet sur l'herbe tondue (le meme facteur que le balancement). Il passe a ZERO : un gazon
+ras ne vague pas, donc il ne change pas de couleur.
+
+Le BALANCEMENT, lui, garde sa part : un reste de fremissement est joli, un reste de couleur efface le travail du
+joueur. Les deux avaient ete branches sur le meme facteur -- c'etait une erreur, ils ne racontent pas la meme
+chose.
+
+### Ce que ca dit
+
+Quand plusieurs effets ecrivent la meme propriete, le dernier gagne. Il ne suffit pas que chacun soit juste : il
+faut decider ce qui doit SURVIVRE aux autres. Ici c'est le travail du joueur -- tout le reste est du decor.
+
 ## 0.0.314 — Le fond du rideau devient un semis de feuilles qui derivent
 
 La tuile est remplacee par des feuilles INDIVIDUELLES. Une image tuilee repete le MEME motif a la MEME taille :

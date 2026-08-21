@@ -356,6 +356,16 @@ local GrassZoneConfigs = {
 	-- 0 = la touffe tondue ne bouge plus du tout, 1 = elle bouge comme avant.
 	MOW_WIND = 0.15,
 
+	-- L'HERBE TONDUE NE SE COLORE PRESQUE PLUS QUAND ON MARCHE DESSUS. Fraction de l'effet d'ecrasement RETIREE a
+	-- une touffe entierement coupee.
+	-- Sans ca, la couleur d'ecrasement (fixe) passait PAR-DESSUS la bande de tonte et la lavait -- et ca arrivait
+	-- systematiquement, puisque le joueur marche JUSTE DERRIERE la tondeuse : son rayon d'ecrasement couvre
+	-- exactement ce qu'il vient de couper. La bande apparaissait et disparaissait aussitot.
+	-- C'est aussi le bon sens : on n'ecrase pas de l'herbe deja rase. La touffe continue de s'APLATIR un peu (c'est
+	-- geometrique), elle ne change simplement plus de couleur.
+	-- 1 = l'ecrasement ne teinte plus du tout une touffe tondue. 0 = l'ancien comportement.
+	MOW_CRUSH_DAMP = 0.9,
+
 	-- ===== REVELATION : voir ce qui RESTE a tondre =====
 	-- Une touche maintenue peint en neon tout ce qui n'est PAS encore coupe. Le but est de rendre le PROGRES
 	-- lisible : on finit un jardin quand on voit ce qu'il reste, on l'abandonne quand on ne sait plus.

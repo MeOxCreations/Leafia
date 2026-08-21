@@ -197,7 +197,11 @@ local function apply(
 		clump.part.Material = if neon then GrassZoneConfigs.HIGHLIGHT_MATERIAL else clump.baseMaterial
 	end
 	do
-		local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
+		-- L'ECRASEMENT NE TEINTE PRESQUE PLUS une touffe TONDUE : sa couleur est deja celle d'une herbe rase, et
+		-- le joueur marche juste derriere la tondeuse -- sans ca il lavait sa propre bande a chaque pas.
+		-- L'APLATISSEMENT, lui, continue : il est geometrique, pas colorimetrique.
+		local crushTint = crush * (1 - mown * GrassZoneConfigs.MOW_CRUSH_DAMP)
+		local blend = math.floor(crushTint / SQUASH_STEP + 0.5) * SQUASH_STEP
 		local mowBlend = math.floor(mown / SQUASH_STEP + 0.5) * SQUASH_STEP
 		-- La rafale bouge en permanence : sans quantification, on reecrirait la couleur de chaque touffe a chaque
 		-- image, pour des ecarts que l'oeil ne voit pas. Meme raison que pour l'ecrasement, avec son propre pas.
@@ -907,7 +911,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- La puissance CONCENTRE l'effet sur la crete -- sans elle le teintage bave sur toute la pelouse et se
 			-- lit comme un aplat au lieu d'une vague qui passe.
 			local crest = math.max(gust, 0) ^ GrassZoneConfigs.GUST_TINT_SHARPNESS
-			lighten = GrassZoneConfigs.GUST_TINT * crest * (1 - crushed) * windScale * mowWind
+			-- LE TEINTAGE DE RAFALE NE TOUCHE PAS L'HERBE TONDUE. `(1 - clump.mown)` et non `mowWind` : un gazon
+			-- ras ne vague pas, donc il ne change pas de couleur -- et surtout, ce teintage passait PAR-DESSUS la
+			-- bande de tonte et la brouillait. Le BALANCEMENT, lui, garde sa part (mowWind) : un reste de
+			-- fremissement est joli, un reste de couleur efface le travail du joueur.
+			lighten = GrassZoneConfigs.GUST_TINT * crest * (1 - crushed) * windScale * (1 - clump.mown)
 		end
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
