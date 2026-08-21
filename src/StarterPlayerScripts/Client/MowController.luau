@@ -43,6 +43,9 @@ local lastScanAt = 0
 local lastPromptAt = 0
 local lastActionAt = 0
 local promptTarget: Model? = nil -- tondeuse dont le prompt est affiche (pour ne le remontrer qu'au CHANGEMENT)
+-- Point d'ancrage REELLEMENT passe au prompt, garde tel quel : on le recalculerait sinon a chaque test, et la
+-- moindre difference de virgule ferait croire que le singleton ne nous appartient plus.
+local promptAnchor: Vector3? = nil
 local actionBound = false
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
 local wheelAngle = 0
@@ -53,15 +56,37 @@ local function rootOf(model: Model): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
--- Part sur laquelle on ACCROCHE le badge. Distincte de la racine : la racine sert a MESURER (detection), elle est
--- choisie pour etre fixe, pas pour etre jolie. Le guidon, lui, est a hauteur des mains -- c'est la qu'on lit
--- "prendre". Deux besoins differents, deux parts.
-local function promptAnchorOf(model: Model): BasePart?
-	local named = model:FindFirstChild(MowConfigs.PROMPT_PART_NAME, true)
-	if named and named:IsA("BasePart") then
-		return named
+-- OU accrocher le badge : au-dessus du milieu de la machine, point CALCULE et non une part.
+--
+-- Accroche a une part, le badge se pose sur le CENTRE de cette part -- et le centre d'un mesh de guidon herite du
+-- rig, pas du bon sens. Le badge partait donc devant la tondeuse, et se deplacait autour d'elle quand elle etait
+-- posee de biais : ce n'etait pas un probleme d'angle, c'etait le POINT qui n'etait pas le bon.
+--
+-- On prend le milieu en X/Z et le point le plus HAUT des parts VISIBLES (la CutZone et les zones logiques ne sont
+-- pas des pieces de la machine). Independant de l'orientation, par construction.
+local function promptAnchorOf(model: Model): Vector3?
+	local lo = Vector3.new(math.huge, math.huge, math.huge)
+	local hi = Vector3.new(-math.huge, -math.huge, -math.huge)
+	local found = false
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME and d.Transparency < 1 then
+			local h = d.Size * 0.5
+			for sx = -1, 1, 2 do
+				for sy = -1, 1, 2 do
+					for sz = -1, 1, 2 do
+						local c = (d.CFrame * CFrame.new(h.X * sx, h.Y * sy, h.Z * sz)).Position
+						lo = Vector3.new(math.min(lo.X, c.X), math.min(lo.Y, c.Y), math.min(lo.Z, c.Z))
+						hi = Vector3.new(math.max(hi.X, c.X), math.max(hi.Y, c.Y), math.max(hi.Z, c.Z))
+						found = true
+					end
+				end
+			end
+		end
 	end
-	return rootOf(model)
+	if not found then
+		return nil
+	end
+	return Vector3.new((lo.X + hi.X) * 0.5, hi.Y, (lo.Z + hi.Z) * 0.5)
 end
 
 -- Balayage du Workspace. RE-SCAN periodique et non une seule fois au boot : avec le streaming, une tondeuse
@@ -321,11 +346,12 @@ end
 -- Le prompt est un SINGLETON partage (dialogue de Papi, echelle, boite aux lettres...). On ne cache donc QUE
 -- le notre : appeler hide() sans regarder ferait disparaitre celui d'un autre en plein milieu.
 local function hideOurs()
-	local anchor = if promptTarget then promptAnchorOf(promptTarget) else nil
+	local anchor = promptAnchor
 	if anchor and InteractionPrompt.currentTarget() == anchor then
 		InteractionPrompt.hide()
 	end
 	promptTarget = nil
+	promptAnchor = nil
 end
 
 local function updatePrompt(hrp: BasePart, carrying: Model?)
@@ -342,9 +368,10 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 		-- On re-montre au CHANGEMENT de tondeuse, mais AUSSI quand le prompt ne nous appartient plus : une autre
 		-- feature a pu prendre le singleton (un dialogue s'ouvre pendant qu'on est a cote). Sans ce second test,
 		-- notre prompt disparaitrait pour de bon alors que rien n'a change de notre point de vue.
-		local anchor = promptAnchorOf(target) or root
+		local anchor = promptAnchorOf(target) or root.Position
 		if target ~= promptTarget or InteractionPrompt.currentTarget() ~= anchor then
 			promptTarget = target
+			promptAnchor = anchor
 			InteractionPrompt.show(
 				anchor,
 				MowConfigs.PROMPT_KEY,

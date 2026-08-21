@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.259 — Le badge se pose sur le capot, quel que soit l'angle de la tondeuse
+
+Il flottait devant la machine, et il se DEPLACAIT autour d'elle selon son orientation dans la map.
+
+Ce n'etait pas un probleme d'angle : `WorldAnchor` accroche le badge sur `part.Position`, soit le CENTRE de la
+part visee. On visait `Handle` -- une part heritee du rig du taille-haie, dont le centre n'a aucune raison d'etre
+la ou l'oeil l'attend. Quand la tondeuse tournait, ce centre tournait avec elle. Le point etait faux, pas l'angle.
+
+`WorldAnchor.Target` accepte aussi un `Vector3` : on lui donne desormais un point CALCULE -- milieu en X/Z,
+sommet en Y, sur les parts VISIBLES uniquement (la CutZone et les zones logiques ne sont pas des pieces de la
+machine). Le badge se pose donc sur le capot, centre, quelle que soit l'orientation. Par construction.
+
+Le point est GARDE tel quel plutot que recalcule a chaque test : le prompt est un singleton, et on compare ce
+point a celui qu'il affiche pour savoir s'il est encore a nous. Le recalculer ferait echouer la comparaison sur
+une virgule et le badge clignoterait.
+
+`PROMPT_PART_NAME` disparait (plus personne ne s'en sert) et `PROMPT_OFFSET` retombe a 0.8 : il ne sert plus qu'a
+decoller le badge du capot, l'ancrage etant deja au sommet.
+
 ## 0.0.258 — Le joueur va A la tondeuse, au lieu que la tondeuse lui saute dessus
 
 ### Le joueur ne se plante plus au milieu de la machine
