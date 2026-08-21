@@ -2185,6 +2185,20 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.289 — Braquer seul INFLECHIT la trajectoire au lieu de la faire pivoter
+
+L'avance de manoeuvre du 0.0.288 tournait au taux PLEIN (120 degres/s), alors que la machine avance a peine. Ca se
+lisait comme un pivot sur place, pas comme une tondeuse qu'on repositionne.
+
+`STEER_CRAWL_TURN_RATE` (18 degres/s) est un taux A PART, applique quand on braque SANS avancer. La trajectoire
+part alors surtout vers l'avant, avec juste un soupcon de courbe.
+
+Un reglage separe et non une fraction de `STEER_TURN_RATE` : regler l'un ne doit pas forcer a compenser l'autre.
+Meme regle que STEP_GLIDE / STEP_GLIDE_CUT sur la taille, ou que la vitesse du FOV tenu face au FOV de fond.
+
+La courbe de debug utilise le taux REELLEMENT applique : dessinee avec l'autre, elle mentirait sur le trajet, et
+on reglerait a l'aveugle en croyant regler a l'oeil.
+
 ## 0.0.288 — Braquer fait rouler : la tondeuse avance doucement pendant qu'elle tourne
 
 Appuyer sur une seule touche de cote fait maintenant AVANCER la machine, tout doucement, et le corps tourne avec.

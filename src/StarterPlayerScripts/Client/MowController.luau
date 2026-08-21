@@ -351,12 +351,17 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		local walk = humanoid.WalkSpeed
 		drive = if walk > 0.1 then math.clamp(MowConfigs.STEER_CRAWL / walk, 0, 1) else 0
 	end
+	-- DEUX TAUX DE ROTATION, et c'est le coeur du ressenti : en pleine avance on braque franchement ; en simple
+	-- manoeuvre on ne fait qu'INFLECHIR la trajectoire, qui part surtout vers l'avant. Au taux plein, une
+	-- machine qui avance a peine braquait comme en pleine course : ca se lit comme un pivot sur place, pas
+	-- comme une tondeuse qu'on repositionne.
+	local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
+	local turnRate = if braking then MowConfigs.STEER_TURN_RATE else MowConfigs.STEER_CRAWL_TURN_RATE
 	-- Le corps ne tourne QUE s'il roule vraiment : soit le joueur avance, soit l'avance de manoeuvre le fait
-	-- rouler. A STEER_CRAWL = 0 on retrouve donc bien le comportement d'avant (corps fige, machine qui pivote),
+	-- rouler. A STEER_CRAWL = 0 on retrouve donc le comportement d'avant (corps fige, machine qui pivote),
 	-- comme la config le promet.
 	if turning and (braking or MowConfigs.STEER_CRAWL > 0) then
-		local sign = if MowConfigs.STEER_INVERT then -1 else 1
-		yaw -= lateralAmount * sign * math.rad(MowConfigs.STEER_TURN_RATE) * dt
+		yaw -= lateralAmount * steerSign * math.rad(turnRate) * dt
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
@@ -367,8 +372,8 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 
 	if MowConfigs.STEER_DEBUG then
 		-- MEME formule que le braquage ci-dessus, sinon la courbe affichee ne serait pas celle qu'on suit.
-		local sign = if MowConfigs.STEER_INVERT then -1 else 1
-		local turnPerSec = lateralAmount * sign * math.rad(MowConfigs.STEER_TURN_RATE)
+		-- MEME taux que celui reellement applique : une courbe dessinee avec l'autre mentirait sur le trajet.
+		local turnPerSec = if turning then lateralAmount * steerSign * math.rad(turnRate) else 0
 		-- Vitesse MESUREE, pas supposee : la courbe montre alors le trajet reel, y compris si un autre systeme
 		-- ralentit le joueur.
 		local v = hrp.AssemblyLinearVelocity

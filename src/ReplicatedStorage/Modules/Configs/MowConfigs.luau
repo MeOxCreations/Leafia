@@ -182,6 +182,12 @@ return {
 	-- a peu pres 2 km/h. C'est une avance de MANOEUVRE, pas un deplacement.
 	-- 0 = on revient au comportement d'avant : le corps reste fige et seule la machine pivote.
 	STEER_CRAWL = 2,
+	-- Vitesse de rotation PENDANT cette manoeuvre, en degres par seconde. TRES basse expres : la trajectoire doit
+	-- partir surtout VERS L'AVANT, avec juste un soupcon de courbe. Au taux normal (STEER_TURN_RATE) la machine
+	-- braquait comme en pleine course alors qu'elle avance a peine -- ca se lit comme un pivot, pas comme une
+	-- manoeuvre.
+	-- Un reglage A PART et non une fraction de STEER_TURN_RATE : regler l'un ne doit pas forcer a compenser l'autre.
+	STEER_CRAWL_TURN_RATE = 18,
 	-- Poussee angulaire donnee a la machine quand on braque A L'ARRET, en radians par seconde a fond de course.
 	-- Elle est RAPPELEE par SWING_RECOVER : les deux s'equilibrent, donc tenir la touche amene la tondeuse a un
 	-- angle stable au lieu de la faire tourner sans fin.
