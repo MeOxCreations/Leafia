@@ -2185,6 +2185,39 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.307 — La machine se cabre et le moteur tousse quand on tire la corde
+
+Deux details qui donnent de la FORCE au geste. Sans eux, tirer la corde n'agissait que sur le personnage : la
+machine, elle, ne bronchait pas.
+
+### L'avant se leve
+
+Un a-coup au moment du tirage, qui retombe vite (`PULL_LIFT_DECAY` haut : un a-coup doit etre sec, pas une
+houle).
+
+Le pivot est l'ARRIERE de la machine, pas sa racine. La racine est a l'avant-bas du carter : pivoter autour d'elle
+aurait souleve l'ARRIERE, soit l'inverse exact de l'effet voulu. On reutilise le recul deja mesure pour le
+portage.
+
+Le calcul se fait dans le repere ALIGNE (apres `baseC0`), ou l'avant de la machine est sur -Z quel que soit le
+montage du rig -- donc l'axe lateral est sur X, et le cabrage est un simple angle autour de lui.
+
+`PULL_LIFT` accepte une valeur NEGATIVE si c'est l'arriere qui se leve : le sens depend du rig, il ne se deduit
+pas.
+
+### Le moteur tousse
+
+Sa boucle est jouee UNE fois, non bouclee, pendant le tirage. Il tourne, il ne PREND pas. C'est ce qui fait
+comprendre qu'on ESSAIE de le lancer -- et ca ouvre la porte a un tirage qui echoue, si on veut un jour que la
+tondeuse demarre au deuxieme ou troisieme coup.
+
+`Looped = false` ecrit en code : le reglage de l'editeur n'est qu'une suggestion, et une piste ponctuelle bouclee
+par erreur reste a plein poids pour toujours.
+
+### Menage
+
+`swingShown` disparait : plus utilise depuis que le ballant vient de l'input et non d'une derivee bruitee.
+
 ## 0.0.306 — La tondeuse va encore moins vite
 
 `SPEED_MIN` passe de 8 a 6, `SPEED_MAX` de 13 a 10.

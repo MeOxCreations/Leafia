@@ -137,6 +137,13 @@ return {
 	-- Meme mecanique que le lanceur du taille-haie (voir ToolStartService : Ready puis Pulling partagent la meme
 	-- piste, seule la vitesse change).
 	START_ACTION = "LeafiaMowPull",
+	-- L'AVANT SE LEVE quand on tire la corde : la machine se cabre sous l'a-coup, puis retombe. C'est ce petit
+	-- sursaut qui donne de la FORCE au geste -- sans lui, tirer la corde n'agit que sur le personnage.
+	-- Angle en degres. NEGATIF si c'est l'arriere qui se leve chez toi : le sens depend du montage du rig, il ne se
+	-- deduit pas.
+	PULL_LIFT = 12,
+	-- Vitesse de retombee, en fraction par seconde. HAUTE : un a-coup doit etre sec, pas une houle.
+	PULL_LIFT_DECAY = 7,
 	-- Attribut pose sur la tondeuse quand le moteur TOURNE. Lu par le client : une machine a l'arret ne coupe rien.
 	RUNNING_ATTRIBUTE = "LeafiaMowerRunning",
 

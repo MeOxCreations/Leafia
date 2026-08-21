@@ -41,8 +41,9 @@ type CarryState = {
 	tick: RBXScriptConnection?, -- boucle de la machine : montee en vitesse + position du levier
 	speed: number, -- vitesse COURANTE du porteur, montee/descente lissee
 	baseC0: CFrame, -- offset de portage au repos, sans le ballant. Le ballant se compose PAR-DESSUS.
+	backDist: number, -- recul de la machine derriere sa racine. PIVOT du cabrage : autour de la racine, c'est l'arriere qui se leverait.
+	lift: number, -- cabrage courant, en radians. Retombe tout seul.
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
-	swingShown: number, -- le meme, LISSE. C'est lui qu'on affiche : le brut tremble (bruit de replication).
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
 	armAmount: number, -- pose des BRAS, lissee. Suit l'input quand on braque, le ballant sinon.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
@@ -303,6 +304,23 @@ local function pullStarter(model: Model, state: CarryState)
 		return -- pas de corde a tirer, ou deja en train de la tirer
 	end
 	track:AdjustSpeed(1)
+	-- LA MACHINE SE CABRE sous l'a-coup. Pose ici et pas dans la boucle : c'est un EVENEMENT, pas un etat.
+	state.lift = math.rad(MowConfigs.PULL_LIFT)
+	-- LE MOTEUR TOUSSE : on joue sa boucle UNE fois, non bouclee. Il tourne, il ne PREND pas -- c'est ce qui
+	-- fait comprendre qu'on essaie de le lancer, et qu'un tirage peut echouer.
+	local animator = machineAnimator(model)
+	local cough = machineAnimation(MowConfigs.MOTOR_ANIM_ID)
+	if animator and cough then
+		local ok, t = pcall(function()
+			return animator:LoadAnimation(cough)
+		end)
+		if ok and typeof(t) == "Instance" then
+			local track2 = t :: AnimationTrack
+			track2.Looped = false -- PONCTUEL : ecrit ici, le reglage de l'editeur n'est qu'une suggestion
+			track2.Priority = Enum.AnimationPriority.Idle
+			track2:Play()
+		end
+	end
 	-- Le son part AVEC le geste, pas a la prise : c'est le tirage qu'on entend.
 	local root = rootOf(model)
 	if root then
@@ -730,8 +748,9 @@ local function grab(player: Player, model: Model)
 		tick = nil,
 		speed = MowConfigs.SPEED_MIN,
 		baseC0 = c0,
+		backDist = select(2, measure(model, root)),
+		lift = 0,
 		swing = 0,
-		swingShown = 0,
 		steerInput = 0,
 		armAmount = 0,
 		humanoid = humanoid,
@@ -865,11 +884,28 @@ local function grab(player: Player, model: Model)
 		if weld then
 			-- La rotation passe A GAUCHE de l'offset : la machine pivote AUTOUR DU JOUEUR (le guidon reste dans
 			-- les mains, le carter part de cote). A droite, elle tournerait sur elle-meme -- un objet porte.
-			weld.C0 = CFrame.Angles(0, state.swing, 0) * state.baseC0
+			-- CABRAGE, pivote autour de l'ARRIERE : les roues restent au sol et le nez se leve. Autour de la racine
+			-- (a l'avant-bas du carter) c'est l'arriere qui se serait souleve.
+			-- Apres baseC0 on est dans le repere ALIGNE : l'avant sur -Z, donc l'arriere sur +Z, le lateral sur X.
+			local pitch = CFrame.identity
+			if math.abs(state.lift) > 1e-4 then
+				local d = state.backDist
+				pitch = CFrame.new(0, 0, d) * CFrame.Angles(state.lift, 0, 0) * CFrame.new(0, 0, -d)
+			end
+			weld.C0 = CFrame.Angles(0, state.swing, 0) * state.baseC0 * pitch
 		end
 
 		-- LE LEVIER RACONTE LE REGIME. Ratio 0 au ralenti, 1 a plein regime, et on ecrit l'IMAGE correspondante.
 		-- On s'arrete a Length - epsilon : sur la derniere image pile, une piste bouclee est deja repartie a zero.
+		-- Le cabrage retombe tout seul. Cle a zero : un lerp exponentiel n'y arrive jamais, et la machine
+		-- garderait une fraction de degre de nez en l'air pour toujours.
+		if state.lift ~= 0 then
+			state.lift -= state.lift * math.min(1, MowConfigs.PULL_LIFT_DECAY * dt)
+			if math.abs(state.lift) < SWING_SNAP then
+				state.lift = 0
+			end
+		end
+
 		-- LE SON MONTE AVEC LE REGIME, comme le levier : les deux racontent la meme chose, ils doivent donc
 		-- venir du meme ratio. Deux calculs separes finiraient par se decaler.
 		local span = MowConfigs.SPEED_MAX - MowConfigs.SPEED_MIN
