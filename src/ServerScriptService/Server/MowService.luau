@@ -26,6 +26,8 @@ type CarryState = {
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
+	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
+	jumpPower: number,
 }
 
 local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
@@ -123,11 +125,32 @@ end
 -- On MEMORISE l'etat d'avant et on le restaure, plutot que de forcer `true` a la repose : un autre systeme peut
 -- avoir de bonnes raisons d'avoir deja coupe le saut (une cinematique, un dialogue), et le lui rendre de force
 -- casserait le sien.
-local function setJump(state: CarryState, enabled: boolean)
+-- DEUX gestes explicites plutot qu'un booleen : bloquer et rendre ne sont PAS symetriques. Rendre doit toujours
+-- remettre les VALEURS d'origine, meme si le saut etait deja interdit avant la prise -- sinon un joueur qui prend
+-- la tondeuse pendant un dialogue garderait JumpHeight a zero pour toujours.
+local function blockJump(state: CarryState)
 	local humanoid = state.humanoid
-	if humanoid and humanoid.Parent then
-		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, enabled)
+	if not (humanoid and humanoid.Parent) then
+		return
 	end
+	-- LES PROPRIETES FONT LE TRAVAIL : elles se REPLIQUENT. `SetStateEnabled`, lui, n'agit que sur la machine
+	-- qui l'appelle -- or c'est le CLIENT qui simule le personnage, pas le serveur. Le couper cote serveur seul
+	-- laissait donc sauter, vu a l'ecran.
+	-- On met les DEUX a zero : laquelle compte depend de UseJumpPower, et ce reglage peut changer sans nous.
+	humanoid.JumpHeight = 0
+	humanoid.JumpPower = 0
+	-- En plus, pas a la place : coupe aussi un saut deja demande du cote serveur.
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+end
+
+local function restoreJump(state: CarryState)
+	local humanoid = state.humanoid
+	if not (humanoid and humanoid.Parent) then
+		return
+	end
+	humanoid.JumpHeight = state.jumpHeight
+	humanoid.JumpPower = state.jumpPower
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, state.jumpWasEnabled)
 end
 
 -- Le point le plus BAS de la tondeuse, en monde. Les 8 coins de chaque part, pas seulement son centre : une part
@@ -213,7 +236,7 @@ local function release(model: Model)
 		end
 	end
 	stopHold(state)
-	setJump(state, state.jumpWasEnabled)
+	restoreJump(state)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
 end
@@ -248,8 +271,10 @@ local function grab(player: Player, model: Model)
 		hold = nil,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
+		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
+		jumpPower = if humanoid then humanoid.JumpPower else 50,
 	}
-	setJump(state, false)
+	blockJump(state)
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }

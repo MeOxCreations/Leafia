@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.257 — Le saut est vraiment coupe, et la tondeuse se pose enfin au sol
+
+### La tondeuse ne flotte plus
+
+C'etaient bien les parts INVISIBLES. `lowestPoint` ignorait la CutZone mais pas les autres (zones logiques, aides
+d'edition) : une seule posee bas faussait toute la hauteur. Elle ne compte plus que les parts visibles, et le
+carter se pose pile sur le sol. Le calcul etait juste, c'est ce qu'on lui donnait a mesurer qui ne l'etait pas.
+
+### Le saut se coupe par les PROPRIETES, pas par l'etat
+
+`SetStateEnabled(Jumping, false)` cote serveur ne changeait rien : cette methode n'agit que sur la machine qui
+l'appelle, or c'est le CLIENT qui simule le personnage. Le serveur s'interdisait donc de sauter tout seul, dans
+son coin, pendant que le joueur sautait tres bien.
+
+Ce sont `JumpHeight` et `JumpPower` qui font le travail : ce sont des PROPRIETES, elles se repliquent. Les deux
+sont mises a zero, parce que laquelle compte depend de `UseJumpPower` et que ce reglage peut changer sans nous.
+`SetStateEnabled` reste EN PLUS (il coupe aussi un saut demande cote serveur), pas a la place.
+
+`blockJump` et `restoreJump` sont deux fonctions distinctes, et non un booleen : les deux gestes ne sont PAS
+symetriques. Rendre doit toujours remettre les valeurs d'ORIGINE, meme si le saut etait deja interdit avant la
+prise -- sinon prendre la tondeuse pendant un dialogue laissait `JumpHeight` a zero pour toujours. Et on relit
+les vraies valeurs a la prise plutot que de reposer les defauts Roblox : un autre systeme a pu les changer.
+
+### Note d'outil
+
+Ce commit contenait une deuxieme faute de syntaxe (un bout d'ancienne fonction laisse en place par une reecriture
+mal decoupee). `selene` l'a attrapee avant le lancement, la ou `rojo build` l'aurait laissee passer -- exactement
+ce pourquoi il vient d'etre installe.
+
 ## 0.0.256 — Plus de saut avec la tondeuse, et des MESURES pour la faire redescendre
 
 ### Le saut est coupe pendant le portage
