@@ -2185,6 +2185,32 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.314 — Le fond du rideau devient un semis de feuilles qui derivent
+
+La tuile est remplacee par des feuilles INDIVIDUELLES. Une image tuilee repete le MEME motif a la MEME taille :
+elle ne peut pas varier, par construction. Trente instances coutent trois fois rien et donnent la taille, la
+rotation et la transparence au hasard -- c'est ce desordre qui empeche l'oeil de lire une grille.
+
+- Trois fois PLUS PETITES qu'avant.
+- Bien plus TRANSPARENTES (0.82, avec un ecart au hasard par feuille).
+- Elles DERIVENT en diagonale et se recyclent en boucle.
+
+La diagonale n'est pas un caprice : un defilement purement horizontal ou vertical se lit comme un decor qui
+glisse, alors qu'une diagonale se lit comme un mouvement propre. L'ecran d'intro fait deja ce choix.
+
+### Deux details qui evitent des defauts classiques
+
+La taille est donnee en Y seulement, avec un `UIAspectRatioConstraint` en `DominantAxis.Height` : exprimee en X,
+elle changerait avec le format de l'ecran et les feuilles seraient ovales sur un ultra-large.
+
+Le recyclage se fait par MODULO avec une marge de 0.2 : la feuille disparait avant de reapparaitre de l'autre
+cote. Sans cette marge, on la verrait sauter au bord.
+
+### La boucle est COUPEE a la sortie
+
+Elle vit sur `RunService`, pas sur le GUI : detruire le rideau ne la couperait pas, elle tournerait sur des
+instances mortes toute la session. Regle deja au journal, et deja payee sur l'ecran d'intro.
+
 ## 0.0.313 — La bande de tonte suit vraiment le sens ou l'on est passe
 
 Deux bugs, et le premier expliquait tout.

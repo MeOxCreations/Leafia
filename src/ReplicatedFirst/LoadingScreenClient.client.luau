@@ -46,16 +46,21 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local LEAF_TINT = Color3.fromRGB(81, 81, 81)
 	-- Prefixe CURTAIN_ : l'ecran d'INTRO a deja ses propres TILE_* en haut du fichier, et un local du meme nom
 	-- les MASQUERAIT ici. On croirait alors regler l'un en reglant l'autre.
-	-- Teinte et transparence du fond tuile, sur un fond a (31, 31, 31).
-	-- PREMIERE VERSION INVISIBLE : 48 a 55 % de transparence donnait 39 a l'ecran, soit 8 points d'ecart sur
-	-- 255. Le calcul se fait de tete et aurait evite le tour : couleur RENDUE = fond + (teinte - fond) x
-	-- (1 - transparence). Un ecart de moins de ~20 points ne se voit pas.
-	-- Ici : 31 + (78 - 31) x 0.75 = 66, soit 35 points d'ecart. Visible, et ca reste une texture.
-	local CURTAIN_TILE_TINT = Color3.fromRGB(78, 78, 78)
-	local CURTAIN_TILE_TRANSPARENCY = 0.25
-	-- Taille d'une tuile, en fraction de l'ecran. Deux valeurs car un ecran n'est pas carre.
-	local CURTAIN_TILE_SCALE_X = 0.075
-	local CURTAIN_TILE_SCALE_Y = 0.13
+	--
+	-- FEUILLES INDIVIDUELLES et non une image TUILEE. Une tuile repete le MEME motif a la MEME taille : elle ne
+	-- peut pas varier. Des feuilles separees coutent quelques dizaines d'instances et donnent la taille, la
+	-- rotation et la transparence au hasard -- c'est ce desordre qui empeche l'oeil de lire une grille.
+	local CURTAIN_LEAF_COUNT = 30
+	local CURTAIN_LEAF_TINT = Color3.fromRGB(78, 78, 78)
+	-- Transparence de base ; chaque feuille tire un ecart au hasard autour d'elle. Haute : c'est un fond.
+	local CURTAIN_LEAF_TRANSPARENCY = 0.82
+	local CURTAIN_LEAF_TRANSPARENCY_JITTER = 0.1
+	-- Taille, en fraction de la HAUTEUR de l'ecran (pas de la largeur : sinon les feuilles changent de taille
+	-- selon le format d'ecran). Divisee par trois depuis la version tuilee.
+	local CURTAIN_LEAF_MIN = 0.022
+	local CURTAIN_LEAF_MAX = 0.055
+	-- Derive DIAGONALE, en fraction d'ecran par seconde. Lente : c'est un fond, il ne doit pas attirer l'oeil.
+	local CURTAIN_DRIFT = Vector2.new(0.012, 0.021)
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
 	-- d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`, le
 	-- rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
@@ -75,28 +80,56 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	curtain.Active = true -- absorbe les clics tant que le rideau couvre
 	curtain.Parent = sg
 
-	-- FOND TUILE, avec la MEME feuille : le rideau tient dix secondes, un aplat gris pendant dix secondes se lit
-	-- comme un ecran fige. Une texture dit que la page est VIVANTE meme quand rien ne bouge.
+	-- FOND DE FEUILLES, avec la MEME image que celle du milieu : le rideau tient dix secondes, et un aplat pendant
+	-- dix secondes se lit comme un ecran fige.
 	--
-	-- Volontairement A PEINE plus clair que le fond : c'est une TEXTURE, pas un motif. La feuille du milieu doit
-	-- rester la seule chose qu'on regarde -- deux elements qui reclament l'attention se la volent, et on ne voit
-	-- plus ni l'un ni l'autre.
+	-- Elles DERIVENT en diagonale et se recyclent en boucle. La diagonale n'est pas un caprice : un defilement
+	-- purement horizontal ou vertical se lit comme un decor qui glisse, alors qu'une diagonale se lit comme un
+	-- mouvement propre.
 	--
-	-- Enfant du CanvasGroup, donc il s'efface AVEC le rideau : rien de plus a fondre.
-	local pattern = Instance.new("ImageLabel")
-	pattern.Name = "Pattern"
-	pattern.BackgroundTransparency = 1
-	pattern.Size = UDim2.fromScale(1, 1)
-	pattern.Image = LEAF_ID
-	pattern.ImageColor3 = CURTAIN_TILE_TINT
-	pattern.ImageTransparency = CURTAIN_TILE_TRANSPARENCY
-	pattern.ScaleType = Enum.ScaleType.Tile
-	-- TileSize en SCALE (fraction de l'ImageLabel, qui couvre l'ecran) : la tuile suit donc la taille de l'ecran.
-	-- X et Y sont SEPARES parce qu'un ecran n'est pas carre : a valeur egale la feuille serait etiree.
-	-- A REGLER A L'OEIL, il n'y a pas de bonne valeur calculable.
-	pattern.TileSize = UDim2.fromScale(CURTAIN_TILE_SCALE_X, CURTAIN_TILE_SCALE_Y)
-	pattern.ZIndex = 1 -- ordre EXPLICITE des deux cotes : compter sur la valeur par defaut d'un seul se lit mal
-	pattern.Parent = curtain
+	-- Tailles, rotations et transparences tirees au hasard : a taille egale l'oeil reconnait une grille, meme quand
+	-- les positions sont aleatoires.
+	local leaves: { ImageLabel } = {}
+	local rng = Random.new()
+	for _ = 1, CURTAIN_LEAF_COUNT do
+		local bit = Instance.new("ImageLabel")
+		bit.BackgroundTransparency = 1
+		bit.Image = LEAF_ID
+		bit.ImageColor3 = CURTAIN_LEAF_TINT
+		bit.ImageTransparency = math.clamp(
+			CURTAIN_LEAF_TRANSPARENCY + rng:NextNumber(-1, 1) * CURTAIN_LEAF_TRANSPARENCY_JITTER,
+			0,
+			1
+		)
+		bit.ScaleType = Enum.ScaleType.Fit
+		bit.Rotation = rng:NextNumber(0, 360)
+		-- Taille donnee en Y seulement, et carree grace a l'AspectRatio : exprimee en X elle changerait avec le
+		-- format de l'ecran, et les feuilles seraient ovales sur un ultra-large.
+		local size = rng:NextNumber(CURTAIN_LEAF_MIN, CURTAIN_LEAF_MAX)
+		bit.Size = UDim2.fromScale(0, size)
+		local ar = Instance.new("UIAspectRatioConstraint")
+		ar.AspectRatio = 1
+		ar.DominantAxis = Enum.DominantAxis.Height
+		ar.Parent = bit
+		bit.Position = UDim2.fromScale(rng:NextNumber(0, 1), rng:NextNumber(0, 1))
+		bit.ZIndex = 1 -- ordre EXPLICITE des deux cotes : la feuille du milieu est a 2
+		bit.Parent = curtain
+		leaves[#leaves + 1] = bit
+	end
+
+	-- La derive. Connexion gardee pour etre COUPEE a la sortie : posee sur RunService, elle survivrait a la
+	-- destruction du rideau et tournerait toute la session.
+	local driftConn: RBXScriptConnection? = nil
+	driftConn = RunService.RenderStepped:Connect(function(dt: number)
+		for _, bit in ipairs(leaves) do
+			local pos = bit.Position
+			-- Recyclage par MODULO : une feuille qui sort d'un cote rentre par l'autre, sans trou ni saut.
+			-- La marge de 0.2 laisse la feuille disparaitre avant de reapparaitre, sinon on la verrait sauter.
+			local x = (pos.X.Scale + CURTAIN_DRIFT.X * dt + 0.2) % 1.4 - 0.2
+			local y = (pos.Y.Scale + CURTAIN_DRIFT.Y * dt + 0.2) % 1.4 - 0.2
+			bit.Position = UDim2.fromScale(x, y)
+		end
+	end)
 
 	-- La feuille : oscille (Rotation) + flotte (Position), deux periodes -> organique.
 	local logo = Instance.new("Frame")
@@ -161,6 +194,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local fade = TweenService:Create(curtain, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { GroupTransparency = 1 })
 	fade:Play()
 	fade.Completed:Wait()
+	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
+	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
+	if driftConn then
+		driftConn:Disconnect()
+		driftConn = nil
+	end
 	sg:Destroy()
 	player:SetAttribute("LeafiaLoadingDone", true) -- meme signal que l'ecran principal (l'UI sait que le rideau est parti)
 	return
