@@ -16,6 +16,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
+local CharacterService = require(script.Parent.CharacterService)
 
 local MowService = {}
 
@@ -30,7 +31,6 @@ type CarryState = {
 	lever: AnimationTrack?, -- levier d'accelerateur : on pilote sa TimePosition, on ne la laisse pas jouer
 	tick: RBXScriptConnection?, -- boucle de la machine : montee en vitesse + position du levier
 	speed: number, -- vitesse COURANTE du porteur, montee/descente lissee
-	walkSpeedWas: number, -- vitesse d'avant la prise, rendue telle quelle a la repose
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -284,11 +284,9 @@ local function stopMachine(state: CarryState)
 	cut(state.lever)
 	state.motor = nil
 	state.lever = nil
-	-- On REND la vitesse d'avant plutot que de reposer SPEED_MIN : un autre systeme a pu la changer.
-	local humanoid = state.humanoid
-	if humanoid and humanoid.Parent then
-		humanoid.WalkSpeed = state.walkSpeedWas
-	end
+	-- On RETIRE l'allure imposee : CharacterService reprend la main et ramene le joueur a sa marche, en
+	-- douceur. Reposer une valeur nous-memes reviendrait a redevenir un deuxieme ecrivain.
+	CharacterService.setSpeedOverride(state.owner, nil)
 end
 
 -- MESURE DE LA MACHINE, en une passe : son point le plus BAS, et de combien elle depasse EN ARRIERE de sa racine.
@@ -430,7 +428,6 @@ local function grab(player: Player, model: Model)
 		lever = nil,
 		tick = nil,
 		speed = MowConfigs.SPEED_MIN,
-		walkSpeedWas = if humanoid then humanoid.WalkSpeed else 16,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -481,7 +478,10 @@ local function grab(player: Player, model: Model)
 		else
 			state.speed = math.max(target, state.speed - rate * dt)
 		end
-		hum.WalkSpeed = state.speed
+		-- On DECLARE l'allure, on n'ecrit pas dans WalkSpeed : CharacterService en est le seul proprietaire, et
+		-- ecrire directement le ferait se battre avec le sprint et les autres features (sa regle, en tete de
+		-- son fichier). Sa rampe est plus rapide que la notre, donc c'est bien NOTRE montee qu'on ressent.
+		CharacterService.setSpeedOverride(state.owner, state.speed)
 
 		-- LE LEVIER RACONTE LE REGIME. Ratio 0 au ralenti, 1 a plein regime, et on ecrit l'IMAGE correspondante.
 		-- On s'arrete a Length - epsilon : sur la derniere image pile, une piste bouclee est deja repartie a zero.

@@ -81,11 +81,9 @@ local function setupLanding(player: Player, character: Model, humanoid: Humanoid
 			-- Rejouee depuis le debut a chaque atterrissage. La piste n'est pas bouclee : elle s'arrete seule.
 			track:Play(0.1)
 		end
-		-- Le personnage encaisse : la vitesse tombe d'un coup, puis la boucle la fait remonter. La chute est
-		-- BRUTALE et la reprise progressive, comme des jambes qui absorbent puis repoussent. L'inverse (chute
-		-- douce, reprise seche) ne se ressentirait pas comme un impact.
-		humanoid.WalkSpeed = CharacterConfigs.LANDING_SPEED
-		recovering[player] = true
+		-- PAS DE RALENTISSEMENT ICI, et c'est un choix : couper les jambes a l'atterrissage donnait du POIDS au
+		-- saut mais rendait le jeu collant -- on retombe sans arret dans un jardin, et chaque reception coutait
+		-- une demi-seconde de marche molle. L'animation, elle, reste : elle raconte l'impact sans le facturer.
 	end)
 end
 
@@ -176,7 +174,7 @@ local function stepRecovery(dt: number)
 		local target = targetSpeed(player)
 		local current = humanoid.WalkSpeed
 		local rate = if target > current
-			then CharacterConfigs.LANDING_RECOVERY_RATE
+			then CharacterConfigs.SPEED_SPEEDUP_RATE
 			else CharacterConfigs.SPEED_SLOWDOWN_RATE
 		local step = rate * dt
 

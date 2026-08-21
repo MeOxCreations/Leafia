@@ -10,12 +10,11 @@ local CharacterConfigs = {
 	-- Vitesse quand le joueur maintient Shift. Applique cote serveur : le client ne fait que demander.
 	SPRINT_SPEED = 17,
 
-	-- ATTERRISSAGE : le personnage encaisse avant de repartir. Sans ce ralentissement il touche le sol et file
-	-- comme s'il n'avait rien senti, ce qui enleve tout poids au saut.
-	LANDING_SPEED = 4,
-	-- Vitesse de recuperation, en studs/s gagnes par seconde. 14 donne ~0.4 s pour retrouver la marche et
-	-- ~0.9 s pour le sprint : on sent la reprise sans se sentir bloque.
-	LANDING_RECOVERY_RATE = 14,
+	-- Vitesse a laquelle on ACCELERE vers une allure plus rapide, en studs/s gagnes par seconde.
+	-- S'appelait LANDING_RECOVERY_RATE du temps ou l'atterrissage coupait les jambes. Ce ralentissement a ete
+	-- retire (il rendait le jeu collant : on retombe sans arret dans un jardin), donc plus rien ne "recupere" --
+	-- cette rampe ne sert plus qu'a rejoindre une allure imposee par une feature, ou a la quitter.
+	SPEED_SPEEDUP_RATE = 14,
 	-- Vitesse de RALENTISSEMENT, quand une feature impose une allure plus lente (travail au pied d'une haie).
 	-- Plus douce que la reprise : on est aspire vers le travail, on n'y est pas jete.
 	SPEED_SLOWDOWN_RATE = 9,

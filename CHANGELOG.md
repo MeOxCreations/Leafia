@@ -2185,6 +2185,34 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.269 — Plus de coup de frein a l'atterrissage
+
+Le personnage tombait a 4 studs/s en touchant le sol, puis remontait. Ca donnait du POIDS au saut, mais ca rendait
+le jeu COLLANT : on retombe sans arret dans un jardin, et chaque reception coutait une demi-seconde de marche
+molle. Retire.
+
+L'ANIMATION d'atterrissage reste : elle raconte l'impact sans le facturer. C'est elle qui portait le ressenti, pas
+le ralentissement.
+
+`LANDING_SPEED` disparait. `LANDING_RECOVERY_RATE` devient `SPEED_SPEEDUP_RATE` : plus rien ne "recupere" d'un
+atterrissage, cette rampe ne sert plus qu'a rejoindre une allure imposee par une feature ou a la quitter. Un nom
+qui ment coute plus cher qu'un renommage.
+
+### Bug d'architecture corrige au passage (introduit au 0.0.262)
+
+`MowService` ecrivait dans `humanoid.WalkSpeed` DIRECTEMENT pour sa montee en regime. Or `CharacterService` porte
+la regle, en tete de son fichier : "Un seul module possede WalkSpeed ; les autres declarent ce qu'ils veulent, il
+tranche." Les deux se battaient donc a chaque image, et le sprint aurait ecrase la tondeuse (ou l'inverse) sans
+qu'on comprenne pourquoi.
+
+La tondeuse DECLARE maintenant son allure via `setSpeedOverride`. Sa propre rampe (3.5 studs/s) est plus lente que
+celle de CharacterService (14), donc c'est bien la montee en regime de la tondeuse qu'on ressent. A la descente en
+revanche, c'est la rampe de CharacterService (9) qui borne : le retour au ralenti est un peu plus doux que les 14
+demandes par `SPEED_RAMP_DOWN`. A regler la si ca compte.
+
+`walkSpeedWas` disparait : c'est CharacterService qui ramene le joueur a sa marche quand on retire l'allure
+imposee. Reposer une valeur nous-memes reviendrait a redevenir un deuxieme ecrivain.
+
 ## 0.0.268 — La crete de la vague passe en Shamrock
 
 L'eclaircissement du 0.0.265 ne se voyait PAS. Cause : quelques pour cent de luminosite sur un vert deja vif se
