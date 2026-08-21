@@ -145,8 +145,9 @@ local GrassZoneConfigs = {
 	-- Sur un vrai terrain, les bandes claires et sombres ne sont pas peintes : elles viennent du SENS dans lequel la
 	-- tondeuse a couche les brins. Les dessiner d'avance donnerait un motif fixe, identique quoi que fasse le joueur,
 	-- et qui contredirait sa propre tonte des qu'il coupe en travers.
-	-- Elles naitront donc de la TONTE elle-meme. La donnee necessaire existe deja : chaque touffe garde `tiltDir`, la
-	-- direction de son dernier passage.
+	-- Elles naissent donc de la TONTE elle-meme : voir le bloc BANDES DE TONTE (MOW_STRIPE_*) plus bas.
+	-- Chaque touffe y garde le SENS dans lequel la tondeuse l'a coupee -- une donnee a part de `tiltDir`, qui
+	-- suit les PAS du joueur : marcher sur une bande ne doit pas la reecrire.
 	-- Remettre a true seulement pour un decor fige, jamais sur une pelouse qui se tond.
 	STRIPE_ENABLED = false,
 	STRIPE_WIDTH = 9, -- largeur d'une bande, en studs
@@ -316,6 +317,23 @@ local GrassZoneConfigs = {
 	-- Garder une MARGE avant 1 : c'est ce qui RESTE qui donne l'avant/apres. A 0.98 (la valeur du pietinement)
 	-- il n'y a plus de matiere a voir, donc plus rien a admirer -- et l'avant/apres est le coeur du jeu.
 	MOW_CUT = 0.75,
+
+	-- ===== BANDES DE TONTE =====
+	-- C'est la promesse tenue du bloc "Rayures de tonte" plus haut : les bandes naissent de la TONTE, elles ne
+	-- sont pas dessinees d'avance. Prefixe MOW_ pour ne pas les confondre avec l'ancien systeme, coupe.
+	-- Les brins couches dans un sens ne renvoient pas la lumiere comme ceux couches dans l'autre : c'est de la que
+	-- viennent les bandes claires et sombres d'une vraie pelouse tondue. Chaque touffe retient le SENS dans lequel
+	-- la tondeuse est passee, et s'eclaircit ou s'assombrit selon.
+	--
+	-- LIMITE ASSUMEE : le sens est compare a un AXE FIXE. Les bandes sont donc franches quand on tond LE LONG de
+	-- cet axe (un aller clair, un retour sombre), et invisibles quand on tond perpendiculairement -- les deux sens
+	-- y donnent la meme valeur. Un vrai effet marcherait dans toutes les directions, mais il faudrait comparer au
+	-- REGARD du joueur, donc repeindre toute la pelouse des qu'il tourne la camera. On prend le pas cher.
+	-- Regler cet axe sur la direction dans laquelle on tond le plus.
+	MOW_STRIPE_AXIS = Vector3.new(0, 0, 1),
+	-- Ecart de luminosite entre un aller et un retour. 0 = pas de bandes.
+	-- Discret : les bandes doivent se deviner, pas se lire comme des rayures peintes.
+	MOW_STRIPE_STRENGTH = 0.13,
 
 	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
 	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.

@@ -80,6 +80,8 @@ type Clump = {
 	colorCrush: number, -- suit le CONTACT SEUL, sans la trace permanente : la couleur revient quand on s'en va.
 	flattened: number, -- TRACE : ecrasement permanent (0 a 1). Ne fait que monter, et sert de plancher a `crush`.
 	mown: number, -- COUPE : tonte permanente (0 = pas tondue, 1 = coupee). Ne descend JAMAIS, rien ne la releve.
+	mowStripe: number, -- SENS de la derniere coupe, projete sur l'axe de bandes (-1 a 1). Donne la bande claire ou sombre.
+	lastStripe: number, -- dernier sens REELLEMENT ecrit
 	mownColor: Color3, -- couleur une fois tondue, tachee de la MEME facon : la partie tondue garde le relief du terrain
 	lastMown: number, -- derniere coupe REELLEMENT ecrite : sans elle, une touffe qu'on vient de couper ne serait pas redessinee
 	lastMownBlend: number, -- dernier melange de couleur de coupe REELLEMENT ecrit
@@ -200,11 +202,24 @@ local function apply(
 			or mowBlend ~= clump.lastMownBlend
 			or light ~= clump.lastLighten
 			or litQ ~= clump.lastReveal
+			or clump.mowStripe ~= clump.lastStripe
 		then
 			-- DEUX melanges empiles, et l'ORDRE compte. La COUPE d'abord : elle change la couleur de REPOS de la
 			-- touffe, pour toujours. L'ECRASEMENT par-dessus : lui est temporaire. Dans cet ordre, une touffe
 			-- tondue PUIS pietinee revient a sa couleur de TONDUE quand le pied repart, pas a celle de l'herbe haute.
-			local rest = clump.baseColor:Lerp(clump.mownColor, mowBlend)
+			local mown2 = clump.mownColor
+			-- BANDE DE TONTE : selon le SENS ou la tondeuse est passee, la touffe renvoie plus ou moins de lumiere.
+			-- On multiplie les canaux plutot que de fondre vers une couleur fixe : chaque touffe garde sa tache de
+			-- Perlin, donc les bandes se posent SUR le relief du terrain au lieu de l'effacer.
+			if clump.mowStripe ~= 0 and GrassZoneConfigs.MOW_STRIPE_STRENGTH > 0 then
+				local k = 1 + clump.mowStripe * GrassZoneConfigs.MOW_STRIPE_STRENGTH
+				mown2 = Color3.new(
+					math.min(mown2.R * k, 1),
+					math.min(mown2.G * k, 1),
+					math.min(mown2.B * k, 1)
+				)
+			end
+			local rest = clump.baseColor:Lerp(mown2, mowBlend)
 			local final = rest:Lerp(clump.crushedColor, blend)
 			-- LA CRETE PREND SA COULEUR. Un fondu VERS une couleur franche, pas un eclaircissement : quelques pour
 			-- cent de luminosite sur un vert deja vif ne se voient pas, une teinte differente si.
@@ -222,6 +237,7 @@ local function apply(
 			clump.lastMownBlend = mowBlend
 			clump.lastLighten = light
 			clump.lastReveal = litQ
+			clump.lastStripe = clump.mowStripe
 		end
 	end
 
@@ -611,6 +627,8 @@ local function populate(zone: Zone)
 				colorCrush = 0,
 				flattened = 0,
 				mown = 0,
+				mowStripe = 0,
+				lastStripe = 0,
 				mownColor = mownColor,
 				lastMown = 0,
 				lastMownBlend = 0,
@@ -819,6 +837,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.squashCrush ~= target
 			or clump.colorCrush ~= target
 			or clump.mown ~= clump.lastMown
+			or clump.mowStripe ~= clump.lastStripe
 		then
 			moving += 1
 		end
@@ -900,6 +919,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.squashCrush ~= clump.lastSquashCrush
 			or clump.colorCrush ~= clump.lastColorCrush
 			or clump.mown ~= clump.lastMown
+			or clump.mowStripe ~= clump.lastStripe
 		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
 			-- Au moment du pas l'ecart est maximal ; une fois le lent arrive, il est NUL et la touffe est droite.
@@ -1039,8 +1059,20 @@ end
 --
 -- Rend le nombre de touffes REELLEMENT coupees cette image. Zero = la tondeuse tourne dans le vide : de quoi couper le
 -- son de coupe ou faire avancer une jauge sans avoir a recompter derriere.
-function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number): number
+function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number, direction: Vector3?): number
 	local rate = GrassZoneConfigs.MOW_RATE * dt
+	-- SENS de la coupe, projete sur l'axe de bandes. Calcule UNE fois pour toute la passe : il est le meme pour
+	-- toutes les touffes de cette image, le refaire par touffe couterait pour rien.
+	-- Repasser dans l'autre sens REECRIT la bande : c'est exactement ce que fait une vraie tondeuse.
+	local stripe = 0
+	if direction and GrassZoneConfigs.MOW_STRIPE_STRENGTH > 0 then
+		local flat = Vector3.new(direction.X, 0, direction.Z)
+		local axis = GrassZoneConfigs.MOW_STRIPE_AXIS
+		local flatAxis = Vector3.new(axis.X, 0, axis.Z)
+		if flat.Magnitude > 1e-3 and flatAxis.Magnitude > 1e-3 then
+			stripe = math.clamp(flat.Unit:Dot(flatAxis.Unit), -1, 1)
+		end
+	end
 	local total = 0
 
 	for _, zone in ipairs(zones) do
@@ -1068,6 +1100,7 @@ function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number
 					-- justement les touffes les plus hautes, celles qu'on vient couper.
 					if math.sqrt(d.X * d.X + d.Z * d.Z) < radius then
 						clump.mown = math.min(1, clump.mown + rate)
+						clump.mowStripe = stripe
 						bucketCut += 1
 					end
 				end

@@ -752,7 +752,9 @@ local function update(dt: number)
 	-- La coupe tourne MEME A L'ARRET : rester sur place finit de tondre la touffe sous le carter, au lieu de laisser
 	-- un rond a moitie coupe qu'on ne comprend pas.
 	if running then
-		GrassZoneController.mowAt(point, radius, dt)
+		-- On passe le SENS de la machine : c'est lui qui decide de la bande claire ou sombre. Le meme `forwardOf`
+		-- que pour les roues, donc les deux ne peuvent pas raconter des sens differents.
+		GrassZoneController.mowAt(point, radius, dt, forwardOf(mine))
 	end
 end
 

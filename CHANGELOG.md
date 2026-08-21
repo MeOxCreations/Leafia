@@ -2185,6 +2185,38 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.305 — Les bandes de tonte naissent enfin de la TONTE
+
+Promesse tenue. La config l'annoncait depuis le debut, dans le bloc "Rayures de tonte" :
+
+> "Sur un vrai terrain, les bandes claires et sombres ne sont pas peintes : elles viennent du SENS dans lequel la
+> tondeuse a couche les brins. Les dessiner d'avance donnerait un motif fixe, identique quoi que fasse le joueur.
+> Elles naitront donc de la TONTE elle-meme."
+
+Chaque touffe retient desormais le SENS dans lequel la tondeuse est passee dessus, et s'eclaircit ou s'assombrit
+selon. Repasser dans l'autre sens REECRIT la bande -- exactement ce que fait une vraie tondeuse.
+
+Une donnee a part de `tiltDir`, qui suit les PAS du joueur : marcher sur une bande ne doit pas la reecrire.
+
+On multiplie les canaux plutot que de fondre vers une couleur fixe, donc chaque touffe garde sa tache de Perlin :
+les bandes se posent SUR le relief du terrain au lieu de l'effacer.
+
+Le sens est calcule UNE fois par passe et non par touffe -- il est le meme pour toutes celles de l'image. Et il
+vient du MEME `forwardOf` que les roues, donc les deux ne peuvent pas raconter des sens differents.
+
+### La limite, assumee
+
+Le sens est compare a un AXE FIXE (`MOW_STRIPE_AXIS`). Les bandes sont donc franches quand on tond LE LONG de cet
+axe -- un aller clair, un retour sombre -- et invisibles quand on tond perpendiculairement, les deux sens y
+donnant la meme valeur.
+
+Un effet juste dans toutes les directions devrait comparer au REGARD du joueur (c'est d'ailleurs physiquement
+exact : de vraies bandes changent d'aspect quand on se deplace). Mais il faudrait alors repeindre toute la pelouse
+des que la camera tourne. On prend le pas cher, et on regle l'axe sur la direction dans laquelle on tond le plus.
+
+L'ancien systeme de rayures dessinees d'avance reste COUPE, et son commentaire pointe maintenant vers celui-ci.
+Prefixe `MOW_STRIPE_` pour qu'on ne confonde jamais les deux.
+
 ## 0.0.304 — La poignee du lanceur passe dans la main du joueur
 
 Elle restait sur la machine pendant le demarrage. Elle QUITTE maintenant la tondeuse des la posture "pret a
