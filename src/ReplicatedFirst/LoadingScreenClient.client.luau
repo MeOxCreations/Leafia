@@ -44,6 +44,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 	local LEAF_ID = "rbxassetid://117703108607506"
 	local LEAF_TINT = Color3.fromRGB(81, 81, 81)
+	-- Teinte de la bande de reflet. Doit etre PLUS CLAIRE que LEAF_TINT : c'est elle qu'on voit passer.
+	local LEAF_SHINE = Color3.fromRGB(168, 168, 168)
+	local SHINE_SWEEP = 0.9 -- duree d'un passage du reflet
+	local SHINE_PAUSE = 1.6 -- temps mort entre deux passages. Sans pause, ca clignote au lieu de briller
 	-- Prefixe CURTAIN_ : l'ecran d'INTRO a deja ses propres TILE_* en haut du fichier, et un local du meme nom
 	-- les MASQUERAIT ici. On croirait alors regler l'un en reglant l'autre.
 	--
@@ -153,7 +157,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	leaf.Position = UDim2.fromScale(0.5, 0.5)
 	leaf.Size = UDim2.fromScale(1, 1)
 	leaf.Image = LEAF_ID
-	leaf.ImageColor3 = LEAF_TINT
+	-- La teinte est posee plus bas, avec le reflet : elle depend de lui (voir LEAF_SHINE).
 	leaf.ScaleType = Enum.ScaleType.Fit
 	local la = Instance.new("UIAspectRatioConstraint")
 	la.AspectRatio = 1
@@ -162,6 +166,42 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	leaf.Rotation = -10
 	TweenService:Create(leaf, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 10 }):Play()
 	TweenService:Create(leaf, TweenInfo.new(2.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(0.5, 0.46) }):Play()
+
+	-- REFLET qui balaie la feuille. Meme motif que le logo de l'ecran d'intro : un UIGradient avec une bande claire
+	-- au milieu, dont l'Offset GLISSE d'un bord a l'autre, avec une PAUSE entre deux passages. Un reflet continu se
+	-- lit comme un clignotement ; c'est le silence entre deux passages qui le rend precieux.
+	--
+	-- Un UIGradient MULTIPLIE l'ImageColor3. Pour obtenir une bande PLUS CLAIRE que la feuille, on monte donc sa
+	-- teinte jusqu'a la valeur du reflet, et le degrade la RAMENE a sa valeur normale partout ailleurs.
+	-- Sans ca, le degrade ne pourrait que l'assombrir -- on ne depasse pas le blanc.
+	leaf.ImageColor3 = LEAF_SHINE
+	local shine = Instance.new("UIGradient")
+	shine.Name = "UIGradientSlide"
+	local base = LEAF_TINT.R / LEAF_SHINE.R -- ratio qui rend la teinte de repos
+	local dim = Color3.new(base, base, base)
+	shine.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, dim),
+		ColorSequenceKeypoint.new(0.35, dim),
+		ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+		ColorSequenceKeypoint.new(0.65, dim),
+		ColorSequenceKeypoint.new(1, dim),
+	})
+	shine.Rotation = 20 -- legerement incline : un reflet vertical se lit comme une barre, pas comme une lumiere
+	shine.Offset = Vector2.new(-1, 0)
+	shine.Parent = leaf
+	task.spawn(function()
+		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
+		-- instance detruite -- meme raison que la derive des feuilles du fond.
+		while sg.Parent do
+			shine.Offset = Vector2.new(-1, 0)
+			TweenService:Create(
+				shine,
+				TweenInfo.new(SHINE_SWEEP, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+				{ Offset = Vector2.new(1, 0) }
+			):Play()
+			task.wait(SHINE_SWEEP + SHINE_PAUSE)
+		end
+	end)
 
 	-- Plus de boules qui rebondissent : la feuille qui oscille suffit a dire que ca charge, et deux animations qui
 	-- disent la meme chose se volent l'attention. Le rideau tenant maintenant dix secondes, il vaut mieux qu'il soit

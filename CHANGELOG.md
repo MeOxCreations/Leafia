@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.318 — Un reflet balaie la feuille du rideau de chargement
+
+Meme motif que le logo de l'ecran d'intro : un UIGradient avec une bande claire au milieu, dont l'`Offset` glisse
+d'un bord a l'autre, avec une PAUSE entre deux passages. Un reflet continu se lit comme un clignotement -- c'est
+le silence entre deux passages qui le rend precieux.
+
+### Le piege du multiplicateur
+
+Un UIGradient MULTIPLIE l'`ImageColor3`. Il ne peut donc qu'ASSOMBRIR : on ne depasse pas le blanc. Pour obtenir
+une bande PLUS CLAIRE que la feuille, on monte sa teinte jusqu'a la valeur du reflet, et le degrade la RAMENE a sa
+valeur normale partout ailleurs.
+
+Le ratio est calcule depuis les deux couleurs plutot qu'ecrit a la main : changer l'une garde l'autre juste.
+
+Legere inclinaison (20 degres) : un reflet parfaitement vertical se lit comme une barre, pas comme une lumiere.
+
+La boucle meurt avec le rideau (`while sg.Parent`), comme la derive des feuilles du fond -- un `while true`
+tournerait toute la session sur une instance detruite.
+
 ## 0.0.317 — La tondeuse ne claque plus dans l'axe quand on lache le virage
 
 Un seul reglage servait a la fois la mise en travers et le retour droit. En lachant la touche, la machine se
