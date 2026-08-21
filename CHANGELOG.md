@@ -2185,6 +2185,32 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.320 — Un bruit de feuille accompagne le rideau de chargement
+
+Joue une fois, au moment ou la feuille apparait. Tire AU HASARD dans `SoundService/Sounds/Environnement/Leafs` --
+le dossier ou la haie pioche deja a chaque coupe. Deux chargements de suite ne sonnent donc pas pareil, et
+deposer un echantillon de plus dans Studio suffit a varier, sans toucher au code.
+
+### Le son est CHERCHE en boucle, pas une seule fois
+
+Ce rideau vit dans ReplicatedFirst : quand il s'affiche, SoundService n'a pas forcement encore recu ses dossiers.
+Un `FindFirstChild` unique a cet instant aurait rendu nil, et le son ne serait JAMAIS parti -- sans la moindre
+erreur a l'ecran ni dans la console. On re-scanne donc pendant six secondes, en tache de fond pour ne rien
+bloquer. "Absent au demarrage" est un etat normal, pas une panne.
+
+### Rangement
+
+`findSound` est REMONTEE au-dessus du rideau : le rideau se termine par un `return`, donc une fonction definie
+plus bas ne pouvait pas etre atteinte depuis ce chemin. Elle se decompose maintenant en `findByPath` (descend le
+chemin), `findSound` (exige un Sound) et `findAnySound` (accepte un dossier et tire au hasard). La musique
+continue de passer par `findSound`, inchangee.
+
+Volume dans `LEAF_SOUND_VOLUME` (0.35), a regler a l'oreille.
+
+### Cote Studio
+
+Aucun asset a ajouter : le dossier existe deja. Si tu le renommes ou le deplaces, le son se tait sans rien dire.
+
 ## 0.0.319 — La feuille du rideau se REMPLIT au lieu de briller
 
 Elle part invisible et se revele petit a petit, comme une jauge en forme de feuille. Le joueur ne voit plus

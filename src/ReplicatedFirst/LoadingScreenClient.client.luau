@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local StarterGui = game:GetService("StarterGui")
 local TextChatService = game:GetService("TextChatService")
 local SoundService = game:GetService("SoundService")
+local Debris = game:GetService("Debris")
 local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
@@ -22,6 +23,61 @@ local TeleportService = game:GetService("TeleportService")
 
 local player = Players.LocalPlayer
 ReplicatedFirst:RemoveDefaultLoadingScreen()
+
+-- ===== Sons : resolution par chemin sous SoundService =====
+-- AUTONOME, comme tout ce fichier : aucun require de ReplicatedStorage (SoundUtils fait la meme chose, mais le
+-- requerir ici ferait attendre une replication qu'on n'a pas au moment de ReplicatedFirst).
+--
+-- Ces fonctions vivent AVANT le rideau parce que le rideau `return` : une definition placee plus bas ne serait
+-- jamais atteinte dans ce chemin.
+local function findByPath(path: { string }): Instance?
+	local current: Instance = SoundService
+	for _, name in ipairs(path) do
+		local child = current:FindFirstChild(name)
+		if not child then
+			return nil
+		end
+		current = child
+	end
+	return current
+end
+
+local function findSound(path: { string }): Sound?
+	local found = findByPath(path)
+	return if found and found:IsA("Sound") then found else nil
+end
+
+-- Comme findSound, mais un chemin qui pointe sur un DOSSIER rend un de ses Sound AU HASARD. Deposer un echantillon
+-- de plus dans Studio augmente donc la variete sans toucher au code (meme convention que le son de coupe de haie).
+local function findAnySound(path: { string }): Sound?
+	local found = findByPath(path)
+	if not found then
+		return nil
+	end
+	if found:IsA("Sound") then
+		return found
+	end
+	local pool: { Sound } = {}
+	for _, child in ipairs(found:GetChildren()) do
+		if child:IsA("Sound") then
+			table.insert(pool, child)
+		end
+	end
+	return if #pool > 0 then pool[math.random(#pool)] else nil
+end
+
+-- Clone et joue. On CLONE plutot que rejouer l'original : rejouer la meme instance couperait le son en cours, et
+-- le clone garde les reglages faits en Studio (volume, hauteur), qui restent la source de verite.
+local function playSound(source: Sound, volume: number?): Sound
+	local sound = source:Clone()
+	if volume then
+		sound.Volume = volume
+	end
+	sound.Parent = SoundService
+	sound:Play()
+	Debris:AddItem(sound, 5) -- garde-fou si Ended ne tire jamais (asset absent)
+	return sound
+end
 
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
 local TILE_IMAGE = "rbxassetid://137385330828951" -- fond tuile qui defile en diagonale
@@ -49,6 +105,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local FILL_DURATION = 10
 	local FILL_SOFT = 0.14 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
 	local FILL_ROTATION = 90 -- sens du remplissage. AJOUTER 180 si elle se vide au lieu de se remplir
+	-- Son joue quand la feuille apparait. POINTE SUR LE DOSSIER : un echantillon est tire au hasard, donc deux
+	-- chargements de suite ne sonnent pas pareil. Meme dossier que le son de coupe de haie.
+	local LEAF_SOUND = { "Sounds", "Environnement", "Leafs" }
+	local LEAF_SOUND_VOLUME = 0.35 -- a regler a l'oreille
+	-- Combien de temps on re-cherche le son avant d'abandonner. Voir le commentaire de la boucle plus bas.
+	local LEAF_SOUND_WAIT = 6
 	-- Prefixe CURTAIN_ : l'ecran d'INTRO a deja ses propres TILE_* en haut du fichier, et un local du meme nom
 	-- les MASQUERAIT ici. On croirait alors regler l'un en reglant l'autre.
 	--
@@ -184,6 +246,25 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- tranche (deja au journal). Si la feuille se vide au lieu de se remplir, ajouter 180 ici.
 	fill.Rotation = FILL_ROTATION
 	fill.Parent = leaf
+
+	-- LE SON DE LA FEUILLE. Tire du dossier au hasard, joue une fois, a l'instant ou elle apparait.
+	--
+	-- POURQUOI UNE BOUCLE DE RECHERCHE et pas un simple FindFirstChild. Ce rideau vit dans ReplicatedFirst : quand
+	-- il s'affiche, SoundService n'a pas forcement encore recu ses dossiers. Un scan unique a cet instant rendrait
+	-- nil, et le son ne partirait JAMAIS -- sans la moindre erreur a l'ecran ni dans la console. On re-scanne donc
+	-- (FindFirstChild est instantane), en tache de fond pour ne rien bloquer. Absent au demarrage est un etat
+	-- NORMAL, pas une panne.
+	task.spawn(function()
+		local deadline = os.clock() + LEAF_SOUND_WAIT
+		while sg.Parent and os.clock() < deadline do
+			local source = findAnySound(LEAF_SOUND)
+			if source then
+				playSound(source, LEAF_SOUND_VOLUME)
+				return
+			end
+			task.wait(0.2)
+		end
+	end)
 
 	task.spawn(function()
 		local t0 = os.clock()
@@ -732,17 +813,6 @@ local SOUND_MUSIC = { "GameSounds", "Musics", "Loading Screen" }
 local SOUND_GAME_MUSIC = { "Sounds", "Game", "Musics", "MusicMainMenu" }
 -- Volume FORCE de la musique du jeu (le reglage du Sound dans Studio est donc ignore ici). A regler a l'oreille.
 local GAME_MUSIC_VOLUME = 0.04
-local function findSound(path: { string }): Sound?
-	local current: Instance = SoundService
-	for _, name in ipairs(path) do
-		local child = current:FindFirstChild(name)
-		if not child then
-			return nil
-		end
-		current = child
-	end
-	return if current:IsA("Sound") then current else nil
-end
 local loadingMusic: Sound? = nil
 do
 	local source = findSound(SOUND_MUSIC)
