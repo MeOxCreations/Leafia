@@ -188,16 +188,9 @@ return {
 	-- manoeuvre.
 	-- Un reglage A PART et non une fraction de STEER_TURN_RATE : regler l'un ne doit pas forcer a compenser l'autre.
 	STEER_CRAWL_TURN_RATE = 18,
-	-- Poussee angulaire donnee a la machine quand on braque A L'ARRET, en radians par seconde a fond de course.
-	-- Elle est RAPPELEE par SWING_RECOVER : les deux s'equilibrent, donc tenir la touche amene la tondeuse a un
-	-- angle stable au lieu de la faire tourner sans fin.
-	-- ANGLE ATTEINT = PIVOT_GAIN / SWING_RECOVER, en RADIANS. Ici 0.8 / 6 = 0.13 rad, soit environ 8 degres :
-	-- un coup de reins pour repositionner la machine, pas un demi-tour. La premiere valeur (2.6) donnait 25
-	-- degres, beaucoup trop pour un simple ajustement sur place.
-	-- POUR REGLER : viser l'angle en degres, puis PIVOT_GAIN = rad(angle) x SWING_RECOVER.
-	-- Une valeur NEGATIVE retourne le sens du braquage sur place. Le sens ne se deduit pas : il a ete fixe a
-	-- l'ecran (la premiere version partait du mauvais cote).
-	PIVOT_GAIN = 0.8,
+	-- (Le braquage a l'arret n'a plus de reglage propre : la machine se braque desormais par le MEME chemin que la
+	-- traine en virage -- l'input pilote directement l'angle, voir SWING_ANGLE. Un seul mecanisme, un seul bouton,
+	-- et les deux cas ne peuvent plus se contredire.)
 	-- RECUL DE CAMERA A LA VITESSE. La vue s'ecarte a mesure qu'on prend du regime : on voit venir la bande a
 	-- tondre, et l'acceleration se RESSENT au lieu de se deviner au chiffre.
 	-- S'ADDITIONNE au recul de la revelation : les deux passent par une seule valeur, sinon le dernier a ecrire
@@ -256,27 +249,21 @@ return {
 
 	-- ===== BALLANT =====
 	-- Soudee RIGIDE, la tondeuse pivote a l'instant meme ou le joueur tourne : elle se lit comme un objet TENU, pas
-	-- comme une machine qu'on POUSSE. Une vraie tondeuse a de l'inertie -- elle traine dans le virage, puis rattrape.
+	-- comme une machine qu'on POUSSE. Elle traine donc un peu dans le virage, puis rattrape.
 	--
-	-- Le ballant fait pivoter la machine AUTOUR DU JOUEUR (le guidon reste dans les mains, le carter part de cote),
-	-- pas autour d'elle-meme : c'est ce qui distingue un objet pousse d'un objet porte.
+	-- PILOTE PAR L'INPUT, PAS PAR LE CAP OBSERVE. La version precedente derivait le cap du joueur (combien il avait
+	-- tourne depuis l'image d'avant). Mais le serveur recoit ce cap REPLIQUE et interpole : quand le joueur arrete
+	-- de tourner net, l'interpolation DEPASSE puis se corrige, la derivee change de SIGNE, et la machine repartait
+	-- de l'autre cote -- un zig-zag a l'arret du virage. Aucun lissage ne rattrape une inversion reelle du signal.
+	-- L'input, lui, est propre : il vaut ce que le joueur demande, sans bruit et sans depassement.
 	--
-	-- 0 = coupe, retour a la soudure rigide.
-	-- Retard pris par degre de virage. Plus HAUT = elle traine plus. Au-dela de ~1 elle part en toupie.
-	SWING_GAIN = 0.55,
-	-- Vitesse a laquelle elle RATTRAPE le joueur, en fraction par seconde. Plus BAS = elle traine plus longtemps.
-	-- Volontairement plus lent que la prise de retard : c'est l'ecart entre les deux qui se lit comme du poids.
+	-- Angle de traine a FOND de braquage, en degres. C'est le seul bouton d'amplitude.
+	SWING_ANGLE = 10,
+	-- Vitesse a laquelle la machine rejoint cet angle, puis revient droite, en fraction par seconde.
+	-- BAS = elle traine plus longtemps, et c'est ce retard qui se lit comme du poids.
 	SWING_RECOVER = 6,
-	-- Retard MAXIMAL, en degres. Sans ce plafond, une pirouette du joueur enverrait la tondeuse a 180 degres, et
-	-- elle repasserait devant lui par l'autre cote.
+	-- Plafond absolu, en degres. Filet : SWING_ANGLE devrait rester en dessous.
 	SWING_MAX = 28,
-	-- LISSAGE de l'angle AFFICHE, en fraction par seconde.
-	-- Le ballant se calcule sur la DIFFERENCE de cap entre deux images. Or le serveur ne voit pas le cap du joueur
-	-- en direct : il le recoit REPLIQUE, par paquets et interpole. Prendre la derivee d'un signal comme ca amplifie
-	-- son bruit, et la machine TREMBLE des qu'on tourne.
-	-- On calcule donc comme avant, mais on n'AFFICHE qu'une version lissee. Assez rapide pour qu'on ne sente aucun
-	-- retard, assez lent pour absorber le bruit de replication.
-	SWING_SMOOTH = 14,
 
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).

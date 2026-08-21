@@ -575,6 +575,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   les deux chemins se lisent pareil. A REVERIFIER : LadderMoveController projette encore sur le regard de la
   camera -- ca marche tant que la camera regarde vers -Z, ce qui est le cas par defaut.
 
+- **Ne jamais DERIVER une valeur recue du reseau : elle est interpolee, donc sa derivee est bruitee ET change de
+  SIGNE.** Vecu sur le ballant de la tondeuse : le serveur calculait "combien le joueur a tourne depuis l'image
+  d'avant" a partir du cap REPLIQUE. Deux symptomes successifs, meme cause : d'abord un TREMBLEMENT en tournant
+  (bruit de la derivee), puis -- une fois le resultat lisse -- un ZIG-ZAG a l'arret du virage, parce que
+  l'interpolation DEPASSE la cible puis se corrige et que la derivee s'inverse. Un filtre attenue le bruit, il ne
+  peut RIEN contre une inversion reelle du signal. Regle : quand une valeur d'INTENTION existe (ici l'input de
+  braquage, deja envoye par le client), lire l'INTENTION et pas la consequence observee. Bonus : ca a supprime
+  trois mecanismes (derivee, pivot a l'arret, filtre) au profit d'un seul, donc deux cas qui ne peuvent plus se
+  contredire.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

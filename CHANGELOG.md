@@ -2185,6 +2185,33 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.294 — Fin du zig-zag : on cesse de DERIVER un signal recu du reseau
+
+En relachant la touche de virage, la machine faisait un aller-retour rapide avant de se remettre droite.
+
+Le ballant derivait le CAP OBSERVE : combien le joueur avait tourne depuis l'image d'avant. Mais le serveur recoit
+ce cap REPLIQUE et INTERPOLE. Quand le joueur arrete de tourner net, l'interpolation DEPASSE puis se corrige : la
+derivee change de SIGNE, et la machine repart de l'autre cote.
+
+Le lissage du 0.0.293 attenuait le bruit, il ne pouvait rien contre une inversion REELLE du signal. Il fallait
+cesser de deriver, pas mieux filtrer.
+
+Le ballant est desormais pilote par l'INPUT de braquage, que le client envoie deja : propre, signe, sans bruit et
+sans depassement. L'angle vise vaut `steerInput x SWING_ANGLE`, et la machine s'en approche a `SWING_RECOVER`.
+
+### Trois mecanismes deviennent un
+
+`SWING_GAIN` (derivee du cap), `PIVOT_GAIN` (braquage a l'arret) et `SWING_SMOOTH` (filtre ajoute la veille)
+disparaissent. Un seul chemin sert maintenant les deux cas -- en roulant ET a l'arret -- donc ils ne peuvent plus
+se contredire, et il ne reste que deux boutons : l'ANGLE et la VITESSE d'approche.
+
+`lastYaw` disparait aussi : plus personne ne mesure de variation de cap.
+
+### Regle a garder
+
+Deriver une valeur RECUE DU RESEAU produit du bruit ET des inversions de signe. Quand une valeur d'INTENTION
+existe deja (ici l'input du joueur), c'est elle qu'il faut lire -- pas la consequence observee de cette intention.
+
 ## 0.0.293 — La tondeuse ne tremble plus en tournant (bruit de derivee)
 
 Le ballant se calcule sur la DIFFERENCE de cap entre deux images. Or le serveur ne voit pas le cap du joueur en
