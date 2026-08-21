@@ -2185,6 +2185,12 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.252 — La tondeuse n'est plus collee au ventre du joueur
+
+`CARRY_FORWARD` passe de 3.2 a 4.6 studs. A 3.2 le guidon arrivait DANS le personnage : on pousse une tondeuse a
+bout de bras, pas contre soi. Valeur a l'oeil, et elle le restera -- elle depend de la longueur du modele, que le
+code ne peut pas deviner.
+
 ## 0.0.251 — Maintenir G montre ce qu'il reste a tondre, et l'herbe coupee s'assombrit
 
 Deux choses demandees par le joueur, dans la meme passe.

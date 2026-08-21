@@ -56,7 +56,10 @@ return {
 	-- Offset de la tondeuse par rapport au HRP du porteur. On la POUSSE : elle vit DEVANT, posee au sol.
 	-- FIXE et non capture a la prise : le besoin n'est pas de garder la pose du sol, c'est qu'elle revienne
 	-- toujours pareil devant le joueur. Capturer l'offset ferait porter de travers une tondeuse posee de travers.
-	CARRY_FORWARD = 3.2, -- studs devant le joueur
+	-- Distance entre le joueur et le CENTRE de la tondeuse. A 3.2 le guidon arrivait dans le personnage : on
+	-- pousse une tondeuse a bout de bras, pas colle au ventre. A REGLER A L'OEIL -- ca depend de la longueur
+	-- du modele, et personne ne peut la deviner depuis le code.
+	CARRY_FORWARD = 4.6, -- studs devant le joueur
 	CARRY_DOWN = 2.6, -- studs sous le HRP (le HRP flotte a ~3 studs du sol)
 	-- Rotation autour de la verticale, en DEGRES, pour que l'AVANT de la tondeuse pointe loin du joueur.
 	-- A REGLER A L'OEIL : le sens depend de l'orientation du modele dans Studio, il ne se deduit pas.
