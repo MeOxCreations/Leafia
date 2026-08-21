@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.272 — Toute l'herbe s'allume, et ca n'eblouit plus
+
+### L'herbe lointaine restait verte
+
+Le drapeau `fading` reveillait les PAVES endormis, mais une ZONE entiere trop loin du joueur est sautee bien avant
+qu'on descende aux paves. Le fondu n'atteignait donc jamais son herbe : elle restait verte pendant que le reste
+passait au bleu.
+
+Le meme drapeau passe maintenant AUSSI au niveau des zones. Correction en une ligne, mais elle valait un
+diagnostic : le premier `fading` etait au bon endroit pour la moitie du probleme seulement, et rien ne le disait.
+
+### Le Neon eblouissait
+
+Neon ignore l'eclairage et rend a pleine intensite. Sur une pelouse ENTIERE ca ne se lit plus comme un surlignage,
+ca fait mal aux yeux -- constate a l'ecran.
+
+`HIGHLIGHT_MATERIAL_ON` passe a false : la touffe garde son materiau, seule sa COULEUR change. Le reglage reste,
+a remettre a true le jour ou la revelation ne concernera qu'une petite surface.
+
+Si le bleu lui-meme reste trop fort une fois le Neon coupe, c'est `HIGHLIGHT_COLOR` qu'il faut adoucir -- pas le
+materiau.
+
 ## 0.0.271 — La revelation FOND vers le bleu au lieu d'y sauter
 
 La bascule etait BINAIRE : l'herbe passait au bleu d'une image a l'autre. Ca se lisait comme un bug d'affichage,

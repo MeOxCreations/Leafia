@@ -344,6 +344,11 @@ local GrassZoneConfigs = {
 	-- Le rendu passe par la MEME fonction que le reste (apply). Poser Color et Material a la main sur les touffes
 	-- serait efface a l'image suivante : la couleur a deja un ecrivain.
 	HIGHLIGHT_COLOR = Color3.fromRGB(16, 191, 255),
+	-- CHANGER LE MATERIAU, ou non. A false, la touffe garde le sien et seule sa COULEUR change.
+	-- Coupe par defaut : Neon ignore l'eclairage et rend a pleine intensite. Sur une pelouse entiere ca ne se lit
+	-- plus comme un surlignage, ca eblouit -- teste, et abandonne pour cette raison.
+	-- A remettre a true si un jour la revelation ne concerne qu'une petite surface.
+	HIGHLIGHT_MATERIAL_ON = false,
 	HIGHLIGHT_MATERIAL = Enum.Material.Neon,
 	-- En dessous de cette coupe, la touffe compte comme PAS TONDUE et s'allume. A 0.5, une touffe a moitie coupee
 	-- s'allume encore : on voit donc aussi les bandes baclees, pas seulement ce qu'on n'a jamais touche.

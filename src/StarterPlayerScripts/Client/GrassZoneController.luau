@@ -183,7 +183,7 @@ local function apply(
 	local litQ = math.floor(litAmount / SQUASH_STEP + 0.5) * SQUASH_STEP
 	-- LE MATERIAU NE SE FOND PAS, il change d'un coup. On le bascule donc TOT, quand la couleur est encore
 	-- presque normale : ca se lit comme un allumage. C'est le fondu de COULEUR qui porte la douceur.
-	local neon = litQ > GrassZoneConfigs.HIGHLIGHT_MATERIAL_AT
+	local neon = GrassZoneConfigs.HIGHLIGHT_MATERIAL_ON and litQ > GrassZoneConfigs.HIGHLIGHT_MATERIAL_AT
 	if neon ~= clump.lastHighlight then
 		clump.lastHighlight = neon
 		clump.part.Material = if neon then GrassZoneConfigs.HIGHLIGHT_MATERIAL else clump.baseMaterial
@@ -1004,7 +1004,9 @@ local function update(dt: number)
 			-- elles se figeraient couchees des qu'on tourne la camera.
 			local d = zone.part.Position - anchor
 			local reach = zone.radius + GrassZoneConfigs.WIND_VIEW_DISTANCE
-			if d.Magnitude < reach or zone.settling then
+			-- `fading` passe AUSSI ici, pas seulement au niveau des paves : une zone entiere trop loin etait sautee,
+			-- donc son herbe ne s'allumait jamais et restait verte pendant que le reste passait au bleu.
+			if d.Magnitude < reach or zone.settling or fading then
 				updateZone(zone, positions, anchor, now, dt)
 			end
 		end
