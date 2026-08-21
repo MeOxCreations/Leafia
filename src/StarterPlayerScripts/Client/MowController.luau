@@ -315,20 +315,14 @@ end
 -- direction avant de la CAMERA, dont les composantes monde changent des qu'on tourne la vue. Lire un axe brut ne
 -- marcherait que dans une seule orientation (piege deja paye sur la grimpe d'echelle).
 local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
-	local camera = workspace.CurrentCamera
-	if not camera then
-		return
-	end
-	local camCF = camera.CFrame
-	local camLook = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z)
-	local camRight = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
-	if camLook.Magnitude < 1e-4 or camRight.Magnitude < 1e-4 then
-		return -- camera pile a la verticale : plus d'horizontale a projeter
-	end
-
+	-- `GetMoveVector` rend un vecteur RELATIF A LA CAMERA : X = cote, Z = arriere. C'est POUR CA que
+	-- `Humanoid:Move(v, true)` existe -- le `true` demande a Roblox d'y appliquer la camera.
+	-- On lit donc ses composantes DIRECTEMENT. Les projeter sur des axes MONDE melangeait deux reperes :
+	-- un simple "avance" produisait une composante laterale fantome qui dependait de l'orientation de la
+	-- vue, et la tondeuse partait en virage sans qu'on touche aux touches de cote.
 	local mv = MoveInput.get()
-	local forwardAmount = math.clamp(mv:Dot(camLook.Unit), -1, 1)
-	local lateralAmount = math.clamp(mv:Dot(camRight.Unit), -1, 1)
+	local forwardAmount = math.clamp(-mv.Z, -1, 1)
+	local lateralAmount = math.clamp(mv.X, -1, 1)
 
 	local look = hrp.CFrame.LookVector
 	local facing = Vector3.new(look.X, 0, look.Z)

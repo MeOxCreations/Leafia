@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.285 — Avancer ne fait plus tourner tout seul : deux reperes melanges
+
+En appuyant SEULEMENT sur avancer, la tondeuse partait parfois en virage. Le joueur avait raison de soupconner la
+camera : elle influencait bien le deplacement, et c'etait une faute de repere.
+
+`ControlModule:GetMoveVector()` rend un vecteur RELATIF A LA CAMERA (X = cote, Z = arriere). C'est precisement
+pour ca que `Humanoid:Move(v, true)` existe -- le second argument demande a Roblox d'y appliquer la camera.
+
+On le PROJETAIT sur des axes MONDE (`mv:Dot(camLookFlat)`), ce qui melange deux reperes : un simple "avance"
+produisait une composante laterale FANTOME, dont la valeur dependait de l'orientation de la vue. D'ou un virage
+sans toucher aux touches de cote, et un comportement qui changeait selon l'angle de la camera -- donc impossible a
+reproduire de facon fiable, donc stressant.
+
+Les composantes se lisent maintenant DIRECTEMENT : `avance = -mv.Z`, `cote = mv.X`. Le secours clavier de
+`MoveInput` suit la meme convention (W -> z -= 1), donc les deux chemins se lisent pareil.
+
+Note au journal, avec une correction : l'entree existante parlait de "repere CAMERA-monde", formulation ambigue
+qui a directement produit cette faute. Elle est precisee. Et `LadderMoveController` projette ENCORE sur le regard
+de la camera : ca marche tant que la camera regarde vers -Z (le cas par defaut), mais c'est a reverifier -- non
+touche ici, on ne corrige pas a l'aveugle un systeme qui marche.
+
 ## 0.0.284 — A L'ARRET, c'est la MACHINE qui se braque, pas le corps
 
 Comprehension du joueur, et elle est physiquement juste : on ne fait pas pivoter une tondeuse sur un point sans

@@ -564,6 +564,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   install` refuse tant que l'outil n'est pas approuve (`rokit trust <auteur>/<outil>`). Corollaire : nettoyer les
   warnings de selene au fur et a mesure, un linter qui crie pour rien finit ignore -- meme lecon que cSpell.
 
+- **`ControlModule:GetMoveVector()` rend un vecteur RELATIF A LA CAMERA, pas un vecteur monde : X = cote, Z =
+  ARRIERE.** C'est precisement pour ca que `Humanoid:Move(v, true)` existe -- le second argument demande a Roblox
+  d'y appliquer la camera. On lit donc ses composantes DIRECTEMENT (`avance = -mv.Z`, `cote = mv.X`) ; les
+  PROJETER sur des axes monde (`mv:Dot(camLookFlat)`) melange deux reperes. Symptome vecu sur la conduite de la
+  tondeuse : appuyer sur AVANCER produisait une composante laterale fantome qui dependait de l'orientation de la
+  vue, et la machine partait en virage sans qu'on touche aux touches de cote -- "la camera influence le
+  deplacement". Note precedente a corriger : l'entree qui parlait de "repere CAMERA-monde" etait ambigue et m'a
+  fait faire exactement cette faute. Le secours clavier de `MoveInput` suit la MEME convention (W -> z -= 1), donc
+  les deux chemins se lisent pareil. A REVERIFIER : LadderMoveController projette encore sur le regard de la
+  camera -- ca marche tant que la camera regarde vers -Z, ce qui est le cas par defaut.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
