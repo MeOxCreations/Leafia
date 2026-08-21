@@ -6,7 +6,8 @@
 -- CE SERVICE NE COUPE RIEN. L'herbe est CLIENTE (chaque joueur fabrique la sienne), donc la coupe l'est aussi :
 -- c'est MowController qui appelle GrassZoneController.mowAt. Ici on ne decide que d'UNE chose : qui porte quoi.
 --
--- L'offset de portage vient de la CONFIG, jamais du client : il n'y a donc rien a valider et rien a falsifier.
+-- L'offset de portage est CALCULE ici sur la geometrie du modele, jamais envoye par le client : il n'y a donc
+-- rien a valider et rien a falsifier. Il n'est pas non plus regle a l'oeil dans la config -- voir carryC0.
 
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
@@ -44,11 +45,55 @@ local function isMower(inst: Instance?): Model?
 	return model
 end
 
--- Offset FIXE de portage : devant le porteur, pose au sol. Constante de config, pas une valeur capturee -- on veut
--- que la tondeuse revienne toujours pareil, pas qu'elle garde le travers de sa pose au sol.
-local function carryC0(): CFrame
-	return CFrame.new(0, -MowConfigs.CARRY_DOWN, -MowConfigs.CARRY_FORWARD)
-		* CFrame.Angles(0, math.rad(MowConfigs.CARRY_YAW), 0)
+-- Le point le plus BAS de la tondeuse, en monde. Les 8 coins de chaque part, pas seulement son centre : une part
+-- inclinee descend plus bas que (position - demi-hauteur), et le carter d'une tondeuse est rarement d'aplomb.
+-- On IGNORE la CutZone : c'est une zone LOGIQUE posee sous le carter, pas une piece de la machine. La compter
+-- ferait poser la tondeuse un peu trop haut, et c'est exactement le defaut qu'on corrige.
+local function lowestPoint(model: Model): number?
+	local low: number? = nil
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME then
+			local h = d.Size * 0.5
+			for sx = -1, 1, 2 do
+				for sy = -1, 1, 2 do
+					for sz = -1, 1, 2 do
+						local y = (d.CFrame * CFrame.new(h.X * sx, h.Y * sy, h.Z * sz)).Position.Y
+						low = if low then math.min(low, y) else y
+					end
+				end
+			end
+		end
+	end
+	return low
+end
+
+-- Offset de portage, CALCULE sur la geometrie reelle plutot que regle a l'oeil.
+--
+-- HAUTEUR : on ne descend pas d'une distance fixe sous le HRP, on vise le SOL sur lequel le joueur se tient. Le
+-- HRP est toujours a HipHeight + demi-hauteur au-dessus de ses pieds : cette distance est CONNUE. Et comme le HRP
+-- monte avec les pentes, la tondeuse les suit gratuitement, sans un seul raycast.
+--
+-- DISTANCE : c'est le GUIDON qui doit tomber a CARRY_GAP devant le joueur, pas la RootPart. La racine se place
+-- donc d'autant plus loin que le guidon est en arriere d'elle. Mesure HORIZONTALE : la hauteur du guidon ne
+-- doit rien changer a la distance.
+--
+-- Consequence : changer la taille du modele ne demande plus aucun reglage.
+local function carryC0(model: Model, root: BasePart, hrp: BasePart, humanoid: Humanoid?): CFrame
+	local hip = if humanoid then humanoid.HipHeight else 2
+	local feet = hip + hrp.Size.Y * 0.5
+	local low = lowestPoint(model)
+	-- De combien la RootPart surplombe le bas de la machine : c'est ce qu'il faut remonter pour la poser au sol.
+	local aboveBottom = if low then root.Position.Y - low else 0
+	local down = feet - aboveBottom - MowConfigs.CARRY_CLEARANCE
+
+	local forward = MowConfigs.CARRY_GAP
+	local handle = model:FindFirstChild(MowConfigs.HANDLE_NAME, true)
+	if handle and handle:IsA("BasePart") then
+		local d = handle.Position - root.Position
+		forward += math.sqrt(d.X * d.X + d.Z * d.Z)
+	end
+
+	return CFrame.new(0, -down, -forward) * CFrame.Angles(0, math.rad(MowConfigs.CARRY_YAW), 0)
 end
 
 -- REPOSE : on retire la soudure et on rend a chaque part son etat d'origine. Celui qui a modifie est celui qui
@@ -92,6 +137,11 @@ local function grab(player: Player, model: Model)
 		return
 	end
 
+	-- MESURE AVANT DE TOUCHER A QUOI QUE CE SOIT : des qu'on desancre, la physique peut deja avoir fait bouger
+	la tondeuse d'un poil, et l'offset serait calcule sur une pose qui n'existe plus.
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local c0 = carryC0(model, root, hrp :: BasePart, humanoid)
+
 	local state: CarryState = { owner = player, parts = {}, weld = nil }
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
@@ -105,7 +155,7 @@ local function grab(player: Player, model: Model)
 	local weld = Instance.new("Weld")
 	weld.Part0 = hrp
 	weld.Part1 = root
-	weld.C0 = carryC0()
+	weld.C0 = c0
 	weld.Parent = root
 	state.weld = weld
 	carried[model] = state

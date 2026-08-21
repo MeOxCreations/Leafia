@@ -2185,6 +2185,46 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.253 — La tondeuse se pose sur le sol, et la distance ne se regle plus a l'oeil
+
+Deux defauts du portage, une seule cause : les deux distances etaient des CHIFFRES DEVINES, ignorant la geometrie
+reelle du modele. 3.2 puis 4.6 studs devant, 2.6 studs dessous -- et la tondeuse flottait tout en etant collee au
+personnage. On ne devine plus, on MESURE. C'est la regle deja au journal : ne jamais refaire a la main un
+placement que le code peut calculer.
+
+### La hauteur : on vise le SOL, pas une distance sous le HRP
+
+Le HRP d'un personnage est TOUJOURS a `HipHeight + demi-hauteur` au-dessus de ses pieds. Cette distance est donc
+connue, sans un seul raycast. On mesure ensuite de combien la RootPart de la tondeuse surplombe le point le plus
+BAS de la machine, et on descend d'autant : le carter se pose sur le sol ou le joueur se tient.
+
+Bonus gratuit : le HRP monte avec les pentes, donc la tondeuse les suit toute seule.
+
+Le point le plus bas se calcule sur les 8 COINS de chaque part, pas sur (position - demi-hauteur) : une part
+inclinee descend plus bas que son centre, et le carter d'une tondeuse est rarement d'aplomb. La `CutZone` est
+EXCLUE du calcul -- c'est une zone logique posee sous le carter, pas une piece de la machine ; la compter ferait
+poser la tondeuse trop haut, soit exactement le defaut qu'on corrige.
+
+(Le joueur proposait de se caler sur la part d'herbe. Le sol sous ses PIEDS est meilleur : ca marche partout,
+y compris hors d'une zone d'herbe, sur une allee ou sur une pente.)
+
+### La distance : c'est le GUIDON qui compte, pas la racine
+
+Le joueur doit se retrouver derriere le GUIDON, pas derriere la RootPart -- et la RootPart est a l'avant-bas du
+carter, d'ou un personnage plante au milieu de la machine. On mesure donc la distance horizontale RootPart ->
+Handle et on l'ajoute. Le guidon tombe alors toujours a `CARRY_GAP` du joueur, quelle que soit la longueur du
+modele.
+
+`CARRY_FORWARD` et `CARRY_DOWN` disparaissent. Restent deux boutons qui sont du CONFORT et non de la geometrie :
+`CARRY_GAP` (l'espace joueur / guidon) et `CARRY_CLEARANCE` (de combien elle effleure le sol).
+
+Nouveau `HANDLE_NAME`, separe de `PROMPT_PART_NAME` bien que la part soit la meme aujourd'hui : l'un dit ou
+AFFICHER le badge, l'autre ou se tient la MAIN. Les confondre marcherait maintenant et mentirait le jour ou l'un
+des deux bouge.
+
+L'offset est mesure AVANT de desancrer la tondeuse : une fois libre, la physique peut l'avoir deja fait bouger
+d'un poil, et on calculerait sur une pose qui n'existe plus.
+
 ## 0.0.252 — La tondeuse n'est plus collee au ventre du joueur
 
 `CARRY_FORWARD` passe de 3.2 a 4.6 studs. A 3.2 le guidon arrivait DANS le personnage : on pousse une tondeuse a

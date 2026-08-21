@@ -56,11 +56,23 @@ return {
 	-- Offset de la tondeuse par rapport au HRP du porteur. On la POUSSE : elle vit DEVANT, posee au sol.
 	-- FIXE et non capture a la prise : le besoin n'est pas de garder la pose du sol, c'est qu'elle revienne
 	-- toujours pareil devant le joueur. Capturer l'offset ferait porter de travers une tondeuse posee de travers.
-	-- Distance entre le joueur et le CENTRE de la tondeuse. A 3.2 le guidon arrivait dans le personnage : on
-	-- pousse une tondeuse a bout de bras, pas colle au ventre. A REGLER A L'OEIL -- ca depend de la longueur
-	-- du modele, et personne ne peut la deviner depuis le code.
-	CARRY_FORWARD = 4.6, -- studs devant le joueur
-	CARRY_DOWN = 2.6, -- studs sous le HRP (le HRP flotte a ~3 studs du sol)
+	--
+	-- LES DEUX DISTANCES SONT CALCULEES, PAS REGLEES. Les valeurs a l'oeil (3.2 puis 4.6) etaient fausses parce
+	-- qu'elles ignoraient la geometrie reelle du modele. MowService MESURE :
+	--   - de combien la RootPart surplombe le point le plus BAS de la tondeuse -> elle se pose sur le sol ;
+	--   - la distance RootPart -> Handle (le guidon) -> le joueur tombe toujours juste derriere le guidon.
+	-- Changer la taille du modele ne demande donc plus AUCUN reglage ici.
+
+	-- Espace entre le joueur et le GUIDON, en studs. Le seul bouton de distance qui reste : c'est du confort, pas
+	-- de la geometrie. Trop petit, le guidon rentre dans le personnage ; trop grand, il pousse dans le vide.
+	-- Part qui sert de GUIDON pour le calcul de distance. Souvent la meme que PROMPT_PART_NAME, mais ce sont
+	-- deux besoins differents : l'un dit ou AFFICHER le badge, l'autre ou se tient la MAIN du joueur. Les
+	-- confondre marcherait aujourd'hui et mentirait le jour ou l'un des deux bouge.
+	HANDLE_NAME = "Handle",
+	CARRY_GAP = 1.6,
+	-- De combien la tondeuse FLOTTE au-dessus du sol, en studs. Petit expres : elle doit EFFLEURER l'herbe, pas
+	-- leviter. Zero pile ferait mordre le carter dans le sol au moindre relief.
+	CARRY_CLEARANCE = 0.08,
 	-- Rotation autour de la verticale, en DEGRES, pour que l'AVANT de la tondeuse pointe loin du joueur.
 	-- A REGLER A L'OEIL : le sens depend de l'orientation du modele dans Studio, il ne se deduit pas.
 	CARRY_YAW = 0,
