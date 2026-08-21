@@ -2185,6 +2185,21 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.276 — On POUSSE la tondeuse, on ne court plus avec
+
+Les vitesses de la tondeuse n'etaient calees sur RIEN : 13 au demarrage, 20 a plein regime, alors que la marche du
+jeu est a 10 et le SPRINT a 17. Le joueur poussait donc sa tondeuse plus vite qu'il ne court. Ca se lisait comme
+une course, pas comme un travail.
+
+Recalees sur les vraies valeurs de `CharacterConfigs` : 8 au demarrage (SOUS la marche -- la machine resiste), 13
+a plein regime (au-dessus de la marche, bien en dessous du sprint).
+
+`SPEED_RAMP_UP` passe de 3.5 a 1.5. Ce chiffre ne veut rien dire seul : ce qu'on ressent, c'est la DUREE, et elle
+depend de l'ECART. Sur l'ancien ecart de 7 studs, 3.5 donnait 2 s ; sur le nouvel ecart de 5, il aurait donne 1.4 s
+et la montee en regime aurait disparu. A 1.5, on retrouve environ 3.3 s.
+
+Regle a retenir : une vitesse de rampe se regle AVEC l'ecart qu'elle parcourt, jamais isolement.
+
 ## 0.0.275 — Le moteur tourne et le levier suit le regime
 
 Les deux IDs manquants sont poses. Le mecanisme etait ecrit depuis le 0.0.262 et attendait juste ces numeros :

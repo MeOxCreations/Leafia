@@ -124,9 +124,16 @@ return {
 	--
 	-- ATTENTION au piege deja paye sur la taille : une vitesse peut etre MULTIPLIEE en aval (un pas glisse, une
 	-- animation qui module). Ces chiffres sont ceux du Humanoid, pas forcement ceux qu'on RESSENT. Regler a l'oeil.
-	SPEED_MIN = 13, -- au demarrage, et apres chaque arret
-	SPEED_MAX = 20, -- plafond. Le joueur n'ira jamais plus vite avec la tondeuse
-	SPEED_RAMP_UP = 3.5, -- studs/s gagnes par seconde de marche. Plus haut = monte en regime plus vite
+	-- A CALER SUR LA MARCHE DU JEU, pas dans le vide. Reperes de CharacterConfigs : WALK_SPEED = 10,
+	-- SPRINT_SPEED = 17. Les premieres valeurs (13 -> 20) etaient au-dessus des DEUX : le joueur poussait sa
+	-- tondeuse plus vite qu'il ne court, ce qui se lisait comme une course, pas comme un travail.
+	-- Une tondeuse est LOURDE : on demarre plus lentement qu'a pied, et meme a plein regime on ne sprinte pas.
+	SPEED_MIN = 8, -- au demarrage et apres chaque arret. Sous la marche : la machine resiste
+	SPEED_MAX = 13, -- plafond. Au-dessus de la marche, bien en dessous du sprint
+	-- Studs/s gagnes par seconde de marche. A REGLER AVEC L'ECART, pas tout seul : sur 5 studs d'ecart (8 -> 13),
+	-- 1.5 met environ 3.3 s a atteindre le plein regime. C'est CETTE duree qu'on ressent, pas le chiffre.
+	-- Plus haut = monte plus vite, et l'effet de montee en regime disparait.
+	SPEED_RAMP_UP = 1.5,
 	SPEED_RAMP_DOWN = 14, -- redescente a l'arret. VIVE expres : repartir doit se meriter, ralentir non
 	-- En dessous de cette vitesse REELLE (studs/s), on considere que le joueur est a l'arret et le regime retombe.
 	-- Se mesure sur le deplacement reel, pas sur l'intention : pousser contre un mur ne doit pas monter le regime.
