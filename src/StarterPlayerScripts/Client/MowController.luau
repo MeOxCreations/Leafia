@@ -22,6 +22,7 @@ local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
+local MoveInput = require(script.Parent.Utils.MoveInput)
 
 local MowController = {}
 
@@ -49,6 +50,10 @@ local promptTarget: Model? = nil -- tondeuse dont le prompt est affiche (pour ne
 local promptAnchor: Vector3? = nil
 local actionBound = false
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
+-- CONDUITE en cours. Sert a ne couper AutoRotate qu'une fois, et surtout a le RENDRE une fois -- une
+-- restauration ecrite a chaque image ecraserait un autre systeme qui l'aurait coupe pour ses raisons.
+local steering = false
+local autoRotateWas = true
 local wheelAngle = 0
 local connection: RBXScriptConnection? = nil
 
@@ -172,7 +177,9 @@ end
 -- l'allure du joueur, et elle s'arrete pile quand il s'arrete. Une animation, elle, patinerait.
 local function spinWheels(model: Model, distance: number)
 	local root = rootOf(model)
-	if not root or distance <= 0 then
+	-- `== 0` et non `<= 0` : une distance NEGATIVE est une marche arriere, et les roues doivent tourner a
+	-- l'envers. La rejeter les figeait des qu'on recule.
+	if not root or distance == 0 then
 		return
 	end
 	for _, name in ipairs(MowConfigs.WHEEL_MOTORS) do
@@ -206,6 +213,50 @@ local function spinWheels(model: Model, distance: number)
 	end
 end
 
+-- CONDUITE. Le cap tourne a vitesse BORNEE, et le deplacement suit le CAP -- pas l'input.
+--
+-- C'est ce second point qui fait l'ARC. Borner la rotation SEULE ferait glisser le personnage de cote pendant
+-- qu'il pivote : il irait deja a droite alors que son corps regarde encore devant. En le faisant avancer la ou il
+-- REGARDE, la trajectoire se courbe, comme une machine qu'on braque.
+--
+-- On lit l'input a la SOURCE (MoveInput) et non `humanoid.MoveDirection` : des qu'on contraint le deplacement avec
+-- `humanoid:Move`, MoveDirection ne reflete plus l'intention du joueur mais notre propre contrainte.
+local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
+	local mv = MoveInput.get()
+	local flat = Vector3.new(mv.X, 0, mv.Z)
+	local wanted = flat.Magnitude
+
+	local look = hrp.CFrame.LookVector
+	local facing = Vector3.new(look.X, 0, look.Z)
+	if facing.Magnitude < 1e-4 then
+		return
+	end
+	facing = facing.Unit
+
+	if wanted > MowConfigs.STEER_INPUT_EPSILON then
+		-- Ecart de cap, replie sur [-pi, pi] : sans ce repli, un virage qui passe par le dos partirait du
+		-- mauvais cote et ferait faire un tour complet a la machine.
+		local target = math.atan2(-flat.Unit.X, -flat.Unit.Z)
+		local current = math.atan2(-facing.X, -facing.Z)
+		local delta = target - current
+		if delta > math.pi then
+			delta -= math.pi * 2
+		elseif delta < -math.pi then
+			delta += math.pi * 2
+		end
+		-- Rotation BORNEE : c'est elle, le poids. On ne depasse jamais l'ecart restant, sinon on oscillerait
+		-- autour de la cible au lieu de s'y poser.
+		local maxStep = math.rad(MowConfigs.STEER_TURN_RATE) * dt
+		local step = math.clamp(delta, -maxStep, maxStep)
+		local yaw = current + step
+		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
+		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
+	end
+
+	-- On avance LA OU ON REGARDE, a l'intensite demandee. Rien demande = on s'arrete.
+	humanoid:Move(facing * math.min(wanted, 1), false)
+end
+
 local function request(model: Model, phase: string)
 	if not carryRemote then
 		return
@@ -217,21 +268,29 @@ local function request(model: Model, phase: string)
 	carryRemote:FireServer(model, phase)
 end
 
+-- AVANT de la machine, en horizontal. Mesure (RootPart -> CutZone, posee a l'avant sous le carter), jamais devine.
+-- Un seul endroit le sait : le point de prise ET le sens de rotation des roues en dependent, et deux calculs
+-- separes finiraient par diverger.
+local function forwardOf(model: Model): Vector3?
+	local root = rootOf(model)
+	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
+	if not (root and zone and zone:IsA("BasePart")) then
+		return nil
+	end
+	local d = zone.Position - root.Position
+	d = Vector3.new(d.X, 0, d.Z)
+	return if d.Magnitude > 1e-3 then d.Unit else nil
+end
+
 -- OU le joueur doit se tenir pour prendre la tondeuse : derriere le point le plus ARRIERE de la machine, face a
 -- elle. L'axe d'avancee est MESURE (RootPart -> CutZone, posee a l'avant), jamais devine.
 -- Rend le point au sol et la direction a regarder, ou nil si on ne sait pas de quel cote regarde la machine.
 local function grabSpot(model: Model): (Vector3?, Vector3?)
 	local root = rootOf(model)
-	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
-	if not (root and zone and zone:IsA("BasePart")) then
+	local forward = forwardOf(model)
+	if not (root and forward) then
 		return nil, nil
 	end
-	local d = zone.Position - root.Position
-	d = Vector3.new(d.X, 0, d.Z)
-	if d.Magnitude < 1e-3 then
-		return nil, nil
-	end
-	local forward = d.Unit
 	-- Meme geometrie que cote serveur : recul de la machine + l'ecart de confort. On repart du plus loin en
 	-- arriere, pas de la racine, sinon on se plante au milieu de la tondeuse.
 	local back = 0
@@ -415,6 +474,23 @@ local function update(dt: number)
 		updatePrompt(hrp :: BasePart, mine)
 	end
 
+	-- CONDUITE. AutoRotate coupe seulement pendant le portage, et RENDU des qu'on lache : sans ca, un joueur qui
+	-- repose sa tondeuse resterait incapable de se tourner, et il chercherait longtemps pourquoi.
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	if mine and humanoid and MowConfigs.STEER_ENABLED then
+		if not steering then
+			steering = true
+			autoRotateWas = humanoid.AutoRotate
+			humanoid.AutoRotate = false
+		end
+		steer(humanoid, hrp :: BasePart, dt)
+	elseif steering then
+		steering = false
+		if humanoid then
+			humanoid.AutoRotate = autoRotateWas
+		end
+	end
+
 	if not mine then
 		lastCutPos = nil
 		return
@@ -427,10 +503,14 @@ local function update(dt: number)
 
 	-- DISTANCE PARCOURUE, a l'horizontale : monter une pente ne doit pas faire tourner les roues plus vite, et
 	-- sauter ne doit pas les faire tourner du tout.
+	-- SIGNEE : on projette le deplacement sur l'AVANT de la machine. Une distance toujours positive ferait
+	-- tourner les roues a l'endroit meme en marche arriere, et l'oeil le voit tout de suite.
 	local distance = 0
 	if lastCutPos then
 		local d = point - lastCutPos
-		distance = math.sqrt(d.X * d.X + d.Z * d.Z)
+		local flatD = Vector3.new(d.X, 0, d.Z)
+		local forward = forwardOf(mine)
+		distance = if forward then flatD:Dot(forward) else flatD.Magnitude
 	end
 	lastCutPos = point
 
@@ -454,6 +534,7 @@ function MowController.init()
 	player.CharacterAdded:Connect(function()
 		hideOurs()
 		lastCutPos = nil
+		steering = false -- nouveau perso : il arrive avec son AutoRotate, notre etat ne le concerne plus
 		setReveal(false)
 		setActionBound(false)
 	end)
@@ -466,6 +547,14 @@ function MowController.stop()
 	end
 	setActionBound(false)
 	hideOurs()
+	if steering then
+		steering = false
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		if humanoid then
+			humanoid.AutoRotate = autoRotateWas
+		end
+	end
 	lastCutPos = nil
 	setReveal(false)
 end

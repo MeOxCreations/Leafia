@@ -20,6 +20,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local MoveInput = require(script.Parent.Utils.MoveInput)
 
 -- Sons de l'echelle, ranges dans SoundService. On les CLONE au declenchement (SoundUtils), donc leur volume /
 -- pitch se reglent dans Studio.
@@ -109,11 +110,11 @@ local placeTrack: AnimationTrack? = nil -- geste de repose = geste de prise joue
 local rotateTrack: AnimationTrack? = nil -- geste de main a la rotation (R), joue une fois par-dessus le portage
 local takeConn: RBXScriptConnection? = nil
 local endConn: RBXScriptConnection? = nil
--- Rail de portage : bind RenderStep actif ? + AutoRotate d'origine a rendre a la fin. controlModule = le module de
--- controle du joueur, pour lire son input BRUT (humanoid.MoveDirection ne marche pas une fois qu'on contraint Move).
+-- Rail de portage : bind RenderStep actif ? + AutoRotate d'origine a rendre a la fin.
+-- L'input BRUT du joueur se lit via MoveInput (module partage) : humanoid.MoveDirection ne reflete plus son
+-- intention des qu'on contraint le deplacement avec Move.
 local carryBound = false
 local savedAutoRotate: boolean? = nil
-local controlModule: any = nil
 local RAIL_NAME = "LadderCarryRail"
 -- Mode de portage : "focus" (rail le long de la haie) ou "libre" (detache, balade + pose libre). refocusBlockUntil :
 -- instant (os.clock) avant lequel le re-focus est bloque, pose apres un detachement volontaire (le temps de s'ecarter).
@@ -191,60 +192,6 @@ local function nearestHedge(position: Vector3): BasePart?
 	return best
 end
 
--- Input BRUT du joueur (camera-relatif) : X = pas de cote, Z = avant/arriere (negatif vers l'avant). On passe par le
--- module de controle car une fois qu'on contraint le deplacement avec humanoid:Move, humanoid.MoveDirection ne reflete
--- plus l'intention du joueur mais notre contrainte.
--- ControlModule recupere UNE fois EN TACHE DE FOND. require(PlayerModule) peut YIELD longtemps (WaitForChild ~10-20s en
--- place secondaire). Le laisser dans getMoveVector -- appele PAR FRAME dans carryStep -- gelait la boucle de portage tout
--- le temps du WaitForChild. Ici zero yield par frame : getMoveVector rend zero tant que ce n'est pas pret.
-task.spawn(function()
-	while not controlModule do
-		local ok, result = pcall(function()
-			local scripts = player:WaitForChild("PlayerScripts", 10)
-			local playerModule = scripts and require(scripts:WaitForChild("PlayerModule", 10)) :: any
-			return playerModule and playerModule:GetControls()
-		end)
-		if ok and result then
-			controlModule = result
-		else
-			task.wait(0.3) -- RETRY : au boot (surtout place secondaire) PlayerModule / GetControls peut ne pas etre pret
-		end
-	end
-end)
-
-local function getMoveVector(): Vector3
-	local vec = Vector3.zero
-	local cm = controlModule
-	if cm then
-		local ok, v = pcall(function()
-			return cm:GetMoveVector()
-		end)
-		if ok and typeof(v) == "Vector3" then
-			vec = v
-		end
-	end
-	-- SECOURS CLAVIER : si le module de controle custom rend du VIDE (place secondaire / tuto), on lit WASD en direct
-	-- pour que le portage reponde quand meme. X = pas de cote (D +, A -), Z = avant/arriere (W -, S +, convention Roblox).
-	if vec.Magnitude < 0.05 then
-		local x, z = 0, 0
-		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-			z -= 1
-		end
-		if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-			z += 1
-		end
-		if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-			x -= 1
-		end
-		if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-			x += 1
-		end
-		if x ~= 0 or z ~= 0 then
-			vec = Vector3.new(x, 0, z)
-		end
-	end
-	return vec
-end
 
 -- Normale SORTANTE de la face de haie la plus proche (on ignore Y : la haie est un mur vertical). Discrete : elle
 -- designe une face (X+ / X- / Z+ / Z-), suffisant pour poser une echelle.
@@ -356,7 +303,7 @@ local function carryStep(dt: number)
 	-- FOCUS -> LIBRE : pousse arriere franche (S), ou aucune haie A PORTEE (nearestHedge renvoie toujours une haie,
 	-- meme a 100 studs : sans ce test de distance, l'aimant tirait le joueur vers une haie lointaine).
 	if carryMode == "focus" then
-		local mv = getMoveVector()
+		local mv = MoveInput.get()
 		local pushBack = mv.Z > DETACH_INPUT
 		if hedge == nil or dist > FOCUS_RANGE or pushBack then
 			carryMode = "libre"
@@ -379,7 +326,7 @@ local function carryStep(dt: number)
 		local right = (-normal):Cross(Vector3.yAxis)
 		right = if right.Magnitude > 1e-3 then right.Unit else Vector3.zero
 
-		local mv = getMoveVector()
+		local mv = MoveInput.get()
 		local lateral = math.clamp(mv.X + math.min(mv.Z, 0), -1, 1)
 		local constrained = right * lateral
 

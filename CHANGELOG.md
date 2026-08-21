@@ -2185,6 +2185,41 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.279 — La tondeuse decrit un ARC au lieu de pivoter sur place
+
+Appuyer sur D faisait tourner le personnage INSTANTANEMENT : un demi-tour sec sur un point, avec une machine
+censee peser. Borner le ballant ne suffisait pas -- le poids devait etre dans la ROTATION elle-meme.
+
+Pendant le portage, `AutoRotate` est coupe et le cap tourne a vitesse BORNEE (`STEER_TURN_RATE`, 120 degres par
+seconde : un quart de tour en 0.75 s).
+
+**Et surtout, le deplacement suit le CAP, pas l'input.** C'est ce second point qui fait l'arc. Borner la rotation
+SEULE aurait fait glisser le personnage de cote pendant qu'il pivote : deja parti a droite alors que son corps
+regarde encore devant. En le faisant avancer LA OU IL REGARDE, la trajectoire se courbe.
+
+Le ballant de la machine et la pose des bras suivent gratuitement : ils se calculent deja sur le cap.
+
+`AutoRotate` est RENDU a la repose, au respawn et a l'arret du controller. Sans ca, un joueur qui lache sa tondeuse
+resterait incapable de se tourner, et il chercherait longtemps pourquoi.
+
+### Les roues tournent aussi en marche arriere
+
+La distance servant a les faire rouler etait une MAGNITUDE, donc toujours positive : elles tournaient a l'endroit
+meme en reculant. Elle est maintenant PROJETEE sur l'avant de la machine, donc signee. Et `spinWheels` rejetait
+`distance <= 0`, ce qui figeait les roues des qu'on recule : il ne rejette plus que zero.
+
+### Menage : `MoveInput`, un seul lecteur d'input brut
+
+Le portage d'echelle et la conduite de la tondeuse ont le meme besoin : lire l'intention du joueur A LA SOURCE,
+parce que `humanoid.MoveDirection` ne la reflete plus des qu'on contraint le deplacement avec `Move`.
+
+La logique (resolution de PlayerModule en tache de fond avec retry, secours clavier, zero yield par frame) vit
+maintenant dans `Client/Utils/MoveInput.luau`, et l'echelle y a ete migree. Deux copies d'un helper aussi subtil
+auraient fini par diverger sur l'une des deux.
+
+Nouveau `forwardOf` cote MowController, pour la meme raison : le point de prise ET le sens des roues dependent de
+l'avant de la machine, et deux calculs separes auraient fini par ne plus dire la meme chose.
+
 ## 0.0.278 — Les bras accompagnent le virage
 
 Nouvelle pose : les bras redressent la tondeuse quand on tourne, comme dans la vraie vie. L'animation n'est pas

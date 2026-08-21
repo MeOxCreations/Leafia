@@ -151,6 +151,23 @@ return {
 	-- la visee haut/bas du taille-haie : une animation dont on ne lit qu'une IMAGE, jamais le defilement.
 	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
+	-- ===== CONDUITE =====
+	-- Une tondeuse a du POIDS : on ne pivote pas sur place avec, on decrit un ARC. Par defaut le personnage Roblox
+	-- s'oriente INSTANTANEMENT vers la direction demandee (AutoRotate), ce qui donne un demi-tour sec sur un point.
+	--
+	-- On coupe donc AutoRotate pendant le portage et on tourne le cap SOI-MEME, a vitesse bornee. Et surtout, le
+	-- deplacement suit le CAP et non l'input : c'est ce qui courbe la trajectoire au lieu de faire glisser le
+	-- personnage de cote pendant qu'il pivote.
+	-- Le ballant de la machine et la pose des bras suivent gratuitement : ils se calculent deja sur le cap.
+	STEER_ENABLED = true,
+	-- Vitesse de rotation MAXIMALE, en degres par seconde. C'est LE bouton du poids ressenti.
+	-- 120 = un quart de tour en 0.75 s. Plus BAS = plus lourd, plus large. Trop bas et on ne peut plus longer un
+	-- massif de fleurs sans le raser.
+	STEER_TURN_RATE = 120,
+	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
+	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
+	STEER_INPUT_EPSILON = 0.05,
+
 	-- ===== POSE DE VIRAGE =====
 	-- Les bras accompagnent le virage, comme quand on redresse une vraie tondeuse. L'animation n'est PAS jouee :
 	-- elle est POSEE, comme le levier. Son MILIEU est la pose droite, un bout est le virage a gauche, l'autre a
