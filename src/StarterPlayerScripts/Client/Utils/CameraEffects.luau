@@ -73,15 +73,6 @@ local BOB_LERP_SPEED = 6
 -- et plongees disparaissent exactement la ou on en a le plus besoin.
 local composedOffset = Vector3.zero
 
--- ===== DECALAGE D'EPAULE =====
--- La camera se decale sur le COTE du joueur au lieu d'etre pile dans son dos. Le personnage ne masque plus ce
--- qu'il a devant lui, et la vue prend un cadrage d'epaule.
--- C'est un decalage TENU, distinct de la secousse et du bob qui, eux, reviennent a zero : il s'ajoute a eux.
--- CameraOffset est en repere CAMERA (voir GetOffset), donc un X positif reste a DROITE de l'ecran quel que soit
--- l'angle de vue -- c'est ce qui fait tenir un cadrage d'epaule au lieu de le faire tourner autour du perso.
-local SHOULDER_LERP_SPEED = 3
-local shoulder = Vector3.zero
-local shoulderTarget = Vector3.zero
 
 -- ===== Plongee d'atterrissage (RESSORT) =====
 -- Un simple decalage qui revient a zero donnait un "TAC" : la descente etait instantanee, seule la remontee
@@ -107,12 +98,6 @@ end
 -- Cible du fond de FOV. Valeur ABSOLUE ; la douceur vient du lerp de la boucle. nil = valeur par defaut.
 function CameraEffects.SetFovBase(fov: number?)
 	fovBaseTarget = fov or DEFAULT_FOV
-end
-
--- Decalage d'epaule TENU, en repere CAMERA (X = droite de l'ecran, Y = haut). Vector3.zero le retire.
--- A remettre a zero par l'appelant : ce module ne devine pas quand un effet tenu doit s'arreter.
-function CameraEffects.SetShoulder(offset: Vector3)
-	shoulderTarget = offset
 end
 
 -- Offset de FOV TENU. S'ajoute au fond et n'en bouge plus jusqu'au prochain appel. Negatif = vue resserree.
@@ -231,8 +216,7 @@ function CameraEffects.init()
 		dipPos += dipVel * dt
 
 		-- L'ECRITURE UNIQUE : secousse, bob et plongee reunis ici, nulle part ailleurs.
-		shoulder = shoulder:Lerp(shoulderTarget, math.min(1, SHOULDER_LERP_SPEED * dt))
-		composedOffset = (shakeOffset + Vector3.new(0, bobY + dipPos, 0)) + shoulder
+		composedOffset = shakeOffset + Vector3.new(0, bobY + dipPos, 0)
 
 		local humanoid = getHumanoid()
 		if humanoid then

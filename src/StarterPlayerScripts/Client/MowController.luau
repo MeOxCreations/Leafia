@@ -77,7 +77,7 @@ local function setReveal(on: boolean)
 	CameraEffects.SetFovOffset(if on then MowConfigs.HIGHLIGHT_FOV else 0)
 end
 
--- LA CAMERA DE CONDUITE : recul et decalage d'epaule, poses ensemble.
+-- LA CAMERA DE CONDUITE : le recul, pose une seule fois par image.
 -- LE RECUL A DEUX RAISONS : la revelation, et la vitesse. Elles passent par UNE SEULE valeur -- deux
 -- appelants ecrivant chacun la sienne, le dernier de l'image ecraserait l'autre, et le recul clignoterait.
 -- La vitesse se MESURE sur le deplacement reel plutot que de recopier la valeur du serveur : c'est ce que le
@@ -90,8 +90,6 @@ local function applyCameraRig(hrp: BasePart?, carrying: boolean)
 		total += math.clamp(speed / MowConfigs.SPEED_MAX, 0, 1) * MowConfigs.DRIVE_ZOOM
 	end
 	CameraEffects.SetZoomBoost(total)
-	-- L'EPAULE ne vaut que pendant le portage : hors tondeuse, la camera revient dans le dos du joueur.
-	CameraEffects.SetShoulder(if carrying then MowConfigs.SHOULDER_OFFSET else Vector3.zero)
 end
 
 local function rootOf(model: Model): BasePart?
@@ -751,7 +749,6 @@ function MowController.stop()
 	hideOurs()
 	-- On rend la camera : sans ca, arreter le controller laisserait la vue reculee et decalee pour toujours.
 	CameraEffects.SetZoomBoost(0)
-	CameraEffects.SetShoulder(Vector3.zero)
 	if steering then
 		steering = false
 		local character = player.Character

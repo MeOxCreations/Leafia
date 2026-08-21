@@ -203,11 +203,6 @@ return {
 	-- Studs de recul a PLEIN regime. 0 = effet coupe.
 	DRIVE_ZOOM = 4,
 
-	-- CAMERA D'EPAULE pendant le portage : la vue se decale sur le cote au lieu d'etre pile dans le dos du joueur.
-	-- Le personnage et la tondeuse ne masquent plus la bande a tondre, et le cadrage se lit tout de suite.
-	-- En repere CAMERA : X = droite de l'ecran, Y = haut. Vector3.zero coupe l'effet.
-	-- Sens A VERIFIER A L'ECRAN comme toujours : si la camera part du mauvais cote, inverser le X.
-	SHOULDER_OFFSET = Vector3.new(2.5, 0.4, 0),
 
 	-- RALENTISSEMENT EN VIRAGE. On ralentit pour tourner, comme avec n'importe quelle machine : avancer et braquer
 	-- a fond en meme temps donnait un mouvement trop vif, pas naturel.

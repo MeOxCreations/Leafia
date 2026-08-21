@@ -2185,6 +2185,17 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.299 — La camera d'epaule est retiree
+
+Le joueur ne l'aime pas. Retiree entierement : le reglage, les appels et la primitive `SetShoulder` de
+`CameraEffects`.
+
+Pas mise a zero, pas laissee derriere un drapeau : une config qui ne fait rien et une fonction que personne
+n'appelle sont du code mort, et le code mort finit toujours par etre lu comme actif. Git garde tout si l'envie
+revient.
+
+Le recul de camera lie a la vitesse, lui, reste : c'est un effet different, et il n'a pas ete remis en cause.
+
 ## 0.0.298 — La tondeuse se met franchement en travers quand on tourne en roulant
 
 Un seul angle servait les deux cas. En pleine avance, 10 degres de travers ne racontaient rien : une machine
