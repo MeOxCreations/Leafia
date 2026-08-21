@@ -46,6 +46,10 @@ local PROMPT_INTERVAL = 0.15 -- on ne teste pas la proximite a chaque image, ca 
 local player = Players.LocalPlayer
 
 local carryRemote: RemoteEvent? = nil
+local steerRemote: RemoteEvent? = nil
+-- Dernier braquage ENVOYE. On ne renvoie que sur un vrai changement : tenir une touche ne doit pas remplir
+-- le reseau d'un message par image pour une valeur qui ne bouge pas.
+local lastSteerSent = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -334,9 +338,18 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	facing = facing.Unit
 	local yaw = math.atan2(-facing.X, -facing.Z)
 
-	-- BRAQUAGE. Proportionnel a la poussee : un joystick a moitie tire braque a moitie, une touche braque a
-	-- fond. Le seuil ecarte le bruit d'un stick au repos, qui ferait tourner la tondeuse toute seule.
-	if math.abs(lateralAmount) > MowConfigs.STEER_INPUT_EPSILON then
+	-- LE BRAQUAGE PART TOUJOURS AU SERVEUR : c'est lui qui tient la soudure, donc lui qui fait pivoter la
+	-- MACHINE. Envoye seulement sur un vrai changement, pas a chaque image.
+	if steerRemote and math.abs(lateralAmount - lastSteerSent) > 0.08 then
+		lastSteerSent = lateralAmount
+		steerRemote:FireServer(lateralAmount)
+	end
+
+	-- LE CORPS NE TOURNE QUE SI ON ROULE. A l'arret c'est la MACHINE qui se braque (cote serveur) et les bras
+	-- de l'animation qui racontent l'effort : on n'oriente pas le personnage. On ne fait pas pivoter une
+	-- tondeuse sur un point sans rouler.
+	local rolling = math.abs(forwardAmount) > MowConfigs.STEER_MOVE_EPSILON
+	if rolling and math.abs(lateralAmount) > MowConfigs.STEER_INPUT_EPSILON then
 		local sign = if MowConfigs.STEER_INVERT then -1 else 1
 		yaw -= lateralAmount * sign * math.rad(MowConfigs.STEER_TURN_RATE) * dt
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
@@ -646,6 +659,7 @@ function MowController.init()
 	-- getRemote cache un WaitForChild : en ligne droite dans un init, il gele TOUT le boot le temps du timeout.
 	task.spawn(function()
 		carryRemote = RemoteSetup.getRemote("SetMowerCarry", "Mow") :: RemoteEvent
+		steerRemote = RemoteSetup.getRemote("SetMowSteer", "Mow") :: RemoteEvent
 	end)
 
 	-- On branche la boucle MEME si aucune tondeuse n'est encore la : avec le streaming, "absente au demarrage" est

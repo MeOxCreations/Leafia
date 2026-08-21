@@ -117,6 +117,11 @@ local REMOTES: { { any } } = {
 	-- flot de remotes. Il valide que c'est bien une tondeuse, qu'elle est libre, et que le joueur est assez pres.
 	-- Aucun CFrame envoye par le client : l'offset de portage est une CONSTANTE de config, donc rien a falsifier.
 	{ "SetMowerCarry", E, "Mow" },
+	-- BRAQUAGE SUR PLACE. UN nombre dans [-1, 1] : combien le joueur pousse sur le cote. Le serveur en fait pivoter
+	-- la TONDEUSE (pas le corps du joueur, qui reste face a sa direction). Il borne la valeur : le client peut
+	-- mentir sur l'intensite, pas sur le resultat -- l'angle final est clampe cote serveur.
+	-- Envoye seulement quand la valeur CHANGE assez, pas a chaque image : tenir une touche n'envoie qu'un message.
+	{ "SetMowSteer", E, "Mow" },
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder

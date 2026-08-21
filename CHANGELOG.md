@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.284 — A L'ARRET, c'est la MACHINE qui se braque, pas le corps
+
+Comprehension du joueur, et elle est physiquement juste : on ne fait pas pivoter une tondeuse sur un point sans
+rouler. On l'ORIENTE, et le corps reste face au travail -- ce sont les BRAS qui montrent l'effort, et ils sont
+deja animes pour ca.
+
+Deux comportements distincts, donc :
+
+- **En roulant** : le cap du personnage tourne, la trajectoire s'arrondit (inchange).
+- **A l'arret** : le corps ne bouge PLUS. Seule la machine pivote, jusqu'a un angle stable.
+
+L'angle est STABLE et non infini : la poussee du braquage est rappelee par `SWING_RECOVER`, et les deux
+s'equilibrent. Tenir la touche amene donc la tondeuse a `PIVOT_GAIN / SWING_RECOVER` radians et l'y laisse ; la
+relacher la ramene droite. Aucun compteur a borner, c'est le ressort qui fait le travail.
+
+La pose des bras suit gratuitement : elle se calcule deja sur cette meme valeur de ballant.
+
+### Un remote, et pourquoi il fallait bien un remote
+
+Le serveur tient la soudure, donc c'est lui qui fait pivoter la machine -- mais il ne voit pas l'input du joueur.
+`SetMowSteer` porte UN nombre dans [-1, 1].
+
+Il n'est PAS envoye a chaque image : seulement quand la valeur change assez. Tenir une touche n'envoie donc qu'un
+seul message, pas soixante par seconde.
+
+Le serveur borne la valeur ET refuse les NaN : un NaN se propagerait dans l'angle et figerait la machine de
+travers pour toujours. Et de toute facon l'angle final reste clampe par `SWING_MAX` -- un client qui enverrait 50
+n'obtiendrait pas plus d'angle qu'un client honnete.
+
 ## 0.0.283 — Le personnage regarde derriere lui en marche arriere
 
 Nouvelle pose : la tete se tourne pour voir ou on recule. Comme dans la vraie vie, et ca DIT au joueur qu'il

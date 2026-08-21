@@ -171,6 +171,14 @@ return {
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,
+	-- En dessous de cette poussee avant / arriere, on considere que le joueur est A L'ARRET. Le corps ne tourne
+	-- alors PLUS : c'est la MACHINE qui se braque, et les bras de l'animation racontent l'effort.
+	-- On ne fait pas pivoter une tondeuse sur un point sans rouler -- on l'oriente, et le corps reste face au travail.
+	STEER_MOVE_EPSILON = 0.15,
+	-- Poussee angulaire donnee a la machine quand on braque A L'ARRET, en radians par seconde a fond de course.
+	-- Elle est RAPPELEE par SWING_RECOVER : les deux s'equilibrent, donc tenir la touche amene la tondeuse a un
+	-- angle stable au lieu de la faire tourner sans fin. L'angle atteint vaut PIVOT_GAIN / SWING_RECOVER radians.
+	PIVOT_GAIN = 2.6,
 	-- RECUL DE CAMERA A LA VITESSE. La vue s'ecarte a mesure qu'on prend du regime : on voit venir la bande a
 	-- tondre, et l'acceleration se RESSENT au lieu de se deviner au chiffre.
 	-- S'ADDITIONNE au recul de la revelation : les deux passent par une seule valeur, sinon le dernier a ecrire

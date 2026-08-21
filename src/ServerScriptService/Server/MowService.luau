@@ -38,6 +38,7 @@ type CarryState = {
 	baseC0: CFrame, -- offset de portage au repos, sans le ballant. Le ballant se compose PAR-DESSUS.
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
 	lastYaw: number?, -- cap du porteur a l'image precedente, pour mesurer combien il a tourne
+	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -503,6 +504,7 @@ local function grab(player: Player, model: Model)
 		baseC0 = c0,
 		swing = 0,
 		lastYaw = nil,
+		steerInput = 0,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -575,6 +577,15 @@ local function grab(player: Player, model: Model)
 			state.swing -= delta * MowConfigs.SWING_GAIN
 		end
 		state.lastYaw = yaw
+		-- BRAQUAGE A L'ARRET. Le corps du joueur ne tourne plus (le client s'en abstient des qu'il ne roule pas) :
+		-- c'est la MACHINE qu'on oriente, et les bras de l'animation racontent l'effort.
+		-- La poussee est RAPPELEE par SWING_RECOVER juste en dessous : les deux s'equilibrent, donc tenir la touche
+		-- amene la tondeuse a un angle STABLE au lieu de la faire tourner sans fin.
+		if not moving and state.steerInput ~= 0 then
+			local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
+			state.swing += state.steerInput * steerSign * MowConfigs.PIVOT_GAIN * dt
+		end
+
 		-- Rattrapage, puis plafond : sans lui une pirouette enverrait la machine repasser devant par l'autre cote.
 		state.swing -= state.swing * math.min(1, MowConfigs.SWING_RECOVER * dt)
 		local maxSwing = math.rad(MowConfigs.SWING_MAX)
@@ -673,6 +684,20 @@ function MowService.init()
 			local state = carried[model]
 			if state and state.owner == player then
 				release(model)
+			end
+		end
+	end)
+
+	-- BRAQUAGE. Le client DEMANDE, le serveur borne : un client qui enverrait 50 n'obtiendrait pas plus d'angle,
+	-- parce que le resultat est de toute facon clampe par SWING_MAX plus bas.
+	local steerRemote = RemoteSetup.getRemote("SetMowSteer", "Mow") :: RemoteEvent
+	steerRemote.OnServerEvent:Connect(function(player: Player, value: unknown)
+		if type(value) ~= "number" or value ~= value then
+			return -- pas un nombre, ou NaN : un NaN se propagerait dans l'angle et figerait la machine de travers
+		end
+		for _, state in pairs(carried) do
+			if state.owner == player then
+				state.steerInput = math.clamp(value, -1, 1)
 			end
 		end
 	end)
