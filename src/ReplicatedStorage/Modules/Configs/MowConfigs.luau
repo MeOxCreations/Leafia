@@ -198,6 +198,17 @@ return {
 	-- Studs de recul a PLEIN regime. 0 = effet coupe.
 	DRIVE_ZOOM = 4,
 
+	-- CAMERA D'EPAULE pendant le portage : la vue se decale sur le cote au lieu d'etre pile dans le dos du joueur.
+	-- Le personnage et la tondeuse ne masquent plus la bande a tondre, et le cadrage se lit tout de suite.
+	-- En repere CAMERA : X = droite de l'ecran, Y = haut. Vector3.zero coupe l'effet.
+	-- Sens A VERIFIER A L'ECRAN comme toujours : si la camera part du mauvais cote, inverser le X.
+	SHOULDER_OFFSET = Vector3.new(2.5, 0.4, 0),
+
+	-- RALENTISSEMENT EN VIRAGE. On ralentit pour tourner, comme avec n'importe quelle machine : avancer et braquer
+	-- a fond en meme temps donnait un mouvement trop vif, pas naturel.
+	-- Fraction de vitesse PERDUE a fond de braquage. 0 = aucun ralentissement, 0.5 = moitie moins vite.
+	TURN_SLOWDOWN = 0.45,
+
 	-- ===== DEBUG DE TRAJECTOIRE =====
 	-- Des points poses devant la machine, qui dessinent la courbe QU'ELLE VA SUIVRE avec le braquage courant.
 	-- Sert a REGLER la conduite a l'oeil au lieu de deviner : on voit tout de suite si l'arc est trop serre, trop

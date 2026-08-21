@@ -2185,6 +2185,34 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.296 — On ralentit pour tourner, et la camera passe a l'epaule
+
+### Avancer en braquant etait trop vif
+
+Le joueur filait ET pivotait a pleine vitesse, ce qui ne ressemble a aucune machine reelle. On perd maintenant
+jusqu'a 45 % de vitesse a fond de braquage (`TURN_SLOWDOWN`) : on ralentit pour tourner.
+
+Ne s'applique qu'a l'avance REELLE. La manoeuvre (braquer sans avancer) est deja lente a 2 studs/s -- la ralentir
+encore la figerait.
+
+### Camera d'epaule
+
+La vue se decale sur le cote pendant le portage, au lieu d'etre pile dans le dos. Le personnage et la tondeuse ne
+masquent plus la bande a tondre.
+
+`CameraOffset` est en repere CAMERA (le module le documentait deja) : un X positif reste donc a DROITE DE L'ECRAN
+quel que soit l'angle de vue. C'est ce qui fait TENIR un cadrage d'epaule, au lieu de le faire tourner autour du
+personnage.
+
+Nouveau `SetShoulder` dans `CameraEffects`, seul ecrivain de `CameraOffset`. C'est un decalage TENU, distinct de
+la secousse, du bob et de la plongee qui, eux, reviennent a zero : il s'ADDITIONNE a eux au lieu de les remplacer.
+
+Le decalage n'existe QUE pendant le portage, et il est rendu a l'arret du controller -- sinon la vue serait restee
+reculee et decalee pour toujours.
+
+`applyCameraZoom` devient `applyCameraRig` : elle ne fait plus que le zoom, et un nom qui ment coute plus cher
+qu'un renommage.
+
 ## 0.0.295 — Reculer en braquant part du bon cote
 
 S + D recule maintenant a DROITE, S + Q a gauche.

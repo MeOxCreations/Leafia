@@ -77,11 +77,12 @@ local function setReveal(on: boolean)
 	CameraEffects.SetFovOffset(if on then MowConfigs.HIGHLIGHT_FOV else 0)
 end
 
--- LE RECUL DE CAMERA A DEUX RAISONS : la revelation, et la vitesse. Elles passent par UNE SEULE valeur -- deux
+-- LA CAMERA DE CONDUITE : recul et decalage d'epaule, poses ensemble.
+-- LE RECUL A DEUX RAISONS : la revelation, et la vitesse. Elles passent par UNE SEULE valeur -- deux
 -- appelants ecrivant chacun la sienne, le dernier de l'image ecraserait l'autre, et le recul clignoterait.
 -- La vitesse se MESURE sur le deplacement reel plutot que de recopier la valeur du serveur : c'est ce que le
 -- joueur voit, et ca marche meme si un autre systeme le ralentit.
-local function applyCameraZoom(hrp: BasePart?, carrying: boolean)
+local function applyCameraRig(hrp: BasePart?, carrying: boolean)
 	local total = if revealOn then MowConfigs.HIGHLIGHT_ZOOM else 0
 	if carrying and hrp and MowConfigs.DRIVE_ZOOM > 0 and MowConfigs.SPEED_MAX > 0 then
 		local v = hrp.AssemblyLinearVelocity
@@ -89,6 +90,8 @@ local function applyCameraZoom(hrp: BasePart?, carrying: boolean)
 		total += math.clamp(speed / MowConfigs.SPEED_MAX, 0, 1) * MowConfigs.DRIVE_ZOOM
 	end
 	CameraEffects.SetZoomBoost(total)
+	-- L'EPAULE ne vaut que pendant le portage : hors tondeuse, la camera revient dans le dos du joueur.
+	CameraEffects.SetShoulder(if carrying then MowConfigs.SHOULDER_OFFSET else Vector3.zero)
 end
 
 local function rootOf(model: Model): BasePart?
@@ -377,6 +380,12 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.
+	-- ON RALENTIT POUR TOURNER, comme avec n'importe quelle machine. Braquer a fond en pleine avance donnait un
+	-- mouvement trop vif : le joueur filait ET pivotait, ce qui ne ressemble a rien de reel.
+	-- Ne s'applique qu'a l'avance REELLE : la manoeuvre est deja lente, la ralentir encore la figerait.
+	if braking then
+		drive *= 1 - math.abs(lateralAmount) * MowConfigs.TURN_SLOWDOWN
+	end
 	humanoid:Move(facing * drive, false)
 
 	if MowConfigs.STEER_DEBUG then
@@ -643,7 +652,7 @@ local function update(dt: number)
 		end
 	end
 
-	applyCameraZoom(hrp :: BasePart, mine ~= nil)
+	applyCameraRig(hrp :: BasePart, mine ~= nil)
 
 	if not mine then
 		lastCutPos = nil
@@ -702,6 +711,9 @@ function MowController.stop()
 	end
 	setActionBound(false)
 	hideOurs()
+	-- On rend la camera : sans ca, arreter le controller laisserait la vue reculee et decalee pour toujours.
+	CameraEffects.SetZoomBoost(0)
+	CameraEffects.SetShoulder(Vector3.zero)
 	if steering then
 		steering = false
 		local character = player.Character
