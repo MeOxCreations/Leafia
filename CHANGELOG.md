@@ -2185,6 +2185,24 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.267 — Le recul de camera devient LENT
+
+Il etait agressif : la vue sautait en arriere au lieu de s'installer. Recul et resserrement passent de 4 et 3 a
+1.1 -- environ deux secondes pour se poser, au lieu d'un quart de seconde.
+
+### Le reglage a ete DEDOUBLE, pas baisse
+
+Le FOV tenu partageait `FOV_LERP_SPEED` avec le FOND (repos <-> mouvement), que le joueur avait deja regle. Le
+ralentir aurait ralenti les transitions de course avec, et il aurait fallu compenser ailleurs -- or un
+compensateur est toujours une estimation. Regle deja au journal, payee sur la vitesse de coupe.
+
+`FOV_OFFSET_LERP_SPEED` est donc une valeur A PART. Le fond reste vif (il change en permanence), l'effet tenu
+s'installe lentement. Chacun se regle sans toucher a l'autre.
+
+Recul et resserrement gardent la MEME allure, et ce n'est pas un hasard : ce sont les deux moities du meme geste.
+A vitesses differentes on verrait l'un arriver avant l'autre, et le mouvement se lirait comme deux effets colles
+au lieu d'un seul.
+
 ## 0.0.266 — La camera prend du recul pendant la revelation
 
 Maintenir G ne fait plus qu'allumer l'herbe : la camera RECULE et se RESSERRE, en douceur. C'est le geste de

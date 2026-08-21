@@ -31,6 +31,11 @@ local fovPunchDecay = 6
 -- OFFSET DE FOV, persistant. Distinct du "fond" (pilote par CameraController selon repos / mouvement) et de
 -- l'a-coup (transitoire) : c'est un TROISIEME terme, qu'un appelant peut tenir aussi longtemps qu'il veut sans
 -- se battre avec les deux autres. Negatif = la vue se resserre.
+-- VITESSE PROPRE, separee de FOV_LERP_SPEED. Le fond change en permanence (repos <-> mouvement) et doit
+-- rester vif ; un effet TENU, lui, doit s'installer lentement. Partager la vitesse forcerait a compenser
+-- l'un en reglant l'autre, et le compensateur serait toujours une estimation.
+-- BAS = lent et pose. 1.1 met environ deux secondes a s'installer.
+local FOV_OFFSET_LERP_SPEED = 1.1
 local fovOffset = 0
 local fovOffsetTarget = 0
 
@@ -39,7 +44,10 @@ local fovOffsetTarget = 0
 -- ses bornes de zoom, en douceur, et on les rend telles quelles a la fin. Bouger la borne PROGRESSIVEMENT evite
 -- le coup sec qu'un clamp pose d'un coup produirait.
 -- Pendant le recul le joueur ne peut plus zoomer : c'est voulu, l'effet dure le temps d'une touche maintenue.
-local ZOOM_LERP_SPEED = 4
+-- MEME allure que FOV_OFFSET_LERP_SPEED, et ce n'est pas un hasard : recul et resserrement sont les deux
+-- moities du MEME geste. A vitesses differentes on verrait l'un arriver avant l'autre, et le mouvement
+-- se lirait comme deux effets colles au lieu d'un seul.
+local ZOOM_LERP_SPEED = 1.1
 local zoomBoost = 0
 local zoomBoostTarget = 0
 local zoomBase: number? = nil -- distance du joueur AU MOMENT ou le recul commence
@@ -166,7 +174,7 @@ function CameraEffects.init()
 		if camera then
 			fovBase += (fovBaseTarget - fovBase) * math.min(1, FOV_LERP_SPEED * dt)
 			fovPunch += (0 - fovPunch) * math.min(1, fovPunchDecay * dt)
-			fovOffset += (fovOffsetTarget - fovOffset) * math.min(1, FOV_LERP_SPEED * dt)
+			fovOffset += (fovOffsetTarget - fovOffset) * math.min(1, FOV_OFFSET_LERP_SPEED * dt)
 			camera.FieldOfView = fovBase + fovPunch + fovOffset
 
 			-- RECUL. On capture la distance du joueur AU DEMARRAGE, pas a chaque image : la relire en continu
