@@ -2185,6 +2185,21 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.250 — Le badge de la tondeuse se pose sur le guidon
+
+Il flottait devant la machine, dans le vide. Il etait accroche a la RootPart, qui se trouve a l'avant-bas du
+carter : bon point pour MESURER, mauvais point pour AFFICHER.
+
+Nouveau reglage `PROMPT_PART_NAME` (defaut "Handle", le guidon, qui existe deja sur le modele : rien a renommer
+dans Studio). Introuvable, on retombe sur la RootPart sans rien casser.
+
+L'ANCRAGE change, la DETECTION non. Elle reste radiale autour de la RootPart, parce qu'il lui faut une part FIXE :
+le pivot d'un Model suit sa bounding box, donc ajouter la CutZone le decalerait. Deux besoins differents, deux
+parts -- et deux reglages qu'il ne faut pas confondre (deja au journal, dans l'autre sens : monter la hauteur du
+badge ne fait pas detecter plus loin).
+
+`PROMPT_OFFSET` retombe de 4 a 1.2 : le guidon est deja a bonne hauteur, il n'y a plus rien a rattraper.
+
 ## 0.0.249 — La tondeuse existe AUSSI dans le tuto
 
 Elle etait injouable dans la seule place ou on l'enseigne. `MowService` et `MowController` n'etaient branches que

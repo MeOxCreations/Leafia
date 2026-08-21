@@ -51,6 +51,17 @@ local function rootOf(model: Model): BasePart?
 	return if root and root:IsA("BasePart") then root else nil
 end
 
+-- Part sur laquelle on ACCROCHE le badge. Distincte de la racine : la racine sert a MESURER (detection), elle est
+-- choisie pour etre fixe, pas pour etre jolie. Le guidon, lui, est a hauteur des mains -- c'est la qu'on lit
+-- "prendre". Deux besoins differents, deux parts.
+local function promptAnchorOf(model: Model): BasePart?
+	local named = model:FindFirstChild(MowConfigs.PROMPT_PART_NAME, true)
+	if named and named:IsA("BasePart") then
+		return named
+	end
+	return rootOf(model)
+end
+
 -- Balayage du Workspace. RE-SCAN periodique et non une seule fois au boot : avec le streaming, une tondeuse
 -- posee loin n'existe pas encore chez le client au demarrage, et un scan unique ne la verrait jamais.
 local function refreshMowers(now: number)
@@ -210,8 +221,8 @@ end
 -- Le prompt est un SINGLETON partage (dialogue de Papi, echelle, boite aux lettres...). On ne cache donc QUE
 -- le notre : appeler hide() sans regarder ferait disparaitre celui d'un autre en plein milieu.
 local function hideOurs()
-	local root = if promptTarget then rootOf(promptTarget) else nil
-	if root and InteractionPrompt.currentTarget() == root then
+	local anchor = if promptTarget then promptAnchorOf(promptTarget) else nil
+	if anchor and InteractionPrompt.currentTarget() == anchor then
 		InteractionPrompt.hide()
 	end
 	promptTarget = nil
@@ -231,10 +242,11 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 		-- On re-montre au CHANGEMENT de tondeuse, mais AUSSI quand le prompt ne nous appartient plus : une autre
 		-- feature a pu prendre le singleton (un dialogue s'ouvre pendant qu'on est a cote). Sans ce second test,
 		-- notre prompt disparaitrait pour de bon alors que rien n'a change de notre point de vue.
-		if target ~= promptTarget or InteractionPrompt.currentTarget() ~= root then
+		local anchor = promptAnchorOf(target) or root
+		if target ~= promptTarget or InteractionPrompt.currentTarget() ~= anchor then
 			promptTarget = target
 			InteractionPrompt.show(
-				root,
+				anchor,
 				MowConfigs.PROMPT_KEY,
 				MowConfigs.PROMPT_LABEL,
 				MowConfigs.PROMPT_OFFSET,
