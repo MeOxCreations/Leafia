@@ -2185,6 +2185,41 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.302 — On TIRE LA CORDE avant de pousser, et le moteur s'entend
+
+Nouvelle animation de demarrage, jouee UNE fois a la prise. La pose du guidon prend le relais quand elle se
+termine.
+
+`Looped = false` et c'est voulu : c'est un geste PONCTUEL, il doit se relacher pour laisser la place a la pose de
+maintien -- l'inverse exact du guidon, qui doit TENIR sa derniere image et reste donc boucle. Ecrit en code et pas
+laisse au reglage de l'editeur : une piste bouclee par erreur resterait a plein poids pour toujours et
+polluerait tout ce qui partage sa priorite.
+
+`Stopped` couvre la fin NORMALE comme un arret force (le joueur repose la tondeuse pendant le geste) : on verifie
+donc qu'il la porte ENCORE avant d'enchainer.
+
+### Le moteur ne demarre plus avant qu'on ait tire
+
+Il se lancait a la prise. Il tournait donc avant meme le geste, ce qui n'a de sens ni a l'oeil ni a l'oreille. Il
+demarre maintenant a la FIN du tirage, avec la pose du guidon.
+
+### Sons, empruntes au taille-haie
+
+En attendant ceux de la tondeuse : `TryLaunchSound` sur le tirage, `IdleSound` en boucle moteur. Le jour ou les
+vrais sons existent, seul le bloc SONS de la config change -- le code ne connait que des noms.
+
+Ils sont CLONES sur la MACHINE, pas joues depuis l'original : le son sort donc de la tondeuse, se spatialise, tout
+le monde l'entend, et deux joueurs qui tondent en meme temps ont chacun le sien. Le son ponctuel se detruit a la
+fin, la boucle a la repose.
+
+La hauteur du son monte avec le REGIME, comme le levier -- et depuis le MEME ratio. Deux calculs separes
+auraient fini par se decaler, et on aurait entendu un moteur qui ne correspond plus a ce qu'on voit.
+
+### Menage
+
+`getAnimator` factorise : le demarrage et la pose du guidon le cherchaient chacun de leur cote, avec le meme
+timeout recopie.
+
 ## 0.0.301 — Les roues tournent juste, et a l'envers en marche arriere
 
 Les deux roues PARTAGEAIENT un seul compteur d'angle. Dans la boucle, la premiere avancait l'angle et la seconde

@@ -108,6 +108,31 @@ return {
 	-- A monter si le joueur frotte encore le carter en contournant.
 	APPROACH_DETOUR = 4,
 
+	-- ===== SONS =====
+	-- EMPRUNTES AU TAILLE-HAIE en attendant ceux de la tondeuse. Rien de definitif : le jour ou les vrais sons
+	-- existent, seul ce bloc change -- le code, lui, ne connait que des noms.
+	-- Chemin du dossier dans SoundService.
+	SOUND_FOLDER = { "Sounds", "Engins", "HedgeTrimmer" },
+	-- Joue pendant le TIRAGE de corde. Une fois, non bouclee.
+	PULL_SOUND = "TryLaunchSound",
+	-- Boucle du moteur, des qu'il a demarre et tant qu'on pousse.
+	RUN_SOUND = "IdleSound",
+	-- Hauteur AJOUTEE a la boucle a plein regime. Le moteur monte donc dans les aigus quand on accelere, comme le
+	-- levier monte dans son animation -- les deux racontent la meme chose.
+	-- 0 = son a hauteur constante.
+	RUN_PITCH = 0.35,
+
+	-- ===== DEMARRAGE =====
+	-- Le joueur tire la corde avant de pousser. Jouee UNE fois a la prise ; la pose du guidon prend le relais quand
+	-- elle se termine, et le MOTEUR ne demarre qu'a ce moment-la -- il tournait avant qu'on ait tire, ce qui n'a
+	-- aucun sens.
+	-- Vide = pas de demarrage, on enchaine directement sur la pose du guidon.
+	START_ANIM_ID = "rbxassetid://88566815924193",
+	-- MEME priorite que la pose du guidon : elles ne jouent jamais en meme temps, l'une remplace l'autre.
+	START_PRIORITY = Enum.AnimationPriority.Action,
+	-- Fondu d'entree. La sortie est geree par le fondu de la pose qui prend le relais.
+	START_FADE = 0.1,
+
 	-- ===== POSE DE MAINTIEN =====
 	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.
 	--

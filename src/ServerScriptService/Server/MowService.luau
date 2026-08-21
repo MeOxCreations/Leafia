@@ -10,6 +10,7 @@
 -- rien a valider et rien a falsifier. Il n'est pas non plus regle a l'oeil dans la config -- voir carryC0.
 
 local Players = game:GetService("Players")
+local SoundService = game:GetService("SoundService")
 local RunService = game:GetService("RunService")
 local ContentProvider = game:GetService("ContentProvider")
 local Workspace = game:GetService("Workspace")
@@ -26,6 +27,8 @@ type CarryState = {
 	owner: Player,
 	parts: { [BasePart]: PartState },
 	weld: Weld?,
+	start: AnimationTrack?, -- tirage de corde, jouee UNE fois a la prise. La pose du guidon suit.
+	run: Sound?, -- boucle du moteur, clonee sur la machine. Detruite a la repose.
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
 	turn: AnimationTrack?, -- pose de VIRAGE des bras. Posee image par image, jamais jouee.
 	reverse: AnimationTrack?, -- pose REGARD ARRIERE. Posee elle aussi.
@@ -125,6 +128,100 @@ local function machineAnimator(model: Model): Animator?
 	return animator
 end
 
+-- SONS. Clones sur la MACHINE (pas sur le joueur) : le son sort donc de la tondeuse, se spatialise, et tout le
+-- monde l'entend puisque tout ca se passe cote serveur.
+-- On CLONE au lieu de jouer l'original : deux joueurs qui tondent en meme temps ont chacun le sien.
+local warnedNoSound = false
+local function findSound(name: string): Sound?
+	local node: Instance? = SoundService
+	for _, step in ipairs(MowConfigs.SOUND_FOLDER) do
+		node = node and node:FindFirstChild(step)
+	end
+	local sound = node and node:FindFirstChild(name)
+	if sound and sound:IsA("Sound") then
+		return sound
+	end
+	if not warnedNoSound then
+		warnedNoSound = true
+		-- Anormal ET actionnable : ces sons sont ceux du taille-haie, ils DOIVENT etre la. Un seul mot, pas un
+		-- par prise, sinon la console devient illisible.
+		warn(`[MowService] Son "{name}" introuvable sous SoundService.{table.concat(MowConfigs.SOUND_FOLDER, ".")}`)
+	end
+	return nil
+end
+
+-- Son PONCTUEL sur la machine : il se detruit tout seul a la fin, sinon chaque prise laisserait une instance.
+local function playOnce(parent: BasePart, name: string)
+	local source = findSound(name)
+	if not source then
+		return
+	end
+	local sound = source:Clone()
+	sound.Looped = false
+	sound.Parent = parent
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+	sound:Play()
+end
+
+-- L'Animator du PERSONNAGE. Un seul endroit le sait : le demarrage et la pose du guidon en ont besoin, et deux
+-- copies de cette recherche finiraient par diverger sur le timeout.
+-- A CharacterAdded l'Animator arrive quelques frames APRES l'Humanoid : un FindFirstChildOfClass nu rend nil.
+local function getAnimator(character: Model): Animator?
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then
+		return nil
+	end
+	local found = humanoid:FindFirstChildOfClass("Animator") or humanoid:WaitForChild("Animator", ANIMATOR_TIMEOUT)
+	return if found and found:IsA("Animator") then found else nil
+end
+
+-- DEMARRAGE : le joueur tire la corde, PUIS empoigne le guidon. `onDone` enchaine la suite.
+--
+-- `Looped = false` et c'est voulu : c'est un geste PONCTUEL, il doit se relacher a la fin pour laisser la place a
+-- la pose de maintien. (L'inverse du guidon, qui doit TENIR sa derniere image et reste donc bouclee.)
+-- Le reglage de l'editeur ne suffit pas, on l'ecrit ici : une piste bouclee par erreur resterait a plein poids
+-- pour toujours et polluerait tout ce qui partage sa priorite.
+--
+-- Sans animation configuree, on enchaine directement -- la tondeuse reste jouable.
+local function playStart(model: Model, character: Model, state: CarryState, onDone: () -> ())
+	local asset = machineAnimation(MowConfigs.START_ANIM_ID)
+	local animator = getAnimator(character)
+	if not (asset and animator) then
+		onDone()
+		return
+	end
+	local ok, result = pcall(function()
+		return animator:LoadAnimation(asset)
+	end)
+	if not ok or typeof(result) ~= "Instance" then
+		warn(`[MowService] Demarrage non chargeable ({MowConfigs.START_ANIM_ID}).`)
+		onDone()
+		return
+	end
+
+	local track = result :: AnimationTrack
+	track.Looped = false
+	track.Priority = MowConfigs.START_PRIORITY
+	state.start = track
+	-- `Stopped` couvre la fin NORMALE comme un arret force (repose pendant le geste) : dans les deux cas la
+	-- suite doit etre annulee ou enchainee, jamais laissee en plan.
+	track.Stopped:Once(function()
+		state.start = nil
+		-- Le joueur a pu reposer la tondeuse pendant le tirage : on n'enchaine que s'il la porte encore.
+		if carried[model] == state then
+			onDone()
+		end
+	end)
+	track:Play(MowConfigs.START_FADE)
+	-- Le son part AVEC le geste, pas a la prise : c'est le tirage qu'on entend.
+	local root = rootOf(model)
+	if root then
+		playOnce(root, MowConfigs.PULL_SOUND)
+	end
+end
+
 -- POSE DE MAINTIEN : le joueur attrape le guidon, et TIENT la pose tant qu'il pousse.
 --
 -- Jouee cote SERVEUR -> elle se replique a tous, comme les animations de l'echelle.
@@ -135,14 +232,8 @@ end
 -- Looped = TRUE et non false : une piste non bouclee se RELACHE en arrivant au bout et la pose saute. On la fige
 -- donc au marqueur (vitesse 0) AVANT la fin, et elle ne boucle jamais puisqu'elle n'avance plus.
 local function playHold(character: Model, state: CarryState)
-	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return
-	end
-	-- A CharacterAdded l'Animator arrive quelques frames apres l'Humanoid : un FindFirstChildOfClass nu rend nil.
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-		or humanoid:WaitForChild("Animator", ANIMATOR_TIMEOUT)
-	if not (animator and animator:IsA("Animator")) then
+	local animator = getAnimator(character)
+	if not animator then
 		warn("[MowService] Pas d'Animator sur le porteur : pose de maintien non jouee.")
 		return
 	end
@@ -233,13 +324,14 @@ local function stopHold(state: CarryState)
 	end
 	-- La pose de VIRAGE vit sur l'Animator du JOUEUR, comme la pose du guidon : elle se coupe ici, pas avec
 	-- les animations de la machine.
-	for _, t in ipairs({ state.turn, state.reverse } :: { AnimationTrack }) do
+	for _, t in ipairs({ state.start, state.turn, state.reverse } :: { AnimationTrack }) do
 		pcall(function()
 			t:AdjustSpeed(1)
 			t:Stop(MowConfigs.HOLD_FADE)
 		end)
 	end
 	state.reverse = nil
+	state.start = nil
 	if state.turn then
 		local t = state.turn
 		state.turn = nil
@@ -300,6 +392,17 @@ end
 -- zero et on ecrit sa TimePosition selon la vitesse du moment. Meme mecanique que la visee haut/bas du taille-haie
 -- -- une animation dont on ne lit qu'une IMAGE, jamais le defilement.
 local function startMachine(model: Model, state: CarryState)
+	-- BOUCLE MOTEUR. Elle demarre ICI et pas a la prise : le moteur ne tourne qu'une fois la corde tiree.
+	local root = rootOf(model)
+	local engine = findSound(MowConfigs.RUN_SOUND)
+	if root and engine then
+		local sound = engine:Clone()
+		sound.Looped = true
+		sound.Parent = root
+		sound:Play()
+		state.run = sound
+	end
+
 	local animator = machineAnimator(model)
 	if not animator then
 		return
@@ -355,6 +458,10 @@ local function stopMachine(state: CarryState)
 	end
 	cut(state.motor)
 	cut(state.lever)
+	if state.run then
+		state.run:Destroy() -- clonee a la prise : on ne la garde pas, on la refait a la suivante
+		state.run = nil
+	end
 	state.motor = nil
 	state.lever = nil
 	-- On RETIRE l'allure imposee : CharacterService reprend la main et ramene le joueur a sa marche, en
@@ -517,6 +624,8 @@ local function grab(player: Player, model: Model)
 		owner = player,
 		parts = {},
 		weld = nil,
+		start = nil,
+		run = nil,
 		hold = nil,
 		turn = nil,
 		reverse = nil,
@@ -556,8 +665,12 @@ local function grab(player: Player, model: Model)
 	-- Lu par le client pour savoir si c'est LUI qui pousse (donc s'il doit couper et tourner les roues).
 	model:SetAttribute("LeafiaCarriedBy", player.UserId)
 
-	playHold(character :: Model, state)
-	startMachine(model, state)
+	-- SEQUENCE : on tire la corde, PUIS on empoigne le guidon et le moteur se lance. Le moteur demarrait avec
+	-- la prise, donc il tournait avant meme qu'on ait tire -- ca n'avait aucun sens a l'oreille comme a l'oeil.
+	playStart(model, character :: Model, state, function()
+		playHold(character :: Model, state)
+		startMachine(model, state)
+	end)
 
 	-- BOUCLE DE LA MACHINE : montee en vitesse du porteur, et position du levier qui la raconte.
 	-- Separee du filet de la pose : deux responsabilites, deux connexions, chacune coupee a son heure.
@@ -663,11 +776,17 @@ local function grab(player: Player, model: Model)
 
 		-- LE LEVIER RACONTE LE REGIME. Ratio 0 au ralenti, 1 a plein regime, et on ecrit l'IMAGE correspondante.
 		-- On s'arrete a Length - epsilon : sur la derniere image pile, une piste bouclee est deja repartie a zero.
+		-- LE SON MONTE AVEC LE REGIME, comme le levier : les deux racontent la meme chose, ils doivent donc
+		-- venir du meme ratio. Deux calculs separes finiraient par se decaler.
+		local span = MowConfigs.SPEED_MAX - MowConfigs.SPEED_MIN
+		local ratio = if span > 1e-3 then math.clamp((state.speed - MowConfigs.SPEED_MIN) / span, 0, 1) else 0
+		if state.run then
+			state.run.PlaybackSpeed = 1 + ratio * MowConfigs.RUN_PITCH
+		end
+
 		local lever = state.lever
 		if lever and lever.Length > 0 then
-			local span = MowConfigs.SPEED_MAX - MowConfigs.SPEED_MIN
-			local ratio = if span > 1e-3 then (state.speed - MowConfigs.SPEED_MIN) / span else 0
-			lever.TimePosition = math.clamp(ratio, 0, 1) * (lever.Length - HOLD_EPSILON)
+			lever.TimePosition = ratio * (lever.Length - HOLD_EPSILON)
 		end
 	end)
 end
@@ -688,7 +807,7 @@ function MowService.init()
 	-- En task.spawn : c'est un appel RESEAU, il n'a rien a faire dans le chemin de boot.
 	task.spawn(function()
 		local assets: { Instance } = { getHoldAnimation() }
-		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.TURN_ANIM_ID, MowConfigs.REVERSE_ANIM_ID }) do
+		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.TURN_ANIM_ID, MowConfigs.REVERSE_ANIM_ID, MowConfigs.START_ANIM_ID }) do
 			local a = machineAnimation(id)
 			if a then
 				assets[#assets + 1] = a
