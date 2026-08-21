@@ -311,10 +311,11 @@ local GrassZoneConfigs = {
 	-- encore un peu, et ca se releve ; la coupe, elle, reste dessous.
 
 	-- Hauteur RETIREE a une touffe entierement tondue, en fraction de sa hauteur.
-	-- 0.55 = il reste 45 % du brin. Volontairement LOIN de 1 : une pelouse tondue est COURTE, pas rasee a zero.
-	-- C'est ce qui RESTE qui donne l'avant/apres. A 0.98 (la valeur du pietinement) il n'y a plus de matiere a voir,
-	-- donc plus rien a admirer -- et l'avant/apres est le coeur du jeu.
-	MOW_CUT = 0.55,
+	-- 0.75 = il reste 25 % du brin. Monte depuis 0.55 : a l'ecran l'herbe tondue restait trop haute, le contraste
+	-- avec l'herbe brute ne sautait pas aux yeux.
+	-- Garder une MARGE avant 1 : c'est ce qui RESTE qui donne l'avant/apres. A 0.98 (la valeur du pietinement)
+	-- il n'y a plus de matiere a voir, donc plus rien a admirer -- et l'avant/apres est le coeur du jeu.
+	MOW_CUT = 0.75,
 
 	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
 	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.

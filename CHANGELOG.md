@@ -2185,6 +2185,14 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.300 — L'herbe tondue descend plus bas
+
+`MOW_CUT` passe de 0.55 a 0.75 : il reste 25 % du brin au lieu de 45. A l'ecran l'herbe tondue restait trop haute
+et le contraste avec l'herbe brute ne sautait pas aux yeux.
+
+On garde une marge avant 1, et pour une raison qui n'a pas change : c'est ce qui RESTE qui donne l'avant/apres. A
+0.98 (la valeur du pietinement) il n'y a plus de matiere a voir, donc plus rien a admirer.
+
 ## 0.0.299 — La camera d'epaule est retiree
 
 Le joueur ne l'aime pas. Retiree entierement : le reglage, les appels et la primitive `SetShoulder` de
