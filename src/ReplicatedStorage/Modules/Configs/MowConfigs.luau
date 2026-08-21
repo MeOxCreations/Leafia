@@ -138,11 +138,11 @@ return {
 	-- place tuto. Meme raison que HOLD_ANIM_ID.
 	--
 	-- MOTEUR : boucle simple, tourne tant que la tondeuse est poussee.
-	MOTOR_ANIM_ID = "",
+	MOTOR_ANIM_ID = "rbxassetid://110288806032199",
 	-- LEVIER d'accelerateur : sa position raconte le REGIME. On ne la laisse pas jouer -- on pilote sa TimePosition
 	-- a la main, de 0 (ralenti) a sa derniere image (plein regime), selon la vitesse du moment. Meme mecanique que
 	-- la visee haut/bas du taille-haie : une animation dont on ne lit qu'une IMAGE, jamais le defilement.
-	LEVER_ANIM_ID = "",
+	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).

@@ -2185,6 +2185,22 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.275 — Le moteur tourne et le levier suit le regime
+
+Les deux IDs manquants sont poses. Le mecanisme etait ecrit depuis le 0.0.262 et attendait juste ces numeros :
+le code ignorait proprement les animations tant que la config etait vide, sans une erreur.
+
+- MOTEUR : boucle en priorite `Idle`, sur l'Animator de la TONDEUSE, cote serveur donc entendue par tous.
+- LEVIER : priorite `Action`, vitesse ZERO, `TimePosition` ecrite a chaque image -- image 0 au ralenti, derniere
+  image a plein regime. On ne lit qu'une IMAGE, jamais le defilement. Meme mecanique que la visee haut/bas du
+  taille-haie.
+
+Le levier passe AU-DESSUS du moteur (`Action` > `Idle`) : si les deux animations clent le meme joint, c'est le
+levier qui gagne au lieu que Roblox fasse une moyenne des deux.
+
+Les deux sont prechargees au boot avec la pose du guidon, donc le premier demarrage de la session ne part pas de
+travers.
+
 ## 0.0.274 — L'herbe redevient verte PARTOUT quand on lache G
 
 En lachant la touche, seule l'herbe autour du joueur reprenait sa couleur. Tout le reste restait bleu, pour de bon.
