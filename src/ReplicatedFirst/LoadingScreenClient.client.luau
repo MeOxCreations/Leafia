@@ -51,14 +51,20 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- peut pas varier. Des feuilles separees coutent quelques dizaines d'instances et donnent la taille, la
 	-- rotation et la transparence au hasard -- c'est ce desordre qui empeche l'oeil de lire une grille.
 	local CURTAIN_LEAF_COUNT = 30
-	local CURTAIN_LEAF_TINT = Color3.fromRGB(78, 78, 78)
-	-- Transparence de base ; chaque feuille tire un ecart au hasard autour d'elle. Haute : c'est un fond.
-	local CURTAIN_LEAF_TRANSPARENCY = 0.82
-	local CURTAIN_LEAF_TRANSPARENCY_JITTER = 0.1
+	-- NOIR, et non un gris plus clair que le fond. Sur un fond deja sombre (31), eclaircir laisse peu de marge :
+	-- il faudrait monter la teinte tres haut pour se detacher. Assombrir en donne 31 d'un coup.
+	-- Formule a refaire A CHAQUE fois qu'on touche a l'un des deux :
+	--   couleur RENDUE = fond + (teinte - fond) x (1 - transparence)
+	-- Ici : 31 + (0 - 31) x 0.65 = 11. Soit 20 points sous le fond -- visible. Sous ~15 points, on ne voit rien,
+	-- et c'est l'erreur qui a ete faite DEUX fois sur ce meme fond.
+	local CURTAIN_LEAF_TINT = Color3.fromRGB(0, 0, 0)
+	-- Transparence de base ; chaque feuille tire un ecart au hasard autour d'elle.
+	local CURTAIN_LEAF_TRANSPARENCY = 0.35
+	local CURTAIN_LEAF_TRANSPARENCY_JITTER = 0.12
 	-- Taille, en fraction de la HAUTEUR de l'ecran (pas de la largeur : sinon les feuilles changent de taille
 	-- selon le format d'ecran). Divisee par trois depuis la version tuilee.
-	local CURTAIN_LEAF_MIN = 0.022
-	local CURTAIN_LEAF_MAX = 0.055
+	local CURTAIN_LEAF_MIN = 0.014
+	local CURTAIN_LEAF_MAX = 0.038
 	-- Derive DIAGONALE, en fraction d'ecran par seconde. Lente : c'est un fond, il ne doit pas attirer l'oeil.
 	local CURTAIN_DRIFT = Vector2.new(0.012, 0.021)
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
@@ -103,10 +109,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		)
 		bit.ScaleType = Enum.ScaleType.Fit
 		bit.Rotation = rng:NextNumber(0, 360)
-		-- Taille donnee en Y seulement, et carree grace a l'AspectRatio : exprimee en X elle changerait avec le
-		-- format de l'ecran, et les feuilles seraient ovales sur un ultra-large.
+		-- Les DEUX axes sont donnes, et la contrainte d'aspect corrige ensuite depuis la HAUTEUR.
+		-- Mettre la largeur a ZERO en comptant sur la contrainte pour la recalculer est un pari : si elle ne
+		-- s'applique pas, la feuille fait zero pixel de large et on ne voit RIEN -- sans la moindre erreur.
+		-- Une valeur non nulle garantit qu'elle existe, la contrainte ne fait que la rendre carree.
 		local size = rng:NextNumber(CURTAIN_LEAF_MIN, CURTAIN_LEAF_MAX)
-		bit.Size = UDim2.fromScale(0, size)
+		bit.Size = UDim2.fromScale(size, size)
 		local ar = Instance.new("UIAspectRatioConstraint")
 		ar.AspectRatio = 1
 		ar.DominantAxis = Enum.DominantAxis.Height

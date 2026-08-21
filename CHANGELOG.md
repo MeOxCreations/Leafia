@@ -2185,6 +2185,34 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.316 — Les feuilles du rideau deviennent NOIRES, et existent vraiment
+
+Toujours invisibles. Deux causes, et la premiere est une erreur repetee.
+
+### La meme faute d'arithmetique, deux fois
+
+La teinte avait ete montee a 78 au 0.0.312... puis la transparence remise a 0.82 en passant aux feuilles
+individuelles. Rendu : 31 + (78 - 31) x 0.18 = 39. Huit points d'ecart sur un fond a 31. Invisible, comme la
+premiere fois.
+
+La formule etait deja ecrite dans le fichier, elle n'a pas ete refaite en changeant l'autre valeur. Elle est
+maintenant posee juste au-dessus des DEUX reglages, avec le calcul concret : on ne peut plus toucher a l'un sans
+lire l'autre.
+
+Les feuilles passent au NOIR, comme le proposait le joueur. Sur un fond deja sombre, eclaircir laisse peu de
+marge -- assombrir en donne 31 d'un coup. Rendu : 31 + (0 - 31) x 0.65 = 11, soit 20 points SOUS le fond.
+
+### Une largeur a zero
+
+La taille etait donnee en Y seulement (`fromScale(0, size)`), en comptant sur l'`UIAspectRatioConstraint` pour
+recalculer la largeur. C'est un pari : si la contrainte ne s'applique pas comme prevu, la feuille fait zero pixel
+de large et on ne voit RIEN -- sans la moindre erreur en console.
+
+Les deux axes sont desormais donnes ; la contrainte ne fait plus que rendre la feuille carree. Elle CORRIGE au
+lieu de FABRIQUER.
+
+Tailles reduites encore : 0.014 a 0.038 de la hauteur d'ecran.
+
 ## 0.0.315 — La bande de tonte ne s'efface plus derriere le joueur
 
 Diagnostic du joueur, et il etait juste : la couleur de la bande apparaissait puis disparaissait aussitot. Deux
