@@ -11,6 +11,7 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local ContentProvider = game:GetService("ContentProvider")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -40,6 +41,11 @@ type CarryState = {
 -- On cle la pose JUSTE avant la derniere image, jamais dessus : a la derniere image pile, la piste bouclee
 -- repart au debut avant qu'on ait pu la figer.
 local HOLD_EPSILON = 0.001
+-- Duree MINIMALE pour qu'une piste soit prise au serieux. Une piste encore en cours de chargement annonce une
+-- Length minuscule (voire nulle) : la comparaison `TimePosition >= Length - epsilon` devenait alors VRAIE des
+-- l'image ZERO, le filet figeait la pose au tout debut, et le personnage restait droit comme un R15 sans
+-- animation. Symptome trompeur : intermittent, parce que c'est une course entre le chargement et la 1re image.
+local HOLD_MIN_LENGTH = 0.05
 local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
 
 local carried: { [Model]: CarryState } = {}
@@ -154,7 +160,10 @@ local function playHold(character: Model, state: CarryState)
 	-- Symptome vecu : ca marche la plupart du temps, et parfois non. On surveille donc aussi la position, et
 	-- on la cle juste avant la fin. Celui des deux qui arrive en premier gagne, l'autre n'a plus rien a faire.
 	state.holdGuard = RunService.Heartbeat:Connect(function()
-		if track.Speed == 0 then
+		-- `TimePosition > 0` en plus de la vitesse : une piste qui vient d'etre lancee peut annoncer une vitesse
+		-- nulle avant que Play ne prenne effet. Lacher le filet a cet instant le rendrait inutile pile quand il
+		-- sert -- au tout debut.
+		if track.Speed == 0 and track.TimePosition > 0 then
 			-- Le marqueur a fait le travail : plus rien a surveiller.
 			if state.holdGuard then
 				state.holdGuard:Disconnect()
@@ -162,8 +171,11 @@ local function playHold(character: Model, state: CarryState)
 			end
 			return
 		end
+		-- Trois conditions, et les deux premieres sont des garde-fous, pas du zele :
+		--   IsPlaying      -> une piste pas encore demarree n'a rien a figer ;
+		--   Length credible -> une piste en cours de chargement ment sur sa duree (voir HOLD_MIN_LENGTH).
 		local length = track.Length
-		if length > 0 and track.TimePosition >= length - HOLD_EPSILON then
+		if track.IsPlaying and length > HOLD_MIN_LENGTH and track.TimePosition >= length - HOLD_EPSILON then
 			track.TimePosition = length - HOLD_EPSILON
 			track:AdjustSpeed(0)
 		end
@@ -505,6 +517,23 @@ local function releaseAllOf(player: Player)
 end
 
 function MowService.init()
+	-- PRECHARGEMENT. Le filet rattrape une piste pas encore chargee, mais mieux vaut qu'elle le soit deja :
+	-- a la 1re prise d'une session, l'asset arrive parfois APRES le Play, et la pose part de travers.
+	-- En task.spawn : c'est un appel RESEAU, il n'a rien a faire dans le chemin de boot.
+	task.spawn(function()
+		local assets: { Instance } = { getHoldAnimation() }
+		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID }) do
+			local a = machineAnimation(id)
+			if a then
+				assets[#assets + 1] = a
+			end
+		end
+		-- pcall : un asset absent ou une coupure reseau ne doit pas empecher la tondeuse de fonctionner.
+		pcall(function()
+			ContentProvider:PreloadAsync(assets)
+		end)
+	end)
+
 	local remote = RemoteSetup.getRemote("SetMowerCarry", "Mow") :: RemoteEvent
 
 	remote.OnServerEvent:Connect(function(player: Player, inst: unknown, phase: unknown)

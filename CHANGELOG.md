@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.273 — La pose du guidon ne se fige plus a l'image ZERO
+
+Le joueur restait parfois droit comme un R15 sans animation, la piste bloquee a `TimePosition` 0.
+
+C'etait le FILET du 0.0.261 qui se declenchait a tort. Sa condition, `TimePosition >= Length - epsilon`, devient
+VRAIE des l'image zero quand `Length` vaut presque rien -- et c'est exactement ce qu'annonce une piste ENCORE EN
+COURS DE CHARGEMENT. Le filet cle alors la pose au tout debut, met la vitesse a zero, se debranche, et plus rien
+ne bouge. Intermittent, parce que c'est une course entre le chargement de l'asset et la premiere image.
+
+Un garde-fou pose pour rattraper une race en a donc cree une autre. Trois corrections :
+
+- Le filet exige maintenant `IsPlaying` ET une duree CREDIBLE (`HOLD_MIN_LENGTH` = 0.05 s). Une piste qui ment sur
+  sa duree n'est plus prise au serieux.
+- Il ne se debranche sur "vitesse nulle" que si la piste a REELLEMENT avance (`TimePosition > 0`). Une piste
+  fraichement lancee peut annoncer une vitesse nulle avant que `Play` ne prenne effet ; lacher le filet a cet
+  instant le rendait inutile pile quand il sert.
+- Et surtout, on s'attaque a la CAUSE : les trois animations (pose, moteur, levier) sont PRECHARGEES au boot via
+  `ContentProvider:PreloadAsync`, en tache de fond. La course disparait quand l'asset est deja la. Meme mesure que
+  celle deja prise sur le repli de l'echelle.
+
 ## 0.0.272 — Toute l'herbe s'allume, et ca n'eblouit plus
 
 ### L'herbe lointaine restait verte
