@@ -29,6 +29,8 @@ local ACTION_NAME = "LeafiaMowerCarry"
 -- chaine n'est pas verifiable par le type-checker, et une faute dans la config donnerait une erreur a
 -- l'execution au lieu d'un rouge a l'ecriture. PROMPT_KEY ne sert qu'a AFFICHER la touche.
 local ACTION_KEY = Enum.KeyCode.E
+-- REVELATION : touche MAINTENUE qui allume ce qui reste a tondre. G, libre dans tout le projet.
+local HIGHLIGHT_KEY = Enum.KeyCode.G
 local CARRIED_ATTRIBUTE = "LeafiaCarriedBy" -- pose par MowService : UserId du porteur
 local RESCAN_INTERVAL = 2 -- secondes entre deux balayages du Workspace (streaming : une tondeuse peut arriver tard)
 local PROMPT_INTERVAL = 0.15 -- on ne teste pas la proximite a chaque image, ca ne se voit pas et ca coute
@@ -213,8 +215,18 @@ local function setActionBound(active: boolean)
 			end
 			return Enum.ContextActionResult.Pass
 		end, true, ACTION_KEY)
+		-- MAINTENUE, pas une bascule : on jette un oeil, on ne joue pas dedans. Un mode qu'on peut laisser allume
+		-- deviendrait le mode NORMAL, et la pelouse ne serait plus jamais regardee pour elle-meme.
+		-- End ET Cancel : perdre le focus (alt-tab, une UI qui s'ouvre) doit eteindre, sinon ca reste allume a vie.
+		ContextActionService:BindAction(MowConfigs.HIGHLIGHT_ACTION, function(_, state: Enum.UserInputState)
+			GrassZoneController.setHighlight(state == Enum.UserInputState.Begin)
+			return Enum.ContextActionResult.Pass
+		end, true, HIGHLIGHT_KEY)
 	else
 		ContextActionService:UnbindAction(ACTION_NAME)
+		ContextActionService:UnbindAction(MowConfigs.HIGHLIGHT_ACTION)
+		-- On s'eloigne la touche enfoncee : sans ca la pelouse resterait allumee pour de bon.
+		GrassZoneController.setHighlight(false)
 	end
 end
 
@@ -318,6 +330,7 @@ function MowController.init()
 	player.CharacterAdded:Connect(function()
 		hideOurs()
 		lastCutPos = nil
+		GrassZoneController.setHighlight(false)
 		setActionBound(false)
 	end)
 end
@@ -330,6 +343,7 @@ function MowController.stop()
 	setActionBound(false)
 	hideOurs()
 	lastCutPos = nil
+	GrassZoneController.setHighlight(false)
 end
 
 return MowController

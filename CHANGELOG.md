@@ -2185,6 +2185,43 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.251 — Maintenir G montre ce qu'il reste a tondre, et l'herbe coupee s'assombrit
+
+Deux choses demandees par le joueur, dans la meme passe.
+
+### La revelation (touche G maintenue)
+
+Tout ce qui n'est PAS encore coupe s'allume en neon cyan. Le but est de rendre le PROGRES lisible : on finit un
+jardin quand on voit ce qu'il reste, on l'abandonne quand on ne sait plus ou on en est.
+
+MAINTENUE et non une bascule, expres. Un mode qu'on peut laisser allume deviendrait le mode NORMAL, et la pelouse
+ne serait plus jamais regardee pour elle-meme -- or c'est ELLE le sujet du jeu.
+
+C'est un CONFORT, pas une bequille : si on la garde appuyee en permanence, ce n'est pas la revelation qu'il faut
+ameliorer, c'est le contraste tondu / pas tondu (MOW_CUT et MOWN_COLOR).
+
+Le seuil (`HIGHLIGHT_THRESHOLD` = 0.5) allume aussi ce qui est a MOITIE coupe : on voit donc les bandes baclees,
+pas seulement ce qu'on n'a jamais touche.
+
+Trois pieges evites :
+- Le rendu passe par `apply`, la meme fonction que tout le reste. Peindre les touffes depuis un autre module
+  aurait ete efface a l'image suivante : la couleur a deja un ecrivain, et un seul.
+- La porte de reecriture teste maintenant la revelation. Sans ca, une touffe immobile et loin du joueur n'aurait
+  jamais ete repeinte -- et c'est justement le LOIN qu'on veut voir s'allumer.
+- `setHighlight` remet tous les paves en `settling` pour forcer un passage, y compris ceux que la boucle saute
+  faute de vent et de joueur a proximite.
+
+La touche est branchee au meme CONTEXTE que la prise (pres d'une tondeuse, ou en train d'en pousser une) : pas de
+bouton tactile qui traine a l'ecran en permanence. Elle s'eteint a la sortie du contexte, au respawn et a `stop`,
+sinon s'eloigner touche enfoncee laisserait la pelouse allumee pour de bon.
+
+### L'herbe coupee etait trop claire
+
+`MOWN_COLOR` passe de (150, 210, 95) a (67, 95, 30). L'ancienne valeur donnait une pelouse tondue qui avait l'air
+ECLAIREE, comme un projecteur pose dessus, au lieu d'avoir l'air rase. C'est l'OMBRE entre les brins courts qui se
+lit comme "coupe", pas la lumiere. Le commentaire qui affirmait le contraire ("plus CLAIRE que l'herbe haute") est
+corrige : il etait devenu faux, et un commentaire faux coute plus cher que pas de commentaire.
+
 ## 0.0.250 — Le badge de la tondeuse se pose sur le guidon
 
 Il flottait devant la machine, dans le vide. Il etait accroche a la RootPart, qui se trouve a l'avant-bas du

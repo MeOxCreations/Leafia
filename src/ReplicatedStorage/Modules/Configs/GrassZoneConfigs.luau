@@ -292,16 +292,32 @@ local GrassZoneConfigs = {
 	-- interessante (elle punit la precipitation), mais ca se regle A L'OEIL, tondeuse en main. Pas maintenant.
 	MOW_RATE = 8,
 
-	-- COULEUR DE L'HERBE TONDUE. Une pelouse fraichement coupee est plus CLAIRE que l'herbe haute : la coupe expose
-	-- l'interieur du brin, et les brins courts renvoient plus de lumiere.
+	-- COULEUR DE L'HERBE TONDUE. Volontairement plus SOMBRE que l'herbe haute : essayee plus claire d'abord, et
+	-- l'ecran a tranche -- la pelouse tondue avait l'air ECLAIREE, comme un projecteur pose dessus, au lieu d'avoir
+	-- l'air rase. C'est l'ombre entre les brins courts qui se lit comme "coupe", pas la lumiere.
 	-- Recoit les MEMES taches de Perlin que le reste : la partie tondue garde donc le relief du terrain au lieu de
 	-- virer a l'aplat uniforme. Meme raison que CRUSHED_COLOR.
-	MOWN_COLOR = Color3.fromRGB(150, 210, 95),
+	MOWN_COLOR = Color3.fromRGB(67, 95, 30),
 
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.
 	-- 0 = la touffe tondue ne bouge plus du tout, 1 = elle bouge comme avant.
 	MOW_WIND = 0.15,
+
+	-- ===== REVELATION : voir ce qui RESTE a tondre =====
+	-- Une touche maintenue peint en neon tout ce qui n'est PAS encore coupe. Le but est de rendre le PROGRES
+	-- lisible : on finit un jardin quand on voit ce qu'il reste, on l'abandonne quand on ne sait plus.
+	--
+	-- C'est un CONFORT, pas une bequille. Si on la garde appuyee en permanence, ce n'est pas la revelation qu'il
+	-- faut ameliorer, c'est le contraste tondu / pas tondu : monter MOW_CUT et ecarter MOWN_COLOR de BASE_COLOR.
+	--
+	-- Le rendu passe par la MEME fonction que le reste (apply). Poser Color et Material a la main sur les touffes
+	-- serait efface a l'image suivante : la couleur a deja un ecrivain.
+	HIGHLIGHT_COLOR = Color3.fromRGB(16, 191, 255),
+	HIGHLIGHT_MATERIAL = Enum.Material.Neon,
+	-- En dessous de cette coupe, la touffe compte comme PAS TONDUE et s'allume. A 0.5, une touffe a moitie coupee
+	-- s'allume encore : on voit donc aussi les bandes baclees, pas seulement ce qu'on n'a jamais touche.
+	HIGHLIGHT_THRESHOLD = 0.5,
 
 	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.

@@ -38,10 +38,16 @@ return {
 	-- Hauteur d'AFFICHAGE du badge au-dessus de la part d'ancrage. N'A RIEN A VOIR avec DETECT_RADIUS : monter
 	-- celui-ci ne fait pas detecter plus loin, il ne fait que lever le badge.
 	-- Petit depuis que l'ancrage est le guidon : il est deja a bonne hauteur, il n'y a plus a rattraper.
-	PROMPT_OFFSET = Vector3.new(0, 1.2, 0),
+	PROMPT_OFFSET = Vector3.new(0, 5, 3),
 	-- Deux prises ne peuvent pas s'enchainer plus vite que ca (secondes). Le meme geste part sinon en double quand
 	-- la touche ET le bouton tactile tirent tous les deux.
 	ACTION_DEBOUNCE = 0.35,
+
+	-- ===== REVELATION =====
+	-- Touche MAINTENUE qui allume en neon tout ce qui reste a tondre (le rendu vit dans GrassZoneConfigs).
+	-- Maintenue et non bascule : on jette un oeil, on ne joue pas dedans. Un mode qu'on peut laisser allume
+	-- deviendrait le mode NORMAL, et la pelouse ne serait plus jamais regardee pour elle-meme.
+	HIGHLIGHT_ACTION = "LeafiaMowHighlight",
 	-- Distance MAX joueur <-> tondeuse acceptee par le SERVEUR a la prise. Anti-triche : le client demande, le
 	-- serveur verifie. Volontairement plus large que DETECT_RADIUS, pour tolerer la latence.
 	MAX_GRAB_DIST = 20,
