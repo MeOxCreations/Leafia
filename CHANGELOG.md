@@ -2185,6 +2185,33 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.304 — La poignee du lanceur passe dans la main du joueur
+
+Elle restait sur la machine pendant le demarrage. Elle QUITTE maintenant la tondeuse des la posture "pret a
+tirer", et y revient a la fin du geste. Le Beam tendu entre `A0Launcher` (sur la machine) et `A1Launcher` (sur la
+poignee) s'etire alors tout seul : on ne dessine pas la corde, on deplace ses deux bouts. Meme montage que le
+taille-haie.
+
+### Le placement est CALCULE, pas regle a l'oeil
+
+L'attachment de la poignee va en `C1`, celui de la main en `C0`. Rappel du montage, deja au journal :
+`Part1.CFrame = Part0.CFrame * C0 * C1:Inverse()` -- l'attachment de la piece vient donc se coller EXACTEMENT sur
+celui de la main, axes alignes. C'est l'attachment pose dans Studio qui decide de l'angle, pas un offset devine
+dans la config.
+
+### Trois filets
+
+Tout joint qui tenait deja la poignee est DETRUIT avant d'en poser un : deux joints sur la meme piece donnent une
+pose qui n'est ni l'une ni l'autre, et on chercherait l'erreur dans les attachments.
+
+Sa place sur la machine est RELEVEE a la prise, et elle y revient exactement -- pas approximativement.
+
+Elle est RE-SOUDEE au retour et pas seulement reposee : la tondeuse est desancree pendant le portage, une piece
+libre tomberait.
+
+Le retour a lieu a la fin du geste ET a la repose : lacher la tondeuse en plein tirage ne laisse pas la poignee
+dans la main.
+
 ## 0.0.303 — C'est le JOUEUR qui tire la corde, pas le jeu
 
 L'animation de demarrage se jouait toute seule a la prise. Elle est desormais FIGEE a sa premiere image : le

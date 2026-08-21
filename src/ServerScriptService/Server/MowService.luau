@@ -29,6 +29,8 @@ type CarryState = {
 	weld: Weld?,
 	start: AnimationTrack?, -- tirage de corde, jouee UNE fois a la prise. La pose du guidon suit.
 	run: Sound?, -- boucle du moteur, clonee sur la machine. Detruite a la repose.
+	launcherJoint: Motor6D?, -- poignee du lanceur accrochee a la main du joueur pendant le demarrage
+	launcherHome: CFrame?, -- sa place SUR LA MACHINE, relevee a la prise pour l'y rendre ensuite
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
 	turn: AnimationTrack?, -- pose de VIRAGE des bras. Posee image par image, jamais jouee.
 	reverse: AnimationTrack?, -- pose REGARD ARRIERE. Posee elle aussi.
@@ -177,6 +179,73 @@ local function getAnimator(character: Model): Animator?
 	return if found and found:IsA("Animator") then found else nil
 end
 
+-- LA POIGNEE DU LANCEUR passe dans la main du joueur pendant le demarrage.
+--
+-- Le placement est CALCULE, pas regle a l'oeil : on met l'attachment de la poignee en C1 et celui de la main en
+-- C0. Rappel du montage (deja au journal) : `Part1.CFrame = Part0.CFrame * C0 * C1:Inverse()` -- l'attachment de
+-- la piece vient donc se coller exactement sur celui de la main, axes alignes. C'est l'attachment qui decide de
+-- l'angle, et il est pose dans Studio une fois pour toutes.
+--
+-- On note d'abord sa place SUR LA MACHINE : c'est la qu'on la rendra, exactement, une fois la corde tiree.
+local function attachLauncher(model: Model, character: Model, state: CarryState)
+	local root = rootOf(model)
+	local part = model:FindFirstChild(MowConfigs.LAUNCHER_PART, true)
+	local hand = character:FindFirstChild(MowConfigs.PULL_HAND, true)
+	if not (root and part and part:IsA("BasePart") and hand and hand:IsA("BasePart")) then
+		return
+	end
+	local launcher: BasePart = part
+	local handPart: BasePart = hand
+
+	state.launcherHome = root.CFrame:ToObjectSpace(launcher.CFrame)
+	-- Tout joint qui la tenait deja doit partir : deux joints sur la meme piece donnent une pose qui n'est ni
+	-- l'une ni l'autre, et on chercherait l'erreur dans les attachments.
+	for _, d in ipairs(model:GetDescendants()) do
+		if (d:IsA("Motor6D") or d:IsA("Weld") or d:IsA("WeldConstraint")) and (d :: any).Part1 == launcher then
+			d:Destroy()
+		end
+	end
+
+	local joint = Instance.new("Motor6D")
+	joint.Name = "LeafiaLauncherGrip"
+	joint.Part0 = handPart
+	joint.Part1 = launcher
+	local handAt = handPart:FindFirstChild(MowConfigs.PULL_HAND_ATTACHMENT)
+	local partAt = launcher:FindFirstChild(MowConfigs.LAUNCHER_ATTACHMENT)
+	if handAt and handAt:IsA("Attachment") then
+		joint.C0 = handAt.CFrame
+	end
+	if partAt and partAt:IsA("Attachment") then
+		joint.C1 = partAt.CFrame
+	end
+	joint.Parent = handPart
+	state.launcherJoint = joint
+end
+
+-- La poignee revient a sa place sur la machine, EXACTEMENT la ou elle etait. On la re-soude plutot que de la
+-- poser : sans joint elle tomberait, la tondeuse etant desancree pendant le portage.
+local function releaseLauncher(model: Model, state: CarryState)
+	local joint = state.launcherJoint
+	state.launcherJoint = nil
+	if joint then
+		joint:Destroy()
+	end
+	local home = state.launcherHome
+	state.launcherHome = nil
+	local root = rootOf(model)
+	local part = model:FindFirstChild(MowConfigs.LAUNCHER_PART, true)
+	if not (home and root and part and part:IsA("BasePart")) then
+		return
+	end
+	local launcher: BasePart = part
+	launcher.CFrame = root.CFrame * home
+	local weld = Instance.new("WeldConstraint")
+	weld.Name = "LeafiaLauncherHome"
+	weld.Part0 = root
+	weld.Part1 = launcher
+	weld.Parent = launcher
+end
+
 -- DEMARRAGE : le joueur tire la corde, PUIS empoigne le guidon. `onDone` enchaine la suite.
 --
 -- `Looped = false` et c'est voulu : c'est un geste PONCTUEL, il doit se relacher a la fin pour laisser la place a
@@ -209,6 +278,8 @@ local function playStart(model: Model, character: Model, state: CarryState, onDo
 	-- suite doit etre annulee ou enchainee, jamais laissee en plan.
 	track.Stopped:Once(function()
 		state.start = nil
+		-- Corde tiree (ou geste interrompu) : la poignee retourne sur la machine dans les deux cas.
+		releaseLauncher(model, state)
 		-- Le joueur a pu reposer la tondeuse pendant le tirage : on n'enchaine que s'il la porte encore.
 		if carried[model] == state then
 			onDone()
@@ -220,6 +291,8 @@ local function playStart(model: Model, character: Model, state: CarryState, onDo
 	track:Play(MowConfigs.START_FADE)
 	track:AdjustSpeed(0)
 	track.TimePosition = 0
+	-- La poignee passe dans la main DES la posture "pret a tirer" : c'est deja elle qu'on tient.
+	attachLauncher(model, character, state)
 end
 
 -- TIRAGE DE CORDE : le joueur a clique. On relance la piste figee -- c'est le seul changement, la posture etait
@@ -610,6 +683,7 @@ local function release(model: Model)
 	stopHold(state)
 	stopMachine(state)
 	restoreJump(state)
+	releaseLauncher(model, state) -- filet : repose (ou mort) en plein tirage
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
 	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, nil)
@@ -644,6 +718,8 @@ local function grab(player: Player, model: Model)
 		weld = nil,
 		start = nil,
 		run = nil,
+		launcherJoint = nil,
+		launcherHome = nil,
 		hold = nil,
 		turn = nil,
 		reverse = nil,

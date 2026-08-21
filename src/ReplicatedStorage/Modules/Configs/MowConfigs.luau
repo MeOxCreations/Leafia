@@ -140,6 +140,18 @@ return {
 	-- Attribut pose sur la tondeuse quand le moteur TOURNE. Lu par le client : une machine a l'arret ne coupe rien.
 	RUNNING_ATTRIBUTE = "LeafiaMowerRunning",
 
+	-- ===== POIGNEE DU LANCEUR =====
+	-- Pendant le demarrage, la poignee QUITTE la machine pour suivre la main qui tire. Le Beam tendu entre
+	-- A0Launcher (sur la tondeuse) et A1Launcher (sur la poignee) s'etire alors tout seul : on ne dessine pas la
+	-- corde, on deplace ses deux bouts. Meme montage que le taille-haie.
+	LAUNCHER_PART = "Launcher",
+	-- Attachment PORTE PAR LA POIGNEE. Il vient se coller sur celui de la main, axes alignes -- c'est lui qui
+	-- decide de l'angle de la poignee dans la main, pas un offset regle a l'oeil.
+	LAUNCHER_ATTACHMENT = "A1Launcher",
+	-- Main qui tire, et son attachment de prise (R15).
+	PULL_HAND = "RightHand",
+	PULL_HAND_ATTACHMENT = "RightGripAttachment",
+
 	-- ===== POSE DE MAINTIEN =====
 	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.
 	--
