@@ -27,6 +27,12 @@ local MoveInput = require(script.Parent.Utils.MoveInput)
 local MowController = {}
 
 local ACTION_NAME = "LeafiaMowerCarry"
+-- La conduite tourne en BindToRenderStep JUSTE APRES le personnage, et surtout PAS sur Heartbeat.
+-- Le module de controle de Roblox appelle `humanoid:Move` a chaque image, avant la physique. Un Move
+-- concurrent envoye depuis Heartbeat arrive APRES la physique : une image sur deux partait dans notre
+-- direction, l'autre dans celle du joueur, et le personnage partait dans tous les sens.
+-- En se placant apres lui dans la MEME image, on ecrase sa demande avant que la physique ne la lise.
+local STEER_BIND = "LeafiaMowSteer"
 -- Touche reelle du bind. Volontairement en dur plutot que `Enum.KeyCode[PROMPT_KEY]` : une indexation par
 -- chaine n'est pas verifiable par le type-checker, et une faute dans la config donnerait une erreur a
 -- l'execution au lieu d'un rouge a l'ecriture. PROMPT_KEY ne sert qu'a AFFICHER la touche.
@@ -229,6 +235,70 @@ local function spinWheels(model: Model, distance: number)
 	end
 end
 
+-- ===== DEBUG DE TRAJECTOIRE =====
+-- Des points qui dessinent la courbe QUE LA MACHINE VA SUIVRE avec le braquage courant. On SIMULE quelques
+-- dixiemes de seconde en avant, avec exactement la meme formule que la conduite : si la courbe affichee ne
+-- correspond pas au trajet reel, c'est que la formule a change d'un cote et pas de l'autre.
+--
+-- Purement local et purement visuel : aucune collision, aucun raycast, rien ne le voit.
+local trailFolder: Folder? = nil
+local trailParts: { BasePart } = {}
+
+local function clearTrail()
+	if trailFolder then
+		trailFolder:Destroy()
+		trailFolder = nil
+	end
+	table.clear(trailParts)
+end
+
+-- Points crees UNE fois puis REUTILISES : en recreer a chaque image ferait des centaines d'instances par seconde.
+local function trailPoint(index: number): BasePart
+	local existing = trailParts[index]
+	if existing then
+		return existing
+	end
+	if not trailFolder then
+		local folder = Instance.new("Folder")
+		folder.Name = "LeafiaMowTrail"
+		folder.Parent = Workspace
+		trailFolder = folder
+	end
+	local part = Instance.new("Part")
+	part.Name = "TrailPoint"
+	part.Shape = Enum.PartType.Ball
+	part.Size = Vector3.new(MowConfigs.STEER_DEBUG_SIZE, MowConfigs.STEER_DEBUG_SIZE, MowConfigs.STEER_DEBUG_SIZE)
+	part.Color = MowConfigs.STEER_DEBUG_COLOR
+	part.Material = Enum.Material.Neon
+	part.Anchored = true
+	part.CanCollide = false
+	part.CanTouch = false
+	-- CanQuery n'a d'effet que parce que CanCollide est faux : sinon les raycasts la verraient quand meme.
+	part.CanQuery = false
+	part.CastShadow = false
+	part.Parent = trailFolder
+	trailParts[index] = part
+	return part
+end
+
+-- Simule la trajectoire a partir de l'etat COURANT, avec la meme formule que la conduite.
+local function drawTrail(origin: Vector3, yaw: number, turnPerSec: number, speed: number)
+	local simYaw = yaw
+	local simPos = origin
+	local step = MowConfigs.STEER_DEBUG_STEP
+	for i = 1, MowConfigs.STEER_DEBUG_POINTS do
+		simYaw -= turnPerSec * step
+		local f = Vector3.new(-math.sin(simYaw), 0, -math.cos(simYaw))
+		simPos += f * speed * step
+		-- Les points RETRECISSENT avec la distance : on lit le SENS de la courbe d'un coup d'oeil.
+		local shrink = 1 - (i - 1) / MowConfigs.STEER_DEBUG_POINTS * 0.6
+		local size = MowConfigs.STEER_DEBUG_SIZE * shrink
+		local point = trailPoint(i)
+		point.Size = Vector3.new(size, size, size)
+		point.CFrame = CFrame.new(simPos)
+	end
+end
+
 -- CONDUITE, facon VEHICULE. Deux commandes qui ne se melangent pas :
 --   avant / arriere -> on AVANCE le long du cap ;
 --   gauche / droite -> on BRAQUE, et RIEN d'autre. Appuyer sur la seule touche de cote ne doit pas faire avancer
@@ -276,6 +346,22 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.
 	humanoid:Move(facing * forwardAmount, false)
+
+	if MowConfigs.STEER_DEBUG then
+		-- MEME formule que le braquage ci-dessus, sinon la courbe affichee ne serait pas celle qu'on suit.
+		local sign = if MowConfigs.STEER_INVERT then -1 else 1
+		local turnPerSec = lateralAmount * sign * math.rad(MowConfigs.STEER_TURN_RATE)
+		-- Vitesse MESUREE, pas supposee : la courbe montre alors le trajet reel, y compris si un autre systeme
+		-- ralentit le joueur.
+		local v = hrp.AssemblyLinearVelocity
+		local speed = math.sqrt(v.X * v.X + v.Z * v.Z)
+		-- A l'arret on montre quand meme la courbe, sinon on ne pourrait pas regler le braquage sans rouler.
+		if speed < 1 then
+			speed = MowConfigs.SPEED_MIN
+		end
+		local yawNow = math.atan2(-facing.X, -facing.Z)
+		drawTrail(Vector3.new(hrp.Position.X, hrp.Position.Y - 2, hrp.Position.Z), yawNow, turnPerSec, speed)
+	end
 end
 
 local function request(model: Model, phase: string)
@@ -503,10 +589,23 @@ local function update(dt: number)
 			steering = true
 			autoRotateWas = humanoid.AutoRotate
 			humanoid.AutoRotate = false
+			-- APRES le personnage dans la MEME image : on ecrase la demande du module de controle avant que la
+			-- physique ne la lise. Sur Heartbeat on arrivait apres elle, une image trop tard.
+			RunService:BindToRenderStep(STEER_BIND, Enum.RenderPriority.Character.Value + 1, function(step: number)
+				local ch = player.Character
+				local hum = ch and ch:FindFirstChildOfClass("Humanoid")
+				local root = ch and ch:FindFirstChild("HumanoidRootPart")
+				if hum and root and root:IsA("BasePart") then
+					steer(hum, root, step)
+				end
+			end)
 		end
-		steer(humanoid, hrp :: BasePart, dt)
 	elseif steering then
 		steering = false
+		pcall(function()
+			RunService:UnbindFromRenderStep(STEER_BIND)
+		end)
+		clearTrail()
 		if humanoid then
 			humanoid.AutoRotate = autoRotateWas
 		end

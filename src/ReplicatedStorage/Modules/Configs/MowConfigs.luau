@@ -178,6 +178,17 @@ return {
 	-- Studs de recul a PLEIN regime. 0 = effet coupe.
 	DRIVE_ZOOM = 4,
 
+	-- ===== DEBUG DE TRAJECTOIRE =====
+	-- Des points poses devant la machine, qui dessinent la courbe QU'ELLE VA SUIVRE avec le braquage courant.
+	-- Sert a REGLER la conduite a l'oeil au lieu de deviner : on voit tout de suite si l'arc est trop serre, trop
+	-- mou, ou si le braquage part du mauvais cote.
+	-- A COUPER une fois la conduite validee.
+	STEER_DEBUG = true,
+	STEER_DEBUG_POINTS = 14, -- nombre de points. Plus = courbe plus longue et plus lisible, un peu plus cher
+	STEER_DEBUG_STEP = 0.09, -- secondes simulees entre deux points. Plus grand = on voit plus loin, moins precis
+	STEER_DEBUG_SIZE = 0.35,
+	STEER_DEBUG_COLOR = Color3.fromRGB(255, 210, 60),
+
 	-- ===== POSE DE VIRAGE =====
 	-- Les bras accompagnent le virage, comme quand on redresse une vraie tondeuse. L'animation n'est PAS jouee :
 	-- elle est POSEE, comme le levier. Son MILIEU est la pose droite, un bout est le virage a gauche, l'autre a

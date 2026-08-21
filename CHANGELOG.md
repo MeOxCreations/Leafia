@@ -2185,6 +2185,34 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.282 — La conduite se battait avec Roblox : corrige, et une courbe pour la regler
+
+Le personnage partait DANS TOUS LES SENS des qu'on avancait. Ce n'etait pas un reglage : c'etait un conflit
+d'ecriture, et il etait entierement de mon fait.
+
+Le module de controle de Roblox appelle `humanoid:Move` a chaque image, AVANT la physique. La conduite, elle,
+tournait sur `Heartbeat` -- donc APRES. Une image sur deux partait dans la direction demandee par la conduite,
+l'autre dans celle du module de controle. D'ou un personnage qui se contredit dix fois par seconde.
+
+Elle passe en `BindToRenderStep`, juste APRES le personnage (`RenderPriority.Character + 1`) : on ecrase la
+demande du module de controle dans la MEME image, avant que la physique ne la lise. Un seul ecrivain a l'instant
+qui compte.
+
+Regle a retenir : contraindre le deplacement d'un personnage ne se fait pas depuis Heartbeat. La question n'est
+pas "est-ce que j'ecris", c'est "est-ce que j'ecris APRES celui que je veux remplacer, et AVANT celui qui lit".
+
+### Debug de trajectoire
+
+Des points dessinent la courbe QUE LA MACHINE VA SUIVRE avec le braquage courant. Ils utilisent exactement la
+meme formule que la conduite : si la courbe affichee ne correspond pas au trajet reel, c'est que la formule a
+change d'un cote et pas de l'autre.
+
+Ils retrecissent avec la distance (on lit le SENS d'un coup d'oeil), s'affichent MEME A L'ARRET (sinon on ne
+pourrait pas regler le braquage sans rouler), et utilisent la vitesse MESUREE et non supposee.
+
+Instances creees UNE fois puis reutilisees, et detruites des qu'on lache la tondeuse. `STEER_DEBUG` a false les
+coupe -- a faire une fois la conduite validee.
+
 ## 0.0.281 — La camera s'ecarte a mesure qu'on prend du regime
 
 La vue recule quand la tondeuse accelere. On voit venir la bande a tondre, et l'acceleration se RESSENT au lieu de
