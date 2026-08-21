@@ -2185,6 +2185,37 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.265 — On VOIT le vent traverser la pelouse
+
+Les rafales ECLAIRCISSENT l'herbe en plus de la coucher. Idee du joueur, et elle est physiquement juste : un brin
+qui se couche ne renvoie pas la lumiere de la meme facon. C'est ce contraste qui rend le vent visible dans un vrai
+champ -- le mouvement seul se lit a peine, surtout de loin.
+
+C'est le MEME champ de bruit que le tassement, donc la vague qu'on voit est exactement celle qui couche l'herbe.
+Pas deux effets cote a cote : un seul, montre de deux facons.
+
+On ECLAIRCIT les canaux de la couleur au lieu de fondre vers une teinte fixe. Chaque touffe garde ainsi sa nuance
+et sa tache de Perlin, et il n'y a AUCUNE couleur de plus a stocker par touffe.
+
+Une touffe deja couchee (un pied) ou TONDUE ne scintille pas : elle ne bouge plus, elle n'a pas a briller. La
+valeur decroit aussi avec `windScale`, donc rien ne reste eclairci quand une touffe sort de portee du vent.
+
+### Perf
+
+La rafale bouge en permanence : sans precaution, on reecrirait la couleur de chaque touffe a CHAQUE image, pour
+des ecarts que l'oeil ne voit pas. L'eclaircissement est donc quantifie, avec son propre pas (`GUST_LIGHT_STEP`,
+50 niveaux). Monter ce pas = moins d'ecritures et une vague qui avance par marches.
+
+`GUST_LIGHTEN = 0.1`, volontairement discret : au-dela de ~0.2 la vague se lit comme un projecteur qui balaie la
+pelouse, pas comme du vent. A regler a l'oeil, et a surveiller au FPS -- c'est le premier effet du systeme qui
+ecrit une couleur en continu.
+
+### Note d'outil
+
+`selene` ne detecte PAS un argument manquant : `apply` a gagne un 7e parametre, et l'appel de la pose initiale
+serait passe a `nil` sans un mot, pour lever au premier semis. Verifier les sites d'appel A LA MAIN quand une
+signature change -- 0 parse error ne veut pas dire 0 probleme.
+
 ## 0.0.264 — Papi cligne des yeux
 
 Son idle (pour l'instant : juste les yeux) est jouee en boucle par `AmbientAnimService`. Une ligne dans

@@ -204,6 +204,19 @@ local GrassZoneConfigs = {
 	-- au coeur d'une rafale. Volontairement petite : c'est un appui, pas un pied. 0 = pas de tassement.
 	GUST_SQUASH = 0.12,
 
+	-- LA RAFALE ECLAIRCIT L'HERBE. Un brin qui se couche ne renvoie pas la lumiere de la meme facon : c'est CA qui
+	-- rend le vent visible dans un vrai champ. Le mouvement seul se lit a peine ; le contraste, lui, saute aux yeux.
+	--
+	-- On ECLAIRCIT la teinte de chaque touffe (facteur sur ses canaux) au lieu de la fondre vers une couleur fixe :
+	-- chaque touffe garde ainsi sa nuance et les taches de Perlin, sans qu'il faille stocker une couleur de plus.
+	--
+	-- 0 = effet coupe. Volontairement DISCRET : au-dela de ~0.2 la vague se lit comme un projecteur qui balaie la
+	-- pelouse, pas comme du vent. A REGLER A L'OEIL, c'est le genre d'effet qui passe vite de "joli" a "faux".
+	GUST_LIGHTEN = 0.1,
+	-- Pas de quantification de cet eclaircissement. Ecrire une couleur coute, et un pour cent d'ecart ne se voit pas.
+	-- Plus GRAND = moins d'ecritures (meilleur FPS) mais la vague avance par marches. 0.02 = 50 niveaux.
+	GUST_LIGHT_STEP = 0.02,
+
 	WIND_FADE_START = 10,
 	WIND_VIEW_DISTANCE = 26,
 

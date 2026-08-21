@@ -77,6 +77,7 @@ type Clump = {
 	lastMownBlend: number, -- dernier melange de couleur de coupe REELLEMENT ecrit
 	baseMaterial: Enum.Material, -- materiau de repos, releve a la pose : la revelation doit pouvoir le rendre
 	lastHighlight: boolean, -- derniere revelation REELLEMENT ecrite : ecrire un Material chaque image couterait pour rien
+	lastLighten: number, -- dernier eclaircissement de rafale REELLEMENT ecrit
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
 	lastCrush: number, -- dernier etat REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
 	lastSquashCrush: number, -- idem pour la valeur retardee : elle peut bouger alors que l'autre est deja posee
@@ -142,7 +143,15 @@ end
 -- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
 -- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle: number, crush: number, mown: number)
+local function apply(
+	clump: Clump,
+	windAngle: number,
+	squash: number,
+	tiltAngle: number,
+	crush: number,
+	mown: number,
+	lighten: number
+)
 	-- La taille ne s'ECRIT que si elle a change : redimensionner une part coute plus cher que la deplacer, et une
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
@@ -170,14 +179,30 @@ local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle:
 	else
 		local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
 		local mowBlend = math.floor(mown / SQUASH_STEP + 0.5) * SQUASH_STEP
-		if blend ~= clump.lastDarken or mowBlend ~= clump.lastMownBlend then
+		-- La rafale bouge en permanence : sans quantification, on reecrirait la couleur de chaque touffe a chaque
+		-- image, pour des ecarts que l'oeil ne voit pas. Meme raison que pour l'ecrasement, avec son propre pas.
+		local step = GrassZoneConfigs.GUST_LIGHT_STEP
+		local light = math.floor(lighten / step + 0.5) * step
+		if blend ~= clump.lastDarken or mowBlend ~= clump.lastMownBlend or light ~= clump.lastLighten then
 			-- DEUX melanges empiles, et l'ORDRE compte. La COUPE d'abord : elle change la couleur de REPOS de la
 			-- touffe, pour toujours. L'ECRASEMENT par-dessus : lui est temporaire. Dans cet ordre, une touffe
 			-- tondue PUIS pietinee revient a sa couleur de TONDUE quand le pied repart, pas a celle de l'herbe haute.
 			local rest = clump.baseColor:Lerp(clump.mownColor, mowBlend)
-			clump.part.Color = rest:Lerp(clump.crushedColor, blend)
+			local final = rest:Lerp(clump.crushedColor, blend)
+			-- LA RAFALE ECLAIRCIT. On multiplie les canaux plutot que de fondre vers une couleur fixe : chaque touffe
+			-- garde ainsi sa nuance et sa tache de Perlin, et il n'y a aucune couleur de plus a stocker par touffe.
+			if light > 0 then
+				local k = 1 + light
+				final = Color3.new(
+					math.min(final.R * k, 1),
+					math.min(final.G * k, 1),
+					math.min(final.B * k, 1)
+				)
+			end
+			clump.part.Color = final
 			clump.lastDarken = blend
 			clump.lastMownBlend = mowBlend
+			clump.lastLighten = light
 		end
 	end
 
@@ -572,6 +597,7 @@ local function populate(zone: Zone)
 				lastMownBlend = 0,
 				baseMaterial = part.Material,
 				lastHighlight = false,
+				lastLighten = 0,
 				windPhase = windPhase,
 				lastCrush = 0,
 				lastSquashCrush = 0,
@@ -579,7 +605,10 @@ local function populate(zone: Zone)
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
-			apply(clump, WIND_ANGLE, 1, 0, 0, 0)
+			-- Pose initiale : jamais tondue, jamais ecrasee, et aucune rafale (le 7e argument). Un argument
+			-- oublie passerait ici en nil, et le calcul de l'eclaircissement leverait au premier semis --
+			-- selene ne voit pas un argument manquant, seul l'appel reel le montre.
+			apply(clump, WIND_ANGLE, 1, 0, 0, 0, 0)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
 
@@ -788,6 +817,9 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 
 		local wind = 0
 		local gustSquash = 1
+		-- Eclaircissement de la rafale. Zero hors du vent : une touffe lointaine ou immobile ne doit rien payer,
+		-- et rien ne reste eclairci quand le vent s'eteint (la valeur decroit avec windScale jusqu'a zero).
+		local lighten = 0
 		if windScale > 0 then
 			-- RAFALE. Champ de bruit de Perlin qui DERIVE dans la direction du vent : des zones fortes et des zones
 			-- calmes roulent sur le champ. Sans lui, toutes les touffes recoivent exactement le meme souffle et ca se
@@ -816,6 +848,9 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- La rafale TASSE l'herbe au passage, puis la laisse remonter. Seule la partie FORTE de la rafale ecrase
 			-- (math.max(gust, 0)) : une zone calme ne doit pas tasser l'herbe en permanence.
 			gustSquash = 1 - GrassZoneConfigs.GUST_SQUASH * math.max(gust, 0) * (1 - crushed) * windScale
+			-- MEME champ que le tassement, donc la vague qu'on VOIT est exactement celle qui couche l'herbe.
+			-- Une touffe deja couchee (pied) ou tondue ne scintille pas : elle ne bouge plus, elle n'a pas a briller.
+			lighten = GrassZoneConfigs.GUST_LIGHTEN * math.max(gust, 0) * (1 - crushed) * windScale * mowWind
 		end
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
@@ -840,7 +875,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			if target > 1e-3 then
 				tilt = TILT_ANGLE * math.clamp((clump.crush - clump.squashCrush) / target, 0, 1)
 			end
-			apply(clump, wind, squash * gustSquash, tilt, clump.colorCrush, clump.mown)
+			apply(clump, wind, squash * gustSquash, tilt, clump.colorCrush, clump.mown, lighten)
 			clump.lastCrush = clump.crush
 			clump.lastSquashCrush = clump.squashCrush
 			clump.lastColorCrush = clump.colorCrush
