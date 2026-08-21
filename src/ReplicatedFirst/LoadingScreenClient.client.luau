@@ -44,10 +44,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 	local LEAF_ID = "rbxassetid://117703108607506"
 	local LEAF_TINT = Color3.fromRGB(81, 81, 81)
-	-- Teinte de la bande de reflet. Doit etre PLUS CLAIRE que LEAF_TINT : c'est elle qu'on voit passer.
-	local LEAF_SHINE = Color3.fromRGB(168, 168, 168)
-	local SHINE_SWEEP = 0.9 -- duree d'un passage du reflet
-	local SHINE_PAUSE = 1.6 -- temps mort entre deux passages. Sans pause, ca clignote au lieu de briller
+	-- Duree du remplissage de la feuille. Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le
+	-- rideau s'en va. Une jauge qui se remplit AVANT la fin ment sur ce qu'il reste.
+	local FILL_DURATION = 10
+	local FILL_SOFT = 0.14 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
+	local FILL_ROTATION = 90 -- sens du remplissage. AJOUTER 180 si elle se vide au lieu de se remplir
 	-- Prefixe CURTAIN_ : l'ecran d'INTRO a deja ses propres TILE_* en haut du fichier, et un local du meme nom
 	-- les MASQUERAIT ici. On croirait alors regler l'un en reglant l'autre.
 	--
@@ -157,7 +158,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	leaf.Position = UDim2.fromScale(0.5, 0.5)
 	leaf.Size = UDim2.fromScale(1, 1)
 	leaf.Image = LEAF_ID
-	-- La teinte est posee plus bas, avec le reflet : elle depend de lui (voir LEAF_SHINE).
+	-- La teinte est posee plus bas, avec le remplissage.
 	leaf.ScaleType = Enum.ScaleType.Fit
 	local la = Instance.new("UIAspectRatioConstraint")
 	la.AspectRatio = 1
@@ -167,39 +168,46 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	TweenService:Create(leaf, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = 10 }):Play()
 	TweenService:Create(leaf, TweenInfo.new(2.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(0.5, 0.46) }):Play()
 
-	-- REFLET qui balaie la feuille. Meme motif que le logo de l'ecran d'intro : un UIGradient avec une bande claire
-	-- au milieu, dont l'Offset GLISSE d'un bord a l'autre, avec une PAUSE entre deux passages. Un reflet continu se
-	-- lit comme un clignotement ; c'est le silence entre deux passages qui le rend precieux.
+	-- LA FEUILLE SE REMPLIT, comme une jauge en forme de feuille. Elle part INVISIBLE et se revele petit a petit :
+	-- le joueur ne voit plus seulement "ca charge", il voit COMBIEN il reste. Une attente qu'on peut mesurer est
+	-- toujours plus courte qu'une attente muette.
 	--
-	-- Un UIGradient MULTIPLIE l'ImageColor3. Pour obtenir une bande PLUS CLAIRE que la feuille, on monte donc sa
-	-- teinte jusqu'a la valeur du reflet, et le degrade la RAMENE a sa valeur normale partout ailleurs.
-	-- Sans ca, le degrade ne pourrait que l'assombrir -- on ne depasse pas le blanc.
-	leaf.ImageColor3 = LEAF_SHINE
-	local shine = Instance.new("UIGradient")
-	shine.Name = "UIGradientSlide"
-	local base = LEAF_TINT.R / LEAF_SHINE.R -- ratio qui rend la teinte de repos
-	local dim = Color3.new(base, base, base)
-	shine.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, dim),
-		ColorSequenceKeypoint.new(0.35, dim),
-		ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
-		ColorSequenceKeypoint.new(0.65, dim),
-		ColorSequenceKeypoint.new(1, dim),
-	})
-	shine.Rotation = 20 -- legerement incline : un reflet vertical se lit comme une barre, pas comme une lumiere
-	shine.Offset = Vector2.new(-1, 0)
-	shine.Parent = leaf
+	-- Remplace le reflet qui balayait : deux animations qui disent la meme chose se volent l'attention, et celle-ci
+	-- en dit plus.
+	--
+	-- Le remplissage passe par la TRANSPARENCE du degrade, pas par sa couleur : la partie pas encore remplie est
+	-- transparente, donc on voit le fond a travers -- exactement l'effet demande.
+	leaf.ImageColor3 = LEAF_TINT
+	local fill = Instance.new("UIGradient")
+	fill.Name = "UIGradientFill"
+	-- SENS DU REMPLISSAGE. Il ne se DEDUIT pas : le sens d'un UIGradient est une de ces choses que seul l'ecran
+	-- tranche (deja au journal). Si la feuille se vide au lieu de se remplir, ajouter 180 ici.
+	fill.Rotation = FILL_ROTATION
+	fill.Parent = leaf
+
 	task.spawn(function()
+		local t0 = os.clock()
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
 		-- instance detruite -- meme raison que la derive des feuilles du fond.
 		while sg.Parent do
-			shine.Offset = Vector2.new(-1, 0)
-			TweenService:Create(
-				shine,
-				TweenInfo.new(SHINE_SWEEP, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-				{ Offset = Vector2.new(1, 0) }
-			):Play()
-			task.wait(SHINE_SWEEP + SHINE_PAUSE)
+			local e = math.clamp((os.clock() - t0) / FILL_DURATION, 0, 1)
+			if e >= 1 then
+				fill.Transparency = NumberSequence.new(0)
+			else
+				-- Bord ADOUCI plutot que net : une coupure franche se lit comme un masque, un degradé comme un
+				-- liquide qui monte.
+				-- Les temps d'une NumberSequence doivent croitre STRICTEMENT : on force donc un ecart minimal,
+				-- sinon Roblox refuse la sequence des que le bord touche un bord.
+				local b = math.clamp(e, 0.002, 0.998)
+				local a = math.clamp(b - FILL_SOFT, 0.001, b - 0.001)
+				fill.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0),
+					NumberSequenceKeypoint.new(a, 0),
+					NumberSequenceKeypoint.new(b, 1),
+					NumberSequenceKeypoint.new(1, 1),
+				})
+			end
+			task.wait()
 		end
 	end)
 

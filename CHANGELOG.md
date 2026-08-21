@@ -2185,6 +2185,31 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.319 — La feuille du rideau se REMPLIT au lieu de briller
+
+Elle part invisible et se revele petit a petit, comme une jauge en forme de feuille. Le joueur ne voit plus
+seulement "ca charge", il voit COMBIEN il reste. Une attente qu'on peut mesurer est toujours plus courte qu'une
+attente muette -- c'est la difference entre l'impatience et l'ennui.
+
+Remplace le reflet qui balayait, ajoute juste avant : deux animations qui disent la meme chose se volent
+l'attention, et celle-ci en dit plus.
+
+### Par la TRANSPARENCE, pas par la couleur
+
+La partie pas encore remplie est transparente : on voit le fond a travers, donc la feuille se confond avec lui
+exactement la ou elle n'est pas encore arrivee. Peindre la feuille couleur du fond aurait donne le meme debut,
+mais rien n'aurait pu la faire APPARAITRE ensuite -- une couleur ne se retire pas, une transparence si.
+
+Le bord est ADOUCI (`FILL_SOFT`) : une coupure franche se lit comme un masque, un degrade comme un liquide qui
+monte.
+
+Duree calee sur celle du rideau (10 s) : une jauge qui se remplit avant la fin ment sur ce qu'il reste.
+
+### A verifier a l'ecran
+
+Le SENS d'un UIGradient ne se deduit pas -- deja au journal, au meme titre que `GetMouseLocation`. Si la feuille
+se VIDE au lieu de se remplir, ajouter 180 a `FILL_ROTATION`.
+
 ## 0.0.318 — Un reflet balaie la feuille du rideau de chargement
 
 Meme motif que le logo de l'ecran d'intro : un UIGradient avec une bande claire au milieu, dont l'`Offset` glisse
