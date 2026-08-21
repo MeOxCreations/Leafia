@@ -2185,6 +2185,19 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.309 — On braque MOINS en roulant, PLUS a l'arret
+
+`STEER_TURN_RATE` tombe de 120 a 60 degres/s : un quart de tour prend 1.5 s au lieu de 0.75. Une machine LANCEE a
+de l'inertie, elle ne pivote pas.
+
+`STEER_CRAWL_TURN_RATE` monte de 18 a 30 : a l'arret il n'y a pas d'inertie a vaincre, on repositionne librement.
+
+C'est l'INVERSE de l'intuition -- on croit qu'aller vite doit tourner vite -- mais c'est ce qui se ressent juste,
+machine en main. Le joueur l'a senti a l'ecran avant qu'on le raisonne.
+
+Aucun code touche : les deux taux avaient ete separes des le depart, precisement pour que regler l'un ne force pas
+a compenser l'autre. C'est ce qui rend ce genre d'ajustement gratuit.
+
 ## 0.0.308 — Le moteur ne prend qu'au deuxieme ou troisieme coup
 
 Un moteur qui demarre du premier coup a chaque fois se lit comme un interrupteur. Il faut maintenant 2 ou 3

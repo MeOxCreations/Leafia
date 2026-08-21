@@ -233,10 +233,10 @@ return {
 	-- Comme on ne se deplace JAMAIS lateralement, la trajectoire ne peut que se courber : c'est ca, l'arc.
 	-- Le ballant de la machine et la pose des bras suivent gratuitement : ils se calculent deja sur le cap.
 	STEER_ENABLED = true,
-	-- Vitesse de rotation MAXIMALE, en degres par seconde. C'est LE bouton du poids ressenti.
-	-- 120 = un quart de tour en 0.75 s. Plus BAS = plus lourd, plus large. Trop bas et on ne peut plus longer un
-	-- massif de fleurs sans le raser.
-	STEER_TURN_RATE = 120,
+	-- Vitesse de rotation EN PLEINE AVANCE, en degres par seconde. C'est LE bouton du poids ressenti.
+	-- 60 = un quart de tour en 1.5 s. Descendu de 120 : une machine LANCEE a de l'inertie, elle ne pivote pas.
+	-- Plus BAS = plus lourd, plus large. Trop bas et on ne peut plus longer un massif de fleurs sans le raser.
+	STEER_TURN_RATE = 60,
 	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
 	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
 	STEER_INPUT_EPSILON = 0.05,
@@ -254,12 +254,12 @@ return {
 	-- a peu pres 2 km/h. C'est une avance de MANOEUVRE, pas un deplacement.
 	-- 0 = on revient au comportement d'avant : le corps reste fige et seule la machine pivote.
 	STEER_CRAWL = 2,
-	-- Vitesse de rotation PENDANT cette manoeuvre, en degres par seconde. TRES basse expres : la trajectoire doit
-	-- partir surtout VERS L'AVANT, avec juste un soupcon de courbe. Au taux normal (STEER_TURN_RATE) la machine
-	-- braquait comme en pleine course alors qu'elle avance a peine -- ca se lit comme un pivot, pas comme une
-	-- manoeuvre.
+	-- Vitesse de rotation PENDANT cette manoeuvre, en degres par seconde.
+	-- PLUS ELEVEE qu'en pleine avance, et c'est voulu : une machine a l'arret n'a pas d'inertie a vaincre, on
+	-- la repositionne librement. C'est l'inverse de l'intuition -- on croit qu'aller vite doit tourner vite --
+	-- mais c'est ce qui se ressent juste, machine en main.
 	-- Un reglage A PART et non une fraction de STEER_TURN_RATE : regler l'un ne doit pas forcer a compenser l'autre.
-	STEER_CRAWL_TURN_RATE = 18,
+	STEER_CRAWL_TURN_RATE = 30,
 	-- (Le braquage a l'arret n'a plus de reglage propre : la machine se braque desormais par le MEME chemin que la
 	-- traine en virage -- l'input pilote directement l'angle, voir SWING_ANGLE. Un seul mecanisme, un seul bouton,
 	-- et les deux cas ne peuvent plus se contredire.)
