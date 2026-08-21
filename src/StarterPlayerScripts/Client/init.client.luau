@@ -51,6 +51,10 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- Herbe de zone (remplissage + ecrasement au passage). Ici AUSSI : tout est local et pilote par la config,
 	-- donc il n'y a rien a recopier dans cette place. Ordre indifferent.
 	require(script.GrassZoneController).init()
+	-- TONDEUSE : prompt de prise, coupe, roues. APRES GrassZoneController, dont il appelle mowAt.
+	-- Le geste CENTRAL du jeu s'apprend dans le tuto : l'oublier ici rendait la tondeuse inutilisable
+	-- dans la seule place ou on l'enseigne, alors que le code etait bien synce.
+	require(script.MowController).init()
 	-- Nuages : du ciel, rien d'autre. Local, aucun reseau. Ordre indifferent.
 	require(script.CloudController).init()
 

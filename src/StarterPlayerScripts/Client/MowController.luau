@@ -207,13 +207,20 @@ local function setActionBound(active: boolean)
 	end
 end
 
+-- Le prompt est un SINGLETON partage (dialogue de Papi, echelle, boite aux lettres...). On ne cache donc QUE
+-- le notre : appeler hide() sans regarder ferait disparaitre celui d'un autre en plein milieu.
+local function hideOurs()
+	local root = if promptTarget then rootOf(promptTarget) else nil
+	if root and InteractionPrompt.currentTarget() == root then
+		InteractionPrompt.hide()
+	end
+	promptTarget = nil
+end
+
 local function updatePrompt(hrp: BasePart, carrying: Model?)
 	if carrying then
 		-- On pousse : plus de badge sur la tondeuse (on est dessus), mais l'action reste branchee pour la reposer.
-		if promptTarget then
-			InteractionPrompt.hide()
-			promptTarget = nil
-		end
+		hideOurs()
 		setActionBound(true)
 		return
 	end
@@ -221,7 +228,10 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 	local target, root = freeMowerNear(hrp.Position)
 	if target and root then
 		setActionBound(true)
-		if target ~= promptTarget then
+		-- On re-montre au CHANGEMENT de tondeuse, mais AUSSI quand le prompt ne nous appartient plus : une autre
+		-- feature a pu prendre le singleton (un dialogue s'ouvre pendant qu'on est a cote). Sans ce second test,
+		-- notre prompt disparaitrait pour de bon alors que rien n'a change de notre point de vue.
+		if target ~= promptTarget or InteractionPrompt.currentTarget() ~= root then
 			promptTarget = target
 			InteractionPrompt.show(
 				root,
@@ -233,8 +243,7 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 			)
 		end
 	elseif promptTarget then
-		InteractionPrompt.hide()
-		promptTarget = nil
+		hideOurs()
 		setActionBound(false)
 	else
 		setActionBound(false)
@@ -295,8 +304,7 @@ function MowController.init()
 
 	-- Nouveau perso : le prompt d'avant pointait sur une position morte, et on ne porte plus rien.
 	player.CharacterAdded:Connect(function()
-		InteractionPrompt.hide()
-		promptTarget = nil
+		hideOurs()
 		lastCutPos = nil
 		setActionBound(false)
 	end)
@@ -308,8 +316,7 @@ function MowController.stop()
 		connection = nil
 	end
 	setActionBound(false)
-	InteractionPrompt.hide()
-	promptTarget = nil
+	hideOurs()
 	lastCutPos = nil
 end
 

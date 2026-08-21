@@ -37,6 +37,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- Papi se promene autour de sa maison. Apres AmbientAnimService, dont il ne depend pas, mais qui ne doit PLUS
 	-- piloter son Animator : c'est ce service qui possede ses deux animations.
 	require(script.NpcWanderService).init()
+	-- TONDEUSE : le geste central s'apprend ICI. Ce service ne fait que dire QUI porte quelle tondeuse
+	-- (soudure au HRP) ; il ne coupe rien, la coupe est cliente. Necessite un Model "Tondeuse" dans la map.
+	require(script.MowService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end

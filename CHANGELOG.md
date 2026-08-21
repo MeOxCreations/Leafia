@@ -2185,6 +2185,32 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.249 — La tondeuse existe AUSSI dans le tuto
+
+Elle etait injouable dans la seule place ou on l'enseigne. `MowService` et `MowController` n'etaient branches que
+dans la sequence PRINCIPALE, apres le `return` qui coupe la branche TUTORIAL. Le code etait bien synce par Rojo,
+la tondeuse etait bien posee dans la map, et rien ne tournait dessus : aucun prompt, aucune coupe.
+
+C'est le piege deja au journal ("une place SECONDAIRE n'herite pas des services gates hors d'elle par PlaceId"),
+et il vient de couter une deuxieme fois. Rappel de la regle : un comportement de GAMEPLAY qui doit valoir PARTOUT
+se branche dans les DEUX listes -- et la tonte est le geste central, donc elle vaut partout par definition.
+
+### Le prompt est un SINGLETON, et on ne le respectait pas
+
+`InteractionPrompt` n'affiche qu'une chose a la fois, et il est partage : dialogue de Papi, echelle, boite aux
+lettres, tondeuse. Deux defauts corriges d'un coup.
+
+`InteractionPrompt.currentTarget()` : nouvel accesseur, il dit ce qui est affiche en ce moment (nil si rien).
+
+- La tondeuse ne re-montrait son prompt qu'au CHANGEMENT de cible. Si un dialogue prenait le singleton pendant
+  qu'on etait a cote, le prompt disparaissait POUR DE BON : de son point de vue rien n'avait change. Elle teste
+  maintenant aussi que le prompt affiche est bien le sien.
+- Elle appelait `hide()` sans regarder a qui appartenait le prompt : elle pouvait donc effacer celui d'un autre
+  en plein milieu. Elle ne cache plus que le sien.
+
+L'echelle a le meme defaut latent, mais elle n'a pas ete touchee : on ne corrige pas a l'aveugle un systeme qui
+marche, et l'accesseur est la quand on voudra le faire.
+
 ## 0.0.248 — L'Animator manquant se cree tout seul, et l'ancrage se dit tout haut
 
 Suite directe du 0.0.247, qui ne suffisait pas : `CommonTree_3` etait bien trouve, son AnimationController etait

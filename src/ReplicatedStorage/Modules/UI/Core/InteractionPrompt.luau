@@ -61,6 +61,11 @@ local titleLabel: TextLabel? = nil -- titre de l'objet, au-dessus de la pilule (
 local scale: UIScale? = nil
 local onActivateFn: (() -> ())? = nil
 local shown = false
+-- CIBLE affichee en ce moment. Le prompt est un SINGLETON : n'importe quelle feature peut prendre sa place.
+-- Sans ce temoin, une feature qui ne re-montre son prompt qu'au CHANGEMENT de cible ne le recupere JAMAIS
+-- apres s'etre fait doubler (par un dialogue, une echelle, une boite aux lettres) : son prompt disparait pour
+-- de bon alors que rien n'a change de son point de vue.
+local activeTarget: WorldAnchor.Target? = nil
 -- Echelle CIBLE (proportionnelle a l'ecran) : c'est vers elle que le pop d'apparition tend, pas vers 1. Sinon un
 -- gros / petit ecran perdrait sa mise a l'echelle des la 1re apparition.
 local baseScale = 1
@@ -250,6 +255,7 @@ function InteractionPrompt.show(
 	onActivateFn = onActivate
 	WorldAnchor.attach(box, target, offset, nil, nil, cameraRelative)
 	shown = true
+	activeTarget = target
 
 	-- APPARITION "slime" : on repart de 0 et on rebondit jusqu'a l'echelle cible (Elastic), + le son de pop.
 	if popTween then
@@ -271,11 +277,18 @@ function InteractionPrompt.setOffset(offset: Vector3)
 	end
 end
 
+-- La cible AFFICHEE en ce moment, ou nil si le prompt est cache. A tester avant de conclure que "mon prompt
+-- est deja a l'ecran" : le singleton a pu passer a quelqu'un d'autre entre-temps.
+function InteractionPrompt.currentTarget(): WorldAnchor.Target?
+	return if shown then activeTarget else nil
+end
+
 function InteractionPrompt.hide()
 	if not shown then
 		return
 	end
 	shown = false
+	activeTarget = nil
 	onActivateFn = nil
 	local box, s = container, scale
 	if not box then
