@@ -2185,6 +2185,15 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.287 — Le braquage sur place devient discret
+
+`PIVOT_GAIN` passe de 2.6 a 0.8, soit environ 8 degres au lieu de 25. Un coup de reins pour repositionner la
+machine, pas un demi-tour.
+
+L'angle atteint vaut `PIVOT_GAIN / SWING_RECOVER`, en RADIANS -- ce chiffre ne veut rien dire seul, comme la rampe
+de vitesse. La config donne maintenant la formule inverse pour viser un angle : `PIVOT_GAIN = rad(angle) x
+SWING_RECOVER`.
+
 ## 0.0.286 — Le braquage sur place partait du mauvais cote
 
 Pousser a gauche envoyait la tondeuse a droite. Sens retourne.

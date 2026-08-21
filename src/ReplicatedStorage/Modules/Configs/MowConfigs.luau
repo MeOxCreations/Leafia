@@ -177,10 +177,14 @@ return {
 	STEER_MOVE_EPSILON = 0.15,
 	-- Poussee angulaire donnee a la machine quand on braque A L'ARRET, en radians par seconde a fond de course.
 	-- Elle est RAPPELEE par SWING_RECOVER : les deux s'equilibrent, donc tenir la touche amene la tondeuse a un
-	-- angle stable au lieu de la faire tourner sans fin. L'angle atteint vaut PIVOT_GAIN / SWING_RECOVER radians.
+	-- angle stable au lieu de la faire tourner sans fin.
+	-- ANGLE ATTEINT = PIVOT_GAIN / SWING_RECOVER, en RADIANS. Ici 0.8 / 6 = 0.13 rad, soit environ 8 degres :
+	-- un coup de reins pour repositionner la machine, pas un demi-tour. La premiere valeur (2.6) donnait 25
+	-- degres, beaucoup trop pour un simple ajustement sur place.
+	-- POUR REGLER : viser l'angle en degres, puis PIVOT_GAIN = rad(angle) x SWING_RECOVER.
 	-- Une valeur NEGATIVE retourne le sens du braquage sur place. Le sens ne se deduit pas : il a ete fixe a
 	-- l'ecran (la premiere version partait du mauvais cote).
-	PIVOT_GAIN = 2.6,
+	PIVOT_GAIN = 0.8,
 	-- RECUL DE CAMERA A LA VITESSE. La vue s'ecarte a mesure qu'on prend du regime : on voit venir la bande a
 	-- tondre, et l'acceleration se RESSENT au lieu de se deviner au chiffre.
 	-- S'ADDITIONNE au recul de la revelation : les deux passent par une seule valeur, sinon le dernier a ecrire
