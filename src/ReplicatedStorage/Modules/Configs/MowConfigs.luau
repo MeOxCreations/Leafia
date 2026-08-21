@@ -350,9 +350,14 @@ return {
 	SWING_ANGLE_DRIVE = 26,
 	-- Angle a fond de braquage EN MANOEUVRE (a l'arret ou presque), en degres.
 	SWING_ANGLE = 10,
-	-- Vitesse a laquelle la machine rejoint cet angle, puis revient droite, en fraction par seconde.
-	-- BAS = elle traine plus longtemps, et c'est ce retard qui se lit comme du poids.
+	-- DEUX VITESSES, et l'ecart entre elles est tout l'effet.
+	-- SE METTRE EN TRAVERS est rapide : la machine repond au braquage.
 	SWING_RECOVER = 6,
+	-- REVENIR DROIT est LENT. Un seul reglage servait les deux : en lachant la touche, la machine se realignait
+	-- derriere le joueur en 0.17 s -- elle CLAQUAIT dans l'axe de la marche, ce qui ne ressemble a rien de reel.
+	-- Une machine lancee revient droite toute seule, doucement, portee par son elan.
+	-- BAS = revient plus lentement. Trop bas et elle reste de travers en ligne droite.
+	SWING_RETURN = 1.6,
 	-- Plafond absolu, en degres. Filet : les deux angles ci-dessus doivent rester EN DESSOUS, sinon c'est lui qui
 	-- decide a leur place et les regler ne change plus rien.
 	SWING_MAX = 40,

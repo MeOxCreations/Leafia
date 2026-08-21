@@ -2185,6 +2185,20 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.317 — La tondeuse ne claque plus dans l'axe quand on lache le virage
+
+Un seul reglage servait a la fois la mise en travers et le retour droit. En lachant la touche, la machine se
+realignait derriere le joueur en 0.17 seconde : elle CLAQUAIT dans l'axe de la marche, et rien ne ressemble moins
+a une machine lancee.
+
+`SWING_RECOVER` (6) garde la mise en travers rapide -- la machine repond au braquage. `SWING_RETURN` (1.6) rend le
+retour lent : elle revient droite toute seule, portee par son elan.
+
+C'est l'ECART entre les deux qui fait l'effet, pas leur valeur. Meme regle que le ballant lui-meme : ecraser vite
+et se relever lentement, c'est ce qui fait lire le poids.
+
+Encore un reglage partage qu'il fallait dedoubler. C'est le quatrieme sur cette feature seule.
+
 ## 0.0.316 — Les feuilles du rideau deviennent NOIRES, et existent vraiment
 
 Toujours invisibles. Deux causes, et la premiere est une erreur repetee.

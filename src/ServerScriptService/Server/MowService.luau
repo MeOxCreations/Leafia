@@ -871,7 +871,13 @@ local function grab(player: Player, model: Model)
 			-maxSwing,
 			maxSwing
 		)
-		state.swing += (target - state.swing) * math.min(1, MowConfigs.SWING_RECOVER * dt)
+		-- DEUX VITESSES : on se met en travers vite, on revient droit LENTEMENT. C'est l'ecart entre les deux qui
+		-- fait l'elan -- avec une seule vitesse, lacher la touche faisait CLAQUER la machine dans l'axe de la
+		-- marche, et rien ne ressemble moins a une machine lancee.
+		local rate = if math.abs(target) > math.abs(state.swing)
+			then MowConfigs.SWING_RECOVER
+			else MowConfigs.SWING_RETURN
+		state.swing += (target - state.swing) * math.min(1, rate * dt)
 		-- Cle a la cible : un lerp exponentiel ne l'atteint jamais, et la machine garderait un demi-degre de
 		-- travers POUR TOUJOURS -- avec les bras decentres avec elle, puisqu'ils lisent la meme valeur.
 		if math.abs(target - state.swing) < SWING_SNAP then
