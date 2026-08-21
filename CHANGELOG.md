@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.291 — Les bras reagissent tout de suite quand on braque sur place
+
+Ils suivaient le BALLANT de la machine. Or le ballant met du temps a s'installer quand on manoeuvre lentement :
+on braquait, et les bras ne bougeaient presque pas.
+
+Ils suivent maintenant l'INPUT en priorite, et ne retombent sur le ballant que le reste du temps. En manoeuvre,
+ce qu'on montre c'est l'EFFORT -- et l'effort est immediat, il n'attend pas que la machine ait tourne.
+
+`TURN_POSE_SPEED` (9) donne la vitesse a laquelle les bras rejoignent la pose. Haute expres.
+
+Le signe du braquage est desormais commun au pivot ET a la pose des bras : les deux DOIVENT partir du meme cote,
+et deux calculs separes auraient fini par ne plus etre d'accord.
+
+La valeur est CLEE a sa cible : un lerp exponentiel ne l'atteint jamais, et les bras seraient restes decentres a
+vie -- meme piege que le ballant au 0.0.290, corrige du meme coup.
+
+Le calcul vit HORS du bloc d'animation : l'etat reste coherent meme si la piste n'a pas pu charger, ce qui evite
+un saut de pose le jour ou elle arrive en retard.
+
 ## 0.0.290 — La pose des bras revient VRAIMENT au milieu quand on lache tout
 
 Question du joueur : "quand j'appuie plus sur rien, tu remets bien l'animation a 0.5 ?" Elle a fait tomber DEUX

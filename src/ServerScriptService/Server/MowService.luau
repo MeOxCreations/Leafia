@@ -39,6 +39,7 @@ type CarryState = {
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
 	lastYaw: number?, -- cap du porteur a l'image precedente, pour mesurer combien il a tourne
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
+	armAmount: number, -- pose des BRAS, lissee. Suit l'input quand on braque, le ballant sinon.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -507,6 +508,7 @@ local function grab(player: Player, model: Model)
 		swing = 0,
 		lastYaw = nil,
 		steerInput = 0,
+		armAmount = 0,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -583,8 +585,9 @@ local function grab(player: Player, model: Model)
 		-- c'est la MACHINE qu'on oriente, et les bras de l'animation racontent l'effort.
 		-- La poussee est RAPPELEE par SWING_RECOVER juste en dessous : les deux s'equilibrent, donc tenir la touche
 		-- amene la tondeuse a un angle STABLE au lieu de la faire tourner sans fin.
+		-- Signe commun au pivot ET a la pose des bras : les deux doivent partir du meme cote.
+		local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
 		if not moving and state.steerInput ~= 0 then
-			local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
 			-- SIGNE FIXE PAR L'ECRAN, pas par le raisonnement : la premiere version envoyait la machine a droite
 			-- quand le joueur poussait a gauche. Pour le retourner a nouveau, un PIVOT_GAIN negatif suffit.
 			state.swing -= state.steerInput * steerSign * MowConfigs.PIVOT_GAIN * dt
@@ -620,12 +623,22 @@ local function grab(player: Player, model: Model)
 		-- joueur roule droit : il suffit de le ramener sur la timeline. Rien de plus a lisser.
 		-- Chaque moitie est mise a l'echelle de SA propre portee, donc le milieu peut etre ailleurs qu'a 0.5 sans
 		-- que la pose deborde d'un cote.
+		-- LES BRAS SUIVENT L'INPUT EN PRIORITE, le ballant seulement a defaut. Le ballant met du temps a
+		-- s'installer quand on manoeuvre lentement : cales dessus, on braquait et les bras ne bougeaient presque
+		-- pas. En manoeuvre c'est l'EFFORT qu'on montre, et l'effort est immediat.
+		-- Calcule HORS du bloc d'animation : l'etat doit rester coherent meme si la piste n'a pas pu charger.
+		local swingRatio = if maxSwing > 1e-4 then math.clamp(state.swing / maxSwing, -1, 1) else 0
+		local steerRatio = math.clamp(state.steerInput * steerSign, -1, 1)
+		local armTarget = if math.abs(steerRatio) > 0.05 then steerRatio else swingRatio
+		state.armAmount += (armTarget - state.armAmount) * math.min(1, MowConfigs.TURN_POSE_SPEED * dt)
+		-- Cle a la cible : un lerp exponentiel n'y arrive jamais, et les bras resteraient decentres a vie.
+		if math.abs(armTarget - state.armAmount) < SWING_SNAP then
+			state.armAmount = armTarget
+		end
+
 		local turn = state.turn
 		if turn and turn.Length > HOLD_MIN_LENGTH then
-			local signed = if maxSwing > 1e-4 then math.clamp(state.swing / maxSwing, -1, 1) else 0
-			if MowConfigs.TURN_POSE_INVERT then
-				signed = -signed
-			end
+			local signed = if MowConfigs.TURN_POSE_INVERT then -state.armAmount else state.armAmount
 			local mid = MowConfigs.TURN_POSE_MIDDLE
 			local ratio = if signed >= 0 then mid + signed * (1 - mid) else mid + signed * mid
 			turn.TimePosition = math.clamp(ratio, 0, 1) * (turn.Length - HOLD_EPSILON)

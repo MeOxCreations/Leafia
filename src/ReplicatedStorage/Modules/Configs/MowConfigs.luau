@@ -229,6 +229,11 @@ return {
 	-- Les bras partent du mauvais cote ? Mettre true. Le sens depend de la convention d'angle de Roblox ET du sens
 	-- dans lequel l'animation a ete faite : ca ne se DEDUIT pas, ca se voit a l'ecran.
 	TURN_POSE_INVERT = false,
+	-- Vitesse a laquelle les BRAS rejoignent la pose demandee, en fraction par seconde. HAUTE expres.
+	-- Les bras suivaient le BALLANT de la machine, qui met du temps a s'installer quand on manoeuvre lentement :
+	-- on braquait, et les bras ne bougeaient presque pas. Ils suivent maintenant l'INPUT en direct des qu'on
+	-- braque, et retombent sur le ballant le reste du temps.
+	TURN_POSE_SPEED = 9,
 	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
 	TURN_PRIORITY = Enum.AnimationPriority.Action2,
