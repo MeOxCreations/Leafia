@@ -2185,6 +2185,41 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.258 — Le joueur va A la tondeuse, au lieu que la tondeuse lui saute dessus
+
+### Le joueur ne se plante plus au milieu de la machine
+
+La distance de portage se calait sur `RootPart -> Handle`. Quand la part `Handle` est juste au-dessus de la
+racine, cette distance est quasi nulle : le personnage se retrouvait DANS la tondeuse.
+
+On mesure maintenant le RECUL REEL de la machine -- de combien elle depasse derriere sa racine -- et le joueur se
+tient derriere ce point-la. L'axe d'avancee n'est plus devine : c'est la direction `RootPart -> CutZone`, et la
+CutZone est par definition posee a l'avant, sous le carter. Une donnee qui existe deja, plutot qu'une hypothese.
+
+`HANDLE_NAME` disparait (il ne servait plus qu'a mentir) et laisse place a `CARRY_FALLBACK_BACK`, utilise
+uniquement quand la CutZone est absente -- sans elle on ne sait pas de quel cote regarde la machine.
+
+### L'approche
+
+Sur E, le joueur MARCHE jusqu'au point de prise, pivote vers la machine, puis prend. C'est lui qui va a la
+tondeuse.
+
+Le pivot n'est pas un ornement : un joueur venu par l'avant arrive DOS a la machine, et la soudure la reposerait
+alors de l'autre cote.
+
+Pas de `PathfindingService` : quelques studs dans un jardin ouvert, `Humanoid:MoveTo` suffit. Un chemin calcule
+serait plus fragile (bloque, sol irregulier, autre joueur) pour un gain nul a cette distance. A revoir le jour ou
+la tondeuse se rangera derriere un obstacle.
+
+Deux garde-fous :
+- **Deja arrive = aucun deplacement fabrique.** Sous `APPROACH_SKIP_DIST`, on prend, point. C'est la lecon de
+  l'echelle, ou tout un systeme de marche forcee avait ete construit pour un joueur qui arrivait des la premiere
+  image.
+- **Timeout** a `APPROACH_TIMEOUT` : mieux vaut une prise un peu de travers qu'un joueur bloque par un caillou.
+
+Le drapeau d'approche n'est relache qu'a la toute fin, pivot compris : un second appui pendant la rotation
+relancerait une marche par-dessus celle qui vient de finir.
+
 ## 0.0.257 — Le saut est vraiment coupe, et la tondeuse se pose enfin au sol
 
 ### La tondeuse ne flotte plus

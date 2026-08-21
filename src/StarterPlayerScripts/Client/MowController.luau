@@ -183,6 +183,89 @@ local function request(model: Model, phase: string)
 	carryRemote:FireServer(model, phase)
 end
 
+-- OU le joueur doit se tenir pour prendre la tondeuse : derriere le point le plus ARRIERE de la machine, face a
+-- elle. L'axe d'avancee est MESURE (RootPart -> CutZone, posee a l'avant), jamais devine.
+-- Rend le point au sol et la direction a regarder, ou nil si on ne sait pas de quel cote regarde la machine.
+local function grabSpot(model: Model): (Vector3?, Vector3?)
+	local root = rootOf(model)
+	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
+	if not (root and zone and zone:IsA("BasePart")) then
+		return nil, nil
+	end
+	local d = zone.Position - root.Position
+	d = Vector3.new(d.X, 0, d.Z)
+	if d.Magnitude < 1e-3 then
+		return nil, nil
+	end
+	local forward = d.Unit
+	-- Meme geometrie que cote serveur : recul de la machine + l'ecart de confort. On repart du plus loin en
+	-- arriere, pas de la racine, sinon on se plante au milieu de la tondeuse.
+	local back = 0
+	for _, part in ipairs(model:GetDescendants()) do
+		if part:IsA("BasePart") and part.Name ~= MowConfigs.CUT_ZONE_NAME and part.Transparency < 1 then
+			back = math.max(back, -(part.Position - root.Position):Dot(forward))
+		end
+	end
+	return root.Position - forward * (back + MowConfigs.CARRY_GAP), forward
+end
+
+-- APPROCHE : le joueur MARCHE jusqu'au guidon, puis prend. C'est lui qui va a la machine, pas l'inverse.
+--
+-- Si on est DEJA sur place, on ne fabrique AUCUN deplacement : construire une marche forcee pour un joueur deja
+-- arrive a deja coute un systeme entier sur l'echelle. On mesure d'abord, on marche seulement si besoin.
+local approaching = false
+local function approachThenGrab(model: Model, onArrived: () -> ())
+	local character = player.Character
+	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	local spot, facing = grabSpot(model)
+	if not (MowConfigs.APPROACH_ENABLED and humanoid and hrp and hrp:IsA("BasePart") and spot and facing) then
+		onArrived()
+		return
+	end
+
+	local flat = Vector3.new(hrp.Position.X - spot.X, 0, hrp.Position.Z - spot.Z)
+	if flat.Magnitude <= MowConfigs.APPROACH_SKIP_DIST then
+		onArrived() -- deja arrive : rien a animer
+		return
+	end
+
+	approaching = true
+	task.spawn(function()
+		local done = false
+		local conn = (humanoid :: Humanoid).MoveToFinished:Connect(function()
+			done = true
+		end)
+		;(humanoid :: Humanoid):MoveTo(spot :: Vector3)
+
+		-- Timeout : mieux vaut une prise un peu de travers qu'un joueur bloque par un caillou.
+		local until_ = os.clock() + MowConfigs.APPROACH_TIMEOUT
+		while not done and os.clock() < until_ do
+			task.wait()
+		end
+		conn:Disconnect()
+
+		-- PIVOT vers la machine. Sans lui, un joueur venu par l'avant arrive DOS a elle, et la soudure la
+		-- reposerait de l'autre cote. On tourne le personnage, on ne le deplace pas.
+		local root2 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+		if root2 and root2:IsA("BasePart") then
+			local from = root2.CFrame
+			local to = CFrame.lookAt(from.Position, from.Position + (facing :: Vector3))
+			local t0 = os.clock()
+			while os.clock() - t0 < MowConfigs.APPROACH_TURN_TIME do
+				local a = (os.clock() - t0) / MowConfigs.APPROACH_TURN_TIME
+				root2.CFrame = from:Lerp(to, a)
+				task.wait()
+			end
+			root2.CFrame = to
+		end
+		-- Relache SEULEMENT ici : le pivot fait partie du geste, un second appui pendant qu'il tourne
+		-- relancerait une marche par-dessus celle qui vient de finir.
+		approaching = false
+		onArrived()
+	end)
+end
+
 -- UN SEUL declencheur pour prendre ET reposer : la meme touche, le meme bouton, le meme anti-spam.
 local function toggleCarry()
 	local mine = myMower()
@@ -190,12 +273,17 @@ local function toggleCarry()
 		request(mine, "place")
 		return
 	end
+	if approaching then
+		return -- deja en train de rejoindre une tondeuse : on ne relance pas la marche par-dessus
+	end
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
 	if hrp and hrp:IsA("BasePart") then
 		local target = freeMowerNear(hrp.Position)
 		if target then
-			request(target, "grab")
+			approachThenGrab(target, function()
+				request(target, "grab")
+			end)
 		end
 	end
 end

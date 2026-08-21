@@ -153,28 +153,47 @@ local function restoreJump(state: CarryState)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, state.jumpWasEnabled)
 end
 
--- Le point le plus BAS de la tondeuse, en monde. Les 8 coins de chaque part, pas seulement son centre : une part
--- inclinee descend plus bas que (position - demi-hauteur), et le carter d'une tondeuse est rarement d'aplomb.
--- On IGNORE la CutZone : c'est une zone LOGIQUE posee sous le carter, pas une piece de la machine. La compter
--- ferait poser la tondeuse un peu trop haut, et c'est exactement le defaut qu'on corrige.
-local function lowestPoint(model: Model): number?
+-- MESURE DE LA MACHINE, en une passe : son point le plus BAS, et de combien elle depasse EN ARRIERE de sa racine.
+--
+-- On ne compte que les parts VISIBLES : la CutZone et les autres zones logiques ne sont pas des pieces de la
+-- machine, et une seule d'entre elles posee bas ou loin fausserait tout (deja paye : la tondeuse flottait).
+-- Les 8 COINS de chaque part, pas son centre : une part inclinee depasse plus loin que sa position.
+--
+-- L'AXE D'AVANCEE est MESURE, pas devine : c'est la direction RootPart -> CutZone, et la CutZone est par
+-- definition posee a l'avant, sous le carter. Sans elle on ne peut pas savoir de quel cote regarde la machine,
+-- et on retombe sur un recul de config.
+local function measure(model: Model, root: BasePart): (number?, number)
+	local rootPos = root.Position
+	local forwardDir: Vector3? = nil
+	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
+	if zone and zone:IsA("BasePart") then
+		local d = zone.Position - rootPos
+		d = Vector3.new(d.X, 0, d.Z)
+		if d.Magnitude > 1e-3 then
+			forwardDir = d.Unit
+		end
+	end
+
 	local low: number? = nil
+	local back = 0 -- de combien la machine depasse DERRIERE la racine, le long de l'axe d'avancee
 	for _, d in ipairs(model:GetDescendants()) do
-		-- On ignore la CutZone ET tout ce qui est INVISIBLE : zones logiques, aides d'edition. Ce ne sont pas
-		-- des pieces de la machine, et une seule d'entre elles posee bas fausserait toute la hauteur.
 		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME and d.Transparency < 1 then
 			local h = d.Size * 0.5
 			for sx = -1, 1, 2 do
 				for sy = -1, 1, 2 do
 					for sz = -1, 1, 2 do
-						local y = (d.CFrame * CFrame.new(h.X * sx, h.Y * sy, h.Z * sz)).Position.Y
-						low = if low then math.min(low, y) else y
+						local corner = (d.CFrame * CFrame.new(h.X * sx, h.Y * sy, h.Z * sz)).Position
+						low = if low then math.min(low, corner.Y) else corner.Y
+						if forwardDir then
+							-- Projection NEGATIVE = le coin est derriere la racine. On garde le plus loin.
+							back = math.max(back, -(corner - rootPos):Dot(forwardDir))
+						end
 					end
 				end
 			end
 		end
 	end
-	return low
+	return low, back
 end
 
 -- Offset de portage, CALCULE sur la geometrie reelle plutot que regle a l'oeil.
@@ -191,17 +210,15 @@ end
 local function carryC0(model: Model, root: BasePart, hrp: BasePart, humanoid: Humanoid?): CFrame
 	local hip = if humanoid then humanoid.HipHeight else 2
 	local feet = hip + hrp.Size.Y * 0.5
-	local low = lowestPoint(model)
+	local low, back = measure(model, root)
 	-- De combien la RootPart surplombe le bas de la machine : c'est ce qu'il faut remonter pour la poser au sol.
 	local aboveBottom = if low then root.Position.Y - low else 0
 	local down = feet - aboveBottom - MowConfigs.CARRY_CLEARANCE
 
-	local forward = MowConfigs.CARRY_GAP
-	local handle = model:FindFirstChild(MowConfigs.HANDLE_NAME, true)
-	if handle and handle:IsA("BasePart") then
-		local d = handle.Position - root.Position
-		forward += math.sqrt(d.X * d.X + d.Z * d.Z)
-	end
+	-- Le joueur se tient derriere le point le plus ARRIERE de la machine, pas derriere sa racine : la racine est
+	-- a l'avant-bas du carter, s'y caler plantait le personnage AU MILIEU de la tondeuse.
+	-- Faute de CutZone, on ne connait pas l'axe d'avancee : on retombe sur un recul de config.
+	local forward = MowConfigs.CARRY_GAP + (if back > 0 then back else MowConfigs.CARRY_FALLBACK_BACK)
 
 	if MowConfigs.CARRY_DEBUG then
 		local r = root.CFrame
@@ -210,7 +227,7 @@ local function carryC0(model: Model, root: BasePart, hrp: BasePart, humanoid: Hu
 			.. ` | racine au-dessus du bas {string.format("%.2f", aboveBottom)}`
 			.. ` | descente {string.format("%.2f", down)} | avance {string.format("%.2f", forward)}`
 			.. ` | racine Y {string.format("%.2f", r.Position.Y)} bas {string.format("%.2f", low or -999)}`
-			.. ` | orientation racine {r:ToOrientation()}`
+			.. ` | recul mesure {string.format("%.2f", back)} | orientation racine {r:ToOrientation()}`
 		)
 	end
 	return CFrame.new(0, -down, -forward) * CFrame.Angles(0, math.rad(MowConfigs.CARRY_YAW), 0)

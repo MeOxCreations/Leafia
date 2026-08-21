@@ -65,10 +65,9 @@ return {
 
 	-- Espace entre le joueur et le GUIDON, en studs. Le seul bouton de distance qui reste : c'est du confort, pas
 	-- de la geometrie. Trop petit, le guidon rentre dans le personnage ; trop grand, il pousse dans le vide.
-	-- Part qui sert de GUIDON pour le calcul de distance. Souvent la meme que PROMPT_PART_NAME, mais ce sont
-	-- deux besoins differents : l'un dit ou AFFICHER le badge, l'autre ou se tient la MAIN du joueur. Les
-	-- confondre marcherait aujourd'hui et mentirait le jour ou l'un des deux bouge.
-	HANDLE_NAME = "Handle",
+	-- Recul utilise SI la CutZone est absente : sans elle on ne sait pas de quel cote regarde la machine, donc
+	-- pas de quel cote la depasser. Valeur de secours uniquement, le cas normal est MESURE.
+	CARRY_FALLBACK_BACK = 2.5,
 	CARRY_GAP = 1.6,
 	-- De combien la tondeuse FLOTTE au-dessus du sol, en studs. Petit expres : elle doit EFFLEURER l'herbe, pas
 	-- leviter. Zero pile ferait mordre le carter dans le sol au moindre relief.
@@ -79,6 +78,24 @@ return {
 	-- Affiche les mesures du portage dans la console a chaque prise. A couper une fois le placement valide :
 	-- un print par prise finit par noyer les vrais messages.
 	CARRY_DEBUG = true,
+
+	-- ===== APPROCHE =====
+	-- Le joueur MARCHE jusqu'au guidon avant de prendre la tondeuse, au lieu que la machine lui saute dessus.
+	--
+	-- Pas de PathfindingService : on parle de quelques studs dans un jardin ouvert, `Humanoid:MoveTo` suffit. Un
+	-- vrai chemin calcule serait plus fragile (bloque, sol irregulier, autre joueur) pour un gain nul a cette
+	-- distance. A revoir SI un jour la tondeuse se prend derriere un obstacle.
+	APPROACH_ENABLED = true,
+	-- Si le joueur est DEJA a moins de ca du point de prise, on ne fabrique aucun deplacement : on prend, point.
+	-- Regle apprise sur l'echelle -- un systeme de marche forcee y avait ete construit pour rien, l'arrivee tirait
+	-- des la premiere image.
+	APPROACH_SKIP_DIST = 1.2,
+	-- Au-dela, on prend quand meme : mieux vaut une prise un peu de travers qu'un joueur bloque parce qu'un caillou
+	-- lui barre le chemin.
+	APPROACH_TIMEOUT = 2.5,
+	-- Duree du pivot vers la tondeuse une fois arrive. Le joueur arrive DOS a elle s'il venait de l'avant : sans ce
+	-- pivot, la soudure la reposerait de l'autre cote.
+	APPROACH_TURN_TIME = 0.18,
 
 	-- ===== POSE DE MAINTIEN =====
 	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.
