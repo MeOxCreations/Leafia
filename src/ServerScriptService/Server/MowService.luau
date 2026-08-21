@@ -27,6 +27,7 @@ type CarryState = {
 	parts: { [BasePart]: PartState },
 	weld: Weld?,
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
+	turn: AnimationTrack?, -- pose de VIRAGE des bras. Posee image par image, jamais jouee.
 	holdGuard: RBXScriptConnection?, -- filet : rattrape la pose si le marqueur est rate (image perdue)
 	motor: AnimationTrack?, -- boucle du moteur, sur l'Animator de la TONDEUSE
 	lever: AnimationTrack?, -- levier d'accelerateur : on pilote sa TimePosition, on ne la laisse pas jouer
@@ -158,6 +159,23 @@ local function playHold(character: Model, state: CarryState)
 	track.TimePosition = 0
 	state.hold = track
 
+	-- POSE DE VIRAGE, sur le MEME Animator (c'est le joueur qui tourne, pas la machine).
+	-- Vitesse ZERO des le depart : on ecrit sa position, elle ne defile jamais toute seule.
+	local turnAsset = machineAnimation(MowConfigs.TURN_ANIM_ID)
+	if turnAsset then
+		local okTurn, turnTrack = pcall(function()
+			return (animator :: Animator):LoadAnimation(turnAsset)
+		end)
+		if okTurn and typeof(turnTrack) == "Instance" then
+			local t = turnTrack :: AnimationTrack
+			t.Looped = true
+			t.Priority = MowConfigs.TURN_PRIORITY
+			t:Play(MowConfigs.HOLD_FADE)
+			t:AdjustSpeed(0)
+			state.turn = t
+		end
+	end
+
 	-- FILET. Le marqueur suffit tant que les images tombent bien, mais une seule image perdue et la tete de
 	-- lecture le DEPASSE sans que le signal serve a rien : la piste boucle alors, et la pose repart du debut.
 	-- Symptome vecu : ca marche la plupart du temps, et parfois non. On surveille donc aussi la position, et
@@ -189,6 +207,16 @@ local function stopHold(state: CarryState)
 	if state.holdGuard then
 		state.holdGuard:Disconnect()
 		state.holdGuard = nil
+	end
+	-- La pose de VIRAGE vit sur l'Animator du JOUEUR, comme la pose du guidon : elle se coupe ici, pas avec
+	-- les animations de la machine.
+	if state.turn then
+		local t = state.turn
+		state.turn = nil
+		pcall(function()
+			t:AdjustSpeed(1)
+			t:Stop(MowConfigs.HOLD_FADE)
+		end)
 	end
 	local track = state.hold
 	if not track then
@@ -438,6 +466,7 @@ local function grab(player: Player, model: Model)
 		parts = {},
 		weld = nil,
 		hold = nil,
+		turn = nil,
 		holdGuard = nil,
 		motor = nil,
 		lever = nil,
@@ -523,6 +552,21 @@ local function grab(player: Player, model: Model)
 		local maxSwing = math.rad(MowConfigs.SWING_MAX)
 		state.swing = math.clamp(state.swing, -maxSwing, maxSwing)
 
+		-- POSE DE VIRAGE. Le ballant est deja SIGNE et proportionnel au virage, et il revient a zero quand le
+		-- joueur roule droit : il suffit de le ramener sur la timeline. Rien de plus a lisser.
+		-- Chaque moitie est mise a l'echelle de SA propre portee, donc le milieu peut etre ailleurs qu'a 0.5 sans
+		-- que la pose deborde d'un cote.
+		local turn = state.turn
+		if turn and turn.Length > HOLD_MIN_LENGTH then
+			local signed = if maxSwing > 1e-4 then math.clamp(state.swing / maxSwing, -1, 1) else 0
+			if MowConfigs.TURN_POSE_INVERT then
+				signed = -signed
+			end
+			local mid = MowConfigs.TURN_POSE_MIDDLE
+			local ratio = if signed >= 0 then mid + signed * (1 - mid) else mid + signed * mid
+			turn.TimePosition = math.clamp(ratio, 0, 1) * (turn.Length - HOLD_EPSILON)
+		end
+
 		local weld = state.weld
 		if weld then
 			-- La rotation passe A GAUCHE de l'offset : la machine pivote AUTOUR DU JOUEUR (le guidon reste dans
@@ -557,7 +601,7 @@ function MowService.init()
 	-- En task.spawn : c'est un appel RESEAU, il n'a rien a faire dans le chemin de boot.
 	task.spawn(function()
 		local assets: { Instance } = { getHoldAnimation() }
-		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID }) do
+		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.TURN_ANIM_ID }) do
 			local a = machineAnimation(id)
 			if a then
 				assets[#assets + 1] = a

@@ -2185,6 +2185,33 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.278 — Les bras accompagnent le virage
+
+Nouvelle pose : les bras redressent la tondeuse quand on tourne, comme dans la vraie vie. L'animation n'est pas
+JOUEE, elle est POSEE -- son milieu est la pose droite, un bout le virage a gauche, l'autre a droite. Meme
+mecanique que le levier : on ecrit une IMAGE, jamais un defilement.
+
+### Elle est pilotee par le BALLANT, pas par un nouveau calcul
+
+`state.swing` etait deja signe, deja proportionnel au virage, et il revient tout seul a zero quand le joueur roule
+droit. Il suffisait de le ramener sur la timeline. Rien de nouveau a lisser, et surtout : la pose des bras et le
+balancement de la machine viennent de la MEME valeur, donc ils ne peuvent pas se desynchroniser.
+
+Chaque moitie de la timeline est mise a l'echelle de SA propre portee, donc `TURN_POSE_MIDDLE` peut etre ailleurs
+qu'a 0.5 sans que la pose deborde d'un cote.
+
+### Priorite Action2, et c'est indispensable
+
+La pose du guidon est en `Action` et cle les MEMES bras. A priorite EGALE, Roblox ne choisit pas : il MELANGE. On
+aurait obtenu une pose "presque bonne" qu'on aurait crue mal animee, et qui ne se lit que dans
+`GetPlayingAnimationTracks` -- jamais a l'oeil. La pose de virage passe donc AU-DESSUS.
+
+### Le sens ne se devine pas
+
+`TURN_POSE_INVERT` existe parce que le sens depend de la convention d'angle de Roblox ET du sens dans lequel
+l'animation a ete faite. Si les bras partent du mauvais cote, c'est ce reglage -- pas le ballant. Meme famille que
+le sens du wipe de gradient et l'axe des roues : c'est l'ecran qui tranche.
+
 ## 0.0.277 — La tondeuse traine dans les virages au lieu d'etre trimballee
 
 Soudee RIGIDE, elle pivotait a l'instant meme ou le joueur tournait. Ca se lit comme un objet TENU a bout de bras,

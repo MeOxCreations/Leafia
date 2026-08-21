@@ -151,6 +151,23 @@ return {
 	-- la visee haut/bas du taille-haie : une animation dont on ne lit qu'une IMAGE, jamais le defilement.
 	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
+	-- ===== POSE DE VIRAGE =====
+	-- Les bras accompagnent le virage, comme quand on redresse une vraie tondeuse. L'animation n'est PAS jouee :
+	-- elle est POSEE, comme le levier. Son MILIEU est la pose droite, un bout est le virage a gauche, l'autre a
+	-- droite -- on ecrit donc une IMAGE, jamais un defilement.
+	--
+	-- Elle est pilotee par le BALLANT (voir plus bas) : deja signe, deja proportionnel au virage, et il revient
+	-- tout seul a zero quand le joueur roule droit. Rien de nouveau a lisser.
+	TURN_ANIM_ID = "rbxassetid://89239700900064",
+	-- Ou se trouve la pose DROITE dans l'animation, en fraction de sa duree. 0.5 = au milieu.
+	TURN_POSE_MIDDLE = 0.5,
+	-- Les bras partent du mauvais cote ? Mettre true. Le sens depend de la convention d'angle de Roblox ET du sens
+	-- dans lequel l'animation a ete faite : ca ne se DEDUIT pas, ca se voit a l'ecran.
+	TURN_POSE_INVERT = false,
+	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
+	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
+	TURN_PRIORITY = Enum.AnimationPriority.Action2,
+
 	-- ===== BALLANT =====
 	-- Soudee RIGIDE, la tondeuse pivote a l'instant meme ou le joueur tourne : elle se lit comme un objet TENU, pas
 	-- comme une machine qu'on POUSSE. Une vraie tondeuse a de l'inertie -- elle traine dans le virage, puis rattrape.
