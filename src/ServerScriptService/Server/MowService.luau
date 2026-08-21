@@ -26,6 +26,11 @@ type CarryState = {
 	weld: Weld?,
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
 	holdGuard: RBXScriptConnection?, -- filet : rattrape la pose si le marqueur est rate (image perdue)
+	motor: AnimationTrack?, -- boucle du moteur, sur l'Animator de la TONDEUSE
+	lever: AnimationTrack?, -- levier d'accelerateur : on pilote sa TimePosition, on ne la laisse pas jouer
+	tick: RBXScriptConnection?, -- boucle de la machine : montee en vitesse + position du levier
+	speed: number, -- vitesse COURANTE du porteur, montee/descente lissee
+	walkSpeedWas: number, -- vitesse d'avant la prise, rendue telle quelle a la repose
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -68,6 +73,40 @@ local function getHoldAnimation(): Animation
 		holdAnim = a
 	end
 	return holdAnim :: Animation
+end
+
+-- Animations de la MACHINE, mises en cache : ce sont des porteurs d'ID, pas des etats.
+local machineAnims: { [string]: Animation } = {}
+local function machineAnimation(id: string): Animation?
+	if id == "" then
+		return nil
+	end
+	local a = machineAnims[id]
+	if not a then
+		a = Instance.new("Animation")
+		a.AnimationId = id
+		machineAnims[id] = a
+	end
+	return a
+end
+
+-- L'Animator de la TONDEUSE. Un mesh rigge importe par le 3D Importer arrive avec un AnimationController VIDE :
+-- Roblox n'y met pas d'Animator. On le CREE au lieu de renoncer -- meme piege que sur les arbres d'ambiance.
+local function machineAnimator(model: Model): Animator?
+	local holder: Instance? = model:FindFirstChildOfClass("AnimationController")
+		or model:FindFirstChildOfClass("Humanoid")
+	if not holder then
+		local controller = Instance.new("AnimationController")
+		controller.Parent = model
+		holder = controller
+	end
+	local found = (holder :: Instance):FindFirstChildOfClass("Animator")
+	if found then
+		return found
+	end
+	local animator = Instance.new("Animator")
+	animator.Parent = holder
+	return animator
 end
 
 -- POSE DE MAINTIEN : le joueur attrape le guidon, et TIENT la pose tant qu'il pousse.
@@ -182,6 +221,76 @@ local function restoreJump(state: CarryState)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, state.jumpWasEnabled)
 end
 
+-- LA MACHINE TOURNE : moteur en boucle, levier pilote a la main, et le porteur monte en vitesse.
+--
+-- LE LEVIER N'EST PAS "JOUE". Sa position raconte le REGIME, pas le temps qui passe : on le pose donc a vitesse
+-- zero et on ecrit sa TimePosition selon la vitesse du moment. Meme mecanique que la visee haut/bas du taille-haie
+-- -- une animation dont on ne lit qu'une IMAGE, jamais le defilement.
+local function startMachine(model: Model, state: CarryState)
+	local animator = machineAnimator(model)
+	if not animator then
+		return
+	end
+
+	local motorAsset = machineAnimation(MowConfigs.MOTOR_ANIM_ID)
+	if motorAsset then
+		local ok, track = pcall(function()
+			return animator:LoadAnimation(motorAsset)
+		end)
+		if ok and typeof(track) == "Instance" then
+			local t = track :: AnimationTrack
+			t.Looped = true
+			t.Priority = Enum.AnimationPriority.Idle
+			t:Play()
+			state.motor = t
+		end
+	end
+
+	local leverAsset = machineAnimation(MowConfigs.LEVER_ANIM_ID)
+	if leverAsset then
+		local ok, track = pcall(function()
+			return animator:LoadAnimation(leverAsset)
+		end)
+		if ok and typeof(track) == "Instance" then
+			local t = track :: AnimationTrack
+			-- Looped pour que la piste ne se RELACHE jamais (sinon la pose du levier saute), vitesse zero pour
+			-- qu'elle n'avance pas d'elle-meme : c'est nous qui la deplacons.
+			t.Looped = true
+			t.Priority = Enum.AnimationPriority.Action
+			t:Play()
+			t:AdjustSpeed(0)
+			t.TimePosition = 0
+			state.lever = t
+		end
+	end
+end
+
+local function stopMachine(state: CarryState)
+	if state.tick then
+		state.tick:Disconnect()
+		state.tick = nil
+	end
+	-- Une par une, et PAS via ipairs sur une table qui peut contenir un trou : ipairs s'arrete au premier nil,
+	-- donc un moteur absent aurait laisse le levier tourner pour toujours.
+	local function cut(track: AnimationTrack?)
+		if track then
+			pcall(function()
+				track:AdjustSpeed(1)
+				track:Stop(MowConfigs.HOLD_FADE)
+			end)
+		end
+	end
+	cut(state.motor)
+	cut(state.lever)
+	state.motor = nil
+	state.lever = nil
+	-- On REND la vitesse d'avant plutot que de reposer SPEED_MIN : un autre systeme a pu la changer.
+	local humanoid = state.humanoid
+	if humanoid and humanoid.Parent then
+		humanoid.WalkSpeed = state.walkSpeedWas
+	end
+end
+
 -- MESURE DE LA MACHINE, en une passe : son point le plus BAS, et de combien elle depasse EN ARRIERE de sa racine.
 --
 -- On ne compte que les parts VISIBLES : la CutZone et les autres zones logiques ne sont pas des pieces de la
@@ -282,6 +391,7 @@ local function release(model: Model)
 		end
 	end
 	stopHold(state)
+	stopMachine(state)
 	restoreJump(state)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
@@ -316,6 +426,11 @@ local function grab(player: Player, model: Model)
 		weld = nil,
 		hold = nil,
 		holdGuard = nil,
+		motor = nil,
+		lever = nil,
+		tick = nil,
+		speed = MowConfigs.SPEED_MIN,
+		walkSpeedWas = if humanoid then humanoid.WalkSpeed else 16,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -342,6 +457,41 @@ local function grab(player: Player, model: Model)
 	model:SetAttribute("LeafiaCarriedBy", player.UserId)
 
 	playHold(character :: Model, state)
+	startMachine(model, state)
+
+	-- BOUCLE DE LA MACHINE : montee en vitesse du porteur, et position du levier qui la raconte.
+	-- Separee du filet de la pose : deux responsabilites, deux connexions, chacune coupee a son heure.
+	state.tick = RunService.Heartbeat:Connect(function(dt: number)
+		local hum = state.humanoid
+		local char = hum and hum.Parent
+		local rootPart = char and char:FindFirstChild("HumanoidRootPart")
+		if not (hum and hum.Parent and rootPart and rootPart:IsA("BasePart")) then
+			return
+		end
+
+		-- Vitesse REELLE, pas l'intention : pousser contre un mur ne doit pas faire monter le regime.
+		local v = (rootPart :: BasePart).AssemblyLinearVelocity
+		local moving = math.sqrt(v.X * v.X + v.Z * v.Z) > MowConfigs.SPEED_MOVE_EPSILON
+
+		-- Montee LENTE, descente VIVE : on gagne sa vitesse, on ne la garde pas gratuitement.
+		local target = if moving then MowConfigs.SPEED_MAX else MowConfigs.SPEED_MIN
+		local rate = if moving then MowConfigs.SPEED_RAMP_UP else MowConfigs.SPEED_RAMP_DOWN
+		if state.speed < target then
+			state.speed = math.min(target, state.speed + rate * dt)
+		else
+			state.speed = math.max(target, state.speed - rate * dt)
+		end
+		hum.WalkSpeed = state.speed
+
+		-- LE LEVIER RACONTE LE REGIME. Ratio 0 au ralenti, 1 a plein regime, et on ecrit l'IMAGE correspondante.
+		-- On s'arrete a Length - epsilon : sur la derniere image pile, une piste bouclee est deja repartie a zero.
+		local lever = state.lever
+		if lever and lever.Length > 0 then
+			local span = MowConfigs.SPEED_MAX - MowConfigs.SPEED_MIN
+			local ratio = if span > 1e-3 then (state.speed - MowConfigs.SPEED_MIN) / span else 0
+			lever.TimePosition = math.clamp(ratio, 0, 1) * (lever.Length - HOLD_EPSILON)
+		end
+	end)
 end
 
 -- Toutes les tondeuses portees par ce joueur. Il n'en porte qu'une, mais boucler evite qu'un etat orphelin

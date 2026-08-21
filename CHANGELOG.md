@@ -2185,6 +2185,46 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.262 — La tondeuse monte en regime, et le levier le raconte
+
+### Le joueur gagne sa vitesse
+
+Il ne part plus a fond. Il pousse a `SPEED_MIN` (13), et tant qu'il AVANCE il monte vers `SPEED_MAX` (20). S'il
+s'arrete, ca retombe. C'est ce qui fait sentir le poids de la machine : une vitesse constante ne raconte rien.
+
+Montee LENTE (`SPEED_RAMP_UP`), descente VIVE (`SPEED_RAMP_DOWN`) : on GAGNE sa vitesse, on ne la garde pas
+gratuitement.
+
+La vitesse se mesure sur le deplacement REEL (`AssemblyLinearVelocity`), pas sur l'intention : pousser contre un
+mur ne doit pas faire monter le regime.
+
+La `WalkSpeed` d'avant la prise est relue et RENDUE telle quelle a la repose, jamais remplacee par `SPEED_MIN` :
+un autre systeme a pu la changer. Meme regle que pour le saut.
+
+### Le levier n'est pas "joue", il est POSE
+
+Sa position raconte le REGIME, pas le temps qui passe. On le charge donc a vitesse ZERO et on ecrit sa
+`TimePosition` a chaque image selon la vitesse du moment : ratio 0 au ralenti, 1 a plein regime.
+
+Meme mecanique que la visee haut/bas du taille-haie -- une animation dont on ne lit qu'une IMAGE, jamais le
+defilement. `Looped = true` pour que la piste ne se relache jamais, et on s'arrete a `Length - epsilon` : sur la
+derniere image pile, une piste bouclee est deja repartie a zero.
+
+### Le moteur
+
+Boucle simple en priorite `Idle`, sur l'Animator de la TONDEUSE (pas celui du joueur), cote serveur donc vue par
+tous. L'Animator de la machine est CREE s'il manque -- un mesh rigge importe par le 3D Importer arrive avec un
+AnimationController vide, meme piege que sur les arbres d'ambiance.
+
+Les IDs vivent dans `MowConfigs` et pas dans des Instances : Rojo ne synchronise pas `ReplicatedStorage.Animations`
+vers la place tuto.
+
+### A REMPLIR
+
+`MOTOR_ANIM_ID` et `LEVER_ANIM_ID` sont VIDES : les deux animations existent dans Studio mais leurs IDs n'ont pas
+ete communiques. Le code les ignore proprement tant qu'ils le sont (aucune erreur, aucune piste chargee), et la
+montee en vitesse fonctionne deja sans elles.
+
 ## 0.0.261 — La pose du guidon ne repart plus au debut de temps en temps
 
 Symptome signale par le joueur, et le pire genre : ca marche la plupart du temps, et parfois non.

@@ -112,6 +112,32 @@ return {
 	-- Fondu d'entree / de sortie de la pose, en secondes. Court : prendre une tondeuse est un geste franc.
 	HOLD_FADE = 0.15,
 
+	-- ===== VITESSE =====
+	-- Le joueur ne part pas a fond : il pousse doucement, puis prend de la vitesse tant qu'il avance. S'il s'arrete,
+	-- il repart lentement. C'est ce qui fait sentir le POIDS de la machine -- une vitesse constante ne raconte rien.
+	--
+	-- ATTENTION au piege deja paye sur la taille : une vitesse peut etre MULTIPLIEE en aval (un pas glisse, une
+	-- animation qui module). Ces chiffres sont ceux du Humanoid, pas forcement ceux qu'on RESSENT. Regler a l'oeil.
+	SPEED_MIN = 13, -- au demarrage, et apres chaque arret
+	SPEED_MAX = 20, -- plafond. Le joueur n'ira jamais plus vite avec la tondeuse
+	SPEED_RAMP_UP = 3.5, -- studs/s gagnes par seconde de marche. Plus haut = monte en regime plus vite
+	SPEED_RAMP_DOWN = 14, -- redescente a l'arret. VIVE expres : repartir doit se meriter, ralentir non
+	-- En dessous de cette vitesse REELLE (studs/s), on considere que le joueur est a l'arret et le regime retombe.
+	-- Se mesure sur le deplacement reel, pas sur l'intention : pousser contre un mur ne doit pas monter le regime.
+	SPEED_MOVE_EPSILON = 1.5,
+
+	-- ===== ANIMATIONS DE LA MACHINE =====
+	-- Jouees sur l'Animator de la TONDEUSE (pas celui du joueur), cote serveur donc vues par tous.
+	-- Les IDs vivent ICI et pas dans des Instances : Rojo ne synchronise pas ReplicatedStorage.Animations vers la
+	-- place tuto. Meme raison que HOLD_ANIM_ID.
+	--
+	-- MOTEUR : boucle simple, tourne tant que la tondeuse est poussee.
+	MOTOR_ANIM_ID = "",
+	-- LEVIER d'accelerateur : sa position raconte le REGIME. On ne la laisse pas jouer -- on pilote sa TimePosition
+	-- a la main, de 0 (ralenti) a sa derniere image (plein regime), selon la vitesse du moment. Meme mecanique que
+	-- la visee haut/bas du taille-haie : une animation dont on ne lit qu'une IMAGE, jamais le defilement.
+	LEVER_ANIM_ID = "",
+
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).
 	FALLBACK_RADIUS = 2.2,
