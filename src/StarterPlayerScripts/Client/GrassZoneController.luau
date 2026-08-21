@@ -44,8 +44,16 @@ local REBUILD_DELAY = 0.25
 -- Le pas divise 1 exactement, donc au repos l'aplatissement retombe sur 1 PILE : pas de residu fige, contrairement a
 -- un garde-fou "ne pas reecrire si le delta est infime".
 local SQUASH_STEP = 0.01
--- REVELATION en cours : tout ce qui n'est pas coupe s'allume. Pilotee par MowController (touche maintenue).
+-- REVELATION : tout ce qui n'est pas coupe s'allume. Pilotee par MowController (touche maintenue).
+-- `highlight` est l'INTENTION (touche tenue ou non), `reveal` ce qu'on AFFICHE : il rejoint l'intention en
+-- douceur. Une bascule binaire se lisait comme un bug d'affichage plutot que comme un mode.
+-- La valeur est GLOBALE et non par touffe : toutes s'allument ensemble, il n'y a rien a stocker mille fois.
 local highlight = false
+local reveal = 0
+-- Fondu EN COURS. Tant qu'il l'est, tous les paves doivent etre redessines, meme ceux sans vent et sans
+-- joueur a proximite : sinon la moitie de la pelouse resterait figee au milieu de la transition, et c'est
+-- justement le LOIN qu'on veut voir s'allumer.
+local fading = false
 -- Repere des rayures, calcule une fois. Projeter la case sur cette direction donne la bande a laquelle elle appartient.
 local STRIPE_COS = math.cos(math.rad(GrassZoneConfigs.STRIPE_HEADING))
 local STRIPE_SIN = math.sin(math.rad(GrassZoneConfigs.STRIPE_HEADING))
@@ -78,6 +86,7 @@ type Clump = {
 	baseMaterial: Enum.Material, -- materiau de repos, releve a la pose : la revelation doit pouvoir le rendre
 	lastHighlight: boolean, -- derniere revelation REELLEMENT ecrite : ecrire un Material chaque image couterait pour rien
 	lastLighten: number, -- dernier eclaircissement de rafale REELLEMENT ecrit
+	lastReveal: number, -- dernier fondu de revelation REELLEMENT ecrit
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
 	lastCrush: number, -- dernier etat REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
 	lastSquashCrush: number, -- idem pour la valeur retardee : elle peut bouger alors que l'autre est deja posee
@@ -168,22 +177,30 @@ local function apply(
 	-- REVELATION. Elle passe par ICI et pas par un reglage pose de l'exterieur : la couleur d'une touffe a deja un
 	-- ecrivain (cette fonction, a chaque image). Peindre les touffes depuis un autre module serait efface a
 	-- l'image suivante, et on chercherait pourquoi le neon clignote.
-	local lit = highlight and mown < GrassZoneConfigs.HIGHLIGHT_THRESHOLD
-	if lit ~= clump.lastHighlight then
-		clump.lastHighlight = lit
-		clump.part.Material = if lit then GrassZoneConfigs.HIGHLIGHT_MATERIAL else clump.baseMaterial
-		clump.lastDarken = -1 -- force la reecriture de la couleur juste en dessous, dans les deux sens
+	-- Une touffe TONDUE ne s'allume pas, quel que soit le fondu en cours : c'est justement ce qui reste a faire
+	-- qu'on veut voir. Elle suit donc le rendu normal, sans transition a gerer.
+	local litAmount = if mown < GrassZoneConfigs.HIGHLIGHT_THRESHOLD then reveal else 0
+	local litQ = math.floor(litAmount / SQUASH_STEP + 0.5) * SQUASH_STEP
+	-- LE MATERIAU NE SE FOND PAS, il change d'un coup. On le bascule donc TOT, quand la couleur est encore
+	-- presque normale : ca se lit comme un allumage. C'est le fondu de COULEUR qui porte la douceur.
+	local neon = litQ > GrassZoneConfigs.HIGHLIGHT_MATERIAL_AT
+	if neon ~= clump.lastHighlight then
+		clump.lastHighlight = neon
+		clump.part.Material = if neon then GrassZoneConfigs.HIGHLIGHT_MATERIAL else clump.baseMaterial
 	end
-	if lit then
-		clump.part.Color = GrassZoneConfigs.HIGHLIGHT_COLOR
-	else
+	do
 		local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
 		local mowBlend = math.floor(mown / SQUASH_STEP + 0.5) * SQUASH_STEP
 		-- La rafale bouge en permanence : sans quantification, on reecrirait la couleur de chaque touffe a chaque
 		-- image, pour des ecarts que l'oeil ne voit pas. Meme raison que pour l'ecrasement, avec son propre pas.
 		local step = GrassZoneConfigs.GUST_LIGHT_STEP
 		local light = math.floor(lighten / step + 0.5) * step
-		if blend ~= clump.lastDarken or mowBlend ~= clump.lastMownBlend or light ~= clump.lastLighten then
+		if
+			blend ~= clump.lastDarken
+			or mowBlend ~= clump.lastMownBlend
+			or light ~= clump.lastLighten
+			or litQ ~= clump.lastReveal
+		then
 			-- DEUX melanges empiles, et l'ORDRE compte. La COUPE d'abord : elle change la couleur de REPOS de la
 			-- touffe, pour toujours. L'ECRASEMENT par-dessus : lui est temporaire. Dans cet ordre, une touffe
 			-- tondue PUIS pietinee revient a sa couleur de TONDUE quand le pied repart, pas a celle de l'herbe haute.
@@ -195,10 +212,16 @@ local function apply(
 			if light > 0 then
 				final = final:Lerp(GrassZoneConfigs.GUST_COLOR, light)
 			end
+			-- LA REVELATION PASSE EN DERNIER : elle recouvre tout le reste. Un fondu, donc l'herbe glisse de sa
+			-- couleur vers le bleu au lieu d'y sauter. A fondu plein on est exactement sur la couleur cible.
+			if litQ > 0 then
+				final = final:Lerp(GrassZoneConfigs.HIGHLIGHT_COLOR, litQ)
+			end
 			clump.part.Color = final
 			clump.lastDarken = blend
 			clump.lastMownBlend = mowBlend
 			clump.lastLighten = light
+			clump.lastReveal = litQ
 		end
 	end
 
@@ -594,6 +617,7 @@ local function populate(zone: Zone)
 				baseMaterial = part.Material,
 				lastHighlight = false,
 				lastLighten = 0,
+				lastReveal = 0,
 				windPhase = windPhase,
 				lastCrush = 0,
 				lastSquashCrush = 0,
@@ -913,7 +937,7 @@ local function updateZone(zone: Zone, positions: { Vector3 }, anchor: Vector3, n
 		local windScale = math.clamp((windReach - dist) / fadeSpan, 0, 1)
 		-- Un pave dont des touffes se relevent encore garde la main meme sans vent, sinon elles se figeraient couchees
 		-- des qu'on tourne la camera.
-		if windScale > 0 or bucket.settling then
+		if windScale > 0 or bucket.settling or fading then
 			table.clear(near)
 			for _, pos in ipairs(positions) do
 				local h = bucket.center - pos
@@ -952,6 +976,18 @@ local function update(dt: number)
 	end
 	local now = os.clock()
 
+	-- FONDU DE LA REVELATION. Une seule valeur pour toute la pelouse : elles s'allument ensemble.
+	local revealTarget = if highlight then 1 else 0
+	if reveal ~= revealTarget then
+		reveal += (revealTarget - reveal) * math.min(1, GrassZoneConfigs.HIGHLIGHT_FADE_SPEED * dt)
+		-- Un lerp exponentiel n'atteint JAMAIS sa cible : sans ce clic, on redessinerait toute la pelouse a
+		-- vie pour un residu invisible. Meme piege que l'ecrasement.
+		if math.abs(revealTarget - reveal) < GrassZoneConfigs.SNAP_EPSILON then
+			reveal = revealTarget
+		end
+	end
+	fading = reveal ~= revealTarget
+
 	-- Positions des personnages, relevees UNE fois par image et partagees par toutes les zones.
 	local positions: { Vector3 } = {}
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -982,19 +1018,10 @@ end
 -- Allume / eteint la revelation : tout ce qui n'est pas encore coupe passe en neon. Appelee par MowController
 -- (touche maintenue). Le RENDU, lui, vit dans apply : la couleur d'une touffe n'a qu'un seul ecrivain.
 function GrassZoneController.setHighlight(on: boolean)
-	if on == highlight then
-		return
-	end
+	-- On ne pose que l'INTENTION. Le fondu et le reveil des paves sont geres par la boucle : elle sait, elle,
+	-- quand la transition est finie. Forcer les paves ici ne les reveillerait qu'une image, pas le temps du fondu.
 	highlight = on
-	-- Tous les paves doivent repasser UNE fois, meme ceux sans vent et sans joueur a proximite : la boucle les
-	-- saute normalement, et c'est justement le LOIN qu'on veut voir s'allumer. Le drapeau retombe tout seul au
-	-- premier passage ou plus rien ne bouge.
-	for _, zone in ipairs(zones) do
-		zone.settling = true
-		for _, bucket in ipairs(zone.buckets) do
-			bucket.settling = true
-		end
-	end
+	fading = true
 end
 
 -- ===== TONTE =====

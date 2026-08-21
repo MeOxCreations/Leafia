@@ -348,6 +348,14 @@ local GrassZoneConfigs = {
 	-- En dessous de cette coupe, la touffe compte comme PAS TONDUE et s'allume. A 0.5, une touffe a moitie coupee
 	-- s'allume encore : on voit donc aussi les bandes baclees, pas seulement ce qu'on n'a jamais touche.
 	HIGHLIGHT_THRESHOLD = 0.5,
+	-- Vitesse du FONDU vers la couleur de revelation, en fraction par seconde. La bascule etait BINAIRE : l'herbe
+	-- passait au bleu d'une image a l'autre, ce qui se lit comme un bug d'affichage plutot que comme un mode.
+	-- BAS = plus lent. 2.5 met environ une demi-seconde a s'installer.
+	HIGHLIGHT_FADE_SPEED = 2.5,
+	-- Au-dessus de cette part de fondu, la touffe passe en Neon. Un materiau ne se FOND pas : il change d'un coup.
+	-- On le bascule donc TOT, quand la couleur est encore presque normale -- ca se lit comme un allumage, pas comme
+	-- un saut. Le fondu de couleur, lui, fait tout le travail de douceur.
+	HIGHLIGHT_MATERIAL_AT = 0.02,
 
 	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.

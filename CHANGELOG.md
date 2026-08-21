@@ -2185,6 +2185,33 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.271 — La revelation FOND vers le bleu au lieu d'y sauter
+
+La bascule etait BINAIRE : l'herbe passait au bleu d'une image a l'autre. Ca se lisait comme un bug d'affichage,
+pas comme un mode qu'on active.
+
+Une valeur GLOBALE (`reveal`) rejoint maintenant l'intention en douceur, et la couleur de chaque touffe glisse
+vers le bleu par un fondu. Globale et non par touffe : elles s'allument toutes ensemble, il n'y a rien a stocker
+mille fois.
+
+La revelation passe EN DERNIER dans la chaine de couleurs (repos, coupe, ecrasement, crete de rafale, puis
+revelation) : elle recouvre tout le reste, et a fondu plein on est exactement sur la couleur cible.
+
+### Trois pieges du fondu
+
+**Le materiau ne se fond pas.** Neon est un etat, pas un degrade. On le bascule donc TOT (`HIGHLIGHT_MATERIAL_AT`
+= 0.02), quand la couleur est encore presque normale : ca se lit comme un allumage. C'est le fondu de COULEUR qui
+porte la douceur.
+
+**Les paves endormis auraient fige la transition.** La boucle saute les paves sans vent et sans joueur proche --
+soit la majorite de la pelouse, soit exactement ce qu'on veut voir s'allumer. Un drapeau `fading` les garde
+eveilles TANT QUE dure le fondu. `setHighlight` ne les reveillait qu'une image, ce qui ne suffisait plus.
+
+**Un lerp exponentiel n'atteint jamais sa cible.** Sans clic sur la valeur exacte, on redessinerait toute la
+pelouse a vie pour un residu invisible. Meme piege que l'ecrasement, meme remede.
+
+`HIGHLIGHT_FADE_SPEED` = 2.5, environ une demi-seconde. Plus bas = plus lent.
+
 ## 0.0.270 — Le vent fait des LAMELLES, plus une grosse masse
 
 Le champ de rafales etait echantillonne en X/Z du monde, a la MEME frequence dans les deux directions. Un bruit
