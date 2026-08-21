@@ -339,11 +339,22 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		steerRemote:FireServer(lateralAmount)
 	end
 
-	-- LE CORPS NE TOURNE QUE SI ON ROULE. A l'arret c'est la MACHINE qui se braque (cote serveur) et les bras
-	-- de l'animation qui racontent l'effort : on n'oriente pas le personnage. On ne fait pas pivoter une
-	-- tondeuse sur un point sans rouler.
-	local rolling = math.abs(forwardAmount) > MowConfigs.STEER_MOVE_EPSILON
-	if rolling and math.abs(lateralAmount) > MowConfigs.STEER_INPUT_EPSILON then
+	-- BRAQUER SEUL FAIT ROULER, doucement, et le corps tourne AVEC. On ne fait pas pivoter une tondeuse sur un
+	-- point : on la fait avancer juste assez pour qu'elle tourne. C'est ce petit roulement qui rend le
+	-- mouvement credible -- sans lui, le personnage pivotait sur ses talons comme une tourelle.
+	local braking = math.abs(forwardAmount) > MowConfigs.STEER_MOVE_EPSILON
+	local turning = math.abs(lateralAmount) > MowConfigs.STEER_INPUT_EPSILON
+	local drive = forwardAmount
+	if turning and not braking and MowConfigs.STEER_CRAWL > 0 then
+		-- `Move` prend une FRACTION de la WalkSpeed, pas une vitesse. On divise donc par la vitesse courante :
+		-- l'avance de manoeuvre reste a STEER_CRAWL studs/s meme quand la tondeuse monte en regime.
+		local walk = humanoid.WalkSpeed
+		drive = if walk > 0.1 then math.clamp(MowConfigs.STEER_CRAWL / walk, 0, 1) else 0
+	end
+	-- Le corps ne tourne QUE s'il roule vraiment : soit le joueur avance, soit l'avance de manoeuvre le fait
+	-- rouler. A STEER_CRAWL = 0 on retrouve donc bien le comportement d'avant (corps fige, machine qui pivote),
+	-- comme la config le promet.
+	if turning and (braking or MowConfigs.STEER_CRAWL > 0) then
 		local sign = if MowConfigs.STEER_INVERT then -1 else 1
 		yaw -= lateralAmount * sign * math.rad(MowConfigs.STEER_TURN_RATE) * dt
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
@@ -352,7 +363,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.
-	humanoid:Move(facing * forwardAmount, false)
+	humanoid:Move(facing * drive, false)
 
 	if MowConfigs.STEER_DEBUG then
 		-- MEME formule que le braquage ci-dessus, sinon la courbe affichee ne serait pas celle qu'on suit.

@@ -175,6 +175,13 @@ return {
 	-- alors PLUS : c'est la MACHINE qui se braque, et les bras de l'animation racontent l'effort.
 	-- On ne fait pas pivoter une tondeuse sur un point sans rouler -- on l'oriente, et le corps reste face au travail.
 	STEER_MOVE_EPSILON = 0.15,
+	-- BRAQUER SEUL FAIT AVANCER, doucement. On ne tourne pas une tondeuse sur un point : on la fait rouler juste
+	-- assez pour qu'elle pivote. Le corps tourne alors AUSSI -- c'est un vrai debut de virage, pas un ajustement.
+	--
+	-- En studs par seconde. Repere : la marche du jeu est a 10 studs/s, soit environ 10 km/h -- donc 2 studs/s font
+	-- a peu pres 2 km/h. C'est une avance de MANOEUVRE, pas un deplacement.
+	-- 0 = on revient au comportement d'avant : le corps reste fige et seule la machine pivote.
+	STEER_CRAWL = 2,
 	-- Poussee angulaire donnee a la machine quand on braque A L'ARRET, en radians par seconde a fond de course.
 	-- Elle est RAPPELEE par SWING_RECOVER : les deux s'equilibrent, donc tenir la touche amene la tondeuse a un
 	-- angle stable au lieu de la faire tourner sans fin.

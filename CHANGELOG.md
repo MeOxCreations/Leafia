@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.288 — Braquer fait rouler : la tondeuse avance doucement pendant qu'elle tourne
+
+Appuyer sur une seule touche de cote fait maintenant AVANCER la machine, tout doucement, et le corps tourne avec.
+On ne fait pas pivoter une tondeuse sur un point : on la fait rouler juste assez pour qu'elle tourne.
+
+C'est ce petit roulement qui rend le mouvement credible. Sans lui, le personnage pivotait sur ses talons comme une
+tourelle.
+
+`STEER_CRAWL` = 2 studs/s. Repere de conversion : la marche du jeu est a 10 studs/s, soit environ 10 km/h -- donc
+2 studs/s font a peu pres 2 km/h. C'est une avance de MANOEUVRE, pas un deplacement.
+
+### Une fraction, pas une vitesse
+
+`Humanoid:Move` prend une FRACTION de la WalkSpeed, pas une vitesse en studs. On divise donc l'avance voulue par la
+vitesse COURANTE : la manoeuvre reste a 2 studs/s meme quand la tondeuse est montee en regime, ou la fraction
+serait sinon deux fois trop grande.
+
+`STEER_CRAWL = 0` rend exactement le comportement precedent (corps fige, seule la machine pivote), et le code le
+respecte : le corps ne tourne que s'il roule VRAIMENT -- soit parce que le joueur avance, soit a cause de la
+manoeuvre. Une config qui promet un comportement doit le tenir.
+
 ## 0.0.287 — Le braquage sur place devient discret
 
 `PIVOT_GAIN` passe de 2.6 a 0.8, soit environ 8 degres au lieu de 25. Un coup de reins pour repositionner la
