@@ -228,7 +228,7 @@ return {
 	TURN_POSE_MIDDLE = 0.5,
 	-- Les bras partent du mauvais cote ? Mettre true. Le sens depend de la convention d'angle de Roblox ET du sens
 	-- dans lequel l'animation a ete faite : ca ne se DEDUIT pas, ca se voit a l'ecran.
-	TURN_POSE_INVERT = false,
+	TURN_POSE_INVERT = true,
 	-- Vitesse a laquelle les BRAS rejoignent la pose demandee, en fraction par seconde. HAUTE expres.
 	-- Les bras suivaient le BALLANT de la machine, qui met du temps a s'installer quand on manoeuvre lentement :
 	-- on braquait, et les bras ne bougeaient presque pas. Ils suivent maintenant l'INPUT en direct des qu'on

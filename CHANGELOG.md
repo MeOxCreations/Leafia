@@ -2185,6 +2185,11 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.292 — La pose des bras partait du mauvais cote
+
+`TURN_POSE_INVERT` passe a true. Le sens depend de la convention d'angle de Roblox ET du sens dans lequel
+l'animation a ete faite : il ne se deduit pas, il se voit. Le reglage etait la pour ca.
+
 ## 0.0.291 — Les bras reagissent tout de suite quand on braque sur place
 
 Ils suivaient le BALLANT de la machine. Or le ballant met du temps a s'installer quand on manoeuvre lentement :
