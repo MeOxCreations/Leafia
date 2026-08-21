@@ -171,6 +171,12 @@ return {
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,
+	-- RECUL DE CAMERA A LA VITESSE. La vue s'ecarte a mesure qu'on prend du regime : on voit venir la bande a
+	-- tondre, et l'acceleration se RESSENT au lieu de se deviner au chiffre.
+	-- S'ADDITIONNE au recul de la revelation : les deux passent par une seule valeur, sinon le dernier a ecrire
+	-- ecraserait l'autre a chaque image.
+	-- Studs de recul a PLEIN regime. 0 = effet coupe.
+	DRIVE_ZOOM = 4,
 
 	-- ===== POSE DE VIRAGE =====
 	-- Les bras accompagnent le virage, comme quand on redresse une vraie tondeuse. L'animation n'est PAS jouee :

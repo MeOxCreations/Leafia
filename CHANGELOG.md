@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.281 — La camera s'ecarte a mesure qu'on prend du regime
+
+La vue recule quand la tondeuse accelere. On voit venir la bande a tondre, et l'acceleration se RESSENT au lieu de
+se deviner au chiffre.
+
+La vitesse est MESUREE sur le deplacement reel du joueur plutot que recopiee depuis la valeur du serveur : c'est
+ce que le joueur voit, et ca reste juste meme si un autre systeme le ralentit.
+
+### Une seule valeur pour deux raisons
+
+Le recul de camera a maintenant DEUX sources : la revelation (touche G) et la vitesse. Elles ecrivaient chacune
+dans `SetZoomBoost`, donc le dernier appel de l'image ecrasait l'autre et le recul aurait clignote des qu'on tond
+en maintenant G.
+
+Elles passent desormais par un seul calcul qui les ADDITIONNE, appele une fois par image. Meme regle que celle qui
+gouverne deja `WalkSpeed`, `FieldOfView` et la couleur des touffes : une grandeur, un seul ecrivain, les autres
+declarent.
+
+`DRIVE_ZOOM` = 4 studs a plein regime, a 0 pour couper l'effet.
+
 ## 0.0.280 — Conduite facon VEHICULE : les touches de cote BRAQUENT, elles n'avancent plus
 
 Le 0.0.279 avait mal compris la demande. Il tournait le cap lentement, mais il faisait toujours AVANCER le joueur

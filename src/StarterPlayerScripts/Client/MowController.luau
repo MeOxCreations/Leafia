@@ -52,6 +52,8 @@ local actionBound = false
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
 -- CONDUITE en cours. Sert a ne couper AutoRotate qu'une fois, et surtout a le RENDRE une fois -- une
 -- restauration ecrite a chaque image ecraserait un autre systeme qui l'aurait coupe pour ses raisons.
+-- Revelation tenue ? Lue par le calcul du recul de camera, qui additionne ses deux raisons.
+local revealOn = false
 local steering = false
 local autoRotateWas = true
 local wheelAngle = 0
@@ -60,9 +62,23 @@ local connection: RBXScriptConnection? = nil
 -- REVELATION : l'herbe s'allume ET la camera prend du recul. UN SEUL point d'entree pour les deux -- les
 -- appeler separement finirait par laisser la camera reculee alors que l'herbe est deja eteinte.
 local function setReveal(on: boolean)
+	revealOn = on
 	GrassZoneController.setHighlight(on)
-	CameraEffects.SetZoomBoost(if on then MowConfigs.HIGHLIGHT_ZOOM else 0)
 	CameraEffects.SetFovOffset(if on then MowConfigs.HIGHLIGHT_FOV else 0)
+end
+
+-- LE RECUL DE CAMERA A DEUX RAISONS : la revelation, et la vitesse. Elles passent par UNE SEULE valeur -- deux
+-- appelants ecrivant chacun la sienne, le dernier de l'image ecraserait l'autre, et le recul clignoterait.
+-- La vitesse se MESURE sur le deplacement reel plutot que de recopier la valeur du serveur : c'est ce que le
+-- joueur voit, et ca marche meme si un autre systeme le ralentit.
+local function applyCameraZoom(hrp: BasePart?, carrying: boolean)
+	local total = if revealOn then MowConfigs.HIGHLIGHT_ZOOM else 0
+	if carrying and hrp and MowConfigs.DRIVE_ZOOM > 0 and MowConfigs.SPEED_MAX > 0 then
+		local v = hrp.AssemblyLinearVelocity
+		local speed = math.sqrt(v.X * v.X + v.Z * v.Z)
+		total += math.clamp(speed / MowConfigs.SPEED_MAX, 0, 1) * MowConfigs.DRIVE_ZOOM
+	end
+	CameraEffects.SetZoomBoost(total)
 end
 
 local function rootOf(model: Model): BasePart?
@@ -495,6 +511,8 @@ local function update(dt: number)
 			humanoid.AutoRotate = autoRotateWas
 		end
 	end
+
+	applyCameraZoom(hrp :: BasePart, mine ~= nil)
 
 	if not mine then
 		lastCutPos = nil
