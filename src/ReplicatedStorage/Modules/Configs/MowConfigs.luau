@@ -206,6 +206,22 @@ return {
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
 	TURN_PRIORITY = Enum.AnimationPriority.Action2,
 
+	-- ===== REGARD ARRIERE =====
+	-- En marche arriere, le personnage tourne la tete pour voir ou il va. Comme dans la vraie vie -- et ca dit au
+	-- joueur qu'il RECULE sans avoir a lire un indicateur.
+	--
+	-- POSEE et non jouee, comme le levier : sa TimePosition va de 0 (tete droite) a sa derniere image (tete
+	-- tournee), et on la deplace. Une piste qu'on laisse defiler rejouerait le mouvement de tete en boucle.
+	REVERSE_ANIM_ID = "rbxassetid://88225605983288",
+	-- AU-DESSUS de la pose de virage (Action2), qui est deja au-dessus du guidon (Action). Trois poses sur le meme
+	-- corps : a priorite EGALE Roblox en ferait une moyenne au lieu de choisir.
+	REVERSE_PRIORITY = Enum.AnimationPriority.Action3,
+	-- Vitesse a laquelle la tete se tourne, en fraction par seconde. BAS = mouvement lent et lourd.
+	REVERSE_TURN_SPEED = 4,
+	-- En dessous de cette vitesse de recul REELLE (studs/s), on considere qu'on ne recule pas. Evite que la tete
+	-- parte en arriere sur un simple recul de la physique (une bosse, une pente, un autre joueur qui pousse).
+	REVERSE_EPSILON = 1.5,
+
 	-- ===== BALLANT =====
 	-- Soudee RIGIDE, la tondeuse pivote a l'instant meme ou le joueur tourne : elle se lit comme un objet TENU, pas
 	-- comme une machine qu'on POUSSE. Une vraie tondeuse a de l'inertie -- elle traine dans le virage, puis rattrape.

@@ -28,6 +28,8 @@ type CarryState = {
 	weld: Weld?,
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
 	turn: AnimationTrack?, -- pose de VIRAGE des bras. Posee image par image, jamais jouee.
+	reverse: AnimationTrack?, -- pose REGARD ARRIERE. Posee elle aussi.
+	reverseAmount: number, -- 0 = tete droite, 1 = tete tournee. Lisse, pour que le regard ne claque pas.
 	holdGuard: RBXScriptConnection?, -- filet : rattrape la pose si le marqueur est rate (image perdue)
 	motor: AnimationTrack?, -- boucle du moteur, sur l'Animator de la TONDEUSE
 	lever: AnimationTrack?, -- levier d'accelerateur : on pilote sa TimePosition, on ne la laisse pas jouer
@@ -176,6 +178,23 @@ local function playHold(character: Model, state: CarryState)
 		end
 	end
 
+	-- REGARD ARRIERE, meme Animator et meme principe : posee, jamais jouee.
+	local backAsset = machineAnimation(MowConfigs.REVERSE_ANIM_ID)
+	if backAsset then
+		local okBack, backTrack = pcall(function()
+			return (animator :: Animator):LoadAnimation(backAsset)
+		end)
+		if okBack and typeof(backTrack) == "Instance" then
+			local t = backTrack :: AnimationTrack
+			t.Looped = true
+			t.Priority = MowConfigs.REVERSE_PRIORITY
+			t:Play(MowConfigs.HOLD_FADE)
+			t:AdjustSpeed(0)
+			t.TimePosition = 0
+			state.reverse = t
+		end
+	end
+
 	-- FILET. Le marqueur suffit tant que les images tombent bien, mais une seule image perdue et la tete de
 	-- lecture le DEPASSE sans que le signal serve a rien : la piste boucle alors, et la pose repart du debut.
 	-- Symptome vecu : ca marche la plupart du temps, et parfois non. On surveille donc aussi la position, et
@@ -210,6 +229,13 @@ local function stopHold(state: CarryState)
 	end
 	-- La pose de VIRAGE vit sur l'Animator du JOUEUR, comme la pose du guidon : elle se coupe ici, pas avec
 	-- les animations de la machine.
+	for _, t in ipairs({ state.turn, state.reverse } :: { AnimationTrack }) do
+		pcall(function()
+			t:AdjustSpeed(1)
+			t:Stop(MowConfigs.HOLD_FADE)
+		end)
+	end
+	state.reverse = nil
 	if state.turn then
 		local t = state.turn
 		state.turn = nil
@@ -467,6 +493,8 @@ local function grab(player: Player, model: Model)
 		weld = nil,
 		hold = nil,
 		turn = nil,
+		reverse = nil,
+		reverseAmount = 0,
 		holdGuard = nil,
 		motor = nil,
 		lever = nil,
@@ -552,6 +580,21 @@ local function grab(player: Player, model: Model)
 		local maxSwing = math.rad(MowConfigs.SWING_MAX)
 		state.swing = math.clamp(state.swing, -maxSwing, maxSwing)
 
+		-- REGARD ARRIERE. On mesure le recul REEL (vitesse projetee sur le cap), pas l'intention : une bosse ou un
+		-- autre joueur qui pousse ne doivent pas faire tourner la tete, et un recul reel doit la tourner meme si
+		-- l'input vient d'ailleurs.
+		local flatLook = Vector3.new(look.X, 0, look.Z)
+		-- Garde-fou : `.Unit` sur un vecteur nul rend du NaN, et un NaN pose dans une TimePosition empoisonne la
+		-- piste pour de bon. Le cas est rare (le HRP est droit), mais il ne coute rien a ecarter.
+		local backward = if flatLook.Magnitude > 1e-4 then -v:Dot(flatLook.Unit) else 0
+		local wantBack = if backward > MowConfigs.REVERSE_EPSILON then 1 else 0
+		state.reverseAmount += (wantBack - state.reverseAmount)
+			* math.min(1, MowConfigs.REVERSE_TURN_SPEED * dt)
+		local back = state.reverse
+		if back and back.Length > HOLD_MIN_LENGTH then
+			back.TimePosition = math.clamp(state.reverseAmount, 0, 1) * (back.Length - HOLD_EPSILON)
+		end
+
 		-- POSE DE VIRAGE. Le ballant est deja SIGNE et proportionnel au virage, et il revient a zero quand le
 		-- joueur roule droit : il suffit de le ramener sur la timeline. Rien de plus a lisser.
 		-- Chaque moitie est mise a l'echelle de SA propre portee, donc le milieu peut etre ailleurs qu'a 0.5 sans
@@ -601,7 +644,7 @@ function MowService.init()
 	-- En task.spawn : c'est un appel RESEAU, il n'a rien a faire dans le chemin de boot.
 	task.spawn(function()
 		local assets: { Instance } = { getHoldAnimation() }
-		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.TURN_ANIM_ID }) do
+		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.TURN_ANIM_ID, MowConfigs.REVERSE_ANIM_ID }) do
 			local a = machineAnimation(id)
 			if a then
 				assets[#assets + 1] = a

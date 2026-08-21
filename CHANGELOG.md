@@ -2185,6 +2185,29 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.283 — Le personnage regarde derriere lui en marche arriere
+
+Nouvelle pose : la tete se tourne pour voir ou on recule. Comme dans la vraie vie, et ca DIT au joueur qu'il
+recule sans avoir a lire un indicateur.
+
+POSEE et non jouee, comme le levier : sa `TimePosition` va de 0 (tete droite) a sa derniere image (tete tournee),
+et on la deplace. Une piste laissee libre rejouerait le mouvement de tete en boucle. C'est aussi le motif qui
+n'a jamais produit de course au chargement, contrairement au gel sur marqueur.
+
+Le mouvement est LISSE (`REVERSE_TURN_SPEED`) : une tete qui claque d'un cote a l'autre se lit comme un bug.
+
+### Le recul est MESURE, pas suppose
+
+On projette la vitesse REELLE sur le cap plutot que de lire l'intention du joueur. Une bosse, une pente ou un
+autre joueur qui pousse ne doivent pas faire tourner la tete ; et un vrai recul doit la tourner meme si la
+poussee vient d'ailleurs. `REVERSE_EPSILON` ecarte les micro-reculs de la physique.
+
+Priorite `Action3` : au-dessus de la pose de virage (Action2), elle-meme au-dessus du guidon (Action). Trois poses
+sur le meme corps -- a priorite EGALE, Roblox en ferait une MOYENNE au lieu de choisir.
+
+Garde-fou pose au passage : `.Unit` sur un vecteur nul rend du NaN, et un NaN ecrit dans une `TimePosition`
+empoisonne la piste pour de bon. Le cas est rare, il ne coute rien a ecarter.
+
 ## 0.0.282 — La conduite se battait avec Roblox : corrige, et une courbe pour la regler
 
 Le personnage partait DANS TOUS LES SENS des qu'on avancait. Ce n'etait pas un reglage : c'etait un conflit
