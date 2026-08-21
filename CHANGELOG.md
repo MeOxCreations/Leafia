@@ -2185,6 +2185,21 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.295 — Reculer en braquant part du bon cote
+
+S + D recule maintenant a DROITE, S + Q a gauche.
+
+En marche arriere on se deplace le long de -cap : tourner le cap a droite envoyait donc la machine a GAUCHE. Le
+braquage est desormais inverse quand on recule -- comme au volant d'une vraie machine.
+
+Ce n'est pas un detail de confort : la marche arriere est justement le moment ou le joueur a le moins de reperes,
+et ou un braquage inverse est le plus difficile a rattraper.
+
+Le braquage de MANOEUVRE (braquer sans avancer) garde le sens normal : on ne recule pas, on repositionne.
+
+La courbe de debug applique la meme inversion -- sinon elle montrerait un arc et la machine en suivrait un autre,
+ce qui est pire que pas de debug du tout.
+
 ## 0.0.294 — Fin du zig-zag : on cesse de DERIVER un signal recu du reseau
 
 En relachant la touche de virage, la machine faisait un aller-retour rapide avant de se remettre droite.

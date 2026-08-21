@@ -361,11 +361,16 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- comme une tondeuse qu'on repositionne.
 	local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
 	local turnRate = if braking then MowConfigs.STEER_TURN_RATE else MowConfigs.STEER_CRAWL_TURN_RATE
+	-- EN MARCHE ARRIERE, ON INVERSE. On se deplace le long de -cap : tourner le cap a droite envoie donc la
+	-- machine a GAUCHE. Sans cette inversion, reculer en braquant part du cote oppose a ce que le joueur
+	-- demande -- et c'est justement en marche arriere qu'on a le moins de reperes pour s'en remettre.
+	-- Le braquage de MANOEUVRE (sans avance) garde le sens normal : on ne recule pas, on repositionne.
+	local dirSign = if forwardAmount < -MowConfigs.STEER_MOVE_EPSILON then -1 else 1
 	-- Le corps ne tourne QUE s'il roule vraiment : soit le joueur avance, soit l'avance de manoeuvre le fait
 	-- rouler. A STEER_CRAWL = 0 on retrouve donc le comportement d'avant (corps fige, machine qui pivote),
 	-- comme la config le promet.
 	if turning and (braking or MowConfigs.STEER_CRAWL > 0) then
-		yaw -= lateralAmount * steerSign * math.rad(turnRate) * dt
+		yaw -= lateralAmount * steerSign * dirSign * math.rad(turnRate) * dt
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
@@ -377,7 +382,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	if MowConfigs.STEER_DEBUG then
 		-- MEME formule que le braquage ci-dessus, sinon la courbe affichee ne serait pas celle qu'on suit.
 		-- MEME taux que celui reellement applique : une courbe dessinee avec l'autre mentirait sur le trajet.
-		local turnPerSec = if turning then lateralAmount * steerSign * math.rad(turnRate) else 0
+		local turnPerSec = if turning then lateralAmount * steerSign * dirSign * math.rad(turnRate) else 0
 		-- Vitesse MESUREE, pas supposee : la courbe montre alors le trajet reel, y compris si un autre systeme
 		-- ralentit le joueur.
 		local v = hrp.AssemblyLinearVelocity
