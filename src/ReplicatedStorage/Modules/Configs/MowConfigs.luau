@@ -151,6 +151,23 @@ return {
 	-- la visee haut/bas du taille-haie : une animation dont on ne lit qu'une IMAGE, jamais le defilement.
 	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
+	-- ===== BALLANT =====
+	-- Soudee RIGIDE, la tondeuse pivote a l'instant meme ou le joueur tourne : elle se lit comme un objet TENU, pas
+	-- comme une machine qu'on POUSSE. Une vraie tondeuse a de l'inertie -- elle traine dans le virage, puis rattrape.
+	--
+	-- Le ballant fait pivoter la machine AUTOUR DU JOUEUR (le guidon reste dans les mains, le carter part de cote),
+	-- pas autour d'elle-meme : c'est ce qui distingue un objet pousse d'un objet porte.
+	--
+	-- 0 = coupe, retour a la soudure rigide.
+	-- Retard pris par degre de virage. Plus HAUT = elle traine plus. Au-dela de ~1 elle part en toupie.
+	SWING_GAIN = 0.55,
+	-- Vitesse a laquelle elle RATTRAPE le joueur, en fraction par seconde. Plus BAS = elle traine plus longtemps.
+	-- Volontairement plus lent que la prise de retard : c'est l'ecart entre les deux qui se lit comme du poids.
+	SWING_RECOVER = 6,
+	-- Retard MAXIMAL, en degres. Sans ce plafond, une pirouette du joueur enverrait la tondeuse a 180 degres, et
+	-- elle repasserait devant lui par l'autre cote.
+	SWING_MAX = 28,
+
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).
 	FALLBACK_RADIUS = 2.2,

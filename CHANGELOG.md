@@ -2185,6 +2185,29 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.277 — La tondeuse traine dans les virages au lieu d'etre trimballee
+
+Soudee RIGIDE, elle pivotait a l'instant meme ou le joueur tournait. Ca se lit comme un objet TENU a bout de bras,
+pas comme une machine qu'on POUSSE -- "trimballee comme une poupee", dixit le joueur.
+
+Elle prend maintenant du RETARD quand on tourne, puis rattrape. C'est l'ecart entre la prise de retard (immediate)
+et le rattrapage (progressif) qui se lit comme du poids. Un objet sans inertie n'a pas de masse a l'oeil.
+
+### Trois details qui font toute la difference
+
+**La rotation passe A GAUCHE de l'offset de portage.** La machine pivote donc AUTOUR DU JOUEUR -- le guidon reste
+dans les mains, le carter part de cote. A droite, elle tournerait sur elle-meme, ce qui est le mouvement d'un objet
+PORTE et pas POUSSE. Un seul cote de multiplication separe les deux lectures.
+
+**Le repli sur [-pi, pi].** Sans lui, passer de +179 a -179 degres compte comme un demi-tour complet, et la
+tondeuse part en toupie une fois par tour de joueur.
+
+**Le plafond (`SWING_MAX`).** Sans lui, une pirouette envoie la machine a 180 degres et elle repasse devant le
+joueur par l'autre cote.
+
+Calcule cote SERVEUR, sur le C0 de la soudure : le ballant se replique donc a tout le monde, comme la rotation de
+l'echelle. `SWING_GAIN` a 0 rend exactement la soudure rigide d'avant.
+
 ## 0.0.276 — On POUSSE la tondeuse, on ne court plus avec
 
 Les vitesses de la tondeuse n'etaient calees sur RIEN : 13 au demarrage, 20 a plein regime, alors que la marche du

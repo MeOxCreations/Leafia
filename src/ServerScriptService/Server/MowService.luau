@@ -32,6 +32,9 @@ type CarryState = {
 	lever: AnimationTrack?, -- levier d'accelerateur : on pilote sa TimePosition, on ne la laisse pas jouer
 	tick: RBXScriptConnection?, -- boucle de la machine : montee en vitesse + position du levier
 	speed: number, -- vitesse COURANTE du porteur, montee/descente lissee
+	baseC0: CFrame, -- offset de portage au repos, sans le ballant. Le ballant se compose PAR-DESSUS.
+	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
+	lastYaw: number?, -- cap du porteur a l'image precedente, pour mesurer combien il a tourne
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -440,6 +443,9 @@ local function grab(player: Player, model: Model)
 		lever = nil,
 		tick = nil,
 		speed = MowConfigs.SPEED_MIN,
+		baseC0 = c0,
+		swing = 0,
+		lastYaw = nil,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -494,6 +500,35 @@ local function grab(player: Player, model: Model)
 		-- ecrire directement le ferait se battre avec le sprint et les autres features (sa regle, en tete de
 		-- son fichier). Sa rampe est plus rapide que la notre, donc c'est bien NOTRE montee qu'on ressent.
 		CharacterService.setSpeedOverride(state.owner, state.speed)
+
+		-- BALLANT. On mesure combien le porteur a TOURNE depuis l'image d'avant, et la machine prend ce retard
+		-- avant de rattraper. C'est l'ecart entre prise de retard (immediate) et rattrapage (progressif) qui se
+		-- lit comme du POIDS -- une machine soudee rigide se lit comme un objet tenu a bout de bras.
+		local look = (rootPart :: BasePart).CFrame.LookVector
+		local yaw = math.atan2(-look.X, -look.Z)
+		if state.lastYaw then
+			local delta = yaw - (state.lastYaw :: number)
+			-- Repli sur [-pi, pi] : sans ca, passer de +179 a -179 degres compte comme un demi-tour complet et
+			-- la tondeuse part en toupie une fois par tour.
+			if delta > math.pi then
+				delta -= math.pi * 2
+			elseif delta < -math.pi then
+				delta += math.pi * 2
+			end
+			state.swing -= delta * MowConfigs.SWING_GAIN
+		end
+		state.lastYaw = yaw
+		-- Rattrapage, puis plafond : sans lui une pirouette enverrait la machine repasser devant par l'autre cote.
+		state.swing -= state.swing * math.min(1, MowConfigs.SWING_RECOVER * dt)
+		local maxSwing = math.rad(MowConfigs.SWING_MAX)
+		state.swing = math.clamp(state.swing, -maxSwing, maxSwing)
+
+		local weld = state.weld
+		if weld then
+			-- La rotation passe A GAUCHE de l'offset : la machine pivote AUTOUR DU JOUEUR (le guidon reste dans
+			-- les mains, le carter part de cote). A droite, elle tournerait sur elle-meme -- un objet porte.
+			weld.C0 = CFrame.Angles(0, state.swing, 0) * state.baseC0
+		end
 
 		-- LE LEVIER RACONTE LE REGIME. Ratio 0 au ralenti, 1 a plein regime, et on ecrit l'IMAGE correspondante.
 		-- On s'arrete a Length - epsilon : sur la derniere image pile, une piste bouclee est deja repartie a zero.
