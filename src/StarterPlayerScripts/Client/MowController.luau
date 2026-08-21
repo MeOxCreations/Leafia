@@ -66,7 +66,11 @@ local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : don
 local revealOn = false
 local steering = false
 local autoRotateWas = true
-local wheelAngle = 0
+-- UN ANGLE PAR ROUE, jamais un compteur partage. Avec une seule variable, la premiere roue de la boucle
+-- avancait l'angle et la seconde repartait de la : l'angle progressait DEUX fois par image (les roues
+-- tournaient deux fois trop vite) et les deux n'etaient jamais au meme endroit.
+-- Cle par le Motor6D lui-meme : deux tondeuses posees dans la map ne se marchent pas dessus non plus.
+local wheelAngles: { [Motor6D]: number } = {}
 local connection: RBXScriptConnection? = nil
 
 -- REVELATION : l'herbe s'allume ET la camera prend du recul. UN SEUL point d'entree pour les deux -- les
@@ -220,13 +224,15 @@ local function spinWheels(model: Model, distance: number)
 				radius = math.max(s.X, s.Y, s.Z) * 0.5
 			end
 			if radius > 1e-3 then
+				-- Distance SIGNEE : negative en marche arriere, donc les roues tournent a l'envers toutes seules.
 				local delta = MowConfigs.WHEEL_DIRECTION * distance / radius
-				wheelAngle = (wheelAngle + delta) % (math.pi * 2)
+				local angle = ((wheelAngles[motor] or 0) + delta) % (math.pi * 2)
+				wheelAngles[motor] = angle
 				local axis = MowConfigs.WHEEL_AXIS
 				local spin = if axis == "Y"
-					then CFrame.Angles(0, wheelAngle, 0)
-					elseif axis == "Z" then CFrame.Angles(0, 0, wheelAngle)
-					else CFrame.Angles(wheelAngle, 0, 0)
+					then CFrame.Angles(0, angle, 0)
+					elseif axis == "Z" then CFrame.Angles(0, 0, angle)
+					else CFrame.Angles(angle, 0, 0)
 				-- On ecrit C0, PAS Transform : Transform appartient a l'Animator. Corollaire, ces joints ne doivent
 				-- etre cles dans AUCUNE animation, sinon deux ecrivains se disputent le meme joint.
 				local base = motor:GetAttribute("LeafiaBaseC0")

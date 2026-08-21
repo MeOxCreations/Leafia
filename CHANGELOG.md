@@ -2185,6 +2185,22 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.301 — Les roues tournent juste, et a l'envers en marche arriere
+
+Les deux roues PARTAGEAIENT un seul compteur d'angle. Dans la boucle, la premiere avancait l'angle et la seconde
+repartait de la : l'angle progressait DEUX fois par image (les roues tournaient deux fois trop vite) et les deux
+n'etaient jamais au meme endroit.
+
+Chaque roue a maintenant son angle, cle par son Motor6D -- donc deux tondeuses posees dans la map ne se marchent
+pas dessus non plus.
+
+La marche arriere, elle, etait deja correcte depuis le 0.0.279 : la distance est PROJETEE sur l'avant de la
+machine, donc negative en reculant, et `spinWheels` ne rejette que zero. Mais le doublement d'angle rendait le
+resultat illisible -- on ne pouvait pas voir que le sens etait bon.
+
+Lecon : une variable d'etat partagee par plusieurs objets dans une boucle est un accumulateur qui compte pour tout
+le monde. Ca se voit d'autant moins que le symptome (trop vite) ressemble a un mauvais reglage.
+
 ## 0.0.300 — L'herbe tondue descend plus bas
 
 `MOW_CUT` passe de 0.55 a 0.75 : il reste 25 % du brin au lieu de 45. A l'ecran l'herbe tondue restait trop haute
