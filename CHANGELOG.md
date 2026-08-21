@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.308 — Le moteur ne prend qu'au deuxieme ou troisieme coup
+
+Un moteur qui demarre du premier coup a chaque fois se lit comme un interrupteur. Il faut maintenant 2 ou 3
+tirages, tires au sort A LA PRISE -- et c'est ce qui rend le demarrage reussi satisfaisant.
+
+Tire a la prise et non a chaque tirage : sinon le compte changerait en cours de sequence, et le moteur pourrait ne
+jamais prendre (ou prendre au premier coup). `PULL_TRIES_MIN == PULL_TRIES_MAX` donne un nombre fixe.
+
+Sur un tirage RATE, la piste se REARME : le joueur revient en position, corde en main, et peut retirer tout de
+suite. La poignee ne retourne PAS sur la machine -- il ne l'a jamais lachee.
+
+Deux details qui ont demande de l'attention :
+- On relance la piste avant de la figer. Une piste terminee ne repart pas en ecrivant sa `TimePosition`.
+- `Stopped` passe de `Once` a `Connect` : la piste se rearme, donc elle re-signalera sa fin.
+
+Generateur aleatoire PROPRE au service plutot que `math.random`, partage par tout le jeu : deux features qui le
+consomment se decalent mutuellement sans qu'on comprenne pourquoi.
+
+### Le cabrage est retarde
+
+Il partait au CLIC, alors que le geste ne tire pas la corde a la premiere image. La machine bronchait donc avant
+que le bras ne parte en arriere. `PULL_LIFT_DELAY` (0.35 s) le recale -- a regler en regardant l'animation.
+
+Le delai verifie que le joueur porte ENCORE la tondeuse a l'echeance : cabrer une machine qu'on ne tient plus la
+laisserait de travers.
+
+Note pour plus tard : le jour ou l'animation portera un MARQUEUR, s'y brancher plutot que de compter un delai. Un
+delai fige se desynchronise des qu'on retouche l'animation -- meme raison que pour la boite aux lettres.
+
 ## 0.0.307 — La machine se cabre et le moteur tousse quand on tire la corde
 
 Deux details qui donnent de la FORCE au geste. Sans eux, tirer la corde n'agissait que sur le personnage : la

@@ -43,6 +43,8 @@ type CarryState = {
 	baseC0: CFrame, -- offset de portage au repos, sans le ballant. Le ballant se compose PAR-DESSUS.
 	backDist: number, -- recul de la machine derriere sa racine. PIVOT du cabrage : autour de la racine, c'est l'arriere qui se leverait.
 	lift: number, -- cabrage courant, en radians. Retombe tout seul.
+	pulls: number, -- tirages deja faits sur cette prise
+	pullsNeeded: number, -- combien il en faut pour que le moteur prenne. Tire au sort a la prise.
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
 	armAmount: number, -- pose des BRAS, lissee. Suit l'input quand on braque, le ballant sinon.
@@ -63,6 +65,10 @@ local HOLD_MIN_LENGTH = 0.05
 -- En dessous de cet angle (radians, ~0.06 degre) on considere la machine DROITE et on cle la valeur.
 local SWING_SNAP = 0.001
 local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
+
+-- Generateur PROPRE au service : `math.random` est partage par tout le jeu, et deux features qui le
+-- consomment se decalent mutuellement sans qu'on comprenne pourquoi.
+local rng = Random.new()
 
 local carried: { [Model]: CarryState } = {}
 
@@ -277,14 +283,31 @@ local function playStart(model: Model, character: Model, state: CarryState, onDo
 	state.start = track
 	-- `Stopped` couvre la fin NORMALE comme un arret force (repose pendant le geste) : dans les deux cas la
 	-- suite doit etre annulee ou enchainee, jamais laissee en plan.
-	track.Stopped:Once(function()
-		state.start = nil
-		-- Corde tiree (ou geste interrompu) : la poignee retourne sur la machine dans les deux cas.
-		releaseLauncher(model, state)
-		-- Le joueur a pu reposer la tondeuse pendant le tirage : on n'enchaine que s'il la porte encore.
-		if carried[model] == state then
-			onDone()
+	-- `Connect` et non `Once` : la piste se REARME apres un tirage rate, donc elle re-signalera sa fin.
+	track.Stopped:Connect(function()
+		-- Le joueur a pu reposer la tondeuse pendant le tirage : dans ce cas on rend la poignee et on s'arrete la.
+		if carried[model] ~= state then
+			state.start = nil
+			releaseLauncher(model, state)
+			return
 		end
+
+		state.pulls += 1
+		if state.pulls >= state.pullsNeeded then
+			-- LE MOTEUR PREND. La poignee retourne sur la machine, la suite s'enchaine.
+			state.start = nil
+			releaseLauncher(model, state)
+			onDone()
+			return
+		end
+
+		-- RATE. On se REMET en position, corde en main : le joueur peut retirer tout de suite. La poignee NE
+		-- retourne PAS sur la machine -- il ne l'a jamais lachee.
+		-- On relance la piste avant de la figer : une piste terminee ne repart pas en ecrivant sa TimePosition.
+		-- Fondu ZERO : on revient a la pose d'ou on est parti, il n'y a rien a fondre.
+		track:Play(0)
+		track:AdjustSpeed(0)
+		track.TimePosition = 0
 	end)
 	-- FIGEE A SA PREMIERE IMAGE : le personnage TIENT la corde, pret a tirer. C'est le CLIC du joueur qui la
 	-- relance (voir MowService.pull) -- on ne demarre pas une tondeuse en la regardant.
@@ -304,8 +327,15 @@ local function pullStarter(model: Model, state: CarryState)
 		return -- pas de corde a tirer, ou deja en train de la tirer
 	end
 	track:AdjustSpeed(1)
-	-- LA MACHINE SE CABRE sous l'a-coup. Pose ici et pas dans la boucle : c'est un EVENEMENT, pas un etat.
-	state.lift = math.rad(MowConfigs.PULL_LIFT)
+	-- LA MACHINE SE CABRE sous l'a-coup, RETARDE : le geste ne tire pas la corde a la premiere image, donc la
+	-- machine ne doit pas broncher avant que le bras ne parte en arriere.
+	-- On verifie qu'il porte ENCORE la tondeuse a l'echeance : il a pu la reposer entre-temps, et cabrer une
+	-- machine qu'on ne tient plus la laisserait de travers.
+	task.delay(MowConfigs.PULL_LIFT_DELAY, function()
+		if carried[model] == state then
+			state.lift = math.rad(MowConfigs.PULL_LIFT)
+		end
+	end)
 	-- LE MOTEUR TOUSSE : on joue sa boucle UNE fois, non bouclee. Il tourne, il ne PREND pas -- c'est ce qui
 	-- fait comprendre qu'on essaie de le lancer, et qu'un tirage peut echouer.
 	local animator = machineAnimator(model)
@@ -750,6 +780,10 @@ local function grab(player: Player, model: Model)
 		baseC0 = c0,
 		backDist = select(2, measure(model, root)),
 		lift = 0,
+		pulls = 0,
+		-- Tire A LA PRISE et pas a chaque tirage : le compte doit etre stable pendant la sequence, sinon le
+		-- moteur pourrait ne jamais prendre (ou prendre au premier coup) selon les tirages successifs.
+		pullsNeeded = rng:NextInteger(MowConfigs.PULL_TRIES_MIN, MowConfigs.PULL_TRIES_MAX),
 		swing = 0,
 		steerInput = 0,
 		armAmount = 0,

@@ -141,7 +141,20 @@ return {
 	-- sursaut qui donne de la FORCE au geste -- sans lui, tirer la corde n'agit que sur le personnage.
 	-- Angle en degres. NEGATIF si c'est l'arriere qui se leve chez toi : le sens depend du montage du rig, il ne se
 	-- deduit pas.
+	-- NOMBRE DE TIRAGES avant que le moteur prenne, tire au sort dans cet intervalle a chaque prise.
+	-- Un moteur qui demarre au premier coup a chaque fois se lit comme un interrupteur. Qu'il tousse une ou deux
+	-- fois avant de partir, c'est ce qui le rend vivant -- et ca rend le demarrage reussi SATISFAISANT.
+	-- MIN == MAX donne un nombre fixe.
+	PULL_TRIES_MIN = 2,
+	PULL_TRIES_MAX = 3,
+
 	PULL_LIFT = 12,
+	-- DELAI avant le cabrage, en secondes, compte depuis le clic. Le geste ne tire pas la corde a la premiere
+	-- image : la machine ne doit donc pas broncher tant que le bras n'a pas tire. A REGLER SUR TON ANIMATION,
+	-- en regardant a quel instant la main part en arriere.
+	-- (Le jour ou l'animation portera un MARQUEUR, s'y brancher plutot que de compter un delai : un delai fige se
+	-- desynchronise des qu'on retouche l'animation. Meme raison que pour la boite aux lettres.)
+	PULL_LIFT_DELAY = 0.35,
 	-- Vitesse de retombee, en fraction par seconde. HAUTE : un a-coup doit etre sec, pas une houle.
 	PULL_LIFT_DECAY = 7,
 	-- Attribut pose sur la tondeuse quand le moteur TOURNE. Lu par le client : une machine a l'arret ne coupe rien.
