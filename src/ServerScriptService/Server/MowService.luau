@@ -439,7 +439,29 @@ local function carryC0(model: Model, root: BasePart, hrp: BasePart, humanoid: Hu
 			.. ` | recul mesure {string.format("%.2f", back)} | orientation racine {r:ToOrientation()}`
 		)
 	end
-	return CFrame.new(0, -down, -forward) * CFrame.Angles(0, math.rad(MowConfigs.CARRY_YAW), 0)
+	-- ORIENTATION : on ALIGNE L'AVANT REEL DE LA MACHINE sur le regard du joueur, au lieu d'aligner betement les
+	-- axes de la RootPart. Rien ne garantit que le -Z local de la racine soit l'avant de la tondeuse -- il vient du
+	-- rig, pas du bon sens. Sans cette correction, la machine PIVOTAIT au moment de la prise, et on croyait qu'elle
+	-- se teleportait devant le joueur.
+	--
+	-- L'avant reel se mesure comme partout ailleurs : RootPart -> CutZone. On le repasse en repere RACINE, et on
+	-- cherche la rotation qui l'amene sur -Z (le "devant" d'un CFrame).
+	local spin = math.rad(MowConfigs.CARRY_YAW)
+	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
+	if zone and zone:IsA("BasePart") then
+		local world = zone.Position - root.Position
+		world = Vector3.new(world.X, 0, world.Z)
+		if world.Magnitude > 1e-3 then
+			local localDir = root.CFrame:VectorToObjectSpace(world.Unit)
+			local flat = Vector3.new(localDir.X, 0, localDir.Z)
+			if flat.Magnitude > 1e-3 then
+				flat = flat.Unit
+				-- Angle de cet avant par rapport a -Z, puis on tourne de l'oppose pour l'y ramener.
+				spin -= math.atan2(flat.X, -flat.Z)
+			end
+		end
+	end
+	return CFrame.new(0, -down, -forward) * CFrame.Angles(0, spin, 0)
 end
 
 -- REPOSE : on retire la soudure et on rend a chaque part son etat d'origine. Celui qui a modifie est celui qui

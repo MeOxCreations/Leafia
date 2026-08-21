@@ -102,6 +102,11 @@ return {
 	-- Duree du pivot vers la tondeuse une fois arrive. Le joueur arrive DOS a elle s'il venait de l'avant : sans ce
 	-- pivot, la soudure la reposerait de l'autre cote.
 	APPROACH_TURN_TIME = 0.18,
+	-- CONTOURNEMENT. Le point de prise est DERRIERE la machine : un joueur qui arrive par DEVANT marcherait droit
+	-- dedans. On passe donc par un point de cote, a cette distance du centre de la tondeuse, avant de rejoindre le
+	-- guidon -- ce qui decrit un arc naturel autour d'elle.
+	-- A monter si le joueur frotte encore le carter en contournant.
+	APPROACH_DETOUR = 4,
 
 	-- ===== POSE DE MAINTIEN =====
 	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.

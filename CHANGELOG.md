@@ -2185,6 +2185,39 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.297 — La tondeuse ne bouge plus a la prise : c'est le joueur qui va a elle
+
+En appuyant sur E, la machine sautait devant le joueur. Deux causes distinctes, toutes deux corrigees.
+
+### Le pivot etait saute quand on etait deja sur place
+
+L'approche pivote le joueur vers la machine avant de prendre. Mais quand il etait DEJA assez pres, on sautait la
+marche -- et le pivot avec. Il prenait donc la tondeuse en regardant ailleurs, et la soudure la reposait devant
+son regard. On croyait que la MACHINE avait saute ; c'est le joueur qui n'etait pas oriente.
+
+Le pivot a maintenant lieu dans les DEUX cas. Sauter un deplacement inutile est une chose, sauter l'orientation en
+est une autre.
+
+### La soudure alignait la mauvaise chose
+
+Elle alignait les axes de la RootPart sur ceux du joueur. Or rien ne garantit que le -Z local de la racine soit
+l'avant de la tondeuse : il vient du rig, pas du bon sens. La machine PIVOTAIT donc a la prise.
+
+On aligne desormais son AVANT REEL (mesure comme partout ailleurs : RootPart -> CutZone) sur le regard du joueur.
+La machine garde son orientation, elle ne fait que se retrouver devant lui.
+
+### Contournement
+
+Un joueur qui arrive PAR DEVANT marchait droit dans la machine pour rejoindre le guidon, qui est derriere. Il
+passe maintenant par un point de COTE d'abord -- du cote ou il se trouve deja, donc le chemin le plus court -- ce
+qui decrit un arc naturel autour d'elle.
+
+Pas de PathfindingService pour autant : deux points suffisent dans un jardin ouvert, et un chemin calcule serait
+plus fragile pour un gain nul a cette distance.
+
+`walkTo` et `turnTo` deviennent deux fonctions distinctes, appelees par les deux chemins. Le pivot etait duplique
+dans l'un des deux, et c'est exactement comme ca qu'un des deux finit par diverger.
+
 ## 0.0.296 — On ralentit pour tourner, et la camera passe a l'epaule
 
 ### Avancer en braquant etait trop vif

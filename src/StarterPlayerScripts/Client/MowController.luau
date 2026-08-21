@@ -454,7 +454,49 @@ end
 --
 -- Si on est DEJA sur place, on ne fabrique AUCUN deplacement : construire une marche forcee pour un joueur deja
 -- arrive a deja coute un systeme entier sur l'echelle. On mesure d'abord, on marche seulement si besoin.
+-- PIVOT vers la machine. Sans lui, un joueur venu par l'avant -- ou deja sur place mais regardant ailleurs --
+-- prend la tondeuse dos a elle, et la soudure la repose de l'autre cote. On croit alors que la MACHINE a saute
+-- devant le joueur, alors que c'est le joueur qui n'etait pas oriente.
+local function turnTo(facing: Vector3)
+	local character = player.Character
+	local part = character and character:FindFirstChild("HumanoidRootPart")
+	if not (part and part:IsA("BasePart")) then
+		return
+	end
+	local root: BasePart = part
+	local from = root.CFrame
+	local to = CFrame.lookAt(from.Position, from.Position + facing)
+	local t0 = os.clock()
+	while os.clock() - t0 < MowConfigs.APPROACH_TURN_TIME do
+		local a = (os.clock() - t0) / MowConfigs.APPROACH_TURN_TIME
+		root.CFrame = from:Lerp(to, a)
+		task.wait()
+	end
+	root.CFrame = to
+end
+
+-- Marche jusqu'a un point, ou abandonne au bout de APPROACH_TIMEOUT. Mieux vaut une prise un peu de travers
+-- qu'un joueur bloque parce qu'un caillou lui barre le chemin.
+local function walkTo(humanoid: Humanoid, point: Vector3)
+	local done = false
+	local conn = humanoid.MoveToFinished:Connect(function()
+		done = true
+	end)
+	humanoid:MoveTo(point)
+	local deadline = os.clock() + MowConfigs.APPROACH_TIMEOUT
+	while not done and os.clock() < deadline do
+		task.wait()
+	end
+	conn:Disconnect()
+end
+
 local approaching = false
+
+-- APPROCHE : le joueur MARCHE jusqu'au guidon, CONTOURNE la machine s'il arrive par devant, pivote, puis prend.
+-- C'est lui qui va a la tondeuse -- elle ne bouge jamais.
+--
+-- Si on est DEJA sur place, on ne fabrique AUCUN deplacement : construire une marche forcee pour un joueur deja
+-- arrive a deja coute un systeme entier sur l'echelle. On mesure d'abord, on marche seulement si besoin.
 local function approachThenGrab(model: Model, onArrived: () -> ())
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
@@ -465,43 +507,39 @@ local function approachThenGrab(model: Model, onArrived: () -> ())
 		return
 	end
 
-	local flat = Vector3.new(hrp.Position.X - spot.X, 0, hrp.Position.Z - spot.Z)
-	if flat.Magnitude <= MowConfigs.APPROACH_SKIP_DIST then
-		onArrived() -- deja arrive : rien a animer
-		return
-	end
+	local hum: Humanoid = humanoid
+	local root: BasePart = hrp
+	local target: Vector3 = spot
+	local look: Vector3 = facing
+	local rootModel = rootOf(model)
 
 	approaching = true
 	task.spawn(function()
-		local done = false
-		local conn = (humanoid :: Humanoid).MoveToFinished:Connect(function()
-			done = true
-		end)
-		;(humanoid :: Humanoid):MoveTo(spot :: Vector3)
-
-		-- Timeout : mieux vaut une prise un peu de travers qu'un joueur bloque par un caillou.
-		local until_ = os.clock() + MowConfigs.APPROACH_TIMEOUT
-		while not done and os.clock() < until_ do
-			task.wait()
-		end
-		conn:Disconnect()
-
-		-- PIVOT vers la machine. Sans lui, un joueur venu par l'avant arrive DOS a elle, et la soudure la
-		-- reposerait de l'autre cote. On tourne le personnage, on ne le deplace pas.
-		local root2 = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-		if root2 and root2:IsA("BasePart") then
-			local from = root2.CFrame
-			local to = CFrame.lookAt(from.Position, from.Position + (facing :: Vector3))
-			local t0 = os.clock()
-			while os.clock() - t0 < MowConfigs.APPROACH_TURN_TIME do
-				local a = (os.clock() - t0) / MowConfigs.APPROACH_TURN_TIME
-				root2.CFrame = from:Lerp(to, a)
-				task.wait()
+		local flat = Vector3.new(root.Position.X - target.X, 0, root.Position.Z - target.Z)
+		if flat.Magnitude > MowConfigs.APPROACH_SKIP_DIST then
+			-- CONTOURNEMENT. Le point de prise est DERRIERE la machine : un joueur qui arrive par devant marcherait
+			-- droit dedans (et se ferait bloquer, ou la traverserait). On passe donc par un point de COTE d'abord,
+			-- du cote ou il se trouve deja -- c'est le chemin le plus court, et il decrit un arc naturel.
+			if rootModel then
+				local toPlayer = root.Position - rootModel.Position
+				toPlayer = Vector3.new(toPlayer.X, 0, toPlayer.Z)
+				local inFront = toPlayer:Dot(look) > 0
+				if inFront then
+					-- Perpendiculaire a l'avant de la machine (rotation de 90 degres : x,z -> -z,x).
+					local side = Vector3.new(-look.Z, 0, look.X)
+					-- Du cote ou le joueur est deja. Pile en face (produit nul), on en choisit un plutot que zero,
+					-- sinon le detour serait nul et on repasserait dans la machine.
+					local sign = if toPlayer:Dot(side) >= 0 then 1 else -1
+					walkTo(hum, rootModel.Position + side * (sign * MowConfigs.APPROACH_DETOUR))
+				end
 			end
-			root2.CFrame = to
+			walkTo(hum, target)
 		end
-		-- Relache SEULEMENT ici : le pivot fait partie du geste, un second appui pendant qu'il tourne
-		-- relancerait une marche par-dessus celle qui vient de finir.
+
+		-- Le pivot a lieu MEME quand on a saute la marche : c'est lui qui evite que la machine paraisse sauter.
+		turnTo(look)
+		-- Relache SEULEMENT ici : le pivot fait partie du geste, un second appui pendant qu'il tourne relancerait
+		-- une marche par-dessus celle qui vient de finir.
 		approaching = false
 		onArrived()
 	end)
