@@ -270,6 +270,13 @@ return {
 	-- Retard MAXIMAL, en degres. Sans ce plafond, une pirouette du joueur enverrait la tondeuse a 180 degres, et
 	-- elle repasserait devant lui par l'autre cote.
 	SWING_MAX = 28,
+	-- LISSAGE de l'angle AFFICHE, en fraction par seconde.
+	-- Le ballant se calcule sur la DIFFERENCE de cap entre deux images. Or le serveur ne voit pas le cap du joueur
+	-- en direct : il le recoit REPLIQUE, par paquets et interpole. Prendre la derivee d'un signal comme ca amplifie
+	-- son bruit, et la machine TREMBLE des qu'on tourne.
+	-- On calcule donc comme avant, mais on n'AFFICHE qu'une version lissee. Assez rapide pour qu'on ne sente aucun
+	-- retard, assez lent pour absorber le bruit de replication.
+	SWING_SMOOTH = 14,
 
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).

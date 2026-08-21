@@ -2185,6 +2185,30 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.293 — La tondeuse ne tremble plus en tournant (bruit de derivee)
+
+Le ballant se calcule sur la DIFFERENCE de cap entre deux images. Or le serveur ne voit pas le cap du joueur en
+direct : il le recoit REPLIQUE, par paquets et interpole. Prendre la derivee d'un signal comme ca AMPLIFIE son
+bruit -- d'ou une machine qui tremble pile au moment ou on tourne.
+
+L'angle est toujours calcule pareil, mais on n'AFFICHE plus qu'une version lissee (`SWING_SMOOTH`). Assez rapide
+pour qu'aucun retard ne se sente, assez lente pour absorber le bruit de replication. Tout ce qui AFFICHE (la
+soudure et la pose des bras) lit cette version ; le brut reste la valeur de travail.
+
+Regle generale a garder : deriver une valeur RECUE du reseau donne toujours du bruit. Soit on lisse le resultat,
+soit on ne derive pas.
+
+### Si ca tremble encore
+
+Deux autres causes possibles, dans cet ordre :
+1. La `C0` de la soudure est ecrite cote SERVEUR a chaque image, donc elle se replique par paquets : le client
+   verrait des marches meme avec un angle parfaitement lisse. Le remede serait de faire le ballant en VISUEL cote
+   client (les autres joueurs ne le verraient plus).
+2. Le `hrp.CFrame` ecrit a chaque image pendant la conduite peut se battre avec le solveur physique.
+
+Test pour trancher : `SWING_GAIN = 0`. Si le tremblement disparait, c'est le chemin du ballant (cause 1) ; s'il
+reste, c'est la conduite (cause 2).
+
 ## 0.0.292 — La pose des bras partait du mauvais cote
 
 `TURN_POSE_INVERT` passe a true. Le sens depend de la convention d'angle de Roblox ET du sens dans lequel

@@ -37,6 +37,7 @@ type CarryState = {
 	speed: number, -- vitesse COURANTE du porteur, montee/descente lissee
 	baseC0: CFrame, -- offset de portage au repos, sans le ballant. Le ballant se compose PAR-DESSUS.
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
+	swingShown: number, -- le meme, LISSE. C'est lui qu'on affiche : le brut tremble (bruit de replication).
 	lastYaw: number?, -- cap du porteur a l'image precedente, pour mesurer combien il a tourne
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
 	armAmount: number, -- pose des BRAS, lissee. Suit l'input quand on braque, le ballant sinon.
@@ -506,6 +507,7 @@ local function grab(player: Player, model: Model)
 		speed = MowConfigs.SPEED_MIN,
 		baseC0 = c0,
 		swing = 0,
+		swingShown = 0,
 		lastYaw = nil,
 		steerInput = 0,
 		armAmount = 0,
@@ -604,6 +606,13 @@ local function grab(player: Player, model: Model)
 		local maxSwing = math.rad(MowConfigs.SWING_MAX)
 		state.swing = math.clamp(state.swing, -maxSwing, maxSwing)
 
+		-- ANGLE AFFICHE : une version lissee du brut. Le brut est une DERIVEE d'un cap replique, donc bruite ;
+		-- l'afficher tel quel faisait trembler la machine des qu'on tournait.
+		state.swingShown += (state.swing - state.swingShown) * math.min(1, MowConfigs.SWING_SMOOTH * dt)
+		if math.abs(state.swing - state.swingShown) < SWING_SNAP then
+			state.swingShown = state.swing
+		end
+
 		-- REGARD ARRIERE. On mesure le recul REEL (vitesse projetee sur le cap), pas l'intention : une bosse ou un
 		-- autre joueur qui pousse ne doivent pas faire tourner la tete, et un recul reel doit la tourner meme si
 		-- l'input vient d'ailleurs.
@@ -627,7 +636,7 @@ local function grab(player: Player, model: Model)
 		-- s'installer quand on manoeuvre lentement : cales dessus, on braquait et les bras ne bougeaient presque
 		-- pas. En manoeuvre c'est l'EFFORT qu'on montre, et l'effort est immediat.
 		-- Calcule HORS du bloc d'animation : l'etat doit rester coherent meme si la piste n'a pas pu charger.
-		local swingRatio = if maxSwing > 1e-4 then math.clamp(state.swing / maxSwing, -1, 1) else 0
+		local swingRatio = if maxSwing > 1e-4 then math.clamp(state.swingShown / maxSwing, -1, 1) else 0
 		local steerRatio = math.clamp(state.steerInput * steerSign, -1, 1)
 		local armTarget = if math.abs(steerRatio) > 0.05 then steerRatio else swingRatio
 		state.armAmount += (armTarget - state.armAmount) * math.min(1, MowConfigs.TURN_POSE_SPEED * dt)
@@ -648,7 +657,7 @@ local function grab(player: Player, model: Model)
 		if weld then
 			-- La rotation passe A GAUCHE de l'offset : la machine pivote AUTOUR DU JOUEUR (le guidon reste dans
 			-- les mains, le carter part de cote). A droite, elle tournerait sur elle-meme -- un objet porte.
-			weld.C0 = CFrame.Angles(0, state.swing, 0) * state.baseC0
+			weld.C0 = CFrame.Angles(0, state.swingShown, 0) * state.baseC0
 		end
 
 		-- LE LEVIER RACONTE LE REGIME. Ratio 0 au ralenti, 1 a plein regime, et on ecrit l'IMAGE correspondante.
