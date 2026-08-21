@@ -325,15 +325,18 @@ local GrassZoneConfigs = {
 	-- viennent les bandes claires et sombres d'une vraie pelouse tondue. Chaque touffe retient le SENS dans lequel
 	-- la tondeuse est passee, et s'eclaircit ou s'assombrit selon.
 	--
-	-- LIMITE ASSUMEE : le sens est compare a un AXE FIXE. Les bandes sont donc franches quand on tond LE LONG de
-	-- cet axe (un aller clair, un retour sombre), et invisibles quand on tond perpendiculairement -- les deux sens
-	-- y donnent la meme valeur. Un vrai effet marcherait dans toutes les directions, mais il faudrait comparer au
-	-- REGARD du joueur, donc repeindre toute la pelouse des qu'il tourne la camera. On prend le pas cher.
-	-- Regler cet axe sur la direction dans laquelle on tond le plus.
-	MOW_STRIPE_AXIS = Vector3.new(0, 0, 1),
+	-- L'AXE S'APPREND DE LA PREMIERE PASSE. Une version precedente le figeait dans la config : les bandes etaient
+	-- alors franches en tondant le long de cet axe, et INVISIBLES en tondant perpendiculairement -- les deux sens y
+	-- donnaient la meme valeur. Le joueur ne voyait donc rien des qu'il ne tondait pas dans le bon sens.
+	-- Comme on tond en ALLER-RETOUR, la premiere passe suffit a definir l'axe : tout le reste s'y aligne ou s'y
+	-- oppose, quelle que soit l'orientation du jardin.
+	-- Vecteur NON NUL ici = axe impose, et on retrouve l'ancien comportement. Vector3.zero = appris.
+	MOW_STRIPE_AXIS = Vector3.zero,
 	-- Ecart de luminosite entre un aller et un retour. 0 = pas de bandes.
-	-- Discret : les bandes doivent se deviner, pas se lire comme des rayures peintes.
-	MOW_STRIPE_STRENGTH = 0.13,
+	-- Monte de 0.13 a 0.22 : a l'ecran on ne voyait pas la difference entre un aller et un retour.
+	-- Ne pas depasser ~0.3 : au-dela ca se lit comme des rayures PEINTES, et on retombe dans ce que
+	-- l'ancien systeme de rayures faisait de faux.
+	MOW_STRIPE_STRENGTH = 0.22,
 
 	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
 	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.

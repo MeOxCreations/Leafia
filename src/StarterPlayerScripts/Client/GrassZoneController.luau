@@ -54,6 +54,12 @@ local reveal = 0
 -- joueur a proximite : sinon la moitie de la pelouse resterait figee au milieu de la transition, et c'est
 -- justement le LOIN qu'on veut voir s'allumer.
 local fading = false
+
+-- AXE DES BANDES DE TONTE, appris de la PREMIERE passe (ou impose par la config).
+-- Il faut une reference pour dire "aller" et "retour" : sans elle, deux sens opposes ne se distinguent pas. Un axe
+-- FIGE dans la config marchait quand on tondait le long de lui, et ne montrait RIEN en travers. Comme on tond en
+-- aller-retour, la premiere passe est la meilleure reference possible : tout le reste s'y aligne ou s'y oppose.
+local stripeAxis: Vector3? = nil
 -- Repere des rayures, calcule une fois. Projeter la case sur cette direction donne la bande a laquelle elle appartient.
 local STRIPE_COS = math.cos(math.rad(GrassZoneConfigs.STRIPE_HEADING))
 local STRIPE_SIN = math.sin(math.rad(GrassZoneConfigs.STRIPE_HEADING))
@@ -1067,10 +1073,15 @@ function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number
 	local stripe = 0
 	if direction and GrassZoneConfigs.MOW_STRIPE_STRENGTH > 0 then
 		local flat = Vector3.new(direction.X, 0, direction.Z)
-		local axis = GrassZoneConfigs.MOW_STRIPE_AXIS
-		local flatAxis = Vector3.new(axis.X, 0, axis.Z)
-		if flat.Magnitude > 1e-3 and flatAxis.Magnitude > 1e-3 then
-			stripe = math.clamp(flat.Unit:Dot(flatAxis.Unit), -1, 1)
+		if flat.Magnitude > 1e-3 then
+			flat = flat.Unit
+			if not stripeAxis then
+				-- Axe impose par la config s'il est non nul, sinon APPRIS de cette premiere passe.
+				local forced = GrassZoneConfigs.MOW_STRIPE_AXIS
+				local flatForced = Vector3.new(forced.X, 0, forced.Z)
+				stripeAxis = if flatForced.Magnitude > 1e-3 then flatForced.Unit else flat
+			end
+			stripe = math.clamp(flat:Dot(stripeAxis :: Vector3), -1, 1)
 		end
 	end
 	local total = 0

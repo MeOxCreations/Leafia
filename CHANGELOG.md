@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.310 — Les bandes de tonte se voient enfin : l'axe s'APPREND
+
+Le joueur ne voyait aucune difference entre un aller et un retour. Deux causes.
+
+### L'axe etait FIGE dans la config
+
+Les bandes etaient donc franches en tondant LE LONG de cet axe, et strictement INVISIBLES en tondant
+perpendiculairement -- les deux sens y donnaient la meme valeur. La limite avait ete annoncee au 0.0.305, mais
+elle rendait l'effet inutilisable en pratique : personne ne tond en verifiant d'abord l'orientation d'une config.
+
+L'axe est desormais APPRIS de la PREMIERE passe. Il faut une reference pour distinguer un aller d'un retour, et
+comme on tond en aller-retour, la premiere passe est la meilleure reference possible : tout le reste s'y aligne ou
+s'y oppose, quelle que soit l'orientation du jardin.
+
+`MOW_STRIPE_AXIS` reste, mais a `Vector3.zero` : un vecteur non nul le fige a nouveau, pour un decor ou l'on veut
+des bandes dans une direction imposee.
+
+### Le contraste etait trop faible
+
+`MOW_STRIPE_STRENGTH` passe de 0.13 a 0.22. Ne pas depasser ~0.3 : au-dela ca se lit comme des rayures PEINTES, et
+on retombe exactement dans ce que l'ancien systeme faisait de faux.
+
 ## 0.0.309 — On braque MOINS en roulant, PLUS a l'arret
 
 `STEER_TURN_RATE` tombe de 120 a 60 degres/s : un quart de tour prend 1.5 s au lieu de 0.75. Une machine LANCEE a
