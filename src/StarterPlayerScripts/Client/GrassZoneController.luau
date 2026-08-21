@@ -1105,14 +1105,23 @@ function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number
 			for _, clump in ipairs(bucket.clumps) do
 				-- Une touffe deja coupee a fond ne coute plus rien : c'est le cas le plus frequent sur une pelouse
 				-- qu'on finit, et c'est justement la que le joueur repasse le plus.
-				if clump.mown < 1 then
+				do
 					local d = clump.basePos - worldPos
 					-- Horizontal, comme le pietinement : la hauteur ne doit pas compter, sinon la tondeuse raterait
 					-- justement les touffes les plus hautes, celles qu'on vient couper.
 					if math.sqrt(d.X * d.X + d.Z * d.Z) < radius then
-						clump.mown = math.min(1, clump.mown + rate)
-						clump.mowStripe = stripe
-						bucketCut += 1
+						if clump.mown < 1 then
+							clump.mown = math.min(1, clump.mown + rate)
+							bucketCut += 1
+						end
+						-- LA BANDE SE REECRIT MEME SUR UNE TOUFFE DEJA COUPEE. On sautait auparavant toute touffe deja tondue
+						-- a fond : la bande restait donc figee sur la PREMIERE passe, et repasser dans l'autre sens ne
+						-- changeait plus rien -- alors que c'est tout l'interet. Une vraie tondeuse reecrit la bande a chaque
+						-- passage.
+						if stripe ~= clump.mowStripe then
+							clump.mowStripe = stripe
+							bucketCut += 1 -- reveille le pave : sans ca la nouvelle bande ne serait pas dessinee
+						end
 					end
 				end
 			end

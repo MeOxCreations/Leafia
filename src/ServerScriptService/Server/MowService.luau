@@ -43,6 +43,7 @@ type CarryState = {
 	baseC0: CFrame, -- offset de portage au repos, sans le ballant. Le ballant se compose PAR-DESSUS.
 	backDist: number, -- recul de la machine derriere sa racine. PIVOT du cabrage : autour de la racine, c'est l'arriere qui se leverait.
 	lift: number, -- cabrage courant, en radians. Retombe tout seul.
+	liftVel: number, -- vitesse du ressort de cabrage. C'est ELLE qu'on pousse, pas la position.
 	pulls: number, -- tirages deja faits sur cette prise
 	pullsNeeded: number, -- combien il en faut pour que le moteur prenne. Tire au sort a la prise.
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
@@ -333,7 +334,10 @@ local function pullStarter(model: Model, state: CarryState)
 	-- machine qu'on ne tient plus la laisserait de travers.
 	task.delay(MowConfigs.PULL_LIFT_DELAY, function()
 		if carried[model] == state then
-			state.lift = math.rad(MowConfigs.PULL_LIFT)
+			-- On donne une VITESSE au ressort, on ne pose pas l'angle. Poser l'angle faisait monter la machine en
+			-- une seule image : instantane, donc brutal. Une impulsion se voit monter.
+			-- La vitesse a donner pour atteindre a peu pres l'angle voulu vaut angle x racine(raideur).
+			state.liftVel = math.rad(MowConfigs.PULL_LIFT) * math.sqrt(MowConfigs.PULL_LIFT_STIFFNESS)
 		end
 	end)
 	-- LE MOTEUR TOUSSE : on joue sa boucle UNE fois, non bouclee. Il tourne, il ne PREND pas -- c'est ce qui
@@ -780,6 +784,7 @@ local function grab(player: Player, model: Model)
 		baseC0 = c0,
 		backDist = select(2, measure(model, root)),
 		lift = 0,
+		liftVel = 0,
 		pulls = 0,
 		-- Tire A LA PRISE et pas a chaque tirage : le compte doit etre stable pendant la sequence, sinon le
 		-- moteur pourrait ne jamais prendre (ou prendre au premier coup) selon les tirages successifs.
@@ -933,10 +938,17 @@ local function grab(player: Player, model: Model)
 		-- On s'arrete a Length - epsilon : sur la derniere image pile, une piste bouclee est deja repartie a zero.
 		-- Le cabrage retombe tout seul. Cle a zero : un lerp exponentiel n'y arrive jamais, et la machine
 		-- garderait une fraction de degre de nez en l'air pour toujours.
-		if state.lift ~= 0 then
-			state.lift -= state.lift * math.min(1, MowConfigs.PULL_LIFT_DECAY * dt)
-			if math.abs(state.lift) < SWING_SNAP then
+		-- RESSORT AMORTI : F = -k*x - c*v, integre en Euler. Suffisant pour un effet de moins d'une seconde.
+		-- La machine se souleve, freine, revient, avec un leger depassement -- c'est lui qui fait "lourd".
+		if state.lift ~= 0 or state.liftVel ~= 0 then
+			local accel = -MowConfigs.PULL_LIFT_STIFFNESS * state.lift - MowConfigs.PULL_LIFT_DAMPING * state.liftVel
+			state.liftVel += accel * dt
+			state.lift += state.liftVel * dt
+			-- On cle les DEUX : un ressort tend vers zero sans jamais l'atteindre, et une vitesse residuelle
+			-- relancerait le calcul a vie pour un angle invisible.
+			if math.abs(state.lift) < SWING_SNAP and math.abs(state.liftVel) < SWING_SNAP then
 				state.lift = 0
+				state.liftVel = 0
 			end
 		end
 

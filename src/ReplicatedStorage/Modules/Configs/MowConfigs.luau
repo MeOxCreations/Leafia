@@ -139,8 +139,9 @@ return {
 	START_ACTION = "LeafiaMowPull",
 	-- L'AVANT SE LEVE quand on tire la corde : la machine se cabre sous l'a-coup, puis retombe. C'est ce petit
 	-- sursaut qui donne de la FORCE au geste -- sans lui, tirer la corde n'agit que sur le personnage.
-	-- Angle en degres. NEGATIF si c'est l'arriere qui se leve chez toi : le sens depend du montage du rig, il ne se
-	-- deduit pas.
+	-- Angle de POINTE atteint, en degres (approximatif : c'est un ressort, pas une cible). Divise par trois
+	-- depuis 12 -- a l'ecran la machine se cabrait comme si on la soulevait du sol.
+	-- NEGATIF si c'est l'arriere qui se leve chez toi : le sens depend du montage du rig, il ne se deduit pas.
 	-- NOMBRE DE TIRAGES avant que le moteur prenne, tire au sort dans cet intervalle a chaque prise.
 	-- Un moteur qui demarre au premier coup a chaque fois se lit comme un interrupteur. Qu'il tousse une ou deux
 	-- fois avant de partir, c'est ce qui le rend vivant -- et ca rend le demarrage reussi SATISFAISANT.
@@ -148,7 +149,7 @@ return {
 	PULL_TRIES_MIN = 2,
 	PULL_TRIES_MAX = 3,
 
-	PULL_LIFT = 12,
+	PULL_LIFT = 4,
 	-- DELAI avant le cabrage, en secondes, compte depuis le clic. Le geste ne tire pas la corde a la premiere
 	-- image : la machine ne doit donc pas broncher tant que le bras n'a pas tire. A REGLER SUR TON ANIMATION,
 	-- en regardant a quel instant la main part en arriere.
@@ -156,7 +157,14 @@ return {
 	-- desynchronise des qu'on retouche l'animation. Meme raison que pour la boite aux lettres.)
 	PULL_LIFT_DELAY = 0.35,
 	-- Vitesse de retombee, en fraction par seconde. HAUTE : un a-coup doit etre sec, pas une houle.
-	PULL_LIFT_DECAY = 7,
+	-- RESSORT AMORTI, pas un decalage qui retombe. La premiere version POSAIT l'angle d'un coup, en une image :
+	-- la montee etait instantanee et se lisait comme un a-coup brutal. Ici la machine se souleve, freine, revient,
+	-- avec un leger depassement -- c'est ce depassement qui fait "lourd" au lieu de "casse".
+	-- Meme mecanique que la plongee d'atterrissage de CameraEffects, pour la meme raison.
+	-- RAIDEUR : plus haut = mouvement plus rapide et plus sec.
+	PULL_LIFT_STIFFNESS = 90,
+	-- AMORTISSEMENT : plus haut = moins de rebond. Trop bas et la machine oscille comme un ressort de dessin anime.
+	PULL_LIFT_DAMPING = 11,
 	-- Attribut pose sur la tondeuse quand le moteur TOURNE. Lu par le client : une machine a l'arret ne coupe rien.
 	RUNNING_ATTRIBUTE = "LeafiaMowerRunning",
 

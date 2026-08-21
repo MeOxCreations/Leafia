@@ -740,11 +740,18 @@ local function update(dt: number)
 	-- SIGNEE : on projette le deplacement sur l'AVANT de la machine. Une distance toujours positive ferait
 	-- tourner les roues a l'endroit meme en marche arriere, et l'oeil le voit tout de suite.
 	local distance = 0
+	-- SENS QUI COUCHE L'HERBE : le DEPLACEMENT reel, pas le cap de la machine. En marche arriere les deux sont
+	-- opposes, et c'est bien le passage du carter qui couche les brins -- donc la bande doit s'inverser.
+	-- A l'arret on garde le cap : il n'y a rien a coucher, autant ne pas ecrire n'importe quoi.
+	local travel = forwardOf(mine)
 	if lastCutPos then
 		local d = point - lastCutPos
 		local flatD = Vector3.new(d.X, 0, d.Z)
 		local forward = forwardOf(mine)
 		distance = if forward then flatD:Dot(forward) else flatD.Magnitude
+		if flatD.Magnitude > 1e-3 then
+			travel = flatD.Unit
+		end
 	end
 	lastCutPos = point
 
@@ -752,9 +759,8 @@ local function update(dt: number)
 	-- La coupe tourne MEME A L'ARRET : rester sur place finit de tondre la touffe sous le carter, au lieu de laisser
 	-- un rond a moitie coupe qu'on ne comprend pas.
 	if running then
-		-- On passe le SENS de la machine : c'est lui qui decide de la bande claire ou sombre. Le meme `forwardOf`
-		-- que pour les roues, donc les deux ne peuvent pas raconter des sens differents.
-		GrassZoneController.mowAt(point, radius, dt, forwardOf(mine))
+		-- On passe le sens du DEPLACEMENT : c'est lui qui couche les brins, donc lui qui decide de la bande.
+		GrassZoneController.mowAt(point, radius, dt, travel)
 	end
 end
 

@@ -2185,6 +2185,39 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.313 — La bande de tonte suit vraiment le sens ou l'on est passe
+
+Deux bugs, et le premier expliquait tout.
+
+### Une touffe deja coupee ne changeait plus jamais de bande
+
+`mowAt` sautait toute touffe deja tondue a fond -- une optimisation raisonnable pour la COUPE, catastrophique pour
+la BANDE : elle restait figee sur la premiere passe, et repasser dans l'autre sens ne changeait plus rien. Or
+c'est tout l'interet de l'effet. Une vraie tondeuse reecrit la bande a chaque passage.
+
+La coupe garde son raccourci (elle ne s'incremente que tant qu'il reste a couper), la bande se reecrit toujours.
+Et elle reveille le pave quand elle change, sinon la nouvelle valeur ne serait pas dessinee.
+
+### On lisait le CAP, pas le DEPLACEMENT
+
+Le sens transmis etait celui de la machine. En marche arriere les deux sont opposes -- et c'est bien le passage du
+CARTER qui couche les brins, donc la bande doit s'inverser quand on recule.
+
+On envoie desormais le deplacement REEL, mesure entre deux images. A l'arret on garde le cap : il n'y a rien a
+coucher, autant ne pas ecrire n'importe quoi.
+
+### Le cabrage devient un RESSORT
+
+Trois fois moins fort (12 degres -> 4), et surtout : la premiere version POSAIT l'angle d'un coup, en une image.
+La montee etait instantanee, donc brutale -- c'etait ca le vrai defaut, pas l'amplitude.
+
+C'est maintenant un ressort amorti : la machine se souleve, freine, revient, avec un leger depassement. Meme
+mecanique que la plongee d'atterrissage de `CameraEffects`, et pour la meme raison, qui y est deja ecrite : "un
+simple decalage qui revient a zero donnait un TAC".
+
+On pousse la VITESSE du ressort, pas sa position. Les deux valeurs sont clees a zero : un ressort tend vers zero
+sans jamais l'atteindre, et une vitesse residuelle relancerait le calcul a vie pour un angle invisible.
+
 ## 0.0.312 — Le fond tuile du rideau se voit vraiment
 
 Il etait invisible, et le calcul le disait deja : teinte 48 a 55 % de transparence sur un fond a 31 rend 39 --
