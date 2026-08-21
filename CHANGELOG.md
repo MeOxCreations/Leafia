@@ -2185,6 +2185,33 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.280 — Conduite facon VEHICULE : les touches de cote BRAQUENT, elles n'avancent plus
+
+Le 0.0.279 avait mal compris la demande. Il tournait le cap lentement, mais il faisait toujours AVANCER le joueur
+des qu'il appuyait sur une touche de cote : on partait donc en avant en braquant, ce qui n'est pas ce qu'on fait
+avec une tondeuse.
+
+Les deux commandes sont maintenant SEPAREES :
+
+- avant / arriere -> on AVANCE le long du cap (negatif = marche arriere, les roues suivent) ;
+- gauche / droite -> on BRAQUE, et RIEN d'autre. Appuyer sur la seule touche de cote ne fait pas avancer la
+  machine d'un pouce -- on la redresse, comme une vraie tondeuse a l'arret.
+
+C'est ce decouplage qui donne l'arc, et non le bridage de la rotation : puisqu'on ne se deplace JAMAIS
+lateralement, la trajectoire ne peut que se courber.
+
+Le braquage est PROPORTIONNEL a la poussee : un joystick a moitie tire braque a moitie, une touche braque a fond.
+Un seuil ecarte le bruit d'un stick au repos, qui ferait tourner la tondeuse toute seule.
+
+### L'input est projete sur la CAMERA, jamais lu en axes monde
+
+"Avancer" veut dire la direction avant de la CAMERA, dont les composantes monde changent des qu'on tourne la vue.
+Lire un axe brut ne marcherait que dans une seule orientation -- piege deja paye sur la grimpe d'echelle, ou ca
+montait au clavier mais pas au doigt des que la camera ne regardait plus vers -Z.
+
+`STEER_INVERT` existe pour le sens du braquage : il depend de la convention d'angle de Roblox, il ne se deduit
+pas. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
+
 ## 0.0.279 — La tondeuse decrit un ARC au lieu de pivoter sur place
 
 Appuyer sur D faisait tourner le personnage INSTANTANEMENT : un demi-tour sec sur un point, avec une machine

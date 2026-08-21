@@ -213,18 +213,32 @@ local function spinWheels(model: Model, distance: number)
 	end
 end
 
--- CONDUITE. Le cap tourne a vitesse BORNEE, et le deplacement suit le CAP -- pas l'input.
+-- CONDUITE, facon VEHICULE. Deux commandes qui ne se melangent pas :
+--   avant / arriere -> on AVANCE le long du cap ;
+--   gauche / droite -> on BRAQUE, et RIEN d'autre. Appuyer sur la seule touche de cote ne doit pas faire avancer
+--                      la tondeuse d'un pouce, exactement comme on redresse une machine a l'arret.
 --
--- C'est ce second point qui fait l'ARC. Borner la rotation SEULE ferait glisser le personnage de cote pendant
--- qu'il pivote : il irait deja a droite alors que son corps regarde encore devant. En le faisant avancer la ou il
--- REGARDE, la trajectoire se courbe, comme une machine qu'on braque.
+-- C'est ce decouplage qui donne l'arc : on ne se DEPLACE jamais lateralement, donc la trajectoire ne peut que se
+-- courber. Le ballant de la machine et la pose des bras suivent gratuitement, ils se calculent deja sur le cap.
 --
--- On lit l'input a la SOURCE (MoveInput) et non `humanoid.MoveDirection` : des qu'on contraint le deplacement avec
--- `humanoid:Move`, MoveDirection ne reflete plus l'intention du joueur mais notre propre contrainte.
+-- L'input est PROJETE sur le regard horizontal de la camera, jamais lu en axes monde : "avancer" veut dire la
+-- direction avant de la CAMERA, dont les composantes monde changent des qu'on tourne la vue. Lire un axe brut ne
+-- marcherait que dans une seule orientation (piege deja paye sur la grimpe d'echelle).
 local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
+	local camera = workspace.CurrentCamera
+	if not camera then
+		return
+	end
+	local camCF = camera.CFrame
+	local camLook = Vector3.new(camCF.LookVector.X, 0, camCF.LookVector.Z)
+	local camRight = Vector3.new(camCF.RightVector.X, 0, camCF.RightVector.Z)
+	if camLook.Magnitude < 1e-4 or camRight.Magnitude < 1e-4 then
+		return -- camera pile a la verticale : plus d'horizontale a projeter
+	end
+
 	local mv = MoveInput.get()
-	local flat = Vector3.new(mv.X, 0, mv.Z)
-	local wanted = flat.Magnitude
+	local forwardAmount = math.clamp(mv:Dot(camLook.Unit), -1, 1)
+	local lateralAmount = math.clamp(mv:Dot(camRight.Unit), -1, 1)
 
 	local look = hrp.CFrame.LookVector
 	local facing = Vector3.new(look.X, 0, look.Z)
@@ -232,29 +246,20 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		return
 	end
 	facing = facing.Unit
+	local yaw = math.atan2(-facing.X, -facing.Z)
 
-	if wanted > MowConfigs.STEER_INPUT_EPSILON then
-		-- Ecart de cap, replie sur [-pi, pi] : sans ce repli, un virage qui passe par le dos partirait du
-		-- mauvais cote et ferait faire un tour complet a la machine.
-		local target = math.atan2(-flat.Unit.X, -flat.Unit.Z)
-		local current = math.atan2(-facing.X, -facing.Z)
-		local delta = target - current
-		if delta > math.pi then
-			delta -= math.pi * 2
-		elseif delta < -math.pi then
-			delta += math.pi * 2
-		end
-		-- Rotation BORNEE : c'est elle, le poids. On ne depasse jamais l'ecart restant, sinon on oscillerait
-		-- autour de la cible au lieu de s'y poser.
-		local maxStep = math.rad(MowConfigs.STEER_TURN_RATE) * dt
-		local step = math.clamp(delta, -maxStep, maxStep)
-		local yaw = current + step
+	-- BRAQUAGE. Proportionnel a la poussee : un joystick a moitie tire braque a moitie, une touche braque a
+	-- fond. Le seuil ecarte le bruit d'un stick au repos, qui ferait tourner la tondeuse toute seule.
+	if math.abs(lateralAmount) > MowConfigs.STEER_INPUT_EPSILON then
+		local sign = if MowConfigs.STEER_INVERT then -1 else 1
+		yaw -= lateralAmount * sign * math.rad(MowConfigs.STEER_TURN_RATE) * dt
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
 
-	-- On avance LA OU ON REGARDE, a l'intensite demandee. Rien demande = on s'arrete.
-	humanoid:Move(facing * math.min(wanted, 1), false)
+	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
+	-- l'avant de la machine, donc elle est negative elle aussi.
+	humanoid:Move(facing * forwardAmount, false)
 end
 
 local function request(model: Model, phase: string)

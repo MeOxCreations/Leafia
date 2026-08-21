@@ -155,9 +155,10 @@ return {
 	-- Une tondeuse a du POIDS : on ne pivote pas sur place avec, on decrit un ARC. Par defaut le personnage Roblox
 	-- s'oriente INSTANTANEMENT vers la direction demandee (AutoRotate), ce qui donne un demi-tour sec sur un point.
 	--
-	-- On coupe donc AutoRotate pendant le portage et on tourne le cap SOI-MEME, a vitesse bornee. Et surtout, le
-	-- deplacement suit le CAP et non l'input : c'est ce qui courbe la trajectoire au lieu de faire glisser le
-	-- personnage de cote pendant qu'il pivote.
+	-- On coupe donc AutoRotate pendant le portage, et on separe les deux commandes : avant / arriere AVANCE le long
+	-- du cap, gauche / droite BRAQUE et rien d'autre. Appuyer sur la seule touche de cote ne fait pas avancer la
+	-- machine d'un pouce -- on redresse, comme sur une vraie tondeuse a l'arret.
+	-- Comme on ne se deplace JAMAIS lateralement, la trajectoire ne peut que se courber : c'est ca, l'arc.
 	-- Le ballant de la machine et la pose des bras suivent gratuitement : ils se calculent deja sur le cap.
 	STEER_ENABLED = true,
 	-- Vitesse de rotation MAXIMALE, en degres par seconde. C'est LE bouton du poids ressenti.
@@ -167,6 +168,9 @@ return {
 	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
 	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
 	STEER_INPUT_EPSILON = 0.05,
+	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
+	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
+	STEER_INVERT = false,
 
 	-- ===== POSE DE VIRAGE =====
 	-- Les bras accompagnent le virage, comme quand on redresse une vraie tondeuse. L'animation n'est PAS jouee :
