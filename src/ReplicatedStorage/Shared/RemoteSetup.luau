@@ -110,6 +110,13 @@ local REMOTES: { { any } } = {
 	{ "DeleteCompany", F, "Company" },
 	{ "SelectCompany", F, "Company" },
 	{ "StartGame", F, "Company" }, -- START : le serveur decide (nouvelle save -> teleport tuto, sinon -> entree jeu)
+
+	-- [ MOW ] --
+	-- PRISE / REPOSE de la tondeuse. Deux arguments : la tondeuse (Instance) et une PHASE ("grab" ou "place").
+	-- Le serveur SOUDE la tondeuse au HRP du porteur, comme l'echelle : sa position se replique alors a tous sans
+	-- flot de remotes. Il valide que c'est bien une tondeuse, qu'elle est libre, et que le joueur est assez pres.
+	-- Aucun CFrame envoye par le client : l'offset de portage est une CONSTANTE de config, donc rien a falsifier.
+	{ "SetMowerCarry", E, "Mow" },
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder

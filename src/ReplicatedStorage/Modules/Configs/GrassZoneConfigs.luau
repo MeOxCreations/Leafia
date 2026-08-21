@@ -273,6 +273,36 @@ local GrassZoneConfigs = {
 	-- de voir.
 	FLATTEN_RECOVER = 0.25,
 
+	-- ===== TONTE =====
+	-- La tonte n'est PAS un ecrasement. Une touffe pietinee se releve ; une touffe TONDUE est COUPEE et reste courte
+	-- pour toujours. Elle a donc sa propre valeur, qui ne descend JAMAIS -- c'est exactement l'autre mecanisme annonce
+	-- juste au-dessus, a FLATTEN_RECOVER.
+	-- Les deux se cumulent sans se gener : on garde la plus COURTE des deux raisons. Marcher sur du tondu le couche
+	-- encore un peu, et ca se releve ; la coupe, elle, reste dessous.
+
+	-- Hauteur RETIREE a une touffe entierement tondue, en fraction de sa hauteur.
+	-- 0.55 = il reste 45 % du brin. Volontairement LOIN de 1 : une pelouse tondue est COURTE, pas rasee a zero.
+	-- C'est ce qui RESTE qui donne l'avant/apres. A 0.98 (la valeur du pietinement) il n'y a plus de matiere a voir,
+	-- donc plus rien a admirer -- et l'avant/apres est le coeur du jeu.
+	MOW_CUT = 0.55,
+
+	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
+	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.
+	-- En BAISSANT, foncer laisse des bandes a moitie tondues qu'il faut repasser. C'est une texture de jeu
+	-- interessante (elle punit la precipitation), mais ca se regle A L'OEIL, tondeuse en main. Pas maintenant.
+	MOW_RATE = 8,
+
+	-- COULEUR DE L'HERBE TONDUE. Une pelouse fraichement coupee est plus CLAIRE que l'herbe haute : la coupe expose
+	-- l'interieur du brin, et les brins courts renvoient plus de lumiere.
+	-- Recoit les MEMES taches de Perlin que le reste : la partie tondue garde donc le relief du terrain au lieu de
+	-- virer a l'aplat uniforme. Meme raison que CRUSHED_COLOR.
+	MOWN_COLOR = Color3.fromRGB(150, 210, 95),
+
+	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
+	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.
+	-- 0 = la touffe tondue ne bouge plus du tout, 1 = elle bouge comme avant.
+	MOW_WIND = 0.15,
+
 	-- En dessous de cet ecart (en fraction d'ecrasement) on CLE la valeur sur sa cible. Un lerp exponentiel n'atteint jamais sa cible :
 	-- sans ce clic, chaque touffe garderait un residu minuscule pour toujours, et on reecrirait son CFrame a vie.
 	SNAP_EPSILON = 0.001,

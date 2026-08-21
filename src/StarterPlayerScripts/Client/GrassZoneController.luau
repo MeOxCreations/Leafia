@@ -70,6 +70,10 @@ type Clump = {
 	squashCrush: number, -- le meme, mais qui TRAINE derriere : c'est lui qui donne le tassement.
 	colorCrush: number, -- suit le CONTACT SEUL, sans la trace permanente : la couleur revient quand on s'en va.
 	flattened: number, -- TRACE : ecrasement permanent (0 a 1). Ne fait que monter, et sert de plancher a `crush`.
+	mown: number, -- COUPE : tonte permanente (0 = pas tondue, 1 = coupee). Ne descend JAMAIS, rien ne la releve.
+	mownColor: Color3, -- couleur une fois tondue, tachee de la MEME facon : la partie tondue garde le relief du terrain
+	lastMown: number, -- derniere coupe REELLEMENT ecrite : sans elle, une touffe qu'on vient de couper ne serait pas redessinee
+	lastMownBlend: number, -- dernier melange de couleur de coupe REELLEMENT ecrit
 	windPhase: number, -- decalage propre dans l'oscillation du vent (deux voisines ne bougent pas a l'identique)
 	lastCrush: number, -- dernier etat REELLEMENT ecrit : evite de reecrire une touffe lointaine immobile
 	lastSquashCrush: number, -- idem pour la valeur retardee : elle peut bouger alors que l'autre est deja posee
@@ -135,7 +139,7 @@ end
 -- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
 -- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
 -- Le dernier facteur remonte le CENTRE de la part au-dessus du pied, le long du haut DEJA incline.
-local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle: number, crush: number)
+local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle: number, crush: number, mown: number)
 	-- La taille ne s'ECRIT que si elle a change : redimensionner une part coute plus cher que la deplacer, et une
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
@@ -150,9 +154,15 @@ local function apply(clump: Clump, windAngle: number, squash: number, tiltAngle:
 	-- meme raison : ecrire une couleur a chaque image sur des centaines de touffes coute pour rien, alors qu'un pour
 	-- cent d'ecart ne se voit pas.
 	local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
-	if blend ~= clump.lastDarken then
-		clump.part.Color = clump.baseColor:Lerp(clump.crushedColor, blend)
+	local mowBlend = math.floor(mown / SQUASH_STEP + 0.5) * SQUASH_STEP
+	if blend ~= clump.lastDarken or mowBlend ~= clump.lastMownBlend then
+		-- DEUX melanges empiles, et l'ORDRE compte. La COUPE d'abord : elle change la couleur de REPOS de la touffe,
+		-- pour toujours. L'ECRASEMENT par-dessus : lui est temporaire. Dans cet ordre, une touffe tondue PUIS pietinee
+		-- revient a sa couleur de TONDUE quand le pied repart, pas a celle de l'herbe haute.
+		local rest = clump.baseColor:Lerp(clump.mownColor, mowBlend)
+		clump.part.Color = rest:Lerp(clump.crushedColor, blend)
 		clump.lastDarken = blend
+		clump.lastMownBlend = mowBlend
 	end
 
 	-- LA TIGE SE COMPRIME comme le reste : au meme facteur que la hauteur. Une fleur ecrasee doit descendre AU SOL,
@@ -497,16 +507,21 @@ local function populate(zone: Zone)
 			end
 
 			local crushedColor: Color3
+			local mownColor: Color3
 			if isFlower then
-				-- Les deux couleurs sont IDENTIQUES : le melange devient un non-evenement, sans un seul test a
-				-- ajouter dans la boucle par-image.
+				-- Les TROIS couleurs sont IDENTIQUES : le melange devient un non-evenement, sans un seul test a
+				-- ajouter dans la boucle par-image. Une fleur tondue RACCOURCIT, elle ne verdit pas.
 				color = source.Color
 				crushedColor = color
+				mownColor = color
 			else
 				color = tinted(color)
 				-- La couleur d'ecrasement recoit la MEME tache : sans ca, tout le chemin parcouru virerait a l'aplat
 				-- uniforme et effacerait le relief que les taches viennent de donner.
 				crushedColor = tinted(GrassZoneConfigs.CRUSHED_COLOR)
+				-- La couleur de COUPE recoit la meme tache, pour la meme raison : une pelouse tondue doit garder le relief
+				-- du terrain, sinon la partie tondue se lit comme une moquette posee dessus.
+				mownColor = tinted(GrassZoneConfigs.MOWN_COLOR)
 			end
 
 			local surface = part:FindFirstChildOfClass("SurfaceAppearance")
@@ -535,6 +550,10 @@ local function populate(zone: Zone)
 				squashCrush = 0,
 				colorCrush = 0,
 				flattened = 0,
+				mown = 0,
+				mownColor = mownColor,
+				lastMown = 0,
+				lastMownBlend = 0,
 				windPhase = windPhase,
 				lastCrush = 0,
 				lastSquashCrush = 0,
@@ -542,7 +561,7 @@ local function populate(zone: Zone)
 			}
 			-- POSEE TOUT DE SUITE, pas a la 1re passe de la boucle. Dependre d'une passe ulterieure pour le placement
 			-- INITIAL, c'est laisser les touffes au point de clonage si cette passe saute pour une raison ou une autre.
-			apply(clump, WIND_ANGLE, 1, 0, 0)
+			apply(clump, WIND_ANGLE, 1, 0, 0, 0)
 			zone.clumps[#zone.clumps + 1] = clump
 			part.Parent = folder
 
@@ -728,7 +747,12 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			clump.colorCrush = target
 		end
 
-		if clump.crush ~= target or clump.squashCrush ~= target or clump.colorCrush ~= target then
+		if
+			clump.crush ~= target
+			or clump.squashCrush ~= target
+			or clump.colorCrush ~= target
+			or clump.mown ~= clump.lastMown
+		then
 			moving += 1
 		end
 
@@ -739,6 +763,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		local crushed = clump.crush
 		-- Le tassement et l'assombrissement partent de la valeur RETARDEE : ils arrivent apres l'inclinaison.
 		local squash = 1 - clump.squashCrush * GrassZoneConfigs.CRUSH_SQUASH
+		-- LA COUPE S'AJOUTE AU PIETINEMENT, et on garde la plus COURTE des deux raisons plutot que de les additionner :
+		-- deux effets qui s'additionnent finiraient sous zero et la touffe disparaitrait. Une touffe tondue reste donc
+		-- courte pour toujours, et un pied la couche encore un peu par-dessus, sans jamais la faire remonter au-dessus.
+		squash = math.min(squash, 1 - clump.mown * GrassZoneConfigs.MOW_CUT)
 
 		local wind = 0
 		local gustSquash = 1
@@ -762,7 +790,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 				- (clump.basePos.X * WIND_DIR.X + clump.basePos.Z * WIND_DIR.Z) * GrassZoneConfigs.WIND_WAVE
 				+ clump.windPhase
 			-- Une touffe couchee sous un pied ne doit plus onduler, et une touffe lointaine ondule de moins en moins.
-			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * gustStrength * (1 - crushed) * windScale
+			-- Une touffe TONDUE ne doit presque plus onduler : un gazon ras qui vague comme de l'herbe haute efface
+			-- l'avant/apres qu'on vient tout juste de produire, et c'est lui le coeur du geste.
+			local mowWind = 1 - clump.mown * (1 - GrassZoneConfigs.MOW_WIND)
+			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * gustStrength * (1 - crushed) * windScale * mowWind
 
 			-- La rafale TASSE l'herbe au passage, puis la laisse remonter. Seule la partie FORTE de la rafale ecrase
 			-- (math.max(gust, 0)) : une zone calme ne doit pas tasser l'herbe en permanence.
@@ -777,6 +808,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.crush ~= clump.lastCrush
 			or clump.squashCrush ~= clump.lastSquashCrush
 			or clump.colorCrush ~= clump.lastColorCrush
+			or clump.mown ~= clump.lastMown
 		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
 			-- Au moment du pas l'ecart est maximal ; une fois le lent arrive, il est NUL et la touffe est droite.
@@ -786,10 +818,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			if target > 1e-3 then
 				tilt = TILT_ANGLE * math.clamp((clump.crush - clump.squashCrush) / target, 0, 1)
 			end
-			apply(clump, wind, squash * gustSquash, tilt, clump.colorCrush)
+			apply(clump, wind, squash * gustSquash, tilt, clump.colorCrush, clump.mown)
 			clump.lastCrush = clump.crush
 			clump.lastSquashCrush = clump.squashCrush
 			clump.lastColorCrush = clump.colorCrush
+			clump.lastMown = clump.mown
 		end
 	end
 
@@ -878,6 +911,68 @@ local function update(dt: number)
 end
 
 -- ===== Boot =====
+
+-- ===== TONTE =====
+
+-- Coupe l'herbe dans un rayon autour d'un point. A appeler A CHAQUE IMAGE par le controller de la tondeuse, avec la
+-- position de son carter.
+--
+-- La coupe est PERMANENTE : `mown` ne fait que monter. Repasser dessus ne releve rien, s'eloigner ne l'efface pas.
+-- C'est toute la difference avec le PIETINEMENT, qui, lui, se releve (voir FLATTEN_RECOVER dans la config). Les deux
+-- cohabitent sans se marcher dessus : marcher sur du tondu le couche encore un peu, puis ca remonte jusqu'a la coupe.
+--
+-- Rend le nombre de touffes REELLEMENT coupees cette image. Zero = la tondeuse tourne dans le vide : de quoi couper le
+-- son de coupe ou faire avancer une jauge sans avoir a recompter derriere.
+function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number): number
+	local rate = GrassZoneConfigs.MOW_RATE * dt
+	local total = 0
+
+	for _, zone in ipairs(zones) do
+		-- On ecarte la zone ENTIERE d'un coup quand la tondeuse est loin. La carte en compte plusieurs et la tondeuse
+		-- n'en touche qu'une : sans ce test on parcourrait toutes les touffes de la map a chaque image.
+		local zd = zone.part.Position - worldPos
+		if math.sqrt(zd.X * zd.X + zd.Z * zd.Z) - zone.radius > radius then
+			continue
+		end
+
+		local zoneCut = 0
+		for _, bucket in ipairs(zone.buckets) do
+			local bd = bucket.center - worldPos
+			if math.sqrt(bd.X * bd.X + bd.Z * bd.Z) - bucket.radius > radius then
+				continue
+			end
+
+			local bucketCut = 0
+			for _, clump in ipairs(bucket.clumps) do
+				-- Une touffe deja coupee a fond ne coute plus rien : c'est le cas le plus frequent sur une pelouse
+				-- qu'on finit, et c'est justement la que le joueur repasse le plus.
+				if clump.mown < 1 then
+					local d = clump.basePos - worldPos
+					-- Horizontal, comme le pietinement : la hauteur ne doit pas compter, sinon la tondeuse raterait
+					-- justement les touffes les plus hautes, celles qu'on vient couper.
+					if math.sqrt(d.X * d.X + d.Z * d.Z) < radius then
+						clump.mown = math.min(1, clump.mown + rate)
+						bucketCut += 1
+					end
+				end
+			end
+
+			-- Le pave doit CONTINUER a etre mis a jour, meme sans vent et sans joueur assez pres : sinon la coupe
+			-- qu'on vient de poser ne serait jamais dessinee. Meme piege que les touffes qui se figent couchees.
+			if bucketCut > 0 then
+				bucket.settling = true
+				zoneCut += bucketCut
+			end
+		end
+
+		if zoneCut > 0 then
+			zone.settling = true
+			total += zoneCut
+		end
+	end
+
+	return total
+end
 
 function GrassZoneController.init()
 	-- EN TACHE DE FOND : resolvePath peut attendre, et un init de boot ne doit jamais bloquer la sequence.

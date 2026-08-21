@@ -1,58 +1,71 @@
 --!strict
--- Reglages de la TONTE (pelouse tondable). Data pure, zero logique. Partage client + serveur : le client lit les noms
--- d'attributs et le rendu du brin, le serveur genere / coupe.
+-- Reglages de la TONDEUSE. Data pure, zero logique. Partage client + serveur.
 --
--- MEME ARCHITECTURE QUE LES HAIES, mais a plat : une pelouse = une part taguee, pavee d'une grille de CELLULES invisibles
--- (repere logique) portant chacune un BRIN d'herbe (visuel). L'attribut GROWTH (1 = haute, 0 = tondue) descend quand la
--- tondeuse passe ; le brin s'enfonce/raccourcit -> l'avant/apres. La grille spatiale (buckets) rend la coupe efficace.
+-- CE FICHIER DECRIVAIT AVANT un systeme de CELLULES calque sur les haies (LawnCellService), qui n'a jamais ete
+-- ecrit. On ne le suit plus : l'herbe de zone existe deja, elle est deja cliente, et elle sait deja s'ecraser.
+-- La tonte s'y greffe (voir le bloc TONTE de GrassZoneConfigs) au lieu de refabriquer une grille a cote.
 --
--- Ce N'EST PAS de l'animation par brin (ca ne scalait pas) : le "vivant" vient du geste de tonte, pas du vent.
+-- PARTAGE DES ROLES
+--   SERVEUR (MowService)    : qui porte quoi. Portage par WELD au HRP, comme l'echelle -> tout le monde la voit.
+--   CLIENT (MowController)  : detection du prompt, appel de la coupe, rotation des roues. Du visuel et de l'intention.
+-- L'herbe est CLIENTE (chaque joueur fabrique la sienne), donc la coupe l'est aussi. Le jour ou une pelouse
+-- tondue rapportera un cheque, c'est le SERVEUR qui comptera -- pas ces valeurs-la.
 
 return {
-	-- ===== SOURCE DE LA PELOUSE =====
-	-- Tag CollectionService pose sur une PART plate = une pelouse a paver (comme "Hedge" pour les haies). Le joueur tague
-	-- une part sur son plot ; LawnCellService la pave. Une part = une pelouse.
-	TAG = "Lawn",
-	CELL_FOLDER = "LawnCells", -- dossier Workspace ou vivent les cellules generees
+	-- ===== LA TONDEUSE DANS LE MONDE =====
+	-- Nom du Model pose dans Studio. Toute la detection part de la : pas de tag a maintenir en plus.
+	MODEL_NAME = "Tondeuse",
+	-- Part fixe qui sert de reference de position. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc
+	-- ajouter la moindre part enfant (CutZone...) le decale et tous les calculs partent de travers.
+	ROOT_NAME = "RootPart",
+	-- Part posee sous le carter, creee par scripts/studio/CreerZoneDeCoupeTondeuse.lua. Sa POSITION dit ou on coupe,
+	-- sa largeur donne le rayon. Absente, on retombe sur FALLBACK_* ci-dessous (le jeu tourne quand meme).
+	CUT_ZONE_NAME = "CutZone",
 
-	-- ===== VISUEL DU BRIN (par cellule) =====
-	-- Chemin sous ReplicatedStorage vers le mesh d'un BRIN d'herbe (comme LEAF_ASSET pour les haies). IDEAL : un seul
-	-- BasePart / MeshPart d'herbe STATIQUE (pas le modele anime avec Humanoid -- c'est lui qui faisait ramer). Si le chemin
-	-- pointe sur un Model, LawnCellService prendra sa 1re MeshPart et jettera tout Humanoid/Animator.
-	TUFT_ASSET = { "Assets", "Contents", "grass" },
+	-- ===== PRISE =====
+	-- Distance HORIZONTALE (studs) sous laquelle le prompt apparait. RADIALE, pas une box : colle a un bout de la
+	-- tondeuse, une box laisse un angle mort et le prompt ne sort pas. C'est LE knob "detecter plus loin".
+	DETECT_RADIUS = 8,
+	PROMPT_KEY = "E",
+	PROMPT_LABEL = "TAKE",
+	PROMPT_TITLE = "MOWER",
+	-- Hauteur d'AFFICHAGE du badge au-dessus de la racine. N'A RIEN A VOIR avec DETECT_RADIUS : monter celui-ci ne
+	-- fait pas detecter plus loin, il ne fait que lever le badge.
+	PROMPT_OFFSET = Vector3.new(0, 4, 0),
+	-- Deux prises ne peuvent pas s'enchainer plus vite que ca (secondes). Le meme geste part sinon en double quand
+	-- la touche ET le bouton tactile tirent tous les deux.
+	ACTION_DEBOUNCE = 0.35,
+	-- Distance MAX joueur <-> tondeuse acceptee par le SERVEUR a la prise. Anti-triche : le client demande, le
+	-- serveur verifie. Volontairement plus large que DETECT_RADIUS, pour tolerer la latence.
+	MAX_GRAB_DIST = 20,
 
-	-- ===== GRILLE DE CELLULES =====
-	-- Cote d'une cellule (studs). PLUS GRAND QUE LES HAIES (0.7) : une pelouse est vaste, des cellules trop fines feraient
-	-- des milliers de brins = FPS au sol. 2 = compromis (assez fin pour une tonte granuleuse, assez gros pour tenir). LE
-	-- levier de perf No 1. A REGLER a l'oeil selon la taille de la pelouse et le FPS.
-	CELL_SIZE = 2,
-	CELL_THICKNESS = 0.2, -- epaisseur de la cellule-repere vers le haut (le brin se pose dessus)
-	CELL_TRANSPARENCY = 1, -- cellule invisible : ce n'est qu'un repere logique, le brin porte le visuel
-	CELL_BUCKET_SIZE = 6, -- cote d'une case de la grille spatiale (studs). ~ quelques cellules. Sert a collectNear
-	CELL_BUDGET = 3000, -- garde-fou : nombre max de cellules par pelouse (evite un runaway sur une enorme part)
+	-- ===== PORTAGE =====
+	-- Offset de la tondeuse par rapport au HRP du porteur. On la POUSSE : elle vit DEVANT, posee au sol.
+	-- FIXE et non capture a la prise : le besoin n'est pas de garder la pose du sol, c'est qu'elle revienne
+	-- toujours pareil devant le joueur. Capturer l'offset ferait porter de travers une tondeuse posee de travers.
+	CARRY_FORWARD = 3.2, -- studs devant le joueur
+	CARRY_DOWN = 2.6, -- studs sous le HRP (le HRP flotte a ~3 studs du sol)
+	-- Rotation autour de la verticale, en DEGRES, pour que l'AVANT de la tondeuse pointe loin du joueur.
+	-- A REGLER A L'OEIL : le sens depend de l'orientation du modele dans Studio, il ne se deduit pas.
+	CARRY_YAW = 0,
 
-	-- ===== POUSSE / TONTE =====
-	GROWTH_ATTRIBUTE = "Growth", -- pousse du brin : 1 = haute (pas tondue), 0 = au ras. Meme nom que les haies (rendu partage)
-	TRIMMED_ATTRIBUTE = "LeafiaMown", -- avancement 0->1 pose sur la PELOUSE (pour une jauge / paie de fin plus tard)
-	PAID_ATTRIBUTE = "LeafiaMownPaid", -- garde "paye une fois" (cheque de fin de tonte, plus tard)
-	CUT_RATE = 4.0, -- pousse retiree par seconde sous la tondeuse (plus grand = tond plus vite). A REGLER
-	AUTO_COMPLETE_THRESHOLD = 0.97, -- au-dela, on finit la pelouse tout seul (derniers brins chiants a chopper)
+	-- ===== COUPE =====
+	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).
+	FALLBACK_RADIUS = 2.2,
+	-- Point de coupe de secours, devant la racine, quand CutZone n'existe pas encore.
+	FALLBACK_FORWARD = 1.6,
 
-	-- ===== ZONE DE COUPE (sous la tondeuse) =====
-	-- La tondeuse coupe les cellules dans un RAYON autour de sa CutZone (une sphere, pas une lame visee). CUT_RADIUS = demi
-	-- largeur du carter grosso modo ; CUT_MARGIN = tolerance. Portee de coupe = CUT_RADIUS + CUT_MARGIN. A REGLER sur la
-	-- taille reelle de ta tondeuse une fois le modele pret.
-	CUT_RADIUS = 2.5,
-	CUT_MARGIN = 0.6,
-
-	-- ===== RENDU DU BRIN (calcule client, comme la feuille des haies) =====
-	CUT_DEPTH = 1.2, -- de combien le brin s'ENFONCE quand il passe de haut (growth 1) a ras (growth 0) : l'avant/apres
-	CUT_SHRINK = 0.4, -- rapetissement du brin au ras (0 = garde sa taille, 1 = disparait). Renforce le "coupe"
-
-	-- ===== BRIN : desordre a la pose (aleatoire seme, comme les feuilles) =====
-	TUFT_SCALE = 1.0, -- echelle de base du brin (x la taille de la cellule)
-	TUFT_SCALE_MIN = 0.85, -- variation d'echelle mini
-	TUFT_SCALE_MAX = 1.25, -- variation d'echelle maxi
-	TUFT_YAW = 180, -- rotation aleatoire max autour de la verticale (degres) : casse la regularite
-	TUFT_JITTER = 0.25, -- decalage aleatoire dans la cellule (fraction de la cellule)
+	-- ===== ROUES =====
+	-- Les roues tournent EN CODE, pas par animation : une animation joue a vitesse fixe, donc la roue patinerait
+	-- des que le joueur change d'allure. Ici l'angle vient de la distance REELLEMENT parcourue, elle colle au sol.
+	-- Corollaire : ces joints ne doivent etre cles dans AUCUNE animation, sinon deux ecrivains sur le meme joint.
+	WHEEL_MOTORS = { "BackWheel", "FrontWheel" },
+	-- Sens de rotation. Si les roues tournent a l'envers, mettre -1. Se voit a l'ecran, ne se deduit pas.
+	WHEEL_DIRECTION = 1,
+	-- AXE de rotation dans le repere du joint : "X", "Y" ou "Z". Depend de la facon dont le rig a ete monte, donc
+	-- il ne se DEDUIT pas : si la roue tourne sur le mauvais axe (elle roule de travers, ou elle pivote a plat),
+	-- essayer les deux autres. C'est l'ecran qui tranche, pas le raisonnement.
+	WHEEL_AXIS = "X",
+	-- Rayon de roue de secours (studs) si on n'arrive pas a le lire sur la part. Sinon il est MESURE sur la roue.
+	WHEEL_RADIUS_FALLBACK = 0.6,
 }

@@ -2185,6 +2185,82 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.246 — On peut pousser la tondeuse, et l'herbe RESTE tondue
+
+Premier increment du geste central. Le joueur s'approche de la tondeuse, un prompt `[E] TAKE` apparait, il la
+prend, elle se pose devant lui et le suit. Sur son passage l'herbe est COUPEE : elle raccourcit, elle change de
+couleur, et elle ne se releve plus jamais. L'avant / apres existe.
+
+Le demarrage moteur (corde du lanceur) et les animations n'y sont pas encore : on valide d'abord que pousser la
+tondeuse et voir la pelouse changer donne envie d'en tondre une deuxieme.
+
+### L'herbe sait etre tondue
+
+`GrassZoneConfigs` : bloc TONTE. La tonte n'est PAS un ecrasement -- une touffe pietinee se releve, une touffe
+tondue est coupee. Elle a donc sa propre valeur, qui ne descend JAMAIS (`mown` sur chaque touffe), la ou le
+pietinement, lui, remonte (`FLATTEN_RECOVER`). C'est l'autre mecanisme que la config annoncait deja.
+
+Les deux cohabitent sans se disputer la touffe : on garde la plus COURTE des deux raisons (`math.min`) plutot que
+de les additionner. Marcher sur du tondu le couche encore un peu, puis ca remonte JUSQU'A la coupe, pas au-dessus.
+Additionner les deux effets serait passe sous zero et la touffe aurait disparu.
+
+La couleur empile deux melanges, et l'ordre compte : la COUPE d'abord (permanente, elle change la couleur de repos
+de la touffe), l'ECRASEMENT par-dessus (temporaire). Dans cet ordre, une touffe tondue puis pietinee revient a sa
+couleur de tondue quand le pied repart, pas a celle de l'herbe haute.
+
+Une touffe tondue n'ondule presque plus (`MOW_WIND`) : un gazon ras qui vague comme de l'herbe haute effacerait
+l'avant / apres qu'on vient de produire.
+
+`GrassZoneController.mowAt(position, rayon, dt)` : nouvelle fonction publique, appelee par la tondeuse. Elle
+ecarte d'abord la zone entiere, puis les paves, avant de descendre aux touffes -- sans ca on parcourrait toute
+l'herbe de la carte a chaque image. Elle marque les paves touches `settling`, sinon la coupe qu'on vient de poser
+ne serait jamais dessinee (les paves sans vent ni joueur proche sont sautes).
+
+### La tondeuse
+
+`MowService` (serveur) : autorite sur QUI pousse quoi. Portage par SOUDURE au HRP, exactement comme l'echelle --
+la position se replique alors a tous sans flot de remotes. Il valide la tondeuse, sa disponibilite et la
+proximite. L'offset de portage est une CONSTANTE de config et non une valeur envoyee par le client : il n'y a
+donc rien a falsifier. Il ne coupe RIEN.
+
+Offset FIXE et non capture a la prise. Le besoin n'est pas de garder la pose du sol, c'est que la tondeuse
+revienne toujours pareil devant le joueur -- capturer l'offset ferait porter de travers une tondeuse posee de
+travers (piege deja paye sur l'echelle).
+
+`MowController` (client) : le prompt, la coupe, les roues.
+- Detection RADIALE sur la RootPart, jamais `GetPivot` (que la CutZone soudee decalerait) et jamais une box
+  (colle a un bout de la tondeuse, une box laisse un angle mort et le prompt ne sort pas).
+- La coupe se fait sous la part `CutZone`, dont la POSITION donne le point et la LARGEUR le rayon. Absente, on
+  retombe devant la racine et la console le DIT une fois, au lieu d'echouer en silence.
+- La coupe tourne MEME A L'ARRET : rester sur place finit la touffe sous le carter au lieu de laisser un rond a
+  moitie coupe.
+- Prise ET repose sur le MEME declencheur, avec anti-spam : la touche et le bouton tactile peuvent tirer ensemble.
+  Le bind passe par `ContextActionService` avec `createTouchButton`, et il n'est branche QUE quand l'action a un
+  sens -- sans ca, deposer la tondeuse serait injouable sans clavier.
+
+### Les roues tournent EN CODE, pas par animation
+
+Une animation joue a vitesse fixe : la roue tournerait pareil que le joueur avance, coure ou soit a l'arret, donc
+elle PATINE. L'angle vient ici de la distance REELLEMENT parcourue (horizontale : une pente ou un saut ne doivent
+rien changer), et le rayon est MESURE sur la roue au lieu d'etre devine.
+
+Corollaire a respecter dans Studio : `BackWheel` et `FrontWheel` ne doivent etre cles dans AUCUNE animation. Deux
+ecrivains sur le meme joint donnent un resultat qui n'est ni l'un ni l'autre.
+
+### Menage
+
+`MowConfigs` decrivait un systeme de CELLULES calque sur les haies (`LawnCellService`) qui n'a jamais ete ecrit,
+et que personne n'utilisait. On ne le suit plus : l'herbe de zone existe deja, elle est deja cliente, elle sait
+deja s'ecraser. Le fichier decrit maintenant la vraie tondeuse. Un commentaire faux coute plus cher que pas de
+commentaire.
+
+### Cote Studio (ne se synchronise PAS par Rojo)
+
+- Un Model `Tondeuse` doit exister dans le Workspace, avec sa `PrimaryPart` reglee sur `RootPart`.
+- La part `CutZone` se cree avec `scripts/studio/CreerZoneDeCoupeTondeuse.lua`, a coller dans la barre de
+  commandes. Elle est CALCULEE depuis la geometrie du modele (largeur du carter, sens de l'avant deduit du
+  Handle), pas posee a l'oeil.
+
 ## 0.0.245 — REGLE : tout texte vu par le joueur s'ecrit en ANGLAIS
 
 Regle posee par le joueur, et elle vaut pour tout le projet : dialogues, notifications, boutons, titres, messages

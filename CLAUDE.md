@@ -538,6 +538,24 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   lecture. Regle : quand deux variables designent le meme objet du monde, tout calcul doit les prendre TOUTES LES
   DEUX de la meme source ; faire passer la source en argument plutot que la lire en upvalue rend le couplage visible.
 
+- **Un skinned mesh qui explose a l'import Roblox : compter les OS PAR SOMMET avant toute autre piste.** Roblox
+  plafonne a **4 os par sommet** ; Blender ("Automatic Weights") en distribue autant qu'il veut. Au-dela, Roblox
+  garde 4 poids et NE RENORMALISE PAS : les sommets partent n'importe ou. Vecu sur des arbres riggés : jusqu'a 9
+  influences, et **100 % des sommets des FEUILLES** au-dessus de 4 alors que les TRONCS etaient presque tous
+  conformes -- ce qui collait exactement a l'ecran (troncs a peu pres corrects, feuillages en confettis). Ce
+  contraste feuilles/troncs EST le diagnostic : ne pas aller chercher le rig, l'orientation ou l'export. Fix :
+  `Limit Total` a 4 PUIS `Normalize All` (dans cet ordre -- normaliser avant de couper laisse une somme de poids
+  inferieure a 1, donc des sommets qui retrecissent). Deuxieme piege du meme fichier : des sommets **sans aucun
+  poids** (103 et 206 sur deux troncs) restent colles a l'origine et fabriquent de longues pointes etirees ; les
+  rattacher a l'os le plus proche. Troisieme : une **echelle d'armature non appliquee** (0.0061) donnait un arbre
+  de 5,8 cm au lieu de 9,4 m. Et pour la corriger, ne scaler QUE l'ARMATURE : les meshes en sont ENFANTS, scaler
+  les deux applique le facteur au carre (163 devient 26 500, l'arbre fait 3 km). Enfin, un FBX a PLUSIEURS
+  armatures donne UN SEUL Model Roblox avec tous les arbres fusionnes : un arbre = un fichier. ET en decoupant
+  un tel fichier, RECENTRER chaque objet sur l'origine : les modeles y sont poses COTE A COTE, remettre a
+  l'echelle multiplie aussi leur POSITION (x163 -> 15 studs de l'origine), et Studio prend alors une boite qui
+  va de l'origine jusqu'au modele -- l'objet apparait minuscule dans un coin d'une enorme selection. Ne pas
+  confondre avec l'ecart NORMAL entre l'os racine (au pied du tronc) et le centre de la boite (a mi-hauteur).
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

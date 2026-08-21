@@ -130,6 +130,11 @@ MailboxService.init()
 local GrassService = require(script.GrassService)
 GrassService.init()
 
+-- Tondeuse PORTEE : autorite sur qui pousse quelle tondeuse (soudure au HRP, comme l'echelle). Ne coupe RIEN --
+-- l'herbe est cliente, c'est MowController qui la tond. Ordre indifferent : il n'ecoute qu'un remote et le Workspace.
+local MowService = require(script.MowService)
+MowService.init()
+
 -- Animations d'ambiance : les plantes (arbres, buissons) et les PNJ qui respirent sur place. Boucles jouees cote
 -- serveur, donc repliquees a tous. Habillage, pas du gameplay. Ordre indifferent : il ne lit aucun autre service,
 -- il ne fait que balayer la map.

@@ -169,6 +169,11 @@ HedgeLeafController.init()
 local GrassZoneController = require(script.GrassZoneController)
 GrassZoneController.init()
 
+-- Tondeuse : prompt de prise, coupe de l'herbe sous la CutZone, rotation des roues. APRES GrassZoneController :
+-- il appelle son mowAt. Le PORTAGE lui-meme appartient au serveur (MowService).
+local MowController = require(script.MowController)
+MowController.init()
+
 -- Nuages qui traversent le ciel en boucle. 100% LOCAL, comme l'herbe : c'est du decor, rien ne transite.
 -- Ordre indifferent, il ne partage rien avec les autres.
 local CloudController = require(script.CloudController)
