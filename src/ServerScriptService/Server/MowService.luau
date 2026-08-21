@@ -10,6 +10,7 @@
 -- rien a valider et rien a falsifier. Il n'est pas non plus regle a l'oeil dans la config -- voir carryC0.
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
@@ -24,12 +25,16 @@ type CarryState = {
 	parts: { [BasePart]: PartState },
 	weld: Weld?,
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
+	holdGuard: RBXScriptConnection?, -- filet : rattrape la pose si le marqueur est rate (image perdue)
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
 	jumpPower: number,
 }
 
+-- On cle la pose JUSTE avant la derniere image, jamais dessus : a la derniere image pile, la piste bouclee
+-- repart au debut avant qu'on ait pu la figer.
+local HOLD_EPSILON = 0.001
 local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
 
 local carried: { [Model]: CarryState } = {}
@@ -104,9 +109,33 @@ local function playHold(character: Model, state: CarryState)
 	track:Play(MowConfigs.HOLD_FADE)
 	track.TimePosition = 0
 	state.hold = track
+
+	-- FILET. Le marqueur suffit tant que les images tombent bien, mais une seule image perdue et la tete de
+	-- lecture le DEPASSE sans que le signal serve a rien : la piste boucle alors, et la pose repart du debut.
+	-- Symptome vecu : ca marche la plupart du temps, et parfois non. On surveille donc aussi la position, et
+	-- on la cle juste avant la fin. Celui des deux qui arrive en premier gagne, l'autre n'a plus rien a faire.
+	state.holdGuard = RunService.Heartbeat:Connect(function()
+		if track.Speed == 0 then
+			-- Le marqueur a fait le travail : plus rien a surveiller.
+			if state.holdGuard then
+				state.holdGuard:Disconnect()
+				state.holdGuard = nil
+			end
+			return
+		end
+		local length = track.Length
+		if length > 0 and track.TimePosition >= length - HOLD_EPSILON then
+			track.TimePosition = length - HOLD_EPSILON
+			track:AdjustSpeed(0)
+		end
+	end)
 end
 
 local function stopHold(state: CarryState)
+	if state.holdGuard then
+		state.holdGuard:Disconnect()
+		state.holdGuard = nil
+	end
 	local track = state.hold
 	if not track then
 		return
@@ -286,6 +315,7 @@ local function grab(player: Player, model: Model)
 		parts = {},
 		weld = nil,
 		hold = nil,
+		holdGuard = nil,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,

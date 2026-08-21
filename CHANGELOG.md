@@ -2185,6 +2185,26 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.261 — La pose du guidon ne repart plus au debut de temps en temps
+
+Symptome signale par le joueur, et le pire genre : ca marche la plupart du temps, et parfois non.
+
+Cause exacte, deja au journal : la pose est figee au marqueur `ReadyToLaunch` (`AdjustSpeed(0)`), mais avec
+`Looped = true` la piste continue de tourner tant que le marqueur n'a pas fait son travail. Une seule image
+perdue et la tete de lecture DEPASSE le marqueur : la piste boucle, et la pose repart du debut. Le journal le
+disait dans ces termes -- "a bas FPS le clamp d'une fenetre >= Length - eps peut le rater".
+
+On garde le marqueur (c'est lui qui gele au bon endroit dans le cas normal) et on ajoute le FILET que le journal
+prescrit : une surveillance de la `TimePosition` qui cle la piste juste avant sa derniere image. Celui des deux
+qui arrive en premier gagne ; le filet se debranche des qu'il voit la vitesse a zero, donc il ne coute rien une
+fois la pose tenue.
+
+On cle a `Length - 0.001`, jamais sur la derniere image pile : a la derniere image, une piste bouclee est deja
+repartie au debut.
+
+La surveillance est coupee a la repose, a la mort et au depart, comme la piste elle-meme -- une connexion posee
+sur `RunService` survit a la destruction de ce qu'elle regarde.
+
 ## 0.0.260 — Correction : le menage de config annonce au 0.0.259 n'avait PAS ete applique
 
 Le 0.0.259 annonce la disparition de `PROMPT_PART_NAME` et un `PROMPT_OFFSET` a 0.8. Les deux etaient FAUX :
