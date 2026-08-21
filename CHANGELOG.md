@@ -2185,6 +2185,31 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.256 — Plus de saut avec la tondeuse, et des MESURES pour la faire redescendre
+
+### Le saut est coupe pendant le portage
+
+On pousse une tondeuse, on ne saute pas avec. `SetStateEnabled(Jumping, false)` a la prise.
+
+On MEMORISE l'etat d'avant et on le RESTAURE a la repose, au lieu de forcer `true` : un autre systeme peut avoir
+de bonnes raisons d'avoir deja coupe le saut (cinematique, dialogue), et le lui rendre de force casserait le sien.
+
+### La tondeuse flotte : on arrete de deviner
+
+Elle flotte ET elle est de travers. Une seule cause explique les deux : si l'orientation de la RootPart n'est pas
+celle de "la tondeuse est droite", la souder au HRP la fait pivoter -- et le point le plus bas mesure DANS LA POSE
+DE REPOS ne correspond alors plus au dessous du carter une fois pivotee.
+
+Deux valeurs devinees, deux echecs. On passe donc aux mesures : `CARRY_DEBUG` (a true) affiche a chaque prise la
+hauteur des pieds, de combien la racine surplombe le bas, la descente, l'avance, et l'ORIENTATION de la racine.
+C'est cette derniere qui devrait trancher.
+
+Corrige au passage, et c'est peut-etre deja suffisant : `lowestPoint` ignorait la CutZone mais PAS les autres
+parts invisibles (zones logiques, aides d'edition). Une seule d'entre elles posee bas fausse toute la hauteur.
+Elle ne compte plus que les parts VISIBLES.
+
+`CARRY_DEBUG` est a couper une fois le placement valide : un print par prise finit par noyer les vrais messages.
+
 ## 0.0.255 — Le serveur repart : faute de syntaxe dans MowService
 
 `MowService` ne se chargeait plus ("Incomplete statement", ligne 214), donc le bootstrap serveur tombait avec lui.

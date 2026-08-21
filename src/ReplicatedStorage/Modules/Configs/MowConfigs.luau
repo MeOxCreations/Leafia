@@ -76,6 +76,9 @@ return {
 	-- Rotation autour de la verticale, en DEGRES, pour que l'AVANT de la tondeuse pointe loin du joueur.
 	-- A REGLER A L'OEIL : le sens depend de l'orientation du modele dans Studio, il ne se deduit pas.
 	CARRY_YAW = 0,
+	-- Affiche les mesures du portage dans la console a chaque prise. A couper une fois le placement valide :
+	-- un print par prise finit par noyer les vrais messages.
+	CARRY_DEBUG = true,
 
 	-- ===== POSE DE MAINTIEN =====
 	-- Le joueur attrape le guidon des qu'il prend la tondeuse, et TIENT la pose tant qu'il pousse.

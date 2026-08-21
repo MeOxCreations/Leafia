@@ -24,6 +24,8 @@ type CarryState = {
 	parts: { [BasePart]: PartState },
 	weld: Weld?,
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
+	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
+	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 }
 
 local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
@@ -117,6 +119,17 @@ local function stopHold(state: CarryState)
 	end)
 end
 
+-- SAUT COUPE pendant le portage. On pousse une tondeuse, on ne saute pas avec.
+-- On MEMORISE l'etat d'avant et on le restaure, plutot que de forcer `true` a la repose : un autre systeme peut
+-- avoir de bonnes raisons d'avoir deja coupe le saut (une cinematique, un dialogue), et le lui rendre de force
+-- casserait le sien.
+local function setJump(state: CarryState, enabled: boolean)
+	local humanoid = state.humanoid
+	if humanoid and humanoid.Parent then
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, enabled)
+	end
+end
+
 -- Le point le plus BAS de la tondeuse, en monde. Les 8 coins de chaque part, pas seulement son centre : une part
 -- inclinee descend plus bas que (position - demi-hauteur), et le carter d'une tondeuse est rarement d'aplomb.
 -- On IGNORE la CutZone : c'est une zone LOGIQUE posee sous le carter, pas une piece de la machine. La compter
@@ -124,7 +137,9 @@ end
 local function lowestPoint(model: Model): number?
 	local low: number? = nil
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME then
+		-- On ignore la CutZone ET tout ce qui est INVISIBLE : zones logiques, aides d'edition. Ce ne sont pas
+		-- des pieces de la machine, et une seule d'entre elles posee bas fausserait toute la hauteur.
+		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME and d.Transparency < 1 then
 			local h = d.Size * 0.5
 			for sx = -1, 1, 2 do
 				for sy = -1, 1, 2 do
@@ -165,6 +180,16 @@ local function carryC0(model: Model, root: BasePart, hrp: BasePart, humanoid: Hu
 		forward += math.sqrt(d.X * d.X + d.Z * d.Z)
 	end
 
+	if MowConfigs.CARRY_DEBUG then
+		local r = root.CFrame
+		print(
+			`[MowService] PORTAGE | pieds sous HRP {string.format("%.2f", feet)}`
+			.. ` | racine au-dessus du bas {string.format("%.2f", aboveBottom)}`
+			.. ` | descente {string.format("%.2f", down)} | avance {string.format("%.2f", forward)}`
+			.. ` | racine Y {string.format("%.2f", r.Position.Y)} bas {string.format("%.2f", low or -999)}`
+			.. ` | orientation racine {r:ToOrientation()}`
+		)
+	end
 	return CFrame.new(0, -down, -forward) * CFrame.Angles(0, math.rad(MowConfigs.CARRY_YAW), 0)
 end
 
@@ -188,6 +213,7 @@ local function release(model: Model)
 		end
 	end
 	stopHold(state)
+	setJump(state, state.jumpWasEnabled)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
 end
@@ -215,7 +241,15 @@ local function grab(player: Player, model: Model)
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local c0 = carryC0(model, root, hrp :: BasePart, humanoid)
 
-	local state: CarryState = { owner = player, parts = {}, weld = nil, hold = nil }
+	local state: CarryState = {
+		owner = player,
+		parts = {},
+		weld = nil,
+		hold = nil,
+		humanoid = humanoid,
+		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
+	}
+	setJump(state, false)
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("BasePart") then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }
