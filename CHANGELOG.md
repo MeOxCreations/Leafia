@@ -2185,6 +2185,29 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.290 — La pose des bras revient VRAIMENT au milieu quand on lache tout
+
+Question du joueur : "quand j'appuie plus sur rien, tu remets bien l'animation a 0.5 ?" Elle a fait tomber DEUX
+bugs, dont un permanent.
+
+### Un reste de braquage qui ne partait jamais
+
+Le braquage n'est envoye au serveur que lorsqu'il CHANGE assez (seuil 0.08), pour ne pas remplir le reseau. Mais
+relacher la touche apres une poussee LEGERE -- 0.05, un stick a peine effleure -- ne franchissait pas ce seuil.
+Le serveur gardait donc ce reste et poussait la machine de travers POUR TOUJOURS.
+
+Le retour a ZERO part maintenant systematiquement, seuil ou pas. Un cas particulier assume : "arreter" n'est pas
+un changement comme les autres.
+
+### Un demi-degre de travers, a vie
+
+Le ballant revient a zero par un lerp exponentiel, qui n'atteint JAMAIS sa cible. La machine gardait donc une
+fraction de degre de travers indefiniment -- et la pose des bras, qui se calcule sur cette meme valeur, restait
+un poil decentree au lieu de revenir a 0.5.
+
+On cle la valeur a zero des qu'elle passe sous un seuil et que plus rien ne pousse. Meme piege que le residu de
+fondu qui traversait le rendu transparent, meme remede, deja au journal.
+
 ## 0.0.289 — Braquer seul INFLECHIT la trajectoire au lieu de la faire pivoter
 
 L'avance de manoeuvre du 0.0.288 tournait au taux PLEIN (120 degres/s), alors que la machine avance a peine. Ca se

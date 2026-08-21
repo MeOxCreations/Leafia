@@ -334,7 +334,11 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 
 	-- LE BRAQUAGE PART TOUJOURS AU SERVEUR : c'est lui qui tient la soudure, donc lui qui fait pivoter la
 	-- MACHINE. Envoye seulement sur un vrai changement, pas a chaque image.
-	if steerRemote and math.abs(lateralAmount - lastSteerSent) > 0.08 then
+	-- LE RETOUR A ZERO PART TOUJOURS, meme s'il est plus petit que le seuil. Sans ce cas particulier, relacher
+	-- la touche apres une poussee legere (0.05, un stick a peine effleure) ne franchissait pas le seuil : le
+	-- serveur gardait ce reste de braquage et poussait la machine de travers POUR TOUJOURS.
+	local releasing = lateralAmount == 0 and lastSteerSent ~= 0
+	if steerRemote and (releasing or math.abs(lateralAmount - lastSteerSent) > 0.08) then
 		lastSteerSent = lateralAmount
 		steerRemote:FireServer(lateralAmount)
 	end

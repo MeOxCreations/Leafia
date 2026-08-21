@@ -53,6 +53,8 @@ local HOLD_EPSILON = 0.001
 -- l'image ZERO, le filet figeait la pose au tout debut, et le personnage restait droit comme un R15 sans
 -- animation. Symptome trompeur : intermittent, parce que c'est une course entre le chargement et la 1re image.
 local HOLD_MIN_LENGTH = 0.05
+-- En dessous de cet angle (radians, ~0.06 degre) on considere la machine DROITE et on cle la valeur.
+local SWING_SNAP = 0.001
 local ANIMATOR_TIMEOUT = 5 -- l'Animator d'un PERSONNAGE arrive apres l'Humanoid (contrairement a un modele de map)
 
 local carried: { [Model]: CarryState } = {}
@@ -590,6 +592,12 @@ local function grab(player: Player, model: Model)
 
 		-- Rattrapage, puis plafond : sans lui une pirouette enverrait la machine repasser devant par l'autre cote.
 		state.swing -= state.swing * math.min(1, MowConfigs.SWING_RECOVER * dt)
+		-- CLE A ZERO quand plus rien ne pousse. Un lerp exponentiel n'atteint JAMAIS sa cible : sans ce clic, la
+		-- machine garderait un demi-degre de travers POUR TOUJOURS, et la pose des bras (qui se calcule sur cette
+		-- meme valeur) resterait un poil decentree. Invisible au reglage, visible a l'ecran.
+		if state.steerInput == 0 and math.abs(state.swing) < SWING_SNAP then
+			state.swing = 0
+		end
 		local maxSwing = math.rad(MowConfigs.SWING_MAX)
 		state.swing = math.clamp(state.swing, -maxSwing, maxSwing)
 
