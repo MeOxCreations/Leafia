@@ -131,6 +131,16 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Le bandeau n'est PAS plein d'un bout a l'autre : sa transparence monte le long de sa largeur. C'est un
 	-- FONDU, pas un reflet -- il ne s'anime pas. L'avoir promene une fois a suffi a le rendre completement opaque.
 	local BANNER_FADE_AT = 0.95 -- ou la transparence atteint 1
+	-- TEINTE du bandeau : vert vif d'un cote, noir de l'autre. Le meme UIGradient porte donc DEUX choses -- la
+	-- couleur et la transparence -- et c'est voulu : elles decrivent le meme voyage le long du bandeau, les
+	-- separer sur deux objets obligerait a les garder d'accord a la main.
+	--
+	-- Ces valeurs rendent EXACTEMENT ce qu'elles disent parce que l'image du bandeau est en blanc pur : un
+	-- UIGradient multiplie la couleur de l'objet, donc toute autre teinte les raboterait en silence.
+	local BANNER_COLOR = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(142, 255, 93)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+	})
 
 	-- FEUILLE centrale : elle oscille, elle flotte, et elle SE REMPLIT comme une jauge.
 	local LEAF_ID = "rbxassetid://117703108607506"
@@ -315,6 +325,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	banner.Name = "Banner"
 	banner.BackgroundTransparency = 1
 	banner.Image = BANNER_IMAGE_ID
+	-- BLANC PUR, ECRIT EXPLICITEMENT. C'est la valeur par defaut, mais c'est aussi ce qui rend le degrade
+	-- litteral : la poser noir sur blanc evite qu'on la teinte un jour sans voir qu'on rabote BANNER_COLOR.
+	banner.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	banner.ScaleType = Enum.ScaleType.Stretch
 	banner.AnchorPoint = Vector2.new(0.5, 0.5)
 	banner.Position = BANNER_POS
@@ -325,6 +338,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- que le bandeau ne soit pas plein d'un bout a l'autre. Deplacer son offset pousserait cette rampe HORS du
 	-- bandeau, qui redeviendrait donc completement opaque.
 	local bannerFade = Instance.new("UIGradient")
+	bannerFade.Color = BANNER_COLOR
 	bannerFade.Transparency = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
 		NumberSequenceKeypoint.new(BANNER_FADE_AT, 1),

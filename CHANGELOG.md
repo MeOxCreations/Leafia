@@ -2185,6 +2185,17 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.350 — Le bandeau passe du vert vif au noir
+
+`BANNER_COLOR` : `#8eff5d` a gauche, `#000000` a droite.
+
+Le meme UIGradient porte donc DEUX choses -- la couleur et la transparence -- et c'est voulu : elles decrivent le
+meme voyage le long du bandeau. Les separer sur deux objets obligerait a les garder d'accord a la main.
+
+L'`ImageColor3` du bandeau est ecrit EXPLICITEMENT en blanc pur. C'est deja la valeur par defaut, mais l'ecrire
+noir sur blanc evite qu'on la teinte un jour sans voir qu'on rabote la sequence en silence -- exactement le piege
+qui vient d'etre corrige sur l'etiquette TIPS.
+
 ## 0.0.349 — TIPS passe en blanc pur pour que son degrade dise la verite
 
 Un UIGradient MULTIPLIE la couleur du texte. Sur le gris 97 d'avant, les valeurs du degrade ne rendaient pas ce
