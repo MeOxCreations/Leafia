@@ -79,6 +79,7 @@ type Clump = {
 	flower: boolean, -- fleur et non touffe d'herbe : la tondeuse la FAUCHE au lieu de la raccourcir
 	gone: boolean, -- fauchee : sa part est detruite, plus rien ne doit y toucher
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
+	lastShrink: number, -- dernier retrecissement de fleur fauchee REELLEMENT ecrit
 	baseColor: Color3, -- couleur au repos, TACHE comprise
 	crushedColor: Color3, -- couleur une fois ecrasee, tachee de la MEME facon : la trace garde le relief du terrain
 	lastDarken: number, -- dernier melange REELLEMENT ecrit
@@ -175,10 +176,17 @@ local function apply(
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
 	-- figerait justement le residu au lieu de le laisser finir de remonter.
+	-- UNE FLEUR FAUCHEE FOND SUR LES TROIS AXES pendant qu'elle passe sous le carter, puis disparait (la
+	-- destruction est faite par mowAt quand la coupe arrive a 1). Retrecir seulement en HAUTEUR en ferait une
+	-- crepe posee au sol ; en la faisant fondre, elle a l'air avalee par la machine.
+	-- L'herbe, elle, garde exactement son comportement : ce facteur vaut 1 pour elle.
+	local shrink = if clump.flower then 1 - mown * GrassZoneConfigs.FLOWER_MOW_SHRINK else 1
 	squash = math.floor(squash / SQUASH_STEP + 0.5) * SQUASH_STEP
-	if squash ~= clump.lastSquash then
-		clump.part.Size = Vector3.new(clump.baseSize.X, clump.baseSize.Y * squash, clump.baseSize.Z)
+	if squash ~= clump.lastSquash or shrink ~= clump.lastShrink then
+		clump.part.Size =
+			Vector3.new(clump.baseSize.X * shrink, clump.baseSize.Y * squash * shrink, clump.baseSize.Z * shrink)
 		clump.lastSquash = squash
+		clump.lastShrink = shrink
 	end
 
 	-- COULEUR. Glissement de la teinte au repos vers celle d'une touffe ecrasee. Meme quantification que la taille,
@@ -255,7 +263,9 @@ local function apply(
 
 	-- LA TIGE SE COMPRIME comme le reste : au meme facteur que la hauteur. Une fleur ecrasee doit descendre AU SOL,
 	-- pas s'aplatir en restant perchee. A l'arret (squash = 1) la tige fait sa taille pleine.
-	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash))
+	-- `shrink` compte AUSSI ici : une fleur qui fond doit DESCENDRE vers le sol en meme temps, sinon elle
+	-- retrecit en restant perchee sur sa tige et on la voit disparaitre en l'air.
+	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash * shrink))
 	-- L'ecrasement se fait en HAUTEUR (la taille, juste au-dessus). Cette bascule ne sert que si on remet un angle
 	-- dans la config, ce qui n'a de sens que sur un mesh d'UN SEUL BRIN.
 	if tiltAngle ~= 0 then
@@ -631,6 +641,7 @@ local function populate(zone: Zone)
 				flower = isFlower,
 				gone = false,
 				lastSquash = 1,
+				lastShrink = 1,
 				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
 				baseColor = part.Color,
 				crushedColor = crushedColor,
@@ -1134,9 +1145,15 @@ function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number
 						-- se fait par le dossier entier, donc retirer d'un cote et pas de l'autre ne ferait que
 						-- fabriquer une reference morte a moitie oubliee.
 						if clump.flower then
-							clump.gone = true
-							clump.part:Destroy()
-							bucketCut += 1 -- reveille le pave, comme une coupe
+							-- ELLE FOND D'ABORD, elle disparait ensuite. La faire sauter des le premier contact se
+							-- lisait comme un bug ; a 0.4 s sous le carter, on la voit passer DESSOUS et fondre.
+							-- Le retrecissement est dessine par `apply`, a partir de cette meme valeur.
+							clump.mown = math.min(1, clump.mown + GrassZoneConfigs.FLOWER_MOW_RATE * dt)
+							bucketCut += 1
+							if clump.mown >= 1 then
+								clump.gone = true
+								clump.part:Destroy()
+							end
 							continue
 						end
 						if clump.mown < 1 then

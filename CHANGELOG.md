@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.324 — La fleur FOND sous le carter avant de disparaitre
+
+Elle sautait des le premier contact : ca se lisait comme un bug, pas comme une coupe. Maintenant elle retrecit
+pendant qu'elle passe SOUS la machine, puis disparait quand il n'en reste presque rien.
+
+Deux reglages, dans `GrassZoneConfigs` :
+
+- `FLOWER_MOW_RATE` (2.5) : 0.4 s sous le carter, au lieu des 0.125 s de l'herbe. C'est le temps de la VOIR
+  passer dessous. A la vitesse de l'herbe, la fonte serait invisible et on retomberait sur le saut.
+- `FLOWER_MOW_SHRINK` (0.9) : il n'en reste qu'un dixieme au moment ou elle est detruite, donc le saut final ne
+  se voit pas.
+
+### Sur les TROIS axes, et elle descend
+
+Retrecir seulement en HAUTEUR aurait fait une crepe posee au sol. En la faisant fondre sur les trois axes, elle a
+l'air avalee par la machine.
+
+Le meme facteur s'applique a sa TIGE : sans ca elle retrecissait en restant perchee, et on la voyait disparaitre
+en l'air au lieu de passer sous le carter.
+
+L'herbe ne change pas d'un poil : ce facteur vaut 1 pour elle.
+
 ## 0.0.323 — La tondeuse FAUCHE les fleurs au lieu de les raccourcir
 
 Jusqu'ici une fleur tondue se contentait de rapetisser. Maintenant la lame passe dessus et il n'en reste rien.

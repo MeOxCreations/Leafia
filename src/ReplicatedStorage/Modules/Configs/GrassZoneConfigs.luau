@@ -343,6 +343,16 @@ local GrassZoneConfigs = {
 	-- En BAISSANT, foncer laisse des bandes a moitie tondues qu'il faut repasser. C'est une texture de jeu
 	-- interessante (elle punit la precipitation), mais ca se regle A L'OEIL, tondeuse en main. Pas maintenant.
 	MOW_RATE = 8,
+	-- LES FLEURS SE FAUCHENT PLUS LENTEMENT QUE L'HERBE, et c'est tout l'interet : a la vitesse de l'herbe
+	-- (0.125 s), une fleur disparaitrait d'un coup en passant devant la machine -- ca se lirait comme un bug.
+	-- A 2.5, il lui faut 0.4 s sous le carter : le temps de la voir passer DESSOUS et fondre.
+	-- En part de coupe par seconde, comme MOW_RATE.
+	FLOWER_MOW_RATE = 2.5,
+	-- De combien elle RETRECIT avant d'etre detruite, en part de sa taille. Sur les TROIS axes et pas seulement en
+	-- hauteur : une fleur seulement aplatie ferait une crepe posee au sol. En la faisant fondre, elle a l'air
+	-- avalee par la machine.
+	-- 0.9 = il n'en reste qu'un dixieme au moment ou elle disparait, donc on ne voit pas le saut.
+	FLOWER_MOW_SHRINK = 0.9,
 
 	-- COULEUR DE L'HERBE TONDUE. Volontairement plus SOMBRE que l'herbe haute : essayee plus claire d'abord, et
 	-- l'ecran a tranche -- la pelouse tondue avait l'air ECLAIREE, comme un projecteur pose dessus, au lieu d'avoir
