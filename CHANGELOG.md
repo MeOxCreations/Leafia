@@ -2185,6 +2185,19 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.326 — Le vent ralentit
+
+Deux vitesses baissent, et il faut savoir laquelle fait quoi -- elles sont souvent confondues :
+
+- `WIND_SPEED` : 1.7 -> 1.1. Le rythme auquel CHAQUE touffe va et vient sur elle-meme.
+- `GUST_SPEED` : 9 -> 5.5. La vitesse a laquelle la VAGUE traverse la pelouse, en studs par seconde.
+
+Une herbe qui vibre vite sous une vague lente donne du frisson. L'inverse donne une houle molle. Les deux se
+reglent separement, et c'est voulu.
+
+A 9 studs/s, la vague balayait la pelouse plus vite qu'on ne marche dessus : ca se lisait comme un balayage
+d'effet, pas comme du vent. A 5.5 elle avance a peu pres a l'allure d'un promeneur.
+
 ## 0.0.325 — Le vent se devine au lieu de s'annoncer
 
 La crete Shamrock se lisait comme de la peinture verte etalee sur la pelouse. Deux reglages baissent ensemble

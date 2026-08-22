@@ -183,7 +183,12 @@ local GrassZoneConfigs = {
 	WIND_HEADING = 45, -- direction du vent, en degres (0 = vers +X, 90 = vers +Z)
 	WIND_ANGLE = 6, -- inclinaison MOYENNE dans le sens du vent, en degres
 	WIND_GUST = 5, -- amplitude de l'oscillation autour de cette inclinaison, en degres
-	WIND_SPEED = 1.7, -- vitesse de l'oscillation
+	-- Vitesse de l'oscillation de CHAQUE touffe : a quel rythme un brin va et vient sur lui-meme.
+	-- A ne pas confondre avec GUST_SPEED, qui est la vitesse a laquelle la VAGUE traverse la pelouse. Une herbe
+	-- qui vibre vite sous une vague lente donne du frisson ; l'inverse donne une houle molle. Les deux se reglent
+	-- separement, et c'est voulu.
+	-- Descendu de 1.7 : ca s'agitait trop pour un jardin par temps calme.
+	WIND_SPEED = 1.1,
 	WIND_WAVE = 0.09, -- serrage des vagues : plus haut = vagues plus courtes, qui defilent plus visiblement
 	-- CHAMP D'ACTION DU VENT, mesure depuis MON PERSONNAGE (pas depuis la camera : elle peut balayer loin ou
 	-- dezoomer, alors que "autour de moi" se definit par ou je suis). Hors du champ, l'herbe est STATIQUE : plus un
@@ -207,7 +212,11 @@ local GrassZoneConfigs = {
 	-- fin le long du souffle, long en travers.
 	-- 1 = taches rondes (l'ancien comportement). Plus HAUT = lamelles plus longues et plus franches.
 	GUST_STRETCH = 6,
-	GUST_SPEED = 9, -- vitesse a laquelle les rafales traversent le champ, en studs par seconde
+	-- Vitesse a laquelle les rafales traversent le champ, en studs par seconde. C'est la vitesse de la VAGUE, pas
+	-- celle des brins (voir WIND_SPEED).
+	-- Descendu de 9 : la vague balayait la pelouse plus vite qu'on ne marche dessus, donc on la lisait comme un
+	-- balayage d'effet et pas comme du vent.
+	GUST_SPEED = 5.5,
 	GUST_FLOOR = 0.35, -- force du vent dans les zones les plus calmes (0 = arret complet entre deux rafales)
 	-- La rafale TASSE l'herbe en plus de la coucher, et elle remonte quand la rafale passe. Fraction de hauteur perdue
 	-- au coeur d'une rafale. Volontairement petite : c'est un appui, pas un pied. 0 = pas de tassement.
