@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.352 — Le curseur reste libre pendant le chargement
+
+Pendant le rideau, la souris etait verrouillee au centre et le curseur efface. Le joueur se retrouvait devant un
+ecran qu'il ne peut de toute facon pas viser, sans pouvoir bouger sa souris : ca ressemble a un jeu fige, pas a un
+chargement.
+
+Le coupable n'etait pas l'ecran de chargement mais la VUE SUBJECTIVE : elle s'activait des l'arrivee du
+personnage, or le rideau tient dix secondes APRES cette arrivee. Elle attend maintenant que le rideau soit parti
+(`LeafiaLoadingDone`, l'attribut que l'ecran de chargement pose deja en s'en allant).
+
+Rien a ajouter cote curseur : hors vue subjective, il est libre et visible tout seul.
+
+### Deux details qui evitent des pieges
+
+- **Sondage et non ecoute d'evenement.** L'attribut peut deja etre pose quand on arrive la (chargement rapide,
+  ou lieu sans rideau), et une ecoute seule attendrait alors un changement qui n'aura jamais lieu.
+- **Un garde-fou de 40 secondes.** Si l'ecran de chargement disparaissait un jour sans poser son attribut, la vue
+  subjective ne s'activerait plus JAMAIS et on chercherait longtemps pourquoi.
+
 ## 0.0.351 — La feuille du rideau passe au vert
 
 `#8eff5d`, le meme vert que le debut du bandeau. La feuille et le bandeau se repondent : l'ecran a une seule

@@ -49,6 +49,12 @@ local DOT_OUTLINE = 1
 -- subjective. Assez petit pour que la vue ne bouge presque pas.
 -- SI LA SOURIS RESTE COLLEE AU CENTRE, c'est ce nombre qu'il faut monter -- le seuil exact appartient a Roblox.
 local FREE_CURSOR_GAP = 1.5
+-- Attribut pose par l'ecran de chargement quand son rideau s'en va. Tant qu'il n'est pas la, on ne prend NI la
+-- souris NI le curseur : voir la note dans init.
+local LOADING_DONE_ATTRIBUTE = "LeafiaLoadingDone"
+-- Au-dela, on demarre quand meme. Un garde-fou, pas une duree : si l'ecran de chargement disparaissait un jour
+-- sans poser son attribut, la vue subjective ne s'activerait plus JAMAIS et on chercherait longtemps pourquoi.
+local LOADING_TIMEOUT = 40
 local RENDER_BIND = "LeafiaFirstPerson"
 
 local available = game.PlaceId ~= PlacesConfig.MAIN
@@ -226,6 +232,20 @@ function FirstPersonController.init()
 		local character = player.Character or player.CharacterAdded:Wait()
 		-- Le personnage est parente avant d'etre complet : on laisse ses parts arriver avant de les effacer.
 		character:WaitForChild("Humanoid", 10)
+
+		-- ON ATTEND QUE LE RIDEAU DE CHARGEMENT SOIT PARTI.
+		--
+		-- Il tient dix secondes APRES l'arrivee du personnage. Prendre la souris a cet instant verrouillait le
+		-- curseur au centre et l'effacait pendant tout ce temps : le joueur se retrouvait devant un ecran qu'il ne
+		-- peut de toute facon pas viser, sans pouvoir bouger sa souris -- ca ressemble a un jeu fige, pas a un
+		-- chargement.
+		--
+		-- Sondage plutot qu'une ecoute d'evenement : l'attribut peut deja etre pose quand on arrive ici, et une
+		-- ecoute seule attendrait alors un changement qui n'aura jamais lieu.
+		local deadline = os.clock() + LOADING_TIMEOUT
+		while player:GetAttribute(LOADING_DONE_ATTRIBUTE) ~= true and os.clock() < deadline do
+			task.wait(0.2)
+		end
 		setFirstPerson(true)
 	end)
 
