@@ -2185,6 +2185,36 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.368 — Le premier conseil sortait a huit pixels
+
+Ce n'etait PAS la police. Correction d'un diagnostic rate au 0.0.366.
+
+### La vraie cause
+
+La taille du texte se deduit de la hauteur de la ligne :
+
+    local size = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
+
+`AbsoluteSize` n'existe qu'apres le passage de la mise en page. Or le tout premier conseil est ecrit AVANT la
+premiere image du rideau : on lisait donc ZERO, et la taille retombait sur son plancher de huit pixels.
+
+Le premier conseil sortait minuscule -- ce qui ressemble a une autre police -- alors que les suivants, ecrits des
+secondes plus tard, tombaient juste. D'ou l'impression que seul le premier etait casse.
+
+On attend maintenant que la ligne ait une hauteur avant de lire quoi que ce soit.
+
+### Le diagnostic precedent etait faux
+
+L'attente de POLICE ajoutee au 0.0.366 est supprimee. Elle ne servait a rien, pour deux raisons :
+
+- `rbxasset://` designe un fichier livre AVEC le client. Il n'y a rien a telecharger.
+- Sa detection etait fausse de toute facon : elle attendait que la largeur d'un temoin CESSE de changer, or la
+  largeur d'une police de secours est stable elle aussi. La boucle sortait donc a la deuxieme image, sans rien
+  garantir.
+
+Lecon : "ca ressemble a un probleme de police" n'est pas un diagnostic. Une taille de texte fausse, une mise en
+page pas encore calculee et une police absente donnent le meme symptome a l'ecran.
+
 ## 0.0.367 — L'herbe coupee flottait au-dessus du sol
 
 Un ecart visible entre le sol et l'herbe tondue.

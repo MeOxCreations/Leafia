@@ -429,58 +429,34 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- et porte le poids separement. C'est la forme deja utilisee partout ailleurs dans ce fichier.
 	local TIP_FONT = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)
 
-	-- TEMOIN DE POLICE. Une police custom se TELECHARGE : tant qu'elle n'est pas arrivee, Roblox rend le texte
-	-- avec une police de SECOURS. Le premier conseil s'ecrivait donc dans la mauvaise police -- et pire, comme on
-	-- mesure la largeur de chaque lettre pour les placer, on mesurait les largeurs de la police de secours : meme
-	-- une fois Montserrat arrivee, l'espacement restait faux.
-	--
-	-- Il n'existe pas d'evenement "police chargee". On mesure donc une chaine temoin jusqu'a ce que sa largeur
-	-- CESSE DE CHANGER : c'est le signe que la vraie police a remplace la secours.
-	-- Cree ICI, des la construction du rideau, pour que le telechargement demarre le plus tot possible.
-	local tipProbe = Instance.new("TextLabel")
-	tipProbe.Name = "TipsFontProbe"
-	tipProbe.BackgroundTransparency = 1
-	tipProbe.TextTransparency = 1 -- rendu (donc mesure), mais invisible
-	tipProbe.Size = UDim2.fromOffset(1, 1)
-	tipProbe.Text = "MEASURE"
-	tipProbe.FontFace = TIP_FONT
-	tipProbe.Parent = tipsRow
-
-	-- Combien de temps on attend la police avant d'ecrire quand meme. Un conseil dans la mauvaise police vaut
-	-- mieux qu'un bandeau vide : ce n'est pas un blocage, c'est une politesse.
-	local TIP_FONT_WAIT = 5
+	-- Combien de temps on attend que la ligne ait une hauteur avant d'ecrire quand meme. Voir writeTip.
+	local TIP_LAYOUT_WAIT = 3
 
 	-- Ecrit un conseil, lettre par lettre. Rend quand tout est pose (pas quand tout est arrive).
 	local function writeTip(text: string)
-		-- On garde le TEMOIN : c'est lui qui tient la police chargee, et le detruire relancerait l'attente a
-		-- chaque conseil.
 		for _, child in ipairs(tipsRow:GetChildren()) do
-			if child ~= tipProbe then
-				child:Destroy()
-			end
+			child:Destroy()
 		end
-		-- La taille du texte se DEDUIT de la hauteur de la ligne : le conseil garde donc les memes proportions sur
-		-- tous les ecrans, sans qu'on ait a poser une taille en pixels qui serait juste sur un seul.
-		local size = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
 
-		-- ON ATTEND QUE LA POLICE SOIT ARRIVEE. Elle ne l'est pas au premier conseil : le rideau s'affiche dans
-		-- les toutes premieres millisecondes de la session, bien avant que le telechargement soit fini.
-		-- La largeur du temoin change quand la vraie police remplace la secours ; deux mesures identiques
-		-- signifient donc que plus rien ne bougera.
-		tipProbe.TextSize = size
-		local lastWidth = -1
-		local deadline = os.clock() + TIP_FONT_WAIT
-		while sg.Parent and os.clock() < deadline do
-			local w = tipProbe.TextBounds.X
-			if w > 0 and math.abs(w - lastWidth) < 0.5 then
-				break
-			end
-			lastWidth = w
+		-- ON ATTEND QUE LA LIGNE AIT UNE HAUTEUR.
+		--
+		-- C'ETAIT LE BUG DU PREMIER CONSEIL. `AbsoluteSize` n'existe qu'apres le passage de la mise en page, et le
+		-- tout premier conseil est ecrit AVANT la premiere image du rideau : on lisait donc ZERO, et la taille de
+		-- texte retombait sur son plancher de huit pixels. Le premier conseil sortait minuscule -- ce qui ressemble
+		-- a une autre police -- alors que les suivants, ecrits des secondes plus tard, tombaient juste.
+		--
+		-- (Une attente de POLICE avait ete essayee avant : elle ne servait a rien. `rbxasset://` designe un fichier
+		-- livre AVEC le client, il n'y a donc rien a telecharger.)
+		local deadline = os.clock() + TIP_LAYOUT_WAIT
+		while sg.Parent and tipsRow.AbsoluteSize.Y < 1 and os.clock() < deadline do
 			RunService.RenderStepped:Wait()
 		end
 		if not sg.Parent then
 			return
 		end
+		-- La taille du texte se DEDUIT de la hauteur de la ligne : le conseil garde donc les memes proportions sur
+		-- tous les ecrans, sans qu'on ait a poser une taille en pixels qui serait juste sur un seul.
+		local size = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
 
 		local letters: { TextLabel } = {}
 		for _, code in utf8.codes(text) do
@@ -568,7 +544,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 				-- detaillee, la disparition non : personne ne regarde partir un texte qu'il a fini de lire, et
 				-- soixante fondus decales feraient trainer la sortie pour rien.
 				for _, child in ipairs(tipsRow:GetChildren()) do
-					if child:IsA("TextLabel") and child ~= tipProbe then
+					if child:IsA("TextLabel") then
 						TweenService:Create(child, TweenInfo.new(TIP_FADE), { TextTransparency = 1 }):Play()
 					end
 				end
