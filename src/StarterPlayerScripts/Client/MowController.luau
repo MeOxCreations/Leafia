@@ -92,8 +92,6 @@ local pullElapsed = 0
 -- Etat de la camera de JEU, capture AVANT de passer en Scriptable : l'arrivee en part et le retour y revient.
 local pullSavedFocus: Vector3? = nil -- (camera.Focus - HRP)
 local pullSavedCam: Vector3? = nil -- (camera.Position - camera.Focus) : l'angle ET le zoom reels
--- RECUL CONTINU. Instant ou la scene de demarrage a commence : le plan s'ecarte a partir de la.
-local pullStartedAt = 0
 -- SECOUSSE du coup de corde. Amplitude COURANTE en studs : elle monte d'un coup au tirage et s'eteint toute
 -- seule. Une secousse amortie plutot qu'un a-coup : rapprocher la camera puis la faire repartir donnait un "TAC"
 -- sec qu'on remarquait plus que le geste lui-meme.
@@ -148,16 +146,7 @@ local function pullShotOffsets(hrp: BasePart): (Vector3, Vector3)
 	local flat = Vector3.new(look.X, 0, look.Z)
 	flat = if flat.Magnitude > 1e-4 then flat.Unit else Vector3.new(0, 0, -1)
 	local side = flat:Cross(UP)
-	-- LE RECUL EST CONTINU. La distance part de PULL_CAM_FORWARD_START et glisse vers PULL_CAM_FORWARD sur
-	-- PULL_CAM_DRIFT_TIME. Rien d'autre a brancher : ce plan est recalcule a chaque image, il suffit donc de
-	-- faire dependre la distance du TEMPS ecoule.
-	local drift = math.clamp((os.clock() - pullStartedAt) / MowConfigs.PULL_CAM_DRIFT_TIME, 0, 1)
-	-- Ease out SIMPLE ici, sans rebond : le recul est un fond de scene, il ne doit pas se faire remarquer. C'est
-	-- l'ARRIVEE qui a le droit d'etre elastique, pas le mouvement de fond -- un recul qui depasse puis revient se
-	-- verrait immediatement.
-	drift = 1 - (1 - drift) * (1 - drift)
-	local forward = MowConfigs.PULL_CAM_FORWARD_START
-		+ (MowConfigs.PULL_CAM_FORWARD - MowConfigs.PULL_CAM_FORWARD_START) * drift
+	local forward = MowConfigs.PULL_CAM_FORWARD
 	local focusOffset = Vector3.new(0, MowConfigs.PULL_CAM_LOOK_HEIGHT, 0)
 	local eye = flat * forward + side * MowConfigs.PULL_CAM_SIDE + UP * MowConfigs.PULL_CAM_HEIGHT
 	return focusOffset, eye - focusOffset
@@ -272,7 +261,6 @@ local function setPullCam(on: boolean)
 		pullSavedCam = camera.CFrame.Position - camera.Focus.Position
 		pullPhase = "in"
 		pullElapsed = 0
-		pullStartedAt = os.clock() -- le recul continu part d'ici
 		pullShake = 0
 		-- LE VIGNETTAGE N'EXISTE QUE POUR CE MOMENT. Il est eteint le reste du temps : un vignettage permanent ne
 		-- dit plus rien au bout d'une minute, c'est son ARRIVEE qui resserre l'attention.

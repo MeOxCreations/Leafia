@@ -2185,6 +2185,29 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.356 — La camera du demarrage arrete de bouger toute seule
+
+Deux mouvements retires. Le plan se pose, et c'est tout.
+
+### Le recul continu
+
+La camera derivait lentement de 7 a 11 studs pendant toute la scene, cense lui donner de l'ampleur. Retire.
+
+Une camera qui derive en permanence pendant qu'on attend de pouvoir agir est PENIBLE, et ca se remarque bien plus
+qu'un plan fixe. Le mouvement ici, c'est le GESTE du joueur -- pas la camera. `PULL_CAM_FORWARD` devient une
+distance fixe (10 studs), et `PULL_CAM_FORWARD_START` / `PULL_CAM_DRIFT_TIME` disparaissent.
+
+### Le rebond elastique
+
+`PULL_CAM_EASING` passe de `Back` a `Quad`.
+
+`Back` depasse la cible puis revient : c'est ce qui donne le rebond du reste de l'interface. Mais un rebond va
+bien a un BOUTON qu'on presse -- c'est une reponse a un appui. Sur une camera, le depassement se lit comme une
+erreur de visee, et l'oeil le suit au lieu de suivre la scene.
+
+Ce qui reste : l'arrivee en 0.22 s, franche et posee, et la secousse a chaque coup de corde. Un mouvement qui
+REPOND a une action du joueur, et rien qui bouge tout seul.
+
 ## 0.0.355 — Retrait du systeme d'accessoire sur os
 
 `PropFollowController` et `PropAttachConfigs` sont supprimes, ainsi que leurs declarations dans le bootstrap.

@@ -284,17 +284,12 @@ return {
 	-- demarrage est le seul moment ou le joueur ne fait qu'une chose : autant la montrer. En vue de conduite on
 	-- est derriere lui et on ne voit rien du geste.
 	PULL_CAM_ENABLED = true,
-	-- LA CAMERA RECULE PENDANT TOUTE LA SCENE, elle ne se pose pas. Un plan fixe pendant qu'on tire une corde est
-	-- MORT : rien ne bouge a l'ecran sauf le personnage, et l'oeil decroche. Un recul lent et continu donne au
-	-- moment son ampleur, sans qu'on sache dire d'ou ca vient.
+	-- Distance DEVANT le joueur, en studs. FIXE : le plan se pose et ne bouge plus.
 	--
-	-- Distances DEVANT le joueur, en studs. On part pres (le geste se lit) et on finit un peu plus large.
-	-- Descendues de 10 -> 20 : a vingt studs le joueur devenait une silhouette et on ne voyait plus la corde.
-	PULL_CAM_FORWARD_START = 7,
-	PULL_CAM_FORWARD = 11,
-	-- Temps pour aller de l'une a l'autre. Le recul ne doit pas se voir BOUGER, mais il ne doit pas non plus
-	-- durer toute la scene : a 7 secondes il etait encore en train de reculer quand le moteur partait.
-	PULL_CAM_DRIFT_TIME = 4,
+	-- Il a existe un recul lent et continu pendant toute la scene, cense lui donner de l'ampleur. Retire : une
+	-- camera qui derive en permanence pendant qu'on attend de pouvoir agir est PENIBLE, et ca se remarque bien
+	-- plus qu'un plan fixe. Le mouvement, ici, c'est le geste du joueur -- pas la camera.
+	PULL_CAM_FORWARD = 10,
 	-- SECOUSSE a chaque coup de corde. C'est la seule facon de faire sentir le tirage ici : les secousses de
 	-- CameraEffects passent par Humanoid.CameraOffset, que Roblox ignore purement et simplement quand la camera
 	-- est Scriptable (deja au journal).
@@ -331,10 +326,12 @@ return {
 	-- Si ca redevenait trop sec, remonter par petits pas (0.26, 0.30), jamais d'un coup a l'ancienne valeur.
 	PULL_CAM_IN_TIME = 0.22,
 	PULL_CAM_OUT_TIME = 0.2,
-	-- COURBE de l'arrivee et du retour. `Back` DEPASSE legerement la cible puis revient : c'est ce depassement
-	-- qui donne le rebond "slime" du reste de l'interface, au lieu d'un glissement mou qui s'arrete pile.
-	-- Mettre `Quad` pour un mouvement sage et sans rebond.
-	PULL_CAM_EASING = Enum.EasingStyle.Back,
+	-- COURBE de l'arrivee et du retour. `Quad` en sortie : ca part franc et ca se pose, sans rien de plus.
+	--
+	-- `Back` a ete essaye : il DEPASSE la cible puis revient, ce qui donne le rebond du reste de l'interface.
+	-- Retire. Un rebond va bien a un bouton qu'on presse -- c'est une reponse a un appui. Sur une camera, le
+	-- depassement se lit comme une erreur de visee, et l'oeil le suit au lieu de suivre la scene.
+	PULL_CAM_EASING = Enum.EasingStyle.Quad,
 	-- RECUL DE CHAMP pendant le tirage, en degres ajoutes. Positif = la vue s'ELARGIT, donc le sujet parait
 	-- s'eloigner : c'est le "recul" lent demande. Il se pose par la meme valeur unique que le recul de la
 	-- revelation (voir applyCameraRig), sinon les deux s'ecraseraient a tour de role.
