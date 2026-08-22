@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.323 — La tondeuse FAUCHE les fleurs au lieu de les raccourcir
+
+Jusqu'ici une fleur tondue se contentait de rapetisser. Maintenant la lame passe dessus et il n'en reste rien.
+
+Ca ne fait pas que coller a la realite : c'est ce qui rend le passage LISIBLE dans un coin fleuri. L'avant /
+apres se voit d'un coup d'oeil, au lieu de demander au joueur de comparer deux verts.
+
+### La touffe est marquee, pas retiree des listes
+
+Le nettoyage d'une zone d'herbe se fait en detruisant le DOSSIER entier, jamais touffe par touffe. Retirer la
+fleur d'une liste et pas de l'autre n'aurait donc fabrique qu'une reference morte a moitie oubliee -- typiquement
+le nettoyage reparti qui finit par en oublier un.
+
+Elle porte donc un drapeau `gone`, sa part est detruite, et les deux boucles qui la parcouraient (l'animation par
+image et la coupe) la sautent en une comparaison. Le champ `flower` devient explicite sur la touffe, au lieu de se
+deduire de sa hauteur de tige.
+
+Une fleur n'est fauchee que par la TONTE. Marcher dessus continue de la coucher sans l'abimer, comme avant.
+
 ## 0.0.322 — On ne promene plus une tondeuse eteinte, et elle tourne trois fois plus
 
 ### Moteur arrete, on ne bouge pas

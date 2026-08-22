@@ -76,6 +76,8 @@ type Clump = {
 	yaw: CFrame, -- rotation propre de la touffe (tirage au sort)
 	baseSize: Vector3, -- taille au repos ; l'ecrasement ne fait que RABOTER son Y, jamais l'ecraser definitivement
 	lift: number, -- hauteur de TIGE au repos (fleurs seulement, 0 pour l'herbe). Se comprime avec l'ecrasement.
+	flower: boolean, -- fleur et non touffe d'herbe : la tondeuse la FAUCHE au lieu de la raccourcir
+	gone: boolean, -- fauchee : sa part est detruite, plus rien ne doit y toucher
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	baseColor: Color3, -- couleur au repos, TACHE comprise
 	crushedColor: Color3, -- couleur une fois ecrasee, tachee de la MEME facon : la trace garde le relief du terrain
@@ -626,6 +628,8 @@ local function populate(zone: Zone)
 				yaw = if GrassZoneConfigs.RANDOM_YAW then CFrame.Angles(0, yawAngle, 0) else CFrame.identity,
 				baseSize = part.Size,
 				lift = lift,
+				flower = isFlower,
+				gone = false,
 				lastSquash = 1,
 				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
 				baseColor = part.Color,
@@ -781,6 +785,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 	local moving = 0
 
 	for _, clump in ipairs(bucket.clumps) do
+		-- FAUCHEE PAR LA TONDEUSE : sa part n'existe plus. On la laisse dans la liste (le nettoyage se fait par le
+		-- dossier entier, pas touffe par touffe) mais plus rien ne doit lui ecrire quoi que ce soit.
+		if clump.gone then
+			continue
+		end
 		-- Le joueur le PLUS proche gagne. On ne MOYENNE pas les directions : deux joueurs de part et d'autre d'une
 		-- touffe la redresseraient, ce qui est l'inverse du sens voulu.
 		local best = 0
@@ -1111,13 +1120,25 @@ function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number
 
 			local bucketCut = 0
 			for _, clump in ipairs(bucket.clumps) do
-				-- Une touffe deja coupee a fond ne coute plus rien : c'est le cas le plus frequent sur une pelouse
-				-- qu'on finit, et c'est justement la que le joueur repasse le plus.
-				do
+				-- Une fleur deja fauchee n'a plus de part : plus rien a couper, plus rien a dessiner.
+				if not clump.gone then
 					local d = clump.basePos - worldPos
 					-- Horizontal, comme le pietinement : la hauteur ne doit pas compter, sinon la tondeuse raterait
 					-- justement les touffes les plus hautes, celles qu'on vient couper.
 					if math.sqrt(d.X * d.X + d.Z * d.Z) < radius then
+						-- UNE FLEUR NE SE RACCOURCIT PAS, ELLE DISPARAIT. La lame passe dessus et il n'en reste rien,
+						-- comme sur une vraie pelouse. C'est aussi ce qui rend le passage LISIBLE dans un coin fleuri :
+						-- l'avant / apres se voit d'un coup d'oeil, sans avoir a comparer deux verts.
+						--
+						-- On DETRUIT la part et on marque la touffe, sans la retirer des listes : le nettoyage de zone
+						-- se fait par le dossier entier, donc retirer d'un cote et pas de l'autre ne ferait que
+						-- fabriquer une reference morte a moitie oubliee.
+						if clump.flower then
+							clump.gone = true
+							clump.part:Destroy()
+							bucketCut += 1 -- reveille le pave, comme une coupe
+							continue
+						end
 						if clump.mown < 1 then
 							clump.mown = math.min(1, clump.mown + rate)
 							bucketCut += 1
