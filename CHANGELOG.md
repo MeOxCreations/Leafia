@@ -2185,6 +2185,39 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.343 — VIGNETTAGE : les bords s'assombrissent, l'oeil revient au milieu
+
+Nouveau `Modules/UI/Core/Vignette`. Un voile plein cadre, sombre sur les bords, transparent au centre.
+
+L'oeil va spontanement vers la zone la plus lumineuse. Assombrir la peripherie ramene donc le regard sur le
+joueur sans rien lui demander et sans rien ecrire a l'ecran. C'est le moyen le moins cher de dire "regarde ici".
+
+### Une PRIMITIVE, pas un bout de controller
+
+Rangee dans `UI/Core` a cote de `Toast` et `InteractionPrompt`, avec un `setStrength` fondu. La camera du
+demarrage pourra donc le renforcer pendant la scene sans avoir a le reecrire, ni meme a connaitre sa valeur de
+repos.
+
+### Trois details qui le font tenir sur tous les ecrans
+
+- **Etire, et c'est voulu.** Le voile doit toucher les QUATRE bords quel que soit le format : c'est sa seule
+  obligation. Garder ses proportions laisserait des bandes claires sur les cotes en 21/9 -- exactement ce qu'il
+  est cense supprimer. La deformation d'un degrade doux ne se voit pas ; un bord manquant, si.
+- **Aucun inset.** Sinon une bande claire de la hauteur de la barre Roblox reste en haut.
+- **DisplayOrder negatif.** Le voile passe SOUS toute l'interface : assombrir ses propres boutons n'aurait aucun
+  sens.
+
+Et il ne mange aucun clic. Un voile plein cadre qui absorbe l'input rendrait le jeu entier incliquable, et on
+chercherait le probleme dans les boutons.
+
+### L'init ne bloque pas
+
+L'attente de PlayerGui se fait en tache de fond. Un `WaitForChild` en ligne droite dans un init de boot gele
+toute la sequence le temps du timeout -- piege deja paye ailleurs dans ce projet.
+
+Reglage principal : `BASE_TRANSPARENCY` (0.45). Un vignettage se SENT, il ne se voit pas -- des qu'on peut le
+montrer du doigt, il est trop fort.
+
 ## 0.0.342 — La camera du demarrage devient VIVANTE
 
 Un plan fixe pendant qu'on tire une corde est MORT : rien ne bouge a l'ecran sauf le personnage, et l'oeil

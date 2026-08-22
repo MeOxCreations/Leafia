@@ -40,6 +40,8 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- zoom, et sans sa boucle la vue subjective ne s'appliquerait jamais.
 	-- Le controller se coupe TOUT SEUL dans le hub, donc on peut le declarer des deux cotes sans condition.
 	require(script.FirstPersonController).init()
+	-- VIGNETTAGE : les bords s'assombrissent, l'oeil revient au milieu. Ordre indifferent, il ne depend de rien.
+	require(RS.Modules.UI.Core.Vignette).init()
 	require(script.ToolController).init()
 	require(script.HedgeController).init()
 	require(script.HedgeLeafController).init()
@@ -162,6 +164,10 @@ CameraController.init()
 -- VUE SUBJECTIVE : elle ne s'active QUE hors du hub, et le controller le decide lui-meme (game.PlaceId). Declare
 -- ici quand meme, pour qu'un futur jardin de client demarre en vue subjective sans qu'on ait a y penser.
 FirstPersonController.init()
+
+-- VIGNETTAGE : les bords s'assombrissent, l'oeil revient au milieu du cadre. Ordre indifferent : il ne depend de
+-- rien et son init ne bloque pas (l'attente de PlayerGui se fait en tache de fond).
+require(game:GetService("ReplicatedStorage").Modules.UI.Core.Vignette).init()
 
 local ToolController = require(script.ToolController)
 ToolController.init()
