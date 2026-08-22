@@ -263,11 +263,7 @@ local function apply(
 		clump.part.Material = if neon then GrassZoneConfigs.HIGHLIGHT_MATERIAL else clump.baseMaterial
 	end
 	do
-		-- L'ECRASEMENT NE TEINTE PRESQUE PLUS une touffe TONDUE : sa couleur est deja celle d'une herbe rase, et
-		-- le joueur marche juste derriere la tondeuse -- sans ca il lavait sa propre bande a chaque pas.
-		-- L'APLATISSEMENT, lui, continue : il est geometrique, pas colorimetrique.
-		local crushTint = crush * (1 - mown * GrassZoneConfigs.MOW_CRUSH_DAMP)
-		local blend = math.floor(crushTint / SQUASH_STEP + 0.5) * SQUASH_STEP
+		local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
 		-- LA COULEUR SUIT L'EMERGENCE, PAS L'AVANCEMENT DE LA COUPE. Branchee sur `mown`, elle etait deja a
 		-- mi-chemin de la teinte tondue a l'instant ou le maillage changeait : le nouveau mesh apparaissait donc
 		-- DEJA colore, et on voyait qu'on ajoutait une herbe au lieu d'en couper une.
@@ -302,7 +298,28 @@ local function apply(
 				)
 			end
 			local rest = clump.baseColor:Lerp(mown2, mowBlend)
-			local final = rest:Lerp(clump.crushedColor, blend)
+
+			-- LA COULEUR D'ECRASEMENT DEPEND DE CE QU'ON ECRASE.
+			--
+			-- Sur l'herbe HAUTE : une teinte claire franche, celle des brins couches qui renvoient la lumiere.
+			-- Sur l'herbe TONDUE : SA PROPRE couleur, juste eclaircie. Elle porte deja sa bande, donc la bande
+			-- SURVIT sous le pas au lieu d'etre remplacee.
+			--
+			-- C'est ce qui manquait. Fondre vers une teinte claire FIXE lavait la bande a chaque pas -- et le
+			-- joueur marche exactement sur celle qu'il vient de couper. On avait donc du couper cet effet presque
+			-- entierement pour sauver les bandes, ce qui rendait l'herbe tondue inerte sous le pied. En eclaircissant
+			-- a partir de sa couleur au lieu d'en changer, on peut avoir les deux.
+			local crushTarget = clump.crushedColor
+			if mowBlend > 0 then
+				local k = 1 + GrassZoneConfigs.MOWN_CRUSH_LIGHTEN
+				local lit = Color3.new(
+					math.min(mown2.R * k, 1),
+					math.min(mown2.G * k, 1),
+					math.min(mown2.B * k, 1)
+				)
+				crushTarget = clump.crushedColor:Lerp(lit, mowBlend)
+			end
+			local final = rest:Lerp(crushTarget, blend)
 			-- LA CRETE PREND SA COULEUR. Un fondu VERS une couleur franche, pas un eclaircissement : quelques pour
 			-- cent de luminosite sur un vert deja vif ne se voient pas, une teinte differente si.
 			-- Le fondu reste PARTIEL, donc la nuance propre de chaque touffe et sa tache de Perlin survivent dessous.

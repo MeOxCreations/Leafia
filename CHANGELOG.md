@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.381 — Marcher sur l'herbe tondue l'eclaircit, sans effacer la bande
+
+`MOWN_CRUSH_LIGHTEN` (0.18) remplace `MOW_CRUSH_DAMP`.
+
+### Le probleme etait le mecanisme, pas le dosage
+
+L'ecrasement fondait vers une teinte claire FIXE -- celle des brins d'herbe haute couches. Sur de l'herbe tondue,
+cette teinte REMPLACAIT la couleur de la touffe, donc elle effacait sa bande. Et le joueur marche exactement sur
+la bande qu'il vient de couper.
+
+On avait donc attenue l'effet de plus en plus (0.55, puis 0.7, puis 0.92) pour sauver les bandes -- jusqu'a rendre
+l'herbe tondue inerte sous le pied. Deux besoins qui se battaient pour le meme reglage, et aucun des deux
+satisfait.
+
+### La correction
+
+Sur l'herbe tondue, l'ecrasement ECLAIRCIT sa propre couleur au lieu d'en changer. Comme cette couleur porte deja
+sa bande, la bande survit sous le pas.
+
+Le dosage devient alors libre : plus rien a sacrifier. 18 % au maximum de l'ecrasement -- ca doit rester discret,
+c'est un retour de pas, pas une information de jeu.
+
+L'herbe HAUTE, elle, garde sa teinte claire franche : chez elle, ce sont vraiment des brins couches qui renvoient
+la lumiere.
+
 ## 0.0.380 — La bande claire prend la couleur demandee, et rien ne la multiplie
 
 `MOWN_COLOR` : 159, 197, 97 -> **123, 148, 74**.

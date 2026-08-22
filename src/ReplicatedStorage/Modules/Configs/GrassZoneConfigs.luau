@@ -496,14 +496,19 @@ local GrassZoneConfigs = {
 	-- C'est aussi le bon sens : on n'ecrase pas de l'herbe deja rase. La touffe continue de s'APLATIR un peu (c'est
 	-- geometrique), elle ne change simplement plus de couleur.
 	-- 1 = l'ecrasement ne teinte plus du tout une touffe tondue. 0 = l'ancien comportement.
-	-- Historique : 0.9, 0.55, 0.7, puis 0.92.
+	-- DE COMBIEN L'HERBE TONDUE S'ECLAIRCIT SOUS LE PIED, en fraction de sa propre couleur.
 	--
-	-- REMONTE HAUT, ET POUR UNE RAISON PRECISE : le joueur marche EXACTEMENT sur la bande qu'il vient de couper.
-	-- La teinte de pietinement etant bien plus claire que l'ecart entre deux bandes, elle les effacait derriere
-	-- lui au fur et a mesure qu'il avancait -- il ne voyait donc jamais son propre travail.
-	-- A 0.92 il en reste un soupcon : assez pour que l'herbe ne soit pas inerte sous le pied, pas assez pour
-	-- concurrencer les bandes.
-	MOW_CRUSH_DAMP = 0.92,
+	-- Elle s'eclaircit A PARTIR DE SA COULEUR, elle ne fond pas vers une teinte fixe. C'est toute la difference :
+	-- sa couleur porte deja sa BANDE, donc la bande survit sous le pas au lieu d'etre remplacee.
+	--
+	-- Il a fallu deux essais pour y arriver. Avec une teinte claire FIXE (celle de l'herbe haute couchee), chaque
+	-- pas lavait la bande -- et le joueur marche exactement sur celle qu'il vient de couper. On avait donc coupe
+	-- cet effet presque entierement pour sauver les bandes, ce qui rendait l'herbe tondue inerte sous le pied.
+	-- Eclaircir au lieu de remplacer permet d'avoir les deux.
+	--
+	-- 0.18 = 18 % plus clair au maximum de l'ecrasement. Doit rester DISCRET : c'est un retour de pas, pas une
+	-- information de jeu.
+	MOWN_CRUSH_LIGHTEN = 0.18,
 	-- ET L'HERBE TONDUE NE S'ECRASE PLUS DU TOUT SOUS LE PIED. Elle est deja rase : un pied n'a plus rien a y
 	-- coucher, et la voir s'aplatir encore contredit ce qu'on vient de faire -- on a coupe, ce n'est pas un
 	-- paillasson.
