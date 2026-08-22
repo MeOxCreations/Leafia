@@ -130,7 +130,16 @@ local GrassZoneConfigs = {
 	-- ===== Couleur de l'herbe =====
 	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur
 	-- est basse plus c'est sombre.
-	BASE_COLOR = Color3.fromRGB(66, 94, 30),
+	--
+	-- REGLE POUR LA DESATURER : la saturation, c'est l'ECART entre le canal le plus fort (le vert) et le plus
+	-- faible (le bleu). Pour un vert moins criard, on MONTE le bleu et on BAISSE le vert -- pas besoin de toucher
+	-- a la luminosite, qui reste a peu pres la moyenne des trois.
+	-- Descendu de (66, 94, 30), ou l'ecart vert/bleu valait 64 : c'etait un vert de peinture, pas de jardin.
+	-- Ici l'ecart est de 45. Pour aller encore plus vers l'olive, continuer a rapprocher les deux.
+	--
+	-- Les TROIS couleurs d'herbe (repos, tondue, ecrasee) doivent bouger ENSEMBLE. N'en desaturer qu'une rendrait
+	-- les autres plus vives par comparaison, et on croirait a un bug d'affichage.
+	BASE_COLOR = Color3.fromRGB(72, 90, 45),
 	-- TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin.
 	-- Sans elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint. Le bruit de
 	-- Perlin donne de vraies ZONES ; un tirage au hasard par touffe donnerait du poivre et sel, ce qui est pire que
@@ -269,7 +278,9 @@ local GrassZoneConfigs = {
 	-- Les TACHES de Perlin s'appliquent aussi a cette teinte : la trace garde donc le relief du terrain au lieu de
 	-- devenir un aplat uniforme.
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee garde sa couleur.
-	CRUSHED_COLOR = Color3.fromRGB(186, 219, 128),
+	-- Desaturee en meme temps que BASE_COLOR : c'etait la plus criarde des trois, et laissee vive elle aurait
+	-- fait ressortir la trace du joueur comme un trait fluo sur une pelouse devenue calme.
+	CRUSHED_COLOR = Color3.fromRGB(184, 205, 147),
 	-- Inclinaison au passage. A ZERO : l'herbe s'APLATIT, elle ne penche pas.
 	-- Elle valait l'ECART entre l'ecrasement rapide et le tassement lent. Defaut vu a l'ecran : en traversant vite, on
 	-- part avant que les deux se soient rejoints, donc l'ecart existe encore PENDANT la remontee -- une inclinaison
@@ -375,7 +386,8 @@ local GrassZoneConfigs = {
 	-- l'air rase. C'est l'ombre entre les brins courts qui se lit comme "coupe", pas la lumiere.
 	-- Recoit les MEMES taches de Perlin que le reste : la partie tondue garde donc le relief du terrain au lieu de
 	-- virer a l'aplat uniforme. Meme raison que CRUSHED_COLOR.
-	MOWN_COLOR = Color3.fromRGB(67, 95, 30),
+	-- Desaturee en meme temps que BASE_COLOR, et du meme ecart : voir la regle chez elle.
+	MOWN_COLOR = Color3.fromRGB(73, 91, 45),
 
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.

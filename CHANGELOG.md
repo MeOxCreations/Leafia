@@ -2185,6 +2185,30 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.327 — L'herbe perd son vert de peinture
+
+La pelouse etait trop saturee : un vert de pot, pas un vert de jardin.
+
+| Couleur | Avant | Apres |
+|---|---|---|
+| `BASE_COLOR` (repos) | 66, 94, 30 | 72, 90, 45 |
+| `MOWN_COLOR` (tondue) | 67, 95, 30 | 73, 91, 45 |
+| `CRUSHED_COLOR` (trace) | 186, 219, 128 | 184, 205, 147 |
+
+### La regle, pour ne plus tatonner
+
+La saturation, c'est l'ECART entre le canal le plus fort (le vert) et le plus faible (le bleu). Pour un vert moins
+criard on MONTE le bleu et on BAISSE le vert. La luminosite ne bouge pas : elle suit la moyenne des trois.
+
+L'ecart passe de 64 a 45 sur la couleur de repos. Pour aller plus loin vers l'olive, continuer a rapprocher les
+deux.
+
+### Les trois bougent ENSEMBLE
+
+N'en desaturer qu'une aurait rendu les deux autres plus vives PAR COMPARAISON. La trace du joueur, la plus criarde
+des trois, serait devenue un trait fluo sur une pelouse redevenue calme -- et ca se serait lu comme un bug
+d'affichage, pas comme un reglage.
+
 ## 0.0.326 — Le vent ralentit
 
 Deux vitesses baissent, et il faut savoir laquelle fait quoi -- elles sont souvent confondues :
