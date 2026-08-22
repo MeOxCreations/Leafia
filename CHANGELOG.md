@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.373 — Hauteur et emprise de l'herbe tondue deviennent deux reglages
+
+L'herbe tondue etait trop haute. Mais la baisser avec le reglage unique reintroduisait les TROUS entre les
+touffes -- on tournait en rond entre deux defauts.
+
+### Un seul chiffre forcait a choisir entre deux defauts
+
+`MOWN_SCALE` s'appliquait aux trois axes :
+
+- le baisser raccourcissait l'herbe, mais retrecissait aussi son EMPRISE AU SOL -> la pelouse se clairsemait ;
+- le laisser a 1 gardait la pelouse pleine, mais l'herbe tondue restait aussi haute que l'herbe brute.
+
+Ces deux grandeurs n'ont rien a voir l'une avec l'autre. Les separer supprime le compromis au lieu de l'arbitrer
+-- c'est la meme lecon que les deux allures de la tondeuse, ou un reglage partage forcait a compenser ailleurs.
+
+### Les deux reglages
+
+- `MOWN_SCALE_Y` (0.6) : la HAUTEUR. C'est ce qui fait qu'une pelouse a l'air tondue. Ne pas descendre sous ~0.4,
+  ou les brins ne sont plus raccourcis mais ECRASES, et le maillage se voit deforme.
+- `MOWN_SCALE_XZ` (1) : l'EMPRISE AU SOL. A 1, la touffe couvre exactement la meme surface qu'avant la coupe :
+  aucun trou ne peut apparaitre. Il n'y a aucune raison d'en bouger, sauf a vouloir un gazon clairseme.
+
+Le calage du PIED au sol suit la nouvelle hauteur, donc l'herbe tondue reste posee au sol quel que soit le
+reglage.
+
 ## 0.0.372 — Le premier conseil sortait plus PETIT, et il a fallu trois essais
 
 Deux captures cote a cote l'ont montre sans discussion : meme police, taille differente. Le premier conseil est

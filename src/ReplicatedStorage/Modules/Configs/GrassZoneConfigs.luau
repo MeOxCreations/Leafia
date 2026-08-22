@@ -378,22 +378,21 @@ local GrassZoneConfigs = {
 	-- Les deux se cumulent sans se gener : on garde la plus COURTE des deux raisons. Marcher sur du tondu le couche
 	-- encore un peu, et ca se releve ; la coupe, elle, reste dessous.
 
-	-- TAILLE D'UNE TOUFFE ENTIEREMENT TONDUE, en fraction de sa taille d'origine.
+	-- TAILLE D'UNE TOUFFE ENTIEREMENT TONDUE. DEUX reglages, et il FAUT qu'ils soient separes.
 	--
-	-- 1 = ELLE NE CHANGE PAS DE TAILLE DU TOUT. C'est le MAILLAGE qui dit "coupe" (voir CUT_MESH_NAME), pas les
-	-- dimensions -- et c'est la bonne repartition des roles : une forme d'herbe rase ressemble a de l'herbe rase,
-	-- quelle que soit la boite dans laquelle on la met.
+	-- Un seul chiffre pour les trois axes forcait a choisir entre deux defauts :
+	--   - le baisser raccourcissait bien l'herbe, mais retrecissait aussi son EMPRISE AU SOL : la pelouse tondue
+	--     se clairsemait et on voyait le sol entre les touffes ;
+	--   - le laisser a 1 gardait la pelouse pleine, mais l'herbe tondue restait aussi HAUTE que l'herbe brute.
+	-- Ces deux grandeurs n'ont rien a voir. Les separer supprime le compromis au lieu de l'arbitrer.
 	--
-	-- CE QUI A ETE ESSAYE, ET POURQUOI ON N'Y REVIENT PAS :
-	--   - Ecraser la HAUTEUR (l'ancien MOW_CUT) : deformait le maillage, comprime dans une boite trop basse.
-	--   - Reduire sur les TROIS axes (0.4) : ne deformait plus, mais retrecissait aussi l'EMPRISE AU SOL. La
-	--     pelouse tondue se clairsemait et on voyait le sol entre les touffes -- des TROUS, pas un gazon.
-	-- Les deux essais partaient de la meme idee fausse : que la taille devait porter l'information "coupe". Elle
-	-- ne le doit pas.
-	--
-	-- Le laisser a 1 a aussi un cout NUL : le facteur etant constant, la taille des touffes tondues n'est plus
-	-- reecrite a chaque image.
-	MOWN_SCALE = 1,
+	-- HAUTEUR. C'est ce qui fait qu'une pelouse a l'air tondue. Baisser pour raccourcir.
+	-- Ne pas descendre trop bas : sous ~0.4 les brins ne sont plus raccourcis, ils sont ECRASES, et le maillage
+	-- d'herbe rase se voit deforme.
+	MOWN_SCALE_Y = 0.6,
+	-- EMPRISE AU SOL. A 1, la touffe couvre exactement la meme surface qu'avant la coupe : aucun trou ne peut
+	-- apparaitre. C'est la valeur sure, et il n'y a aucune raison d'en bouger sauf a vouloir un gazon clairseme.
+	MOWN_SCALE_XZ = 1,
 
 	-- ===== BANDES DE TONTE =====
 	-- C'est la promesse tenue du bloc "Rayures de tonte" plus haut : les bandes naissent de la TONTE, elles ne

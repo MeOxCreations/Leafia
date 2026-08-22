@@ -221,18 +221,27 @@ local function apply(
 	-- crepe posee au sol ; en la faisant fondre, elle a l'air avalee par la machine.
 	-- L'herbe, elle, garde exactement son comportement : ce facteur vaut 1 pour elle.
 	local shrink = if clump.flower then 1 - mown * GrassZoneConfigs.FLOWER_MOW_SHRINK else 1
-	-- LA TOUFFE TONDUE RETRECIT SUR LES TROIS AXES au lieu d'etre aplatie : le maillage d'herbe rase garde ainsi
-	-- exactement la forme modelee. Ecraser la seule hauteur le comprimait dans une boite trop basse.
-	-- Suit l'EMERGENCE et non la coupe : la touffe sort du sol a sa nouvelle taille, en un seul mouvement.
+	-- LA TOUFFE TONDUE RACCOURCIT, mais garde son EMPRISE AU SOL. Deux reglages separes, parce que ce sont deux
+	-- grandeurs sans rapport : la hauteur fait qu'une pelouse a l'air tondue, l'emprise fait qu'elle reste pleine.
+	-- Les avoir confondus donnait soit de l'herbe trop haute, soit des trous entre les touffes.
+	-- Suivent l'EMERGENCE et non la coupe : la touffe sort du sol a sa nouvelle taille, en un seul mouvement.
+	local mownY, mownXZ = 1, 1
 	if not clump.flower then
-		shrink *= 1 - clump.cutT * (1 - GrassZoneConfigs.MOWN_SCALE)
+		mownY = 1 - clump.cutT * (1 - GrassZoneConfigs.MOWN_SCALE_Y)
+		mownXZ = 1 - clump.cutT * (1 - GrassZoneConfigs.MOWN_SCALE_XZ)
 	end
 	squash = math.floor(squash / SQUASH_STEP + 0.5) * SQUASH_STEP
-	if squash ~= clump.lastSquash or shrink ~= clump.lastShrink then
-		clump.part.Size =
-			Vector3.new(clump.baseSize.X * shrink, clump.baseSize.Y * squash * shrink, clump.baseSize.Z * shrink)
+	-- Une seule valeur de cache pour les deux facteurs : ils varient ENSEMBLE (tous deux pilotes par l'emergence),
+	-- donc surveiller le premier suffit a savoir que le second a bouge.
+	local shrinkY = shrink * mownY
+	if squash ~= clump.lastSquash or shrinkY ~= clump.lastShrink then
+		clump.part.Size = Vector3.new(
+			clump.baseSize.X * shrink * mownXZ,
+			clump.baseSize.Y * squash * shrinkY,
+			clump.baseSize.Z * shrink * mownXZ
+		)
 		clump.lastSquash = squash
-		clump.lastShrink = shrink
+		clump.lastShrink = shrinkY
 	end
 
 	-- COULEUR. Glissement de la teinte au repos vers celle d'une touffe ecrasee. Meme quantification que la taille,
@@ -328,7 +337,7 @@ local function apply(
 	--
 	-- On descend le centre de la MOITIE de la hauteur perdue : le pied retrouve exactement sa place. Une seule
 	-- ligne qui couvre les deux causes, l'ecrasement et la coupe, sans avoir a les traiter separement.
-	local sink = clump.baseSize.Y * 0.5 * (1 - squash * shrink)
+	local sink = clump.baseSize.Y * 0.5 * (1 - squash * shrinkY)
 	if clump.cutStarted and clump.cutT < 1 then
 		sink += clump.baseSize.Y * squash * GrassZoneConfigs.CUT_RISE_DEPTH * (1 - clump.cutT)
 	end
@@ -337,8 +346,8 @@ local function apply(
 	-- LEVITER. On l'enfonce donc d'un poil.
 	-- En fraction de sa hauteur COURANTE et pas en studs : la marge du mesh est proportionnelle a sa taille, donc
 	-- une valeur absolue enterrerait les petites touffes et laisserait les grandes en l'air.
-	sink += clump.baseSize.Y * squash * shrink * GrassZoneConfigs.GROUND_SINK
-	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash * shrink - sink))
+	sink += clump.baseSize.Y * squash * shrinkY * GrassZoneConfigs.GROUND_SINK
+	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash * shrinkY - sink))
 	-- L'ecrasement se fait en HAUTEUR (la taille, juste au-dessus). Cette bascule ne sert que si on remet un angle
 	-- dans la config, ce qui n'a de sens que sur un mesh d'UN SEUL BRIN.
 	if tiltAngle ~= 0 then
