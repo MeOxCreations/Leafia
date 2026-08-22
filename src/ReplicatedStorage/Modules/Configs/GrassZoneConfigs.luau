@@ -387,13 +387,15 @@ local GrassZoneConfigs = {
 	-- Ces deux grandeurs n'ont rien a voir. Les separer supprime le compromis au lieu de l'arbitrer.
 	--
 	-- HAUTEUR. C'est ce qui fait qu'une pelouse a l'air tondue. Baisser pour raccourcir.
-	-- Historique : 0.6 puis 0.35, toujours le meme retour -- "trop haute".
 	--
-	-- ON APPROCHE DE LA LIMITE DE CE REGLAGE. Plus bas, on ne raccourcit plus les brins, on les ECRASE : le
-	-- maillage d'herbe rase se comprime et cesse de ressembler a de l'herbe. Si 0.35 est encore trop haut, la
-	-- suite ne se joue plus ici mais dans BLENDER -- il faut modeler GrassCut plus court, et remettre ce chiffre
-	-- vers 1. Le code peut raccourcir une forme, il ne peut pas en inventer une autre.
-	MOWN_SCALE_Y = 0.35,
+	-- 0.25 : la valeur du tout debut, retrouvee apres avoir essaye 1, 0.6 et 0.35. On la croyait trop ecrasante --
+	-- elle ne l'est pas. A l'ecran, un brin franchement comprime se lit comme de l'herbe RASE, alors qu'un brin
+	-- a peine raccourci se lit comme de l'herbe mal coupee.
+	--
+	-- La lecon vaut au-dela de ce chiffre : la deformation d'un maillage n'est un probleme que si elle SE VOIT en
+	-- tant que deformation. Sur des brins d'herbe, tous verticaux, l'ecrasement se lit comme une COUPE. C'est
+	-- pour ca qu'on est revenu ici apres avoir cherche ailleurs.
+	MOWN_SCALE_Y = 0.25,
 	-- EMPRISE AU SOL. A 1, la touffe couvre exactement la meme surface qu'avant la coupe : aucun trou ne peut
 	-- apparaitre. C'est la valeur sure, et il n'y a aucune raison d'en bouger sauf a vouloir un gazon clairseme.
 	MOWN_SCALE_XZ = 1,

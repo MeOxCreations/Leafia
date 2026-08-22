@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.375 — L'herbe tondue retrouve son ecrasement d'origine
+
+`MOWN_SCALE_Y` : 0.35 -> 0.25. C'est la valeur du tout debut, retrouvee apres avoir essaye 1, puis 0.6, puis
+0.35.
+
+On la croyait trop ecrasante. Elle ne l'est pas : a l'ecran, un brin franchement comprime se lit comme de l'herbe
+RASE, alors qu'un brin a peine raccourci se lit comme de l'herbe MAL COUPEE.
+
+### Ce que le detour aura servi
+
+La valeur est la meme qu'au depart, mais rien d'autre ne l'est, et c'est le detour qui l'a permis :
+
+- l'EMPRISE AU SOL est un reglage a part, donc l'ecrasement ne fait plus de trous dans la pelouse ;
+- le PIED reste au sol quelle que soit la hauteur, donc l'herbe ne flotte plus ;
+- l'herbe deja tondue ne s'ecrase plus sous le pied ;
+- le maillage d'herbe rase, lui, est arrive en cours de route.
+
+### La lecon
+
+Une deformation de maillage n'est un probleme que si elle SE VOIT en tant que deformation. Sur des brins d'herbe,
+tous verticaux, l'ecrasement se lit comme une COUPE -- pas comme un defaut. C'est pour ca qu'on est revenu ici
+apres avoir cherche ailleurs pendant plusieurs versions.
+
 ## 0.0.374 — L'herbe tondue descend encore
 
 `MOWN_SCALE_Y` : 0.6 -> 0.35. L'emprise au sol ne bouge pas, donc toujours aucun trou.
