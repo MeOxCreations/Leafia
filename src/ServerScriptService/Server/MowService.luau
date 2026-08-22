@@ -1060,7 +1060,7 @@ function MowService.init()
 	-- le message si la machine est deja lancee -- un clic de plus ne relance pas le geste.
 	local pullRemote = RemoteSetup.getRemote("PullMowStarter", "Mow") :: RemoteEvent
 	pullRemote.OnServerEvent:Connect(function(player: Player)
-		for model, state in pairs(carried) do
+		for _, state in pairs(carried) do
 			if state.owner == player then
 				pullStarter(state)
 			end
