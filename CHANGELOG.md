@@ -2185,6 +2185,36 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.342 — La camera du demarrage devient VIVANTE
+
+Un plan fixe pendant qu'on tire une corde est MORT : rien ne bouge a l'ecran sauf le personnage, et l'oeil
+decroche. Deux mouvements, qui ne font pas la meme chose.
+
+### Un recul CONTINU
+
+La camera part a 10 studs (le geste se lit) et glisse jusqu'a 20 (la scene existe), sur 7 secondes. En ease out :
+le gros du recul se fait tot, puis ca se pose -- en lineaire on sentirait la camera "tirer" jusqu'au bout, ce qui
+se remarque.
+
+Volontairement LENT. Le recul ne doit jamais se voir bouger, il doit juste AVOIR bouge. Plus court, ca se lit
+comme un zoom et l'attention se porte sur la camera au lieu du geste.
+
+Rien de neuf a brancher : le plan etant recalcule a chaque image, il suffit de faire dependre la distance du
+temps ecoule depuis le debut de la scene.
+
+### Un A-COUP a chaque coup de corde
+
+La camera se jette de 3 studs vers le joueur, puis repart. C'est la SEULE facon de faire sentir le tirage ici :
+les secousses de `CameraEffects` passent par `Humanoid.CameraOffset`, que Roblox ignore purement et simplement
+quand la camera est Scriptable (deja au journal).
+
+L'a-coup est pose a l'INSTANT DE L'APPUI, pas en attendant la reponse du serveur. Un retour qui arrive apres un
+aller-retour reseau ne se ressent plus comme la consequence de son propre geste.
+
+Il s'amortit dans la BOUCLE et non dans le calcul du plan : un amortissement range dans une fonction de calcul
+depend du nombre de fois qu'on l'appelle, pas du temps -- et le jour ou un deuxieme appelant arrive, l'effet fond
+deux fois plus vite sans qu'on comprenne pourquoi.
+
 ## 0.0.341 — La camera du demarrage recule et descend
 
 - `PULL_CAM_FORWARD` : 9 -> 14. A 9 studs on voyait le joueur, mais pas la SCENE.

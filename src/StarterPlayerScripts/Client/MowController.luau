@@ -90,6 +90,10 @@ local pullElapsed = 0
 -- Etat de la camera de JEU, capture AVANT de passer en Scriptable : l'arrivee en part et le retour y revient.
 local pullSavedFocus: Vector3? = nil -- (camera.Focus - HRP)
 local pullSavedCam: Vector3? = nil -- (camera.Position - camera.Focus) : l'angle ET le zoom reels
+-- RECUL CONTINU. Instant ou la scene de demarrage a commence : le plan s'ecarte a partir de la.
+local pullStartedAt = 0
+-- A-COUP du coup de corde, en studs de RAPPROCHEMENT. Monte d'un coup au tirage, redescend tout seul.
+local pullKick = 0
 -- Le plan au moment ou l'on lache : le retour part de LA, pas de la cible theorique.
 local pullExitFocus = Vector3.zero
 local pullExitCam = Vector3.zero
@@ -140,10 +144,19 @@ local function pullShotOffsets(hrp: BasePart): (Vector3, Vector3)
 	local flat = Vector3.new(look.X, 0, look.Z)
 	flat = if flat.Magnitude > 1e-4 then flat.Unit else Vector3.new(0, 0, -1)
 	local side = flat:Cross(UP)
+	-- LE RECUL EST CONTINU. La distance part de PULL_CAM_FORWARD_START et glisse vers PULL_CAM_FORWARD sur
+	-- PULL_CAM_DRIFT_TIME. Rien d'autre a brancher : ce plan est recalcule a chaque image, il suffit donc de
+	-- faire dependre la distance du TEMPS ecoule.
+	local drift = math.clamp((os.clock() - pullStartedAt) / MowConfigs.PULL_CAM_DRIFT_TIME, 0, 1)
+	-- Ease out : le gros du recul se fait tot, puis ca se pose. Lineaire, on sentirait la camera "tirer" jusqu'au
+	-- bout, ce qui se remarque.
+	drift = 1 - (1 - drift) * (1 - drift)
+	local forward = MowConfigs.PULL_CAM_FORWARD_START
+		+ (MowConfigs.PULL_CAM_FORWARD - MowConfigs.PULL_CAM_FORWARD_START) * drift
+	-- L'A-COUP RAPPROCHE, il ne recule pas : au moment ou le joueur tire, on se jette sur lui.
+	forward = math.max(forward - pullKick, 1)
 	local focusOffset = Vector3.new(0, MowConfigs.PULL_CAM_LOOK_HEIGHT, 0)
-	local eye = flat * MowConfigs.PULL_CAM_FORWARD
-		+ side * MowConfigs.PULL_CAM_SIDE
-		+ UP * MowConfigs.PULL_CAM_HEIGHT
+	local eye = flat * forward + side * MowConfigs.PULL_CAM_SIDE + UP * MowConfigs.PULL_CAM_HEIGHT
 	return focusOffset, eye - focusOffset
 end
 
@@ -164,6 +177,15 @@ local function stepPullCam(dt: number)
 			camera.CameraType = Enum.CameraType.Custom
 		end
 		return
+	end
+	-- L'a-coup s'efface tout seul. Amorti ICI, dans la boucle, et pas dans le calcul du plan : un amortissement
+	-- range dans une fonction de CALCUL depend du nombre de fois qu'on l'appelle, pas du temps -- et le jour ou
+	-- un deuxieme appelant arrive, l'effet fond deux fois plus vite sans qu'on comprenne pourquoi.
+	if pullKick > 0 then
+		pullKick = math.max(0, pullKick - pullKick * math.min(1, MowConfigs.PULL_CAM_KICK_DECAY * dt))
+		if pullKick < 0.02 then
+			pullKick = 0
+		end
 	end
 	local hrp = root :: BasePart
 	local shotFocus, shotCam = pullShotOffsets(hrp)
@@ -228,6 +250,8 @@ local function setPullCam(on: boolean)
 		pullSavedCam = camera.CFrame.Position - camera.Focus.Position
 		pullPhase = "in"
 		pullElapsed = 0
+		pullStartedAt = os.clock() -- le recul continu part d'ici
+		pullKick = 0
 		if not pullCamBound then
 			pullCamBound = true
 			RunService:BindToRenderStep(PULL_CAM_BIND, Enum.RenderPriority.Camera.Value, stepPullCam)
@@ -780,6 +804,10 @@ local function setPullBound(active: boolean)
 		ContextActionService:BindAction(MowConfigs.START_ACTION, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin and pullRemote then
 				pullRemote:FireServer()
+				-- A-COUP DE CAMERA sur le coup de corde. Pose ICI, au moment de l'appui, et pas en attendant une
+				-- reponse du serveur : un retour qui arrive apres un aller-retour reseau ne se ressent plus comme
+				-- la consequence de son propre geste.
+				pullKick = MowConfigs.PULL_CAM_KICK
 			end
 			return Enum.ContextActionResult.Pass
 		end, true, Enum.UserInputType.MouseButton1)

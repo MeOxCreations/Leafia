@@ -284,9 +284,21 @@ return {
 	-- demarrage est le seul moment ou le joueur ne fait qu'une chose : autant la montrer. En vue de conduite on
 	-- est derriere lui et on ne voit rien du geste.
 	PULL_CAM_ENABLED = true,
-	-- Distance DEVANT le joueur, en studs. Il faut passer la machine (elle est soudee devant lui) sans partir si
-	-- loin qu'on ne lise plus le geste. Monte de 9 : a cette distance on voyait le joueur mais pas la SCENE.
-	PULL_CAM_FORWARD = 14,
+	-- LA CAMERA RECULE PENDANT TOUTE LA SCENE, elle ne se pose pas. Un plan fixe pendant qu'on tire une corde est
+	-- MORT : rien ne bouge a l'ecran sauf le personnage, et l'oeil decroche. Un recul lent et continu donne au
+	-- moment son ampleur, sans qu'on sache dire d'ou ca vient.
+	--
+	-- Distances DEVANT le joueur, en studs. On part pres (le geste se lit) et on finit large (la scene existe).
+	PULL_CAM_FORWARD_START = 10,
+	PULL_CAM_FORWARD = 20,
+	-- Temps pour aller de l'une a l'autre. Volontairement LONG : le recul ne doit jamais se voir bouger, il doit
+	-- juste avoir bouge. Plus court, ca se lit comme un zoom et ca attire l'attention sur la camera.
+	PULL_CAM_DRIFT_TIME = 7,
+	-- A-COUP a chaque coup de corde : la camera se rapproche d'un coup, puis repart. C'est la seule facon de faire
+	-- SENTIR le tirage ici -- les secousses de CameraEffects passent par Humanoid.CameraOffset, que Roblox ignore
+	-- purement et simplement quand la camera est Scriptable (deja au journal).
+	PULL_CAM_KICK = 3, -- de combien on se rapproche, en studs
+	PULL_CAM_KICK_DECAY = 3.2, -- vitesse a laquelle l'a-coup s'efface. BAS = il traine
 	-- Decalage LATERAL. Le SIGNE decide du cote, et il ne se DEDUIT pas : si la camera se pose du mauvais cote,
 	-- mettre -6. C'est de la famille des sens qu'on ne tranche qu'a l'ecran.
 	PULL_CAM_SIDE = 6,
