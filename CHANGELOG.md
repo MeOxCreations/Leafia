@@ -2185,6 +2185,54 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.370 — L'herbe tondue reprend la taille de l'herbe normale
+
+Les touffes tondues etaient reduites a 40 %, ce qui laissait des TROUS entre elles : on voyait le sol.
+
+`MOWN_SCALE` passe a 1. La touffe ne change plus de taille du tout -- c'est le MAILLAGE qui dit "coupe", pas les
+dimensions.
+
+### Deux essais, la meme idee fausse
+
+- Ecraser la HAUTEUR (l'ancien `MOW_CUT`) : deformait le maillage d'herbe rase, comprime dans une boite trop
+  basse.
+- Reduire sur les TROIS axes (0.4) : ne deformait plus, mais retrecissait aussi l'EMPRISE AU SOL. La pelouse
+  tondue se clairsemait -- des trous, pas un gazon.
+
+Les deux partaient de la meme idee fausse : que la TAILLE devait porter l'information "coupe". Elle ne le doit
+pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boite dans laquelle on la met.
+
+Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
+
+## 0.0.371 — Les lettres du conseil n'ont plus qu'un seul ecrivain
+
+Suite du premier conseil mal rendu. Ni la police ni la taille cette fois : les POSITIONS.
+
+Une police se charge PARESSEUSEMENT. Le premier conseil peut etre dessine avec une police de secours puis
+redessine avec la bonne : Roblox echange le rendu tout seul, mais pas nos positions, calculees a la main sur les
+largeurs de l'ancienne. Les lettres restaient donc mal espacees, et le mot entier avait l'air d'etre dans une
+autre police.
+
+### On cesse de deviner QUAND la police arrive
+
+Aucune API ne le dit, et deux tentatives de le deviner se sont revelees fausses -- dont une qui attendait qu'une
+largeur cesse de changer, alors que la largeur d'une police de secours est stable elle aussi.
+
+On RE-MESURE donc a chaque image et on replace. La mise en page se corrige toute seule, quel que soit le moment
+ou la vraie police arrive.
+
+### Ce qui a oblige a reecrire le rebond
+
+Avec des tweens sur `Position`, ce replacement se serait battu avec l'animation en cours : le tween aurait
+continue vers sa cible, calculee sur les anciennes largeurs. Deux ecrivains sur la meme propriete, exactement ce
+que la regle du projet interdit.
+
+Le rebond est donc ecrit A LA MAIN, dans la meme boucle que le placement : un seul ecrivain pour le X ET le Y. La
+courbe est empruntee a `TweenService:GetValue`, donc on garde le rebond sans le coder.
+
+Un jeton coupe la boucle du conseil precedent : sans lui, deux boucles ecriraient les memes lettres et la plus
+vieille gagnerait une image sur deux.
+
 ## 0.0.369 — On ne peut plus ecraser l'herbe deja tondue
 
 Marcher sur une pelouse tondue l'aplatissait encore. Elle est deja rase : un pied n'a plus rien a y coucher, et

@@ -431,8 +431,22 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 	-- Combien de temps on attend que la ligne ait une hauteur avant d'ecrire quand meme. Voir writeTip.
 	local TIP_LAYOUT_WAIT = 3
+	-- Combien de temps on SURVEILLE la largeur des lettres apres les avoir placees.
+	--
+	-- POURQUOI SURVEILLER. Une police se charge PARESSEUSEMENT : le premier conseil peut etre dessine avec une
+	-- police de secours, puis redessine avec la bonne. Roblox echange le rendu tout seul -- mais pas nos
+	-- POSITIONS, calculees a la main sur les largeurs de l'ancienne. Les lettres restaient donc mal espacees, et
+	-- le mot entier avait l'air d'etre dans une autre police.
+	--
+	-- On ne peut pas savoir QUAND la vraie police arrive : aucune API ne le dit, et deux tentatives de le deviner
+	-- se sont revelees fausses. On ne devine donc plus -- on regarde si les largeurs bougent, et on replace.
+	local TIP_WIDTH_WATCH = 2.5
 
 	-- Ecrit un conseil, lettre par lettre. Rend quand tout est pose (pas quand tout est arrive).
+	-- Jeton du conseil COURANT. La boucle d'animation s'arrete des qu'un nouveau conseil arrive : sans lui, deux
+	-- boucles ecriraient la position des memes lettres, et la plus vieille gagnerait une image sur deux.
+	local tipToken: any = nil
+
 	local function writeTip(text: string)
 		for _, child in ipairs(tipsRow:GetChildren()) do
 			child:Destroy()
@@ -487,46 +501,64 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			return
 		end
 
-		-- ON PLACE A LA MAIN plutot qu'avec un UIListLayout. Un layout REPOSE ses enfants a chaque image : il
-		-- ecraserait le decalage vertical du rebond, et animer autre chose (l'echelle) changerait la largeur des
-		-- lettres, donc ferait sautiller toute la ligne. En posant les X une fois pour toutes, le Y reste a nous.
-		local x = 0
-		for _, label in ipairs(letters) do
-			local w = label.AbsoluteSize.X
-			-- UNE ESPACE NE MESURE RIEN. Roblox rogne les blancs de bord, donc sa largeur revient a zero et les
-			-- mots se colleraient. On lui donne une avance fixe, proportionnelle a la taille du texte.
-			if w < 1 then
-				w = size * TIP_SPACE_WIDTH
-			end
-			label.Position = UDim2.fromOffset(x, 0)
-			x += w
-		end
-
-		-- LE REBOND. Chaque lettre monte de sous la ligne et se pose, avec un LEGER retard sur la precedente :
-		-- c'est ce decalage qui donne l'impression que le texte s'ECRIT, au lieu d'apparaitre d'un bloc.
-		-- Easing `Back` : la lettre DEPASSE sa place puis y revient. Sur du texte, ce depassement se lit comme du
-		-- rebond -- contrairement a une camera, ou il se lirait comme une erreur de visee.
+		-- ===== UNE SEULE BOUCLE ECRIT LA POSITION DES LETTRES =====
+		--
+		-- Elle fait DEUX choses a la fois, et c'est justement pour ca qu'elle est unique :
+		--   1. le X, qui vient des largeurs mesurees ;
+		--   2. le Y, qui vient du rebond.
+		--
+		-- Ces deux-la ne peuvent pas etre confies a des mecanismes differents. Une police se charge PARESSEUSEMENT :
+		-- le premier conseil peut etre dessine avec une police de SECOURS, puis redessine avec la bonne. Roblox
+		-- echange le rendu tout seul -- mais pas nos POSITIONS, calculees a la main sur les largeurs de l'ancienne.
+		-- Les lettres restaient donc mal espacees, et le mot entier avait l'air d'etre dans une autre police.
+		--
+		-- On ne peut pas savoir QUAND la vraie police arrive : aucune API ne le dit, et deux tentatives de le
+		-- deviner se sont revelees fausses. On cesse donc de deviner -- on RE-MESURE a chaque image et on replace.
+		--
+		-- Avec des tweens sur Position, ce replacement se serait battu avec l'animation en cours : le tween aurait
+		-- continue vers sa cible, calculee sur les anciennes largeurs. D'ou le rebond ecrit a la main.
+		--
+		-- ON PLACE A LA MAIN plutot qu'avec un UIListLayout, pour la meme raison : un layout repose ses enfants a
+		-- chaque image et ecraserait le Y du rebond.
 		local rise = size * TIP_LETTER_RISE
-		for i, label in ipairs(letters) do
-			local delay = (i - 1) * TIP_LETTER_STAGGER
-			local restX = label.Position.X.Offset
-			label.Position = UDim2.fromOffset(restX, math.floor(rise))
-			task.delay(delay, function()
-				if not label.Parent then
+		local token = {}
+		tipToken = token
+		task.spawn(function()
+			local t0 = os.clock()
+			-- Duree totale : la derniere lettre part au bout de tous les retards cumules.
+			local total = (#letters - 1) * TIP_LETTER_STAGGER + TIP_LETTER_TIME
+			-- On continue un peu APRES la fin du rebond : c'est pendant ce rab qu'une police arrivee en retard se
+			-- fait rattraper.
+			local watchUntil = math.max(total, TIP_WIDTH_WATCH)
+			while sg.Parent and tipToken == token do
+				local now = os.clock() - t0
+				-- LARGEURS RELUES A CHAQUE IMAGE. Une espace ne mesure rien (Roblox rogne les blancs de bord) :
+				-- on lui donne une avance fixe, sinon les mots se colleraient.
+				local x = 0
+				for i, label in ipairs(letters) do
+					if not label.Parent then
+						return
+					end
+					local progress = math.clamp((now - (i - 1) * TIP_LETTER_STAGGER) / TIP_LETTER_TIME, 0, 1)
+					-- `Back` DEPASSE la place puis y revient : sur du texte ce depassement se lit comme du rebond.
+					local eased = TweenService:GetValue(progress, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+					label.Position = UDim2.fromOffset(x, math.floor(rise * (1 - eased)))
+					-- La transparence ne rebondit PAS : elle fond droit. Un `Back` la ferait passer sous zero, donc
+					-- clignoter. Elle finit aussi plus tot que le mouvement : la lettre est deja lisible quand elle
+					-- se pose.
+					label.TextTransparency = 1 - math.clamp(progress * 2, 0, 1)
+					local w = label.AbsoluteSize.X
+					if w < 1 then
+						w = size * TIP_SPACE_WIDTH
+					end
+					x += w
+				end
+				if now >= watchUntil then
 					return
 				end
-				TweenService
-					:Create(
-						label,
-						TweenInfo.new(TIP_LETTER_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-						{ Position = UDim2.fromOffset(restX, 0) }
-					)
-					:Play()
-				-- La transparence, elle, ne rebondit PAS : elle fond droit. Un `Back` sur une transparence la
-				-- ferait passer sous zero, donc clignoter.
-				TweenService:Create(label, TweenInfo.new(TIP_LETTER_TIME * 0.5), { TextTransparency = 0 }):Play()
-			end)
-		end
+				RunService.RenderStepped:Wait()
+			end
+		end)
 	end
 
 	if #TIPS > 0 then

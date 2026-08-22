@@ -380,19 +380,20 @@ local GrassZoneConfigs = {
 
 	-- TAILLE D'UNE TOUFFE ENTIEREMENT TONDUE, en fraction de sa taille d'origine.
 	--
-	-- APPLIQUE SUR LES TROIS AXES, et c'est tout l'interet : la touffe RETRECIT au lieu d'etre APLATIE. Depuis que
-	-- l'herbe coupee a son propre maillage, l'ecraser en hauteur le deformait -- il se retrouvait comprime dans une
-	-- boite au quart de sa taille. Reduit uniformement, il garde exactement la forme modelee.
+	-- 1 = ELLE NE CHANGE PAS DE TAILLE DU TOUT. C'est le MAILLAGE qui dit "coupe" (voir CUT_MESH_NAME), pas les
+	-- dimensions -- et c'est la bonne repartition des roles : une forme d'herbe rase ressemble a de l'herbe rase,
+	-- quelle que soit la boite dans laquelle on la met.
 	--
-	-- CE QUI A ETE ESSAYE ENTRE-TEMPS, pour ne pas y revenir : deduire la hauteur du RAPPORT entre les deux
-	-- meshes. L'idee etait bonne -- regler une hauteur d'herbe en modelant de l'herbe -- mais elle supposait que le
-	-- mesh d'herbe coupee etait modele COURT. Il ne l'est pas : sa boite fait a peu pres la meme hauteur que celle
-	-- de l'herbe haute, donc le rapport valait 1 et la coupe ne raccourcissait plus rien.
+	-- CE QUI A ETE ESSAYE, ET POURQUOI ON N'Y REVIENT PAS :
+	--   - Ecraser la HAUTEUR (l'ancien MOW_CUT) : deformait le maillage, comprime dans une boite trop basse.
+	--   - Reduire sur les TROIS axes (0.4) : ne deformait plus, mais retrecissait aussi l'EMPRISE AU SOL. La
+	--     pelouse tondue se clairsemait et on voyait le sol entre les touffes -- des TROUS, pas un gazon.
+	-- Les deux essais partaient de la meme idee fausse : que la taille devait porter l'information "coupe". Elle
+	-- ne le doit pas.
 	--
-	-- CONTREPARTIE A SURVEILLER : reduire sur trois axes retrecit aussi l'EMPRISE au sol. Trop bas, la pelouse
-	-- tondue se clairseme et on voit le sol entre les touffes. Si ca arrive, c'est ce chiffre qu'il faut remonter,
-	-- pas la densite du semis.
-	MOWN_SCALE = 0.4,
+	-- Le laisser a 1 a aussi un cout NUL : le facteur etant constant, la taille des touffes tondues n'est plus
+	-- reecrite a chaque image.
+	MOWN_SCALE = 1,
 
 	-- ===== BANDES DE TONTE =====
 	-- C'est la promesse tenue du bloc "Rayures de tonte" plus haut : les bandes naissent de la TONTE, elles ne
