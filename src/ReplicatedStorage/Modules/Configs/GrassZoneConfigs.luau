@@ -226,11 +226,18 @@ local GrassZoneConfigs = {
 	-- Quelle PART de cette couleur au sommet de la vague. 0 = effet coupe, 1 = la crete prend la couleur pleine et
 	-- perd la nuance propre de chaque touffe. A REGLER A L'OEIL : c'est le genre d'effet qui passe vite de "vivant"
 	-- a "peinture".
-	GUST_TINT = 0.55,
+	--
+	-- HISTORIQUE : 0.55 au depart, et ca se lisait comme de la peinture verte etalee sur la pelouse. Descendu a
+	-- 0.22 : la vague se devine au lieu de s'annoncer, ce qui est le but -- du vent, pas un effet.
+	GUST_TINT = 0.22,
 	-- CONCENTRE l'effet sur la CRETE. La rafale est un champ doux ; applique tel quel, le teintage bave sur toute la
 	-- pelouse et se lit comme un aplat, pas comme une vague. On eleve donc la valeur a cette puissance : plus HAUT
 	-- = bande plus fine et plus nette, 1 = pas de concentration du tout.
-	GUST_TINT_SHARPNESS = 2.2,
+	--
+	-- Monte de 2.2 a 3.4 en meme temps qu'on baissait GUST_TINT. Les deux vont ENSEMBLE : baisser la teinte sans
+	-- resserrer la crete rend l'effet fade PARTOUT au lieu de le rendre discret. Resserrer concentre le peu qui
+	-- reste la ou la vague passe, donc on la voit encore -- mais seulement la.
+	GUST_TINT_SHARPNESS = 3.4,
 	-- Pas de quantification du teintage. Ecrire une couleur coute, et un pour cent d'ecart ne se voit pas.
 	-- Plus GRAND = moins d'ecritures (meilleur FPS) mais la vague avance par marches. 0.02 = 50 niveaux.
 	GUST_LIGHT_STEP = 0.02,

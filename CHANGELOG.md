@@ -2185,6 +2185,24 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.325 — Le vent se devine au lieu de s'annoncer
+
+La crete Shamrock se lisait comme de la peinture verte etalee sur la pelouse. Deux reglages baissent ensemble
+dans `GrassZoneConfigs` :
+
+- `GUST_TINT` : 0.55 -> 0.22. Quelle part de la couleur de crete arrive sur la touffe.
+- `GUST_TINT_SHARPNESS` : 2.2 -> 3.4. A quel point l'effet se CONCENTRE sur le haut de la vague.
+
+### Pourquoi les deux et pas seulement le premier
+
+Baisser la teinte SEULE aurait rendu l'effet fade PARTOUT au lieu de le rendre discret : la rafale est un champ
+doux, donc un teintage faible mais large se lit comme un aplat un peu delave sur toute la pelouse.
+
+Resserrer la crete en meme temps concentre le peu qui reste la ou la vague passe vraiment. On la voit encore --
+mais seulement la, et une seconde a la fois. C'est ce qui la fait passer pour du vent plutot que pour un effet.
+
+Les deux vont donc ensemble : remonter l'un sans toucher l'autre ramenera le probleme.
+
 ## 0.0.324 — La fleur FOND sous le carter avant de disparaitre
 
 Elle sautait des le premier contact : ca se lisait comme un bug, pas comme une coupe. Maintenant elle retrecit
