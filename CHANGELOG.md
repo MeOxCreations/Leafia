@@ -2185,6 +2185,19 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.348 — Une nuance sur l'etiquette TIPS
+
+Un UIGradient de couleur sur le mot "TIPS" : franc sur la premiere moitie, puis tres legerement eteint.
+
+La cassure nette entre 0.463 et 0.483 fait un petit RESSAUT plutot qu'un degrade continu -- c'est ce qui donne
+l'impression d'un relief, la ou un fondu lisse aurait juste l'air sale.
+
+Un UIGradient MULTIPLIE la couleur du texte. Ces valeurs presque blanches ne le repeignent donc pas, elles
+l'assombrissent d'au plus 16 % : la teinte de base reste celle du label.
+
+Le SENS est un reglage a part (`TIPS_LABEL_SHADE_ROTATION`, 0 = de gauche a droite). Il ne se deduit pas, comme
+tous les degrades de ce fichier : c'est l'ecran qui tranche.
+
 ## 0.0.347 — Reglages du rideau : tuile plus fine, fondue, et etiquette TIPS centree
 
 Valeurs relevees dans l'editeur et reportees en constantes.

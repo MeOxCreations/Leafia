@@ -150,6 +150,21 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- garde sur son axe quelle que soit sa taille -- avec une ancre en coin, changer la taille la deplace.
 	local TIPS_LABEL_POS = UDim2.fromScale(0.07, 0.916)
 	local TIPS_LABEL_SIZE = UDim2.fromScale(0.156, 0.088)
+	-- NUANCE sur l'etiquette : elle reste franche sur la premiere moitie, puis s'eteint tres legerement. La
+	-- cassure nette entre 0.463 et 0.483 fait un petit RESSAUT plutot qu'un degrade continu -- c'est ce qui donne
+	-- l'impression d'un relief, la ou un fondu lisse aurait juste l'air sale.
+	--
+	-- Un UIGradient MULTIPLIE la couleur du texte : ces valeurs presque blanches ne le REPEIGNENT donc pas, elles
+	-- l'assombrissent d'au plus 16 %. La teinte de base reste TIPS_LABEL_COLOR.
+	local TIPS_LABEL_SHADE = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.463, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.483, Color3.fromRGB(229, 229, 229)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 214, 214)),
+	})
+	-- Sens de la nuance, en degres. 0 = de gauche a droite, 90 = de haut en bas. Ne se DEDUIT pas : c'est l'ecran
+	-- qui tranche, comme pour tous les degrades de ce fichier.
+	local TIPS_LABEL_SHADE_ROTATION = 0
 	local TIPS: { string } = {
 		"Mow in straight lines. The stripes you leave are your signature.",
 		"Pull the cord before you push. A dead engine cuts nothing.",
@@ -329,6 +344,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tipsLabel.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 	tipsLabel.ZIndex = 3
 	tipsLabel.Parent = curtain
+	local tipsShade = Instance.new("UIGradient")
+	tipsShade.Color = TIPS_LABEL_SHADE
+	tipsShade.Rotation = TIPS_LABEL_SHADE_ROTATION
+	tipsShade.Parent = tipsLabel
 
 	local tipsDesc = Instance.new("TextLabel")
 	tipsDesc.Name = "TipsDescription"
