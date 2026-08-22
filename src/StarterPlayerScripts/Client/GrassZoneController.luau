@@ -78,7 +78,12 @@ type Clump = {
 	lift: number, -- hauteur de TIGE au repos (fleurs seulement, 0 pour l'herbe). Se comprime avec l'ecrasement.
 	flower: boolean, -- fleur et non touffe d'herbe : la tondeuse la FAUCHE au lieu de la raccourcir
 	gone: boolean, -- fauchee : sa part est detruite, plus rien ne doit y toucher
-	cutApplied: boolean, -- son maillage a deja ete echange contre celui de l'herbe coupee
+	-- LA PHASE "COUPEE" A COMMENCE : maillage echange (s'il y en a un) et emergence lancee. Le nom ne dit pas
+	-- "maillage applique", parce que la phase demarre AUSSI quand aucun mesh de rechange n'existe -- sinon la
+	-- couleur de tonte ne partirait jamais dans ce cas-la.
+	cutStarted: boolean,
+	cutT: number, -- avancement de l'emergence (0 = enfouie et couleur d'herbe haute, 1 = en place et tondue)
+	lastCutT: number, -- dernier avancement REELLEMENT dessine : sans lui la remontee ne serait pas redessinee
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	lastShrink: number, -- dernier retrecissement de fleur fauchee REELLEMENT ecrit
 	baseColor: Color3, -- couleur au repos, TACHE comprise
@@ -192,9 +197,10 @@ local function apply(
 	-- passe inapercu. Au premier contact, elle serait encore a pleine hauteur et le saut se verrait.
 	local cutMesh = cutTemplate
 	local myPart = clump.part
-	if cutMesh and not clump.cutApplied and not clump.flower and mown >= GrassZoneConfigs.MOW_SWAP_AT then
-		if myPart:IsA("MeshPart") then
-			clump.cutApplied = true
+	if not clump.cutStarted and not clump.flower and mown >= GrassZoneConfigs.MOW_SWAP_AT then
+		clump.cutStarted = true
+		clump.cutT = 0 -- l'emergence part d'ici : enfouie, et encore de la couleur de l'herbe haute
+		if cutMesh and myPart:IsA("MeshPart") then
 			myPart:ApplyMesh(cutMesh)
 			-- On ne SUPPOSE pas ce qu'ApplyMesh a touche (taille ? texture ? materiau ?) : on invalide les caches
 			-- pour que la taille et la couleur soient reecrites dans la foulee, a leurs valeurs a nous.
@@ -246,7 +252,12 @@ local function apply(
 		-- L'APLATISSEMENT, lui, continue : il est geometrique, pas colorimetrique.
 		local crushTint = crush * (1 - mown * GrassZoneConfigs.MOW_CRUSH_DAMP)
 		local blend = math.floor(crushTint / SQUASH_STEP + 0.5) * SQUASH_STEP
-		local mowBlend = math.floor(mown / SQUASH_STEP + 0.5) * SQUASH_STEP
+		-- LA COULEUR SUIT L'EMERGENCE, PAS L'AVANCEMENT DE LA COUPE. Branchee sur `mown`, elle etait deja a
+		-- mi-chemin de la teinte tondue a l'instant ou le maillage changeait : le nouveau mesh apparaissait donc
+		-- DEJA colore, et on voyait qu'on ajoutait une herbe au lieu d'en couper une.
+		-- En la branchant sur l'emergence, la touffe sort du sol avec la couleur de l'herbe HAUTE et devient
+		-- tondue en montant.
+		local mowBlend = math.floor(clump.cutT / SQUASH_STEP + 0.5) * SQUASH_STEP
 		-- La rafale bouge en permanence : sans quantification, on reecrirait la couleur de chaque touffe a chaque
 		-- image, pour des ecarts que l'oeil ne voit pas. Meme raison que pour l'ecrasement, avec son propre pas.
 		local step = GrassZoneConfigs.GUST_LIGHT_STEP
@@ -299,7 +310,15 @@ local function apply(
 	-- pas s'aplatir en restant perchee. A l'arret (squash = 1) la tige fait sa taille pleine.
 	-- `shrink` compte AUSSI ici : une fleur qui fond doit DESCENDRE vers le sol en meme temps, sinon elle
 	-- retrecit en restant perchee sur sa tige et on la voit disparaitre en l'air.
-	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash * shrink))
+	-- ELLE SORT DU SOL. Enfoncee au moment de l'echange, elle remonte a sa place : c'est ce qui fait croire
+	-- qu'elle etait DEJA LA, sous l'herbe haute, au lieu d'apparaitre par-dessus.
+	-- Enfoncement RELATIF a sa propre hauteur du moment : une valeur en studs laisserait les grandes touffes
+	-- depasser et enterrerait les petites trop profond.
+	local sink = 0
+	if clump.cutStarted and clump.cutT < 1 then
+		sink = clump.baseSize.Y * squash * GrassZoneConfigs.CUT_RISE_DEPTH * (1 - clump.cutT)
+	end
+	local cf = CFrame.new(clump.basePos + UP * (clump.lift * squash * shrink - sink))
 	-- L'ecrasement se fait en HAUTEUR (la taille, juste au-dessus). Cette bascule ne sert que si on remet un angle
 	-- dans la config, ce qui n'a de sens que sur un mesh d'UN SEUL BRIN.
 	if tiltAngle ~= 0 then
@@ -674,7 +693,9 @@ local function populate(zone: Zone)
 				lift = lift,
 				flower = isFlower,
 				gone = false,
-				cutApplied = false,
+				cutStarted = false,
+				cutT = 0,
+				lastCutT = 0,
 				lastSquash = 1,
 				lastShrink = 1,
 				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
@@ -836,6 +857,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		if clump.gone then
 			continue
 		end
+		-- EMERGENCE de l'herbe coupee : elle remonte a sa place et prend sa couleur. Son propre temps, deconnecte
+		-- de l'avancement de la coupe -- celle-ci dure 0.125 s, bien trop court pour qu'on y lise une transition.
+		if clump.cutStarted and clump.cutT < 1 then
+			clump.cutT = math.min(1, clump.cutT + dt / GrassZoneConfigs.CUT_RISE_TIME)
+		end
 		-- Le joueur le PLUS proche gagne. On ne MOYENNE pas les directions : deux joueurs de part et d'autre d'une
 		-- touffe la redresseraient, ce qui est l'inverse du sens voulu.
 		local best = 0
@@ -902,6 +928,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.squashCrush ~= target
 			or clump.colorCrush ~= target
 			or clump.mown ~= clump.lastMown
+			or clump.cutT ~= clump.lastCutT
 			or clump.mowStripe ~= clump.lastStripe
 		then
 			moving += 1
@@ -988,6 +1015,9 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.squashCrush ~= clump.lastSquashCrush
 			or clump.colorCrush ~= clump.lastColorCrush
 			or clump.mown ~= clump.lastMown
+			-- L'EMERGENCE CONTINUE APRES LA COUPE. `mown` atteint 1 en 0.125 s et ne bouge plus ; sans ce test,
+			-- la touffe resterait enfouie et de la couleur de l'herbe haute POUR TOUJOURS, sauf coup de vent.
+			or clump.cutT ~= clump.lastCutT
 			or clump.mowStripe ~= clump.lastStripe
 		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
@@ -1003,6 +1033,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			clump.lastSquashCrush = clump.squashCrush
 			clump.lastColorCrush = clump.colorCrush
 			clump.lastMown = clump.mown
+			clump.lastCutT = clump.cutT
 		end
 	end
 

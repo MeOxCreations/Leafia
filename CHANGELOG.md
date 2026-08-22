@@ -2185,6 +2185,41 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.331 — L'herbe coupee SORT DU SOL au lieu d'apparaitre par-dessus
+
+On voyait qu'on AJOUTAIT une herbe, pas qu'on en coupait une. Deux causes, toutes les deux corrigees.
+
+### 1. Tout arrivait en meme temps, en un huitieme de seconde
+
+La coupe dure 0.125 s (`MOW_RATE`), et la couleur etait branchee dessus. A l'instant ou le maillage changeait, la
+touffe etait donc DEJA a mi-chemin de la teinte tondue : le nouveau mesh apparaissait deja colore.
+
+L'emergence a maintenant son PROPRE temps (`CUT_RISE_TIME`, 0.35 s), independant de l'avancement de la coupe. La
+touffe sort avec la couleur de l'herbe HAUTE et devient tondue en montant.
+
+### 2. Elle apparaissait par-dessus
+
+Au moment de l'echange, la touffe coupee est desormais ENFONCEE sous la surface, et elle remonte a sa place. Elle
+a l'air d'avoir toujours ete la, dessous, cachee par l'herbe haute -- ce qui est d'ailleurs la verite d'une
+pelouse.
+
+L'enfoncement est RELATIF a la hauteur de la touffe (`CUT_RISE_DEPTH`, 1 = entierement sous la surface) et pas en
+studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les grandes depasser en
+enterrant les petites trop profond.
+
+### Le piege de la porte de redessin
+
+`mown` atteint 1 en 0.125 s et ne bouge plus. Une touffe n'etant redessinee que lorsqu'une de ses valeurs change,
+l'emergence se serait arretee net : la touffe serait restee ENFOUIE et de la couleur de l'herbe haute pour
+toujours, sauf coup de vent. Il a donc fallu ajouter l'avancement de l'emergence aux deux portes (celle qui
+compte les touffes en mouvement, et celle qui decide de redessiner).
+
+### Marcher sur l'herbe deja tondue se voit a nouveau
+
+`MOW_CRUSH_DAMP` : 0.9 -> 0.55. A 0.9, marcher sur une pelouse deja tondue ne changeait plus RIEN, et on perdait
+le retour du pas sur toute la partie du jardin qu'on venait de finir. A 0.55 il en reste assez pour voir ou l'on
+est passe, sans laver la bande de tonte.
+
 ## 0.0.330 — L'herbe tondue devient nettement plus claire
 
 `MOWN_COLOR` : 73, 91, 45 -> 159, 197, 97. Le passage de la tondeuse se voit enfin sans avoir a chercher.

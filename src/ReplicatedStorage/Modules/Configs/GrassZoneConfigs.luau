@@ -29,6 +29,23 @@ local GrassZoneConfigs = {
 	-- puisque la touffe est encore a sa pleine hauteur.
 	MOW_SWAP_AT = 0.5,
 
+	-- ===== EMERGENCE DE L'HERBE COUPEE =====
+	-- Au moment de l'echange de maillage, la touffe coupee est ENFONCEE sous la surface, et elle remonte a sa
+	-- place en prenant sa couleur en chemin.
+	--
+	-- POURQUOI. Sans ca, l'herbe coupee APPARAIT par-dessus, deja de sa couleur : on voit qu'on AJOUTE quelque
+	-- chose, pas qu'on coupe. En la faisant sortir du sol, elle a l'air d'avoir toujours ete la, dessous, cachee
+	-- par l'herbe haute -- ce qui est d'ailleurs la verite d'une pelouse.
+	--
+	-- Duree en secondes. Assez longue pour se VOIR, assez courte pour ne pas trainer derriere la machine.
+	-- La coupe elle-meme dure 0.125 s (MOW_RATE) : c'est bien trop court pour qu'on y lise une transition, et
+	-- c'est justement pour ca que l'emergence a son propre temps au lieu de suivre l'avancement de la coupe.
+	CUT_RISE_TIME = 0.35,
+	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
+	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
+	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.
+	CUT_RISE_DEPTH = 1,
+
 	-- Delai TOTAL pour trouver la racine et le mesh au demarrage (un seul delai pour tout le chemin).
 	RESOLVE_TIMEOUT = 15,
 
@@ -418,7 +435,10 @@ local GrassZoneConfigs = {
 	-- C'est aussi le bon sens : on n'ecrase pas de l'herbe deja rase. La touffe continue de s'APLATIR un peu (c'est
 	-- geometrique), elle ne change simplement plus de couleur.
 	-- 1 = l'ecrasement ne teinte plus du tout une touffe tondue. 0 = l'ancien comportement.
-	MOW_CRUSH_DAMP = 0.9,
+	-- Descendu de 0.9 : a ce niveau, marcher sur une pelouse deja tondue ne changeait plus RIEN du tout, et on
+	-- perdait le retour du pas sur toute la partie du jardin qu'on venait de finir. A 0.55 il en reste assez pour
+	-- qu'on voie ou l'on est passe, sans laver la bande de tonte.
+	MOW_CRUSH_DAMP = 0.55,
 
 	-- ===== REVELATION : voir ce qui RESTE a tondre =====
 	-- Une touche maintenue peint en neon tout ce qui n'est PAS encore coupe. Le but est de rendre le PROGRES
