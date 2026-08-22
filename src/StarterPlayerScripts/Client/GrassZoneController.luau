@@ -145,15 +145,6 @@ local flowerTemplates: { BasePart } = {}
 -- Mesh de l'herbe COUPEE, resolu au boot a cote de celui de l'herbe haute. nil = pas d'echange de maillage, la
 -- touffe se contente de raccourcir. MeshPart et pas BasePart : `ApplyMesh` n'existe que sur un MeshPart.
 local cutTemplate: MeshPart? = nil
--- HAUTEUR DE L'HERBE COUPEE, en fraction de celle de l'herbe haute. Relevee sur les DEUX MESHES au demarrage.
---
--- Avant, la touffe tondue etait ecrasee a un pourcentage ECRIT EN CONFIG (MOW_CUT). Ca se tenait tant que la
--- coupe n'etait qu'un aplatissement -- mais depuis que l'herbe coupee a son propre maillage, ecraser en plus
--- DEFORMAIT ce maillage : il etait comprime dans une boite au quart de sa taille.
---
--- En lisant le rapport, la touffe coupee fait exactement la taille modelee dans Blender. Le reglage passe donc du
--- code au MODELE, la ou il a un sens : on regle une hauteur d'herbe en modelant de l'herbe.
-local cutHeightRatio: number? = nil
 local heartbeat: RBXScriptConnection? = nil
 
 -- ===== Resolution des dependances =====
@@ -230,6 +221,12 @@ local function apply(
 	-- crepe posee au sol ; en la faisant fondre, elle a l'air avalee par la machine.
 	-- L'herbe, elle, garde exactement son comportement : ce facteur vaut 1 pour elle.
 	local shrink = if clump.flower then 1 - mown * GrassZoneConfigs.FLOWER_MOW_SHRINK else 1
+	-- LA TOUFFE TONDUE RETRECIT SUR LES TROIS AXES au lieu d'etre aplatie : le maillage d'herbe rase garde ainsi
+	-- exactement la forme modelee. Ecraser la seule hauteur le comprimait dans une boite trop basse.
+	-- Suit l'EMERGENCE et non la coupe : la touffe sort du sol a sa nouvelle taille, en un seul mouvement.
+	if not clump.flower then
+		shrink *= 1 - clump.cutT * (1 - GrassZoneConfigs.MOWN_SCALE)
+	end
 	squash = math.floor(squash / SQUASH_STEP + 0.5) * SQUASH_STEP
 	if squash ~= clump.lastSquash or shrink ~= clump.lastShrink then
 		clump.part.Size =
@@ -959,11 +956,9 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- LA COUPE S'AJOUTE AU PIETINEMENT, et on garde la plus COURTE des deux raisons plutot que de les additionner :
 		-- deux effets qui s'additionnent finiraient sous zero et la touffe disparaitrait. Une touffe tondue reste donc
 		-- courte pour toujours, et un pied la couche encore un peu par-dessus, sans jamais la faire remonter au-dessus.
-		-- CE QUI RESTE d'une touffe entierement tondue. Le rapport des deux meshes s'il existe -- la touffe fait
-		-- alors la taille modelee, sans deformation -- sinon le pourcentage de la config, qui reste le seul moyen
-		-- de montrer une coupe quand il n'y a pas de maillage d'herbe rase.
-		local mownFloor = cutHeightRatio or (1 - GrassZoneConfigs.MOW_CUT)
-		squash = math.min(squash, 1 - clump.mown * (1 - mownFloor))
+		-- LA COUPE NE PASSE PLUS PAR LE SQUASH. `squash` n'ecrase QUE la hauteur : c'est bon pour un pied qui
+		-- appuie, mauvais pour une coupe, qui deformerait le maillage d'herbe rase. La touffe tondue RETRECIT
+		-- entiere, sur les trois axes -- voir `mownScale` dans apply.
 
 		local wind = 0
 		local gustSquash = 1
@@ -1303,10 +1298,6 @@ function GrassZoneController.init()
 			local cut = if cutName ~= "" then foliages:FindFirstChild(cutName) else nil
 			if cut and cut:IsA("MeshPart") then
 				cutTemplate = cut
-				local tall = source.Size.Y
-				if tall > 1e-3 then
-					cutHeightRatio = math.clamp(cut.Size.Y / tall, 0.02, 1)
-				end
 			elseif cutName ~= "" then
 				-- ACTIONNABLE : le nom est renseigne donc l'echange est VOULU, mais le mesh n'est pas la ou on le
 				-- cherche. Sans ce message, l'herbe coupee garderait la forme de l'herbe haute sans que rien ne le

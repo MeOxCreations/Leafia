@@ -378,16 +378,21 @@ local GrassZoneConfigs = {
 	-- Les deux se cumulent sans se gener : on garde la plus COURTE des deux raisons. Marcher sur du tondu le couche
 	-- encore un peu, et ca se releve ; la coupe, elle, reste dessous.
 
-	-- Hauteur RETIREE a une touffe entierement tondue, en fraction de sa hauteur.
-	-- 0.75 = il reste 25 % du brin. Monte depuis 0.55 : a l'ecran l'herbe tondue restait trop haute, le contraste
-	-- avec l'herbe brute ne sautait pas aux yeux.
-	-- Garder une MARGE avant 1 : c'est ce qui RESTE qui donne l'avant/apres. A 0.98 (la valeur du pietinement)
-	-- il n'y a plus de matiere a voir, donc plus rien a admirer -- et l'avant/apres est le coeur du jeu.
+	-- TAILLE D'UNE TOUFFE ENTIEREMENT TONDUE, en fraction de sa taille d'origine.
 	--
-	-- N'EST PLUS UTILISE quand un mesh d'herbe coupee existe (voir CUT_MESH_NAME) : la hauteur vient alors du
-	-- RAPPORT entre les deux maillages, donc la touffe fait la taille modelee dans Blender au lieu d'etre
-	-- comprimee dans une boite. Ce chiffre ne sert plus que de SECOURS, quand il n'y a pas de mesh d'herbe rase.
-	MOW_CUT = 0.75,
+	-- APPLIQUE SUR LES TROIS AXES, et c'est tout l'interet : la touffe RETRECIT au lieu d'etre APLATIE. Depuis que
+	-- l'herbe coupee a son propre maillage, l'ecraser en hauteur le deformait -- il se retrouvait comprime dans une
+	-- boite au quart de sa taille. Reduit uniformement, il garde exactement la forme modelee.
+	--
+	-- CE QUI A ETE ESSAYE ENTRE-TEMPS, pour ne pas y revenir : deduire la hauteur du RAPPORT entre les deux
+	-- meshes. L'idee etait bonne -- regler une hauteur d'herbe en modelant de l'herbe -- mais elle supposait que le
+	-- mesh d'herbe coupee etait modele COURT. Il ne l'est pas : sa boite fait a peu pres la meme hauteur que celle
+	-- de l'herbe haute, donc le rapport valait 1 et la coupe ne raccourcissait plus rien.
+	--
+	-- CONTREPARTIE A SURVEILLER : reduire sur trois axes retrecit aussi l'EMPRISE au sol. Trop bas, la pelouse
+	-- tondue se clairseme et on voit le sol entre les touffes. Si ca arrive, c'est ce chiffre qu'il faut remonter,
+	-- pas la densite du semis.
+	MOWN_SCALE = 0.4,
 
 	-- ===== BANDES DE TONTE =====
 	-- C'est la promesse tenue du bloc "Rayures de tonte" plus haut : les bandes naissent de la TONTE, elles ne

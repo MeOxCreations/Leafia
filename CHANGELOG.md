@@ -2185,6 +2185,34 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.365 — L'herbe tondue RETRECIT au lieu d'etre aplatie
+
+Elle montait beaucoup trop haut. Correction d'une hypothese fausse posee au 0.0.363.
+
+### Ce qui n'allait pas
+
+J'avais deduit la hauteur de l'herbe coupee du RAPPORT entre les deux meshes. L'idee se tenait -- regler une
+hauteur d'herbe en modelant de l'herbe -- mais elle supposait que le mesh d'herbe coupee etait modele COURT.
+
+Il ne l'est pas : sa boite fait a peu pres la meme hauteur que celle de l'herbe haute. Le rapport valait donc 1,
+et la coupe ne raccourcissait plus rien.
+
+### La vraie reponse : reduire sur les TROIS axes
+
+`MOWN_SCALE` (0.4) remplace `MOW_CUT`. La touffe RETRECIT au lieu d'etre APLATIE, donc le maillage d'herbe rase
+garde exactement la forme modelee -- ce qui etait la demande de depart.
+
+La coupe ne passe donc plus du tout par `squash`. Celui-ci n'ecrase que la HAUTEUR : c'est bon pour un pied qui
+appuie, mauvais pour une coupe.
+
+Le retrecissement suit l'EMERGENCE et non l'avancement de la coupe : la touffe sort du sol a sa nouvelle taille,
+en un seul mouvement.
+
+### Contrepartie a surveiller
+
+Reduire sur trois axes retrecit aussi l'EMPRISE au sol. Trop bas, la pelouse tondue se clairseme et on voit le
+sol entre les touffes. Si ca arrive, c'est `MOWN_SCALE` qu'il faut remonter -- pas la densite du semis.
+
 ## 0.0.364 — L'herbe de base fonce
 
 `BASE_COLOR` : 138, 154, 85 -> 90, 107, 49. Meme teinte, plus sombre.
