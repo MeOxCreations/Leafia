@@ -607,7 +607,15 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- machine qui avance a peine braquait comme en pleine course : ca se lit comme un pivot sur place, pas
 	-- comme une tondeuse qu'on repositionne.
 	local steerSign = if MowConfigs.STEER_INVERT then -1 else 1
-	local turnRate = if braking then MowConfigs.STEER_TURN_RATE else MowConfigs.STEER_CRAWL_TURN_RATE
+	-- LA ROTATION VIENT DE LA DISTANCE PARCOURUE, pas du temps. C'est la definition d'un rayon de braquage : a
+	-- fond de braquage la machine decrit toujours le meme cercle, qu'elle roule vite ou doucement.
+	--
+	-- `drive` est une FRACTION de la WalkSpeed (c'est ce que `Humanoid:Move` attend), donc on la multiplie pour
+	-- retrouver des studs par seconde. Le braquage partiel reduit l'angle, donc agrandit le rayon -- exactement
+	-- comme un volant qu'on ne tourne qu'a moitie.
+	local rolling = math.abs(drive) * humanoid.WalkSpeed
+	local radius = math.max(MowConfigs.STEER_RADIUS, 0.5)
+	local turnRate = math.deg(rolling / radius)
 	-- EN MARCHE ARRIERE, ON INVERSE. On se deplace le long de -cap : tourner le cap a droite envoie donc la
 	-- machine a GAUCHE. Sans cette inversion, reculer en braquant part du cote oppose a ce que le joueur
 	-- demande -- et c'est justement en marche arriere qu'on a le moins de reperes pour s'en remettre.
@@ -616,7 +624,9 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- Le corps ne tourne QUE s'il roule vraiment : soit le joueur avance, soit l'avance de manoeuvre le fait
 	-- rouler. A STEER_CRAWL = 0 on retrouve donc le comportement d'avant (corps fige, machine qui pivote),
 	-- comme la config le promet.
-	if turning and (braking or MowConfigs.STEER_CRAWL > 0) then
+	-- Plus besoin de demander si le joueur avance : s'il ne roule pas, `rolling` vaut zero et la machine ne tourne
+	-- pas, toute seule. Une tondeuse a l'arret ne pivote pas sur elle-meme.
+	if turning then
 		yaw -= lateralAmount * steerSign * dirSign * math.rad(turnRate) * dt
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
@@ -991,18 +1001,11 @@ local function update(dt: number)
 	-- SIGNEE : on projette le deplacement sur l'AVANT de la machine. Une distance toujours positive ferait
 	-- tourner les roues a l'endroit meme en marche arriere, et l'oeil le voit tout de suite.
 	local distance = 0
-	-- SENS QUI COUCHE L'HERBE : le DEPLACEMENT reel, pas le cap de la machine. En marche arriere les deux sont
-	-- opposes, et c'est bien le passage du carter qui couche les brins -- donc la bande doit s'inverser.
-	-- A l'arret on garde le cap : il n'y a rien a coucher, autant ne pas ecrire n'importe quoi.
-	local travel = forwardOf(mine)
 	if lastCutPos then
 		local d = point - lastCutPos
 		local flatD = Vector3.new(d.X, 0, d.Z)
 		local forward = forwardOf(mine)
 		distance = if forward then flatD:Dot(forward) else flatD.Magnitude
-		if flatD.Magnitude > 1e-3 then
-			travel = flatD.Unit
-		end
 	end
 	lastCutPos = point
 
@@ -1010,8 +1013,7 @@ local function update(dt: number)
 	-- La coupe tourne MEME A L'ARRET : rester sur place finit de tondre la touffe sous le carter, au lieu de laisser
 	-- un rond a moitie coupe qu'on ne comprend pas.
 	if running then
-		-- On passe le sens du DEPLACEMENT : c'est lui qui couche les brins, donc lui qui decide de la bande.
-		GrassZoneController.mowAt(point, radius, dt, travel)
+		GrassZoneController.mowAt(point, radius, dt)
 	end
 end
 

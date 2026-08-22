@@ -415,22 +415,19 @@ local GrassZoneConfigs = {
 	-- donnaient la meme valeur. Le joueur ne voyait donc rien des qu'il ne tondait pas dans le bon sens.
 	-- Comme on tond en ALLER-RETOUR, la premiere passe suffit a definir l'axe : tout le reste s'y aligne ou s'y
 	-- oppose, quelle que soit l'orientation du jardin.
-	-- Vecteur NON NUL ici = axe impose, et on retrouve l'ancien comportement. Vector3.zero = appris.
-	MOW_STRIPE_AXIS = Vector3.zero,
-	-- Ecart de luminosite entre un aller et un retour. 0 = pas de bandes.
-	-- Monte de 0.13 a 0.22 : a l'ecran on ne voyait pas la difference entre un aller et un retour.
-	-- Ne pas depasser ~0.3 : au-dela ca se lit comme des rayures PEINTES, et on retombe dans ce que
-	-- l'ancien systeme de rayures faisait de faux.
-	MOW_STRIPE_STRENGTH = 0.32,
-	-- CONCENTRATION DU CONTRASTE. La bande vient de `direction de tonte . axe appris` : parallele donne 1, sens
-	-- inverse -1, et PERPENDICULAIRE donne ZERO -- donc aucune bande du tout. Rouler en travers de sa premiere
-	-- passe ne marquait donc rien, ce qui se lisait comme "ca ne marche que dans un sens".
+	-- BANDES DE TONTE. De combien la couleur de coupe s'ecarte, en plus ou en moins, d'une bande a l'autre.
 	--
-	-- En multipliant avant de borner, tout ce qui s'ecarte de plus d'environ 20 degres de la perpendiculaire
-	-- sature a fond : on obtient une bande FRANCHE dans presque toutes les directions, et le degrade ne subsiste
-	-- que dans l'etroit couloir ou l'on roule vraiment en travers.
-	-- 1 = comportement d'avant (degrade doux, rien en travers). Plus HAUT = plus tranche.
-	MOW_STRIPE_SHARPNESS = 3,
+	-- LES BANDES SONT UN MOTIF DU TERRAIN, PAS LA TRACE DU TRAJET. Elles sont decidees a la POSE d'apres la
+	-- position de chaque touffe, et se revelent des qu'on coupe -- quel que soit le sens dans lequel on a roule.
+	--
+	-- CE QUI A ETE ESSAYE AVANT : faire dependre la bande du SENS de la coupe, avec un axe appris de la premiere
+	-- passe. Techniquement ca marchait, mais ca demandait au joueur de rouler droit et regulier pour meriter un
+	-- beau resultat -- et il roule comme il veut. Une pelouse doit recompenser le fait d'avoir TOUT coupe, pas la
+	-- discipline du trajet.
+	--
+	-- Leur largeur et leur orientation se reglent avec STRIPE_WIDTH et STRIPE_HEADING, partages avec les rayures
+	-- decoratives : c'est le meme damier, revele au lieu d'etre peint.
+	MOWN_BAND_STRENGTH = 0.09,
 
 	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
 	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.

@@ -263,13 +263,23 @@ return {
 	-- Comme on ne se deplace JAMAIS lateralement, la trajectoire ne peut que se courber : c'est ca, l'arc.
 	-- Le ballant de la machine et la pose des bras suivent gratuitement : ils se calculent deja sur le cap.
 	STEER_ENABLED = true,
-	-- Vitesse de rotation EN PLEINE AVANCE, en degres par seconde. C'est LE bouton du poids ressenti.
-	-- 180 = un demi-tour par seconde. Plus BAS = plus lourd, plus large.
+	-- RAYON DE BRAQUAGE A FOND, en studs. C'EST LE REGLAGE CENTRAL DE LA CONDUITE.
 	--
-	-- HISTORIQUE, pour ne pas refaire l'aller-retour : 120 au depart, descendu a 60 parce que ca tournait trop
-	-- vite, puis remonte a 180 (x3) parce que ca ne tournait plus assez. On est donc AU-DESSUS du point de
-	-- depart. Si ca redevient trop vif, la valeur juste est probablement entre 120 et 180, pas en dessous.
-	STEER_TURN_RATE = 180,
+	-- On ne regle plus une VITESSE DE ROTATION mais un RAYON, et ca change tout : c'est ce qui fait la difference
+	-- entre une machine et une tourelle.
+	--
+	-- Avec une vitesse de rotation fixe, la machine tourne AUTANT par seconde qu'elle roule vite ou lentement.
+	-- Resultat : a l'arret ou au pas, le moindre appui la fait pivoter beaucoup trop -- on sur-corrige, on
+	-- zigzague, et on n'arrive pas a viser une bande droite. C'est ce que le joueur decrivait comme "trop vite,
+	-- trop sec, stressant".
+	--
+	-- Avec un rayon, la rotation est proportionnelle a la DISTANCE parcourue, comme sur une vraie voiture : a fond
+	-- de braquage, la machine decrit toujours le meme cercle, qu'elle aille vite ou doucement. Elle devient donc
+	-- PREVISIBLE -- on sait ou elle va avant d'y aller, et c'est ca qui enleve le stress.
+	--
+	-- 8 studs : environ deux fois la largeur de la machine. Plus PETIT = elle tourne court (nerveux, peut vite
+	-- redevenir stressant). Plus GRAND = elle est lourde, il faut manoeuvrer pour se retourner.
+	STEER_RADIUS = 8,
 	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
 	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
 	STEER_INPUT_EPSILON = 0.05,
@@ -287,12 +297,9 @@ return {
 	-- a peu pres 2 km/h. C'est une avance de MANOEUVRE, pas un deplacement.
 	-- 0 = on revient au comportement d'avant : le corps reste fige et seule la machine pivote.
 	STEER_CRAWL = 2,
-	-- Vitesse de rotation PENDANT cette manoeuvre, en degres par seconde.
-	-- PLUS ELEVEE qu'en pleine avance, et c'est voulu : une machine a l'arret n'a pas d'inertie a vaincre, on
-	-- la repositionne librement. C'est l'inverse de l'intuition -- on croit qu'aller vite doit tourner vite --
-	-- mais c'est ce qui se ressent juste, machine en main.
-	-- Un reglage A PART et non une fraction de STEER_TURN_RATE : regler l'un ne doit pas forcer a compenser l'autre.
-	STEER_CRAWL_TURN_RATE = 30,
+	-- (Il n'y a plus de vitesse de rotation SEPAREE pour la manoeuvre. Avec un rayon, elle sort toute seule : en
+	-- braquant a l'arret la machine avance de STEER_CRAWL, donc elle tourne d'autant -- lentement, puisqu'elle
+	-- roule lentement. Un reglage de moins, et deux cas qui ne peuvent plus se contredire.)
 	-- (Le braquage a l'arret n'a plus de reglage propre : la machine se braque desormais par le MEME chemin que la
 	-- traine en virage -- l'input pilote directement l'angle, voir SWING_ANGLE. Un seul mecanisme, un seul bouton,
 	-- et les deux cas ne peuvent plus se contredire.)

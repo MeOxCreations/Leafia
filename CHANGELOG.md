@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.377 — La conduite braque comme une VOITURE, et les bandes deviennent un motif du terrain
+
+Deux changements demandes le meme soir, tous les deux sur le coeur du jeu.
+
+### Le braquage se regle par un RAYON, plus par une vitesse
+
+Le joueur decrivait la conduite comme "trop vite, trop sec, stressant", et sa reference comme "une voiture : elle
+braque en roulant".
+
+Avec une vitesse de rotation fixe, la machine tourne AUTANT par seconde qu'elle roule vite ou lentement. Au pas,
+le moindre appui la fait donc pivoter beaucoup trop : on sur-corrige, on zigzague, on n'arrive pas a viser une
+bande droite.
+
+`STEER_RADIUS` (8 studs) remplace `STEER_TURN_RATE` et `STEER_CRAWL_TURN_RATE`. La rotation devient
+proportionnelle a la DISTANCE parcourue : a fond de braquage la machine decrit toujours le meme cercle, qu'elle
+aille vite ou doucement. Elle devient PREVISIBLE -- on sait ou elle va avant d'y aller, et c'est ca qui enleve le
+stress.
+
+Un reglage de moins, aussi : la manoeuvre a l'arret n'a plus besoin de sa propre vitesse de rotation. En braquant
+sur place la machine avance de `STEER_CRAWL`, donc elle tourne d'autant -- lentement, puisqu'elle roule
+lentement. Deux cas qui ne peuvent plus se contredire.
+
+Et le test "est-ce qu'il avance ?" disparait : s'il ne roule pas, la rotation vaut zero toute seule. Une tondeuse
+a l'arret ne pivote pas sur elle-meme.
+
+### Les bandes sont un motif du TERRAIN, pas la trace du trajet
+
+Elles dependaient du SENS dans lequel on avait coupe, avec un axe appris de la premiere passe. Techniquement ca
+marchait -- mais ca demandait au joueur de rouler droit et regulier pour meriter un beau resultat, et il roule
+comme il veut.
+
+Une pelouse doit recompenser le fait d'avoir TOUT coupe, pas la discipline du trajet.
+
+La bande est donc decidee A LA POSE, d'apres la position de chaque touffe, et se revele des qu'on coupe. Elle
+reutilise le damier des rayures decoratives (`STRIPE_WIDTH`, `STRIPE_HEADING`) : le meme motif, revele au lieu
+d'etre peint.
+
+Ce que ca supprime : l'axe appris, le sens de deplacement passe a `mowAt`, la reecriture de la bande a chaque
+passage, et trois reglages. La bande ne changeant plus jamais, elle sort aussi des tests de redessin.
+
 ## 0.0.376 — L'herbe se rabaisse plus doucement
 
 Elle tombait d'un coup, ce qui se lit comme un interrupteur et pas comme une coupe.
