@@ -288,11 +288,13 @@ local function apply(
 			-- touffe, pour toujours. L'ECRASEMENT par-dessus : lui est temporaire. Dans cet ordre, une touffe
 			-- tondue PUIS pietinee revient a sa couleur de TONDUE quand le pied repart, pas a celle de l'herbe haute.
 			local mown2 = clump.mownColor
-			-- BANDE DE TONTE : selon le SENS ou la tondeuse est passee, la touffe renvoie plus ou moins de lumiere.
+			-- BANDE DE TONTE. Une bande sur deux est ASSOMBRIE ; l'autre garde la couleur de la config telle quelle.
+			-- Une seule direction, et c'est voulu : en eclaircissant aussi, la couleur ecrite en config n'etait
+			-- celle d'AUCUNE des deux bandes, et on la reglait a l'aveugle.
 			-- On multiplie les canaux plutot que de fondre vers une couleur fixe : chaque touffe garde sa tache de
 			-- Perlin, donc les bandes se posent SUR le relief du terrain au lieu de l'effacer.
-			if GrassZoneConfigs.MOWN_BAND_STRENGTH > 0 then
-				local k = 1 + clump.mowBand * GrassZoneConfigs.MOWN_BAND_STRENGTH
+			if GrassZoneConfigs.MOWN_BAND_STRENGTH > 0 and clump.mowBand < 0 then
+				local k = 1 - GrassZoneConfigs.MOWN_BAND_STRENGTH
 				mown2 = Color3.new(
 					math.min(mown2.R * k, 1),
 					math.min(mown2.G * k, 1),

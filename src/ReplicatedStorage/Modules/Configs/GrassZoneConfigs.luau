@@ -437,9 +437,12 @@ local GrassZoneConfigs = {
 	-- Leur largeur et leur orientation se reglent avec STRIPE_WIDTH et STRIPE_HEADING, partages avec les rayures
 	-- decoratives : c'est le meme damier, revele au lieu d'etre peint.
 	--
-	-- 0.22 : monte depuis 0.09, ou les bandes existaient mais ne se voyaient pas. Un ecart faible se perd des que
-	-- QUOI QUE CE SOIT d'autre teinte la touffe -- le pas du joueur, une rafale de vent. Une bande doit gagner ces
-	-- concours-la, sinon elle n'existe que dans le code.
+	-- De combien la bande SOMBRE descend sous MOWN_COLOR. Une seule direction, et c'est voulu : en eclaircissant
+	-- aussi, la couleur ecrite en config n'etait celle d'AUCUNE des deux bandes, et on la reglait a l'aveugle.
+	-- Ici MOWN_COLOR est la bande claire, et ce chiffre dit ou tombe l'autre.
+	--
+	-- 0.22 : un ecart faible se perd des que QUOI QUE CE SOIT d'autre teinte la touffe -- le pas du joueur, une
+	-- rafale de vent. Une bande doit gagner ces concours-la, sinon elle n'existe que dans le code.
 	MOWN_BAND_STRENGTH = 0.22,
 
 	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
@@ -474,7 +477,11 @@ local GrassZoneConfigs = {
 	--
 	-- Recoit les MEMES taches de Perlin que le reste : la partie tondue garde donc le relief du terrain au lieu de
 	-- virer a l'aplat uniforme. Meme raison que CRUSHED_COLOR.
-	MOWN_COLOR = Color3.fromRGB(159, 197, 97),
+	--
+	-- C'EST LA COULEUR DE LA BANDE CLAIRE, pas une teinte moyenne : les bandes ne font qu'ASSOMBRIR a partir
+	-- d'elle (voir MOWN_BAND_STRENGTH). Ce qui est ecrit ici est donc exactement ce qu'on voit sur une bande
+	-- claire -- rien ne vient le multiplier par-dessus.
+	MOWN_COLOR = Color3.fromRGB(123, 148, 74),
 
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.

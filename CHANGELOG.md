@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.380 — La bande claire prend la couleur demandee, et rien ne la multiplie
+
+`MOWN_COLOR` : 159, 197, 97 -> **123, 148, 74**.
+
+### Les bandes n'ECLAIRCISSENT plus, elles ne font qu'assombrir
+
+Avant, la couleur de config etait une teinte MOYENNE : une bande sur deux montait au-dessus, l'autre descendait
+en dessous. Ce qui etait ecrit dans le fichier n'etait donc la couleur d'AUCUNE des deux bandes -- on la reglait
+a l'aveugle, en corrigeant un resultat qu'on ne pouvait pas prevoir.
+
+Maintenant `MOWN_COLOR` EST la bande claire. Ce qui est ecrit est exactement ce qu'on voit, et
+`MOWN_BAND_STRENGTH` (0.22) dit seulement de combien l'autre descend.
+
+Meme famille que la regle apprise sur les UIGradient : quand deux reglages se multiplient dans le dos l'un de
+l'autre, on en corrige un en croyant corriger l'autre.
+
 ## 0.0.379 — L'herbe haute ne s'ecrase plus autant sous le pied
 
 - `CRUSH_SQUASH` : 0.98 -> **0.65**. Sous le pied, la touffe descend a 35 % de sa hauteur au lieu de 2 %.
