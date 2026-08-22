@@ -42,6 +42,8 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.FirstPersonController).init()
 	-- VIGNETTAGE : les bords s'assombrissent, l'oeil revient au milieu. Ordre indifferent, il ne depend de rien.
 	require(RS.Modules.UI.Core.Vignette).init()
+	-- ACCESSOIRES POSES SUR UN OS (la canne du grand-pere). Purement visuel, ordre indifferent.
+	require(script.PropFollowController).init()
 	require(script.ToolController).init()
 	require(script.HedgeController).init()
 	require(script.HedgeLeafController).init()
@@ -168,6 +170,10 @@ FirstPersonController.init()
 -- VIGNETTAGE : les bords s'assombrissent, l'oeil revient au milieu du cadre. Ordre indifferent : il ne depend de
 -- rien et son init ne bloque pas (l'attente de PlayerGui se fait en tache de fond).
 require(game:GetService("ReplicatedStorage").Modules.UI.Core.Vignette).init()
+
+-- ACCESSOIRES POSES SUR UN OS (la canne du grand-pere). Purement visuel : chaque client le calcule chez lui, rien
+-- ne transite. Ordre indifferent, il ne depend d'aucun autre controller.
+require(script.PropFollowController).init()
 
 local ToolController = require(script.ToolController)
 ToolController.init()

@@ -2185,6 +2185,50 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.354 — La canne suit enfin la main du grand-pere
+
+Nouveau `PropFollowController` + `PropAttachConfigs`. Un objet de decor suit un OS d'un personnage skinne.
+
+### Pourquoi un systeme a part, et pas un Motor6D
+
+Un Motor6D exige DEUX BasePart. Sur un mesh skinne, les membres sont des `Bone`, qui heritent d'Attachment :
+aucun joint ne peut s'y accrocher. C'est pour ca que le script de la barre de commandes disait "RightHand
+introuvable" -- il cherchait une part la ou il y a un os.
+
+`Bone.TransformedWorldCFrame` est la seule propriete qui donne la position ANIMEE d'un os, et elle se LIT. On la
+recopie donc a chaque image.
+
+### Cote CLIENT, et c'est mieux que le serveur
+
+C'est du decor : rien ne depend de la position exacte de la canne. Chaque client fait le calcul chez lui, donc
+c'est fluide a son propre framerate et ca ne coute pas un octet de reseau. Cote serveur, il aurait fallu repliquer
+une CFrame soixante fois par seconde pour un resultat MOINS bon -- la replication est plus lente que l'affichage,
+l'objet aurait saccade.
+
+L'ecriture tient parce que le serveur ne touche jamais a cet objet : une part ancree n'est repliquee que quand
+elle CHANGE cote serveur.
+
+### L'ecart est CAPTURE, pas regle
+
+On releve ou l'objet est POSE par rapport a l'os, une seule fois. Le placement fait a l'oeil dans Studio est donc
+la source de verite, exactement comme pour un Motor6D : deplacer la canne dans l'editeur et relancer suffit a
+corriger la prise. Aucun reglage a tatonner.
+
+Un accessoire en PLUSIEURS morceaux suit entier : chaque part garde son ecart a la part maitresse.
+
+### Deux details qui evitent des heures
+
+- **Apres la camera** dans l'image. Les os sont mis a jour par l'animation pendant l'image : les lire trop tot
+  donnerait l'etat de l'image PRECEDENTE, et l'accessoire trainerait d'une image derriere la main.
+- **On NOMME ce qu'on n'a pas trouve.** Un compteur global ne revele jamais l'absence du troisieme accessoire :
+  on chercherait le probleme dans l'animation alors que l'objet n'a simplement pas ete vu.
+
+### Ca reste le deuxieme meilleur choix
+
+Pour un accessoire qui ne se lache JAMAIS, l'integrer au mesh dans Blender et le peser sur l'os reste superieur :
+il devient une partie du personnage, il suit tout seul, et ca ne coute rien a l'execution. Ce module est fait pour
+les objets qu'on veut pouvoir deplacer, echanger ou retirer sans reexporter le personnage.
+
 ## 0.0.353 — La camera arrive devant la tondeuse deux fois plus vite
 
 `PULL_CAM_IN_TIME` : 0.42 -> **0.22**. `PULL_CAM_OUT_TIME` : 0.32 -> **0.2**.
