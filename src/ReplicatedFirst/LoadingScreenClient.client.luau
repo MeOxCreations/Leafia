@@ -144,7 +144,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 	-- FEUILLE centrale : elle oscille, elle flotte, et elle SE REMPLIT comme une jauge.
 	local LEAF_ID = "rbxassetid://117703108607506"
-	local LEAF_TINT = Color3.fromRGB(138, 138, 138)
+	-- LE MEME VERT QUE LE DEBUT DU BANDEAU : la feuille et le bandeau se repondent, l'ecran a une seule couleur
+	-- d'accent au lieu de deux elements gris qui se ressemblent sans se parler.
+	--
+	-- Le degrade pose sur la feuille ne touche QUE sa transparence (c'est lui qui la remplit) : sa couleur reste
+	-- neutre, donc ce vert s'affiche tel quel.
+	local LEAF_TINT = Color3.fromRGB(142, 255, 93)
 	local LEAF_SIZE = UDim2.fromScale(0.2, 0.2)
 	local LEAF_CENTER = UDim2.fromScale(0.5, 0.46)
 	-- Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le rideau s'en va. Une jauge qui se

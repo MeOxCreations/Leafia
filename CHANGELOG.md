@@ -2185,6 +2185,14 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.351 — La feuille du rideau passe au vert
+
+`#8eff5d`, le meme vert que le debut du bandeau. La feuille et le bandeau se repondent : l'ecran a une seule
+couleur d'accent, au lieu de deux elements gris qui se ressemblent sans se parler.
+
+Le degrade pose sur la feuille ne touche QUE sa transparence -- c'est lui qui la remplit comme une jauge. Sa
+couleur reste neutre, donc ce vert s'affiche tel quel.
+
 ## 0.0.350 — Le bandeau passe du vert vif au noir
 
 `BANNER_COLOR` : `#8eff5d` a gauche, `#000000` a droite.
