@@ -2185,6 +2185,13 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.359 — Le volet du rideau ralentit
+
+`WIPE_COVER_TIME` : 0.3 -> 0.55. `WIPE_REVEAL_TIME` : 0.45 -> 0.85. `WIPE_HOLD` : 0.06 -> 0.12.
+
+Le retrait reste plus LENT que l'arrivee, et c'est voulu : les deux moities n'ont pas le meme role. On couvre
+pour CACHER -- autant que ce soit vite fait. On decouvre pour MONTRER le jeu -- autant que ca se savoure.
+
 ## 0.0.358 — Le rideau s'en va derriere un VOLET BLANC
 
 Le fondu de sortie etait moche : chaque element du rideau -- la tuile, la feuille, les textes -- s'effacait en

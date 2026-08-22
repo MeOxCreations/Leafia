@@ -215,9 +215,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- feuille et les textes s'effacent en meme temps mais pas au meme rythme, et ca se lit comme un bug. Sous le
 	-- volet, on ne voit RIEN partir -- le rideau est deja detruit quand le blanc se retire.
 	local WIPE_COLOR = Color3.fromRGB(255, 255, 255)
-	local WIPE_COVER_TIME = 0.3 -- duree pour recouvrir
-	local WIPE_HOLD = 0.06 -- temps couvert, pendant lequel on detruit le rideau
-	local WIPE_REVEAL_TIME = 0.45 -- duree pour s'en aller. Plus lent que l'arrivee : on decouvre le jeu, on savoure
+	local WIPE_COVER_TIME = 0.55 -- duree pour recouvrir
+	local WIPE_HOLD = 0.12 -- temps couvert, pendant lequel on detruit le rideau
+	-- Plus lent que l'arrivee, et c'est voulu : on COUVRE pour cacher (autant que ce soit vite fait), on DECOUVRE
+	-- pour montrer le jeu (autant que ca se savoure). Les deux n'ont pas le meme role, ils n'ont pas la meme duree.
+	local WIPE_REVEAL_TIME = 0.85
 	local WIPE_SOFT = 0.18 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
 	-- SENS DU BALAYAGE, en degres. 0 = de gauche a droite, 180 = l'inverse.
 	-- Il ne se DEDUIT pas -- deja au journal. Mais ici il n'y a AUCUN risque a se tromper : le volet est detruit a
