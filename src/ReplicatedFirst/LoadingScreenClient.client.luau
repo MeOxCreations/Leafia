@@ -520,7 +520,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		--
 		-- ON PLACE A LA MAIN plutot qu'avec un UIListLayout, pour la meme raison : un layout repose ses enfants a
 		-- chaque image et ecraserait le Y du rebond.
-		local rise = size * TIP_LETTER_RISE
 		local token = {}
 		tipToken = token
 		task.spawn(function()
@@ -532,6 +531,26 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			local watchUntil = math.max(total, TIP_WIDTH_WATCH)
 			while sg.Parent and tipToken == token do
 				local now = os.clock() - t0
+
+				-- LA TAILLE DU TEXTE SE RELIT A CHAQUE IMAGE, elle ne se fige pas.
+				--
+				-- C'ETAIT LE BUG DU PREMIER CONSEIL, et il a resiste a deux correctifs. La taille se deduit de la
+				-- hauteur de la ligne, qui vaut 4.5 % de l'ecran -- mais le rideau s'affiche AVANT que le viewport
+				-- ait sa taille definitive. On lisait donc une hauteur trop petite, et le premier conseil sortait
+				-- minuscule alors que les suivants tombaient juste.
+				--
+				-- Attendre "hauteur > 0" ne suffisait pas : la valeur intermediaire est NON NULLE et FAUSSE, donc
+				-- l'attente sortait tout de suite. Il n'y a pas d'instant ou l'on peut dire "maintenant c'est bon".
+				-- On cesse donc de chercher cet instant -- on relit, et on corrige si ca a bouge. Meme raison que
+				-- pour les largeurs juste en dessous, et ca couvre aussi le redimensionnement de la fenetre.
+				local live = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
+				if live ~= size then
+					size = live
+					for _, label in ipairs(letters) do
+						label.TextSize = size
+					end
+				end
+				local rise = size * TIP_LETTER_RISE
 				-- LARGEURS RELUES A CHAQUE IMAGE. Une espace ne mesure rien (Roblox rogne les blancs de bord) :
 				-- on lui donne une avance fixe, sinon les mots se colleraient.
 				local x = 0

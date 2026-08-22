@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.372 — Le premier conseil sortait plus PETIT, et il a fallu trois essais
+
+Deux captures cote a cote l'ont montre sans discussion : meme police, taille differente. Le premier conseil est
+plus petit que les suivants.
+
+### Pourquoi les deux correctifs precedents ont echoue
+
+La taille du texte se deduit de la hauteur de la ligne, qui vaut 4.5 % de l'ecran. Mais le rideau s'affiche AVANT
+que le viewport ait sa taille definitive : on lisait donc une hauteur trop petite.
+
+- Le premier essai a cherche du cote de la POLICE. Faux : `rbxasset://` est livre avec le client.
+- Le second attendait "hauteur > 0". Insuffisant : la valeur intermediaire est NON NULLE et FAUSSE, donc
+  l'attente sortait immediatement.
+
+Le defaut commun aux deux : chercher L'INSTANT ou la valeur devient bonne. Il n'y en a pas.
+
+### On corrige en continu
+
+La taille est relue A CHAQUE IMAGE et reappliquee si elle a bouge. Meme principe que les largeurs de lettres,
+corrigees juste en dessous, et meme boucle -- donc aucun mecanisme de plus.
+
+Ca couvre au passage un cas qu'aucune attente n'aurait couvert : le joueur qui redimensionne sa fenetre pendant
+le chargement.
+
+Regle a retenir : quand une valeur d'affichage se stabilise SANS prevenir, ne pas chercher le bon moment pour la
+lire. La relire.
+
 ## 0.0.371 — Les lettres du conseil n'ont plus qu'un seul ecrivain
 
 Suite du premier conseil mal rendu. Ni la police ni la taille cette fois : les POSITIONS.
