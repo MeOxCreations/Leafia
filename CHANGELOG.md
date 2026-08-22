@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.369 — On ne peut plus ecraser l'herbe deja tondue
+
+Marcher sur une pelouse tondue l'aplatissait encore. Elle est deja rase : un pied n'a plus rien a y coucher, et
+la voir s'aplatir contredit ce qu'on vient de faire -- on a coupe, ce n'est pas un paillasson.
+
+`MOWN_CRUSH_DAMP` (1) supprime l'ecrasement sur une touffe tondue. La HAUTEUR et l'INCLINAISON, les deux :
+une touffe qui ne s'aplatit plus mais qui penche encore aurait l'air de GLISSER sous le pied, ce qui est pire que
+les deux ensemble.
+
+L'amortissement suit l'avancement de la coupe, il ne bascule pas : une touffe a moitie tondue s'ecrase a moitie.
+
+### La couleur, elle, bouge encore -- a peine
+
+`MOW_CRUSH_DAMP` : 0.55 -> 0.7. Historique : 0.9 (marcher sur du tondu ne changeait plus rien), 0.55 (trop
+marque), 0.7.
+
+Il doit rester JUSTE ASSEZ pour qu'on devine ou l'on est passe, sans laver la bande de tonte ni concurrencer le
+contraste tondu / pas tondu -- qui est l'information importante.
+
 ## 0.0.368 — Le premier conseil sortait a huit pixels
 
 Ce n'etait PAS la police. Correction d'un diagnostic rate au 0.0.366.

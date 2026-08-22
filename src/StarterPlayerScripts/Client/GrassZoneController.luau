@@ -960,7 +960,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- C'etait l'inverse avant : tout etait tire de l'ANGLE, donc mettre l'angle a zero tuait l'aplatissement avec.
 		local crushed = clump.crush
 		-- Le tassement et l'assombrissement partent de la valeur RETARDEE : ils arrivent apres l'inclinaison.
-		local squash = 1 - clump.squashCrush * GrassZoneConfigs.CRUSH_SQUASH
+		-- UNE TOUFFE TONDUE NE S'ECRASE PLUS SOUS LE PIED. Elle est deja rase : il n'y a plus rien a coucher, et la
+		-- voir s'aplatir encore contredit ce qu'on vient de faire. Seule sa COULEUR bouge encore, et a peine.
+		local crushDamp = 1 - clump.mown * GrassZoneConfigs.MOWN_CRUSH_DAMP
+		local squash = 1 - clump.squashCrush * GrassZoneConfigs.CRUSH_SQUASH * crushDamp
 		-- LA COUPE S'AJOUTE AU PIETINEMENT, et on garde la plus COURTE des deux raisons plutot que de les additionner :
 		-- deux effets qui s'additionnent finiraient sous zero et la touffe disparaitrait. Une touffe tondue reste donc
 		-- courte pour toujours, et un pied la couche encore un peu par-dessus, sans jamais la faire remonter au-dessus.
@@ -1048,7 +1051,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- cause de la trace, donc il n'atteint jamais 1 et l'inclinaison ne tombait jamais a zero.
 			local tilt = 0
 			if target > 1e-3 then
-				tilt = TILT_ANGLE * math.clamp((clump.crush - clump.squashCrush) / target, 0, 1)
+				-- Le MEME amortissement que la hauteur : une touffe tondue qui ne s'aplatit plus mais qui penche
+				-- encore aurait l'air de glisser sous le pied, ce qui est pire que les deux.
+				tilt = TILT_ANGLE
+					* math.clamp((clump.crush - clump.squashCrush) / target, 0, 1)
+					* (1 - clump.mown * GrassZoneConfigs.MOWN_CRUSH_DAMP)
 			end
 			apply(clump, wind, squash * gustSquash, tilt, clump.colorCrush, clump.mown, lighten)
 			clump.lastCrush = clump.crush

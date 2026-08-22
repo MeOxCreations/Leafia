@@ -465,10 +465,16 @@ local GrassZoneConfigs = {
 	-- C'est aussi le bon sens : on n'ecrase pas de l'herbe deja rase. La touffe continue de s'APLATIR un peu (c'est
 	-- geometrique), elle ne change simplement plus de couleur.
 	-- 1 = l'ecrasement ne teinte plus du tout une touffe tondue. 0 = l'ancien comportement.
-	-- Descendu de 0.9 : a ce niveau, marcher sur une pelouse deja tondue ne changeait plus RIEN du tout, et on
-	-- perdait le retour du pas sur toute la partie du jardin qu'on venait de finir. A 0.55 il en reste assez pour
-	-- qu'on voie ou l'on est passe, sans laver la bande de tonte.
-	MOW_CRUSH_DAMP = 0.55,
+	-- Historique : 0.9 (marcher sur du tondu ne changeait plus RIEN), 0.55 (trop marque), 0.7. Il doit rester
+	-- JUSTE ASSEZ pour qu'on devine ou l'on est passe, sans laver la bande de tonte ni concurrencer le contraste
+	-- tondu / pas tondu, qui est l'information importante.
+	MOW_CRUSH_DAMP = 0.7,
+	-- ET L'HERBE TONDUE NE S'ECRASE PLUS DU TOUT SOUS LE PIED. Elle est deja rase : un pied n'a plus rien a y
+	-- coucher, et la voir s'aplatir encore contredit ce qu'on vient de faire -- on a coupe, ce n'est pas un
+	-- paillasson.
+	-- 1 = l'ecrasement (hauteur ET inclinaison) est entierement supprime sur une touffe tondue. 0 = comportement
+	-- d'avant. Entre les deux, il s'attenue a mesure que la coupe avance.
+	MOWN_CRUSH_DAMP = 1,
 
 	-- ===== REVELATION : voir ce qui RESTE a tondre =====
 	-- Une touche maintenue peint en neon tout ce qui n'est PAS encore coupe. Le but est de rendre le PROGRES
