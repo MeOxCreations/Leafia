@@ -1175,7 +1175,13 @@ function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number
 				local flatForced = Vector3.new(forced.X, 0, forced.Z)
 				stripeAxis = if flatForced.Magnitude > 1e-3 then flatForced.Unit else flat
 			end
-			stripe = math.clamp(flat:Dot(stripeAxis :: Vector3), -1, 1)
+			-- On MULTIPLIE avant de borner : sans ca, rouler en travers de l'axe appris donnait un produit nul,
+			-- donc aucune bande. Voir MOW_STRIPE_SHARPNESS.
+			stripe = math.clamp(
+				flat:Dot(stripeAxis :: Vector3) * GrassZoneConfigs.MOW_STRIPE_SHARPNESS,
+				-1,
+				1
+			)
 		end
 	end
 	local total = 0

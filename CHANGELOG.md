@@ -2185,6 +2185,52 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.332 — Les roues tournent enfin, la camera filme le demarrage, et les bandes marchent dans tous les sens
+
+### Les roues ne tournaient pas du tout
+
+Deux erreurs cumulees, et aucune ne disait rien :
+
+1. Le code cherchait des joints nommes `BackWheel` / `FrontWheel`. Ils s'appellent `WheelBackMotor6D` et
+   `WheelFrontMotor6D`.
+2. Il les cherchait sous la seule RootPart. Dans le rig, chaque joint est range SOUS SA ROUE.
+
+La recherche balaie maintenant tout le modele, et les joints trouves sont memorises (une entree : on ne porte
+qu'une machine a la fois, donc rien a nettoyer, et on ne parcourt pas les descendants a chaque image).
+
+Surtout, elle PARLE quand elle ne trouve rien. Une liste renseignee et aucun joint qui porte ces noms, c'est
+anormal et actionnable -- sans ce message on regarde une tondeuse qui glisse sans savoir ou chercher.
+
+### La camera passe devant pour le tirage de corde
+
+Pendant qu'on tire la corde, la camera vient DEVANT la machine, un peu de cote, et regarde le joueur. Le
+demarrage est le seul moment ou le joueur ne fait qu'une chose : autant la montrer. En vue de conduite on est
+derriere lui et on ne voit rien du geste.
+
+Le champ de vision s'ELARGIT lentement pendant ce temps (`PULL_CAM_FOV`), ce qui donne le recul demande.
+
+Tout est en OFFSETS RELATIFS AU JOUEUR, jamais en positions monde, et le focus est re-ancre sur sa position VIVE
+a chaque image. L'arrivee part de l'etat EXACT de la camera de jeu (mesure, pas devine : la distance camera ->
+Focus est le vrai zoom) et le retour y revient, donc aucun saut ni au debut ni a la fin. Le retour part du plan
+COURANT, pas de la cible theorique : on peut lacher la machine en pleine arrivee.
+
+Le champ de vision avait deja un ecrivain (le recul de la revelation). Les deux raisons s'ADDITIONNENT maintenant
+dans une seule ecriture, dans `applyCameraRig` -- deux ecrivains se seraient ecrases a tour de role.
+
+Le pilotage est lu AU-DESSUS de la sortie anticipee de la boucle : sinon lacher la machine n'aurait jamais
+relache la camera, et elle serait restee plantee sur un plan sans rien a filmer.
+
+### Les bandes ne marchaient que dans un sens
+
+La bande vient de `direction de tonte . axe appris` : parallele donne 1, sens inverse -1, et PERPENDICULAIRE
+donne ZERO -- donc aucune bande. Rouler en travers de sa premiere passe ne marquait rien.
+
+`MOW_STRIPE_SHARPNESS` (3) multiplie avant de borner : tout ce qui s'ecarte de plus d'environ 20 degres de la
+perpendiculaire sature a fond. On obtient donc une bande FRANCHE dans presque toutes les directions, et le
+degrade ne subsiste que dans l'etroit couloir ou l'on roule vraiment en travers.
+
+`MOW_STRIPE_STRENGTH` monte aussi, 0.22 -> 0.32.
+
 ## 0.0.331 — L'herbe coupee SORT DU SOL au lieu d'apparaitre par-dessus
 
 On voyait qu'on AJOUTAIT une herbe, pas qu'on en coupait une. Deux causes, toutes les deux corrigees.

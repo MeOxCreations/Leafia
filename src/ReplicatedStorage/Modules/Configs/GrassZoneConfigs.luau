@@ -391,7 +391,16 @@ local GrassZoneConfigs = {
 	-- Monte de 0.13 a 0.22 : a l'ecran on ne voyait pas la difference entre un aller et un retour.
 	-- Ne pas depasser ~0.3 : au-dela ca se lit comme des rayures PEINTES, et on retombe dans ce que
 	-- l'ancien systeme de rayures faisait de faux.
-	MOW_STRIPE_STRENGTH = 0.22,
+	MOW_STRIPE_STRENGTH = 0.32,
+	-- CONCENTRATION DU CONTRASTE. La bande vient de `direction de tonte . axe appris` : parallele donne 1, sens
+	-- inverse -1, et PERPENDICULAIRE donne ZERO -- donc aucune bande du tout. Rouler en travers de sa premiere
+	-- passe ne marquait donc rien, ce qui se lisait comme "ca ne marche que dans un sens".
+	--
+	-- En multipliant avant de borner, tout ce qui s'ecarte de plus d'environ 20 degres de la perpendiculaire
+	-- sature a fond : on obtient une bande FRANCHE dans presque toutes les directions, et le degrade ne subsiste
+	-- que dans l'etroit couloir ou l'on roule vraiment en travers.
+	-- 1 = comportement d'avant (degrade doux, rien en travers). Plus HAUT = plus tranche.
+	MOW_STRIPE_SHARPNESS = 3,
 
 	-- Vitesse a laquelle la coupe s'installe sous la tondeuse, en fraction par seconde.
 	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.

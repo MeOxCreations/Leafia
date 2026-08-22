@@ -75,12 +75,36 @@ local autoRotateWas = true
 local wheelAngles: { [Motor6D]: number } = {}
 local connection: RBXScriptConnection? = nil
 
+-- ===== CAMERA DU DEMARRAGE =====
+-- Elle passe devant la machine, de cote, et regarde le joueur tirer la corde.
+--
+-- TOUT EST EXPRIME EN OFFSETS RELATIFS AU JOUEUR, jamais en positions monde. Une cible calculee une fois laisse
+-- la camera plantee des que le sujet bouge, et l'arrivee comme le retour doivent SUIVRE le joueur pour ne pas
+-- laisser de trou. C'est la lecon deja payee sur le retour de camera de la taille de haie.
+local UP = Vector3.new(0, 1, 0)
+local PULL_CAM_BIND = "LeafiaMowPullCam"
+local pullCamOn = false -- la camera de demarrage est-elle demandee ? (lu par applyCameraRig pour le champ)
+local pullCamBound = false
+local pullPhase: string? = nil -- "in" (arrivee), "hold" (en place), "out" (retour)
+local pullElapsed = 0
+-- Etat de la camera de JEU, capture AVANT de passer en Scriptable : l'arrivee en part et le retour y revient.
+local pullSavedFocus: Vector3? = nil -- (camera.Focus - HRP)
+local pullSavedCam: Vector3? = nil -- (camera.Position - camera.Focus) : l'angle ET le zoom reels
+-- Le plan au moment ou l'on lache : le retour part de LA, pas de la cible theorique.
+local pullExitFocus = Vector3.zero
+local pullExitCam = Vector3.zero
+-- Les offsets REELLEMENT poses a la derniere image. C'est d'eux que part le retour -- et pas de `camera.Focus`,
+-- qui garderait la valeur laissee par la camera de jeu tant qu'on ne l'ecrit pas.
+local pullLastFocus = Vector3.zero
+local pullLastCam = Vector3.zero
+
 -- REVELATION : l'herbe s'allume ET la camera prend du recul. UN SEUL point d'entree pour les deux -- les
 -- appeler separement finirait par laisser la camera reculee alors que l'herbe est deja eteinte.
 local function setReveal(on: boolean)
 	revealOn = on
 	GrassZoneController.setHighlight(on)
-	CameraEffects.SetFovOffset(if on then MowConfigs.HIGHLIGHT_FOV else 0)
+	-- Le champ de vision est pose par applyCameraRig, pas ici : il a DEUX raisons (la revelation et la camera de
+	-- demarrage) et deux ecrivains finiraient par s'ecraser a tour de role, une image sur deux.
 end
 
 -- LA CAMERA DE CONDUITE : le recul, pose une seule fois par image.
@@ -96,6 +120,125 @@ local function applyCameraRig(hrp: BasePart?, carrying: boolean)
 		total += math.clamp(speed / MowConfigs.SPEED_MAX, 0, 1) * MowConfigs.DRIVE_ZOOM
 	end
 	CameraEffects.SetZoomBoost(total)
+	-- LE CHAMP DE VISION, MEME REGLE : deux raisons, une seule ecriture. Elles s'ADDITIONNENT plutot que de se
+	-- choisir -- reveler pendant qu'on tire la corde est possible, et le recul doit alors valoir les deux.
+	local fov = if revealOn then MowConfigs.HIGHLIGHT_FOV else 0
+	if pullCamOn then
+		fov += MowConfigs.PULL_CAM_FOV
+	end
+	CameraEffects.SetFovOffset(fov)
+end
+
+-- LE PLAN DE TIRAGE, en offsets relatifs au joueur. Deux valeurs, dans la meme convention que la camera de jeu :
+-- le point VISE (par rapport au joueur) et la position de l'oeil (par rapport a ce point vise). C'est cette
+-- convention qui permet d'interpoler entre ce plan et la vue de jeu sans jamais melanger deux reperes.
+--
+-- On part du REGARD du joueur et pas de l'orientation de la machine : la machine est soudee devant lui, donc les
+-- deux disent la meme chose, mais le regard se lit sans avoir a deviner quel axe du modele pointe vers l'avant.
+local function pullShotOffsets(hrp: BasePart): (Vector3, Vector3)
+	local look = hrp.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	flat = if flat.Magnitude > 1e-4 then flat.Unit else Vector3.new(0, 0, -1)
+	local side = flat:Cross(UP)
+	local focusOffset = Vector3.new(0, MowConfigs.PULL_CAM_LOOK_HEIGHT, 0)
+	local eye = flat * MowConfigs.PULL_CAM_FORWARD
+		+ side * MowConfigs.PULL_CAM_SIDE
+		+ UP * MowConfigs.PULL_CAM_HEIGHT
+	return focusOffset, eye - focusOffset
+end
+
+-- Une image de la camera de demarrage. Arrivee, maintien et retour passent tous par ici : les trois ne different
+-- que par les deux offsets a poser, et les separer aurait donne trois fois la meme trigonometrie.
+local function stepPullCam(dt: number)
+	local camera = workspace.CurrentCamera
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	local savedFocus, savedCam = pullSavedFocus, pullSavedCam
+	if not (camera and root and root:IsA("BasePart") and savedFocus and savedCam) then
+		-- Le personnage a disparu (mort, changement de lieu) : on rend la camera tout de suite plutot que de
+		-- tenir un plan sur un joueur qui n'existe plus.
+		pullPhase = nil
+		pullCamBound = false
+		RunService:UnbindFromRenderStep(PULL_CAM_BIND)
+		if camera then
+			camera.CameraType = Enum.CameraType.Custom
+		end
+		return
+	end
+	local hrp = root :: BasePart
+	local shotFocus, shotCam = pullShotOffsets(hrp)
+
+	local focusOffset, camOffset = shotFocus, shotCam
+	if pullPhase == "in" then
+		pullElapsed += dt
+		local t = math.clamp(pullElapsed / MowConfigs.PULL_CAM_IN_TIME, 0, 1)
+		local a = 1 - (1 - t) * (1 - t) -- ease out : part franc, se pose doucement
+		focusOffset = savedFocus:Lerp(shotFocus, a)
+		camOffset = savedCam:Lerp(shotCam, a)
+		if t >= 1 then
+			pullPhase = "hold"
+		end
+	elseif pullPhase == "out" then
+		pullElapsed += dt
+		local t = math.clamp(pullElapsed / MowConfigs.PULL_CAM_OUT_TIME, 0, 1)
+		local a = 1 - (1 - t) * (1 - t)
+		-- On revient vers l'etat EXACT de la camera de jeu capture a l'entree. Viser une valeur approchee laisse
+		-- un micro-saut a la reprise : sub-perceptible a la lecture, tres visible a l'ecran.
+		focusOffset = pullExitFocus:Lerp(savedFocus, a)
+		camOffset = pullExitCam:Lerp(savedCam, a)
+		if t >= 1 then
+			pullPhase = nil
+			pullCamBound = false
+			RunService:UnbindFromRenderStep(PULL_CAM_BIND)
+			camera.CameraType = Enum.CameraType.Custom
+			return
+		end
+	end
+
+	-- LE FOCUS EST RE-ANCRE SUR LA POSITION VIVE DU JOUEUR A CHAQUE IMAGE. Une CFrame calculee une fois laisserait
+	-- la camera plantee des que le sujet bouge, et le retour finirait a cote de lui.
+	pullLastFocus, pullLastCam = focusOffset, camOffset
+	local focus = hrp.Position + focusOffset
+	camera.CameraType = Enum.CameraType.Scriptable
+	camera.CFrame = CFrame.lookAt(focus + camOffset, focus)
+	-- On ecrit AUSSI le Focus : c'est lui que Roblox utilise comme point d'ecoute des sons 3D, et le laisser sur
+	-- la valeur de la camera de jeu ferait entendre la scene depuis l'ancien point de vue.
+	camera.Focus = CFrame.new(focus)
+end
+
+-- Demande ou relache la camera de demarrage. Idempotent : appelable a chaque image sans rien casser.
+local function setPullCam(on: boolean)
+	if on == pullCamOn then
+		return
+	end
+	pullCamOn = on
+	local camera = workspace.CurrentCamera
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (MowConfigs.PULL_CAM_ENABLED and camera and root and root:IsA("BasePart")) then
+		return
+	end
+	local hrp = root :: BasePart
+
+	if on then
+		-- L'ETAT DE LA CAMERA DE JEU SE CAPTURE AVANT DE PASSER EN SCRIPTABLE, et il se MESURE : la distance
+		-- camera -> Focus est le vrai zoom (pas la distance au joueur), et l'offset Focus -> joueur donne la
+		-- hauteur du regard. Devinees, ces deux valeurs laissent un saut a la reprise.
+		pullSavedFocus = camera.Focus.Position - hrp.Position
+		pullSavedCam = camera.CFrame.Position - camera.Focus.Position
+		pullPhase = "in"
+		pullElapsed = 0
+		if not pullCamBound then
+			pullCamBound = true
+			RunService:BindToRenderStep(PULL_CAM_BIND, Enum.RenderPriority.Camera.Value, stepPullCam)
+		end
+	elseif pullCamBound then
+		-- LE RETOUR PART DU PLAN COURANT, pas de la cible theorique : on peut lacher la machine en pleine
+		-- arrivee, et repartir d'ailleurs ferait un saut au moment meme ou l'on veut de la douceur.
+		pullExitFocus, pullExitCam = pullLastFocus, pullLastCam
+		pullPhase = "out"
+		pullElapsed = 0
+	end
 end
 
 local function rootOf(model: Model): BasePart?
@@ -208,42 +351,77 @@ end
 
 -- ROUES. L'angle vient de la DISTANCE parcourue, pas du temps : la roue colle donc au sol quelle que soit
 -- l'allure du joueur, et elle s'arrete pile quand il s'arrete. Une animation, elle, patinerait.
+-- Les Motor6D des roues, cherches DANS TOUT LE MODELE et memorises.
+--
+-- La version d'avant les cherchait sous la seule RootPart, avec des noms qui n'etaient pas les bons. Elle ne
+-- trouvait donc RIEN, sans un mot : les roues ne tournaient jamais et rien ne disait pourquoi. C'est exactement
+-- le genre d'echec silencieux qui coute des heures -- d'ou l'avertissement plus bas.
+--
+-- MEMOIRE A UNE ENTREE : on ne porte qu'une machine a la fois, donc une seule suffit, et elle ne garde qu'une
+-- reference -- rien a nettoyer. Parcourir les descendants a chaque image, en revanche, se paierait.
+local wheelMotorsModel: Model? = nil
+local wheelMotorsList: { Motor6D } = {}
+
+local function wheelMotorsOf(model: Model): { Motor6D }
+	if wheelMotorsModel == model then
+		return wheelMotorsList
+	end
+	local found: { Motor6D } = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("Motor6D") then
+			for _, name in ipairs(MowConfigs.WHEEL_MOTORS) do
+				if d.Name == name then
+					found[#found + 1] = d
+					break
+				end
+			end
+		end
+	end
+	wheelMotorsModel = model
+	wheelMotorsList = found
+	if #found == 0 then
+		-- ACTIONNABLE : la liste est renseignee, donc les roues DOIVENT tourner, mais aucun joint ne porte ces
+		-- noms. Sans ce message, on regarde une tondeuse qui glisse sans savoir ou chercher.
+		warn(
+			`[Mow] Aucun Motor6D de roue trouve dans "{model.Name}" `
+				.. `(cherches : {table.concat(MowConfigs.WHEEL_MOTORS, ", ")}). Les roues ne tourneront pas.`
+		)
+	end
+	return found
+end
+
 local function spinWheels(model: Model, distance: number)
-	local root = rootOf(model)
 	-- `== 0` et non `<= 0` : une distance NEGATIVE est une marche arriere, et les roues doivent tourner a
 	-- l'envers. La rejeter les figeait des qu'on recule.
-	if not root or distance == 0 then
+	if distance == 0 then
 		return
 	end
-	for _, name in ipairs(MowConfigs.WHEEL_MOTORS) do
-		local motor = root:FindFirstChild(name)
-		if motor and motor:IsA("Motor6D") then
-			local wheel = motor.Part1
-			-- Rayon MESURE sur la roue plutot que devine : changer la taille du modele ne demande alors aucun reglage.
-			local radius = MowConfigs.WHEEL_RADIUS_FALLBACK
-			if wheel then
-				local s = wheel.Size
-				radius = math.max(s.X, s.Y, s.Z) * 0.5
+	for _, motor in ipairs(wheelMotorsOf(model)) do
+		local wheel = motor.Part1
+		-- Rayon MESURE sur la roue plutot que devine : changer la taille du modele ne demande alors aucun reglage.
+		local radius = MowConfigs.WHEEL_RADIUS_FALLBACK
+		if wheel then
+			local s = wheel.Size
+			radius = math.max(s.X, s.Y, s.Z) * 0.5
+		end
+		if radius > 1e-3 then
+			-- Distance SIGNEE : negative en marche arriere, donc les roues tournent a l'envers toutes seules.
+			local delta = MowConfigs.WHEEL_DIRECTION * distance / radius
+			local angle = ((wheelAngles[motor] or 0) + delta) % (math.pi * 2)
+			wheelAngles[motor] = angle
+			local axis = MowConfigs.WHEEL_AXIS
+			local spin = if axis == "Y"
+				then CFrame.Angles(0, angle, 0)
+				elseif axis == "Z" then CFrame.Angles(0, 0, angle)
+				else CFrame.Angles(angle, 0, 0)
+			-- On ecrit C0, PAS Transform : Transform appartient a l'Animator. Corollaire, ces joints ne doivent
+			-- etre cles dans AUCUNE animation, sinon deux ecrivains se disputent le meme joint.
+			local base = motor:GetAttribute("LeafiaBaseC0")
+			if typeof(base) ~= "CFrame" then
+				base = motor.C0
+				motor:SetAttribute("LeafiaBaseC0", base)
 			end
-			if radius > 1e-3 then
-				-- Distance SIGNEE : negative en marche arriere, donc les roues tournent a l'envers toutes seules.
-				local delta = MowConfigs.WHEEL_DIRECTION * distance / radius
-				local angle = ((wheelAngles[motor] or 0) + delta) % (math.pi * 2)
-				wheelAngles[motor] = angle
-				local axis = MowConfigs.WHEEL_AXIS
-				local spin = if axis == "Y"
-					then CFrame.Angles(0, angle, 0)
-					elseif axis == "Z" then CFrame.Angles(0, 0, angle)
-					else CFrame.Angles(angle, 0, 0)
-				-- On ecrit C0, PAS Transform : Transform appartient a l'Animator. Corollaire, ces joints ne doivent
-				-- etre cles dans AUCUNE animation, sinon deux ecrivains se disputent le meme joint.
-				local base = motor:GetAttribute("LeafiaBaseC0")
-				if typeof(base) ~= "CFrame" then
-					base = motor.C0
-					motor:SetAttribute("LeafiaBaseC0", base)
-				end
-				motor.C0 = (base :: CFrame) * spin
-			end
+			motor.C0 = (base :: CFrame) * spin
 		end
 	end
 end
@@ -730,6 +908,15 @@ local function update(dt: number)
 		end
 	end
 
+	-- UNE MACHINE A L'ARRET NE COUPE RIEN, ET NE SE POUSSE PAS. Tant que la corde n'a pas ete tiree, on tient un
+	-- objet, pas une tondeuse. C'est aussi ce qui donne du SENS au demarrage : sans ca, tirer la corde ne serait
+	-- qu'une animation de plus.
+	--
+	-- LU ICI, AU-DESSUS de la sortie anticipee : la camera de demarrage doit etre RELACHEE quand on lache la
+	-- machine, et le `return` plus bas empecherait ce relachement -- la camera resterait plantee sur le plan de
+	-- tirage, sans plus rien a filmer.
+	local running = mine ~= nil and mine:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
+	setPullCam(mine ~= nil and not running)
 	applyCameraRig(hrp :: BasePart, mine ~= nil)
 
 	if not mine then
@@ -737,11 +924,6 @@ local function update(dt: number)
 		lastCutPos = nil
 		return
 	end
-
-	-- UNE MACHINE A L'ARRET NE COUPE RIEN. Tant que la corde n'a pas ete tiree, on pousse un objet, pas une
-	-- tondeuse. C'est aussi ce qui donne du SENS au demarrage : sans ca, tirer la corde ne serait qu'une
-	-- animation de plus.
-	local running = mine:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
 	setPullBound(not running)
 
 	local point, radius = cutPointOf(mine)

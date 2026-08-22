@@ -279,6 +279,28 @@ return {
 	-- S'ADDITIONNE au recul de la revelation : les deux passent par une seule valeur, sinon le dernier a ecrire
 	-- ecraserait l'autre a chaque image.
 	-- Studs de recul a PLEIN regime. 0 = effet coupe.
+	-- ===== CAMERA DU DEMARRAGE (le tirage de corde) =====
+	-- Pendant qu'on tire la corde, la camera passe DEVANT la machine, un peu de cote, et regarde le joueur. Le
+	-- demarrage est le seul moment ou le joueur ne fait qu'une chose : autant la montrer. En vue de conduite on
+	-- est derriere lui et on ne voit rien du geste.
+	PULL_CAM_ENABLED = true,
+	-- Distance DEVANT le joueur, en studs. Il faut passer la machine (elle est soudee devant lui) sans partir si
+	-- loin qu'on ne lise plus le geste.
+	PULL_CAM_FORWARD = 9,
+	-- Decalage LATERAL. Le SIGNE decide du cote, et il ne se DEDUIT pas : si la camera se pose du mauvais cote,
+	-- mettre -6. C'est de la famille des sens qu'on ne tranche qu'a l'ecran.
+	PULL_CAM_SIDE = 6,
+	PULL_CAM_HEIGHT = 3.2, -- hauteur de l'oeil, en studs
+	PULL_CAM_LOOK_HEIGHT = 2.2, -- hauteur du point VISE sur le joueur (vers le torse, pas les pieds)
+	-- Duree de l'arrivee et du retour. L'arrivee part de la vue de jeu EXACTE et le retour y revient : aucun saut
+	-- ni au debut ni a la fin.
+	PULL_CAM_IN_TIME = 0.7,
+	PULL_CAM_OUT_TIME = 0.55,
+	-- RECUL DE CHAMP pendant le tirage, en degres ajoutes. Positif = la vue s'ELARGIT, donc le sujet parait
+	-- s'eloigner : c'est le "recul" lent demande. Il se pose par la meme valeur unique que le recul de la
+	-- revelation (voir applyCameraRig), sinon les deux s'ecraseraient a tour de role.
+	PULL_CAM_FOV = 12,
+
 	DRIVE_ZOOM = 4,
 
 
@@ -375,7 +397,9 @@ return {
 	-- Les roues tournent EN CODE, pas par animation : une animation joue a vitesse fixe, donc la roue patinerait
 	-- des que le joueur change d'allure. Ici l'angle vient de la distance REELLEMENT parcourue, elle colle au sol.
 	-- Corollaire : ces joints ne doivent etre cles dans AUCUNE animation, sinon deux ecrivains sur le meme joint.
-	WHEEL_MOTORS = { "BackWheel", "FrontWheel" },
+	-- NOMS DES MOTOR6D, cherches PARTOUT dans le modele et pas seulement sous la RootPart : dans le rig, chaque
+	-- joint est range sous SA roue. Une recherche etroite ne trouvait donc rien -- et ne disait rien.
+	WHEEL_MOTORS = { "WheelBackMotor6D", "WheelFrontMotor6D" },
 	-- Sens de rotation. Si les roues tournent a l'envers, mettre -1. Se voit a l'ecran, ne se deduit pas.
 	WHEEL_DIRECTION = 1,
 	-- AXE de rotation dans le repere du joint : "X", "Y" ou "Z". Depend de la facon dont le rig a ete monte, donc
