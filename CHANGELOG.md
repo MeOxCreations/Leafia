@@ -2185,6 +2185,35 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.358 — Le rideau s'en va derriere un VOLET BLANC
+
+Le fondu de sortie etait moche : chaque element du rideau -- la tuile, la feuille, les textes -- s'effacait en
+meme temps mais pas au meme rythme, et ca se lisait comme un bug.
+
+Un aplat BLANC balaie maintenant l'ecran, le rideau est DETRUIT pendant qu'il couvre, puis le blanc s'en va en
+balayant dans l'autre sens et le jeu apparait. On ne voit donc plus rien partir : il n'y a plus rien a voir.
+
+### On construit la sequence, on n'anime pas l'Offset
+
+Le sens d'un `UIGradient.Offset` est imprevisible -- deja au journal, et deja paye sur cet ecran. Les TEMPS d'une
+NumberSequence, eux, sont deterministes : 0 est le debut du degrade, 1 sa fin. En posant les points soi-meme, on
+sait exactement ce qu'on fabrique.
+
+Une valeur `edge` decrit jusqu'ou le blanc s'etend. Le MEME constructeur sert aux deux moities du mouvement : on
+la fait monter pour couvrir, puis redescendre pour decouvrir -- et cette descente EST le balayage inverse, sans
+une ligne de plus.
+
+### Le volet est CONDAMNE D'AVANCE
+
+Un aplat blanc plein cadre est la pire chose a laisser derriere soi : il cache le jeu entier et le joueur n'a
+aucun moyen de s'en debarrasser. Sa destruction est donc programmee AVANT meme qu'il soit anime. Si une seule
+ligne du balayage echoue -- ou si le sens est faux -- il part quand meme.
+
+C'est ce qui rend l'idee sans danger : le pire cas devient "le balayage part du mauvais cote", pas "le jeu est
+masque pour toute la session".
+
+Le sens reste un reglage (`WIPE_ROTATION`, 0 ou 180) parce qu'il ne se devine pas.
+
 ## 0.0.357 — Le coup de corde part de l'ANIMATION, plus d'un delai devine
 
 Le son du tirage arrivait en retard. Cause : il partait du CLIC, alors que le bras ne part en arriere qu'un

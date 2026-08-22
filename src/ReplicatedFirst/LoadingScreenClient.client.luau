@@ -207,6 +207,23 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- le rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
 	local MIN_ARRIVAL = 10
 
+	-- ===== VOLET DE SORTIE =====
+	-- Un aplat BLANC balaie l'ecran, on detruit le rideau PENDANT qu'il couvre, puis le blanc s'en va en balayant
+	-- dans l'autre sens et le jeu apparait.
+	--
+	-- POURQUOI PAS UN SIMPLE FONDU. En fondant, chaque element du rideau disparait a sa maniere : la tuile, la
+	-- feuille et les textes s'effacent en meme temps mais pas au meme rythme, et ca se lit comme un bug. Sous le
+	-- volet, on ne voit RIEN partir -- le rideau est deja detruit quand le blanc se retire.
+	local WIPE_COLOR = Color3.fromRGB(255, 255, 255)
+	local WIPE_COVER_TIME = 0.3 -- duree pour recouvrir
+	local WIPE_HOLD = 0.06 -- temps couvert, pendant lequel on detruit le rideau
+	local WIPE_REVEAL_TIME = 0.45 -- duree pour s'en aller. Plus lent que l'arrivee : on decouvre le jeu, on savoure
+	local WIPE_SOFT = 0.18 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
+	-- SENS DU BALAYAGE, en degres. 0 = de gauche a droite, 180 = l'inverse.
+	-- Il ne se DEDUIT pas -- deja au journal. Mais ici il n'y a AUCUN risque a se tromper : le volet est detruit a
+	-- la fin quoi qu'il arrive, donc au pire le balayage part du mauvais cote, il ne bloque jamais le jeu.
+	local WIPE_ROTATION = 0
+
 	local sg = Instance.new("ScreenGui")
 	sg.Name = "LeafiaCurtain"
 	sg.ScreenInsets = Enum.ScreenInsets.None
@@ -462,14 +479,81 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
 	end)
 
-	-- Fondu de TOUT le rideau d'un coup (le CanvasGroup fond son contenu avec lui) puis destruction.
-	local fade = TweenService:Create(
-		curtain,
-		TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-		{ GroupTransparency = 1 }
-	)
-	fade:Play()
-	fade.Completed:Wait()
+	-- ===== VOLET DE SORTIE =====
+	local wipeGui = Instance.new("ScreenGui")
+	wipeGui.Name = "LeafiaWipe"
+	wipeGui.ScreenInsets = Enum.ScreenInsets.None
+	wipeGui.ResetOnSpawn = false
+	wipeGui.DisplayOrder = 2000 -- AU-DESSUS du rideau : c'est lui qui doit le cacher, pas l'inverse
+	wipeGui.Parent = player:WaitForChild("PlayerGui")
+
+	local wipe = Instance.new("Frame")
+	wipe.BackgroundColor3 = WIPE_COLOR
+	wipe.BorderSizePixel = 0
+	wipe.Size = UDim2.fromScale(1, 1)
+	wipe.Parent = wipeGui
+
+	local wipeGrad = Instance.new("UIGradient")
+	wipeGrad.Rotation = WIPE_ROTATION
+	wipeGrad.Parent = wipe
+
+	-- CONDAMNE D'AVANCE. Un aplat blanc plein cadre est la pire chose a laisser derriere soi : il cache le jeu
+	-- entier et le joueur n'a aucun moyen de s'en debarrasser. On programme donc sa destruction MAINTENANT, avant
+	-- meme de l'animer -- si une seule ligne du balayage echoue, il part quand meme.
+	-- La marge est large : elle ne sert jamais quand tout va bien, et elle coute une tache endormie.
+	task.delay(WIPE_COVER_TIME + WIPE_HOLD + WIPE_REVEAL_TIME + 3, function()
+		wipeGui:Destroy()
+	end)
+
+	-- ON CONSTRUIT LA SEQUENCE, ON N'ANIME PAS L'OFFSET.
+	--
+	-- Le sens d'un `UIGradient.Offset` est imprevisible (deja au journal, et deja paye sur cet ecran). Les TEMPS
+	-- d'une NumberSequence, eux, sont deterministes : 0 est le debut du degrade, 1 sa fin. En posant les points
+	-- soi-meme, on sait exactement ce qu'on fabrique.
+	--
+	-- `edge` va de 0 a 1 et decrit jusqu'ou le blanc s'etend. Le meme constructeur sert aux deux moitiés du
+	-- mouvement : on le fait monter pour couvrir, puis redescendre pour decouvrir -- et cette descente EST le
+	-- balayage inverse, sans une ligne de plus.
+	local function wipeAt(edge: number)
+		if edge >= 1 then
+			wipeGrad.Transparency = NumberSequence.new(0) -- tout blanc
+			return
+		end
+		if edge <= 0 then
+			wipeGrad.Transparency = NumberSequence.new(1) -- rien
+			return
+		end
+		-- Les temps doivent croitre STRICTEMENT : on force un ecart minimal, sinon Roblox refuse la sequence des
+		-- que le bord touche un bord.
+		local b = math.clamp(edge, 0.002, 0.998)
+		local a = math.clamp(b - WIPE_SOFT, 0.001, b - 0.001)
+		wipeGrad.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(a, 0),
+			NumberSequenceKeypoint.new(b, 1),
+			NumberSequenceKeypoint.new(1, 1),
+		})
+	end
+
+	local function sweep(from: number, to: number, duration: number)
+		local t0 = os.clock()
+		while true do
+			local t = math.clamp((os.clock() - t0) / duration, 0, 1)
+			-- Ease in-out : le bord part doucement, file au milieu, se pose. Lineaire, un balayage a l'air
+			-- mecanique -- on voit une barre traverser, pas un volet.
+			local eased = t * t * (3 - 2 * t)
+			wipeAt(from + (to - from) * eased)
+			if t >= 1 then
+				return
+			end
+			RunService.RenderStepped:Wait()
+		end
+	end
+
+	wipeAt(0)
+	sweep(0, 1, WIPE_COVER_TIME)
+
+	-- COUVERT : on demonte le rideau pendant qu'on ne voit rien. C'est tout l'interet du volet.
 	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
 	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
 	if tileConn then
@@ -477,6 +561,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		tileConn = nil
 	end
 	sg:Destroy()
+	task.wait(WIPE_HOLD)
+
+	-- ET LE JEU APPARAIT. Le meme bord repart en arriere : le volet se retire par ou il est venu.
+	sweep(1, 0, WIPE_REVEAL_TIME)
+	-- DETRUIT QUOI QU'IL ARRIVE. C'est la garantie qui rend ce volet sans danger : meme si le balayage partait du
+	-- mauvais cote, ou si une sequence etait refusee, on ne peut pas se retrouver avec un aplat blanc collé sur
+	-- le jeu pour toute la session.
+	wipeGui:Destroy()
 	player:SetAttribute("LeafiaLoadingDone", true) -- meme signal que l'ecran principal (l'UI sait que le rideau est parti)
 	return
 end
