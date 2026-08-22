@@ -288,17 +288,32 @@ return {
 	-- MORT : rien ne bouge a l'ecran sauf le personnage, et l'oeil decroche. Un recul lent et continu donne au
 	-- moment son ampleur, sans qu'on sache dire d'ou ca vient.
 	--
-	-- Distances DEVANT le joueur, en studs. On part pres (le geste se lit) et on finit large (la scene existe).
-	PULL_CAM_FORWARD_START = 10,
-	PULL_CAM_FORWARD = 20,
-	-- Temps pour aller de l'une a l'autre. Volontairement LONG : le recul ne doit jamais se voir bouger, il doit
-	-- juste avoir bouge. Plus court, ca se lit comme un zoom et ca attire l'attention sur la camera.
-	PULL_CAM_DRIFT_TIME = 7,
-	-- A-COUP a chaque coup de corde : la camera se rapproche d'un coup, puis repart. C'est la seule facon de faire
-	-- SENTIR le tirage ici -- les secousses de CameraEffects passent par Humanoid.CameraOffset, que Roblox ignore
-	-- purement et simplement quand la camera est Scriptable (deja au journal).
-	PULL_CAM_KICK = 3, -- de combien on se rapproche, en studs
-	PULL_CAM_KICK_DECAY = 3.2, -- vitesse a laquelle l'a-coup s'efface. BAS = il traine
+	-- Distances DEVANT le joueur, en studs. On part pres (le geste se lit) et on finit un peu plus large.
+	-- Descendues de 10 -> 20 : a vingt studs le joueur devenait une silhouette et on ne voyait plus la corde.
+	PULL_CAM_FORWARD_START = 7,
+	PULL_CAM_FORWARD = 11,
+	-- Temps pour aller de l'une a l'autre. Le recul ne doit pas se voir BOUGER, mais il ne doit pas non plus
+	-- durer toute la scene : a 7 secondes il etait encore en train de reculer quand le moteur partait.
+	PULL_CAM_DRIFT_TIME = 4,
+	-- SECOUSSE a chaque coup de corde. C'est la seule facon de faire sentir le tirage ici : les secousses de
+	-- CameraEffects passent par Humanoid.CameraOffset, que Roblox ignore purement et simplement quand la camera
+	-- est Scriptable (deja au journal).
+	--
+	-- UNE SECOUSSE ET PAS UN A-COUP. Rapprocher la camera d'un coup puis la faire repartir donnait un "TAC" sec,
+	-- deux fois de suite, qu'on remarquait plus que le geste. Une secousse AMORTIE oscille et s'eteint toute
+	-- seule : on la ressent sans pouvoir dire ce qui a bouge, ce qui est exactement le but.
+	--
+	-- Amplitude en studs. C'est un TREMBLEMENT, pas un deplacement : au-dela de ~0.5 ca devient un mouvement de
+	-- camera et ca reprend l'air d'un effet.
+	PULL_CAM_SHAKE = 0.35,
+	-- Vitesse d'extinction. BAS = la secousse traine. A 4, il en reste un quart apres un tiers de seconde.
+	PULL_CAM_SHAKE_DECAY = 4,
+	-- Frequence de l'oscillation, en cycles par seconde. HAUT = tremblement nerveux, BAS = balancement.
+	-- Autour de 14 on est sur un choc mecanique ; en dessous de 8 ca ressemble a un bateau.
+	PULL_CAM_SHAKE_FREQ = 14,
+	-- INTENSITE DU VIGNETTAGE pendant la scene de demarrage, de 0 a 1. Il est eteint le reste du temps : un
+	-- vignettage permanent ne dit plus rien au bout d'une minute, c'est son ARRIVEE qui resserre l'attention.
+	PULL_CAM_VIGNETTE = 1,
 	-- Decalage LATERAL. Le SIGNE decide du cote, et il ne se DEDUIT pas : si la camera se pose du mauvais cote,
 	-- mettre -6. C'est de la famille des sens qu'on ne tranche qu'a l'ecran.
 	PULL_CAM_SIDE = 6,
@@ -309,8 +324,14 @@ return {
 	PULL_CAM_LOOK_HEIGHT = 2.2, -- hauteur du point VISE sur le joueur (vers le torse, pas les pieds)
 	-- Duree de l'arrivee et du retour. L'arrivee part de la vue de jeu EXACTE et le retour y revient : aucun saut
 	-- ni au debut ni a la fin.
-	PULL_CAM_IN_TIME = 0.7,
-	PULL_CAM_OUT_TIME = 0.55,
+	-- Raccourcies : a 0.7 s la camera GLISSAIT, et une glissade lente se lit comme un ralenti, pas comme un
+	-- mouvement de camera. Court + elastique (voir PULL_CAM_EASING) donne le nerf sans donner la brusquerie.
+	PULL_CAM_IN_TIME = 0.42,
+	PULL_CAM_OUT_TIME = 0.32,
+	-- COURBE de l'arrivee et du retour. `Back` DEPASSE legerement la cible puis revient : c'est ce depassement
+	-- qui donne le rebond "slime" du reste de l'interface, au lieu d'un glissement mou qui s'arrete pile.
+	-- Mettre `Quad` pour un mouvement sage et sans rebond.
+	PULL_CAM_EASING = Enum.EasingStyle.Back,
 	-- RECUL DE CHAMP pendant le tirage, en degres ajoutes. Positif = la vue s'ELARGIT, donc le sujet parait
 	-- s'eloigner : c'est le "recul" lent demande. Il se pose par la meme valeur unique que le recul de la
 	-- revelation (voir applyCameraRig), sinon les deux s'ecraseraient a tour de role.

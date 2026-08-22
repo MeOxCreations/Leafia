@@ -36,7 +36,11 @@ local FADE_TIME = 0.6
 local DISPLAY_ORDER = -10
 
 local image: ImageLabel? = nil
-local strength = 1 -- multiplicateur courant, 0 = eteint, 1 = pleine force
+-- ETEINT PAR DEFAUT. Un vignettage permanent finit par ne plus rien dire : l'oeil s'y habitue en une minute, et
+-- il ne reste qu'une image plus sombre. Il ne vaut que s'il ARRIVE -- c'est le changement qui resserre
+-- l'attention, pas la valeur. On l'allume donc pour un MOMENT precis (le demarrage de la tondeuse) et on
+-- l'eteint apres.
+local strength = 0
 local tween: Tween? = nil
 
 local function transparencyFor(amount: number): number

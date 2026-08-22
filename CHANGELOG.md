@@ -2185,6 +2185,50 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.345 — Le vignettage ne sert QUE le demarrage, et la camera devient elastique
+
+### Le vignettage etait permanent, il ne devait pas l'etre
+
+Il s'allumait au spawn et ne s'eteignait jamais. Un vignettage permanent finit par ne plus rien dire : l'oeil s'y
+habitue en une minute, et il ne reste qu'une image plus sombre. Il ne vaut que s'il ARRIVE -- c'est le CHANGEMENT
+qui resserre l'attention, pas la valeur.
+
+Il est donc eteint par defaut, et la scene de demarrage l'allume puis l'eteint (`PULL_CAM_VIGNETTE`).
+
+### L'a-coup devient une SECOUSSE
+
+Rapprocher la camera d'un coup puis la faire repartir donnait un "TAC" sec, deux fois de suite, qu'on remarquait
+plus que le geste. Une secousse AMORTIE oscille et s'eteint toute seule : on la ressent sans pouvoir dire ce qui
+a bouge.
+
+Trois details qui font la difference entre une secousse et un defaut d'affichage :
+
+- **Trois frequences differentes, une par axe.** A frequence egale les trois montent et descendent ensemble, et
+  la camera vibre le long d'une DROITE.
+- **Seule la POSITION de l'oeil tremble**, pas le point vise : la camera reste braquee sur le joueur. Secouer la
+  cible aussi ferait tanguer toute l'image.
+- **Elle est calee a zero** quand elle devient minuscule. Un amortissement exponentiel n'atteint jamais sa cible,
+  et la camera tremblerait d'un millieme de stud pour toujours.
+
+Le plan memorise pour le retour est le plan NON SECOUE : sinon le retour partirait d'une position de tremblement
+attrapee au hasard.
+
+### La transition : plus pres, plus vive, elastique
+
+- `PULL_CAM_FORWARD_START` / `PULL_CAM_FORWARD` : 10 -> 20 devient 7 -> 11. A vingt studs le joueur devenait une
+  silhouette et on ne voyait plus la corde.
+- `PULL_CAM_DRIFT_TIME` : 7 -> 4. A sept secondes, le recul etait encore en cours quand le moteur partait.
+- `PULL_CAM_IN_TIME` : 0.7 -> 0.42, `PULL_CAM_OUT_TIME` : 0.55 -> 0.32. Une glissade lente se lit comme un
+  ralenti, pas comme un mouvement de camera.
+- `PULL_CAM_EASING` : `Back`. La courbe DEPASSE legerement la cible puis revient -- c'est ce depassement qui
+  donne le rebond du reste de l'interface.
+
+La courbe est empruntee a `TweenService:GetValue` au lieu d'etre ecrite a la main : on obtient un rebond sans le
+coder, et on en change depuis la config.
+
+Le recul de fond, lui, garde une courbe SAGE. C'est l'arrivee qui a le droit d'etre elastique, pas le mouvement
+de fond : un recul qui depasse puis revient se verrait immediatement.
+
 ## 0.0.344 — Le rideau de chargement revient en CODE
 
 Le modele Studio du 0.0.339 est abandonne. Raison : Rojo ne synchronise pas StarterGui, donc la ScreenGui

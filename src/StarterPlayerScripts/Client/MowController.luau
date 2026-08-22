@@ -14,6 +14,7 @@
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 
@@ -22,6 +23,7 @@ local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
+local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 
 local MowController = {}
@@ -92,8 +94,10 @@ local pullSavedFocus: Vector3? = nil -- (camera.Focus - HRP)
 local pullSavedCam: Vector3? = nil -- (camera.Position - camera.Focus) : l'angle ET le zoom reels
 -- RECUL CONTINU. Instant ou la scene de demarrage a commence : le plan s'ecarte a partir de la.
 local pullStartedAt = 0
--- A-COUP du coup de corde, en studs de RAPPROCHEMENT. Monte d'un coup au tirage, redescend tout seul.
-local pullKick = 0
+-- SECOUSSE du coup de corde. Amplitude COURANTE en studs : elle monte d'un coup au tirage et s'eteint toute
+-- seule. Une secousse amortie plutot qu'un a-coup : rapprocher la camera puis la faire repartir donnait un "TAC"
+-- sec qu'on remarquait plus que le geste lui-meme.
+local pullShake = 0
 -- Le plan au moment ou l'on lache : le retour part de LA, pas de la cible theorique.
 local pullExitFocus = Vector3.zero
 local pullExitCam = Vector3.zero
@@ -148,13 +152,12 @@ local function pullShotOffsets(hrp: BasePart): (Vector3, Vector3)
 	-- PULL_CAM_DRIFT_TIME. Rien d'autre a brancher : ce plan est recalcule a chaque image, il suffit donc de
 	-- faire dependre la distance du TEMPS ecoule.
 	local drift = math.clamp((os.clock() - pullStartedAt) / MowConfigs.PULL_CAM_DRIFT_TIME, 0, 1)
-	-- Ease out : le gros du recul se fait tot, puis ca se pose. Lineaire, on sentirait la camera "tirer" jusqu'au
-	-- bout, ce qui se remarque.
+	-- Ease out SIMPLE ici, sans rebond : le recul est un fond de scene, il ne doit pas se faire remarquer. C'est
+	-- l'ARRIVEE qui a le droit d'etre elastique, pas le mouvement de fond -- un recul qui depasse puis revient se
+	-- verrait immediatement.
 	drift = 1 - (1 - drift) * (1 - drift)
 	local forward = MowConfigs.PULL_CAM_FORWARD_START
 		+ (MowConfigs.PULL_CAM_FORWARD - MowConfigs.PULL_CAM_FORWARD_START) * drift
-	-- L'A-COUP RAPPROCHE, il ne recule pas : au moment ou le joueur tire, on se jette sur lui.
-	forward = math.max(forward - pullKick, 1)
 	local focusOffset = Vector3.new(0, MowConfigs.PULL_CAM_LOOK_HEIGHT, 0)
 	local eye = flat * forward + side * MowConfigs.PULL_CAM_SIDE + UP * MowConfigs.PULL_CAM_HEIGHT
 	return focusOffset, eye - focusOffset
@@ -178,13 +181,16 @@ local function stepPullCam(dt: number)
 		end
 		return
 	end
-	-- L'a-coup s'efface tout seul. Amorti ICI, dans la boucle, et pas dans le calcul du plan : un amortissement
-	-- range dans une fonction de CALCUL depend du nombre de fois qu'on l'appelle, pas du temps -- et le jour ou
-	-- un deuxieme appelant arrive, l'effet fond deux fois plus vite sans qu'on comprenne pourquoi.
-	if pullKick > 0 then
-		pullKick = math.max(0, pullKick - pullKick * math.min(1, MowConfigs.PULL_CAM_KICK_DECAY * dt))
-		if pullKick < 0.02 then
-			pullKick = 0
+	-- La secousse s'eteint toute seule. Amortie ICI, dans la boucle, et pas dans le calcul du plan : un
+	-- amortissement range dans une fonction de CALCUL depend du nombre de fois qu'on l'appelle, pas du temps --
+	-- et le jour ou un deuxieme appelant arrive, l'effet s'eteint deux fois plus vite sans qu'on comprenne
+	-- pourquoi.
+	if pullShake > 0 then
+		pullShake -= pullShake * math.min(1, MowConfigs.PULL_CAM_SHAKE_DECAY * dt)
+		-- On CLE a zero : un amortissement exponentiel n'atteint jamais sa cible, et la camera tremblerait d'un
+		-- millieme de stud pour toujours.
+		if pullShake < 0.005 then
+			pullShake = 0
 		end
 	end
 	local hrp = root :: BasePart
@@ -194,7 +200,10 @@ local function stepPullCam(dt: number)
 	if pullPhase == "in" then
 		pullElapsed += dt
 		local t = math.clamp(pullElapsed / MowConfigs.PULL_CAM_IN_TIME, 0, 1)
-		local a = 1 - (1 - t) * (1 - t) -- ease out : part franc, se pose doucement
+		-- ON EMPRUNTE LA COURBE A TweenService plutot que d'ecrire l'interpolation a la main : `GetValue` rend
+		-- l'alpha d'un style d'easing, donc on obtient un rebond elastique sans avoir a le coder -- et on peut en
+		-- changer depuis la config sans toucher a ce fichier.
+		local a = TweenService:GetValue(t, MowConfigs.PULL_CAM_EASING, Enum.EasingDirection.Out)
 		focusOffset = savedFocus:Lerp(shotFocus, a)
 		camOffset = savedCam:Lerp(shotCam, a)
 		if t >= 1 then
@@ -203,7 +212,7 @@ local function stepPullCam(dt: number)
 	elseif pullPhase == "out" then
 		pullElapsed += dt
 		local t = math.clamp(pullElapsed / MowConfigs.PULL_CAM_OUT_TIME, 0, 1)
-		local a = 1 - (1 - t) * (1 - t)
+		local a = TweenService:GetValue(t, MowConfigs.PULL_CAM_EASING, Enum.EasingDirection.Out)
 		-- On revient vers l'etat EXACT de la camera de jeu capture a l'entree. Viser une valeur approchee laisse
 		-- un micro-saut a la reprise : sub-perceptible a la lecture, tres visible a l'ecran.
 		focusOffset = pullExitFocus:Lerp(savedFocus, a)
@@ -219,7 +228,20 @@ local function stepPullCam(dt: number)
 
 	-- LE FOCUS EST RE-ANCRE SUR LA POSITION VIVE DU JOUEUR A CHAQUE IMAGE. Une CFrame calculee une fois laisserait
 	-- la camera plantee des que le sujet bouge, et le retour finirait a cote de lui.
+	-- On memorise le plan NON SECOUE : le retour doit partir d'une vue propre, pas d'une position de tremblement
+	-- attrapee au hasard.
 	pullLastFocus, pullLastCam = focusOffset, camOffset
+
+	-- LA SECOUSSE S'AJOUTE EN DERNIER, et seulement a la POSITION de l'oeil : le point vise ne bouge pas, donc la
+	-- camera tremble en restant braquee sur le joueur. Secouer la cible aussi ferait tanguer toute l'image et
+	-- donnerait mal au coeur.
+	-- TROIS FREQUENCES DIFFERENTES, une par axe. A frequence egale, les trois axes montent et descendent ensemble
+	-- et la camera vibre le long d'une DROITE, ce qui se lit comme un defaut d'affichage et pas comme un choc.
+	if pullShake > 0 then
+		local t = os.clock() * MowConfigs.PULL_CAM_SHAKE_FREQ
+		camOffset += Vector3.new(math.sin(t), math.sin(t * 1.7 + 1.3), math.sin(t * 2.3 + 2.1)) * pullShake
+	end
+
 	local focus = hrp.Position + focusOffset
 	camera.CameraType = Enum.CameraType.Scriptable
 	camera.CFrame = CFrame.lookAt(focus + camOffset, focus)
@@ -251,7 +273,10 @@ local function setPullCam(on: boolean)
 		pullPhase = "in"
 		pullElapsed = 0
 		pullStartedAt = os.clock() -- le recul continu part d'ici
-		pullKick = 0
+		pullShake = 0
+		-- LE VIGNETTAGE N'EXISTE QUE POUR CE MOMENT. Il est eteint le reste du temps : un vignettage permanent ne
+		-- dit plus rien au bout d'une minute, c'est son ARRIVEE qui resserre l'attention.
+		Vignette.setStrength(MowConfigs.PULL_CAM_VIGNETTE)
 		if not pullCamBound then
 			pullCamBound = true
 			RunService:BindToRenderStep(PULL_CAM_BIND, Enum.RenderPriority.Camera.Value, stepPullCam)
@@ -260,6 +285,8 @@ local function setPullCam(on: boolean)
 		-- LE RETOUR PART DU PLAN COURANT, pas de la cible theorique : on peut lacher la machine en pleine
 		-- arrivee, et repartir d'ailleurs ferait un saut au moment meme ou l'on veut de la douceur.
 		pullExitFocus, pullExitCam = pullLastFocus, pullLastCam
+		pullShake = 0
+		Vignette.setStrength(0)
 		pullPhase = "out"
 		pullElapsed = 0
 	end
@@ -804,10 +831,10 @@ local function setPullBound(active: boolean)
 		ContextActionService:BindAction(MowConfigs.START_ACTION, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin and pullRemote then
 				pullRemote:FireServer()
-				-- A-COUP DE CAMERA sur le coup de corde. Pose ICI, au moment de l'appui, et pas en attendant une
-				-- reponse du serveur : un retour qui arrive apres un aller-retour reseau ne se ressent plus comme
-				-- la consequence de son propre geste.
-				pullKick = MowConfigs.PULL_CAM_KICK
+				-- SECOUSSE DE CAMERA sur le coup de corde. Posee ICI, au moment de l'appui, et pas en attendant
+				-- une reponse du serveur : un retour qui arrive apres un aller-retour reseau ne se ressent plus
+				-- comme la consequence de son propre geste.
+				pullShake = MowConfigs.PULL_CAM_SHAKE
 			end
 			return Enum.ContextActionResult.Pass
 		end, true, Enum.UserInputType.MouseButton1)
