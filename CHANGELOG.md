@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.374 — L'herbe tondue descend encore
+
+`MOWN_SCALE_Y` : 0.6 -> 0.35. L'emprise au sol ne bouge pas, donc toujours aucun trou.
+
+On approche de la limite de ce reglage. Plus bas, on ne raccourcit plus les brins, on les ECRASE : le maillage
+d'herbe rase se comprime et cesse de ressembler a de l'herbe.
+
+Si c'est encore trop haut, la suite ne se joue plus dans le code mais dans BLENDER -- il faut modeler `GrassCut`
+plus court et remettre ce chiffre vers 1. Le code peut raccourcir une forme, il ne peut pas en inventer une autre.
+
 ## 0.0.373 — Hauteur et emprise de l'herbe tondue deviennent deux reglages
 
 L'herbe tondue etait trop haute. Mais la baisser avec le reglage unique reintroduisait les TROUS entre les
