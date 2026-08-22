@@ -2185,6 +2185,31 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.366 — Le premier conseil s'ecrivait dans la mauvaise police
+
+Une police custom se TELECHARGE. Tant qu'elle n'est pas arrivee, Roblox rend le texte avec une police de SECOURS.
+
+Le rideau s'affiche dans les toutes premieres millisecondes de la session, donc le premier conseil partait avant
+Montserrat. Les suivants, eux, tombaient juste -- d'ou l'impression que seul le premier etait casse.
+
+### Le vrai degat n'etait pas la police, c'etait la MESURE
+
+Chaque lettre est un objet, place a la main d'apres sa largeur mesuree. Cette largeur etait donc celle de la
+police de SECOURS : meme une fois Montserrat arrivee et le texte redessine correctement, l'espacement restait
+faux, calcule sur des largeurs qui n'etaient plus les bonnes.
+
+### Comment on attend une police
+
+Il n'existe pas d'evenement "police chargee". On mesure donc une chaine TEMOIN jusqu'a ce que sa largeur CESSE DE
+CHANGER : deux mesures identiques signifient que la vraie police a remplace la secours et que plus rien ne
+bougera.
+
+Le temoin est cree des la construction du rideau, pour que le telechargement demarre le plus tot possible, et il
+SURVIT au menage entre deux conseils -- le detruire relancerait l'attente a chaque fois.
+
+Plafond de 5 secondes : un conseil dans la mauvaise police vaut mieux qu'un bandeau vide. Ce n'est pas un blocage,
+c'est une politesse.
+
 ## 0.0.365 — L'herbe tondue RETRECIT au lieu d'etre aplatie
 
 Elle montait beaucoup trop haut. Correction d'une hypothese fausse posee au 0.0.363.
