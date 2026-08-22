@@ -21,6 +21,10 @@
 --
 -- ATTENTION : Rojo ne synchronise PAS le Workspace. Ce joint doit etre refait dans CHAQUE place (Leafia ET le
 -- tuto), sinon Papi tiendra sa canne dans l'une et pas dans l'autre.
+--
+-- NE MARCHE QUE SUR UN RIG EN PARTS (R15 et compagnie). Sur un mesh SKINNE, les membres sont des Bone, qui
+-- heritent d'Attachment et pas de BasePart : un Motor6D ne peut pas s'y accrocher. Le script le detecte et dit
+-- quoi faire a la place.
 
 local PAPI_NAME = "Papi"
 local CANE_NAME = "Canne"
@@ -34,6 +38,32 @@ if not (papi and papi:IsA("Model")) then
 end
 
 local hand = papi:FindFirstChild(HAND_NAME, true)
+
+-- CAS DU RIG SKINNE : la "main" est un BONE, pas une part.
+--
+-- Un Motor6D exige DEUX BasePart. Un Bone n'en est pas un : il herite d'Attachment (verifie dans la doc, pas
+-- suppose). Ce script ne peut donc RIEN faire sur un personnage skinne, et il vaut mieux le dire que de laisser
+-- croire a un nom mal ecrit.
+--
+-- CE QU'IL FAUT FAIRE A LA PLACE, du meilleur au moins bon :
+--   1. INTEGRER LA CANNE AU MESH, dans Blender, et la peser a 100 % sur l'os de la main. Elle devient alors une
+--      partie du personnage : elle suit l'animation toute seule, sans une ligne de code et sans joint. C'est la
+--      bonne reponse pour un accessoire qui ne se lache jamais.
+--   2. La faire SUIVRE EN JEU, par un script qui recopie chaque image `bone.TransformedWorldCFrame` (la seule
+--      propriete qui donne la position ANIMEE d'un os) dans la CFrame de la canne. A reserver au cas ou elle doit
+--      pouvoir etre lachee ou changer de main.
+--
+-- Dans les deux cas, la canne n'apparaitra PAS comme une piste separee dans l'editeur d'animation : sur un rig
+-- skinne, l'editeur anime les OS du mesh, pas les objets poses a cote.
+if hand and hand:IsA("Bone") then
+	warn(
+		`[Canne] "{HAND_NAME}" est un BONE, pas une part : {papi:GetFullName()} est un mesh SKINNE. `
+			.. `Un Motor6D exige deux BasePart, ce script ne peut donc rien faire ici. `
+			.. `Integre la canne au mesh dans Blender et pese-la sur l'os de la main : elle suivra toute seule.`
+	)
+	return
+end
+
 if not (hand and hand:IsA("BasePart")) then
 	warn(`[Canne] Part "{HAND_NAME}" introuvable sous {papi:GetFullName()}.`)
 	return
