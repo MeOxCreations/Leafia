@@ -63,6 +63,11 @@ local firstPerson = false
 local FP_LERP_SPEED = 4.5
 local fpAmount = 0 -- 0 = vue de dos, 1 = dans les yeux. Lu aussi par l'appelant, pour effacer le corps AU MEME rythme.
 local fpBase: number? = nil -- distance du joueur AVANT d'entrer : c'est la qu'on revient
+-- ECART MINIMAL garde entre l'oeil et la tete, en studs. A ZERO, Roblox considere qu'on est en vue subjective et
+-- VERROUILLE la souris au centre a chaque image -- impossible de lui reprendre, meme en ecrivant apres lui
+-- (verifie a l'ecran). Laisser un cheveu d'ecart le fait renoncer, et la souris redevient libre.
+-- Sert donc uniquement a RENDRE LE CURSEUR ; le reste du temps il vaut zero et rien ne change.
+local fpGap = 0
 
 -- ===== Secousse (impact) =====
 -- Ecrite par la tache de Shake, lue par la boucle. Revient a zero quand la secousse est finie.
@@ -133,6 +138,13 @@ end
 --- effacer le corps d'un coup pendant que la camera glisse encore montrerait un trou a la place du personnage.
 function CameraEffects.GetFirstPersonAmount(): number
 	return fpAmount
+end
+
+--- Ecart minimal entre l'oeil et la tete, en studs, pendant la vue subjective. Zero = colle a la tete, et Roblox
+--- verrouille alors la souris au centre. Une valeur non nulle le fait renoncer : c'est la SEULE facon de rendre le
+--- curseur sans quitter la vue subjective (verifie a l'ecran, l'ecriture de MouseBehavior apres lui ne suffit pas).
+function CameraEffects.SetFirstPersonGap(studs: number)
+	fpGap = math.max(studs, 0)
 end
 
 -- A-coup de FOV : s'ajoute au fond puis s'efface. Negatif = la vue se resserre.
@@ -231,7 +243,10 @@ function CameraEffects.init()
 				-- Le recul est remis a plat pour qu'en ressortant il reparte d'une distance FRAICHE.
 				zoomBase = nil
 				zoomBoost = 0
-				local d = (fpBase or 12) * (1 - fpAmount)
+				-- L'ECART PREND LE DESSUS quand il est demande, sans jamais faire RECULER la camera plus que le
+				-- glissement en cours : au debut du voyage la distance est encore grande, l'ecart ne doit pas s'y
+				-- ajouter.
+				local d = math.max((fpBase or 12) * (1 - fpAmount), math.min(fpGap, fpBase or 12))
 				player.CameraMinZoomDistance = d
 				player.CameraMaxZoomDistance = d
 			else

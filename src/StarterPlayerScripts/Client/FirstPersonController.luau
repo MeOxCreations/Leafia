@@ -44,6 +44,11 @@ local DOT_TRANSPARENCY = 0.25
 -- Contour sombre. Sans lui, un point blanc disparait sur un ciel clair ou une facade blanche -- et un reticule
 -- qu'on perd de vue est pire que pas de reticule.
 local DOT_OUTLINE = 1
+-- ECART pris pendant qu'on tient la touche du curseur. A zero, Roblox verrouille la souris au centre et refuse
+-- de la rendre : lui laisser un cheveu d'ecart est la seule facon de recuperer le curseur sans quitter la vue
+-- subjective. Assez petit pour que la vue ne bouge presque pas.
+-- SI LA SOURIS RESTE COLLEE AU CENTRE, c'est ce nombre qu'il faut monter -- le seuil exact appartient a Roblox.
+local FREE_CURSOR_GAP = 1.5
 local RENDER_BIND = "LeafiaFirstPerson"
 
 local available = game.PlaceId ~= PlacesConfig.MAIN
@@ -129,6 +134,10 @@ local function step()
 	-- CUSTOM (une ImageLabel qui suit la souris), et couper l'icone systeme ne l'aurait pas efface -- il serait
 	-- reste plante au centre de l'ecran par-dessus le point de visee. Ce module est le seul ecrivain des deux.
 	CursorController.setSuppressed(not free)
+	-- ON RECULE D'UN CHEVEU pour que Roblox cesse de verrouiller la souris. Ecrire MouseBehavior apres lui ne
+	-- suffit PAS : il repose la sienne et gagne (verifie a l'ecran). Tant que la camera est collee a la tete, la
+	-- souris lui appartient -- il faut donc ne plus y etre tout a fait.
+	CameraEffects.SetFirstPersonGap(if free then FREE_CURSOR_GAP else 0)
 	UserInputService.MouseBehavior = if free then Enum.MouseBehavior.Default else Enum.MouseBehavior.LockCenter
 end
 
@@ -153,6 +162,7 @@ local function setFirstPerson(on: boolean)
 	-- garder la souris verrouillee pendant que la vue recule serait desagreable.
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	CursorController.setSuppressed(false)
+	CameraEffects.SetFirstPersonGap(0)
 	local screen = gui
 	if screen then
 		screen.Enabled = false

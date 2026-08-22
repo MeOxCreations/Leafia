@@ -2185,6 +2185,30 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.337 — Alt rend vraiment la souris : on recule d'un cheveu
+
+Maintenir Alt ne rendait ni la souris ni le curseur. C'etait UN seul defaut, pas deux : le curseur custom
+REVENAIT bien, mais il suit la position de la souris -- et la souris etant verrouillee au centre, il restait
+plante sous le point de visee, indiscernable d'un curseur absent.
+
+### Ecrire MouseBehavior apres Roblox ne suffit pas
+
+C'etait le pari du 0.0.334, et l'ecran l'a tranche : tant que la camera est COLLEE a la tete, Roblox repose son
+verrouillage a chaque image et gagne, meme en ecrivant apres lui.
+
+La seule facon de recuperer la souris sans quitter la vue subjective est donc de ne plus y etre TOUT A FAIT.
+`CameraEffects.SetFirstPersonGap` laisse un ecart de 1.5 stud entre l'oeil et la tete tant que la touche est
+tenue : Roblox renonce, la souris redevient libre, et la vue ne bouge pratiquement pas.
+
+L'ecart ne peut jamais faire RECULER la camera plus que le glissement en cours : au debut du voyage la distance
+est encore grande, il ne doit pas s'y ajouter.
+
+### A verifier a l'ecran
+
+1.5 est un pari raisonnable, pas une certitude : le seuil exact a partir duquel Roblox cesse de considerer qu'on
+est en vue subjective lui appartient et n'est pas documente. Si la souris reste collee au centre, c'est
+`FREE_CURSOR_GAP` qu'il faut monter.
+
 ## 0.0.336 — On ne sort plus un taille-haie en poussant la tondeuse
 
 On pouvait tenir les deux a la fois : un outil qui flotte a cote d'un guidon.
