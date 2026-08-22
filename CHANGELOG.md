@@ -2185,6 +2185,63 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.339 — Le rideau de chargement se DESSINE DANS STUDIO
+
+Le rideau de changement de map n'est plus construit en code. Il CLONE une ScreenGui modele et se contente
+d'ANIMER ce qu'il y trouve. Le dessin appartient a l'editeur, le mouvement au code : changer une couleur, une
+image ou une police ne demande plus de toucher a ce fichier.
+
+### Ce qui est anime, s'il est trouve
+
+| Nom dans le modele | Ce que le code en fait |
+|---|---|
+| `Tile` | defile en diagonale, en lisant la taille de tuile POSEE dans Studio |
+| `Frame` > premiere `ImageLabel` | oscille, flotte, et SE REMPLIT comme une jauge |
+| `Banner` > son `UIGradient` | un reflet le balaie, avec une pause entre deux passages |
+| `TipsDescription` | les conseils defilent, en fondu |
+| `CanvasGroup` | c'est lui qui fond a la sortie, contenu compris |
+
+Chaque piece est FACULTATIVE. Le modele appartient a l'editeur : renommer ou supprimer un element doit eteindre
+son animation, pas casser le rideau.
+
+La taille de tuile est LUE et non reecrite : c'est un choix de dessin, il n'appartient pas au code.
+
+### Ou ranger le modele : ReplicatedFirst
+
+C'est le service replique AVANT tout le reste -- c'est sa raison d'etre -- et rien n'y est recopie
+automatiquement dans PlayerGui.
+
+StarterGui est TOLERE, mais Roblox y recopie tout dans PlayerGui A CHAQUE SPAWN. Un deuxieme rideau se collerait
+donc par-dessus le notre et resterait affiche pour toujours apres le respawn. Quand le modele est trouve la, le
+code desactive la copie locale pour que celle du spawn arrive invisible, et previent qu'il faut le deplacer.
+
+Notre clone est aussi RENOMME : deux instances du meme nom dans PlayerGui, et on ne sait plus laquelle on tient.
+
+### Le piege qu'il a fallu desamorcer
+
+Ce fichier DETRUISAIT `ReplicatedFirst.LoadingScreen` au demarrage -- un reste de l'epoque ou l'ancien ecran
+n'etait plus lu. C'est devenu exactement l'endroit ou doit vivre le modele : on supprimait le decor juste avant
+de s'en servir.
+
+### Modele introuvable = rideau de secours
+
+Un ecran opaque, sans decor, et un avertissement nomme. Le rideau sert d'abord a CACHER : un rideau laid vaut
+mieux qu'un joueur qui voit la map se construire.
+
+### Les conseils
+
+Six conseils EN ANGLAIS (le traducteur de Roblox part de l'anglais ; un texte francais n'est traduit nulle part).
+Ils tournent toutes les cinq secondes, en fondu -- un texte qui change d'un coup attire l'oeil comme une erreur.
+
+Le premier est tire AU HASARD : commencer toujours par le meme en ferait le seul que les joueurs connaissent,
+puisque beaucoup ne verront qu'un ou deux chargements.
+
+### Cote Studio
+
+Ranger la ScreenGui `LoadingScreen` dans **ReplicatedFirst**. Rojo ne synchronise ni StarterGui ni ReplicatedFirst
+autrement que par le code : ce modele est a recopier a la main dans CHAQUE lieu, sinon le collaborateur aura le
+rideau de secours.
+
 ## 0.0.338 — C rend la souris et le curseur pour de bon
 
 En repassant en vue de dos, la souris restait collee au centre et le curseur custom invisible.
