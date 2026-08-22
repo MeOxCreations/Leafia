@@ -2185,6 +2185,21 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.338 — C rend la souris et le curseur pour de bon
+
+En repassant en vue de dos, la souris restait collee au centre et le curseur custom invisible.
+
+Cause : la boucle de vue subjective reste branchee pendant le glissement de SORTIE -- c'est voulu, elle finit de
+faire reapparaitre le corps au rythme de la camera. Mais elle reposait AUSSI la souris et le curseur a chaque
+image, juste apres que la bascule les ait rendus au joueur. La derniere de ces ecritures survivait au
+debranchement : souris verrouillee et curseur cache, en pleine troisieme personne.
+
+Elle ne touche plus a la souris, au curseur ni au reticule des que la vue subjective n'est plus voulue. Elle ne
+s'occupe alors que du corps, la seule chose qui ait besoin de glisser.
+
+Meme famille que la regle du projet sur les proprietes a un seul ecrivain : ici il n'y en avait qu'un, mais il
+ecrivait encore apres avoir cesse d'etre legitime.
+
 ## 0.0.337 — Alt rend vraiment la souris : on recule d'un cheveu
 
 Maintenir Alt ne rendait ni la souris ni le curseur. C'etait UN seul defaut, pas deux : le curseur custom

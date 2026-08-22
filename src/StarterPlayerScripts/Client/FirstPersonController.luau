@@ -123,6 +123,16 @@ local function step()
 		-- invisible.
 		CharacterFade.keepToolsVisible(character)
 	end
+	-- TOUT CE QUI SUIT N'EST POSE QUE TANT QU'ON VEUT LA VUE SUBJECTIVE.
+	--
+	-- Pendant le glissement de SORTIE la boucle tourne encore -- elle finit de faire reapparaitre le corps -- mais
+	-- elle ne doit plus toucher ni a la souris ni au curseur. Sans ce garde-fou elle les REPRENAIT au joueur image
+	-- apres image, juste apres que la bascule les lui ait rendus, et la derniere ecriture avant le debranchement
+	-- restait en place : souris collee au centre et curseur invisible, en pleine vue de dos.
+	if not firstPerson then
+		return
+	end
+
 	-- CURSEUR RENDU tant que la touche est maintenue. Le reticule s'efface avec, sinon on aurait un point de
 	-- visee ET une fleche a l'ecran, et on ne saurait plus lequel des deux compte.
 	local free = UserInputService:IsKeyDown(FREE_CURSOR_KEY)
