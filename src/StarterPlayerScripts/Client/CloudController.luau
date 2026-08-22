@@ -62,21 +62,66 @@ local function anchorPoint(): Vector3?
 	return if camera then camera.CFrame.Position else nil
 end
 
--- Place un nuage quelque part dans le ciel autour de `center`.
--- `upwind` = true quand il s'agit d'un RECYCLAGE : on le remet alors en AMONT du vent, sinon il ressortirait
+-- Un ecart tire au hasard, autour de `center`.
+-- `upwind` = true quand il s'agit d'un RECYCLAGE : le nuage revient alors en AMONT du vent, sinon il ressortirait
 -- aussitot par le meme bord et clignoterait.
+local function randomOffset(upwind: boolean, radius: number): Vector3
+	if upwind then
+		-- SUR L'ARC AMONT, et surtout pas sur une DROITE perpendiculaire au vent.
+		--
+		-- C'ETAIT LE BUG DU CIEL. La version d'avant posait le nuage a `-vent * rayon + cote * lateral` : sa
+		-- distance au centre valait donc racine(rayon^2 + lateral^2), c'est-a-dire DEJA HORS du rayon. Il etait
+		-- donc recycle a l'image suivante, puis encore, sans jamais deriver. Seuls les nuages tires PILE dans
+		-- l'axe du vent (lateral proche de zero) survivaient -- alors tout le ciel finissait aligne et empile sur
+		-- une seule bande, ce qui se voyait comme un chevauchement permanent et un ciel vide a cote.
+		--
+		-- En prenant le point de l'ARC a ce meme ecart lateral, la distance vaut exactement le rayon : le nuage
+		-- entre dans le disque au lieu d'en etre deja sorti.
+		local side = Vector3.new(-DRIFT.Z, 0, DRIFT.X)
+		local lateral = rng:NextNumber(-1, 1) * radius
+		local along = math.sqrt(math.max(radius * radius - lateral * lateral, 0))
+		-- Un cheveu EN DEDANS : pile sur le bord, l'arrondi des flottants peut faire repasser le test de sortie.
+		return (-DRIFT * along + side * lateral) * 0.995
+	end
+	-- Premiere mise en place : n'importe ou dans le disque, pour que le ciel soit deja peuple au demarrage.
+	local angle = rng:NextNumber(0, math.pi * 2)
+	local distance = radius * math.sqrt(rng:NextNumber()) -- racine : repartition EGALE sur le disque, pas un tas au centre
+	return Vector3.new(math.cos(angle), 0, math.sin(angle)) * distance
+end
+
+-- Distance a plat au nuage le plus proche, si on se posait la. `self` est exclu : un nuage qu'on replace ne doit
+-- pas se fuir lui-meme.
+local function nearestGap(center: Vector3, offset: Vector3, self: Cloud): number
+	local x = center.X + offset.X
+	local z = center.Z + offset.Z
+	local gap = math.huge
+	for _, other in ipairs(clouds) do
+		if other ~= self then
+			local p = other.part.Position
+			local dx, dz = p.X - x, p.Z - z
+			gap = math.min(gap, math.sqrt(dx * dx + dz * dz))
+		end
+	end
+	return gap
+end
+
+-- Place un nuage dans le ciel autour de `center`, en evitant les autres.
 local function place(cloud: Cloud, center: Vector3, upwind: boolean)
 	local radius = CloudConfigs.FIELD_RADIUS
-	local offset: Vector3
-	if upwind then
-		-- Sur le bord amont, avec un ecart lateral au hasard : les nuages n'arrivent pas tous par le meme point.
-		local side = Vector3.new(-DRIFT.Z, 0, DRIFT.X)
-		offset = -DRIFT * radius + side * rng:NextNumber(-radius, radius)
-	else
-		-- Premiere mise en place : n'importe ou dans le disque, pour que le ciel soit deja peuple au demarrage.
-		local angle = rng:NextNumber(0, math.pi * 2)
-		local distance = radius * math.sqrt(rng:NextNumber()) -- racine : repartition EGALE sur le disque, pas un tas au centre
-		offset = Vector3.new(math.cos(angle), 0, math.sin(angle)) * distance
+	-- ON GARDE LA MOINS MAUVAISE PLACE, on n'insiste pas jusqu'a en trouver une parfaite : sur un ciel dense il
+	-- n'existe pas toujours de trou assez grand, et boucler jusqu'a en trouver un figerait le jeu.
+	local offset = randomOffset(upwind, radius)
+	local gap = nearestGap(center, offset, cloud)
+	for _ = 2, CloudConfigs.SEPARATION_TRIES do
+		if gap >= CloudConfigs.MIN_SEPARATION then
+			break
+		end
+		local candidate = randomOffset(upwind, radius)
+		local candidateGap = nearestGap(center, candidate, cloud)
+		if candidateGap > gap then
+			offset = candidate
+			gap = candidateGap
+		end
 	end
 
 	cloud.altitude = CloudConfigs.ALTITUDE + rng:NextNumber(-1, 1) * CloudConfigs.ALTITUDE_SPREAD

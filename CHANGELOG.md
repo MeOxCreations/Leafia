@@ -2185,6 +2185,43 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.328 — Le ciel arrete de s'empiler sur une seule bande
+
+Les nuages se chevauchaient, s'alignaient, et laissaient le reste du ciel vide. Ce n'etaient pas trois defauts
+mais UN SEUL, dans le recyclage.
+
+### Le bug
+
+Un nuage sorti du champ etait remis en amont du vent a cette position :
+
+    -vent * rayon + cote * lateral
+
+Sa distance au centre valait donc `racine(rayon^2 + lateral^2)`, c'est-a-dire **deja hors du rayon**. Le test de
+sortie le reprenait a l'image SUIVANTE, et encore, et encore : il ne derivait jamais, il sautait au hasard le long
+d'une droite.
+
+Seuls les nuages tires PILE dans l'axe du vent (ecart lateral proche de zero) tombaient dans le champ et
+survivaient. D'ou un ciel ou tout finissait aligne et empile sur une bande, avec du vide autour.
+
+### Le correctif
+
+Le nuage revient maintenant sur l'ARC amont : au meme ecart lateral, mais a la distance qui le pose exactement
+sur le cercle (un cheveu en dedans, parce que pile sur le bord l'arrondi des flottants peut refaire passer le
+test). Il ENTRE dans le disque au lieu d'en etre deja sorti.
+
+### Anti-chevauchement
+
+Chaque pose essaie jusqu'a `SEPARATION_TRIES` (6) positions et garde celle qui laisse le plus de place, en visant
+`MIN_SEPARATION` (130 studs, un peu plus qu'un gros nuage). Ce n'est PAS une garantie : sur un ciel dense il
+n'existe pas toujours de trou, et boucler jusqu'a en trouver un figerait le jeu. On garde donc le meilleur des
+essais. Le calcul n'a lieu qu'A LA POSE, jamais par image.
+
+### Couverture
+
+`COUNT` : 28 -> 55, et `FADE_START` : 0.5 -> 0.62 (les nuages restent nets plus loin avant de se fondre). A
+surveiller cote FPS : le cout d'un nuage est un CFrame par image, mais le RENDU de 55 gros meshes translucides
+qui se superposent, lui, se paie. Si ca descend, `COUNT` est le bouton.
+
 ## 0.0.327 — L'herbe perd son vert de peinture
 
 La pelouse etait trop saturee : un vert de pot, pas un vert de jardin.
