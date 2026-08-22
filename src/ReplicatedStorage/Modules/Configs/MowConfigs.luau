@@ -21,6 +21,20 @@ return {
 	-- Part posee sous le carter, creee par scripts/studio/CreerZoneDeCoupeTondeuse.lua. Sa POSITION dit ou on coupe,
 	-- sa largeur donne le rayon. Absente, on retombe sur FALLBACK_* ci-dessous (le jeu tourne quand meme).
 	CUT_ZONE_NAME = "CutZone",
+	-- BOITE DE COLLISION. La SEULE part de la machine qui garde ses collisions une fois portee : c'est elle qui
+	-- l'empeche de traverser les haies, les cloture et les portails.
+	--
+	-- Tout le reste est mis en CanCollide = false a la prise, et il le faut : une machine pleine de parts solides
+	-- soudee au joueur se coince dans le decor et le fait sauter. Une seule boite, posee a la main dans Studio,
+	-- donne une forme simple que la physique sait resoudre.
+	--
+	-- Elle est aussi ECARTEE de la mesure d'encombrement, comme la zone de coupe : c'est un volume logique, pas
+	-- une piece de la machine. La compter fausserait la hauteur et le recul du portage.
+	--
+	-- ATTENTION : `CanQuery = false` n'a AUCUN effet tant que CanCollide est vrai (deja au journal). Cette boite
+	-- reste donc vue par les raycasts -- a savoir si un systeme se met un jour a lancer des rayons depuis le
+	-- joueur vers l'avant.
+	HITBOX_NAME = "Hitbox",
 
 	-- ===== PRISE =====
 	-- Distance HORIZONTALE (studs) sous laquelle le prompt apparait. RADIALE, pas une box : colle a un bout de la

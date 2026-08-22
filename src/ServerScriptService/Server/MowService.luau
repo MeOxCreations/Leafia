@@ -656,7 +656,14 @@ local function measure(model: Model, root: BasePart): (number?, number)
 	local low: number? = nil
 	local back = 0 -- de combien la machine depasse DERRIERE la racine, le long de l'axe d'avancee
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME and d.Transparency < 1 then
+		-- La zone de coupe et la boite de collision sont des volumes LOGIQUES, pas des pieces de la machine : les
+		-- compter fausserait la hauteur et le recul du portage.
+		if
+			d:IsA("BasePart")
+			and d.Name ~= MowConfigs.CUT_ZONE_NAME
+			and d.Name ~= MowConfigs.HITBOX_NAME
+			and d.Transparency < 1
+		then
 			local h = d.Size * 0.5
 			for sx = -1, 1, 2 do
 				for sy = -1, 1, 2 do
@@ -824,8 +831,23 @@ local function grab(player: Player, model: Model)
 		if d:IsA("BasePart") then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }
 			d.Anchored = false
-			-- Portee, elle ne doit plus bousculer le porteur ni accrocher le decor.
-			d.CanCollide = false
+			-- LA BOITE DE COLLISION GARDE SES COLLISIONS, tout le reste les perd.
+			--
+			-- Sans elle, la machine traversait les haies, les cloture et les portails : soudee au joueur et sans
+			-- collision, elle n'existait pour la physique. Avec toutes ses parts solides, en revanche, elle se
+			-- coincait dans le decor et faisait sauter le porteur -- une forme compliquee accrochee a un
+			-- personnage est ingerable pour le moteur.
+			-- Une seule boite simple, posee a la main dans Studio, resout les deux.
+			local isHitbox = d.Name == MowConfigs.HITBOX_NAME
+			d.CanCollide = isHitbox
+			if isHitbox then
+				-- MASSLESS : elle borne le passage, elle n'alourdit pas le joueur. Sans ca, elle change la masse
+				-- de son assemblage et donc sa facon de marcher, de tomber et de monter une pente.
+				d.Massless = true
+				-- Pas de Touched : rien n'ecoute cet evenement, et une boite qui frotte le decor en tirerait des
+				-- centaines par seconde.
+				d.CanTouch = false
+			end
 		end
 	end
 

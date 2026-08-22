@@ -298,7 +298,14 @@ local function promptAnchorOf(model: Model): Vector3?
 	local hi = Vector3.new(-math.huge, -math.huge, -math.huge)
 	local found = false
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") and d.Name ~= MowConfigs.CUT_ZONE_NAME and d.Transparency < 1 then
+		-- Zone de coupe et boite de collision ECARTEES : ce sont des volumes logiques, pas des pieces de la
+		-- machine. Les compter deplacerait le badge vers un point qui n'existe sur rien de visible.
+		if
+			d:IsA("BasePart")
+			and d.Name ~= MowConfigs.CUT_ZONE_NAME
+			and d.Name ~= MowConfigs.HITBOX_NAME
+			and d.Transparency < 1
+		then
 			local h = d.Size * 0.5
 			for sx = -1, 1, 2 do
 				for sy = -1, 1, 2 do
@@ -680,7 +687,12 @@ local function grabSpot(model: Model): (Vector3?, Vector3?)
 	-- arriere, pas de la racine, sinon on se plante au milieu de la tondeuse.
 	local back = 0
 	for _, part in ipairs(model:GetDescendants()) do
-		if part:IsA("BasePart") and part.Name ~= MowConfigs.CUT_ZONE_NAME and part.Transparency < 1 then
+		if
+			part:IsA("BasePart")
+			and part.Name ~= MowConfigs.CUT_ZONE_NAME
+			and part.Name ~= MowConfigs.HITBOX_NAME
+			and part.Transparency < 1
+		then
 			back = math.max(back, -(part.Position - root.Position):Dot(forward))
 		end
 	end

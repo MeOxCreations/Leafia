@@ -2185,6 +2185,41 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.361 — La tondeuse ne traverse plus les haies ni les cloture
+
+Une part `Hitbox` posee dans Studio garde ses collisions une fois la machine portee. C'est la SEULE.
+
+### Pourquoi une seule boite, et pas la machine entiere
+
+La prise met `CanCollide = false` sur toutes les parts, et il le faut : une machine pleine de parts solides
+soudee au joueur se coince dans le decor et le fait sauter -- une forme compliquee accrochee a un personnage est
+ingerable pour le moteur physique. Mais sans collision du tout, la machine n'existe pas pour la physique et
+traverse tout.
+
+Une seule boite simple, posee a la main, resout les deux : la physique sait la gerer, et elle borne le passage.
+
+Elle est mise en `Massless` : elle borne, elle n'alourdit pas. Sans ca, elle change la masse de l'assemblage du
+joueur, donc sa facon de marcher, de tomber et de monter une pente.
+
+`CanTouch` a false : rien n'ecoute cet evenement, et une boite qui frotte le decor en tirerait des centaines par
+seconde.
+
+### Ecartee de tous les balayages de parts
+
+Comme la zone de coupe, c'est un volume LOGIQUE et pas une piece de la machine. La compter fausserait la hauteur
+et le recul du portage (cote serveur) et deplacerait le badge d'interaction vers un point qui n'existe sur rien de
+visible (cote client). Les trois endroits qui balayaient les parts l'ecartent maintenant par son nom.
+
+### A savoir
+
+`CanQuery = false` n'a AUCUN effet tant que `CanCollide` est vrai -- deja au journal. Cette boite reste donc vue
+par les raycasts, a garder en tete si un systeme se met un jour a lancer des rayons depuis le joueur vers l'avant.
+
+### Cote Studio
+
+La part doit s'appeler `Hitbox` et vivre sous le modele de la tondeuse. Rojo ne synchronise pas le Workspace : a
+recopier dans chaque lieu, sinon la machine continuera de traverser les cloture chez le collaborateur.
+
 ## 0.0.360 — La camera du demarrage recule un peu : vue d'ensemble
 
 `PULL_CAM_FORWARD` : 10 -> 13. Assez loin pour tenir le joueur ET la machine dans le cadre. C'est une vue
