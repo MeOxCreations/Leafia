@@ -475,7 +475,7 @@ local GrassZoneConfigs = {
 	-- lisible : on finit un jardin quand on voit ce qu'il reste, on l'abandonne quand on ne sait plus.
 	--
 	-- C'est un CONFORT, pas une bequille. Si on la garde appuyee en permanence, ce n'est pas la revelation qu'il
-	-- faut ameliorer, c'est le contraste tondu / pas tondu : monter MOW_CUT et ecarter MOWN_COLOR de BASE_COLOR.
+	-- faut ameliorer, c'est le contraste tondu / pas tondu : BAISSER MOWN_SCALE et ecarter MOWN_COLOR de BASE_COLOR.
 	--
 	-- Le rendu passe par la MEME fonction que le reste (apply). Poser Color et Material a la main sur les touffes
 	-- serait efface a l'image suivante : la couleur a deja un ecrivain.
