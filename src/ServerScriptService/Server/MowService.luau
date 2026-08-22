@@ -268,6 +268,45 @@ end
 -- pour toujours et polluerait tout ce qui partage sa priorite.
 --
 -- Sans animation configuree, on enchaine directement -- la tondeuse reste jouable.
+-- LE COUP DE CORDE : ce qui se passe a l'instant EXACT ou le bras part en arriere.
+--
+-- Declenche par un evenement pose DANS l'animation, pas par un delai en secondes. Un delai suppose qu'on connait
+-- la cadence du geste, alors qu'elle vit dans l'animation : la retoucher decalait tout en silence. Le marqueur,
+-- lui, suit l'animation quoi qu'on lui fasse -- et les trois retours (secousse, toux, son) restent d'accord
+-- entre eux par construction, sans qu'on ait a les recaler un par un.
+local function yankStarter(model: Model, state: CarryState)
+	-- Il a pu reposer la machine entre le clic et l'image du marqueur : cabrer une tondeuse qu'on ne tient plus
+	-- la laisserait de travers.
+	if carried[model] ~= state then
+		return
+	end
+	-- LA MACHINE SE CABRE. On donne une VITESSE au ressort, on ne pose pas l'angle : poser l'angle la faisait
+	-- monter en une seule image, donc brutalement. Une impulsion se voit monter.
+	-- La vitesse a donner pour atteindre a peu pres l'angle voulu vaut angle x racine(raideur).
+	state.liftVel = math.rad(MowConfigs.PULL_LIFT) * math.sqrt(MowConfigs.PULL_LIFT_STIFFNESS)
+
+	-- LE MOTEUR TOUSSE : on joue sa boucle UNE fois, non bouclee. Il tourne, il ne PREND pas -- c'est ce qui fait
+	-- comprendre qu'on essaie de le lancer, et qu'un tirage peut echouer.
+	local animator = machineAnimator(model)
+	local cough = machineAnimation(MowConfigs.MOTOR_ANIM_ID)
+	if animator and cough then
+		local ok, t = pcall(function()
+			return animator:LoadAnimation(cough)
+		end)
+		if ok and typeof(t) == "Instance" then
+			local track = t :: AnimationTrack
+			track.Looped = false -- PONCTUEL : ecrit ici, le reglage de l'editeur n'est qu'une suggestion
+			track.Priority = Enum.AnimationPriority.Idle
+			track:Play()
+		end
+	end
+
+	local root = rootOf(model)
+	if root then
+		playOnce(root, MowConfigs.PULL_SOUND)
+	end
+end
+
 local function playStart(model: Model, character: Model, state: CarryState, onDone: () -> ())
 	local asset = machineAnimation(MowConfigs.START_ANIM_ID)
 	local animator = getAnimator(character)
@@ -288,6 +327,12 @@ local function playStart(model: Model, character: Model, state: CarryState, onDo
 	track.Looped = false
 	track.Priority = MowConfigs.START_PRIORITY
 	state.start = track
+	-- BRANCHE UNE SEULE FOIS, a la creation de la piste, et surtout pas au clic : la piste se REARME apres un
+	-- tirage rate, donc une connexion posee a chaque clic s'empilerait et la machine se cabrerait deux fois, puis
+	-- trois. Le signal, lui, retire a chaque passage du marqueur -- c'est exactement ce qu'on veut.
+	track:GetMarkerReachedSignal(MowConfigs.PULL_EVENT):Connect(function()
+		yankStarter(model, state)
+	end)
 	-- `Stopped` couvre la fin NORMALE comme un arret force (repose pendant le geste) : dans les deux cas la
 	-- suite doit etre annulee ou enchainee, jamais laissee en plan.
 	-- `Connect` et non `Once` : la piste se REARME apres un tirage rate, donc elle re-signalera sa fin.
@@ -328,44 +373,14 @@ end
 
 -- TIRAGE DE CORDE : le joueur a clique. On relance la piste figee -- c'est le seul changement, la posture etait
 -- deja la bonne, donc il n'y a aucune transition a fondre.
-local function pullStarter(model: Model, state: CarryState)
+local function pullStarter(state: CarryState)
 	local track = state.start
 	if not track or track.Speed ~= 0 then
 		return -- pas de corde a tirer, ou deja en train de la tirer
 	end
+	-- ON NE FAIT QUE RELANCER LA PISTE. Tout ce qui se voit et s'entend (la machine qui se cabre, la toux du
+	-- moteur, le son de la corde) part du MARQUEUR pose dans l'animation, pas d'ici -- voir yankStarter.
 	track:AdjustSpeed(1)
-	-- LA MACHINE SE CABRE sous l'a-coup, RETARDE : le geste ne tire pas la corde a la premiere image, donc la
-	-- machine ne doit pas broncher avant que le bras ne parte en arriere.
-	-- On verifie qu'il porte ENCORE la tondeuse a l'echeance : il a pu la reposer entre-temps, et cabrer une
-	-- machine qu'on ne tient plus la laisserait de travers.
-	task.delay(MowConfigs.PULL_LIFT_DELAY, function()
-		if carried[model] == state then
-			-- On donne une VITESSE au ressort, on ne pose pas l'angle. Poser l'angle faisait monter la machine en
-			-- une seule image : instantane, donc brutal. Une impulsion se voit monter.
-			-- La vitesse a donner pour atteindre a peu pres l'angle voulu vaut angle x racine(raideur).
-			state.liftVel = math.rad(MowConfigs.PULL_LIFT) * math.sqrt(MowConfigs.PULL_LIFT_STIFFNESS)
-		end
-	end)
-	-- LE MOTEUR TOUSSE : on joue sa boucle UNE fois, non bouclee. Il tourne, il ne PREND pas -- c'est ce qui
-	-- fait comprendre qu'on essaie de le lancer, et qu'un tirage peut echouer.
-	local animator = machineAnimator(model)
-	local cough = machineAnimation(MowConfigs.MOTOR_ANIM_ID)
-	if animator and cough then
-		local ok, t = pcall(function()
-			return animator:LoadAnimation(cough)
-		end)
-		if ok and typeof(t) == "Instance" then
-			local track2 = t :: AnimationTrack
-			track2.Looped = false -- PONCTUEL : ecrit ici, le reglage de l'editeur n'est qu'une suggestion
-			track2.Priority = Enum.AnimationPriority.Idle
-			track2:Play()
-		end
-	end
-	-- Le son part AVEC le geste, pas a la prise : c'est le tirage qu'on entend.
-	local root = rootOf(model)
-	if root then
-		playOnce(root, MowConfigs.PULL_SOUND)
-	end
 end
 
 -- POSE DE MAINTIEN : le joueur attrape le guidon, et TIENT la pose tant qu'il pousse.
@@ -1047,7 +1062,7 @@ function MowService.init()
 	pullRemote.OnServerEvent:Connect(function(player: Player)
 		for model, state in pairs(carried) do
 			if state.owner == player then
-				pullStarter(model, state)
+				pullStarter(state)
 			end
 		end
 	end)

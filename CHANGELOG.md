@@ -2185,6 +2185,31 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.357 — Le coup de corde part de l'ANIMATION, plus d'un delai devine
+
+Le son du tirage arrivait en retard. Cause : il partait du CLIC, alors que le bras ne part en arriere qu'un
+demi-tiers de seconde plus tard.
+
+L'animation de tirage porte un evenement, `TryLaunchEvent`, pose a l'image exacte du coup de corde. C'est lui qui
+declenche maintenant les TROIS retours d'un coup : la machine qui se cabre, la toux du moteur, et le son.
+
+### Ce que ca supprime
+
+`PULL_LIFT_DELAY` (0.35 s) disparait. Un delai en secondes suppose qu'on connait la cadence du geste, alors
+qu'elle vit dans l'animation : la retoucher decalait tout, en silence. Le marqueur, lui, suit l'animation quoi
+qu'on lui fasse.
+
+Et les trois retours restent d'accord entre eux PAR CONSTRUCTION, au lieu d'etre recales un par un.
+
+### Deux precautions
+
+- **Branche une seule fois**, a la creation de la piste, et surtout pas au clic. La piste se REARME apres un
+  tirage rate : une connexion posee a chaque clic s'empilerait, et la machine se cabrerait deux fois, puis trois.
+- **`GetMarkerReachedSignal` et jamais `GetKeyframeSequenceAsync`.** Le second est un appel RESEAU qui, s'il rate
+  au boot, tue la feature pour TOUTE la session -- deja paye sur la boite aux lettres.
+
+`pullStarter` ne fait donc plus qu'une chose : relancer la piste figee.
+
 ## 0.0.356 — La camera du demarrage arrete de bouger toute seule
 
 Deux mouvements retires. Le plan se pose, et c'est tout.

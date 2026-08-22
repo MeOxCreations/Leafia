@@ -154,8 +154,16 @@ return {
 	-- image : la machine ne doit donc pas broncher tant que le bras n'a pas tire. A REGLER SUR TON ANIMATION,
 	-- en regardant a quel instant la main part en arriere.
 	-- (Le jour ou l'animation portera un MARQUEUR, s'y brancher plutot que de compter un delai : un delai fige se
-	-- desynchronise des qu'on retouche l'animation. Meme raison que pour la boite aux lettres.)
-	PULL_LIFT_DELAY = 0.35,
+	-- INSTANT DU COUP DE CORDE, lu dans l'ANIMATION. C'est un evenement pose sur la piste de tirage, a l'image ou
+	-- le bras part en arriere.
+	--
+	-- REMPLACE UN DELAI DEVINE (0.35 s). Un delai en secondes suppose qu'on connait la cadence du geste, alors
+	-- qu'elle vit dans l'animation : retoucher celle-ci decalait tout, sans que rien ne le signale. Le marqueur,
+	-- lui, suit l'animation quoi qu'on lui fasse.
+	--
+	-- On passe par `GetMarkerReachedSignal` pendant la lecture, et JAMAIS par `GetKeyframeSequenceAsync` : le
+	-- second est un appel RESEAU qui, s'il rate au boot, tue la feature pour TOUTE la session (deja au journal).
+	PULL_EVENT = "TryLaunchEvent",
 	-- Vitesse de retombee, en fraction par seconde. HAUTE : un a-coup doit etre sec, pas une houle.
 	-- RESSORT AMORTI, pas un decalage qui retombe. La premiere version POSAIT l'angle d'un coup, en une image :
 	-- la montee etait instantanee et se lisait comme un a-coup brutal. Ici la machine se souleve, freine, revient,
