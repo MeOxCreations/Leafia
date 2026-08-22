@@ -52,6 +52,11 @@ local zoomBoost = 0
 local zoomBoostTarget = 0
 local zoomBase: number? = nil -- distance du joueur AU MOMENT ou le recul commence
 local zoomMinWas, zoomMaxWas = 0, 0
+local zoomSaved = false -- les bornes du joueur sont-elles mises de cote ?
+-- VUE SUBJECTIVE. Deuxieme raison de toucher aux bornes de zoom, et elle PRIME sur le recul : reculer la vue n'a
+-- aucun sens quand on est dans les yeux. Elle vit ICI et pas dans le controller qui la demande, parce que les
+-- bornes de zoom n'ont droit qu'a UN ecrivain -- c'est la regle en tete de ce fichier.
+local firstPerson = false
 
 -- ===== Secousse (impact) =====
 -- Ecrite par la tache de Shake, lue par la boucle. Revient a zero quand la secousse est finie.
@@ -110,6 +115,12 @@ end
 -- Meme regle : c'est l'appelant qui l'eteint.
 function CameraEffects.SetZoomBoost(studs: number)
 	zoomBoostTarget = studs
+end
+
+--- VUE SUBJECTIVE. Colle les bornes de zoom a zero tant que c'est vrai, et rend au joueur les siennes en sortant.
+--- Passe par ici et pas par l'appelant : les bornes de zoom n'ont droit qu'a UN ecrivain (voir la regle en tete).
+function CameraEffects.SetFirstPerson(on: boolean)
+	firstPerson = on
 end
 
 -- A-coup de FOV : s'ajoute au fond puis s'efface. Negatif = la vue se resserre.
@@ -181,24 +192,44 @@ function CameraEffects.init()
 			-- RECUL. On capture la distance du joueur AU DEMARRAGE, pas a chaque image : la relire en continu
 			-- pendant qu'on la modifie ferait fuir la camera toujours plus loin.
 			-- La VRAIE distance est camera -> Focus, jamais camera -> personnage : c'est elle, le zoom.
-			zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, ZOOM_LERP_SPEED * dt)
-			if zoomBoostTarget > 0 and not zoomBase then
-				zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
+			-- Les bornes du joueur sont mises de cote a la PREMIERE raison qui se presente, et rendues quand plus
+			-- aucune ne tient. Une capture par raison finirait par memoriser une borne qu'on avait deja modifiee.
+			if (firstPerson or zoomBoostTarget > 0) and not zoomSaved then
+				zoomSaved = true
 				zoomMinWas = player.CameraMinZoomDistance
 				zoomMaxWas = player.CameraMaxZoomDistance
 			end
-			if zoomBase then
-				if zoomBoostTarget <= 0 and zoomBoost < 0.05 then
-					-- Fini : on rend ses bornes au joueur. La camera est deja revenue a sa distance, rien ne saute.
+			if firstPerson then
+				-- Les deux bornes a ZERO : la camera Custom se colle a la tete, et c'est Roblox qui fait la vue
+				-- subjective. Ecrire nous-memes la CFrame reviendrait a nous battre avec ses scripts de camera.
+				-- Le recul est remis a plat pour qu'en ressortant il reparte d'une distance FRAICHE.
+				zoomBase = nil
+				zoomBoost = 0
+				player.CameraMinZoomDistance = 0
+				player.CameraMaxZoomDistance = 0
+			else
+				zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, ZOOM_LERP_SPEED * dt)
+				if zoomBoostTarget > 0 and not zoomBase then
+					zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
+				end
+				if zoomBase then
+					if zoomBoostTarget <= 0 and zoomBoost < 0.05 then
+						zoomBoost = 0
+						zoomBase = nil
+					else
+						-- Min ET max sur la MEME valeur : la camera Custom s'y cale, et comme la valeur glisse,
+						-- elle glisse.
+						local d = (zoomBase :: number) + zoomBoost
+						player.CameraMinZoomDistance = d
+						player.CameraMaxZoomDistance = d
+					end
+				end
+				if zoomSaved and not zoomBase then
+					-- Plus aucune raison de tenir les bornes : on les rend. La camera est deja revenue a sa
+					-- distance, donc rien ne saute.
 					player.CameraMinZoomDistance = zoomMinWas
 					player.CameraMaxZoomDistance = zoomMaxWas
-					zoomBoost = 0
-					zoomBase = nil
-				else
-					-- Min ET max sur la MEME valeur : la camera Custom s'y cale, et comme la valeur glisse, elle glisse.
-					local d = (zoomBase :: number) + zoomBoost
-					player.CameraMinZoomDistance = d
-					player.CameraMaxZoomDistance = d
+					zoomSaved = false
 				end
 			end
 		end

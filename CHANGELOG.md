@@ -2185,6 +2185,67 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.334 — VUE SUBJECTIVE chez le client, avec bascule et point de visee
+
+Nouveau `FirstPersonController`. Chez un client on demarre DANS LES YEUX ; `C` bascule vers la vue de dos et
+retour. Point de visee au centre, curseur cache, corps efface mais mains et outil visibles.
+
+### Hors du hub, et la regle est negative
+
+`game.PlaceId ~= PlacesConfig.MAIN`. Le hub sert a choisir son plot, construire, lire des interfaces : on y a
+besoin de voir son personnage et de cliquer partout. Chez un client, on TRAVAILLE, et le travail se regarde de
+pres.
+
+La regle est ecrite comme "tout ce qui n'est pas le hub" et pas comme une liste de lieux : un futur jardin de
+client demarrera en vue subjective sans qu'on ait rien a ajouter. Le controller est donc declare dans LES DEUX
+branches du bootstrap et se coupe tout seul la ou il n'a pas lieu d'etre.
+
+### On ne fabrique pas de camera
+
+La camera Custom sait deja faire la vue subjective : il suffit de coller ses bornes de zoom a zero. Ecrire
+nous-memes sa CFrame reviendrait a nous battre contre les scripts de camera de Roblox, ce qui saccade des que le
+joueur bouge la souris.
+
+Ces bornes n'avaient deja qu'UN ecrivain, `CameraEffects` (le recul de camera passe par lui). La vue subjective y
+devient donc une DEUXIEME raison via `SetFirstPerson`, et elle PRIME sur le recul -- reculer la vue n'a aucun sens
+quand on est dans les yeux. La mise de cote des bornes du joueur est desormais faite a la premiere raison qui se
+presente et rendue quand plus aucune ne tient, au lieu d'etre capturee par le recul seul.
+
+### Le corps s'efface, les mains restent
+
+En vue subjective Roblox efface TOUT le personnage, outil compris -- or l'outil est justement ce qu'on veut voir.
+`CharacterFade` existait deja et fait exactement ca : corps a 1, mains a 0. Nos outils sont soudes a la main par
+un Motor6D, ils restent donc visibles avec elle.
+
+### Ce qui doit etre repose A CHAQUE IMAGE
+
+Roblox reecrit la transparence du personnage ET le comportement de la souris a chaque image quand la camera est
+collee a la tete. Une valeur posee une seule fois a la bascule serait effacee a l'image suivante. Le controller
+passe donc APRES lui (priorite Camera + 1) et repose la sienne.
+
+### A VERIFIER A L'ECRAN : le curseur rendu par Alt
+
+Maintenir Alt rend le curseur pour cliquer une interface, et efface le reticule pendant ce temps (un point de
+visee ET une fleche a l'ecran, on ne saurait plus lequel compte).
+
+C'est le point FRAGILE de ce commit : Roblox re-verrouille la souris au centre a chaque image en vue subjective,
+et plusieurs retours signalent qu'une ecriture unique ne tient pas. L'ecriture par image apres lui devrait gagner,
+mais ca se verifie a l'ecran et pas au raisonnement. Si le curseur reste colle au centre, il faudra passer par
+l'autre approche : figer la vue et rendre la souris.
+
+Pas de bouton tactile pour cette action-la, et c'est voulu : sans souris il n'y a rien a liberer. C'est la seule
+exception a la regle "tout input clavier a son pendant tactile" -- la bascule `C`, elle, passe par
+ContextActionService et cree bien son bouton sur mobile.
+
+### Le reticule est cree en CODE
+
+Contrairement au reste des interfaces, posees dans Studio. C'est un point de six pixels qui n'a rien a regler a la
+main, et le poser dans Studio obligerait a le recopier dans CHAQUE lieu (Rojo ne synchronise pas StarterGui).
+Meme raison que l'ecran de chargement, qui se construit aussi tout seul.
+
+Aucun inset sur son ScreenGui : le point doit tomber au centre exact de l'ECRAN, pas au centre de la zone sous la
+barre Roblox, sinon il vise dix-huit pixels trop bas.
+
 ## 0.0.333 — L'herbe se rechauffe : elle tirait sur le bleu
 
 `BASE_COLOR` : 72, 90, 45 -> 138, 154, 85.

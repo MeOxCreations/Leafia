@@ -36,6 +36,10 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.FootstepController).init()
 	require(script.TeleportController).init()
 	require(script.CameraController).init()
+	-- VUE SUBJECTIVE. APRES CameraController, qui demarre CameraEffects : c'est lui qui possede les bornes de
+	-- zoom, et sans sa boucle la vue subjective ne s'appliquerait jamais.
+	-- Le controller se coupe TOUT SEUL dans le hub, donc on peut le declarer des deux cotes sans condition.
+	require(script.FirstPersonController).init()
 	require(script.ToolController).init()
 	require(script.HedgeController).init()
 	require(script.HedgeLeafController).init()
@@ -153,7 +157,11 @@ TeleportController.init()
 -- CameraController avant ToolController : il demarre CameraEffects (le seul ecrivain du FieldOfView), dont
 -- ToolController se sert pour l'a-coup du tirage.
 local CameraController = require(script.CameraController)
+local FirstPersonController = require(script.FirstPersonController)
 CameraController.init()
+-- VUE SUBJECTIVE : elle ne s'active QUE hors du hub, et le controller le decide lui-meme (game.PlaceId). Declare
+-- ici quand meme, pour qu'un futur jardin de client demarre en vue subjective sans qu'on ait a y penser.
+FirstPersonController.init()
 
 local ToolController = require(script.ToolController)
 ToolController.init()
