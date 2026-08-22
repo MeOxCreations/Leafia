@@ -320,9 +320,17 @@ local function apply(
 	-- qu'elle etait DEJA LA, sous l'herbe haute, au lieu d'apparaitre par-dessus.
 	-- Enfoncement RELATIF a sa propre hauteur du moment : une valeur en studs laisserait les grandes touffes
 	-- depasser et enterrerait les petites trop profond.
-	local sink = 0
+	-- LE PIED RESTE AU SOL, QUELLE QUE SOIT LA HAUTEUR.
+	--
+	-- Une part est posee par son CENTRE. Quand la touffe raccourcit -- ecrasee par un pied, ou tondue et reduite a
+	-- 40 % -- son centre ne bouge pas : c'est donc son PIED qui remonte, et l'herbe se met a flotter au-dessus du
+	-- sol. Plus la reduction est forte, plus l'ecart se voit.
+	--
+	-- On descend le centre de la MOITIE de la hauteur perdue : le pied retrouve exactement sa place. Une seule
+	-- ligne qui couvre les deux causes, l'ecrasement et la coupe, sans avoir a les traiter separement.
+	local sink = clump.baseSize.Y * 0.5 * (1 - squash * shrink)
 	if clump.cutStarted and clump.cutT < 1 then
-		sink = clump.baseSize.Y * squash * GrassZoneConfigs.CUT_RISE_DEPTH * (1 - clump.cutT)
+		sink += clump.baseSize.Y * squash * GrassZoneConfigs.CUT_RISE_DEPTH * (1 - clump.cutT)
 	end
 	-- ENFONCEMENT PERMANENT. La touffe est posee par son CENTRE sur la surface de la zone, mais la geometrie du
 	-- mesh n'occupe pas forcement toute sa boite : selon la marge laissee sous les brins, elle a l'air de

@@ -2185,6 +2185,28 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.367 — L'herbe coupee flottait au-dessus du sol
+
+Un ecart visible entre le sol et l'herbe tondue.
+
+### Une part est posee par son CENTRE
+
+Quand la touffe raccourcit -- ecrasee par un pied, ou tondue et reduite a 40 % -- son centre ne bouge pas. C'est
+donc son PIED qui remonte, de la moitie de la hauteur perdue. A 40 %, ca fait 30 % de la hauteur d'origine en
+l'air : impossible a rater.
+
+Le defaut existait deja pour le pietinement, mais il etait trop petit pour se voir. C'est le passage a une
+reduction UNIFORME (0.0.365) qui l'a rendu evident -- et la aussi, le vrai probleme etait plus vieux que le
+changement qui l'a revele.
+
+### Une ligne qui couvre les deux causes
+
+On descend le centre de la MOITIE de la hauteur perdue. Le pied retrouve exactement sa place, que la touffe soit
+ecrasee, tondue, ou les deux -- sans avoir a traiter les cas separement.
+
+`GROUND_SINK` reste a cote et garde son role a lui : compenser la marge vide que le MESH laisse sous ses brins.
+Deux causes differentes, deux corrections distinctes.
+
 ## 0.0.366 — Le premier conseil s'ecrivait dans la mauvaise police
 
 Une police custom se TELECHARGE. Tant qu'elle n'est pas arrivee, Roblox rend le texte avec une police de SECOURS.
