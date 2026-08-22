@@ -2185,6 +2185,17 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.353 — La camera arrive devant la tondeuse deux fois plus vite
+
+`PULL_CAM_IN_TIME` : 0.42 -> **0.22**. `PULL_CAM_OUT_TIME` : 0.32 -> **0.2**.
+
+Historique note dans la config pour ne pas refaire le tour : 0.7, puis 0.42, puis 0.22. A chaque fois le meme
+retour -- "c'est lent, c'est stressant".
+
+La raison est simple une fois dite : une camera qui SE DEPLACE pendant qu'on attend de pouvoir agir se SUBIT. Le
+joueur veut arriver, pas voyager. Le rebond elastique fait le reste du travail -- meme tres court, il ne claque
+pas.
+
 ## 0.0.352 — Le curseur reste libre pendant le chargement
 
 Pendant le rideau, la souris etait verrouillee au centre et le curseur efface. Le joueur se retrouvait devant un

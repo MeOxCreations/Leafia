@@ -324,10 +324,13 @@ return {
 	PULL_CAM_LOOK_HEIGHT = 2.2, -- hauteur du point VISE sur le joueur (vers le torse, pas les pieds)
 	-- Duree de l'arrivee et du retour. L'arrivee part de la vue de jeu EXACTE et le retour y revient : aucun saut
 	-- ni au debut ni a la fin.
-	-- Raccourcies : a 0.7 s la camera GLISSAIT, et une glissade lente se lit comme un ralenti, pas comme un
-	-- mouvement de camera. Court + elastique (voir PULL_CAM_EASING) donne le nerf sans donner la brusquerie.
-	PULL_CAM_IN_TIME = 0.42,
-	PULL_CAM_OUT_TIME = 0.32,
+	-- HISTORIQUE, pour ne pas refaire le tour : 0.7 -> 0.42 -> 0.22. A chaque fois le meme retour, "c'est lent,
+	-- c'est stressant". Une camera qui se DEPLACE pendant qu'on attend de pouvoir agir se subit ; on veut arriver,
+	-- pas voyager. Le rebond de PULL_CAM_EASING fait le reste du travail : meme tres court, il ne claque pas.
+	--
+	-- Si ca redevenait trop sec, remonter par petits pas (0.26, 0.30), jamais d'un coup a l'ancienne valeur.
+	PULL_CAM_IN_TIME = 0.22,
+	PULL_CAM_OUT_TIME = 0.2,
 	-- COURBE de l'arrivee et du retour. `Back` DEPASSE legerement la cible puis revient : c'est ce depassement
 	-- qui donne le rebond "slime" du reste de l'interface, au lieu d'un glissement mou qui s'arrete pile.
 	-- Mettre `Quad` pour un mouvement sage et sans rebond.
