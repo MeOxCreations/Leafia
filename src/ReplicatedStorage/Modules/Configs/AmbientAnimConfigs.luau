@@ -20,11 +20,14 @@ local ANIMATIONS: { [string]: string } = {
 	Bush1 = "rbxassetid://78047203094778",
 	Tree1 = "rbxassetid://130136106070231",
 	CommonTree_3 = "rbxassetid://78769164571724",
-	-- PAPI est ICI, et c'est voulu pour l'instant : son entree dans NpcWanderConfigs est DESACTIVEE (elle vise
-	-- l'ancien rig "OldManIdle", sans bras ni jambes). Il ne se promene donc pas, il respire sur place.
+	-- LE GRAND-PERE est ICI, et c'est voulu pour l'instant : son entree dans NpcWanderConfigs est DESACTIVEE (elle
+	-- vise l'ancien rig "OldManIdle", sans bras ni jambes). Il ne se promene donc pas, il respire sur place.
 	-- LE JOUR OU IL SE PROMENERA A NOUVEAU, RETIRER CETTE LIGNE : NpcWanderService pilote alors ses deux
 	-- animations (idle ET marche), et deux services sur le meme Animator se battraient pour la meme piste.
-	Papi = "rbxassetid://102639960685891",
+	--
+	-- LA CLE EST LE NOM DU MODELE DANS LE WORKSPACE, pas une etiquette libre. Le renommer dans Studio sans le
+	-- changer ici coupe son animation EN SILENCE : plus rien ne le trouve, et rien ne le signale.
+	GrandFather = "rbxassetid://102639960685891",
 }
 
 local AmbientAnimConfigs = {

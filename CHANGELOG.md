@@ -2185,6 +2185,27 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.346 — Le grand-pere s'appelle GrandFather
+
+Le modele a ete renomme dans Studio. Une seule chose cassait vraiment : la cle de `AmbientAnimConfigs` est le NOM
+DU MODELE dans le Workspace, pas une etiquette libre. Renomme d'un cote et pas de l'autre, plus rien ne le trouve
+et son animation d'attente s'arrete EN SILENCE -- aucune erreur, il cesse simplement de cligner des yeux.
+
+Le commentaire le dit maintenant sur place, pour que le prochain renommage ne coute pas un diagnostic.
+
+`scripts/studio/AttacherCanneAuPapi.lua` suit aussi.
+
+`NpcWanderConfigs` n'est pas concerne : son entree vise `OldManIdle`, un autre modele, et elle est desactivee.
+
+### Ce qui n'a PAS ete touche
+
+Le nom AFFICHE dans les dialogues reste "Papi". C'est du texte vu par le joueur, pas une cle : le changer est une
+decision d'ecriture, pas une consequence du renommage.
+
+A noter quand meme : la regle du projet veut que TOUT texte vu par le joueur soit en anglais, parce que le
+traducteur de Roblox part de l'anglais. "Papi" n'y est pas, donc il ne sera traduit nulle part. "Grandpa" serait
+le mot naturel -- mais c'est un choix a faire, pas a subir.
+
 ## 0.0.345 — Le vignettage ne sert QUE le demarrage, et la camera devient elastique
 
 ### Le vignettage etait permanent, il ne devait pas l'etre

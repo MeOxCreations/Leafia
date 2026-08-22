@@ -26,7 +26,7 @@
 -- heritent d'Attachment et pas de BasePart : un Motor6D ne peut pas s'y accrocher. Le script le detecte et dit
 -- quoi faire a la place.
 
-local PAPI_NAME = "Papi"
+local PAPI_NAME = "GrandFather" -- nom du MODELE dans le Workspace
 local CANE_NAME = "Canne"
 local HAND_NAME = "RightHand" -- main qui tient la canne. "LeftHand" si tu preferes l'autre.
 local JOINT_NAME = "Canne" -- NOM DE LA PISTE dans l'editeur d'animation. C'est ce nom que tu verras.
