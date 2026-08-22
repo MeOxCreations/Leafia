@@ -40,7 +40,10 @@ local GrassZoneConfigs = {
 	-- Duree en secondes. Assez longue pour se VOIR, assez courte pour ne pas trainer derriere la machine.
 	-- La coupe elle-meme dure 0.125 s (MOW_RATE) : c'est bien trop court pour qu'on y lise une transition, et
 	-- c'est justement pour ca que l'emergence a son propre temps au lieu de suivre l'avancement de la coupe.
-	CUT_RISE_TIME = 0.35,
+	-- Monte de 0.35 : la touffe se rabaissait d'un coup, ce qui se lit comme un interrupteur et pas comme une
+	-- coupe. C'est CE temps-la qu'il faut regler quand "l'herbe descend trop vite", et pas MOW_RATE : celui-ci
+	-- decide si la touffe est coupee, celui-ci decide de ce qu'on VOIT.
+	CUT_RISE_TIME = 0.9,
 	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
 	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.
@@ -433,7 +436,12 @@ local GrassZoneConfigs = {
 	-- A 8, il faut 0.12 s sur une touffe pour la couper a fond : un passage normal coupe donc entierement.
 	-- En BAISSANT, foncer laisse des bandes a moitie tondues qu'il faut repasser. C'est une texture de jeu
 	-- interessante (elle punit la precipitation), mais ca se regle A L'OEIL, tondeuse en main. Pas maintenant.
-	MOW_RATE = 8,
+	-- Descendu de 8, mais PAS PLUS BAS. Ce chiffre decide en combien de temps une touffe compte comme coupee : a 5
+	-- il faut 0.2 s de contact, ce qu'un passage de tondeuse donne largement. Trop bas, une passe rapide laisserait
+	-- des touffes a moitie coupees derriere elle -- et rien n'est plus penible que devoir repasser sur ce qu'on
+	-- croit avoir fait.
+	-- Pour que l'herbe descende plus DOUCEMENT, c'est CUT_RISE_TIME qu'il faut monter, pas celui-ci.
+	MOW_RATE = 5,
 	-- LES FLEURS SE FAUCHENT PLUS LENTEMENT QUE L'HERBE, et c'est tout l'interet : a la vitesse de l'herbe
 	-- (0.125 s), une fleur disparaitrait d'un coup en passant devant la machine -- ca se lirait comme un bug.
 	-- A 2.5, il lui faut 0.4 s sous le carter : le temps de la voir passer DESSOUS et fondre.

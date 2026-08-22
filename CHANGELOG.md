@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.376 — L'herbe se rabaisse plus doucement
+
+Elle tombait d'un coup, ce qui se lit comme un interrupteur et pas comme une coupe.
+
+### Deux vitesses a ne pas confondre
+
+- `CUT_RISE_TIME` : 0.35 -> **0.9**. Ce qu'on VOIT. La touffe descend et prend sa couleur sur ce temps-la. C'est
+  celui qu'il faut monter quand "l'herbe descend trop vite".
+- `MOW_RATE` : 8 -> **5**. Si la touffe compte comme coupee. A 5, il faut 0.2 s de contact, ce qu'un passage de
+  tondeuse donne largement.
+
+`MOW_RATE` ne doit PAS descendre plus bas : une passe rapide laisserait alors des touffes a moitie coupees
+derriere elle, et rien n'est plus penible que devoir repasser sur ce qu'on croit avoir fait.
+
+C'est la meme separation que partout ailleurs dans ce fichier : ce qui DECIDE et ce qui se MONTRE ne se reglent
+pas ensemble.
+
 ## 0.0.375 — L'herbe tondue retrouve son ecrasement d'origine
 
 `MOWN_SCALE_Y` : 0.35 -> 0.25. C'est la valeur du tout debut, retrouvee apres avoir essaye 1, puis 0.6, puis
