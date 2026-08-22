@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.382 — Plus de secousse de camera au coup de corde
+
+Retiree, avec ses trois reglages.
+
+Elle attirait l'attention sur la CAMERA au lieu du geste. La machine qui se cabre et le moteur qui tousse
+racontent deja le tirage -- et eux sont DANS la scene. Une camera qui tremble est un commentaire sur ce qui se
+passe, pas un evenement qui se passe.
+
+Le code est supprime, pas desactive : un effet qu'on garde "au cas ou" finit par etre un mort qu'on n'ose plus
+toucher. Il est dans l'historique si le besoin revient.
+
+La secousse du taille-haie, elle, est un autre systeme et n'est pas concernee.
+
 ## 0.0.381 — Marcher sur l'herbe tondue l'eclaircit, sans effacer la bande
 
 `MOWN_CRUSH_LIGHTEN` (0.18) remplace `MOW_CRUSH_DAMP`.

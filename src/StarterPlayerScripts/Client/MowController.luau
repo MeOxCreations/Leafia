@@ -94,8 +94,6 @@ local pullSavedFocus: Vector3? = nil -- (camera.Focus - HRP)
 local pullSavedCam: Vector3? = nil -- (camera.Position - camera.Focus) : l'angle ET le zoom reels
 -- SECOUSSE du coup de corde. Amplitude COURANTE en studs : elle monte d'un coup au tirage et s'eteint toute
 -- seule. Une secousse amortie plutot qu'un a-coup : rapprocher la camera puis la faire repartir donnait un "TAC"
--- sec qu'on remarquait plus que le geste lui-meme.
-local pullShake = 0
 -- Le plan au moment ou l'on lache : le retour part de LA, pas de la cible theorique.
 local pullExitFocus = Vector3.zero
 local pullExitCam = Vector3.zero
@@ -170,18 +168,6 @@ local function stepPullCam(dt: number)
 		end
 		return
 	end
-	-- La secousse s'eteint toute seule. Amortie ICI, dans la boucle, et pas dans le calcul du plan : un
-	-- amortissement range dans une fonction de CALCUL depend du nombre de fois qu'on l'appelle, pas du temps --
-	-- et le jour ou un deuxieme appelant arrive, l'effet s'eteint deux fois plus vite sans qu'on comprenne
-	-- pourquoi.
-	if pullShake > 0 then
-		pullShake -= pullShake * math.min(1, MowConfigs.PULL_CAM_SHAKE_DECAY * dt)
-		-- On CLE a zero : un amortissement exponentiel n'atteint jamais sa cible, et la camera tremblerait d'un
-		-- millieme de stud pour toujours.
-		if pullShake < 0.005 then
-			pullShake = 0
-		end
-	end
 	local hrp = root :: BasePart
 	local shotFocus, shotCam = pullShotOffsets(hrp)
 
@@ -221,16 +207,6 @@ local function stepPullCam(dt: number)
 	-- attrapee au hasard.
 	pullLastFocus, pullLastCam = focusOffset, camOffset
 
-	-- LA SECOUSSE S'AJOUTE EN DERNIER, et seulement a la POSITION de l'oeil : le point vise ne bouge pas, donc la
-	-- camera tremble en restant braquee sur le joueur. Secouer la cible aussi ferait tanguer toute l'image et
-	-- donnerait mal au coeur.
-	-- TROIS FREQUENCES DIFFERENTES, une par axe. A frequence egale, les trois axes montent et descendent ensemble
-	-- et la camera vibre le long d'une DROITE, ce qui se lit comme un defaut d'affichage et pas comme un choc.
-	if pullShake > 0 then
-		local t = os.clock() * MowConfigs.PULL_CAM_SHAKE_FREQ
-		camOffset += Vector3.new(math.sin(t), math.sin(t * 1.7 + 1.3), math.sin(t * 2.3 + 2.1)) * pullShake
-	end
-
 	local focus = hrp.Position + focusOffset
 	camera.CameraType = Enum.CameraType.Scriptable
 	camera.CFrame = CFrame.lookAt(focus + camOffset, focus)
@@ -261,7 +237,6 @@ local function setPullCam(on: boolean)
 		pullSavedCam = camera.CFrame.Position - camera.Focus.Position
 		pullPhase = "in"
 		pullElapsed = 0
-		pullShake = 0
 		-- LE VIGNETTAGE N'EXISTE QUE POUR CE MOMENT. Il est eteint le reste du temps : un vignettage permanent ne
 		-- dit plus rien au bout d'une minute, c'est son ARRIVEE qui resserre l'attention.
 		Vignette.setStrength(MowConfigs.PULL_CAM_VIGNETTE)
@@ -273,7 +248,6 @@ local function setPullCam(on: boolean)
 		-- LE RETOUR PART DU PLAN COURANT, pas de la cible theorique : on peut lacher la machine en pleine
 		-- arrivee, et repartir d'ailleurs ferait un saut au moment meme ou l'on veut de la douceur.
 		pullExitFocus, pullExitCam = pullLastFocus, pullLastCam
-		pullShake = 0
 		Vignette.setStrength(0)
 		pullPhase = "out"
 		pullElapsed = 0
@@ -841,10 +815,6 @@ local function setPullBound(active: boolean)
 		ContextActionService:BindAction(MowConfigs.START_ACTION, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin and pullRemote then
 				pullRemote:FireServer()
-				-- SECOUSSE DE CAMERA sur le coup de corde. Posee ICI, au moment de l'appui, et pas en attendant
-				-- une reponse du serveur : un retour qui arrive apres un aller-retour reseau ne se ressent plus
-				-- comme la consequence de son propre geste.
-				pullShake = MowConfigs.PULL_CAM_SHAKE
 			end
 			return Enum.ContextActionResult.Pass
 		end, true, Enum.UserInputType.MouseButton1)

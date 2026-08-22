@@ -323,22 +323,9 @@ return {
 	-- HISTORIQUE pour ne pas refaire le tour : 9 (trop pres, on ne voyait pas la scene), 20 (trop loin, le joueur
 	-- devenait une silhouette), 10, puis 13.
 	PULL_CAM_FORWARD = 13,
-	-- SECOUSSE a chaque coup de corde. C'est la seule facon de faire sentir le tirage ici : les secousses de
-	-- CameraEffects passent par Humanoid.CameraOffset, que Roblox ignore purement et simplement quand la camera
-	-- est Scriptable (deja au journal).
-	--
-	-- UNE SECOUSSE ET PAS UN A-COUP. Rapprocher la camera d'un coup puis la faire repartir donnait un "TAC" sec,
-	-- deux fois de suite, qu'on remarquait plus que le geste. Une secousse AMORTIE oscille et s'eteint toute
-	-- seule : on la ressent sans pouvoir dire ce qui a bouge, ce qui est exactement le but.
-	--
-	-- Amplitude en studs. C'est un TREMBLEMENT, pas un deplacement : au-dela de ~0.5 ca devient un mouvement de
-	-- camera et ca reprend l'air d'un effet.
-	PULL_CAM_SHAKE = 0.35,
-	-- Vitesse d'extinction. BAS = la secousse traine. A 4, il en reste un quart apres un tiers de seconde.
-	PULL_CAM_SHAKE_DECAY = 4,
-	-- Frequence de l'oscillation, en cycles par seconde. HAUT = tremblement nerveux, BAS = balancement.
-	-- Autour de 14 on est sur un choc mecanique ; en dessous de 8 ca ressemble a un bateau.
-	PULL_CAM_SHAKE_FREQ = 14,
+	-- (Il y a eu une SECOUSSE de camera a chaque coup de corde. Retiree : elle attirait l'attention sur la camera
+	-- au lieu du geste. La machine qui se cabre et le moteur qui tousse racontent deja le tirage, et eux sont dans
+	-- la scene -- une camera qui tremble est un commentaire, pas un evenement.)
 	-- INTENSITE DU VIGNETTAGE pendant la scene de demarrage, de 0 a 1. Il est eteint le reste du temps : un
 	-- vignettage permanent ne dit plus rien au bout d'une minute, c'est son ARRIVEE qui resserre l'attention.
 	PULL_CAM_VIGNETTE = 1,
