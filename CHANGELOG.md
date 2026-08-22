@@ -2185,6 +2185,50 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.335 — Le curseur custom disparait, les outils restent, et la bascule GLISSE
+
+Trois corrections sur la vue subjective posee juste avant.
+
+### Le curseur custom restait a l'ecran
+
+Le jeu n'affiche pas le curseur systeme : il en dessine un a lui, une ImageLabel qui suit la souris. Couper
+`MouseIconEnabled` ne l'effacait donc pas -- il restait plante au centre, par-dessus le point de visee.
+
+Pire, `CursorController` dit en tete de fichier qu'il est le SEUL ecrivain de `MouseIconEnabled` et du curseur.
+Ecrire par-dessus lui n'aurait pas tenu : la derniere des deux boucles a s'executer aurait gagne, une image sur
+deux. La vue subjective DECLARE donc son intention (`CursorController.setSuppressed`), et lui seul ecrit.
+
+### On ne voyait pas ses outils
+
+Ce n'est pas `CharacterFade` : il ne touche que les enfants DIRECTS du personnage, et les parts d'un outil sont
+plus profondes.
+
+C'est ROBLOX. Son controleur de transparence efface tout le personnage en vue subjective, et il n'EPARGNE que les
+parts rangees sous un `Tool`. Nos outils sont des `Model` avec un Motor6D fabrique a la main -- un `Tool` n'a rien
+de magique, c'est simplement Roblox qui lui cree son joint tout seul. Ils n'etaient donc pas epargnes.
+
+`CharacterFade.keepToolsVisible` remet leur modificateur a zero A CHAQUE IMAGE, parce que Roblox repose le sien a
+chaque image.
+
+Meme piege, une marche plus loin : le garde-fou "ne pas reecrire la meme valeur" de `CharacterFade` faisait que
+nos MAINS n'etaient posees qu'une fois -- et Roblox reprenait la main juste apres. D'ou le nouveau parametre
+`force`, a n'utiliser que quand quelqu'un d'autre ecrit sur les memes parts en continu.
+
+### La bascule glisse au lieu de couper
+
+Passer d'un coup de la distance du joueur a zero etait un COUP SEC : on se retrouvait dans sa tete sans avoir vu
+le chemin, et le retour etait pire. La distance VOYAGE maintenant (`FP_LERP_SPEED`, environ une demi-seconde).
+
+Le corps revient AU MEME RYTHME : l'effacer d'un bloc pendant que la vue glisse encore montrerait un trou a la
+place du personnage pendant le voyage. La souris, le curseur et le reticule, eux, sont rendus tout de suite --
+ils n'ont rien a interpoler, et garder la souris verrouillee pendant que la vue recule serait desagreable.
+
+La boucle reste donc branchee jusqu'a la fin du glissement, et c'est elle qui se debranche et nettoie. Elle
+verifie au passage qu'on n'a pas rebascule en vue subjective entre-temps.
+
+Piege evite au passage : un lerp exponentiel n'atteint JAMAIS sa cible. Sans le calage sur zero, on n'aurait
+JAMAIS rendu ses bornes de zoom au joueur -- il n'aurait plus pu zoomer, sans que rien ne l'explique.
+
 ## 0.0.334 — VUE SUBJECTIVE chez le client, avec bascule et point de visee
 
 Nouveau `FirstPersonController`. Chez un client on demarre DANS LES YEUX ; `C` bascule vers la vue de dos et

@@ -57,6 +57,12 @@ local zoomSaved = false -- les bornes du joueur sont-elles mises de cote ?
 -- aucun sens quand on est dans les yeux. Elle vit ICI et pas dans le controller qui la demande, parce que les
 -- bornes de zoom n'ont droit qu'a UN ecrivain -- c'est la regle en tete de ce fichier.
 local firstPerson = false
+-- ELLE GLISSE, elle ne bascule pas. Passer d'un coup de la distance du joueur a zero est un COUP SEC : on se
+-- retrouve dans sa tete sans avoir vu le chemin, et le retour est pire encore. On fait donc voyager la distance.
+-- BAS = lent. 4.5 met environ une demi-seconde.
+local FP_LERP_SPEED = 4.5
+local fpAmount = 0 -- 0 = vue de dos, 1 = dans les yeux. Lu aussi par l'appelant, pour effacer le corps AU MEME rythme.
+local fpBase: number? = nil -- distance du joueur AVANT d'entrer : c'est la qu'on revient
 
 -- ===== Secousse (impact) =====
 -- Ecrite par la tache de Shake, lue par la boucle. Revient a zero quand la secousse est finie.
@@ -121,6 +127,12 @@ end
 --- Passe par ici et pas par l'appelant : les bornes de zoom n'ont droit qu'a UN ecrivain (voir la regle en tete).
 function CameraEffects.SetFirstPerson(on: boolean)
 	firstPerson = on
+end
+
+--- Ou en est le glissement : 0 = vue de dos, 1 = dans les yeux. A lire pour accorder un effet AU MEME rythme --
+--- effacer le corps d'un coup pendant que la camera glisse encore montrerait un trou a la place du personnage.
+function CameraEffects.GetFirstPersonAmount(): number
+	return fpAmount
 end
 
 -- A-coup de FOV : s'ajoute au fond puis s'efface. Negatif = la vue se resserre.
@@ -199,15 +211,31 @@ function CameraEffects.init()
 				zoomMinWas = player.CameraMinZoomDistance
 				zoomMaxWas = player.CameraMaxZoomDistance
 			end
-			if firstPerson then
-				-- Les deux bornes a ZERO : la camera Custom se colle a la tete, et c'est Roblox qui fait la vue
-				-- subjective. Ecrire nous-memes la CFrame reviendrait a nous battre avec ses scripts de camera.
+			-- La distance de DEPART se capture a l'entree, jamais en continu : la relire pendant qu'on la modifie
+			-- ferait fuir la camera toujours plus loin. Meme piege que le recul, juste au-dessus.
+			if firstPerson and not fpBase then
+				fpBase = math.max((camera.CFrame.Position - camera.Focus.Position).Magnitude, 0.5)
+			end
+			local fpTarget = if firstPerson then 1 else 0
+			fpAmount += (fpTarget - fpAmount) * math.min(1, FP_LERP_SPEED * dt)
+			-- ON CLE SUR LA CIBLE. Un lerp exponentiel n'atteint JAMAIS son but : sans ca, `fpAmount` resterait a
+			-- 0.004 pour toujours et on ne rendrait donc JAMAIS ses bornes au joueur -- il ne pourrait plus zoomer,
+			-- sans que rien ne l'explique.
+			if math.abs(fpTarget - fpAmount) < 0.01 then
+				fpAmount = fpTarget
+			end
+
+			if fpAmount > 0 then
+				-- LA VUE SUBJECTIVE PRIME sur le recul de camera : reculer la vue n'a aucun sens quand on est dans
+				-- les yeux, et deux raisons ecrivant la meme borne se battraient a chaque image.
 				-- Le recul est remis a plat pour qu'en ressortant il reparte d'une distance FRAICHE.
 				zoomBase = nil
 				zoomBoost = 0
-				player.CameraMinZoomDistance = 0
-				player.CameraMaxZoomDistance = 0
+				local d = (fpBase or 12) * (1 - fpAmount)
+				player.CameraMinZoomDistance = d
+				player.CameraMaxZoomDistance = d
 			else
+				fpBase = nil
 				zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, ZOOM_LERP_SPEED * dt)
 				if zoomBoostTarget > 0 and not zoomBase then
 					zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude

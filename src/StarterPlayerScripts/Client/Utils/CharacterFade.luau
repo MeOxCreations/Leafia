@@ -47,9 +47,19 @@ local function write(part: BasePart, value: number)
 end
 
 -- `body` et `hands` vont de 0 (rien d'efface) a 1 (invisible).
-function CharacterFade.apply(character: Model, body: number, hands: number)
+--
+-- `force` IGNORE le garde-fou "meme valeur qu'avant". A n'utiliser que quand QUELQU'UN D'AUTRE ecrit sur les
+-- memes parts a chaque image : c'est le cas en vue subjective, ou le controleur de transparence de Roblox repose
+-- la sienne sans arret. Sans lui, notre valeur est posee une fois puis plus jamais rafraichie, et Roblox reprend
+-- la main des l'image suivante -- les mains disparaissent alors que rien n'a change chez nous.
+function CharacterFade.apply(character: Model, body: number, hands: number, force: boolean?)
 	local last = applied[character]
-	if last and math.abs(last.body - body) < 0.001 and math.abs(last.hands - hands) < 0.001 then
+	if
+		not force
+		and last
+		and math.abs(last.body - body) < 0.001
+		and math.abs(last.hands - hands) < 0.001
+	then
 		return
 	end
 	applied[character] = { body = body, hands = hands }
@@ -66,6 +76,32 @@ function CharacterFade.apply(character: Model, body: number, hands: number)
 				-- Cheveux, chapeaux : ils suivent le corps. Les laisser pleins ferait flotter une chevelure
 				-- toute seule au-dessus d'un fantome.
 				write(handle, body)
+			end
+		end
+	end
+end
+
+-- FORCE LES OUTILS A RESTER VISIBLES, contre Roblox.
+--
+-- En vue subjective, le controleur de transparence de Roblox efface tout le personnage. Il EPARGNE les parts
+-- rangees sous un `Tool`... et nos outils sont des `Model` avec un Motor6D fabrique a la main (un Tool n'a rien
+-- de magique, c'est juste Roblox qui lui cree son joint tout seul). Ils ne sont donc pas epargnes, et ils
+-- disparaissent avec le corps -- alors que l'outil est precisement ce qu'on veut voir dans les mains.
+--
+-- A APPELER A CHAQUE IMAGE. Roblox repose sa valeur a chaque image tant que la camera est collee a la tete : une
+-- ecriture unique serait effacee juste apres. Pas de cache ici pour la meme raison -- c'est le seul endroit du
+-- module ou reecrire la meme valeur est le but, et non du gaspillage.
+--
+-- Zero sur le MODIFICATEUR, pas sur la transparence : une part volontairement translucide le reste.
+function CharacterFade.keepToolsVisible(character: Model)
+	for _, child in ipairs(character:GetChildren()) do
+		-- Les outils sont les MODELS poses sur le personnage. On ne les nomme pas un par un : une liste serait a
+		-- tenir a jour a chaque nouvel outil, et personne ne le ferait.
+		if child:IsA("Model") then
+			for _, part in ipairs(child:GetDescendants()) do
+				if part:IsA("BasePart") then
+					part.LocalTransparencyModifier = 0
+				end
 			end
 		end
 	end

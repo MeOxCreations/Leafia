@@ -48,6 +48,14 @@ local SLIME_HOVER_PULSE_SPEED = 4.5 -- vitesse de la respiration en rad/s (lent 
 
 local CursorController = {}
 
+-- CURSEUR SUPPRIME DE L'EXTERIEUR. En vue subjective la souris est verrouillee au centre : un curseur n'a plus de
+-- sens, et c'est le point de visee qui prend sa place.
+--
+-- Un DRAPEAU lu par la boucle, et pas une ecriture faite ailleurs : ce module est le seul ecrivain du curseur et
+-- de MouseIconEnabled (c'est ecrit en tete du fichier). Un autre controller qui ecrirait par-dessus se ferait
+-- effacer a l'image suivante par cette boucle -- ou l'effacerait, selon lequel passe en dernier.
+local suppressed = false
+
 function CursorController.init()
 	-- On coupe le curseur systeme : le notre le remplace entierement.
 	UserInputService.MouseIconEnabled = false
@@ -86,6 +94,16 @@ function CursorController.init()
 	-- MouseIconEnabled qu'aux CHANGEMENTS, pas chaque frame.
 	local systemShown = false
 	RunService.RenderStepped:Connect(function(dt: number)
+		if suppressed then
+			cursor.Visible = false
+			-- On coupe AUSSI le curseur systeme : sur les boutons Roblox du haut-gauche il reprendrait la main,
+			-- et on verrait une fleche reapparaitre en vue subjective.
+			if systemShown then
+				systemShown = false
+				UserInputService.MouseIconEnabled = false
+			end
+			return
+		end
 		local m = UserInputService:GetMouseLocation()
 
 		-- BOUTONS ROBLOX (haut-gauche) : on y montre le curseur SYSTEME (il passe par-dessus le CoreGui), et on cache
@@ -163,6 +181,12 @@ function CursorController.init()
 	end)
 
 	print("[Cursor] Curseur custom actif")
+end
+
+--- Cache (ou rend) le curseur custom ET le curseur systeme. Appele par la vue subjective, qui verrouille la souris
+--- au centre. Passer par ici plutot que d'ecrire MouseIconEnabled soi-meme : ce module en est le seul ecrivain.
+function CursorController.setSuppressed(on: boolean)
+	suppressed = on
 end
 
 return CursorController

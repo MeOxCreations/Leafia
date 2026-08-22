@@ -25,6 +25,7 @@ local UserInputService = game:GetService("UserInputService")
 
 local PlacesConfig = require(ReplicatedStorage.Modules.Configs.PlacesConfig)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
+local CursorController = require(script.Parent.CursorController)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 
 local FirstPersonController = {}
@@ -104,10 +105,18 @@ end
 -- comportement de la souris a chaque image quand la camera est collee a la tete : une valeur posee une seule
 -- fois serait effacee a l'image suivante. On passe donc APRES lui (priorite Camera + 1) et on repose la notre.
 local function step()
+	-- LE CORPS S'EFFACE AU RYTHME DE LA CAMERA, pas d'un coup. Effacer d'un bloc pendant que la vue glisse encore
+	-- montrerait un trou a la place du personnage le temps du voyage.
+	local amount = CameraEffects.GetFirstPersonAmount()
 	local character = player.Character
 	if character then
-		-- Corps efface, mains gardees : l'outil est soude a la main, il reste donc visible avec elle.
-		CharacterFade.apply(character, 1, 0)
+		-- `true` = on REECRIT meme quand rien n'a change chez nous. Roblox repose sa propre transparence a chaque
+		-- image en vue subjective : sans ca, nos mains seraient effacees des l'image suivant la derniere ecriture.
+		CharacterFade.apply(character, amount, 0, true)
+		-- ET ON REMET LES OUTILS VISIBLES PAR-DESSUS ROBLOX, qui les efface avec le reste : il n'epargne que les
+		-- parts rangees sous un `Tool`, or les notres sont des `Model`. Sans cette ligne, on tient un taille-haie
+		-- invisible.
+		CharacterFade.keepToolsVisible(character)
 	end
 	-- CURSEUR RENDU tant que la touche est maintenue. Le reticule s'efface avec, sinon on aurait un point de
 	-- visee ET une fleche a l'ecran, et on ne saurait plus lequel des deux compte.
@@ -116,7 +125,10 @@ local function step()
 	if screen then
 		screen.Enabled = not free
 	end
-	UserInputService.MouseIconEnabled = free
+	-- LE CURSEUR PASSE PAR CursorController, jamais par MouseIconEnabled en direct : le jeu affiche un curseur
+	-- CUSTOM (une ImageLabel qui suit la souris), et couper l'icone systeme ne l'aurait pas efface -- il serait
+	-- reste plante au centre de l'ecran par-dessus le point de visee. Ce module est le seul ecrivain des deux.
+	CursorController.setSuppressed(not free)
 	UserInputService.MouseBehavior = if free then Enum.MouseBehavior.Default else Enum.MouseBehavior.LockCenter
 end
 
@@ -137,22 +149,36 @@ local function setFirstPerson(on: boolean)
 		return
 	end
 
-	if bound then
-		bound = false
-		RunService:UnbindFromRenderStep(RENDER_BIND)
-	end
-	-- ON REND TOUT CE QU'ON A PRIS, au meme endroit : le curseur, son icone, le reticule et le corps. Un
-	-- nettoyage reparti sur plusieurs sorties finit toujours par en oublier un.
+	-- ON REND TOUT DE SUITE CE QUI EST BINAIRE : la souris, le curseur, le reticule. Rien a faire glisser la, et
+	-- garder la souris verrouillee pendant que la vue recule serait desagreable.
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-	UserInputService.MouseIconEnabled = true
+	CursorController.setSuppressed(false)
 	local screen = gui
 	if screen then
 		screen.Enabled = false
 	end
-	local character = player.Character
-	if character then
-		CharacterFade.clear(character)
+
+	-- LE CORPS, LUI, REVIENT AU RYTHME DE LA CAMERA. On garde donc la boucle branchee jusqu'a ce que le
+	-- glissement soit VRAIMENT fini, et c'est elle qui debranche et nettoie. Couper ici laisserait un personnage
+	-- invisible pendant que la vue recule -- on regarderait un trou s'eloigner.
+	if not bound then
+		return
 	end
+	task.spawn(function()
+		while CameraEffects.GetFirstPersonAmount() > 0 and not firstPerson do
+			RunService.RenderStepped:Wait()
+		end
+		-- On a pu rebasculer en vue subjective entre-temps : dans ce cas la boucle doit RESTER branchee.
+		if firstPerson or not bound then
+			return
+		end
+		bound = false
+		RunService:UnbindFromRenderStep(RENDER_BIND)
+		local character = player.Character
+		if character then
+			CharacterFade.clear(character)
+		end
+	end)
 end
 
 function FirstPersonController.init()
