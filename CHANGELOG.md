@@ -2185,6 +2185,14 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.360 — La camera du demarrage recule un peu : vue d'ensemble
+
+`PULL_CAM_FORWARD` : 10 -> 13. Assez loin pour tenir le joueur ET la machine dans le cadre. C'est une vue
+d'ensemble -- on regarde quelqu'un demarrer une tondeuse, pas un gros plan sur une main.
+
+Historique note dans la config pour ne pas refaire le tour : 9 (trop pres, on ne voyait pas la scene), 20 (trop
+loin, le joueur devenait une silhouette), 10, puis 13.
+
 ## 0.0.359 — Le volet du rideau ralentit
 
 `WIPE_COVER_TIME` : 0.3 -> 0.55. `WIPE_REVEAL_TIME` : 0.45 -> 0.85. `WIPE_HOLD` : 0.06 -> 0.12.

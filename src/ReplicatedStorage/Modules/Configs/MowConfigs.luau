@@ -297,7 +297,11 @@ return {
 	-- Il a existe un recul lent et continu pendant toute la scene, cense lui donner de l'ampleur. Retire : une
 	-- camera qui derive en permanence pendant qu'on attend de pouvoir agir est PENIBLE, et ca se remarque bien
 	-- plus qu'un plan fixe. Le mouvement, ici, c'est le geste du joueur -- pas la camera.
-	PULL_CAM_FORWARD = 10,
+	-- 13 : assez loin pour tenir le joueur ET la machine dans le cadre. C'est une vue D'ENSEMBLE -- on regarde
+	-- quelqu'un demarrer une tondeuse, pas un gros plan sur une main.
+	-- HISTORIQUE pour ne pas refaire le tour : 9 (trop pres, on ne voyait pas la scene), 20 (trop loin, le joueur
+	-- devenait une silhouette), 10, puis 13.
+	PULL_CAM_FORWARD = 13,
 	-- SECOUSSE a chaque coup de corde. C'est la seule facon de faire sentir le tirage ici : les secousses de
 	-- CameraEffects passent par Humanoid.CameraOffset, que Roblox ignore purement et simplement quand la camera
 	-- est Scriptable (deja au journal).
