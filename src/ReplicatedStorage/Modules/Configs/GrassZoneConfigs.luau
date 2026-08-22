@@ -392,13 +392,18 @@ local GrassZoneConfigs = {
 	-- 0.9 = il n'en reste qu'un dixieme au moment ou elle disparait, donc on ne voit pas le saut.
 	FLOWER_MOW_SHRINK = 0.9,
 
-	-- COULEUR DE L'HERBE TONDUE. Volontairement plus SOMBRE que l'herbe haute : essayee plus claire d'abord, et
-	-- l'ecran a tranche -- la pelouse tondue avait l'air ECLAIREE, comme un projecteur pose dessus, au lieu d'avoir
-	-- l'air rase. C'est l'ombre entre les brins courts qui se lit comme "coupe", pas la lumiere.
+	-- COULEUR DE L'HERBE TONDUE. Nettement plus CLAIRE que l'herbe haute : c'est ce qui rend le passage visible.
+	--
+	-- HISTORIQUE, parce que ca a change d'avis et qu'il ne faut pas refaire le tour : une version claire avait ete
+	-- essayee puis REJETEE (la pelouse tondue avait l'air ECLAIREE, comme un projecteur pose dessus, au lieu
+	-- d'avoir l'air rase), et on etait passe a une teinte quasi identique a l'herbe haute -- donc invisible.
+	-- Ce qui a change entre-temps : l'herbe coupee a maintenant son PROPRE MAILLAGE (voir CUT_MESH_NAME). C'est la
+	-- FORME qui dit "coupe" desormais, la couleur n'a plus a le faire toute seule -- elle peut donc etre claire
+	-- sans que ca se lise comme de la lumiere.
+	--
 	-- Recoit les MEMES taches de Perlin que le reste : la partie tondue garde donc le relief du terrain au lieu de
 	-- virer a l'aplat uniforme. Meme raison que CRUSHED_COLOR.
-	-- Desaturee en meme temps que BASE_COLOR, et du meme ecart : voir la regle chez elle.
-	MOWN_COLOR = Color3.fromRGB(73, 91, 45),
+	MOWN_COLOR = Color3.fromRGB(159, 197, 97),
 
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.

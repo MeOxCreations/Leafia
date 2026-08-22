@@ -2185,6 +2185,22 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.330 — L'herbe tondue devient nettement plus claire
+
+`MOWN_COLOR` : 73, 91, 45 -> 159, 197, 97. Le passage de la tondeuse se voit enfin sans avoir a chercher.
+
+### Pourquoi ce revirement se tient
+
+Une version claire avait deja ete essayee, puis REJETEE : la pelouse tondue avait l'air ECLAIREE, comme un
+projecteur pose dessus, au lieu d'avoir l'air rase. On etait donc revenu a une teinte quasi identique a l'herbe
+haute -- lisible dans le code, invisible a l'ecran.
+
+Ce qui a change entre-temps, c'est le 0.0.329 : l'herbe coupee a maintenant son PROPRE MAILLAGE. C'est la FORME
+qui dit "coupe" desormais, la couleur n'a plus a porter ce sens toute seule. Elle peut donc etre claire sans se
+lire comme de la lumiere.
+
+L'historique est ecrit dans la config, pour ne pas refaire le tour une troisieme fois.
+
 ## 0.0.329 — L'herbe tondue CHANGE DE FORME, elle ne fait plus que raccourcir
 
 Le mesh `GrassCut` (range a cote de `GrassMesh` sous `Assets/Contents/Foliages`) remplace le maillage de la touffe
