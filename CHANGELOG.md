@@ -2185,6 +2185,15 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.364 — L'herbe de base fonce
+
+`BASE_COLOR` : 138, 154, 85 -> 90, 107, 49. Meme teinte, plus sombre.
+
+Elle laisse toute la place au contraste avec l'herbe TONDUE, qui est claire : c'est cet ecart qui fait voir le
+travail fait, et c'est le coeur du geste.
+
+L'historique complet des valeurs reste dans la config, avec ce que chacune corrigeait.
+
 ## 0.0.363 — L'herbe coupee n'est plus ecrasee, l'herbe normale ne levite plus, et le regard arriere se coupe
 
 ### La touffe coupee gardait 25 % de sa hauteur

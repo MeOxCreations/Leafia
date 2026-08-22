@@ -164,11 +164,13 @@ local GrassZoneConfigs = {
 	--   (66, 94, 30) : ecart vert/bleu de 64. Un vert de peinture, trop sature.
 	--   (72, 90, 45) : desature en montant le BLEU... ce qui a rendu l'herbe FROIDE, tirant sur le bleu-vert.
 	--   (138, 154, 85) : on remonte le ROUGE bien au-dessus du bleu. Meme desaturation, mais chaude.
+	--   (90, 107, 49) : la meme teinte, plus SOMBRE. Elle laisse toute la place au contraste avec l'herbe tondue,
+	--     qui est claire (voir MOWN_COLOR) -- c'est cet ecart qui fait voir le travail fait.
 	-- Autrement dit : pour desaturer sans refroidir, il faut monter le rouge AUTANT que le bleu.
 	--
 	-- Les TROIS couleurs d'herbe (repos, tondue, ecrasee) doivent rester coherentes entre elles. N'en changer
 	-- qu'une rend les autres bizarres PAR COMPARAISON, et on croit a un bug d'affichage.
-	BASE_COLOR = Color3.fromRGB(138, 154, 85),
+	BASE_COLOR = Color3.fromRGB(90, 107, 49),
 	-- TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin.
 	-- Sans elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint. Le bruit de
 	-- Perlin donne de vraies ZONES ; un tirage au hasard par touffe donnerait du poivre et sel, ce qui est pire que
