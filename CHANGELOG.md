@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.379 — L'herbe haute ne s'ecrase plus autant sous le pied
+
+- `CRUSH_SQUASH` : 0.98 -> **0.65**. Sous le pied, la touffe descend a 35 % de sa hauteur au lieu de 2 %.
+- `FLATTEN_AMOUNT` : 0.9 -> **0.5**. La trainee derriere le joueur garde la moitie de cet ecrasement au lieu de
+  presque tout.
+
+### Pourquoi c'etait devenu faux
+
+A 0.98, un pas ne couchait pas l'herbe : il la RASAIT. Ca ressemblait davantage a un passage de tondeuse qu'a un
+pas -- et ca brouille justement l'information qu'on veut donner, maintenant que la tonte a sa propre hauteur
+(`MOWN_SCALE_Y`). Deux gestes tres differents produisaient le meme resultat a l'ecran.
+
+Meme chose pour la trainee : a 0.9, une pelouse simplement TRAVERSEE ressemblait a une pelouse TONDUE.
+
+### Les deux reglages ne disent pas la meme chose
+
+`CRUSH_SQUASH` dit a quel point l'herbe se couche SOUS le pied. `FLATTEN_AMOUNT` dit combien elle en garde
+APRES. Ils se multiplient, donc baisser l'un allege deja l'autre -- utile a savoir avant de les regler tous les
+deux a l'aveugle.
+
+L'herbe deja tondue n'est pas concernee : elle ne s'ecrase plus du tout depuis le 0.0.369.
+
 ## 0.0.378 — Les bandes de tonte se voient enfin
 
 Elles existaient bien, mais deux choses les rendaient invisibles.

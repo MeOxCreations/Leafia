@@ -309,11 +309,16 @@ local GrassZoneConfigs = {
 	-- ===== Ecrasement =====
 	-- Rayon autour du joueur ou l'herbe se couche. Mesure a l'horizontale (X/Z) : sauter ne doit pas relever l'herbe.
 	CRUSH_RADIUS = 4.5,
-	-- APLATISSEMENT vertical au maximum de l'ecrasement, en fraction de la hauteur.
-	-- 0.98 = la touffe descend a 2 % de sa hauteur sous le pied, puis remonte. C'EST L'EFFET PRINCIPAL.
-	-- Ecrasee au ras du sol. La limite est 1.0, ou elle disparaitrait tout a fait : au-dela de 0.98 il ne reste
-	-- quasiment plus rien a voir, et l'effet se perd faute de matiere.
-	CRUSH_SQUASH = 0.98,
+	-- APLATISSEMENT vertical SOUS LE PIED, en fraction de la hauteur.
+	--
+	-- 0.65 = la touffe descend a 35 % de sa hauteur, puis remonte. Descendu de 0.98, ou elle etait ecrasee au RAS
+	-- DU SOL : un pas ne rase pas une pelouse, il la couche. A 2 % de hauteur il ne restait plus rien a voir, et
+	-- ca ressemblait davantage a un passage de tondeuse qu'a un pas -- ce qui brouille justement l'information
+	-- qu'on veut donner, puisque la tonte a maintenant sa propre hauteur (MOWN_SCALE_Y).
+	--
+	-- L'herbe DEJA TONDUE, elle, ne s'ecrase plus du tout : voir MOWN_CRUSH_DAMP. Ce reglage ne concerne donc que
+	-- l'herbe haute.
+	CRUSH_SQUASH = 0.65,
 	-- COULEUR DE L'HERBE ECRASEE. La touffe glisse en douceur de BASE_COLOR vers celle-ci quand on marche dessus, et
 	-- revient quand elle se releve. Deux couleurs choisies plutot qu'un pourcentage d'assombrissement : on regle ce
 	-- qu'on voit, et rien n'empeche de faire une trace plus CLAIRE que l'herbe -- c'est d'ailleurs ce que fait une
@@ -356,11 +361,15 @@ local GrassZoneConfigs = {
 	-- se voit ; une qui rebondit en un quart de seconde ne se lit pas.
 	-- A 3.2, la touffe rejoint le niveau de la trainee en un peu plus d'une demi-seconde.
 	RECOVER_SPEED = 3.2,
-	-- TRAINEE. Fraction de l'ecrasement que le passage laisse derriere le joueur, une fois qu'il n'est plus dessus.
-	-- 0.9 = l'herbe reste presque plaquee au sol derriere le joueur. Le chemin est aussi visible que sous ses pieds,
-	-- il ne s'en distingue que par la couleur, qui, elle, revient tout de suite.
+	-- TRAINEE. Fraction de l'ecrasement que le passage laisse DERRIERE le joueur, une fois qu'il n'est plus dessus.
+	--
+	-- A ne pas confondre avec CRUSH_SQUASH : celui-la dit a quel point l'herbe se couche SOUS le pied, celui-ci
+	-- dit combien elle en garde APRES. Les deux se multiplient, donc baisser l'un allege deja l'autre.
+	--
+	-- 0.5 = la trainee garde la moitie de l'ecrasement. Descendu de 0.9, ou le chemin restait aussi plaque que
+	-- sous les pieds : une pelouse traversee ressemblait a une pelouse tondue.
 	-- A 0 elle se redresse entierement ; a 1 elle reste ecrasee a fond.
-	FLATTEN_AMOUNT = 0.9,
+	FLATTEN_AMOUNT = 0.5,
 	-- Vitesse a laquelle la trainee s'efface, en fraction par seconde. 0 = elle ne s'efface JAMAIS.
 	-- 0.01 la fait tenir une bonne minute : de quoi voir tout son parcours, meme long. Attention en descendant plus
 	-- bas : une pelouse qui n'oublie plus finit entierement pietinee, et l'effet disparait par SATURATION -- si tout
