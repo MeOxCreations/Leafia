@@ -2185,6 +2185,18 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.340 — On ne touche plus au bandeau du rideau
+
+Son `UIGradient` n'est pas un reflet a promener : c'est un FONDU dessine dans Studio, dont la transparence monte
+de 0 a 1 le long du bandeau pour qu'il ne soit pas plein d'un bout a l'autre.
+
+Le balayage ajoute au 0.0.339 deplacait son `Offset`, ce qui poussait cette rampe HORS du bandeau -- lequel
+redevenait donc completement opaque. L'exact contraire de l'intention.
+
+Regle generale, et c'est la deuxieme fois qu'elle se paie sur cet ecran : ne pas EMBELLIR d'un effet non demande.
+Un degrade pose a la main porte une intention, et l'animer la detruit sans que rien ne le signale a la lecture du
+code.
+
 ## 0.0.339 — Le rideau de chargement se DESSINE DANS STUDIO
 
 Le rideau de changement de map n'est plus construit en code. Il CLONE une ScreenGui modele et se contente

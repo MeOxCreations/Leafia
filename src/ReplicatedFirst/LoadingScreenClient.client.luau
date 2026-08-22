@@ -117,11 +117,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local FILL_SOFT = 0.14 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
 	local FILL_ROTATION = 270 -- sens du remplissage. 90 = l'autre sens (verifie a l'ecran : 270 est le bon)
 
-	-- Reflet qui balaie le BANDEAU, via le UIGradient qui y est deja pose dans Studio. Une pause entre deux
-	-- passages : un reflet continu se lit comme un clignotement, c'est le silence qui le rend precieux.
-	local BANNER_SWEEP = 1.1
-	local BANNER_PAUSE = 2.4
-
 	-- CONSEILS qui defilent. EN ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est
 	-- traduit nulle part. A remplacer librement, c'est une ligne chacun.
 	local TIPS: { string } = {
@@ -297,24 +292,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		end)
 	end
 
-	-- REFLET SUR LE BANDEAU. On anime le UIGradient DEJA POSE dans Studio plutot que d'en creer un : c'est lui qui
-	-- porte les couleurs choisies a l'editeur, en fabriquer un autre les remplacerait.
-	local banner = sg:FindFirstChild("Banner", true)
-	local bannerGrad = if banner then banner:FindFirstChildWhichIsA("UIGradient") else nil
-	if bannerGrad then
-		local grad = bannerGrad :: UIGradient
-		task.spawn(function()
-			while sg.Parent do
-				grad.Offset = Vector2.new(-1, grad.Offset.Y)
-				TweenService
-					:Create(grad, TweenInfo.new(BANNER_SWEEP, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut), {
-						Offset = Vector2.new(1, grad.Offset.Y),
-					})
-					:Play()
-				task.wait(BANNER_SWEEP + BANNER_PAUSE)
-			end
-		end)
-	end
+	-- ON NE TOUCHE PAS AU BANDEAU. Son UIGradient n'est pas un reflet a promener, c'est un FONDU dessine dans
+	-- Studio : sa transparence monte de 0 a 1 le long du bandeau, pour qu'il ne soit pas plein d'un bout a
+	-- l'autre. Deplacer son Offset poussait cette rampe HORS du bandeau, qui redevenait donc completement opaque
+	-- -- l'exact contraire de ce qui etait voulu.
+	--
+	-- Regle generale, deja payee sur cet ecran : ne pas EMBELLIR d'un effet non demande. Un degrade pose a la main
+	-- porte une intention, et l'animer la detruit sans qu'on s'en apercoive en lisant le code.
 
 	-- LES CONSEILS TOURNENT. Un fondu entre deux textes plutot qu'un remplacement sec : un texte qui change d'un
 	-- coup attire l'oeil comme une erreur, un fondu se lit comme une page qui tourne.
