@@ -78,6 +78,7 @@ type Clump = {
 	lift: number, -- hauteur de TIGE au repos (fleurs seulement, 0 pour l'herbe). Se comprime avec l'ecrasement.
 	flower: boolean, -- fleur et non touffe d'herbe : la tondeuse la FAUCHE au lieu de la raccourcir
 	gone: boolean, -- fauchee : sa part est detruite, plus rien ne doit y toucher
+	cutApplied: boolean, -- son maillage a deja ete echange contre celui de l'herbe coupee
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	lastShrink: number, -- dernier retrecissement de fleur fauchee REELLEMENT ecrit
 	baseColor: Color3, -- couleur au repos, TACHE comprise
@@ -136,6 +137,9 @@ local connections: { RBXScriptConnection } = {}
 local template: BasePart? = nil
 -- Meshes de fleurs, resolus au boot. Vide = pas de fleurs, et ce n'est pas une erreur.
 local flowerTemplates: { BasePart } = {}
+-- Mesh de l'herbe COUPEE, resolu au boot a cote de celui de l'herbe haute. nil = pas d'echange de maillage, la
+-- touffe se contente de raccourcir. MeshPart et pas BasePart : `ApplyMesh` n'existe que sur un MeshPart.
+local cutTemplate: MeshPart? = nil
 local heartbeat: RBXScriptConnection? = nil
 
 -- ===== Resolution des dependances =====
@@ -176,6 +180,36 @@ local function apply(
 	-- touffe debout ne doit rien payer. Pas de garde-fou "delta infime" ici : l'angle d'ecrasement se cle exactement
 	-- sur sa cible, donc `squash` retombe exactement a 1 et la comparaison stricte s'arrete d'elle-meme. Un seuil
 	-- figerait justement le residu au lieu de le laisser finir de remonter.
+	-- L'HERBE HAUTE DEVIENT DE L'HERBE COUPEE : on echange son MAILLAGE, on ne fait pas que la raccourcir. Une
+	-- herbe rase n'a pas la forme d'une herbe haute qu'on aurait tassee, et l'oeil le sait.
+	--
+	-- `ApplyMesh` remplace le maillage SUR PLACE, sans creer ni detruire une seule instance. C'est le seul chemin
+	-- possible a l'execution : `MeshId` et `MeshContent` sont marques "Not Accessible Security" et ne s'ecrivent
+	-- pas depuis un script normal (verifie dans la doc, pas suppose). Elle exige en revanche un MeshPart DEJA
+	-- present en jeu portant le bon maillage -- d'ou le template garde en ReplicatedStorage.
+	--
+	-- A MI-COUPE : la touffe est alors deja bien tassee, donc sa silhouette est petite et le changement de forme
+	-- passe inapercu. Au premier contact, elle serait encore a pleine hauteur et le saut se verrait.
+	local cutMesh = cutTemplate
+	local myPart = clump.part
+	if cutMesh and not clump.cutApplied and not clump.flower and mown >= GrassZoneConfigs.MOW_SWAP_AT then
+		if myPart:IsA("MeshPart") then
+			clump.cutApplied = true
+			myPart:ApplyMesh(cutMesh)
+			-- On ne SUPPOSE pas ce qu'ApplyMesh a touche (taille ? texture ? materiau ?) : on invalide les caches
+			-- pour que la taille et la couleur soient reecrites dans la foulee, a leurs valeurs a nous.
+			clump.lastSquash = -1
+			clump.lastShrink = -1
+			clump.lastDarken = -1
+			-- Le materiau, lui, n'a pas de cache numerique qu'on puisse invalider (c'est un booleen). On le repose
+			-- donc directement dans l'etat que le cache DECRIT : juste si la revelation etait allumee, juste si
+			-- elle ne l'etait pas. Sans ca, tondre en maintenant G laisserait un materiau incoherent.
+			myPart.Material = if clump.lastHighlight
+				then GrassZoneConfigs.HIGHLIGHT_MATERIAL
+				else clump.baseMaterial
+		end
+	end
+
 	-- UNE FLEUR FAUCHEE FOND SUR LES TROIS AXES pendant qu'elle passe sous le carter, puis disparait (la
 	-- destruction est faite par mowAt quand la coupe arrive a 1). Retrecir seulement en HAUTEUR en ferait une
 	-- crepe posee au sol ; en la faisant fondre, elle a l'air avalee par la machine.
@@ -640,6 +674,7 @@ local function populate(zone: Zone)
 				lift = lift,
 				flower = isFlower,
 				gone = false,
+				cutApplied = false,
 				lastSquash = 1,
 				lastShrink = 1,
 				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
@@ -1206,6 +1241,22 @@ function GrassZoneController.init()
 		-- pas de fleurs, et ce n'est PAS une erreur (une place peut ne pas les avoir).
 		local foliages = source.Parent
 		if foliages then
+			-- HERBE COUPEE. Rangee a cote de l'herbe haute, comme les fleurs. Absente = pas d'echange de maillage,
+			-- et la touffe se contente de raccourcir : c'est degrade, pas casse.
+			local cutName = GrassZoneConfigs.CUT_MESH_NAME
+			local cut = if cutName ~= "" then foliages:FindFirstChild(cutName) else nil
+			if cut and cut:IsA("MeshPart") then
+				cutTemplate = cut
+			elseif cutName ~= "" then
+				-- ACTIONNABLE : le nom est renseigne donc l'echange est VOULU, mais le mesh n'est pas la ou on le
+				-- cherche. Sans ce message, l'herbe coupee garderait la forme de l'herbe haute sans que rien ne le
+				-- dise, et on chercherait le probleme dans la tonte.
+				warn(
+					`[GrassZone] Mesh d'herbe coupee "{cutName}" introuvable a cote de `
+						.. `{GrassZoneConfigs.MESH_PATH[#GrassZoneConfigs.MESH_PATH]}, ou ce n'est pas un MeshPart. `
+						.. `L'herbe tondue gardera la forme de l'herbe haute.`
+				)
+			end
 			for _, name in ipairs(GrassZoneConfigs.FLOWER_NAMES) do
 				local mesh = foliages:FindFirstChild(name)
 				if mesh and mesh:IsA("BasePart") then

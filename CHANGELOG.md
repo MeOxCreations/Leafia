@@ -2185,6 +2185,45 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.329 — L'herbe tondue CHANGE DE FORME, elle ne fait plus que raccourcir
+
+Le mesh `GrassCut` (range a cote de `GrassMesh` sous `Assets/Contents/Foliages`) remplace le maillage de la touffe
+quand elle est coupee. Une herbe rase n'a pas la forme d'une herbe haute qu'on aurait tassee, et l'oeil le sait :
+raccourcir seulement, ca fait de l'herbe haute ecrasee, pas de l'herbe tondue.
+
+### Comment on change un mesh a l'execution
+
+Verifie dans la doc, pas suppose : `MeshId` et `MeshContent` sont marques "Not Accessible Security" et ne
+s'ecrivent PAS depuis un script normal. La seule voie est `MeshPart:ApplyMesh(autreMeshPart)`, qui remplace le
+maillage SUR PLACE -- donc sans creer ni detruire une seule instance, ce qui compte quand la pelouse en aligne des
+milliers.
+
+En contrepartie elle exige un MeshPart DEJA present en jeu portant le bon maillage : c'est le role du template
+garde en ReplicatedStorage, comme pour l'herbe haute et les fleurs.
+
+### L'echange a MI-COUPE
+
+`MOW_SWAP_AT` (0.5) : la touffe est alors deja bien tassee, sa silhouette est petite, donc le changement de forme
+passe inapercu. Echanger des le premier contact la ferait sauter a pleine hauteur, et on verrait le remplacement
+au lieu de la coupe.
+
+### Ce qu'on ne suppose pas
+
+On ignore ce qu'`ApplyMesh` reecrit au juste (taille ? texture ? materiau ?). Plutot que de parier, les caches de
+taille et de couleur sont invalides pour que nos valeurs soient reposees dans la foulee. Le materiau, qui n'a pas
+de cache numerique a invalider, est remis directement dans l'etat que son cache DECRIT -- sinon tondre en
+maintenant G aurait laisse un materiau incoherent.
+
+### Absent = degrade, pas casse
+
+Sans le mesh, la touffe raccourcit comme avant. Le message d'avertissement ne sort que si `CUT_MESH_NAME` est
+renseigne ET introuvable : la, c'est actionnable, et sans lui on chercherait le probleme dans la tonte.
+
+### Cote Studio
+
+Le mesh `GrassCut` doit exister sous `ReplicatedStorage/Assets/Contents/Foliages`. Rojo ne synchronise PAS les
+Assets : le collaborateur doit l'ajouter a la main, sinon l'herbe tondue gardera l'ancienne forme chez lui.
+
 ## 0.0.328 — Le ciel arrete de s'empiler sur une seule bande
 
 Les nuages se chevauchaient, s'alignaient, et laissaient le reste du ciel vide. Ce n'etaient pas trois defauts

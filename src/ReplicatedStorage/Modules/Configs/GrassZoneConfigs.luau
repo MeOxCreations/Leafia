@@ -18,6 +18,17 @@ local GrassZoneConfigs = {
 	-- Le mesh a dupliquer, sous ReplicatedStorage.
 	MESH_PATH = { "Assets", "Contents", "Foliages", "GrassMesh" },
 
+	-- Mesh de l'herbe COUPEE, range A COTE de MESH_PATH. Quand une touffe est tondue, son maillage est remplace
+	-- par celui-ci : une herbe rase n'a pas la meme forme qu'une herbe haute, et la raccourcir ne suffit pas a le
+	-- faire croire.
+	-- Introuvable = pas d'echange, la touffe se contente de raccourcir comme avant. Ce n'est donc pas bloquant.
+	CUT_MESH_NAME = "GrassCut",
+	-- A quel avancement de la coupe (0 a 1) on echange le maillage.
+	-- A MI-COURSE et pas a la fin : la touffe est alors deja bien tassee, sa silhouette est petite, donc le
+	-- changement de forme passe inapercu. Echanger a 0 (des le premier contact) rendrait le saut bien visible,
+	-- puisque la touffe est encore a sa pleine hauteur.
+	MOW_SWAP_AT = 0.5,
+
 	-- Delai TOTAL pour trouver la racine et le mesh au demarrage (un seul delai pour tout le chemin).
 	RESOLVE_TIMEOUT = 15,
 
