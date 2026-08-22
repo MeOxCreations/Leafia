@@ -2185,6 +2185,22 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.333 — L'herbe se rechauffe : elle tirait sur le bleu
+
+`BASE_COLOR` : 72, 90, 45 -> 138, 154, 85.
+
+### Saturation et temperature ne sont pas le meme reglage
+
+C'est l'erreur commise au 0.0.327, et elle valait une iteration :
+
+- La SATURATION est l'ecart entre le vert et le bleu.
+- La TEMPERATURE est l'ecart entre le rouge et le bleu.
+
+Pour desaturer, j'avais monte le bleu. Ca marche -- mais ca refroidit la couleur du meme coup, et l'herbe a vire
+au bleu-vert. La regle juste : pour desaturer sans refroidir, il faut monter le ROUGE autant que le bleu.
+
+Elle est ecrite dans la config, avec les trois valeurs successives et ce que chacune a change.
+
 ## 0.0.332 — Les roues tournent enfin, la camera filme le demarrage, et les bandes marchent dans tous les sens
 
 ### Les roues ne tournaient pas du tout

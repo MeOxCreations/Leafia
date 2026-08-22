@@ -159,15 +159,16 @@ local GrassZoneConfigs = {
 	-- Teinte au repos. Elle MULTIPLIE la texture du mesh : du blanc pur rend la texture telle quelle, plus la valeur
 	-- est basse plus c'est sombre.
 	--
-	-- REGLE POUR LA DESATURER : la saturation, c'est l'ECART entre le canal le plus fort (le vert) et le plus
-	-- faible (le bleu). Pour un vert moins criard, on MONTE le bleu et on BAISSE le vert -- pas besoin de toucher
-	-- a la luminosite, qui reste a peu pres la moyenne des trois.
-	-- Descendu de (66, 94, 30), ou l'ecart vert/bleu valait 64 : c'etait un vert de peinture, pas de jardin.
-	-- Ici l'ecart est de 45. Pour aller encore plus vers l'olive, continuer a rapprocher les deux.
+	-- DEUX reglages, pas un : la SATURATION est l'ecart vert - bleu, la TEMPERATURE est l'ecart rouge - bleu.
+	-- Les confondre coute une iteration, et ca a ete le cas ici :
+	--   (66, 94, 30) : ecart vert/bleu de 64. Un vert de peinture, trop sature.
+	--   (72, 90, 45) : desature en montant le BLEU... ce qui a rendu l'herbe FROIDE, tirant sur le bleu-vert.
+	--   (138, 154, 85) : on remonte le ROUGE bien au-dessus du bleu. Meme desaturation, mais chaude.
+	-- Autrement dit : pour desaturer sans refroidir, il faut monter le rouge AUTANT que le bleu.
 	--
-	-- Les TROIS couleurs d'herbe (repos, tondue, ecrasee) doivent bouger ENSEMBLE. N'en desaturer qu'une rendrait
-	-- les autres plus vives par comparaison, et on croirait a un bug d'affichage.
-	BASE_COLOR = Color3.fromRGB(72, 90, 45),
+	-- Les TROIS couleurs d'herbe (repos, tondue, ecrasee) doivent rester coherentes entre elles. N'en changer
+	-- qu'une rend les autres bizarres PAR COMPARAISON, et on croit a un bug d'affichage.
+	BASE_COLOR = Color3.fromRGB(138, 154, 85),
 	-- TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin.
 	-- Sans elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint. Le bruit de
 	-- Perlin donne de vraies ZONES ; un tirage au hasard par touffe donnerait du poivre et sel, ce qui est pire que
