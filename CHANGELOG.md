@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.378 — Les bandes de tonte se voient enfin
+
+Elles existaient bien, mais deux choses les rendaient invisibles.
+
+### Le joueur effacait ses propres bandes en marchant dessus
+
+Il marche EXACTEMENT sur la bande qu'il vient de couper -- c'est la position d'un pousseur de tondeuse. Or la
+teinte de pietinement est bien plus CLAIRE que l'ecart entre deux bandes : elle les lavait derriere lui au fur et
+a mesure qu'il avancait. Il ne voyait donc jamais son propre travail.
+
+`MOW_CRUSH_DAMP` : 0.7 -> 0.92. Il en reste un soupcon, assez pour que l'herbe ne soit pas inerte sous le pied,
+pas assez pour concurrencer les bandes.
+
+### Et l'ecart entre bandes etait trop faible
+
+`MOWN_BAND_STRENGTH` : 0.09 -> 0.22.
+
+Un ecart faible se perd des que QUOI QUE CE SOIT d'autre teinte la touffe -- le pas du joueur, une rafale de vent.
+Une bande doit gagner ces concours-la, sinon elle n'existe que dans le code.
+
 ## 0.0.377 — La conduite braque comme une VOITURE, et les bandes deviennent un motif du terrain
 
 Deux changements demandes le meme soir, tous les deux sur le coeur du jeu.
