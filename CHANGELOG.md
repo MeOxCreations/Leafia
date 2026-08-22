@@ -2185,6 +2185,19 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.355 — Retrait du systeme d'accessoire sur os
+
+`PropFollowController` et `PropAttachConfigs` sont supprimes, ainsi que leurs declarations dans le bootstrap.
+
+Le 0.0.354 reste dans ce fichier : il explique POURQUOI un Motor6D ne peut pas s'accrocher a un `Bone`, et ce
+que fait `TransformedWorldCFrame`. C'est de l'information qui resservira le jour ou un accessoire devra vraiment
+etre detachable.
+
+Pour un objet qui ne se lache jamais -- une canne sur un PNJ -- la bonne reponse reste de l'integrer au mesh dans
+Blender et de le peser sur l'os de la main. Zero code, zero cout a l'execution, et rien a rebrancher.
+
+Le code retire est recuperable dans l'historique si le besoin revient.
+
 ## 0.0.354 — La canne suit enfin la main du grand-pere
 
 Nouveau `PropFollowController` + `PropAttachConfigs`. Un objet de decor suit un OS d'un personnage skinne.
