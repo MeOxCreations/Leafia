@@ -285,12 +285,15 @@ return {
 	-- est derriere lui et on ne voit rien du geste.
 	PULL_CAM_ENABLED = true,
 	-- Distance DEVANT le joueur, en studs. Il faut passer la machine (elle est soudee devant lui) sans partir si
-	-- loin qu'on ne lise plus le geste.
-	PULL_CAM_FORWARD = 9,
+	-- loin qu'on ne lise plus le geste. Monte de 9 : a cette distance on voyait le joueur mais pas la SCENE.
+	PULL_CAM_FORWARD = 14,
 	-- Decalage LATERAL. Le SIGNE decide du cote, et il ne se DEDUIT pas : si la camera se pose du mauvais cote,
 	-- mettre -6. C'est de la famille des sens qu'on ne tranche qu'a l'ecran.
 	PULL_CAM_SIDE = 6,
-	PULL_CAM_HEIGHT = 3.2, -- hauteur de l'oeil, en studs
+	-- Hauteur de l'oeil, en studs. Descendue de 3.2 : une camera au-dessus du joueur regarde le sol et ecrase la
+	-- silhouette. Plus BAS que PULL_CAM_LOOK_HEIGHT, elle regarde legerement VERS LE HAUT -- c'est ce qui rend un
+	-- personnage imposant, et un demarrage de moteur merite ce cadrage-la.
+	PULL_CAM_HEIGHT = 1.6,
 	PULL_CAM_LOOK_HEIGHT = 2.2, -- hauteur du point VISE sur le joueur (vers le torse, pas les pieds)
 	-- Duree de l'arrivee et du retour. L'arrivee part de la vue de jeu EXACTE et le retour y revient : aucun saut
 	-- ni au debut ni a la fin.

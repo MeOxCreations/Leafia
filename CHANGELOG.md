@@ -2185,6 +2185,14 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.341 — La camera du demarrage recule et descend
+
+- `PULL_CAM_FORWARD` : 9 -> 14. A 9 studs on voyait le joueur, mais pas la SCENE.
+- `PULL_CAM_HEIGHT` : 3.2 -> 1.6. Une camera au-dessus du joueur regarde le sol et ecrase la silhouette.
+
+L'oeil passe donc SOUS le point vise (2.2) : la camera regarde legerement vers le haut. C'est ce qui rend un
+personnage imposant, et un demarrage de moteur merite ce cadrage-la.
+
 ## 0.0.340 — On ne touche plus au bandeau du rideau
 
 Son `UIGradient` n'est pas un reflet a promener : c'est un FONDU dessine dans Studio, dont la transparence monte
