@@ -2185,6 +2185,34 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.344 — Le rideau de chargement revient en CODE
+
+Le modele Studio du 0.0.339 est abandonne. Raison : Rojo ne synchronise pas StarterGui, donc la ScreenGui
+n'existait que dans le lieu ou elle avait ete dessinee. Le tuto tombait sur le rideau de secours, avec le message
+"Modele introuvable" -- ce qui etait le comportement voulu, mais pas le resultat voulu.
+
+Le code, lui, arrive dans TOUS les lieux sans rien a recopier. Pour une piece qui doit exister partout, c'est le
+seul endroit ou elle est sure d'etre.
+
+Le dessin fait dans l'editeur est repris tel quel : fond tuile teinte, bandeau du bas avec son degrade, feuille
+centrale, etiquette TIPS et son conseil.
+
+### Ce qui bouge
+
+- La tuile defile en diagonale. Horizontal ou vertical, ca se lit comme un decor qui glisse ; en diagonale,
+  comme un mouvement propre.
+- La feuille oscille, flotte, et SE REMPLIT comme une jauge : le joueur voit combien il reste, pas seulement que
+  ca charge.
+- Les conseils tournent en fondu, le premier tire au hasard.
+- Le bandeau, lui, ne bouge PAS. Son degrade est un fondu fixe : le promener pousserait sa rampe de transparence
+  hors du bandeau, qui redeviendrait completement opaque.
+
+### Les polices par leur FAMILLE
+
+`Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)` et non `Enum.Font.Montserrat` :
+les enums de police sont en cours de depreciation (celui-ci renvoie deja vers Gotham), alors que le chemin de
+famille reste stable et porte le poids separement. C'est la forme deja utilisee partout ailleurs dans ce fichier.
+
 ## 0.0.343 — VIGNETTAGE : les bords s'assombrissent, l'oeil revient au milieu
 
 Nouveau `Modules/UI/Core/Vignette`. Un voile plein cadre, sombre sur les bords, transparent au centre.

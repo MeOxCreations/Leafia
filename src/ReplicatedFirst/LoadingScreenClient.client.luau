@@ -98,27 +98,41 @@ local TILE_SPEED = 15
 -- ReplicatedFirst ne peut pas require PlacesConfig, donc l'ID de Leafia est EN DUR ici (doit valoir PlacesConfig.MAIN). =====
 local MAIN_PLACE_ID = 84161484719535
 if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_PLACE_ID then
-	-- ===== LE RIDEAU EST DESSINE DANS STUDIO, PAS ICI =====
-	-- On CLONE une ScreenGui modele et on ne fait qu'ANIMER ce qu'on y trouve. Le dessin appartient a l'editeur,
-	-- le mouvement au code : changer une couleur ou une image ne demande plus de toucher a ce fichier.
-	--
-	-- OU ON LA CHERCHE, dans cet ordre :
-	--   1. ReplicatedFirst -- le bon endroit. Ce service est replique AVANT tout le reste, c'est sa raison d'etre,
-	--      et rien n'y est copie automatiquement dans PlayerGui.
-	--   2. StarterGui -- toleré, mais Roblox y recopie TOUT dans PlayerGui a chaque spawn : on desactive donc le
-	--      modele local pour que cette copie arrive invisible, sinon un deuxieme rideau se collerait par-dessus
-	--      le notre et resterait affiche pour toujours apres le respawn.
-	local TEMPLATE_NAME = "LoadingScreen"
-	local TEMPLATE_WAIT = 5 -- on RE-SCANNE pendant ce temps : au boot, la replication n'est pas forcement finie
+	-- ===== LE RIDEAU EST CONSTRUIT EN CODE =====
+	-- Il l'a ete un temps a partir d'une ScreenGui modele posee dans Studio. Abandonne : Rojo ne synchronise pas
+	-- StarterGui, donc le modele n'existait que dans le lieu ou on l'avait dessine, et le tuto tombait sur le
+	-- rideau de secours. Le code, lui, arrive dans TOUS les lieux sans qu'on ait rien a recopier.
+	-- Les valeurs ci-dessous sont celles du dessin fait dans l'editeur.
+	local BG = Color3.fromRGB(31, 31, 31)
 
-	-- Remplissage de la feuille centrale. Calee sur MIN_ARRIVAL : elle finit de se remplir au moment ou le rideau
-	-- s'en va. Une jauge qui se remplit AVANT la fin ment sur ce qu'il reste.
+	-- FOND TUILE qui defile en diagonale.
+	local TILE_IMAGE_ID = "rbxassetid://86181241708864"
+	local TILE_TINT = Color3.fromRGB(83, 83, 83)
+	local TILE_CELL = UDim2.fromScale(0.06, 0.11) -- taille d'UNE tuile, en fraction de l'ImageLabel
+	local TILE_DRIFT = 15 -- vitesse de defilement, en pixels par seconde
+
+	-- BANDEAU du bas, avec son degrade de transparence.
+	local BANNER_IMAGE_ID = "rbxassetid://129604305857410"
+	local BANNER_POS = UDim2.fromScale(0.453, 0.904)
+	local BANNER_SIZE = UDim2.fromScale(1.002, 0.132)
+	-- Le bandeau n'est PAS plein d'un bout a l'autre : sa transparence monte le long de sa largeur. C'est un
+	-- FONDU, pas un reflet -- il ne s'anime pas. L'avoir promene une fois a suffi a le rendre completement opaque.
+	local BANNER_FADE_AT = 0.95 -- ou la transparence atteint 1
+
+	-- FEUILLE centrale : elle oscille, elle flotte, et elle SE REMPLIT comme une jauge.
+	local LEAF_ID = "rbxassetid://117703108607506"
+	local LEAF_TINT = Color3.fromRGB(138, 138, 138)
+	local LEAF_SIZE = UDim2.fromScale(0.2, 0.2)
+	local LEAF_CENTER = UDim2.fromScale(0.5, 0.46)
+	-- Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le rideau s'en va. Une jauge qui se
+	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
 	local FILL_SOFT = 0.14 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
 	local FILL_ROTATION = 270 -- sens du remplissage. 90 = l'autre sens (verifie a l'ecran : 270 est le bon)
 
-	-- CONSEILS qui defilent. EN ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est
-	-- traduit nulle part. A remplacer librement, c'est une ligne chacun.
+	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
+	local TIPS_LABEL = "TIPS"
+	local TIPS_LABEL_COLOR = Color3.fromRGB(97, 97, 97)
 	local TIPS: { string } = {
 		"Mow in straight lines. The stripes you leave are your signature.",
 		"Pull the cord before you push. A dead engine cuts nothing.",
@@ -140,196 +154,202 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- part d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`,
 	-- le rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
 	local MIN_ARRIVAL = 10
-	local FALLBACK_BG = Color3.fromRGB(31, 31, 31) -- si le modele est introuvable : au moins un ecran opaque
-
-	local playerGui = player:WaitForChild("PlayerGui")
-
-	-- RE-SCAN plutot qu'un WaitForChild par racine : un modele absent d'une racine ferait attendre le timeout
-	-- ENTIER avant meme d'essayer l'autre, et on cumulerait les attentes.
-	local template: ScreenGui? = nil
-	local fromStarterGui = false
-	do
-		local deadline = os.clock() + TEMPLATE_WAIT
-		repeat
-			for _, root in ipairs({ ReplicatedFirst, StarterGui }) do
-				local found = root:FindFirstChild(TEMPLATE_NAME)
-				if found and found:IsA("ScreenGui") then
-					template = found
-					fromStarterGui = root == StarterGui
-					break
-				end
-			end
-			if template then
-				break
-			end
-			task.wait(0.1)
-		until os.clock() >= deadline
-	end
 
 	local sg = Instance.new("ScreenGui")
-	local curtain: GuiObject? = nil
-	if template then
-		local cloned = (template :: ScreenGui):Clone()
-		if fromStarterGui then
-			-- La copie faite par Roblox au spawn arrivera DESACTIVEE. Modification purement locale : elle ne
-			-- remonte pas au serveur et ne gene personne d'autre.
-			(template :: ScreenGui).Enabled = false
-			warn(
-				`[LoadingScreen] Modele "{TEMPLATE_NAME}" trouve dans StarterGui. `
-					.. `A DEPLACER dans ReplicatedFirst : c'est le service replique en premier, et rien n'y est `
-					.. `recopie dans PlayerGui a chaque spawn.`
-			)
-		end
-		sg = cloned
-		-- RENOMME : la copie que StarterGui posera au spawn porte le nom d'origine. Deux instances du meme nom
-		-- dans PlayerGui, et on ne sait plus laquelle on tient.
-		sg.Name = "LeafiaCurtain"
-		-- Le fondu de sortie porte sur le CanvasGroup s'il y en a un (il fond TOUT d'un coup, contenu compris) ;
-		-- sinon sur le premier enfant graphique venu.
-		local canvas = sg:FindFirstChildWhichIsA("CanvasGroup", true)
-		curtain = canvas or sg:FindFirstChildWhichIsA("GuiObject")
-	else
-		-- MODELE INTROUVABLE : on montre quand meme un ecran opaque. Le rideau sert d'abord a CACHER ; un rideau
-		-- laid vaut mieux qu'un joueur qui voit la map se construire.
-		warn(
-			`[LoadingScreen] Modele "{TEMPLATE_NAME}" introuvable (ni ReplicatedFirst ni StarterGui). `
-				.. `Rideau de secours affiche.`
-		)
-		local plain = Instance.new("Frame")
-		plain.BackgroundColor3 = FALLBACK_BG
-		plain.BorderSizePixel = 0
-		plain.Size = UDim2.fromScale(1, 1)
-		plain.Parent = sg
-		curtain = plain
-	end
-
+	sg.Name = "LeafiaCurtain"
 	sg.ScreenInsets = Enum.ScreenInsets.None
 	sg.ResetOnSpawn = false -- sinon le rideau est recree a chaque mort et nos references pointent sur du detruit
 	sg.DisplayOrder = 1000
-	sg.Enabled = true
-	sg.Parent = playerGui
-	if curtain then
-		curtain.Active = true -- absorbe les clics tant que le rideau couvre
-	end
+	sg.Parent = player:WaitForChild("PlayerGui")
 
-	-- ===== ANIMATION DE CE QU'ON A TROUVE =====
-	-- Chaque element est FACULTATIF. Le modele appartient a l'editeur : renommer ou supprimer une piece doit
-	-- eteindre son animation, pas casser le rideau.
-	local conns: { RBXScriptConnection } = {}
+	-- CanvasGroup : le fondu de sortie porte sur LUI, donc tout son contenu s'efface d'un seul mouvement au lieu
+	-- de partir element par element.
+	local curtain = Instance.new("CanvasGroup")
+	curtain.BackgroundColor3 = BG
+	curtain.BorderSizePixel = 0
+	curtain.Size = UDim2.fromScale(1, 1)
+	curtain.Active = true -- absorbe les clics tant que le rideau couvre
+	curtain.Parent = sg
 
-	-- FOND TUILE qui defile en DIAGONALE. On lit la taille de tuile POSEE DANS STUDIO au lieu de la reecrire :
-	-- c'est un choix de dessin, il n'appartient pas au code. La diagonale n'est pas un caprice -- un defilement
-	-- purement horizontal ou vertical se lit comme un decor qui glisse, une diagonale comme un mouvement propre.
-	local tile = sg:FindFirstChild("Tile", true)
-	if tile and tile:IsA("ImageLabel") then
-		local box = tile :: ImageLabel
-		local anchor = box.Position
+	-- ===== FOND TUILE =====
+	-- Le defilement DIAGONAL n'est pas un caprice : horizontal ou vertical, ca se lit comme un decor qui glisse ;
+	-- en diagonale, ca se lit comme un mouvement propre.
+	local tile = Instance.new("ImageLabel")
+	tile.Name = "Tile"
+	tile.BackgroundTransparency = 1
+	tile.Image = TILE_IMAGE_ID
+	tile.ImageColor3 = TILE_TINT
+	tile.ScaleType = Enum.ScaleType.Tile
+	tile.TileSize = TILE_CELL
+	tile.AnchorPoint = Vector2.new(0.5, 0.5)
+	tile.Position = UDim2.fromScale(0.5, 0.5)
+	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
+	tile.ZIndex = 1
+	tile.Parent = curtain
+
+	local tileConn: RBXScriptConnection? = nil
+	do
 		local offX, offY = 0, 0
-		conns[#conns + 1] = RunService.Heartbeat:Connect(function(dt: number)
+		tileConn = RunService.Heartbeat:Connect(function(dt: number)
 			-- Periode de recyclage = la taille PIXEL d'une tuile. Relue a chaque image, donc elle suit l'ecran
 			-- (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
-			local periodX = box.TileSize.X.Scale * box.AbsoluteSize.X + box.TileSize.X.Offset
-			local periodY = box.TileSize.Y.Scale * box.AbsoluteSize.Y + box.TileSize.Y.Offset
+			local periodX = TILE_CELL.X.Scale * tile.AbsoluteSize.X
+			local periodY = TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
 			if periodX <= 0 or periodY <= 0 then
 				return
 			end
-			offX = (offX + TILE_SPEED * dt) % periodX
-			offY = (offY + TILE_SPEED * dt) % periodY
-			box.Position = UDim2.new(anchor.X.Scale, anchor.X.Offset + offX, anchor.Y.Scale, anchor.Y.Offset + offY)
+			offX = (offX + TILE_DRIFT * dt) % periodX
+			offY = (offY + TILE_DRIFT * dt) % periodY
+			tile.Position = UDim2.new(0.5, offX, 0.5, offY)
 		end)
 	end
 
-	-- LA FEUILLE CENTRALE : elle oscille, elle flotte, et elle SE REMPLIT.
+	-- ===== FEUILLE CENTRALE =====
 	-- Elle part invisible et se revele petit a petit : le joueur ne voit plus seulement "ca charge", il voit
 	-- COMBIEN il reste. Une attente qu'on peut mesurer est toujours plus courte qu'une attente muette.
-	local frame = sg:FindFirstChild("Frame", true)
-	local leaf = if frame then frame:FindFirstChildWhichIsA("ImageLabel") else nil
-	if leaf then
-		local img = leaf :: ImageLabel
-		local restPos = img.Position
-		img.Rotation = -10
-		TweenService
-			:Create(img, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-				Rotation = 10,
-			})
-			:Play()
-		TweenService
-			:Create(img, TweenInfo.new(2.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-				Position = UDim2.new(restPos.X.Scale, restPos.X.Offset, restPos.Y.Scale - 0.02, restPos.Y.Offset),
-			})
-			:Play()
+	local leaf = Instance.new("ImageLabel")
+	leaf.Name = "Leaf"
+	leaf.BackgroundTransparency = 1
+	leaf.AnchorPoint = Vector2.new(0.5, 0.5)
+	leaf.Position = LEAF_CENTER
+	leaf.Size = LEAF_SIZE
+	leaf.Image = LEAF_ID
+	leaf.ImageColor3 = LEAF_TINT
+	leaf.ScaleType = Enum.ScaleType.Fit
+	leaf.ZIndex = 2
+	leaf.Rotation = -10
+	leaf.Parent = curtain
+	-- La contrainte garde la feuille CARREE : sans elle, elle s'etire avec le format de l'ecran.
+	local leafRatio = Instance.new("UIAspectRatioConstraint")
+	leafRatio.AspectRatio = 1
+	leafRatio.DominantAxis = Enum.DominantAxis.Height
+	leafRatio.Parent = leaf
 
-		-- Le remplissage passe par la TRANSPARENCE du degrade, pas par sa couleur : la partie pas encore remplie
-		-- est transparente, donc on voit le fond a travers. Une couleur ne se retire pas, une transparence si.
-		local fill = Instance.new("UIGradient")
-		fill.Name = "UIGradientFill"
-		-- Le SENS ne se DEDUIT pas : le sens d'un UIGradient est une de ces choses que seul l'ecran tranche.
-		fill.Rotation = FILL_ROTATION
-		fill.Parent = img
-		task.spawn(function()
-			local t0 = os.clock()
-			-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
-			-- instance detruite.
-			while sg.Parent do
-				local e = math.clamp((os.clock() - t0) / FILL_DURATION, 0, 1)
-				if e >= 1 then
-					fill.Transparency = NumberSequence.new(0)
-				else
-					-- Bord ADOUCI plutot que net : une coupure franche se lit comme un masque, un degrade comme un
-					-- liquide qui monte. Les temps d'une NumberSequence doivent croitre STRICTEMENT, d'ou l'ecart
-					-- minimal force : sinon Roblox refuse la sequence des que le bord touche un bord.
-					local b = math.clamp(e, 0.002, 0.998)
-					local a = math.clamp(b - FILL_SOFT, 0.001, b - 0.001)
-					fill.Transparency = NumberSequence.new({
-						NumberSequenceKeypoint.new(0, 0),
-						NumberSequenceKeypoint.new(a, 0),
-						NumberSequenceKeypoint.new(b, 1),
-						NumberSequenceKeypoint.new(1, 1),
-					})
-				end
-				task.wait()
+	TweenService
+		:Create(leaf, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+			Rotation = 10,
+		})
+		:Play()
+	TweenService
+		:Create(leaf, TweenInfo.new(2.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
+			Position = UDim2.fromScale(LEAF_CENTER.X.Scale, LEAF_CENTER.Y.Scale - 0.02),
+		})
+		:Play()
+
+	-- Le remplissage passe par la TRANSPARENCE du degrade, pas par sa couleur : la partie pas encore remplie est
+	-- transparente, donc on voit le fond a travers. Une couleur ne se retire pas, une transparence si.
+	local fill = Instance.new("UIGradient")
+	fill.Name = "UIGradientFill"
+	-- Le SENS ne se DEDUIT pas : le sens d'un UIGradient est une de ces choses que seul l'ecran tranche.
+	fill.Rotation = FILL_ROTATION
+	fill.Parent = leaf
+	task.spawn(function()
+		local t0 = os.clock()
+		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
+		-- instance detruite.
+		while sg.Parent do
+			local e = math.clamp((os.clock() - t0) / FILL_DURATION, 0, 1)
+			if e >= 1 then
+				fill.Transparency = NumberSequence.new(0)
+			else
+				-- Bord ADOUCI plutot que net : une coupure franche se lit comme un masque, un degrade comme un
+				-- liquide qui monte. Les temps d'une NumberSequence doivent croitre STRICTEMENT, d'ou l'ecart
+				-- minimal force : sinon Roblox refuse la sequence des que le bord touche un bord.
+				local b = math.clamp(e, 0.002, 0.998)
+				local a = math.clamp(b - FILL_SOFT, 0.001, b - 0.001)
+				fill.Transparency = NumberSequence.new({
+					NumberSequenceKeypoint.new(0, 0),
+					NumberSequenceKeypoint.new(a, 0),
+					NumberSequenceKeypoint.new(b, 1),
+					NumberSequenceKeypoint.new(1, 1),
+				})
 			end
-		end)
-	end
+			task.wait()
+		end
+	end)
 
-	-- ON NE TOUCHE PAS AU BANDEAU. Son UIGradient n'est pas un reflet a promener, c'est un FONDU dessine dans
-	-- Studio : sa transparence monte de 0 a 1 le long du bandeau, pour qu'il ne soit pas plein d'un bout a
-	-- l'autre. Deplacer son Offset poussait cette rampe HORS du bandeau, qui redevenait donc completement opaque
-	-- -- l'exact contraire de ce qui etait voulu.
-	--
-	-- Regle generale, deja payee sur cet ecran : ne pas EMBELLIR d'un effet non demande. Un degrade pose a la main
-	-- porte une intention, et l'animer la detruit sans qu'on s'en apercoive en lisant le code.
+	-- ===== BANDEAU DU BAS =====
+	local banner = Instance.new("ImageLabel")
+	banner.Name = "Banner"
+	banner.BackgroundTransparency = 1
+	banner.Image = BANNER_IMAGE_ID
+	banner.ScaleType = Enum.ScaleType.Stretch
+	banner.AnchorPoint = Vector2.new(0.5, 0.5)
+	banner.Position = BANNER_POS
+	banner.Size = BANNER_SIZE
+	banner.ZIndex = 2
+	banner.Parent = curtain
+	-- Son degrade est un FONDU FIXE, pas un reflet a promener : sa transparence monte le long de la largeur pour
+	-- que le bandeau ne soit pas plein d'un bout a l'autre. Deplacer son offset pousserait cette rampe HORS du
+	-- bandeau, qui redeviendrait donc completement opaque.
+	local bannerFade = Instance.new("UIGradient")
+	bannerFade.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(BANNER_FADE_AT, 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	bannerFade.Parent = banner
 
-	-- LES CONSEILS TOURNENT. Un fondu entre deux textes plutot qu'un remplacement sec : un texte qui change d'un
-	-- coup attire l'oeil comme une erreur, un fondu se lit comme une page qui tourne.
-	local tipsDesc = sg:FindFirstChild("TipsDescription", true)
-	if tipsDesc and tipsDesc:IsA("TextLabel") and #TIPS > 0 then
-		local label = tipsDesc :: TextLabel
+	-- ===== CONSEILS =====
+	-- "TIPS" est cale a DROITE et le conseil a GAUCHE : les deux se rejoignent au milieu, donc l'etiquette reste
+	-- collee au texte quelle que soit sa longueur.
+	local tipsLabel = Instance.new("TextLabel")
+	tipsLabel.Name = "TipsText"
+	tipsLabel.BackgroundTransparency = 1
+	tipsLabel.AnchorPoint = Vector2.new(0, 0.5)
+	tipsLabel.Position = UDim2.fromScale(0.03, BANNER_POS.Y.Scale)
+	tipsLabel.Size = UDim2.fromScale(0.1, 0.055)
+	tipsLabel.Text = TIPS_LABEL
+	tipsLabel.TextColor3 = TIPS_LABEL_COLOR
+	tipsLabel.TextScaled = true
+	tipsLabel.TextXAlignment = Enum.TextXAlignment.Right
+	tipsLabel.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+	tipsLabel.ZIndex = 3
+	tipsLabel.Parent = curtain
+
+	local tipsDesc = Instance.new("TextLabel")
+	tipsDesc.Name = "TipsDescription"
+	tipsDesc.BackgroundTransparency = 1
+	tipsDesc.AnchorPoint = Vector2.new(0, 0.5)
+	tipsDesc.Position = UDim2.fromScale(0.15, BANNER_POS.Y.Scale)
+	tipsDesc.Size = UDim2.fromScale(0.8, 0.045)
+	tipsDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
+	tipsDesc.TextScaled = true
+	tipsDesc.TextXAlignment = Enum.TextXAlignment.Left
+	tipsDesc.ZIndex = 3
+	-- Montserrat en GRAS, designee par sa FAMILLE et pas par un Enum.Font : les enums de police sont en cours de
+	-- depreciation (`Enum.Font.Montserrat` renvoie deja vers Gotham), alors que le chemin de famille reste stable
+	-- et porte le poids separement. C'est la forme deja utilisee partout ailleurs dans ce fichier.
+	tipsDesc.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)
+	tipsDesc.Parent = curtain
+
+	if #TIPS > 0 then
 		task.spawn(function()
 			-- On DEMARRE sur un conseil au hasard : commencer toujours par le meme ferait du premier le seul que
 			-- les joueurs connaissent, puisque beaucoup ne verront qu'un ou deux chargements.
 			local index = math.random(#TIPS)
-			label.Text = TIPS[index]
+			tipsDesc.Text = TIPS[index]
 			while sg.Parent do
 				task.wait(TIP_INTERVAL)
 				if not sg.Parent then
 					return
 				end
-				local out = TweenService:Create(label, TweenInfo.new(TIP_FADE), { TextTransparency = 1 })
+				-- Un FONDU entre deux textes plutot qu'un remplacement sec : un texte qui change d'un coup attire
+				-- l'oeil comme une erreur, un fondu se lit comme une page qui tourne.
+				local out = TweenService:Create(tipsDesc, TweenInfo.new(TIP_FADE), { TextTransparency = 1 })
 				out:Play()
 				out.Completed:Wait()
 				if not sg.Parent then
 					return
 				end
 				index = index % #TIPS + 1
-				label.Text = TIPS[index]
-				TweenService:Create(label, TweenInfo.new(TIP_FADE), { TextTransparency = 0 }):Play()
+				tipsDesc.Text = TIPS[index]
+				TweenService:Create(tipsDesc, TweenInfo.new(TIP_FADE), { TextTransparency = 0 }):Play()
 			end
 		end)
 	end
 
-	-- LE SON. Tire du dossier au hasard, joue une fois, a l'instant ou le rideau apparait.
-	--
+	-- ===== SON =====
 	-- POURQUOI UNE BOUCLE DE RECHERCHE et pas un simple FindFirstChild. Ce rideau vit dans ReplicatedFirst : quand
 	-- il s'affiche, SoundService n'a pas forcement encore recu ses dossiers. Un scan unique a cet instant rendrait
 	-- nil, et le son ne partirait JAMAIS -- sans la moindre erreur a l'ecran ni dans la console.
@@ -377,21 +397,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	end)
 
 	-- Fondu de TOUT le rideau d'un coup (le CanvasGroup fond son contenu avec lui) puis destruction.
-	if curtain then
-		local fade = TweenService:Create(
-			curtain,
-			TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			if curtain:IsA("CanvasGroup") then { GroupTransparency = 1 } else { BackgroundTransparency = 1 }
-		)
-		fade:Play()
-		fade.Completed:Wait()
+	local fade = TweenService:Create(
+		curtain,
+		TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ GroupTransparency = 1 }
+	)
+	fade:Play()
+	fade.Completed:Wait()
+	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
+	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
+	if tileConn then
+		tileConn:Disconnect()
+		tileConn = nil
 	end
-	-- Les boucles AVANT le Destroy : elles vivent sur RunService, pas sur le GUI, donc detruire le rideau ne les
-	-- couperait pas -- elles tourneraient sur des instances mortes toute la session.
-	for _, conn in ipairs(conns) do
-		conn:Disconnect()
-	end
-	table.clear(conns)
 	sg:Destroy()
 	player:SetAttribute("LeafiaLoadingDone", true) -- meme signal que l'ecran principal (l'UI sait que le rideau est parti)
 	return
