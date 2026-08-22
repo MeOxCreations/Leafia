@@ -2185,6 +2185,36 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.336 — On ne sort plus un taille-haie en poussant la tondeuse
+
+On pouvait tenir les deux a la fois : un outil qui flotte a cote d'un guidon.
+
+### Refuse a l'ALLER, range au RETOUR
+
+Les deux sens ne se traitent pas pareil, et ce n'est pas une incoherence :
+
+- **Sortir un outil pendant qu'on pousse** est REFUSE. Rien a resoudre, l'action n'a pas de sens.
+- **Prendre la tondeuse avec un outil en main** RANGE l'outil. Refuser laisserait le joueur appuyer sur E devant
+  sa tondeuse sans que rien ne se passe et sans savoir pourquoi : un cul-de-sac. Ranger est ce qu'il aurait fait
+  lui-meme.
+
+### Un drapeau sur le JOUEUR, pas sur la machine
+
+`LeafiaCarryingMower`, pose par MowService, meme convention que `LeafiaCarryingLadder`. Sur le joueur parce que
+c'est LUI qu'on interroge quand on veut savoir s'il peut sortir un outil -- interroger la machine obligerait a
+balayer le monde pour la trouver. Et un attribut de joueur se replique, donc le client le lit aussi sans qu'on
+ait a fabriquer un remote.
+
+Le refus est pose dans `ToolService.equip`, la SEULE porte d'entree de l'equipement : la bascule et la selection y
+passent toutes les deux, donc il tient quel que soit le chemin. Le client ment toujours, c'est donc bien la que
+ca se decide.
+
+### Et cote client aussi, pour ne pas parler dans le vide
+
+L'auto-equip du taille-haie (approcher une haie l'equipe) aurait tire le remote toutes les 0.2 secondes pour
+rien : l'outil ne s'equipant jamais, sa condition "pas encore equipe" serait restee vraie pour toujours. Il lit
+donc le meme drapeau et se tait.
+
 ## 0.0.335 — Le curseur custom disparait, les outils restent, et la bascule GLISSE
 
 Trois corrections sur la vue subjective posee juste avant.

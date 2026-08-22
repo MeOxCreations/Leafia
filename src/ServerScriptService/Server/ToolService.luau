@@ -362,6 +362,14 @@ function ToolService.equip(player: Player, toolName: string): boolean
 		return false
 	end
 
+	-- LES DEUX MAINS SONT DEJA PRISES. On pousse la tondeuse a deux mains : en sortir un taille-haie en meme
+	-- temps n'a aucun sens, et ca donnait un joueur avec un outil qui flotte a cote d'un guidon.
+	-- Le drapeau est pose par MowService sur le JOUEUR. Verifie ICI, dans la seule porte d'entree de l'equipement
+	-- (toggle et selection y passent tous les deux) : le refus tient donc quel que soit le chemin.
+	if player:GetAttribute("LeafiaCarryingMower") then
+		return false
+	end
+
 	local character = player.Character
 	if not character then
 		return false

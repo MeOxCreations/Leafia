@@ -19,6 +19,12 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local CharacterService = require(script.Parent.CharacterService)
+local ToolService = require(script.Parent.ToolService)
+
+-- LES DEUX MAINS SONT PRISES. Drapeau pose sur le JOUEUR (pas sur la machine) : c'est lui qu'on interroge quand on
+-- veut savoir s'il peut sortir un outil, et un attribut de joueur se replique, donc le client le lit aussi.
+-- Meme convention que LeafiaCarryingLadder.
+local CARRYING_ATTRIBUTE = "LeafiaCarryingMower"
 
 local MowService = {}
 
@@ -739,6 +745,7 @@ local function release(model: Model)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
 	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, nil)
+	state.owner:SetAttribute(CARRYING_ATTRIBUTE, nil)
 end
 
 local function grab(player: Player, model: Model)
@@ -816,6 +823,13 @@ local function grab(player: Player, model: Model)
 	carried[model] = state
 	-- Lu par le client pour savoir si c'est LUI qui pousse (donc s'il doit couper et tourner les roues).
 	model:SetAttribute("LeafiaCarriedBy", player.UserId)
+	-- ON POUSSE LA TONDEUSE A DEUX MAINS : plus d'outil pendant ce temps.
+	--
+	-- On RANGE l'outil au lieu de refuser la prise. Refuser laisserait le joueur appuyer sur E devant sa tondeuse
+	-- sans que rien ne se passe et sans savoir pourquoi -- un cul-de-sac. Le ranger est ce qu'il aurait fait
+	-- lui-meme, et la reciproque (sortir un outil pendant qu'on pousse) est bien REFUSEE, elle, dans ToolService.
+	player:SetAttribute(CARRYING_ATTRIBUTE, true)
+	ToolService.unequip(player)
 
 	-- SEQUENCE : on tire la corde, PUIS on empoigne le guidon et le moteur se lance. Le moteur demarrait avec
 	-- la prise, donc il tournait avant meme qu'on ait tire -- ca n'avait aucun sens a l'oreille comme a l'oeil.

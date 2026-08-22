@@ -974,6 +974,13 @@ function LadderMoveController.init()
 		if carriedLadder or isTrimmerEquipped() or not toggleToolRemote then
 			return
 		end
+		-- TONDEUSE EN MAIN : on la pousse a deux mains, pas d'outil pendant ce temps. Le serveur refuse deja
+		-- l'equipement, mais sans ce test l'auto-equip retirerait le remote toutes les 0.2 s pour rien -- l'outil
+		-- ne s'equipant jamais, la condition "pas encore equipe" resterait vraie pour toujours.
+		-- Drapeau pose par MowService sur le JOUEUR ; un attribut de joueur se replique, donc on le lit d'ici.
+		if player:GetAttribute("LeafiaCarryingMower") then
+			return
+		end
 		-- Sur l'echelle : l'outil est RANGE le temps de la grimpe (cote serveur). On NE le re-sort pas ici, sinon
 		-- l'auto-equip se battrait avec ce rangement et l'outil reviendrait en pleine montee.
 		local character = player.Character
