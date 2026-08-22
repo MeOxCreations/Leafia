@@ -242,9 +242,12 @@ return {
 	-- Le ballant de la machine et la pose des bras suivent gratuitement : ils se calculent deja sur le cap.
 	STEER_ENABLED = true,
 	-- Vitesse de rotation EN PLEINE AVANCE, en degres par seconde. C'est LE bouton du poids ressenti.
-	-- 60 = un quart de tour en 1.5 s. Descendu de 120 : une machine LANCEE a de l'inertie, elle ne pivote pas.
-	-- Plus BAS = plus lourd, plus large. Trop bas et on ne peut plus longer un massif de fleurs sans le raser.
-	STEER_TURN_RATE = 60,
+	-- 180 = un demi-tour par seconde. Plus BAS = plus lourd, plus large.
+	--
+	-- HISTORIQUE, pour ne pas refaire l'aller-retour : 120 au depart, descendu a 60 parce que ca tournait trop
+	-- vite, puis remonte a 180 (x3) parce que ca ne tournait plus assez. On est donc AU-DESSUS du point de
+	-- depart. Si ca redevient trop vif, la valeur juste est probablement entre 120 et 180, pas en dessous.
+	STEER_TURN_RATE = 180,
 	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
 	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
 	STEER_INPUT_EPSILON = 0.05,

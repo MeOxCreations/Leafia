@@ -324,6 +324,20 @@ end
 -- direction avant de la CAMERA, dont les composantes monde changent des qu'on tourne la vue. Lire un axe brut ne
 -- marcherait que dans une seule orientation (piege deja paye sur la grimpe d'echelle).
 local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
+	-- UNE MACHINE A L'ARRET NE SE POUSSE PAS. Tant que la corde n'a pas ete tiree, c'est un poids mort : ni
+	-- avance, ni braquage. On pouvait jusqu'ici promener la tondeuse sans jamais la demarrer, ce qui vidait le
+	-- demarrage de tout son sens -- il n'etait plus qu'une animation qu'on pouvait ignorer.
+	--
+	-- Meme raison que la coupe, deja bloquee plus bas par le meme attribut : les deux consequences du demarrage
+	-- se lisent au meme endroit.
+	local mower = myMower()
+	if not (mower and mower:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true) then
+		-- On ECRIT zero, on ne se contente pas de sortir : ce bind passe APRES le module de controle de Roblox,
+		-- donc ne rien faire laisserait SA demande de deplacement s'appliquer.
+		humanoid:Move(Vector3.zero, false)
+		clearTrail()
+		return
+	end
 	-- `GetMoveVector` rend un vecteur RELATIF A LA CAMERA : X = cote, Z = arriere. C'est POUR CA que
 	-- `Humanoid:Move(v, true)` existe -- le `true` demande a Roblox d'y appliquer la camera.
 	-- On lit donc ses composantes DIRECTEMENT. Les projeter sur des axes MONDE melangeait deux reperes :

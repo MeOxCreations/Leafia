@@ -780,7 +780,7 @@ local function grab(player: Player, model: Model)
 		motor = nil,
 		lever = nil,
 		tick = nil,
-		speed = MowConfigs.SPEED_MIN,
+		speed = 0, -- a l'arret tant que la corde n'a pas ete tiree ; la rampe monte a SPEED_MIN au demarrage
 		baseC0 = c0,
 		backDist = select(2, measure(model, root)),
 		lift = 0,
@@ -838,9 +838,14 @@ local function grab(player: Player, model: Model)
 		local v = (rootPart :: BasePart).AssemblyLinearVelocity
 		local moving = math.sqrt(v.X * v.X + v.Z * v.Z) > MowConfigs.SPEED_MOVE_EPSILON
 
+		-- MOTEUR ARRETE = ON NE BOUGE PAS. Le client se bloque deja tout seul, mais le client ment toujours :
+		-- l'autorite est ici. Cible ZERO, donc la rampe de CharacterService descend le porteur a l'arret.
+		-- On ne sort PAS de la boucle pour autant : le cabrage a la corde et la soudure se calculent plus bas,
+		-- et ils doivent continuer de tourner justement pendant que le moteur ne tourne pas.
+		local running = model:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
 		-- Montee LENTE, descente VIVE : on gagne sa vitesse, on ne la garde pas gratuitement.
-		local target = if moving then MowConfigs.SPEED_MAX else MowConfigs.SPEED_MIN
-		local rate = if moving then MowConfigs.SPEED_RAMP_UP else MowConfigs.SPEED_RAMP_DOWN
+		local target = if not running then 0 elseif moving then MowConfigs.SPEED_MAX else MowConfigs.SPEED_MIN
+		local rate = if moving and running then MowConfigs.SPEED_RAMP_UP else MowConfigs.SPEED_RAMP_DOWN
 		if state.speed < target then
 			state.speed = math.min(target, state.speed + rate * dt)
 		else

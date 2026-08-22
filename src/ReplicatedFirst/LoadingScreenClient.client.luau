@@ -82,6 +82,22 @@ end
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
 local TILE_IMAGE = "rbxassetid://137385330828951" -- fond tuile qui defile en diagonale
 local TILE_TRANSPARENCY = 0.95 -- KNOB : baisser = tuile plus visible ; monter = plus discrete
+-- Taille et vitesse de la tuile. LUES PAR LES DEUX ECRANS (l'intro et le rideau de changement de map) : en changer
+-- un change les deux, c'est voulu -- le rideau doit ressembler a l'ecran principal.
+-- TileSize en SCALE (fraction de l'ImageLabel tuile) : ca s'adapte a l'ecran. A REGLER a l'oeil pour l'image.
+local TILE_SCALE_X = 0.037 -- largeur d'une tuile (fraction de la largeur de l'ImageLabel tuile)
+local TILE_SCALE_Y = 0.07 -- hauteur d'une tuile (fraction de la hauteur de l'ImageLabel tuile)
+local TILE_SPEED = 15
+-- Transparence de la tuile SUR LE RIDEAU. Un reglage a part parce que les deux fonds n'ont rien a voir : l'intro
+-- pose sa tuile sur un ciel CLAIR, le rideau sur du gris SOMBRE (31).
+--   couleur RENDUE = fond + (teinte - fond) x (1 - transparence)
+-- Ici : 31 + (255 - 31) x 0.1 = 53. Soit 22 points au-dessus du fond -- visible. Sous ~15 points, on ne voit rien.
+--
+-- CLAIR et non noir : sur un fond a 31, eclaircir dispose de 224 points d'ecart, assombrir de 31 seulement. C'est
+-- donc du cote CLAIR qu'il y a de la marge. (Une note precedente affirmait l'inverse dans ce fichier : elle etait
+-- fausse, elle ne valait qu'a transparence ZERO.)
+local CURTAIN_TILE_TINT = Color3.fromRGB(255, 255, 255)
+local CURTAIN_TILE_TRANSPARENCY = 0.9
 -- Plus rien n'est lu de l'ancien ecran (logo = 4 calques en dur, tile en dur) : on le detruit juste
 -- s'il existe encore, pour ne pas afficher deux ecrans. Tu peux donc le supprimer de Studio quand tu veux.
 do
@@ -104,36 +120,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- rideau s'en va. Une jauge qui se remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
 	local FILL_SOFT = 0.14 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
-	local FILL_ROTATION = 90 -- sens du remplissage. AJOUTER 180 si elle se vide au lieu de se remplir
+	local FILL_ROTATION = 270 -- sens du remplissage. 90 = l'autre sens (verifie a l'ecran : 270 est le bon)
 	-- Son joue quand la feuille apparait. POINTE SUR LE DOSSIER : un echantillon est tire au hasard, donc deux
 	-- chargements de suite ne sonnent pas pareil. Meme dossier que le son de coupe de haie.
 	local LEAF_SOUND = { "Sounds", "Environnement", "Leafs" }
 	local LEAF_SOUND_VOLUME = 0.35 -- a regler a l'oreille
 	-- Combien de temps on re-cherche le son avant d'abandonner. Voir le commentaire de la boucle plus bas.
 	local LEAF_SOUND_WAIT = 6
-	-- Prefixe CURTAIN_ : l'ecran d'INTRO a deja ses propres TILE_* en haut du fichier, et un local du meme nom
-	-- les MASQUERAIT ici. On croirait alors regler l'un en reglant l'autre.
-	--
-	-- FEUILLES INDIVIDUELLES et non une image TUILEE. Une tuile repete le MEME motif a la MEME taille : elle ne
-	-- peut pas varier. Des feuilles separees coutent quelques dizaines d'instances et donnent la taille, la
-	-- rotation et la transparence au hasard -- c'est ce desordre qui empeche l'oeil de lire une grille.
-	local CURTAIN_LEAF_COUNT = 30
-	-- NOIR, et non un gris plus clair que le fond. Sur un fond deja sombre (31), eclaircir laisse peu de marge :
-	-- il faudrait monter la teinte tres haut pour se detacher. Assombrir en donne 31 d'un coup.
-	-- Formule a refaire A CHAQUE fois qu'on touche a l'un des deux :
-	--   couleur RENDUE = fond + (teinte - fond) x (1 - transparence)
-	-- Ici : 31 + (0 - 31) x 0.65 = 11. Soit 20 points sous le fond -- visible. Sous ~15 points, on ne voit rien,
-	-- et c'est l'erreur qui a ete faite DEUX fois sur ce meme fond.
-	local CURTAIN_LEAF_TINT = Color3.fromRGB(0, 0, 0)
-	-- Transparence de base ; chaque feuille tire un ecart au hasard autour d'elle.
-	local CURTAIN_LEAF_TRANSPARENCY = 0.35
-	local CURTAIN_LEAF_TRANSPARENCY_JITTER = 0.12
-	-- Taille, en fraction de la HAUTEUR de l'ecran (pas de la largeur : sinon les feuilles changent de taille
-	-- selon le format d'ecran). Divisee par trois depuis la version tuilee.
-	local CURTAIN_LEAF_MIN = 0.014
-	local CURTAIN_LEAF_MAX = 0.038
-	-- Derive DIAGONALE, en fraction d'ecran par seconde. Lente : c'est un fond, il ne doit pas attirer l'oeil.
-	local CURTAIN_DRIFT = Vector2.new(0.012, 0.021)
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui part
 	-- d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`, le
 	-- rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
@@ -153,58 +146,46 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	curtain.Active = true -- absorbe les clics tant que le rideau couvre
 	curtain.Parent = sg
 
-	-- FOND DE FEUILLES, avec la MEME image que celle du milieu : le rideau tient dix secondes, et un aplat pendant
-	-- dix secondes se lit comme un ecran fige.
+	-- FOND TUILE, comme l'ecran de chargement principal : la MEME image, le MEME defilement en DIAGONALE, les
+	-- MEMES reglages de taille et de vitesse (ils vivent en haut du fichier et servent aux deux ecrans).
 	--
-	-- Elles DERIVENT en diagonale et se recyclent en boucle. La diagonale n'est pas un caprice : un defilement
-	-- purement horizontal ou vertical se lit comme un decor qui glisse, alors qu'une diagonale se lit comme un
-	-- mouvement propre.
+	-- Remplace les trente feuilles individuelles qui derivaient : trente instances et une boucle par image, pour
+	-- un resultat qu'on ne voyait pas a l'ecran.
 	--
-	-- Tailles, rotations et transparences tirees au hasard : a taille egale l'oeil reconnait une grille, meme quand
-	-- les positions sont aleatoires.
-	local leaves: { ImageLabel } = {}
-	local rng = Random.new()
-	for _ = 1, CURTAIN_LEAF_COUNT do
-		local bit = Instance.new("ImageLabel")
-		bit.BackgroundTransparency = 1
-		bit.Image = LEAF_ID
-		bit.ImageColor3 = CURTAIN_LEAF_TINT
-		bit.ImageTransparency = math.clamp(
-			CURTAIN_LEAF_TRANSPARENCY + rng:NextNumber(-1, 1) * CURTAIN_LEAF_TRANSPARENCY_JITTER,
-			0,
-			1
-		)
-		bit.ScaleType = Enum.ScaleType.Fit
-		bit.Rotation = rng:NextNumber(0, 360)
-		-- Les DEUX axes sont donnes, et la contrainte d'aspect corrige ensuite depuis la HAUTEUR.
-		-- Mettre la largeur a ZERO en comptant sur la contrainte pour la recalculer est un pari : si elle ne
-		-- s'applique pas, la feuille fait zero pixel de large et on ne voit RIEN -- sans la moindre erreur.
-		-- Une valeur non nulle garantit qu'elle existe, la contrainte ne fait que la rendre carree.
-		local size = rng:NextNumber(CURTAIN_LEAF_MIN, CURTAIN_LEAF_MAX)
-		bit.Size = UDim2.fromScale(size, size)
-		local ar = Instance.new("UIAspectRatioConstraint")
-		ar.AspectRatio = 1
-		ar.DominantAxis = Enum.DominantAxis.Height
-		ar.Parent = bit
-		bit.Position = UDim2.fromScale(rng:NextNumber(0, 1), rng:NextNumber(0, 1))
-		bit.ZIndex = 1 -- ordre EXPLICITE des deux cotes : la feuille du milieu est a 2
-		bit.Parent = curtain
-		leaves[#leaves + 1] = bit
-	end
+	-- La diagonale n'est pas un caprice : un defilement purement horizontal ou vertical se lit comme un decor qui
+	-- glisse, une diagonale se lit comme un mouvement propre.
+	local tileBg = Instance.new("ImageLabel")
+	tileBg.Name = "Tile"
+	tileBg.BackgroundTransparency = 1
+	tileBg.Image = TILE_IMAGE
+	tileBg.ImageColor3 = CURTAIN_TILE_TINT
+	tileBg.ImageTransparency = CURTAIN_TILE_TRANSPARENCY
+	tileBg.ScaleType = Enum.ScaleType.Tile
+	tileBg.TileSize = UDim2.fromScale(TILE_SCALE_X, TILE_SCALE_Y)
+	tileBg.AnchorPoint = Vector2.new(0.5, 0.5)
+	tileBg.Position = UDim2.fromScale(0.5, 0.5)
+	tileBg.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
+	tileBg.ZIndex = 1 -- ordre EXPLICITE des deux cotes : la feuille du milieu est a 2
+	tileBg.Parent = curtain
 
-	-- La derive. Connexion gardee pour etre COUPEE a la sortie : posee sur RunService, elle survivrait a la
-	-- destruction du rideau et tournerait toute la session.
-	local driftConn: RBXScriptConnection? = nil
-	driftConn = RunService.RenderStepped:Connect(function(dt: number)
-		for _, bit in ipairs(leaves) do
-			local pos = bit.Position
-			-- Recyclage par MODULO : une feuille qui sort d'un cote rentre par l'autre, sans trou ni saut.
-			-- La marge de 0.2 laisse la feuille disparaitre avant de reapparaitre, sinon on la verrait sauter.
-			local x = (pos.X.Scale + CURTAIN_DRIFT.X * dt + 0.2) % 1.4 - 0.2
-			local y = (pos.Y.Scale + CURTAIN_DRIFT.Y * dt + 0.2) % 1.4 - 0.2
-			bit.Position = UDim2.fromScale(x, y)
-		end
-	end)
+	-- Connexion GARDEE pour etre coupee a la sortie : posee sur RunService, elle survivrait a la destruction du
+	-- rideau et tournerait toute la session sur des instances mortes.
+	local curtainTileConn: RBXScriptConnection? = nil
+	do
+		local offX, offY = 0, 0
+		curtainTileConn = RunService.Heartbeat:Connect(function(dt: number)
+			-- Periode de recyclage = la taille PIXEL d'une tuile (scale x taille du label). Relue a chaque image,
+			-- donc elle suit l'ecran (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
+			local periodX = TILE_SCALE_X * tileBg.AbsoluteSize.X
+			local periodY = TILE_SCALE_Y * tileBg.AbsoluteSize.Y
+			if periodX <= 0 or periodY <= 0 then
+				return
+			end
+			offX = (offX + TILE_SPEED * dt) % periodX
+			offY = (offY + TILE_SPEED * dt) % periodY
+			tileBg.Position = UDim2.new(0.5, offX, 0.5, offY)
+		end)
+	end
 
 	-- La feuille : oscille (Rotation) + flotte (Position), deux periodes -> organique.
 	local logo = Instance.new("Frame")
@@ -243,7 +224,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local fill = Instance.new("UIGradient")
 	fill.Name = "UIGradientFill"
 	-- SENS DU REMPLISSAGE. Il ne se DEDUIT pas : le sens d'un UIGradient est une de ces choses que seul l'ecran
-	-- tranche (deja au journal). Si la feuille se vide au lieu de se remplir, ajouter 180 ici.
+	-- tranche (deja au journal). 90 avait ete pose au juge, et c'etait l'envers -- corrige a 270.
 	fill.Rotation = FILL_ROTATION
 	fill.Parent = leaf
 
@@ -333,9 +314,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	fade.Completed:Wait()
 	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
 	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
-	if driftConn then
-		driftConn:Disconnect()
-		driftConn = nil
+	if curtainTileConn then
+		curtainTileConn:Disconnect()
+		curtainTileConn = nil
 	end
 	sg:Destroy()
 	player:SetAttribute("LeafiaLoadingDone", true) -- meme signal que l'ecran principal (l'UI sait que le rideau est parti)
@@ -447,9 +428,6 @@ skyGrad.Parent = sky
 -- et SOUS tout le reste (le contenu le cacherait dessus). Le decalage X ET Y a la meme vitesse donne la diagonale ;
 -- on recycle chaque axe sur SA periode (la taille de tuile sur cet axe) pour boucler sans saut.
 -- TileSize en SCALE (fraction de l'ImageLabel tuile) : ca s'adapte a l'ecran. A REGLER a l'oeil pour l'image.
-local TILE_SCALE_X = 0.037 -- largeur d'une tuile (fraction de la largeur de l'ImageLabel tuile)
-local TILE_SCALE_Y = 0.07 -- hauteur d'une tuile (fraction de la hauteur de l'ImageLabel tuile)
-local TILE_SPEED = 15
 local tile = Instance.new("ImageLabel")
 tile.Name = "Tile"
 tile.BackgroundTransparency = 1

@@ -2185,6 +2185,60 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.322 — On ne promene plus une tondeuse eteinte, et elle tourne trois fois plus
+
+### Moteur arrete, on ne bouge pas
+
+On pouvait prendre la tondeuse et partir avec sans jamais tirer la corde. Le demarrage n'etait alors qu'une
+animation qu'on pouvait ignorer, et la coupe -- deja bloquee, elle -- semblait cassee plutot que voulue.
+
+Maintenant c'est un poids mort : ni avance, ni braquage tant que le moteur n'a pas pris. Les deux consequences du
+demarrage (on avance, on coupe) se lisent donc au meme endroit et dependent du meme attribut.
+
+Bloque des DEUX cotes. Le client se coupe tout seul pour que ca reponde tout de suite, et il ECRIT zero au lieu
+de simplement sortir : son bind passe APRES le module de controle de Roblox, donc ne rien faire laisserait la
+demande de deplacement de Roblox s'appliquer. Le serveur, lui, met la vitesse cible a zero -- c'est lui
+l'autorite, le client ment toujours.
+
+La vitesse de depart passe de `SPEED_MIN` a zero : sans ca, la machine avancait une demi-seconde avant que la
+rampe ne la freine.
+
+### Trois fois plus de braquage en pleine avance
+
+`STEER_TURN_RATE` passe de 60 a 180 degres par seconde, soit un demi-tour par seconde.
+
+Historique note dans la config pour ne pas refaire l'aller-retour : 120 au depart, descendu a 60 parce que ca
+tournait trop vite, remonte a 180 parce que ca ne tournait plus assez. On est donc AU-DESSUS du point de depart.
+Si ca redevient trop vif, la valeur juste est entre 120 et 180, pas en dessous.
+
+## 0.0.321 — Le rideau retrouve le fond TUILE de l'ecran principal, et la feuille se remplit dans le bon sens
+
+Les trente feuilles individuelles qui derivaient sont supprimees. A la place, le MEME fond que l'ecran de
+chargement principal : la meme image, tuilee, qui defile en diagonale.
+
+Les reglages de taille et de vitesse (`TILE_SCALE_X`, `TILE_SCALE_Y`, `TILE_SPEED`) sont remontes en tete de
+fichier et servent maintenant aux DEUX ecrans. En changer un change les deux, et c'est exactement ce qu'on veut
+puisque le rideau doit ressembler au principal.
+
+Cout au passage : trente instances et une boucle par image en moins, pour un resultat qu'on ne voyait meme pas.
+
+### La transparence, elle, ne peut pas etre la meme
+
+Les deux fonds n'ont rien a voir : l'intro pose sa tuile sur un ciel CLAIR, le rideau sur du gris SOMBRE (31).
+`CURTAIN_TILE_TRANSPARENCY` est donc un reglage a part, calcule et non devine :
+
+    couleur RENDUE = fond + (teinte - fond) x (1 - transparence)
+    31 + (255 - 31) x 0.1 = 53, soit 22 points au-dessus du fond
+
+Une note precedente de ce fichier affirmait qu'il fallait ASSOMBRIR sur un fond deja sombre. Elle etait FAUSSE :
+sur un fond a 31, eclaircir dispose de 224 points d'ecart, assombrir de 31 seulement. Le raisonnement ne valait
+qu'a transparence zero. Corrige sur place.
+
+### Sens du remplissage
+
+`FILL_ROTATION` passe de 90 a 270. Le 90 avait ete pose au juge et c'etait l'envers -- comme prevu, seul l'ecran
+pouvait trancher.
+
 ## 0.0.320 — Un bruit de feuille accompagne le rideau de chargement
 
 Joue une fois, au moment ou la feuille apparait. Tire AU HASARD dans `SoundService/Sounds/Environnement/Leafs` --
