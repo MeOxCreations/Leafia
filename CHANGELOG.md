@@ -2185,6 +2185,18 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.349 — TIPS passe en blanc pur pour que son degrade dise la verite
+
+Un UIGradient MULTIPLIE la couleur du texte. Sur le gris 97 d'avant, les valeurs du degrade ne rendaient pas ce
+qu'elles annoncent : `#ffffff` sortait a 97 et `#d6d6d6` a 81. On reglait donc un degrade dont on ne voyait
+jamais les vraies couleurs.
+
+En blanc pur, la multiplication devient NEUTRE : ce qui est ecrit dans la sequence est exactement ce qui
+s'affiche.
+
+Regle a retenir : des qu'un UIGradient decide de la teinte, la couleur de base doit etre le blanc. Sinon les deux
+reglages se multiplient dans le dos l'un de l'autre, et on en corrige un en croyant corriger l'autre.
+
 ## 0.0.348 — Une nuance sur l'etiquette TIPS
 
 Un UIGradient de couleur sur le mot "TIPS" : franc sur la premiere moitie, puis tres legerement eteint.

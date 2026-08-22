@@ -145,7 +145,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
 	local TIPS_LABEL = "TIPS"
-	local TIPS_LABEL_COLOR = Color3.fromRGB(97, 97, 97)
+	-- BLANC PUR, et c'est indispensable : le degrade pose plus bas MULTIPLIE cette couleur. Sur une teinte grise,
+	-- ses valeurs (#ffffff, #d6d6d6) ne rendaient pas ce qu'elles disent -- elles etaient rabotees par le gris, et
+	-- on reglait donc un degrade dont on ne voyait jamais les vraies couleurs.
+	-- Le blanc rend la multiplication NEUTRE : ce qui est ecrit dans TIPS_LABEL_SHADE est exactement ce qu'on voit.
+	-- C'est la couleur de reference a garder des qu'un UIGradient decide de la teinte.
+	local TIPS_LABEL_COLOR = Color3.fromRGB(255, 255, 255)
 	-- Place de l'etiquette "TIPS". Ancree en son CENTRE : la position designe alors le milieu du bloc, ce qui la
 	-- garde sur son axe quelle que soit sa taille -- avec une ancre en coin, changer la taille la deplace.
 	local TIPS_LABEL_POS = UDim2.fromScale(0.07, 0.916)
