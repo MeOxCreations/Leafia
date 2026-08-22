@@ -194,7 +194,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		"Press C to look through your own eyes.",
 	}
 	local TIP_INTERVAL = 5 -- secondes entre deux conseils
-	local TIP_FADE = 0.35 -- duree du fondu entre deux conseils
+	local TIP_FADE = 0.35 -- duree du fondu de SORTIE d'un conseil
+	-- REBOND LETTRE PAR LETTRE.
+	-- Le retard entre deux lettres. C'est LE reglage du rythme : trop court, tout arrive ensemble et on perd
+	-- l'effet ; trop long, la phrase met une eternite a s'ecrire et on la lit plus vite qu'elle ne s'affiche.
+	-- 0.02 = environ une seconde pour une phrase de cinquante caracteres.
+	local TIP_LETTER_STAGGER = 0.02
+	local TIP_LETTER_TIME = 0.34 -- duree du rebond d'UNE lettre
+	-- De combien elle monte, en part de la taille du texte. Elle arrive PAR EN DESSOUS : vers le haut, elle
+	-- passerait derriere le bandeau.
+	local TIP_LETTER_RISE = 0.55
+	-- Largeur d'une espace, en part de la taille du texte. Roblox rogne les blancs de bord, donc une espace
+	-- mesuree rend ZERO et les mots se colleraient. Valeur a l'oeil, propre a la police.
+	local TIP_SPACE_WIDTH = 0.28
 
 	-- Son joue quand le rideau apparait. POINTE SUR LE DOSSIER : un echantillon est tire au hasard, donc deux
 	-- chargements de suite ne sonnent pas pareil. Meme dossier que le son de coupe de haie.
@@ -392,44 +404,135 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tipsShade.Rotation = TIPS_LABEL_SHADE_ROTATION
 	tipsShade.Parent = tipsLabel
 
-	local tipsDesc = Instance.new("TextLabel")
-	tipsDesc.Name = "TipsDescription"
-	tipsDesc.BackgroundTransparency = 1
-	tipsDesc.AnchorPoint = Vector2.new(0, 0.5)
-	tipsDesc.Position = UDim2.fromScale(0.15, BANNER_POS.Y.Scale)
-	tipsDesc.Size = UDim2.fromScale(0.8, 0.045)
-	tipsDesc.TextColor3 = Color3.fromRGB(255, 255, 255)
-	tipsDesc.TextScaled = true
-	tipsDesc.TextXAlignment = Enum.TextXAlignment.Left
-	tipsDesc.ZIndex = 3
+	-- ===== LE CONSEIL S'ECRIT LETTRE PAR LETTRE, CHACUNE AVEC SON REBOND =====
+	--
+	-- UNE ETIQUETTE PAR CARACTERE, et il n'y a pas d'autre moyen. Un TextLabel est un bloc : `MaxVisibleGraphemes`
+	-- (ce qu'utilise le dialogue du jeu) revele bien les lettres une a une, mais il ne peut pas les faire BOUGER
+	-- separement -- elles appartiennent toutes au meme objet. Pour un rebond par lettre, il faut un objet par
+	-- lettre.
+	--
+	-- Le cout est acceptable ICI et nulle part ailleurs : une soixantaine d'etiquettes creees a chaque conseil, sur
+	-- un ecran qui ne fait rien d'autre. Dans une interface de jeu, ce serait a proscrire.
+	local tipsRow = Instance.new("Frame")
+	tipsRow.Name = "TipsDescription"
+	tipsRow.BackgroundTransparency = 1
+	tipsRow.AnchorPoint = Vector2.new(0, 0.5)
+	tipsRow.Position = UDim2.fromScale(0.15, BANNER_POS.Y.Scale)
+	tipsRow.Size = UDim2.fromScale(0.8, 0.045)
+	-- Les lettres DEBORDENT pendant leur rebond : elles arrivent d'en dessous. Un clip les couperait en plein vol.
+	tipsRow.ClipsDescendants = false
+	tipsRow.ZIndex = 3
+	tipsRow.Parent = curtain
+
 	-- Montserrat en GRAS, designee par sa FAMILLE et pas par un Enum.Font : les enums de police sont en cours de
 	-- depreciation (`Enum.Font.Montserrat` renvoie deja vers Gotham), alors que le chemin de famille reste stable
 	-- et porte le poids separement. C'est la forme deja utilisee partout ailleurs dans ce fichier.
-	tipsDesc.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)
-	tipsDesc.Parent = curtain
+	local TIP_FONT = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Bold)
+
+	-- Ecrit un conseil, lettre par lettre. Rend quand tout est pose (pas quand tout est arrive).
+	local function writeTip(text: string)
+		for _, child in ipairs(tipsRow:GetChildren()) do
+			child:Destroy()
+		end
+		-- La taille du texte se DEDUIT de la hauteur de la ligne : le conseil garde donc les memes proportions sur
+		-- tous les ecrans, sans qu'on ait a poser une taille en pixels qui serait juste sur un seul.
+		local size = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
+		local letters: { TextLabel } = {}
+		for _, code in utf8.codes(text) do
+			local label = Instance.new("TextLabel")
+			label.BackgroundTransparency = 1
+			-- AutomaticSize : chaque lettre prend SA largeur. Sans ca il faudrait mesurer le texte, ce qui passe
+			-- par un appel asynchrone -- inutile ici, Roblox sait le faire tout seul.
+			label.AutomaticSize = Enum.AutomaticSize.X
+			label.Size = UDim2.fromScale(0, 1)
+			label.Text = utf8.char(code)
+			label.TextColor3 = Color3.fromRGB(255, 255, 255)
+			label.TextSize = size
+			label.TextTransparency = 1 -- invisible tant qu'elle n'est pas arrivee
+			label.FontFace = TIP_FONT
+			label.ZIndex = 3
+			label.Parent = tipsRow
+			letters[#letters + 1] = label
+		end
+		if #letters == 0 then
+			return
+		end
+
+		-- UNE IMAGE D'ATTENTE avant de mesurer. `AbsoluteSize` n'est calcule qu'apres le passage de la mise en
+		-- page : le lire tout de suite rendrait zero partout, et toutes les lettres se poseraient l'une sur
+		-- l'autre.
+		RunService.RenderStepped:Wait()
+		if not sg.Parent then
+			return
+		end
+
+		-- ON PLACE A LA MAIN plutot qu'avec un UIListLayout. Un layout REPOSE ses enfants a chaque image : il
+		-- ecraserait le decalage vertical du rebond, et animer autre chose (l'echelle) changerait la largeur des
+		-- lettres, donc ferait sautiller toute la ligne. En posant les X une fois pour toutes, le Y reste a nous.
+		local x = 0
+		for _, label in ipairs(letters) do
+			local w = label.AbsoluteSize.X
+			-- UNE ESPACE NE MESURE RIEN. Roblox rogne les blancs de bord, donc sa largeur revient a zero et les
+			-- mots se colleraient. On lui donne une avance fixe, proportionnelle a la taille du texte.
+			if w < 1 then
+				w = size * TIP_SPACE_WIDTH
+			end
+			label.Position = UDim2.fromOffset(x, 0)
+			x += w
+		end
+
+		-- LE REBOND. Chaque lettre monte de sous la ligne et se pose, avec un LEGER retard sur la precedente :
+		-- c'est ce decalage qui donne l'impression que le texte s'ECRIT, au lieu d'apparaitre d'un bloc.
+		-- Easing `Back` : la lettre DEPASSE sa place puis y revient. Sur du texte, ce depassement se lit comme du
+		-- rebond -- contrairement a une camera, ou il se lirait comme une erreur de visee.
+		local rise = size * TIP_LETTER_RISE
+		for i, label in ipairs(letters) do
+			local delay = (i - 1) * TIP_LETTER_STAGGER
+			local restX = label.Position.X.Offset
+			label.Position = UDim2.fromOffset(restX, math.floor(rise))
+			task.delay(delay, function()
+				if not label.Parent then
+					return
+				end
+				TweenService
+					:Create(
+						label,
+						TweenInfo.new(TIP_LETTER_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+						{ Position = UDim2.fromOffset(restX, 0) }
+					)
+					:Play()
+				-- La transparence, elle, ne rebondit PAS : elle fond droit. Un `Back` sur une transparence la
+				-- ferait passer sous zero, donc clignoter.
+				TweenService:Create(label, TweenInfo.new(TIP_LETTER_TIME * 0.5), { TextTransparency = 0 }):Play()
+			end)
+		end
+	end
 
 	if #TIPS > 0 then
 		task.spawn(function()
 			-- On DEMARRE sur un conseil au hasard : commencer toujours par le meme ferait du premier le seul que
 			-- les joueurs connaissent, puisque beaucoup ne verront qu'un ou deux chargements.
 			local index = math.random(#TIPS)
-			tipsDesc.Text = TIPS[index]
+			writeTip(TIPS[index])
 			while sg.Parent do
 				task.wait(TIP_INTERVAL)
 				if not sg.Parent then
 					return
 				end
-				-- Un FONDU entre deux textes plutot qu'un remplacement sec : un texte qui change d'un coup attire
-				-- l'oeil comme une erreur, un fondu se lit comme une page qui tourne.
-				local out = TweenService:Create(tipsDesc, TweenInfo.new(TIP_FADE), { TextTransparency = 1 })
-				out:Play()
-				out.Completed:Wait()
+				-- LE CONSEIL SORT D'UN BLOC, il ne se retire pas lettre par lettre. L'apparition merite d'etre
+				-- detaillee, la disparition non : personne ne regarde partir un texte qu'il a fini de lire, et
+				-- soixante fondus decales feraient trainer la sortie pour rien.
+				for _, child in ipairs(tipsRow:GetChildren()) do
+					if child:IsA("TextLabel") then
+						TweenService:Create(child, TweenInfo.new(TIP_FADE), { TextTransparency = 1 }):Play()
+					end
+				end
+				task.wait(TIP_FADE)
 				if not sg.Parent then
 					return
 				end
 				index = index % #TIPS + 1
-				tipsDesc.Text = TIPS[index]
-				TweenService:Create(tipsDesc, TweenInfo.new(TIP_FADE), { TextTransparency = 0 }):Play()
+				writeTip(TIPS[index])
 			end
 		end)
 	end

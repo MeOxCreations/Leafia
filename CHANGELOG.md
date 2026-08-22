@@ -2185,6 +2185,40 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.362 — Le conseil s'ecrit lettre par lettre, chacune avec son rebond
+
+### Une etiquette par caractere, et il n'y a pas d'autre moyen
+
+Un TextLabel est un BLOC. `MaxVisibleGraphemes` -- ce qu'utilise deja le dialogue du jeu -- revele bien les
+lettres une a une, mais il ne peut pas les faire BOUGER separement : elles appartiennent toutes au meme objet.
+Pour un rebond par lettre, il faut un objet par lettre.
+
+Le cout est acceptable ICI et nulle part ailleurs : une soixantaine d'etiquettes par conseil, sur un ecran qui ne
+fait rien d'autre. Dans une interface de jeu, ce serait a proscrire.
+
+### Place a la main, pas par un UIListLayout
+
+Un layout REPOSE ses enfants a chaque image : il ecraserait le decalage vertical du rebond. Et animer autre chose
+(l'echelle) changerait la largeur des lettres, donc ferait sautiller toute la ligne. En posant les X une fois pour
+toutes, le Y reste a nous.
+
+Trois pieges le long du chemin :
+
+- **Une image d'attente avant de mesurer.** `AbsoluteSize` n'est calcule qu'apres le passage de la mise en page :
+  le lire tout de suite rend zero partout, et toutes les lettres se posent l'une sur l'autre.
+- **Une espace ne mesure RIEN.** Roblox rogne les blancs de bord, donc sa largeur revient a zero et les mots se
+  colleraient. Elle recoit une avance fixe (`TIP_SPACE_WIDTH`).
+- **La transparence ne rebondit pas.** Un easing `Back` sur une transparence la ferait passer sous zero, donc
+  clignoter. Seule la position rebondit.
+
+### La sortie, elle, reste d'un bloc
+
+L'apparition merite d'etre detaillee, la disparition non : personne ne regarde partir un texte qu'il a fini de
+lire, et soixante fondus decales feraient trainer la sortie pour rien.
+
+`TIP_LETTER_STAGGER` (0.02) est LE reglage du rythme : trop court, tout arrive ensemble et on perd l'effet ; trop
+long, on lit la phrase plus vite qu'elle ne s'affiche.
+
 ## 0.0.361 — La tondeuse ne traverse plus les haies ni les cloture
 
 Une part `Hitbox` posee dans Studio garde ses collisions une fois la machine portee. C'est la SEULE.
