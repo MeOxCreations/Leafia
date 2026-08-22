@@ -2185,6 +2185,25 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.347 — Reglages du rideau : tuile plus fine, fondue, et etiquette TIPS centree
+
+Valeurs relevees dans l'editeur et reportees en constantes.
+
+- `TileSize` : 0.06 x 0.11 -> **0.01 x 0.017**. Un motif beaucoup plus fin.
+- `ImageColor3` de la tuile : 83 -> **38**. Elle passe au second plan.
+- **Un UIGradient sur la tuile.** Le motif ne doit pas etre present partout avec la meme force : plein cadre et
+  uniforme, il se lit comme un papier peint et entre en concurrence avec la feuille du milieu. Il reste dense
+  d'un cote et disparait de l'autre.
+  La courbe part a PLAT, monte vite, puis s'aplatit vers l'invisible. C'est le palier de depart qui evite que le
+  fondu commence des le premier pixel, ce qui aurait l'air d'une erreur.
+  Il ne s'anime pas : c'est la tuile qui defile dessous, et comme elle ne se deplace que d'une case a la fois, le
+  fondu reste ou il est.
+- **Etiquette TIPS** ancree en son CENTRE, position et taille fixees, texte centre. L'ancre au centre garde
+  l'etiquette sur son axe quelle que soit sa taille -- avec une ancre en coin, changer la taille la deplace.
+
+Le conseil, lui, reste cale a GAUCHE : c'est lui qui varie en longueur, donc c'est lui qui doit avoir de la
+place. L'etiquette, elle, ne bouge jamais.
+
 ## 0.0.346 — Le grand-pere s'appelle GrandFather
 
 Le modele a ete renomme dans Studio. Une seule chose cassait vraiment : la cle de `AmbientAnimConfigs` est le NOM

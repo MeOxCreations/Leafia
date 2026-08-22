@@ -107,9 +107,22 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 	-- FOND TUILE qui defile en diagonale.
 	local TILE_IMAGE_ID = "rbxassetid://86181241708864"
-	local TILE_TINT = Color3.fromRGB(83, 83, 83)
-	local TILE_CELL = UDim2.fromScale(0.06, 0.11) -- taille d'UNE tuile, en fraction de l'ImageLabel
+	local TILE_TINT = Color3.fromRGB(38, 38, 38)
+	local TILE_CELL = UDim2.fromScale(0.01, 0.017) -- taille d'UNE tuile, en fraction de l'ImageLabel
 	local TILE_DRIFT = 15 -- vitesse de defilement, en pixels par seconde
+	-- FONDU SUR LA TUILE. Le motif ne doit pas etre present partout avec la meme force : plein cadre et uniforme,
+	-- il se lit comme un papier peint et rentre en concurrence avec la feuille du milieu. On le laisse dense d'un
+	-- cote et on le fait disparaitre de l'autre.
+	--
+	-- La courbe part a PLAT (le motif reste franc au debut), MONTE VITE, puis s'aplatit vers l'invisible. C'est ce
+	-- palier de depart qui evite que le fondu commence des le premier pixel et donne l'air d'une erreur.
+	local TILE_FADE = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.15, 0),
+		NumberSequenceKeypoint.new(0.288, 0.512),
+		NumberSequenceKeypoint.new(0.6, 0.86),
+		NumberSequenceKeypoint.new(1, 1),
+	})
 
 	-- BANDEAU du bas, avec son degrade de transparence.
 	local BANNER_IMAGE_ID = "rbxassetid://129604305857410"
@@ -133,6 +146,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
 	local TIPS_LABEL = "TIPS"
 	local TIPS_LABEL_COLOR = Color3.fromRGB(97, 97, 97)
+	-- Place de l'etiquette "TIPS". Ancree en son CENTRE : la position designe alors le milieu du bloc, ce qui la
+	-- garde sur son axe quelle que soit sa taille -- avec une ancre en coin, changer la taille la deplace.
+	local TIPS_LABEL_POS = UDim2.fromScale(0.07, 0.916)
+	local TIPS_LABEL_SIZE = UDim2.fromScale(0.156, 0.088)
 	local TIPS: { string } = {
 		"Mow in straight lines. The stripes you leave are your signature.",
 		"Pull the cord before you push. A dead engine cuts nothing.",
@@ -186,6 +203,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
 	tile.ZIndex = 1
 	tile.Parent = curtain
+	-- Le fondu vit sur un UIGradient enfant de la tuile. Il ne s'anime PAS : c'est la tuile qui defile dessous, et
+	-- comme elle ne se deplace que d'une case a la fois, le fondu reste ou il est.
+	local tileFade = Instance.new("UIGradient")
+	tileFade.Transparency = TILE_FADE
+	tileFade.Parent = tile
 
 	local tileConn: RBXScriptConnection? = nil
 	do
@@ -291,18 +313,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	bannerFade.Parent = banner
 
 	-- ===== CONSEILS =====
-	-- "TIPS" est cale a DROITE et le conseil a GAUCHE : les deux se rejoignent au milieu, donc l'etiquette reste
-	-- collee au texte quelle que soit sa longueur.
+	-- "TIPS" est une ETIQUETTE : elle est centree dans son propre bloc, a une place fixe. Le conseil, lui, est cale
+	-- a GAUCHE et occupe le reste de la largeur -- c'est lui qui varie en longueur, donc c'est lui qui doit avoir
+	-- de la place, pas l'etiquette.
 	local tipsLabel = Instance.new("TextLabel")
 	tipsLabel.Name = "TipsText"
 	tipsLabel.BackgroundTransparency = 1
-	tipsLabel.AnchorPoint = Vector2.new(0, 0.5)
-	tipsLabel.Position = UDim2.fromScale(0.03, BANNER_POS.Y.Scale)
-	tipsLabel.Size = UDim2.fromScale(0.1, 0.055)
+	tipsLabel.AnchorPoint = Vector2.new(0.5, 0.5)
+	tipsLabel.Position = TIPS_LABEL_POS
+	tipsLabel.Size = TIPS_LABEL_SIZE
 	tipsLabel.Text = TIPS_LABEL
 	tipsLabel.TextColor3 = TIPS_LABEL_COLOR
 	tipsLabel.TextScaled = true
-	tipsLabel.TextXAlignment = Enum.TextXAlignment.Right
+	tipsLabel.TextXAlignment = Enum.TextXAlignment.Center
 	tipsLabel.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 	tipsLabel.ZIndex = 3
 	tipsLabel.Parent = curtain
