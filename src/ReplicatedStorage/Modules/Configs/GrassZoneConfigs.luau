@@ -175,6 +175,15 @@ local GrassZoneConfigs = {
 	-- rien.
 	-- Calculees UNE fois a la pose, a partir de la position monde : aucun cout en jeu, et deux touffes voisines
 	-- appartiennent bien a la meme tache.
+	-- ENFONCEMENT DE TOUTE L'HERBE dans le sol, en fraction de la hauteur de la touffe.
+	--
+	-- Une touffe est posee par son CENTRE sur la surface de la zone, mais la geometrie du mesh n'occupe pas
+	-- forcement toute sa boite : selon la marge laissee sous les brins, elle a l'air de LEVITER.
+	-- Proportionnel et pas en studs : cette marge suit la taille du mesh, donc une valeur absolue enterrerait les
+	-- petites touffes et laisserait les grandes en l'air.
+	-- Monter si l'herbe flotte encore, descendre si les brins sont manges par le sol.
+	GROUND_SINK = 0.08,
+
 	PATCH_SCALE = 0.06, -- taille des taches. Plus BAS = taches plus LARGES (0.06 = des zones d'environ 15 studs)
 	PATCH_AMOUNT = 0.18, -- ecart de clarte maxi, en fraction. Monter au-dela de 0.3 fait tacheter, pas nuancer.
 
@@ -372,6 +381,10 @@ local GrassZoneConfigs = {
 	-- avec l'herbe brute ne sautait pas aux yeux.
 	-- Garder une MARGE avant 1 : c'est ce qui RESTE qui donne l'avant/apres. A 0.98 (la valeur du pietinement)
 	-- il n'y a plus de matiere a voir, donc plus rien a admirer -- et l'avant/apres est le coeur du jeu.
+	--
+	-- N'EST PLUS UTILISE quand un mesh d'herbe coupee existe (voir CUT_MESH_NAME) : la hauteur vient alors du
+	-- RAPPORT entre les deux maillages, donc la touffe fait la taille modelee dans Blender au lieu d'etre
+	-- comprimee dans une boite. Ce chiffre ne sert plus que de SECOURS, quand il n'y a pas de mesh d'herbe rase.
 	MOW_CUT = 0.75,
 
 	-- ===== BANDES DE TONTE =====

@@ -2185,6 +2185,43 @@ ExperienceConfigs, pour qu'ils ne divergent jamais.
 Petit plus : a chaque level up, le texte de niveau fait un PUNCH (grossit d'un coup puis se pose, via un UIScale
 dedie). Simple pour l'instant, les effets viendront par-dessus.
 
+## 0.0.363 — L'herbe coupee n'est plus ecrasee, l'herbe normale ne levite plus, et le regard arriere se coupe
+
+### La touffe coupee gardait 25 % de sa hauteur
+
+Elle etait ecrasee a un pourcentage ecrit en config (`MOW_CUT`). Ca se tenait tant que la coupe n'etait qu'un
+aplatissement -- mais depuis que l'herbe coupee a son PROPRE MAILLAGE, ecraser en plus DEFORMAIT ce maillage : il
+etait comprime dans une boite au quart de sa taille.
+
+La hauteur vient maintenant du RAPPORT entre les deux meshes, releve au demarrage. La touffe coupee fait donc
+exactement la taille modelee dans Blender.
+
+Le reglage passe du code au MODELE, la ou il a un sens : on regle une hauteur d'herbe en modelant de l'herbe.
+`MOW_CUT` ne sert plus que de secours, quand il n'y a pas de mesh d'herbe rase.
+
+### L'herbe levitait
+
+Une touffe est posee par son CENTRE sur la surface de la zone, mais la geometrie du mesh n'occupe pas forcement
+toute sa boite : selon la marge laissee sous les brins, elle a l'air de flotter. `GROUND_SINK` (0.08) l'enfonce.
+
+En fraction de sa hauteur et pas en studs : cette marge suit la taille du mesh, donc une valeur absolue
+enterrerait les petites touffes et laisserait les grandes en l'air.
+
+### Le regard arriere restait joue apres avoir lache la machine
+
+Le joueur gardait la tete tournee en arriere, pour toujours.
+
+Cause : les poses tenues etaient coupees par un `ipairs` sur un tableau construit a la volee.
+
+    for _, t in ipairs({ state.start, state.turn, state.reverse }) do
+
+**`ipairs` S'ARRETE AU PREMIER NIL.** Or `state.start` passe a nil des que le moteur a pris : la boucle ne
+tournait donc ZERO fois. C'est le genre de trou qui ne se voit jamais a la lecture -- le code a l'air de couvrir
+les trois cas.
+
+Les quatre poses (guidon, virage, regard arriere, tirage) sont maintenant coupees UNE PAR UNE, par un helper qui
+accepte nil. Plus de liste, donc plus de trou possible.
+
 ## 0.0.362 — Le conseil s'ecrit lettre par lettre, chacune avec son rebond
 
 ### Une etiquette par caractere, et il n'y a pas d'autre moyen

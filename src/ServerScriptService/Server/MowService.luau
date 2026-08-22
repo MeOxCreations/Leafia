@@ -478,41 +478,43 @@ local function playHold(character: Model, state: CarryState)
 	end)
 end
 
+-- Coupe UNE pose tenue. Accepte nil : toutes ces pistes peuvent deja avoir ete rendues.
+--
+-- pcall : on passe aussi par ici quand le joueur MEURT en poussant. Son Animator est alors deja detruit, et
+-- couper une piste morte leve. Ce n'est pas un cas anormal, donc on ne warn pas -- on nettoie, point.
+local function stopPose(track: AnimationTrack?)
+	if not track then
+		return
+	end
+	local t = track :: AnimationTrack
+	pcall(function()
+		-- On rend la vitesse AVANT d'arreter : une piste figee a 0 ne fondrait pas, elle disparaitrait d'un coup.
+		t:AdjustSpeed(1)
+		t:Stop(MowConfigs.HOLD_FADE)
+	end)
+end
+
+-- TOUTES LES POSES TENUES SUR LE JOUEUR SE COUPENT ICI : le guidon, le virage, le regard arriere, le tirage.
+-- Elles vivent sur l'Animator du JOUEUR et non sur celui de la machine, donc elles ne partent pas avec elle.
+--
+-- UNE PAR UNE, ET SURTOUT PAS DANS UNE LISTE. La version d'avant les parcourait avec `ipairs` sur un tableau
+-- construit a la volee -- et `ipairs` S'ARRETE AU PREMIER NIL. Or `state.start` passe a nil des que le moteur a
+-- pris : la boucle ne tournait donc ZERO fois, et le regard arriere restait joue. On lachait la tondeuse, le
+-- joueur gardait la tete tournee en arriere, pour toujours.
+-- C'est le genre de trou qui ne se voit jamais a la lecture : le code a l'air de couvrir les trois cas.
 local function stopHold(state: CarryState)
 	if state.holdGuard then
 		state.holdGuard:Disconnect()
 		state.holdGuard = nil
 	end
-	-- La pose de VIRAGE vit sur l'Animator du JOUEUR, comme la pose du guidon : elle se coupe ici, pas avec
-	-- les animations de la machine.
-	for _, t in ipairs({ state.start, state.turn, state.reverse } :: { AnimationTrack }) do
-		pcall(function()
-			t:AdjustSpeed(1)
-			t:Stop(MowConfigs.HOLD_FADE)
-		end)
-	end
-	state.reverse = nil
+	stopPose(state.start)
 	state.start = nil
-	if state.turn then
-		local t = state.turn
-		state.turn = nil
-		pcall(function()
-			t:AdjustSpeed(1)
-			t:Stop(MowConfigs.HOLD_FADE)
-		end)
-	end
-	local track = state.hold
-	if not track then
-		return
-	end
+	stopPose(state.turn)
+	state.turn = nil
+	stopPose(state.reverse)
+	state.reverse = nil
+	stopPose(state.hold)
 	state.hold = nil
-	-- pcall : on passe aussi par ici quand le joueur MEURT en poussant. Son Animator est alors deja detruit, et
-	-- couper une piste morte leve. Ce n'est pas un cas anormal, donc on ne warn pas -- on nettoie, point.
-	pcall(function()
-		-- On rend la vitesse AVANT d'arreter : une piste figee a 0 ne fondrait pas, elle disparaitrait d'un coup.
-		track:AdjustSpeed(1)
-		track:Stop(MowConfigs.HOLD_FADE)
-	end)
 end
 
 -- SAUT COUPE pendant le portage. On pousse une tondeuse, on ne saute pas avec.
