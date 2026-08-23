@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.431 — Un seau monte sur un rig d'animation n'est plus un seau du jeu
+
+Mesure du commit precedent, en jeu :
+
+    l'animation NE pilote PAS le seau : le joint "BinCarryJoint" sur "UpperTorso" n'a jamais bouge.
+
+C'est donc confirme : la piste du seau de l'animation n'est JAMAIS appliquee. Le nom du Motor6D cree en jeu ne
+correspond pas a celui du joint pose sur le rig d'animation, et une animation retrouve un joint PAR SON NOM.
+Tout le travail d'angle des versions precedentes compensait ca sans le savoir.
+
+### Le rig polluait la detection
+
+Les logs montraient aussi `Workspace.Rig.Bintest` compte comme un 3e seau. Les rigs d'ANIMATION vivent dans le
+Workspace avec leur seau accroche dans la main : le jeu proposait donc de "prendre" un objet soude a un
+mannequin.
+
+Un model est desormais ignore s'il vit sous un rig, reconnu a son `Humanoid` -- pas a son nom, qui ne se devine
+pas. Filtre pose des DEUX cotes : le client ne le propose plus, et le serveur le refuse meme si on le lui
+demande.
+
+Le garde-fou annonce dans `BinConfigs` ("un model de test nomme Bintest serait vu comme un vrai seau") devient
+donc inutile : le cas est traite, plus seulement documente.
+
+### A faire dans Studio
+
+Relever le nom de la PISTE du seau dans l'editeur d'animation, et le reporter dans `JOINT_NAME`. C'est la seule
+chose qui manque pour que l'animation reprenne la main sur l'angle du seau.
+
 ## 0.0.430 — Le jeu dit si l'animation pilote vraiment le seau
 
 L'animation du seau anime le SEAU LUI-MEME : sa piste existe dans l'editeur, elle le pose a plat de 0 a 0.5 s

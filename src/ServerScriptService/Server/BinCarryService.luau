@@ -35,6 +35,21 @@ type CarryState = {
 
 local carried: { [Model]: CarryState } = {}
 
+-- UN SEAU MONTE SUR UN RIG N'EST PAS UN SEAU DU JEU. Les rigs d'ANIMATION vivent dans le Workspace avec leur
+-- seau accroche dans la main : sans ce filtre, le jeu propose de "prendre" un objet soude a un mannequin, et il
+-- pollue la detection (vecu : "Workspace.Rig.Bintest" compte comme un 3e seau). Un rig se reconnait a son
+-- Humanoid -- pas a son nom, qui ne se devine pas.
+local function onRig(model: Instance): boolean
+	local node: Instance? = model.Parent
+	while node and node ~= workspace do
+		if node:IsA("Model") and node:FindFirstChildOfClass("Humanoid") then
+			return true
+		end
+		node = node.Parent
+	end
+	return model:FindFirstChildOfClass("Humanoid") ~= nil
+end
+
 local function isBin(inst: unknown): Model?
 	if typeof(inst) ~= "Instance" then
 		return nil
@@ -44,6 +59,7 @@ local function isBin(inst: unknown): Model?
 		instance:IsA("Model")
 		and instance:IsDescendantOf(workspace)
 		and instance.Name:sub(1, #BinConfigs.MODEL_PREFIX) == BinConfigs.MODEL_PREFIX
+		and not onRig(instance)
 	then
 		return instance
 	end
