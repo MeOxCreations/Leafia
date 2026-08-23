@@ -191,7 +191,10 @@ return {
 	--
 	-- On veut l'inverse : il se REDRESSE TOUT DE SUITE, et il ne lui reste plus qu'a descendre. Garder cette
 	-- valeur nettement plus courte que PLACE_TWEEN_TIME.
-	PLACE_TWEEN_ROT_TIME = 0.08,
+	--
+	-- A 0.001 le redressement tient dans la premiere image : le seau est deja droit quand il commence a
+	-- descendre. C'est le reglage voulu -- on ne veut PAS voir la rotation, seulement la descente.
+	PLACE_TWEEN_ROT_TIME = 0.001,
 
 	-- ANCRE UNE FOIS POSE. Le seau est DESANCRE pour etre porte (une part ancree ignore sa soudure). A la
 	-- repose, on lui rendait son etat d'origine -- et s'il etait LIBRE dans Studio, la physique reprend la main

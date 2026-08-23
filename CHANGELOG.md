@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.428 — Le seau est deja droit quand il commence a descendre
+
+`PLACE_TWEEN_ROT_TIME` 0.08 -> 0.001. Le redressement tient dans la premiere image : on ne voit plus la
+rotation du tout, seulement la descente. Reglage seul, aucun code touche.
+
 ## 0.0.427 — Le seau se redresse tout de suite, puis descend
 
 Il restait DE BIAIS pendant tout le trajet vers le sol et ne se remettait droit qu'a l'arrivee. On le voyait donc
