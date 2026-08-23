@@ -55,6 +55,24 @@ end
 for _, model in ipairs(bins) do
 	print(`[VerifierBin] --- {model:GetFullName()} ---`)
 
+	-- Un Bin MONTE SUR UN RIG (pour animer) est desancre et souvent sans PrimaryPart : AttacherObjetAuRig.lua
+	-- desancre tout expres, sinon le joint serait ignore. C'est donc NORMAL et pas un defaut. On saute les
+	-- reproches sur celui-la : il ne sert qu'a lire le C0 de la prise. Warner dessus polluerait la sortie et
+	-- ferait courir apres un faux probleme.
+	local ancestor = model:FindFirstAncestorWhichIsA("Model")
+	local rigName = nil
+	while ancestor do
+		if ancestor:FindFirstChildOfClass("Humanoid") then
+			rigName = ancestor.Name
+			break
+		end
+		ancestor = ancestor:FindFirstAncestorWhichIsA("Model")
+	end
+	if rigName then
+		print(`[VerifierBin]   monte sur le rig "{rigName}" (sert a animer) -> verifications sautees, c'est normal`)
+		continue
+	end
+
 	-- LE PIEGE : la PROPRIETE PrimaryPart, pas une part qui porte ce nom.
 	if model.PrimaryPart then
 		print(`[VerifierBin]   PrimaryPart (propriete) = "{model.PrimaryPart.Name}" -> OK`)
