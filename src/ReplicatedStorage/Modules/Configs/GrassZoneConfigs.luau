@@ -44,6 +44,15 @@ local GrassZoneConfigs = {
 	-- coupe. C'est CE temps-la qu'il faut regler quand "l'herbe descend trop vite", et pas MOW_RATE : celui-ci
 	-- decide si la touffe est coupee, celui-ci decide de ce qu'on VOIT.
 	CUT_RISE_TIME = 0.9,
+	-- TEMPS MORT avant que la touffe commence a descendre, en secondes.
+	--
+	-- La lame passe, et la touffe tient encore un instant avant de tomber. C'est ce court retard qui fait la
+	-- difference entre "l'herbe s'eteint sous la machine" et "la machine coupe l'herbe" : sans lui, la coupe est
+	-- SIMULTANEE au passage, donc elle ressemble a un interrupteur.
+	--
+	-- Court, et il doit le rester : au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber
+	-- APRES elle, ce qui se lit comme un retard d'affichage.
+	CUT_RISE_DELAY = 0.18,
 	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
 	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.

@@ -99,6 +99,7 @@ type Clump = {
 	-- "maillage applique", parce que la phase demarre AUSSI quand aucun mesh de rechange n'existe -- sinon la
 	-- couleur de tonte ne partirait jamais dans ce cas-la.
 	cutStarted: boolean,
+	cutWait: number, -- temps restant avant que la touffe commence a se coucher. La lame passe, elle tient encore.
 	cutT: number, -- avancement de l'emergence (0 = enfouie et couleur d'herbe haute, 1 = en place et tondue)
 	lastCutT: number, -- dernier avancement REELLEMENT dessine : sans lui la remontee ne serait pas redessinee
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
@@ -222,6 +223,9 @@ local function apply(
 	if not clump.cutStarted and not clump.flower and mown >= GrassZoneConfigs.MOW_SWAP_AT then
 		clump.cutStarted = true
 		clump.cutT = 0 -- l'emergence part d'ici : enfouie, et encore de la couleur de l'herbe haute
+		-- ELLE TIENT ENCORE UN INSTANT. La lame vient de passer, mais une touffe ne tombe pas dans la meme image :
+		-- sans ce retard la coupe est SIMULTANEE au passage, et ca ressemble a un interrupteur.
+		clump.cutWait = GrassZoneConfigs.CUT_RISE_DELAY
 		if cutMesh and myPart:IsA("MeshPart") then
 			myPart:ApplyMesh(cutMesh)
 			-- On ne SUPPOSE pas ce qu'ApplyMesh a touche (taille ? texture ? materiau ?) : on invalide les caches
@@ -770,6 +774,7 @@ local function populate(zone: Zone)
 				flower = isFlower,
 				gone = false,
 				cutStarted = false,
+				cutWait = 0,
 				cutT = 0,
 				lastCutT = 0,
 				lastSquash = 1,
@@ -941,7 +946,13 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- EMERGENCE de l'herbe coupee : elle remonte a sa place et prend sa couleur. Son propre temps, deconnecte
 		-- de l'avancement de la coupe -- celle-ci dure 0.125 s, bien trop court pour qu'on y lise une transition.
 		if clump.cutStarted and clump.cutT < 1 then
-			clump.cutT = math.min(1, clump.cutT + dt / GrassZoneConfigs.CUT_RISE_TIME)
+			-- Le temps mort s'ecoule D'ABORD. Tant qu'il reste, la touffe garde sa hauteur et sa couleur d'herbe
+			-- haute -- elle est coupee, elle ne le SAIT pas encore.
+			if clump.cutWait > 0 then
+				clump.cutWait -= dt
+			else
+				clump.cutT = math.min(1, clump.cutT + dt / GrassZoneConfigs.CUT_RISE_TIME)
+			end
 		end
 		-- Le joueur le PLUS proche gagne. On ne MOYENNE pas les directions : deux joueurs de part et d'autre d'une
 		-- touffe la redresseraient, ce qui est l'inverse du sens voulu.
@@ -1010,6 +1021,12 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.colorCrush ~= target
 			or clump.mown ~= clump.lastMown
 			or clump.cutT ~= clump.lastCutT
+			-- LE TEMPS MORT COMPTE COMME DU MOUVEMENT, meme si rien ne bouge encore a l'ecran.
+			--
+			-- Sinon le pave se declare AU REPOS pendant l'attente, cesse d'etre mis a jour, et le compte a rebours
+			-- ne s'ecoule jamais : la touffe reste debout POUR TOUJOURS. Meme piege qu'un `return` pose sur "rien a
+			-- faire pour l'instant" -- ce n'est pas parce qu'il n'y a rien a dessiner qu'il n'y a rien a faire.
+			or clump.cutWait > 0
 		then
 			moving += 1
 		end

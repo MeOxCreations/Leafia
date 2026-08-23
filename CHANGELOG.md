@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.405 — L'herbe tient un instant avant de se coucher
+
+`CUT_RISE_DELAY` (0.18 s) : la lame passe, la touffe tient encore, puis elle descend.
+
+C'est ce court retard qui fait la difference entre "l'herbe s'eteint sous la machine" et "la machine coupe
+l'herbe". Sans lui la coupe est SIMULTANEE au passage, donc elle se lit comme un interrupteur.
+
+Il doit rester court : au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber APRES elle, ce qui
+ressemble a un retard d'affichage.
+
+### Le piege du temps mort
+
+Pendant l'attente, RIEN ne change sur la touffe. Le pave se serait donc declare au repos, aurait cesse d'etre mis a
+jour, et le compte a rebours ne se serait jamais ecoule : la touffe serait restee debout POUR TOUJOURS.
+
+Le temps mort compte donc comme du MOUVEMENT. Meme piege qu'un `return` pose sur "rien a faire pour l'instant" --
+ce n'est pas parce qu'il n'y a rien a dessiner qu'il n'y a rien a faire.
+
 ## 0.0.404 — On n'entre plus en vue subjective tout seul
 
 Le joueur arrive en vue de dos, et bascule avec `C` s'il le veut.
