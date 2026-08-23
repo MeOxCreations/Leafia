@@ -104,6 +104,7 @@ local function showDebug(text: string)
 	label.Text = text
 end
 
+local lastCutAt = 0 -- instant de la derniere touffe coupee : les brins volent encore un peu apres
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
 -- CONDUITE en cours. Sert a ne couper AutoRotate qu'une fois, et surtout a le RENDRE une fois -- une
 -- restauration ecrite a chaque image ecraserait un autre systeme qui l'aurait coupe pour ses raisons.
@@ -449,6 +450,46 @@ local function wheelMotorsOf(model: Model): { Motor6D }
 		)
 	end
 	return found
+end
+
+-- ===== PARTICULES =====
+-- Les emetteurs d'un modele, cherches UNE fois et memorises. Meme memoire a une entree que les roues : on ne
+-- porte qu'une machine a la fois, donc rien a nettoyer, et on ne parcourt pas les descendants a chaque image.
+local emitterModel: Model? = nil
+local emittersByName: { [string]: { ParticleEmitter } } = {}
+
+local function emittersOf(model: Model, names: { string }): { ParticleEmitter }
+	if emitterModel ~= model then
+		emitterModel = model
+		table.clear(emittersByName)
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("ParticleEmitter") then
+				local list = emittersByName[d.Name]
+				if not list then
+					list = {}
+					emittersByName[d.Name] = list
+				end
+				list[#list + 1] = d
+			end
+		end
+	end
+	local found: { ParticleEmitter } = {}
+	for _, name in ipairs(names) do
+		for _, emitter in ipairs(emittersByName[name] or {}) do
+			found[#found + 1] = emitter
+		end
+	end
+	return found
+end
+
+-- Allume ou eteint un groupe d'emetteurs. On n'ECRIT QUE SUR CHANGEMENT : reposer la meme valeur a chaque image
+-- sur plusieurs emetteurs coute pour rien.
+local function setEmitters(model: Model, names: { string }, on: boolean)
+	for _, emitter in ipairs(emittersOf(model, names)) do
+		if emitter.Enabled ~= on then
+			emitter.Enabled = on
+		end
+	end
 end
 
 local function spinWheels(model: Model, distance: number)
@@ -1023,6 +1064,13 @@ local function update(dt: number)
 	if not mine then
 		setPullBound(false)
 		lastCutPos = nil
+		-- ON ETEINT CE QU'ON A ALLUME. Une machine reposee garderait sinon son vent et ses brins d'herbe en vol
+		-- pour toujours : les emetteurs vivent sur le MODELE, ils ne partent pas avec le portage.
+		local last = emitterModel
+		if last then
+			setEmitters(last, MowConfigs.WIND_EMITTERS, false)
+			setEmitters(last, MowConfigs.CUT_EMITTERS, false)
+		end
 		return
 	end
 	setPullBound(not running)
@@ -1046,10 +1094,23 @@ local function update(dt: number)
 	lastCutPos = point
 
 	spinWheels(mine, distance)
+
+	-- LE VENT SOUFFLE QUAND CA AVANCE, moteur en marche. Une machine a l'arret ne souffle pas, et une machine
+	-- eteinte encore moins.
+	setEmitters(mine, MowConfigs.WIND_EMITTERS, running and math.abs(distance) > 1e-3)
+	-- LES BRINS CONTINUENT DE VOLER un court instant apres la derniere touffe. La coupe est intermittente d'une
+	-- image a l'autre (un trou dans l'herbe, une touffe deja tondue) : sans ce delai, l'emetteur clignoterait
+	-- plusieurs fois par seconde.
+	setEmitters(mine, MowConfigs.CUT_EMITTERS, os.clock() - lastCutAt < MowConfigs.CUT_EMITTER_HOLD)
 	-- La coupe tourne MEME A L'ARRET : rester sur place finit de tondre la touffe sous le carter, au lieu de laisser
 	-- un rond a moitie coupe qu'on ne comprend pas.
 	if running then
-		GrassZoneController.mowAt(point, radius, dt)
+		local cutNow = GrassZoneController.mowAt(point, radius, dt)
+		-- L'HERBE NE VOLE QUE SI ON EN COUPE VRAIMENT. Passer une tondeuse allumee sur du beton ne projette rien --
+		-- c'est cette exactitude qui fait qu'on croit a l'effet.
+		if cutNow > 0 then
+			lastCutAt = os.clock()
+		end
 	end
 end
 

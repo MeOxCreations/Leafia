@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.397 — Du VENT quand on avance, des BRINS D'HERBE quand on coupe
+
+Deux groupes de ParticleEmitter poses dans Studio, pilotes par ce que la machine fait vraiment.
+
+- `Wind` : souffle tant que la machine AVANCE, moteur en marche. Une tondeuse a l'arret ne souffle pas, une
+  tondeuse eteinte encore moins.
+- `LeafCutEffectsRight` / `LeafCutEffectsLeft` : ne partent que quand on coupe VRAIMENT.
+
+### La coupe est mesuree, pas supposee
+
+`mowAt` rend deja le nombre de touffes REELLEMENT coupees cette image. On s'en sert : passer une tondeuse allumee
+sur du beton ne projette rien. C'est cette exactitude qui fait qu'on croit a l'effet -- des brins qui volent au
+mauvais moment se remarquent immediatement.
+
+### Un delai, sinon ca clignote
+
+La coupe est intermittente d'une image a l'autre : un trou dans l'herbe, une touffe deja tondue, et le compte
+retombe a zero. Sans `CUT_EMITTER_HOLD` (0.25 s), l'emetteur s'allumerait et s'eteindrait plusieurs fois par
+seconde.
+
+### Deux precautions
+
+- **Les emetteurs sont cherches une fois et memorises.** Parcourir les descendants du modele a chaque image
+  couterait pour rien, et on n'ecrit que sur CHANGEMENT d'etat.
+- **Ils sont ETEINTS a la repose.** Ils vivent sur le MODELE, pas sur le portage : une machine reposee aurait garde
+  son vent et ses brins en vol pour toujours.
+
+### Cote Studio
+
+Les emetteurs doivent porter ces noms exacts et vivre sous le modele de la tondeuse. Rojo ne synchronise pas le
+Workspace : a recopier dans chaque lieu. Un nom introuvable n'est pas une erreur -- c'est une facon valable de
+couper l'effet.
+
 ## 0.0.396 — Le joystick redevient DYNAMIQUE, et tombe enfin sous le doigt
 
 Il se pose exactement la ou le doigt touche. Le repli en position fixe est annule : ce n'etait qu'un contournement

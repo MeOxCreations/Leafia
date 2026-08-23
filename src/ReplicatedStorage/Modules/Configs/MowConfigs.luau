@@ -472,4 +472,19 @@ return {
 	WHEEL_AXIS = "X",
 	-- Rayon de roue de secours (studs) si on n'arrive pas a le lire sur la part. Sinon il est MESURE sur la roue.
 	WHEEL_RADIUS_FALLBACK = 0.6,
+
+	-- ===== PARTICULES =====
+	-- Noms des ParticleEmitter poses dans Studio sur le modele de la tondeuse. Cherches PARTOUT dans le modele :
+	-- ils peuvent etre ranges sous n'importe quelle piece.
+	-- Un nom introuvable n'est PAS une erreur : un emetteur absent est une facon valable de couper l'effet.
+	--
+	-- VENT : souffle tant que la machine AVANCE, moteur en marche. Une tondeuse a l'arret ne souffle pas.
+	WIND_EMITTERS = { "Wind" },
+	-- HERBE PROJETEE : ne part que quand on coupe VRAIMENT. Passer une tondeuse allumee sur du beton ne doit rien
+	-- projeter -- c'est cette exactitude qui fait qu'on croit a l'effet.
+	CUT_EMITTERS = { "LeafCutEffectsRight", "LeafCutEffectsLeft" },
+	-- Temps pendant lequel les brins continuent de voler apres la derniere touffe coupee, en secondes.
+	-- SANS CA, CA CLIGNOTE : la coupe est intermittente d'une image a l'autre (un trou dans l'herbe, une touffe
+	-- deja tondue), et l'emetteur s'allumerait et s'eteindrait plusieurs fois par seconde.
+	CUT_EMITTER_HOLD = 0.25,
 }
