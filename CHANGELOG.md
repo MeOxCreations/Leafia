@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.426 — L'ecrasement du seau est retire
+
+Il brouillait la repose au lieu de l'appuyer.
+
+Cause probable, notee pour le jour ou on le refera : l'effet DEMARRAIT d'un coup a 55 % de la hauteur, sans la
+moindre entree en douceur. Les parts sautaient a leur taille ecrasee en une image, et un objet qui change de
+taille ET de position d'un coup se lit comme une TELEPORTATION, pas comme un choc.
+
+`BuildPlaceController` fait le meme effet correctement : il monte de 1 vers la valeur ecrasee sur le premier
+tiers du temps, PUIS revient en depassant. C'est la reference si on y revient.
+
+Code et reglages supprimes, pas desactives : un effet eteint derriere un reglage devient du code mort qu'on
+n'ose plus toucher. Il est dans l'historique, un revert le ramene.
+
+Le jeton qui protegeait l'animation reste, mais il ne parle plus que du TRAJET vers le sol -- renomme en
+consequence. Un nom qui ment vaut moins que pas de nom.
+
+### Ce qui ne change pas
+
+Le trajet glisse de 0.0.425, l'ancrage a la pose et la mesure de tangage/roulis restent en place.
+
 ## 0.0.425 — Le seau glisse jusqu'au sol au lieu d'y sauter
 
 Il se TELEPORTAIT a plat a l'instant du lacher, pendant que le geste de repose jouait encore : le personnage se
