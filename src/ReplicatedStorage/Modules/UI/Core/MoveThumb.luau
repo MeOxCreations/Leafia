@@ -14,6 +14,7 @@
 --
 -- Purement client, purement visuel : il ne fait que RENDRE une valeur, il ne deplace personne.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
@@ -115,7 +116,16 @@ local function build()
 			return
 		end
 		finger = input
-		origin = Vector2.new(input.Position.X, input.Position.Y)
+		-- L'INSET DE LA BARRE ROBLOX, AJOUTE A LA MAIN.
+		--
+		-- `InputObject.Position` est mesuree SOUS la barre du haut, alors que cette interface ignore l'inset : son
+		-- coin (0, 0) est le coin ABSOLU de l'ecran. Les deux ne partent donc pas du meme endroit, et le joystick
+		-- apparaissait decale de la hauteur de la barre -- assez pour qu'il ne tombe pas sous le pouce.
+		--
+		-- Relu a CHAQUE prise et pas une fois pour toutes : la barre change de hauteur (rotation d'ecran, encoche,
+		-- interface Roblox qui s'adapte), et une valeur figee au demarrage se retrouverait fausse.
+		-- Meme famille que le piege GetMouseLocation / ScreenPointToRay deja au journal.
+		origin = Vector2.new(input.Position.X, input.Position.Y) + GuiService:GetGuiInset()
 		local camera = workspace.CurrentCamera
 		radius = math.max((if camera then camera.ViewportSize.Y else 720) * RADIUS_SCALE, 40)
 		ring.Size = UDim2.fromOffset(radius * BASE_SIZE, radius * BASE_SIZE)
@@ -130,7 +140,10 @@ local function build()
 		if input ~= finger then
 			return
 		end
-		local delta = Vector2.new(input.Position.X, input.Position.Y) - origin
+		-- MEME correction que a la prise, pour rester dans le meme repere des deux cotes. Un delta calcule entre
+		-- deux reperes differents serait faux d'un decalage constant, donc le joystick partirait deja incline.
+		local point = Vector2.new(input.Position.X, input.Position.Y) + GuiService:GetGuiInset()
+		local delta = point - origin
 		local length = delta.Magnitude
 		local clamped = if length > radius then delta.Unit * radius else delta
 		head.Position = UDim2.fromOffset(origin.X + clamped.X, origin.Y + clamped.Y)

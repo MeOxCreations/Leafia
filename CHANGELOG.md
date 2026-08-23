@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.390 — Le joystick apparait pile sous le pouce
+
+Il se posait a cote du doigt, decale vers le haut.
+
+### L'inset de la barre Roblox, encore
+
+`InputObject.Position` est mesuree SOUS la barre du haut. L'interface du joystick, elle, IGNORE l'inset : son coin
+(0, 0) est le coin ABSOLU de l'ecran. Les deux ne partent donc pas du meme endroit, et l'ecart vaut exactement la
+hauteur de la barre -- assez pour que le joystick ne tombe pas sous le pouce.
+
+Meme famille que le piege `GetMouseLocation` / `ScreenPointToRay` deja au journal, et que celui de `WorldAnchor`.
+Ce projet l'a maintenant paye trois fois.
+
+### Relu a CHAQUE prise
+
+Et pas mesure une fois au demarrage : la barre change de hauteur (rotation d'ecran, encoche, interface Roblox qui
+s'adapte), et une valeur figee au boot se retrouverait fausse sans que rien ne le dise.
+
+La meme correction est appliquee des DEUX cotes -- a la prise et pendant le glissement. Un delta calcule entre
+deux reperes differents serait faux d'un decalage constant, donc le joystick partirait deja incline.
+
 ## 0.0.389 — Un JOYSTICK a nous, partage, pour toutes les features qui prennent la camera
 
 Nouveau `Modules/UI/Core/MoveThumb`. La tondeuse l'allume tant qu'on la pousse.
