@@ -389,6 +389,13 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   jamais dans un reglage Studio par-place (il ne suit pas le teleport). Et quand on gate par PlaceId, se mefier des features
   COUPLEES a un module au nom trompeur (l'auto-equip dans le controller d'ECHELLE). Rojo synchronise le CODE dans les deux
   lieux, mais PAS le Workspace/map ni les assets `$ignoreUnknownInstances` (Assets, Animations) : ca se copie a la main.
+  SIGNATURE A RECONNAITRE (vecu deux fois : tondeuse, puis seau) : la feature ne fait RIEN, AUCUNE erreur, AUCUN log
+  a elle, et pourtant son module est bien VISIBLE dans l'Explorer pendant le Play. Ce trio ne veut dire qu'une chose :
+  le code est synce mais PERSONNE ne l'appelle. Ca ressemble a un bug de la feature (on va debugger sa detection, ses
+  distances, ses attributs) alors que le bootstrap de CETTE place ne la declare pas. Reflexe : lire la ligne
+  `[Server] ... demarre` / `[Client] Pret` de la console -- elle dit dans QUELLE place on tourne -- puis verifier que
+  le module est declare dans CE bloc-la. Corollaire pour l'assistant : signaler "pas branche dans le tuto" comme une
+  limite ne suffit pas si le joueur teste justement dans le tuto ; demander OU il teste avant de livrer.
 - **Un `WaitForChild` (ou tout appel qui YIELD) dans une fonction appelee PAR FRAME gele TOUTE la boucle le temps du
   yield.** Une connexion (Heartbeat/RenderStep) qui yield ne re-fire pas tant que son callback n'a pas rendu : elle reste
   bloquee. Vecu : `getMoveVector` (pas chasse / rail d'echelle, appele chaque frame) faisait un `require(PlayerModule)`

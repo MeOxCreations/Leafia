@@ -61,6 +61,10 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- Le geste CENTRAL du jeu s'apprend dans le tuto : l'oublier ici rendait la tondeuse inutilisable
 	-- dans la seule place ou on l'enseigne, alors que le code etait bien synce.
 	require(script.MowController).init()
+	-- SEAU : meme raison que la tondeuse ci-dessus. Le module etait synce et BinConfigs bien present, mais rien
+	-- ne l'initialisait ici -- donc pas la moindre trace dans la console, ce qui ressemble a un bug de detection
+	-- alors que le controller n'existe simplement pas dans cette place.
+	require(script.BinCarryController).init()
 	-- Nuages : du ciel, rien d'autre. Local, aucun reseau. Ordre indifferent.
 	require(script.CloudController).init()
 

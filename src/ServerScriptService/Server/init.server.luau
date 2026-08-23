@@ -40,6 +40,10 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- TONDEUSE : le geste central s'apprend ICI. Ce service ne fait que dire QUI porte quelle tondeuse
 	-- (soudure au HRP) ; il ne coupe rien, la coupe est cliente. Necessite un Model "Tondeuse" dans la map.
 	require(script.MowService).init()
+	-- SEAU : meme raison que la tondeuse ci-dessus. Sans cette ligne le code est bien synce mais personne ne
+	-- l'appelle : aucun prompt, aucun log, aucune erreur -- la signature d'un service gate hors de sa place.
+	-- Necessite le model "Bin" dans la MAP du tuto (Rojo ne synchronise pas le Workspace).
+	require(script.BinCarryService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end
