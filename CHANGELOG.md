@@ -2204,6 +2204,47 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.414 — On peut prendre et deplacer le seau
+
+PORTAGE LIBRE, contrairement a l'echelle : aucun rail, aucun aimant vers une haie. On prend le seau, on se
+balade ou on veut, on le repose ou on veut. Tout le systeme de focus de `LadderMoveController` est absent
+ici, volontairement.
+
+Nouveaux fichiers :
+
+- `src/ReplicatedStorage/Modules/Configs/BinConfigs.luau` — data pure : prefixe du model, prise, detection,
+  animations, repose.
+- `src/ServerScriptService/Server/BinCarryService.luau` — autorite : desancre, soude, repose au sol.
+- `src/StarterPlayerScripts/Client/BinCarryController.luau` — prompt, animations, declenchement.
+- Remote `Bin/SetBinCarry` (phases `grab` / `place` / `release`).
+
+SOUDURE AU MARQUEUR, pas a l'appui. L'echelle soude des l'appui : elle est enorme et le geste est rapide, le
+saut ne se voit pas. Un seau pose par terre se teleporterait dans la main avant que la main l'atteigne. On
+attend donc `TakeBucketEvent` (0.33 s). FILET : si le marqueur ne tire pas (asset pas charge a la 1re lecture
+de la session), l'arret de la piste declenche quand meme la soudure, sinon le seau ne se prendrait pas DU TOUT.
+
+LA REPOSE CHERCHE LE SOL. Le seau est porte DEVANT LE TORSE, donc en l'air. Le re-ancrer sur place, comme
+fait l'echelle (portee au ras du sol), le laisserait FLOTTER a hauteur de poitrine. Le serveur lance donc un
+rayon vers le bas devant le joueur et descend le seau jusqu'a ce que son point le plus bas touche. Ce point
+est mesure APRES orientation, en projetant les trois axes de chaque part sur la verticale : une simple moitie
+de `Size.Y` serait fausse des que le seau est pose de biais. Replis en cascade : sol devant, sinon sol sous le
+joueur (bord de plateforme), sinon pose sans correction.
+
+LA PRISE VIENT DU RIG, PAS D'UN REGLAGE A L'OEIL. `CARRY_C0` est la valeur relevee sur le rig d'animation par
+`scripts/studio/VerifierBin.lua`. Le seau n'etant pas un outil de `ToolConfigs`, sa prise n'est calculee par
+personne : c'est le placement fait dans l'editeur qui fait foi, et le jeu doit rejouer EXACTEMENT ce joint.
+`JOINT_PARENT` et `CARRY_C0` vont ENSEMBLE : changer l'un sans l'autre donne n'importe quoi.
+
+Limites connues :
+
+- **La touche `E` est partagee avec la tondeuse.** Chacun ne branche la sienne que quand elle a un sens, mais
+  un seau et une tondeuse poses cote a cote repondraient tous les deux. A trancher quand le cas se presentera.
+- Le seau est soude au TORSE (`UpperTorso`), pas a la main : il ne suit donc pas le bras. Pour qu'il pende au
+  bout du bras, refaire l'attache sur `RightHand` et reporter le nouveau `C0`.
+- Pas branche dans la place TUTORIAL : une place secondaire n'herite de rien, il faudrait l'ajouter au bloc
+  `PlaceId == PlacesConfig.TUTORIAL` ET copier le model dans sa map a la main.
+- Un model de test nomme `Bintest` serait vu comme un vrai seau (la detection est par prefixe).
+
 ## 0.0.413 — Connecter Rojo en retard efface le code recent de Studio
 
 Le collaborateur a connecte son `rojo serve` alors que son depot etait en retard. Studio a perdu l'herbe, la

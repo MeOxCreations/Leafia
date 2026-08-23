@@ -138,6 +138,11 @@ GrassService.init()
 local MowService = require(script.MowService)
 MowService.init()
 
+-- Autorite serveur sur le SEAU porte (soudure au torse, repose au sol). Independant du reste : il n'ecoute
+-- qu'un remote et le Workspace.
+local BinCarryService = require(script.BinCarryService)
+BinCarryService.init()
+
 -- Animations d'ambiance : les plantes (arbres, buissons) et les PNJ qui respirent sur place. Boucles jouees cote
 -- serveur, donc repliquees a tous. Habillage, pas du gameplay. Ordre indifferent : il ne lit aucun autre service,
 -- il ne fait que balayer la map.

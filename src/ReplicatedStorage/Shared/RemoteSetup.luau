@@ -125,6 +125,14 @@ local REMOTES: { { any } } = {
 	-- TIRAGE DE CORDE. Aucun argument : le serveur sait deja ce que le joueur porte et dans quel etat, donc il n'y
 	-- a rien a valider et rien a falsifier. Il ignore le message si la tondeuse est deja lancee.
 	{ "PullMowStarter", E, "Mow" },
+
+	-- [ BIN ] --
+	-- PRISE / REPOSE du SEAU. Deux arguments : le seau (Instance) et une PHASE ("grab", "place", "release").
+	-- Le serveur SOUDE le seau au torse du porteur (Motor6D) : sa position se replique alors a tous sans flot de
+	-- remotes. Aucun CFrame envoye par le client -- l'offset de portage est une CONSTANTE de BinConfigs, mesuree
+	-- sur le rig d'animation, donc rien a falsifier. Le serveur valide (vrai seau, libre, proximite) et decide
+	-- SEUL de l'endroit ou le seau retombe (rayon vers le sol).
+	{ "SetBinCarry", E, "Bin" },
 }
 
 local function getOrCreateFolder(parent: Instance, name: string): Folder

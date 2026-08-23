@@ -192,6 +192,12 @@ GrassZoneController.init()
 local MowController = require(script.MowController)
 MowController.init()
 
+-- SEAU : prompt, animations et declenchement. Le portage lui-meme appartient au serveur (BinCarryService).
+-- ATTENTION : partage la touche E avec la tondeuse ci-dessus. Chacun ne branche la sienne que quand elle a un
+-- sens, mais un seau et une tondeuse poses cote a cote repondraient tous les deux.
+local BinCarryController = require(script.BinCarryController)
+BinCarryController.init()
+
 -- Nuages qui traversent le ciel en boucle. 100% LOCAL, comme l'herbe : c'est du decor, rien ne transite.
 -- Ordre indifferent, il ne partage rien avec les autres.
 local CloudController = require(script.CloudController)
