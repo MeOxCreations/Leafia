@@ -182,9 +182,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		ColorSequenceKeypoint.new(0.483, Color3.fromRGB(229, 229, 229)),
 		ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 214, 214)),
 	})
-	-- Sens de la nuance, en degres. 0 = de gauche a droite, 90 = de haut en bas. Ne se DEDUIT pas : c'est l'ecran
-	-- qui tranche, comme pour tous les degrades de ce fichier.
-	local TIPS_LABEL_SHADE_ROTATION = 0
+	-- Sens de la nuance, en degres. 0 = de gauche a droite, 90 = de haut en bas.
+	-- A 90, le ressaut de la sequence tombe donc a mi-HAUTEUR des lettres : le mot s'eclaircit du haut vers le bas,
+	-- ce qui se lit comme une lumiere posee dessus plutot que comme un balayage lateral.
+	local TIPS_LABEL_SHADE_ROTATION = 90
 	local TIPS: { string } = {
 		"Mow in straight lines. The stripes you leave are your signature.",
 		"Pull the cord before you push. A dead engine cuts nothing.",

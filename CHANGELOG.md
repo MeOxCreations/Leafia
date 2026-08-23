@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.408 — Le degrade de l'etiquette TIPS passe a la verticale
+
+`TIPS_LABEL_SHADE_ROTATION` : 0 -> 90.
+
+Le ressaut de la sequence tombe donc a mi-HAUTEUR des lettres : le mot s'eclaircit du haut vers le bas, ce qui se
+lit comme une lumiere posee dessus plutot que comme un balayage lateral.
+
 ## 0.0.407 — La touffe sort de terre TOUT DE SUITE, et se couche apres
 
 Un defaut introduit par le temps mort du 0.0.405, et il etait pire qu'il n'en avait l'air.
