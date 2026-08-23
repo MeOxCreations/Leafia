@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.419 — Plus de soubresaut entre le geste de prise et le portage
+
+On voyait le personnage s'arreter une fraction de seconde puis reprendre, au moment ou la prise laisse la place
+a la pose de portage.
+
+Cause : les deux animations se RELAYAIENT. La pose de portage etait chargee et lancee a l'instant precis ou le
+geste s'effaçait. Il suffisait d'une milliseconde de retard -- chargement de l'asset, signal differe d'une image
+-- pour qu'il existe un instant SANS AUCUNE POSE. Le corps y repassait par la position neutre.
+
+Rien ne pouvait combler ce trou, puisqu'il n'y avait rien en dessous.
+
+### Elles se superposent maintenant, elles ne se relaient plus
+
+La pose de portage demarre EN MEME TEMPS que le geste et joue EN DESSOUS de lui, masquee. La fin du geste ne
+fait plus que la DECOUVRIR. Il n'y a plus d'instant a combler.
+
+Priorites : geste en `Action3`, portage en `Action2`. Elles doivent DIFFERER -- a priorite egale Roblox ne
+choisit pas, il moyenne les deux poses, et on verrait des bras a mi-chemin pendant tout le fondu.
+
+### Le relachement de fin devient le mecanisme, plus le bug
+
+En 0.0.416 la piste etait bouclee expres : non bouclee, elle se relache a sa derniere image et les bras
+retombaient. Avec une pose en dessous, ce meme relachement REVELE le portage. `Looped = false` redevient donc le
+bon reglage -- et une piste non bouclee ne peut plus reboucler d'une image au mauvais moment, ce qui supprime
+l'autre moitie du soubresaut.
+
+### Le filet de fin disparait
+
+Il surveillait un rebouclage qui ne peut plus arriver. Et si `EndTakeEventBin` se tait, la piste finit
+d'elle-meme et decouvre exactement la meme pose, juste un poil plus tard : son echec est devenu inoffensif.
+
+`TAKE_LOAD_TIMEOUT` part avec, plus personne ne le lit.
+
+### Note
+
+Le rayon de prise est de 8 studs et le prompt n'apparait donc pas avant. Les traces envoyees montrent un seau a
+9.2 puis 10.1 studs sans prompt : c'est le reglage qui parle, pas un bug. `DETECT_RADIUS` si tu veux le voir de
+plus loin.
+
 ## 0.0.418 — Le joueur s'arrete en douceur pour poser son seau
 
 On reposait son seau en pleine course : le geste glissait a cote du personnage. La vitesse DESCEND maintenant a

@@ -86,12 +86,12 @@ return {
 	-- Marqueur dans TAKE_ANIM (a 0.33s) : l'instant ou la main se referme. C'est LA qu'on soude, pas a
 	-- l'appui -- sinon le seau saute dans la main avant que la main l'atteigne.
 	TAKE_EVENT = "TakeBucketEvent",
-	-- Marqueur de FIN, pose en bout de TAKE_ANIM : l'instant ou l'on bascule sur la pose de portage.
+	-- Marqueur de FIN, pose en bout de TAKE_ANIM : l'instant ou le geste s'efface pour DECOUVRIR la pose de
+	-- portage, qui joue deja en dessous de lui.
 	--
-	-- C'EST L'ANIMATEUR QUI DECIDE, pas une constante. Deplacer ce marqueur dans l'editeur change la bascule,
-	-- sans toucher au code. Et surtout il supprime un vrai risque : sans lui il fallait guetter la fin en
-	-- comparant le temps a la duree, fenetre qu'un FPS bas peut RATER -- la piste rebouclait alors au lieu de
-	-- tenir. Un marqueur, lui, ne se rate pas.
+	-- C'EST L'ANIMATEUR QUI DECIDE : le deplacer dans l'editeur change la bascule, sans toucher au code. S'il se
+	-- tait, la piste finit d'elle-meme et decouvre exactement la meme pose, juste un poil plus tard -- son echec
+	-- est inoffensif, il n'y a aucun filet a prevoir.
 	END_EVENT = "EndTakeEventBin",
 	-- FILET, en secondes depuis le debut de TAKE_ANIM : demande la soudure si TAKE_EVENT se tait (asset pas
 	-- encore charge a la 1re lecture de la session). Regle APRES le marqueur, donc sans effet tant qu'il parle.
@@ -100,9 +100,6 @@ return {
 	-- Fondus d'entree. Le geste arrive vite (c'est un geste), la pose de portage prend son temps (c'est un etat).
 	TAKE_FADE = 0.1,
 	CARRY_FADE = 0.15,
-	-- Secondes avant d'abandonner l'attente d'une animation dont la duree reste a zero (asset jamais charge).
-	-- Sans ce plafond le joueur resterait sans pose de portage, sans la moindre erreur pour le dire.
-	TAKE_LOAD_TIMEOUT = 2,
 
 	-- ===== ORIENTATION A LA PRISE =====
 	-- ON NE FABRIQUE AUCUN DEPLACEMENT : le joueur PIVOTE face au seau, il n'avance pas d'un stud. Une marche

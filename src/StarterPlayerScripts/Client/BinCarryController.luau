@@ -4,7 +4,16 @@
 -- est volontairement absent ici.
 --
 --   PRISE   : on joue TakeAnimation ; au marqueur TakeBucketEvent (la main se referme), on demande au SERVEUR de
---             souder le seau ; au marqueur EndTakeEventBin (fin du geste), on enchaine sur la pose de portage.
+--             souder le seau ; au marqueur EndTakeEventBin (fin du geste), le geste s'efface et DECOUVRE la
+--             pose de portage.
+--
+-- LES DEUX ANIMATIONS SE SUPERPOSENT, elles ne se relaient pas. La pose de portage (Action2) demarre EN MEME
+-- TEMPS que le geste (Action3) et joue en dessous, masquee. La fin du geste ne fait que la reveler.
+--
+-- C'est ce qui supprime le soubresaut qu'on voyait entre les deux : tant qu'on les enchainait, il existait un
+-- instant sans pose -- le temps de charger l'asset, ou une image de signal differe -- et le corps y repassait
+-- par la position neutre. Il n'y a plus d'instant a combler. Et les priorites doivent DIFFERER : a priorite
+-- egale Roblox ne choisit pas, il moyenne les deux poses.
 --   REPOSE  : on rejoue TakeAnimation A L'ENVERS depuis sa derniere image ; en repassant TakeBucketEvent dans
 --             l'autre sens (la main s'ouvre), on demande au serveur de retirer le joint et de poser le seau AU
 --             SOL devant nous.
@@ -202,12 +211,26 @@ local function stopTracks()
 	end
 end
 
--- Pose de PORTAGE, enchainee A LA FIN du geste de prise. Elle ne cle que les bras et le torse, donc la marche
--- continue de tourner par-dessous. Action2 : au-dessus du maintien d'outil (Action) et de la marche (Movement).
+-- Pose de PORTAGE. Elle demarre DES LE DEBUT du geste de prise, pas a sa fin, et elle joue EN DESSOUS de lui :
+-- le geste est en Action3, elle en Action2, donc il la masque entierement tant qu'il dure.
+--
+-- C'EST CE QUI SUPPRIME LE SOUBRESAUT ENTRE LES DEUX ANIMATIONS. Avant, elle etait chargee et lancee a
+-- l'instant precis de la bascule -- un instant ou le geste s'effaçait deja. Il suffisait d'une milliseconde de
+-- retard (chargement de l'asset, signal differe d'une image) pour que le corps repasse par la position neutre.
+-- Rien ne pouvait combler ce trou, puisqu'il n'y avait aucune pose EN DESSOUS.
+--
+-- Deux priorites DIFFERENTES, et c'est essentiel : a priorite EGALE Roblox ne choisit pas, il MELANGE les deux
+-- poses. On verrait alors une moyenne des bras pendant tout le fondu.
+--
+-- Elle ne cle QUE les bras et le torse, donc la marche continue de tourner par-dessous.
 local function playCarryPose()
 	local animator = getAnimator()
 	if not animator or not carriedBin then
 		return
+	end
+	if carryTrack then
+		carryTrack:Stop(BinConfigs.CARRY_FADE)
+		carryTrack = nil
 	end
 	local carry = loadTrack(animator, BinConfigs.CARRY_ANIM)
 	if not carry then
@@ -216,7 +239,7 @@ local function playCarryPose()
 	carryTrack = carry
 	carry.Priority = Enum.AnimationPriority.Action2
 	carry.Looped = true
-	carry:Play(0.15)
+	carry:Play(BinConfigs.CARRY_FADE)
 end
 
 local function pickUp(model: Model)
@@ -267,19 +290,20 @@ local function pickUp(model: Model)
 		end
 	end
 
+	-- LA POSE DE PORTAGE PART MAINTENANT, pas a la fin du geste. Elle joue dessous, masquee, et sera simplement
+	-- REVELEE quand le geste s'efface. Plus aucun instant sans pose, donc plus de soubresaut.
+	playCarryPose()
+
 	takeTrack = track
-	track.Priority = Enum.AnimationPriority.Action2
-	-- LOOPED = TRUE, ET C'EST VOULU ICI. Une piste NON bouclee SE RELACHE a sa derniere image : les bras
-	-- retombent vers la pose neutre juste avant que le portage arrive, et ca se lit comme un bug. Bouclee, elle
-	-- tient sa pose -- et c'est le marqueur EndTakeEventBin qui la coupe avant qu'elle ne reboucle.
-	--
-	-- LA LECTURE RESTE NORMALE (vitesse 1). Avancer le temps a la main tiendrait la pose aussi, mais rien ne
-	-- garantit qu'un marqueur tire encore quand c'est NOUS qui ecrivons TimePosition -- et tout le geste repose
-	-- desormais sur les marqueurs.
-	track.Looped = true
+	-- ACTION3, AU-DESSUS de la pose de portage (Action2). Deux pistes de MEME priorite se melangeraient.
+	track.Priority = Enum.AnimationPriority.Action3
+	-- LOOPED = FALSE, et ce n'est plus un probleme. Une piste non bouclee se relache a sa derniere image : avant
+	-- ca faisait retomber les bras, faute de pose en dessous. Maintenant ce relachement REVELE le portage --
+	-- c'est devenu le mecanisme, plus le bug. Et une piste non bouclee ne peut pas reboucler d'une image au
+	-- mauvais moment, ce qui supprime l'autre moitie du soubresaut.
+	track.Looped = false
 
 	local fired = false
-	local ended = false
 	clearTakeConns()
 	-- Le drapeau garantit UN seul envoi : marqueur et filet demanderaient sinon la prise deux fois.
 	-- On ne coupe QUE le marqueur de prise ici, surtout pas clearTakeConns : ca tuerait la surveillance de fin.
@@ -295,19 +319,15 @@ local function pickUp(model: Model)
 		request(model, "grab")
 	end
 
-	-- FIN DU GESTE : on gele la piste sur son image courante, puis la pose de portage monte par-dessus en fondu
-	-- croise. A aucun instant les bras ne repassent par la position neutre.
+	-- FIN DU GESTE : on l'efface en fondu, ce qui DECOUVRE la pose de portage deja en place dessous.
+	--
+	-- Si ce marqueur se tait, la piste finit d'elle-meme et se relache : elle decouvre exactement la meme pose,
+	-- juste un poil plus tard. Il n'y a donc plus de filet a prevoir ici -- l'echec est devenu inoffensif.
 	local function finish()
-		if ended then
-			return
-		end
-		ended = true
 		clearTakeConns()
 		releaseStance()
 		-- Le geste est fini : le seau DOIT etre en main, quoi qu'il se soit passe avant.
 		doGrab()
-		track:AdjustSpeed(0)
-		playCarryPose()
 		track:Stop(BinConfigs.CARRY_FADE)
 		if takeTrack == track then
 			takeTrack = nil
@@ -319,7 +339,6 @@ local function pickUp(model: Model)
 	track:Play(BinConfigs.TAKE_FADE)
 
 	local elapsed = 0
-	local lastTime = 0
 	holdConn = RunService.Heartbeat:Connect(function(dt)
 		-- Le joueur a repose le seau, ou une autre prise a pris la main : on lache tout.
 		if takeTrack ~= track or carriedBin ~= model then
@@ -343,22 +362,6 @@ local function pickUp(model: Model)
 		-- FILET DE PRISE, si TAKE_EVENT se tait. Sans effet tant que le marqueur parle.
 		if elapsed >= BinConfigs.TAKE_GRAB_FALLBACK then
 			doGrab()
-		end
-
-		-- FILET DE FIN, si END_EVENT se tait. On surveille le TEMPS RECULER : la piste est bouclee, donc un
-		-- marqueur muet la fait repartir a zero. Ce retour en arriere est un fait, pas une fenetre a rater --
-		-- contrairement a un test "assez proche de la fin", qu'un FPS bas peut sauter.
-		local length = track.Length
-		if length > 0 then
-			local now = track.TimePosition
-			if now < lastTime - 0.001 then
-				finish()
-				return
-			end
-			lastTime = now
-		elseif elapsed > BinConfigs.TAKE_LOAD_TIMEOUT then
-			-- Duree a zero : l'animation n'a jamais charge. On ne laisse pas le joueur coince sans pose.
-			finish()
 		end
 	end)
 end
@@ -405,9 +408,9 @@ local function placeBin()
 		takeTrack:Stop(BinConfigs.TAKE_FADE)
 	end
 	takeTrack = track
-	track.Priority = Enum.AnimationPriority.Action2
-	-- LOOPED = FALSE ici, contrairement a la prise : arrivee a zero la piste DOIT se relacher, puisque la pose
-	-- d'arrivee est justement la position neutre.
+	-- ACTION3, comme a la prise : au-dessus de la pose de portage, qu'il masque le temps de s'en debarrasser.
+	track.Priority = Enum.AnimationPriority.Action3
+	-- LOOPED = FALSE : arrivee a zero la piste se relache, et il n'y a plus rien dessous -- la marche reprend.
 	track.Looped = false
 	track:Play(BinConfigs.TAKE_FADE)
 	track.TimePosition = math.max(track.Length - 0.001, 0)
