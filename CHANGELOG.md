@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.389 — Un JOYSTICK a nous, partage, pour toutes les features qui prennent la camera
+
+Nouveau `Modules/UI/Core/MoveThumb`. La tondeuse l'allume tant qu'on la pousse.
+
+### La cause etait deja documentee dans le projet
+
+Le travail de la haie avait rencontre EXACTEMENT ce probleme, et son commentaire le dit :
+
+> "Dans l'etat de travail la camera passe en Scriptable ; le thumbstick tactile PAR DEFAUT cesse alors de remonter
+> un move vector (GetMoveVector rend 0)"
+
+Le thumbstick de Roblox se tait des qu'une feature prend la camera en main. Sur mobile le joueur ne peut alors
+plus bouger du tout -- et rien ne le signale : l'input arrive bien au jeu, il n'arrive juste plus jusqu'a nous.
+
+La tondeuse prend la camera. Deux corrections ont ete tentees a cote avant qu'on remonte a la cause -- le
+verrouillage de souris, la detection d'appareil -- alors que la reponse etait ecrite dans un fichier voisin.
+
+### Un MODULE, pas une deuxieme copie
+
+La meme logique a deux endroits finit toujours par diverger sur l'un des deux. Le joystick est donc sorti en
+module partage : la prochaine feature qui prend la camera n'aura qu'a l'allumer.
+
+Il est DYNAMIQUE (il apparait la ou le doigt se pose) et ne mesure que le DELTA depuis le point de contact, ce qui
+le rend insensible a l'inset de la barre Roblox -- le decalage se simplifie.
+
+Trois details qui evitent des bugs :
+
+- **La zone d'ecoute est invisible et large, les cercles ne sont QUE du dessin.** Si le dessin avalait l'input, un
+  doigt pose pile dessus serait ignore par la zone et le joystick ne partirait jamais.
+- **La fin du toucher s'ecoute au niveau du SERVICE, pas du bouton.** Un doigt qui glisse hors de la zone avant de
+  se lever ne declencherait jamais l'evenement du bouton, et le joystick resterait colle a fond pour toujours.
+- **Le rayon est en fraction de la hauteur d'ecran**, pas en pixels : sur une tablette un rayon en pixels serait
+  minuscule, sur un petit telephone il sortirait de l'ecran.
+
+### Reste a faire
+
+`HedgeController` garde sa propre copie. Elle marche, et la migrer maintenant risquerait de casser une feature qui
+va bien pour reparer une autre. A faire quand la tondeuse sera validee -- c'est note ici pour que la duplication ne
+devienne pas invisible.
+
 ## 0.0.388 — L'input de deplacement a une deuxieme source
 
 `ControlModule:GetMoveVector()` rend ZERO sur l'appareil tactile teste -- mesure a l'ecran, joystick pousse a

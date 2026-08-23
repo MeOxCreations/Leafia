@@ -14,6 +14,9 @@
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
 
 local MoveInput = {}
 
@@ -49,7 +52,19 @@ function MoveInput.get(): Vector3
 			vec = v
 		end
 	end
-	-- SECOURS N.1 : LE HUMANOID LUI-MEME.
+	-- SECOURS N.1 : NOTRE PROPRE JOYSTICK.
+	--
+	-- Le thumbstick tactile de Roblox cesse de remonter quoi que ce soit des qu'une feature prend la camera en
+	-- main. Les features concernees allument alors le notre (voir MoveThumb), et il passe AVANT les autres secours
+	-- parce que c'est le seul qui reflete VRAIMENT ce que le doigt fait a cet instant.
+	if vec.Magnitude < 0.05 then
+		local thumb = MoveThumb.get()
+		if thumb.Magnitude > 0.05 then
+			vec = thumb
+		end
+	end
+
+	-- SECOURS N.2 : LE HUMANOID LUI-MEME.
 	--
 	-- `GetMoveVector` rend ZERO sur certains appareils tactiles -- mesure a l'ecran, joystick pousse a fond. On ne
 	-- sait pas pourquoi, et on cesse de chercher : il existe une AUTRE source de la meme information, que Roblox
@@ -80,7 +95,7 @@ function MoveInput.get(): Vector3
 		end
 	end
 
-	-- SECOURS N.2, CLAVIER : si les deux precedents rendent du VIDE (place secondaire / tuto ou PlayerModule pas
+	-- SECOURS N.3, CLAVIER : si les deux precedents rendent du VIDE (place secondaire / tuto ou PlayerModule pas
 	-- encore pret), on lit WASD en direct pour que la feature reponde quand meme.
 	if vec.Magnitude < 0.05 then
 		local x, z = 0, 0

@@ -25,6 +25,7 @@ local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionP
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
+local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 
 local MowController = {}
@@ -1009,6 +1010,14 @@ local function update(dt: number)
 	-- tirage, sans plus rien a filmer.
 	local running = mine ~= nil and mine:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
 	setPullCam(mine ~= nil and not running)
+	-- NOTRE JOYSTICK, tant qu'on pousse la machine. Celui de Roblox cesse de remonter un vecteur des qu'une feature
+	-- prend la camera en main -- et la conduite en prend une. Sur mobile, sans lui, le joueur ne bouge pas du tout.
+	-- Sur PC il ne s'affiche meme pas : MoveThumb ne fait rien hors tactile.
+	if mine then
+		MoveThumb.show()
+	else
+		MoveThumb.hide()
+	end
 	applyCameraRig(hrp :: BasePart, mine ~= nil)
 
 	if not mine then
@@ -1068,6 +1077,9 @@ function MowController.init()
 end
 
 function MowController.stop()
+	-- Le joystick vit dans PlayerGui, pas dans ce module : sans ce retrait il resterait a l'ecran apres l'arret,
+	-- et il continuerait de rendre une valeur que plus personne ne lit.
+	MoveThumb.hide()
 	if connection then
 		connection:Disconnect()
 		connection = nil
