@@ -40,19 +40,25 @@ local GrassZoneConfigs = {
 	-- Duree en secondes. Assez longue pour se VOIR, assez courte pour ne pas trainer derriere la machine.
 	-- La coupe elle-meme dure 0.125 s (MOW_RATE) : c'est bien trop court pour qu'on y lise une transition, et
 	-- c'est justement pour ca que l'emergence a son propre temps au lieu de suivre l'avancement de la coupe.
-	-- Monte de 0.35 : la touffe se rabaissait d'un coup, ce qui se lit comme un interrupteur et pas comme une
-	-- coupe. C'est CE temps-la qu'il faut regler quand "l'herbe descend trop vite", et pas MOW_RATE : celui-ci
-	-- decide si la touffe est coupee, celui-ci decide de ce qu'on VOIT.
-	CUT_RISE_TIME = 0.9,
+	-- Historique : 0.35 (trop sec, ca ressemblait a un interrupteur), 0.9 (trop mou), 0.45.
+	--
+	-- A NE PAS CONFONDRE AVEC CUT_RISE_DELAY, juste en dessous. Celui-ci dit a quelle VITESSE la touffe descend et
+	-- sort du sol ; l'autre dit QUAND elle commence. "Ca se couche trop tot" se regle avec le DELAI, "ca se couche
+	-- trop lentement" avec celui-ci -- les confondre force a sacrifier l'un pour l'autre.
+	--
+	-- Et surtout pas MOW_RATE : celui-la decide si la touffe est coupee, pas de ce qu'on VOIT.
+	CUT_RISE_TIME = 0.45,
 	-- TEMPS MORT avant que la touffe commence a descendre, en secondes.
 	--
 	-- La lame passe, et la touffe tient encore un instant avant de tomber. C'est ce court retard qui fait la
 	-- difference entre "l'herbe s'eteint sous la machine" et "la machine coupe l'herbe" : sans lui, la coupe est
 	-- SIMULTANEE au passage, donc elle ressemble a un interrupteur.
 	--
-	-- Court, et il doit le rester : au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber
-	-- APRES elle, ce qui se lit comme un retard d'affichage.
-	CUT_RISE_DELAY = 0.18,
+	-- Monte de 0.18 : la touffe tombait encore trop tot, donc trop pres de la machine.
+	--
+	-- ON APPROCHE DE LA LIMITE. Au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber loin
+	-- DERRIERE elle -- ca cesse de se lire comme une coupe et ca ressemble a un retard d'affichage.
+	CUT_RISE_DELAY = 0.35,
 	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
 	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.

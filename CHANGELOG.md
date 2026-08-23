@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.406 — La touffe tombe plus tard, mais tombe plus vite
+
+- `CUT_RISE_DELAY` : 0.18 -> **0.35**. Elle tient plus longtemps apres le passage de la lame.
+- `CUT_RISE_TIME` : 0.9 -> **0.45**. Une fois lancee, elle descend et sort du sol deux fois plus vite.
+
+Les deux vont dans des sens opposes, et c'est exactement ce qu'il fallait : l'un dit QUAND ca commence, l'autre a
+quelle VITESSE ca se fait. "Ca se couche trop tot" se regle avec le DELAI ; "ca se couche trop lentement" avec la
+duree. Les confondre aurait force a sacrifier l'un pour l'autre.
+
+C'est pour ca qu'ils ont ete separes des le depart -- meme raison que la hauteur et l'emprise de l'herbe tondue,
+ou que les deux allures de la tondeuse.
+
+### On approche de la limite du delai
+
+Au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber loin DERRIERE elle. Ca cesse de se lire
+comme une coupe et ca ressemble a un retard d'affichage.
+
 ## 0.0.405 — L'herbe tient un instant avant de se coucher
 
 `CUT_RISE_DELAY` (0.18 s) : la lame passe, la touffe tient encore, puis elle descend.
