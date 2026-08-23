@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.385 — L'herbe lointaine disparait sur mobile, et un diagnostic pour la tondeuse
+
+### L'herbe lointaine est RETIREE (mobile uniquement)
+
+Au-dela de 90 studs du bord d'une zone, toute son herbe sort de l'affichage. En dessous, elle revient.
+
+**On retire, on ne DETRUIT pas.** Un seul changement de parent sur le dossier fait disparaitre des milliers de
+parts d'un coup, et les rend tout aussi vite. Detruire obligerait a REFAIRE le semis en revenant -- des milliers
+de creations etalees sur plusieurs secondes, exactement l'a-coup qu'on cherche a eviter. La memoire n'est de
+toute facon pas le probleme (866 Mo mesures sur 1300 disponibles) : c'est le CPU.
+
+Mobile SEULEMENT : sur PC la pelouse lointaine ne coute presque rien et fait partie du decor. Voir un jardin
+entier de loin, c'est ce qui donne envie d'y aller.
+
+90 studs, c'est bien au-dela du rayon d'animation (14 sur mobile) : l'herbe est deja immobile depuis longtemps
+quand elle disparait, donc on ne voit jamais le basculement.
+
+### Le piege que ca ouvrait
+
+Le nettoyage et le re-semis cherchaient le dossier PAR SON NOM sous la zone. Deparente, il devenait introuvable :
+un re-semis aurait laisse l'ancien jeu de touffes derriere lui, et l'arret aurait laisse des milliers de parts
+vivre hors du monde pour le reste de la session. Les deux passent maintenant par la reference gardee sur la zone.
+
+### Diagnostic d'input pour la tondeuse
+
+La machine ne bouge pas sur mobile. TROIS causes possibles donnent exactement le meme symptome, et se corrigent a
+trois endroits differents : l'input n'arrive pas, le moteur n'est pas vu comme demarre, ou la vitesse est a zero.
+
+`STEER_DEBUG_INPUT` affiche les trois, deux fois par seconde. On mesure au lieu de parier -- trois corrections a
+l'aveugle couteraient plus cher qu'une mesure.
+
+A REPASSER A FALSE une fois la question reglee : ca imprime en continu.
+
 ## 0.0.384 — On n'anime plus l'herbe qui est dans le dos du joueur
 
 Mesures apres le profil mobile : 37 ms par image, avec des pics a 82. C'est du CPU -- la memoire et le reseau

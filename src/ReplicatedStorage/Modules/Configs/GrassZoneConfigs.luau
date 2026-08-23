@@ -99,6 +99,22 @@ local GrassZoneConfigs = {
 	-- Rayon autour du JOUEUR toujours anime, quoi qu'il regarde. Sans lui, les touffes sous ses pieds cesseraient
 	-- de reagir des qu'il leve les yeux -- et celles-la, il les voit forcement.
 	CULL_BEHIND_KEEP = 10,
+
+	-- ===== L'HERBE LOINTAINE DISPARAIT (MOBILE UNIQUEMENT) =====
+	-- Au-dela de cette distance du bord d'une zone, toute son herbe est RETIREE de l'affichage. En dessous, elle
+	-- revient.
+	--
+	-- MOBILE SEULEMENT. Sur PC la pelouse lointaine ne coute presque rien et fait partie du decor : voir un jardin
+	-- entier de loin, c'est ce qui donne envie d'y aller. On ne s'en prive que la ou l'appareil ne suit pas.
+	--
+	-- ON RETIRE, ON NE DETRUIT PAS. Un seul changement de parent sur le dossier fait disparaitre des milliers de
+	-- parts d'un coup, et les rend tout aussi vite. Detruire obligerait a REFAIRE le semis en revenant -- des
+	-- milliers de creations etalees sur plusieurs secondes, exactement l'a-coup qu'on cherche a eviter. La memoire,
+	-- elle, n'est pas le probleme ici (866 Mo mesures sur 1300 disponibles) : c'est le CPU.
+	--
+	-- 90 studs : bien au-dela du rayon d'animation (14 sur mobile), donc l'herbe est deja immobile depuis longtemps
+	-- quand elle disparait. On ne voit jamais le basculement.
+	MOBILE_UNLOAD_DISTANCE = 90,
 	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = alignement parfaitement
 	-- regulier, 1 = la touffe peut aller jusqu'au bord de sa case.
 	-- ATTENTION, c'est LUI qui fait les trous : a 0.8, deux voisines peuvent s'ecarter de 80 % d'une case, et l'ecart

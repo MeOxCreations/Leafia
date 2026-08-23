@@ -150,6 +150,9 @@ type Zone = {
 	-- proprement celui d'avant au lieu de remplir la meme zone a deux
 	watchers: { RBXScriptConnection }, -- ecoutes posees sur les OBSTACLES : bouger une haie doit refaire le semis
 	rebuildPending: boolean, -- une reconstruction est deja programmee : on ne l'empile pas
+	-- Dossier qui contient les touffes. Garde en clair parce qu'on le DEPARENTE sur mobile quand le joueur
+	-- s'eloigne : une fois hors de la zone, on ne pourrait plus le retrouver par son nom.
+	folder: Folder?,
 }
 
 -- Declaration en avance : `watchBlockers` la referme, et elle rappelle `populate` qui rappelle `watchBlockers`.
@@ -551,10 +554,13 @@ local function populate(zone: Zone)
 	zone.generation += 1
 	local generation = zone.generation
 
-	local previous = zone.part:FindFirstChild(FOLDER_NAME)
+	-- Meme raison qu'a l'arret : le dossier peut etre DEPARENTE (herbe lointaine retiree sur mobile), donc
+	-- introuvable par son nom. Sans la reference, un re-semis laisserait l'ancien jeu de touffes derriere lui.
+	local previous = zone.folder or zone.part:FindFirstChild(FOLDER_NAME)
 	if previous then
 		previous:Destroy()
 	end
+	zone.folder = nil
 	table.clear(zone.clumps)
 
 	local folder = Instance.new("Folder")
@@ -811,6 +817,7 @@ local function populate(zone: Zone)
 				end
 				-- Le dossier n'est parente qu'a la fin ; on le rend visible des la 1re pause pour que l'herbe
 				-- apparaisse progressivement au lieu de surgir d'un bloc.
+				zone.folder = folder
 				folder.Parent = zone.part
 			end
 		end
@@ -840,6 +847,7 @@ local function populate(zone: Zone)
 		)
 	end
 
+	zone.folder = folder
 	folder.Parent = zone.part
 	buildBuckets(zone, zoneCFrame, size.Y * 0.5)
 
@@ -1251,6 +1259,25 @@ local function update(dt: number)
 			-- Ecarte d'un bloc les zones hors de vue. Une zone dont des touffes se relevent encore garde la main, sinon
 			-- elles se figeraient couchees des qu'on tourne la camera.
 			local d = zone.part.Position - anchor
+
+			-- HERBE LOINTAINE RETIREE, sur mobile uniquement. Un seul changement de parent fait disparaitre des
+			-- milliers de parts d'un coup -- et les rend tout aussi vite quand on revient.
+			--
+			-- On NE DETRUIT PAS : il faudrait REFAIRE le semis en revenant, soit des milliers de creations etalees
+			-- sur plusieurs secondes. Exactement l'a-coup qu'on cherche a eviter.
+			--
+			-- On n'ecrit QUE sur changement d'etat : reposer le meme parent a chaque image couterait plus cher que
+			-- ce que la mesure economise.
+			if MOBILE then
+				local grass = zone.folder
+				if grass then
+					local away = d.Magnitude - zone.radius > GrassZoneConfigs.MOBILE_UNLOAD_DISTANCE
+					if away == (grass.Parent ~= nil) then
+						grass.Parent = if away then nil else zone.part
+					end
+				end
+			end
+
 			local reach = zone.radius + WIND_VIEW
 			-- `fading` passe AUSSI ici, pas seulement au niveau des paves : une zone entiere trop loin etait sautee,
 			-- donc son herbe ne s'allumait jamais et restait verte pendant que le reste passait au bleu.
@@ -1497,10 +1524,14 @@ function GrassZoneController.stop()
 			watcher:Disconnect()
 		end
 		table.clear(zone.watchers)
-		local folder = zone.part:FindFirstChild(FOLDER_NAME)
+		-- ON PASSE PAR LA REFERENCE, pas par le nom : sur mobile le dossier est DEPARENTE quand le joueur s'eloigne,
+		-- donc `FindFirstChild` sous la zone ne le trouverait plus -- et on laisserait des milliers de parts vivre
+		-- hors du monde pour le reste de la session.
+		local folder = zone.folder or zone.part:FindFirstChild(FOLDER_NAME)
 		if folder then
 			folder:Destroy()
 		end
+		zone.folder = nil
 	end
 	table.clear(zones)
 end

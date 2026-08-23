@@ -15,6 +15,7 @@ local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 
@@ -63,6 +64,7 @@ local promptTarget: Model? = nil -- tondeuse dont le prompt est affiche (pour ne
 -- moindre difference de virgule ferait croire que le singleton ne nous appartient plus.
 local promptAnchor: Vector3? = nil
 local actionBound = false
+local lastInputLog = 0 -- throttle du diagnostic d'input (voir STEER_DEBUG_INPUT)
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
 -- CONDUITE en cours. Sert a ne couper AutoRotate qu'une fois, et surtout a le RENDRE une fois -- une
 -- restauration ecrite a chaque image ecraserait un autre systeme qui l'aurait coupe pour ses raisons.
@@ -544,6 +546,18 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	local mv = MoveInput.get()
 	local forwardAmount = math.clamp(-mv.Z, -1, 1)
 	local lateralAmount = math.clamp(mv.X, -1, 1)
+
+	-- DIAGNOSTIC. Voir MowConfigs.STEER_DEBUG_INPUT : quand la machine ne bouge pas, il y a TROIS causes possibles
+	-- qui donnent exactement le meme symptome, et elles se corrigent a trois endroits differents.
+	if MowConfigs.STEER_DEBUG_INPUT and os.clock() - lastInputLog > 0.5 then
+		lastInputLog = os.clock()
+		print(
+			`[Mow] input {string.format("%.2f", mv.X)},{string.format("%.2f", mv.Z)} `
+				.. `| vitesse {string.format("%.1f", humanoid.WalkSpeed)} `
+				.. `| moteur {if mower:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true then "ON" else "off"} `
+				.. `| tactile {if UserInputService.TouchEnabled then "oui" else "non"}`
+		)
+	end
 
 	local look = hrp.CFrame.LookVector
 	local facing = Vector3.new(look.X, 0, look.Z)
