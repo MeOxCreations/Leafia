@@ -86,6 +86,33 @@ return {
 	-- Marqueur dans TAKE_ANIM (a 0.33s) : l'instant ou la main se referme. C'est LA qu'on soude, pas a
 	-- l'appui -- sinon le seau saute dans la main avant que la main l'atteigne.
 	TAKE_EVENT = "TakeBucketEvent",
+	-- FILET DE SECURITE, en secondes depuis le debut de TAKE_ANIM. Le geste de prise avance son temps A LA MAIN
+	-- (voir TAKE_ANIM ci-dessus et le controller) pour pouvoir TENIR sa derniere image : rien ne garantit qu'un
+	-- marqueur tire encore quand c'est nous qui ecrivons TimePosition. Regle un peu APRES le marqueur, pour que
+	-- le marqueur reste le declencheur normal et que ceci ne serve que s'il se tait.
+	TAKE_GRAB_FALLBACK = 0.45,
+	-- Fondus d'entree. Le geste arrive vite (c'est un geste), la pose de portage prend son temps (c'est un etat).
+	TAKE_FADE = 0.1,
+	CARRY_FADE = 0.15,
+	-- Secondes avant d'abandonner l'attente d'une animation dont la duree reste a zero (asset jamais charge).
+	-- Sans ce plafond le joueur resterait sans pose de portage, sans la moindre erreur pour le dire.
+	TAKE_LOAD_TIMEOUT = 2,
+
+	-- ===== ORIENTATION A LA PRISE =====
+	-- ON NE FABRIQUE AUCUN DEPLACEMENT : le joueur PIVOTE face au seau, il n'avance pas d'un stud. Une marche
+	-- forcee avait ete codee pour l'echelle (priorite Camera, marqueurs, secours distance) puis SUPPRIMEE : le
+	-- joueur etait deja arrive, tout ce systeme ne servait a rien. Meme conclusion ici.
+	--
+	-- Duree du pivot. Il doit finir AVANT TAKE_GRAB_FALLBACK et avant le marqueur, sinon la main se referme
+	-- pendant que le corps tourne encore.
+	FACE_TURN_TIME = 0.2,
+	-- En dessous de cette distance horizontale, on ne pivote pas : la direction n'a plus de sens quand on est
+	-- pile dessus, et le joueur ferait un demi-tour aleatoire.
+	FACE_MIN_DIST = 0.5,
+	-- Le joueur est FIGE pendant le geste. Sans ca il s'eloigne en plein mouvement et le pivot se bat contre ses
+	-- touches. Ignore s'il est EN L'AIR : figer quelqu'un en plein saut se verrait bien plus que le probleme
+	-- qu'on corrige.
+	ANCHOR_DURING_TAKE = true,
 
 	-- ===== REPOSE =====
 	-- Le seau est porte DEVANT le torse, en l'air. Le reposer sur place le laisserait FLOTTER a hauteur de

@@ -41,7 +41,11 @@ local actionBound = false
 local takeTrack: AnimationTrack? = nil
 local carryTrack: AnimationTrack? = nil
 local markerConn: RBXScriptConnection? = nil
-local stopConn: RBXScriptConnection? = nil
+-- Avance le temps du geste de prise A LA MAIN. Voir pickUp : c'est ce qui lui fait TENIR sa derniere image.
+local holdConn: RBXScriptConnection? = nil
+-- La part qu'on a ancree pour figer le joueur pendant le geste. On retient LAQUELLE, pas un simple booleen :
+-- celui qui modifie est celui qui restaure, et le personnage peut avoir change entre-temps.
+local anchoredRoot: BasePart? = nil
 local stepConn: RBXScriptConnection? = nil
 local remote: RemoteEvent? = nil
 
@@ -64,6 +68,11 @@ local function getAnimator(): Animator?
 	end
 	local animator = humanoid:WaitForChild("Animator", 3)
 	return if animator and animator:IsA("Animator") then animator else nil
+end
+
+local function getHumanoid(): Humanoid?
+	local character = player.Character
+	return if character then character:FindFirstChildOfClass("Humanoid") else nil
 end
 
 local function resolveAnimation(name: string): Animation?
@@ -154,14 +163,25 @@ local function clearTakeConns()
 		markerConn:Disconnect()
 		markerConn = nil
 	end
-	if stopConn then
-		stopConn:Disconnect()
-		stopConn = nil
+	if holdConn then
+		holdConn:Disconnect()
+		holdConn = nil
+	end
+end
+
+-- Rend au joueur sa liberte de mouvement. Idempotent : appele a la fin du geste ET a tout abandon (repose,
+-- changement de personnage, autre portage). Un ancrage oublie laisserait le joueur plante pour toujours.
+local function releaseStance()
+	local root = anchoredRoot
+	anchoredRoot = nil
+	if root and root.Parent then
+		root.Anchored = false
 	end
 end
 
 local function stopTracks()
 	clearTakeConns()
+	releaseStance()
 	if takeTrack then
 		takeTrack:Stop(0.1)
 		takeTrack = nil
@@ -206,30 +226,117 @@ local function pickUp(model: Model)
 		playCarryPose()
 		return
 	end
+	-- PIVOT FACE AU SEAU, SANS UN STUD DE DEPLACEMENT. On ne fabrique pas une marche : le joueur se tourne, la
+	-- main se referme face a l'objet, et c'est tout. On ne garde que la ROTATION (la position reste vive), sinon
+	-- le lerp figerait aussi ses coordonnees et il resterait colle en l'air s'il saute au meme moment.
+	local hrp = getRoot()
+	local binPart = binRoot(model)
+	local fromRot: CFrame? = nil
+	local toRot: CFrame? = nil
+	if hrp and binPart then
+		local flat = binPart.Position - hrp.Position
+		flat = Vector3.new(flat.X, 0, flat.Z)
+		if flat.Magnitude >= BinConfigs.FACE_MIN_DIST then
+			local start = hrp.CFrame
+			local target = CFrame.lookAt(start.Position, start.Position + flat.Unit)
+			fromRot = start - start.Position
+			toRot = target - target.Position
+		end
+		-- FIGE PENDANT LE GESTE, mais JAMAIS EN L'AIR : figer quelqu'un en plein saut se verrait bien plus que
+		-- le probleme qu'on corrige.
+		local humanoid = getHumanoid()
+		if
+			BinConfigs.ANCHOR_DURING_TAKE
+			and humanoid
+			and humanoid.FloorMaterial ~= Enum.Material.Air
+			and not hrp.Anchored
+		then
+			releaseStance()
+			hrp.Anchored = true
+			anchoredRoot = hrp
+		end
+	end
+
 	takeTrack = track
 	track.Priority = Enum.AnimationPriority.Action2
-	-- FORCE a false : une piste bouclee par erreur reste a plein poids POUR TOUJOURS et pollue tout ce qui
-	-- partage sa priorite. Le reglage de l'editeur n'est qu'une suggestion.
-	track.Looped = false
+	-- LOOPED = TRUE, ET C'EST VOULU ICI. Une piste NON bouclee SE RELACHE a sa derniere image : les bras
+	-- retombent vers la pose neutre juste avant que le portage arrive, et ca se lit comme un bug. On la laisse
+	-- donc bouclee -- puis on lui retire tout moyen de reboucler : vitesse ZERO, et c'est NOUS qui avancons son
+	-- temps image par image, avec un plafond. Elle joue une fois, et elle TIENT.
+	track.Looped = true
 
-	-- SOUDURE AU MARQUEUR, avec filet a l'arret de la piste. Le drapeau garantit UN seul envoi : sans lui, le
-	-- marqueur puis l'arret demanderaient deux fois la prise.
 	local fired = false
 	clearTakeConns()
+	-- Le drapeau garantit UN seul envoi : marqueur et filet demanderaient sinon la prise deux fois.
+	-- On ne coupe QUE le marqueur ici, surtout pas clearTakeConns : ca tuerait la boucle qui avance le temps,
+	-- et le geste se figerait en plein vol.
 	local function doGrab()
 		if fired or carriedBin ~= model then
 			return
 		end
 		fired = true
-		clearTakeConns()
+		if markerConn then
+			markerConn:Disconnect()
+			markerConn = nil
+		end
 		request(model, "grab")
 	end
 	markerConn = track:GetMarkerReachedSignal(BinConfigs.TAKE_EVENT):Connect(doGrab)
-	stopConn = track.Stopped:Connect(function()
-		doGrab() -- filet : le marqueur n'a pas tire (asset pas charge a la 1re lecture)
+	track:Play(BinConfigs.TAKE_FADE)
+	track:AdjustSpeed(0)
+
+	local elapsed = 0
+	local function finish()
+		clearTakeConns()
+		releaseStance()
+		-- L'animation est finie : le seau DOIT etre en main, quoi qu'il se soit passe avant.
+		doGrab()
+		-- FONDU CROISE. La pose de portage monte pendant que le geste descend, sur la meme duree : a aucun
+		-- instant les bras ne repassent par la position neutre.
 		playCarryPose()
+		track:Stop(BinConfigs.CARRY_FADE)
+		if takeTrack == track then
+			takeTrack = nil
+		end
+	end
+	holdConn = RunService.Heartbeat:Connect(function(dt)
+		-- Le joueur a repose le seau, ou une autre prise a pris la main : on lache tout.
+		if takeTrack ~= track or carriedBin ~= model then
+			clearTakeConns()
+			releaseStance()
+			return
+		end
+		elapsed += dt
+
+		-- LE PIVOT. Fraction du temps ecoule, pas un lerp exponentiel : celui-ci n'atteindrait jamais sa cible et
+		-- laisserait le joueur legerement de travers pour toujours.
+		if fromRot and toRot and hrp and hrp.Parent then
+			local a = if BinConfigs.FACE_TURN_TIME > 0
+				then math.min(elapsed / BinConfigs.FACE_TURN_TIME, 1)
+				else 1
+			hrp.CFrame = CFrame.new(hrp.Position) * (fromRot :: CFrame):Lerp(toRot :: CFrame, a)
+			if a >= 1 then
+				fromRot = nil
+			end
+		end
+		-- FILET DE PRISE. Rien ne garantit qu'un marqueur tire quand c'est NOUS qui ecrivons TimePosition. Il est
+		-- regle apres le marqueur, donc sans effet tant que celui-ci parle.
+		if elapsed >= BinConfigs.TAKE_GRAB_FALLBACK then
+			doGrab()
+		end
+		local length = track.Length
+		if length > 0 then
+			-- CLAMP A Length - 0.001, jamais a Length pile : pile au bout, Roblox reboucle.
+			local last = math.max(length - 0.001, 0)
+			track.TimePosition = math.min(elapsed, last)
+			if elapsed >= last then
+				finish()
+			end
+		elseif elapsed > BinConfigs.TAKE_LOAD_TIMEOUT then
+			-- Length reste a zero : l'animation n'a jamais charge. On ne laisse pas le joueur coince sans pose.
+			finish()
+		end
 	end)
-	track:Play(0.1)
 end
 
 local function placeBin()

@@ -2204,6 +2204,63 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.415 — Le geste de prise du seau tient sa pose, et se joue face a l'objet
+
+Deux defauts du portage precedent, tous deux visibles a l'ecran.
+
+### Les bras retombaient a la fin du geste
+
+`TakeAnimation` etait jouee avec `Looped = false`. Une piste non bouclee SE RELACHE a sa derniere image : les
+bras revenaient vers la pose neutre, PUIS la pose de portage arrivait en fondu. Un aller-retour parasite, juste
+au moment ou le seau se pose dans les mains.
+
+La piste est maintenant bouclee -- et on lui retire tout moyen de reboucler : vitesse ZERO, et c'est le jeu qui
+avance son temps image par image, avec un plafond a `Length - 0.001`. Elle joue une fois et elle TIENT. C'est la
+recette deja notee dans le journal de CLAUDE.md, appliquee ici.
+
+La pose de portage monte alors en FONDU CROISE pendant que le geste descend : a aucun instant les bras ne
+repassent par la position neutre.
+
+### Le marqueur n'est plus le seul declencheur
+
+Quand c'est nous qui ecrivons `TimePosition`, rien ne garantit qu'un marqueur d'animation tire encore.
+`TAKE_GRAB_FALLBACK` (0.45 s) demande la soudure si `TakeBucketEvent` se tait. Regle APRES le marqueur, donc
+sans effet tant que celui-ci parle.
+
+`TAKE_LOAD_TIMEOUT` couvre l'autre cas : une animation dont la duree reste a zero (asset jamais charge)
+laissait le joueur sans pose de portage, sans la moindre erreur pour le dire.
+
+### Le geste partait dos au seau
+
+On pouvait appuyer sur `E` a 8 studs. Le joueur jouait sa prise sur place, bras dans le vide, pendant que le
+seau lui sautait au torse depuis l'autre bout de la pelouse.
+
+Le joueur PIVOTE maintenant face au seau en `FACE_TURN_TIME` (0.2 s), soit avant que la main se referme. Il est
+fige pendant le geste, sinon il s'eloigne en plein mouvement et le pivot se bat contre ses touches.
+
+AUCUN DEPLACEMENT N'EST FABRIQUE. Une marche forcee avait ete codee pour l'echelle -- priorite Camera, marqueurs
+d'animation, secours par distance et par delai -- puis SUPPRIMEE : le joueur etait deja arrive, tout ce systeme
+ne servait a rien. Meme conclusion ici.
+
+Trois details qui evitent des bugs discrets :
+
+- Seule la ROTATION est pilotee, la position reste vive. Lerper la CFrame entiere figerait aussi les
+  coordonnees, et le joueur resterait colle en l'air s'il saute au meme instant.
+- Fraction du temps ecoule, pas un lerp exponentiel : celui-ci n'atteindrait jamais sa cible et laisserait le
+  joueur legerement de travers pour toujours.
+- On ne fige JAMAIS quelqu'un en l'air (`FloorMaterial`) : ca se verrait bien plus que le probleme corrige. Et
+  la part ancree est retenue nommement, pour etre rendue a son etat quoi qu'il arrive ensuite.
+
+### A faire dans Studio
+
+Rien de neuf. Le seau demande toujours un model prefixe `Bin` dans la MAP et le dossier
+`Assets/Animations/Player/Tools/Bin` -- Rojo ne synchronise ni l'un ni l'autre.
+
+### Note
+
+L'entree 0.0.414 annonce le seau comme "pas branche dans la place TUTORIAL". C'est PERIME : le commit suivant
+l'a branche, serveur et client. La ligne est laissee telle quelle (le CHANGELOG ne s'efface pas).
+
 ## 0.0.414 — On peut prendre et deplacer le seau
 
 PORTAGE LIBRE, contrairement a l'echelle : aucun rail, aucun aimant vers une haie. On prend le seau, on se
