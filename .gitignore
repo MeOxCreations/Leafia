@@ -9,3 +9,6 @@ DevPackages/
 
 # Reglages Claude Code locaux a la machine (permissions), pas a partager.
 .claude/settings.local.json
+
+# Declaration de role personnelle (qui utilise ce depot), pas a partager.
+CLAUDE.local.md

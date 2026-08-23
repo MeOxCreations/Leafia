@@ -83,6 +83,45 @@ version qui TOURNE, sans avoir a demander.
   asset ou d'un objet pose dans Studio, le DIRE dans le message de commit et me le rappeler : sinon le
   collaborateur croit avoir la bonne version et il ne l'a pas.
 
+### Rojo ECRASE Studio avec le disque LOCAL
+
+Rojo ne fusionne rien. Quand quelqu'un connecte son `rojo serve`, Studio recoit SA version de `src/`, celle de
+son disque, et elle REMPLACE ce qui etait la. Le dernier qui connecte gagne. Si son depot est en retard, tout
+le code recent disparait de la session Studio, sans erreur et sans avertissement : le bouton « Accepter » du
+plugin est exactement ce qui l'applique.
+
+- **Ordre obligatoire, pour tout le monde : `git pull --rebase origin main` PUIS `rojo serve`.** Jamais
+  l'inverse.
+- **Lire le diff que le plugin affiche avant d'accepter.** S'il propose de SUPPRIMER des fichiers recents,
+  c'est le signal qu'on est en retard : refuser, pull, reconnecter.
+- **Ne jamais publier la place juste apres avoir connecte Rojo sans avoir pull.** Tant que ca reste une
+  session Studio, une reconnexion a jour repare tout. Publie, l'ancien code part chez les joueurs et il faut
+  republier.
+- Seul `src/` est touche : la map, les Assets et les Animations ne bougent pas (voir la regle du push
+  ci-dessus). Symptome typique : le CODE revient en arriere alors que la MAP reste bonne.
+
+### Deux personnes sur le projet
+
+Par defaut, l'assistant parle a **Meox**, le proprietaire du depot. Le collaborateur se declare en ecrivant une
+ligne dans un fichier que son assistant lit au demarrage -- soit `CLAUDE.local.md` a la racine du depot (ignore
+par git, donc personnel a sa machine), soit sa memoire perso `~/.claude/CLAUDE.md` :
+
+    Je suis LE COLLABORATEUR de Leafia, pas Meox.
+
+Si rien ne se charge chez lui, qu'il le dise simplement en une phrase au debut de sa session : le but est que
+son assistant sache quel role suivre, pas qu'un fichier precis existe.
+
+Ce que ca change pour son assistant :
+
+- **Commencer chaque session par `git pull --rebase origin main`**, avant de lire du code et avant de lancer
+  Rojo. La reference est ce qui est sur GitHub, pas ce qui traine sur son disque.
+- **Ne jamais raisonner sur un fichier local sans avoir pull d'abord.** Un fichier en retard se lit comme du
+  code valide : rien ne signale qu'il est perime.
+- Meme regle de push que Meox : commit -> `git pull --rebase origin main` -> push, jamais de `--force`.
+- Meme `CHANGELOG.md` : lire le dernier numero REEL **apres** le pull et prendre le suivant. En cas de
+  conflit, garder les DEUX entrees en renumerotant la sienne, jamais `--ours` / `--theirs`.
+- En cas de conflit ou de push refuse : **stop, le dire.**
+
 ## Journal d'apprentissage
 
 Quand l'assistant apprend quelque chose de non evident pendant une session (piege d'outil, comportement
@@ -620,6 +659,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   temps a chercher la bonne valeur -- alors qu'aucune valeur ne peut satisfaire deux besoins opposes. Dedoubler
   supprime le probleme au lieu de l'arbitrer, et coute une ligne. Signal d'alerte : des qu'on se surprend a
   "compenser" un reglage en tournant un autre, ils sont deja en train de se battre.
+
+- **Rojo pousse le disque LOCAL vers Studio et REMPLACE : le dernier qui connecte gagne.** Le collaborateur, dont
+  le depot etait en retard, a lance son `rojo serve` : l'herbe, la tondeuse et le tuto recent ont DISPARU de
+  Studio, remplaces par l'ancienne version -- aucune erreur, juste un « Accepter » dans le plugin. Reconnecter
+  depuis un depot A JOUR a tout remis, ce qui fait croire a un bug fantome ("ca s'est repare tout seul") alors que
+  c'est le fonctionnement normal. Regle : `git pull --rebase` AVANT `rojo serve`, toujours ; et si le diff du
+  plugin propose de SUPPRIMER des fichiers recents, on est en retard, on refuse. Le vrai danger n'est pas la
+  session Studio (reversible) mais de PUBLIER dans cet etat : l'ancien code part chez les joueurs, et la une
+  reconnexion Rojo ne repare plus rien. Indice qui pointe droit sur la cause : le CODE recule pendant que la MAP
+  reste bonne -- Rojo ne synchronise que `src/`.
 
 ## Design emotionnel
 

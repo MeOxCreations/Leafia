@@ -2204,6 +2204,70 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.413 — Connecter Rojo en retard efface le code recent de Studio
+
+Le collaborateur a connecte son `rojo serve` alors que son depot etait en retard. Studio a perdu l'herbe, la
+tondeuse et le tuto recent, et repris l'ancienne version. Aucune erreur : juste un « Accepter » dans le plugin.
+
+Rojo ne fusionne rien. Il pousse le disque LOCAL vers Studio et REMPLACE. Le dernier qui connecte gagne, avec sa
+version a lui.
+
+Reconnecter depuis un depot a jour a tout remis -- ce qui donne l'impression d'un bug fantome qui s'est repare
+seul, alors que c'est le fonctionnement normal vu deux fois de suite.
+
+### Ce qui est ecrit dans CLAUDE.md
+
+- Ordre obligatoire pour tout le monde : `git pull --rebase origin main` PUIS `rojo serve`.
+- Lire le diff du plugin avant d'accepter. S'il propose de SUPPRIMER des fichiers recents, on est en retard.
+- Ne jamais publier la place juste apres avoir connecte Rojo sans avoir pull.
+
+### Le vrai danger n'est pas la session Studio
+
+Elle est reversible : une reconnexion a jour repare tout. PUBLIER dans cet etat, non -- l'ancien code part chez
+les joueurs, et la aucune reconnexion Rojo n'y change quoi que ce soit. Il faut republier.
+
+### Indice qui pointe droit sur la cause
+
+Le CODE recule pendant que la MAP reste bonne. Rojo ne synchronise que `src/` : c'est sa signature.
+
+### Deux personnes, deux roles
+
+CLAUDE.md decrit maintenant le role du COLLABORATEUR, en plus de celui de Meox : pull en debut de session avant
+meme de lire du code, jamais de raisonnement sur un fichier local non actualise, meme regle de push et de
+numerotation du CHANGELOG. Il se declare par une ligne dans `CLAUDE.local.md` (ajoute au `.gitignore`) ou dans
+sa memoire perso.
+
+## 0.0.412 — Un script pour accrocher n'importe quel objet a un rig
+
+Entree ecrite apres coup : le script etait pousse (commit 08951ef) sans sa ligne de CHANGELOG.
+
+`scripts/studio/AttacherObjetAuRig.lua` accroche n'importe quel objet a la main d'un rig pour pouvoir l'ANIMER
+avec lui. Le rateau, une brouette, un arrosoir.
+
+### Pourquoi un deuxieme script
+
+`AttacherOutilAuRig.lua` REPRODUIT un calcul du jeu : il rejoue la prise que `ToolService.applyGrip` fabrique a
+partir de `ToolConfigs`. Il ne vaut donc que pour un objet DECLARE la-dedans -- aujourd'hui le taille-haie, et
+lui seul.
+
+Pour un objet qui n'est pas encore un outil, personne ne calcule la prise : le placement fait a la main EST la
+source de verite. Le nouveau script la fige, point.
+
+Prendre le mauvais coute une animation entiere : poser a l'oeil un outil dont le jeu calcule la prise donne des
+poses justes dans l'editeur et fausses en jeu. C'est ecrit en tete des deux fichiers.
+
+### Ce qu'il fait
+
+- Cree un Motor6D nomme comme l'objet, donc visible en piste dans l'editeur d'animation.
+- Desancre TOUT l'objet : une part ancree ignore son Motor6D, en silence.
+- Detruit un joint precedent du meme nom, sinon Roblox melange deux pistes identiques.
+- Detecte un rig SKINNE (`Bone`) et explique pourquoi un Motor6D ne peut pas s'y accrocher.
+
+### A savoir avant d'animer
+
+Le jour ou le rateau devient un vrai outil declare dans `ToolConfigs`, les animations faites ici seront a
+refaire avec l'autre script.
+
 ## 0.0.411 — Un nom d'effet peut designer l'EMETTEUR ou CE QUI LE CONTIENT
 
 L'avertissement du commit precedent a repondu tout seul :
