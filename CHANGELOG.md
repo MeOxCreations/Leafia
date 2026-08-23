@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.388 — L'input de deplacement a une deuxieme source
+
+`ControlModule:GetMoveVector()` rend ZERO sur l'appareil tactile teste -- mesure a l'ecran, joystick pousse a
+fond. Le deplacement avec la tondeuse etait donc impossible.
+
+### On arrete de chercher POURQUOI
+
+Deux corrections ont deja ete tentees a cote (le verrouillage de souris, la detection d'appareil). La bonne
+question n'est pas "pourquoi cette source est vide" mais "existe-t-il une autre source de la meme information".
+
+Oui : `humanoid.MoveDirection`. Roblox le remplit lui-meme quel que soit le controleur -- doigt, clavier,
+manette. Il devient le premier secours, avant le secours clavier qui existait deja.
+
+### Deux precautions
+
+- **Repere.** `MoveDirection` est en repere MONDE, alors que tout le reste attend du repere CAMERA (la convention
+  de `GetMoveVector`). On le ramene donc dans le repere de la camera, a plat -- melanger deux reperes est un piege
+  deja paye sur la conduite de cette meme tondeuse.
+- **Instant de lecture.** L'en-tete de ce fichier dit que `MoveDirection` ne reflete plus l'intention du joueur des
+  qu'on contraint le deplacement. C'est vrai APRES notre appel a `Move` ; on le lit AVANT, sur la meme image. A cet
+  instant il porte encore la demande du module de controle de Roblox.
+
+Le risque theorique -- si Roblox cessait d'appeler `Move`, la valeur resterait la NOTRE et la machine partirait
+toute seule -- est ecarte par l'observation : le joueur marche normalement sans la tondeuse, donc le controleur
+tourne bien.
+
 ## 0.0.387 — On ne verrouille plus une souris qui n'existe pas
 
 Le joystick tactile ne remontait RIEN : impossible de bouger avec la tondeuse sur mobile.

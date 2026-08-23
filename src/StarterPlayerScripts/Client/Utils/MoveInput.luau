@@ -49,8 +49,39 @@ function MoveInput.get(): Vector3
 			vec = v
 		end
 	end
-	-- SECOURS CLAVIER : si le module de controle rend du VIDE (place secondaire / tuto), on lit WASD en direct pour
-	-- que la feature reponde quand meme. Ne couvre PAS le tactile -- c'est un filet, pas un chemin.
+	-- SECOURS N.1 : LE HUMANOID LUI-MEME.
+	--
+	-- `GetMoveVector` rend ZERO sur certains appareils tactiles -- mesure a l'ecran, joystick pousse a fond. On ne
+	-- sait pas pourquoi, et on cesse de chercher : il existe une AUTRE source de la meme information, que Roblox
+	-- remplit lui-meme quel que soit le controleur (doigt, clavier, manette).
+	--
+	-- `MoveDirection` est en repere MONDE, alors que tout le reste attend du repere CAMERA (X = cote, Z = arriere,
+	-- la convention de `GetMoveVector`). On le RAMENE donc dans le repere de la camera, sinon on melangerait deux
+	-- reperes -- piege deja paye sur la conduite de la tondeuse.
+	--
+	-- POURQUOI CA MARCHE MALGRE LE COMMENTAIRE EN TETE DE CE FICHIER : on le lit AVANT que la boucle appelante
+	-- n'appelle `Move` sur cette image. A cet instant il porte encore la demande du module de controle de Roblox,
+	-- c'est-a-dire l'intention du joueur -- pas notre contrainte.
+	if vec.Magnitude < 0.05 then
+		local character = player.Character
+		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
+		local camera = workspace.CurrentCamera
+		if humanoid and camera then
+			local world = humanoid.MoveDirection
+			if world.Magnitude > 0.05 then
+				local relative = camera.CFrame:VectorToObjectSpace(world)
+				-- A PLAT : une camera qui plonge donnerait une composante verticale, sans aucun sens pour un
+				-- deplacement au sol.
+				local flat = Vector3.new(relative.X, 0, relative.Z)
+				if flat.Magnitude > 0.05 then
+					vec = flat.Unit * math.min(world.Magnitude, 1)
+				end
+			end
+		end
+	end
+
+	-- SECOURS N.2, CLAVIER : si les deux precedents rendent du VIDE (place secondaire / tuto ou PlayerModule pas
+	-- encore pret), on lit WASD en direct pour que la feature reponde quand meme.
 	if vec.Magnitude < 0.05 then
 		local x, z = 0, 0
 		if UserInputService:IsKeyDown(Enum.KeyCode.W) then
