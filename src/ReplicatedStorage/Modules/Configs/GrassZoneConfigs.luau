@@ -80,6 +80,25 @@ local GrassZoneConfigs = {
 	-- Combien de touffes on cree par image pendant le semis. Plus bas sur mobile : le semis est etale sur plus
 	-- d'images, donc l'arrivee dans un jardin ne fait pas tomber le jeu a genoux pendant une seconde.
 	MOBILE_CREATE_BUDGET = 120,
+
+	-- ===== ON N'ANIME PAS CE QUE PERSONNE NE REGARDE =====
+	-- Roblox ne DESSINE deja pas ce qui est derriere la camera. Ce qui coute, c'est NOTRE boucle : elle calculait
+	-- le vent, l'ecrasement et la couleur de touffes situees dans le dos du joueur, pour un resultat que personne
+	-- ne verra jamais.
+	--
+	-- Le test se fait par PAVE et pas par touffe : un produit scalaire pour six studs de cote, contre un par
+	-- touffe. C'est ce qui rend l'economie gratuite.
+	--
+	-- 100 % CLIENT, donc AUCUN risque en co-op : chaque joueur construit et anime sa propre pelouse, rien ne
+	-- transite. Cacher la sienne ne peut rien changer chez les autres.
+	CULL_BEHIND = true,
+	-- Produit scalaire en dessous duquel un pave est considere "dans le dos". 0 = pile sur les cotes, -1 = pile
+	-- derriere. On prend une valeur NEGATIVE avec de la marge : le champ de vision est large, et un pave coupe une
+	-- image trop tot se verrait se figer au bord de l'ecran.
+	CULL_BEHIND_DOT = -0.35,
+	-- Rayon autour du JOUEUR toujours anime, quoi qu'il regarde. Sans lui, les touffes sous ses pieds cesseraient
+	-- de reagir des qu'il leve les yeux -- et celles-la, il les voit forcement.
+	CULL_BEHIND_KEEP = 10,
 	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = alignement parfaitement
 	-- regulier, 1 = la touffe peut aller jusqu'au bord de sa case.
 	-- ATTENTION, c'est LUI qui fait les trous : a 0.8, deux voisines peuvent s'ecarter de 80 % d'une case, et l'ecart

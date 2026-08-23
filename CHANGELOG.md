@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.384 — On n'anime plus l'herbe qui est dans le dos du joueur
+
+Mesures apres le profil mobile : 37 ms par image, avec des pics a 82. C'est du CPU -- la memoire et le reseau
+vont bien. A 37 ms on est a 26 images par seconde, sous le seuil des 45 ou le joueur sent que "ca repond mal"
+sans savoir le nommer.
+
+### La nuance qui compte
+
+Roblox ne DESSINE deja pas ce qui est derriere la camera. L'idee de cacher l'herbe n'aurait donc rien gagne cote
+rendu.
+
+Ce qui coutait, c'est NOTRE boucle : elle calculait le vent, l'ecrasement et la couleur de touffes situees dans
+le dos du joueur, pour un resultat que personne ne verra jamais.
+
+### Le test se fait par PAVE, pas par touffe
+
+Un produit scalaire pour six studs de cote, contre un par touffe. C'est ce qui rend l'economie gratuite -- un
+test par touffe aurait coute presque aussi cher que ce qu'il economise.
+
+Deux exceptions, et elles sont necessaires :
+
+- **Les paves ENCORE EN MOUVEMENT** sont epargnes. Une touffe qui se releve doit finir son geste, sinon elle se
+  fige a mi-chemin et on la retrouve comme ca en se retournant.
+- **Ce qui est SOUS LES PIEDS** aussi (`CULL_BEHIND_KEEP`, 10 studs). Ces touffes-la, le joueur les voit
+  forcement, quoi qu'il regarde.
+
+Le regard est pris A PLAT : une pelouse est horizontale, donc lever les yeux ne doit rien cacher. Sans ca,
+regarder le ciel figerait toute l'herbe autour de soi.
+
+### Aucun risque en CO-OP
+
+L'herbe est 100 % client : chaque joueur construit et anime la sienne, rien ne transite. Cacher la sienne ne peut
+donc rien changer chez les autres. C'est aussi pour ca qu'on ECARTE au lieu de DETRUIRE : detruire et recreer des
+parts coute cher et provoque des a-coups, alors que sauter un calcul ne coute rien.
+
 ## 0.0.383 — PROFIL MOBILE pour l'herbe : le jeu etait injouable sur telephone
 
 Regarder la pelouse ou marcher dessus faisait tomber le jeu a genoux sur mobile.

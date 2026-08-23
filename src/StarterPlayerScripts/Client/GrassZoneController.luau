@@ -1120,7 +1120,15 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 	return moving
 end
 
-local function updateZone(zone: Zone, positions: { Vector3 }, anchor: Vector3, now: number, dt: number)
+local function updateZone(
+	zone: Zone,
+	positions: { Vector3 },
+	anchor: Vector3,
+	now: number,
+	dt: number,
+	camPos: Vector3,
+	camLook: Vector3
+)
 	local windReach = WIND_VIEW
 	local crushReach = GrassZoneConfigs.CRUSH_RADIUS
 	local zoneMoving = 0
@@ -1130,6 +1138,26 @@ local function updateZone(zone: Zone, positions: { Vector3 }, anchor: Vector3, n
 	local fadeSpan = math.max(windReach - fadeStart, 1e-3)
 
 	for _, bucket in ipairs(zone.buckets) do
+		-- DANS LE DOS DU JOUEUR : on saute le pave entier.
+		--
+		-- Roblox ne DESSINE deja pas ce qui est derriere la camera ; ce qu'on economise ici, c'est notre propre
+		-- calcul -- vent, ecrasement, couleur -- pour des touffes que personne ne verra.
+		--
+		-- On epargne les paves ENCORE EN MOUVEMENT : une touffe qui se releve doit finir son geste, sinon elle se
+		-- figerait a mi-chemin et on la retrouverait comme ca en se retournant.
+		-- Et on epargne ce qui est SOUS LES PIEDS : celles-la, le joueur les voit forcement.
+		if GrassZoneConfigs.CULL_BEHIND and not bucket.settling then
+			local toward = bucket.center - camPos
+			local flat = Vector3.new(toward.X, 0, toward.Z)
+			local len = flat.Magnitude
+			if
+				len > GrassZoneConfigs.CULL_BEHIND_KEEP
+				and (flat / len):Dot(camLook) < GrassZoneConfigs.CULL_BEHIND_DOT
+			then
+				continue
+			end
+		end
+
 		local d = bucket.center - anchor
 		-- On retranche le rayon du pave : sinon un pave a cheval sur la limite serait ecarte alors qu'une partie de ses
 		-- touffes est bien visible.
@@ -1190,6 +1218,24 @@ local function update(dt: number)
 	end
 	fading = reveal ~= revealTarget
 
+	-- REGARD DE LA CAMERA, releve UNE fois par image et partage par toutes les zones. Il sert a ecarter les paves
+	-- situes dans le dos du joueur.
+	-- A PLAT : une pelouse est horizontale, donc lever ou baisser les yeux ne doit rien cacher. Sans ca, regarder
+	-- le ciel figerait toute l'herbe autour de soi.
+	local camPos = anchor
+	local camLook = Vector3.new(0, 0, -1)
+	do
+		local camera = workspace.CurrentCamera
+		if camera then
+			camPos = camera.CFrame.Position
+			local look = camera.CFrame.LookVector
+			local flat = Vector3.new(look.X, 0, look.Z)
+			if flat.Magnitude > 1e-4 then
+				camLook = flat.Unit
+			end
+		end
+	end
+
 	-- Positions des personnages, relevees UNE fois par image et partagees par toutes les zones.
 	local positions: { Vector3 } = {}
 	for _, player in ipairs(Players:GetPlayers()) do
@@ -1209,7 +1255,7 @@ local function update(dt: number)
 			-- `fading` passe AUSSI ici, pas seulement au niveau des paves : une zone entiere trop loin etait sautee,
 			-- donc son herbe ne s'allumait jamais et restait verte pendant que le reste passait au bleu.
 			if d.Magnitude < reach or zone.settling or fading then
-				updateZone(zone, positions, anchor, now, dt)
+				updateZone(zone, positions, anchor, now, dt, camPos, camLook)
 			end
 		end
 	end
