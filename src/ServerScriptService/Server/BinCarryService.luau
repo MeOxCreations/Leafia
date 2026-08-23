@@ -400,6 +400,48 @@ local function slowForPlace(player: Player)
 	end)
 end
 
+-- REDRESSEMENT DANS LES MAINS. Le seau est tenu PENCHE -- c'est CARRY_C0 qui lui donne cet angle. On l'amene a
+-- plat PENDANT le geste de repose, donc il est deja droit quand il quitte les bras : il ne lui reste plus qu'a
+-- descendre, et le redressement se lit comme une partie du geste au lieu d'un saut a l'arrivee.
+--
+-- ON NE TOUCHE QU'A LA ROTATION du joint, jamais a sa position : le seau doit rester au meme endroit dans les
+-- bras. Et on n'enleve que le TANGAGE et le ROULIS -- le LACET est ce qui le fait suivre le joueur, on le garde.
+--
+-- L'UpperTorso d'un personnage debout est DROIT. Retirer tangage et roulis du C0 suffit donc a mettre le seau a
+-- plat DANS LE MONDE, sans avoir a refaire un calcul en repere monde a chaque image.
+local function straightenInHands(model: Model, state: CarryState)
+	local joint = state.joint
+	if not joint or BinConfigs.PLACE_STRAIGHTEN_TIME <= 0 then
+		return
+	end
+	local from = joint.C0
+	local _, yaw = from:ToOrientation()
+	local toRot = CFrame.Angles(0, yaw, 0)
+	local fromRot = from - from.Position
+	local keep = from.Position
+	task.spawn(function()
+		local t0 = os.clock()
+		while true do
+			-- Lache, repris par un autre, ou personnage detruit : le joint n'est plus le notre.
+			if carried[model] ~= state or not joint.Parent then
+				return
+			end
+			local a = (os.clock() - t0) / BinConfigs.PLACE_STRAIGHTEN_TIME
+			if a >= 1 then
+				break
+			end
+			local eased = TweenService:GetValue(a, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			joint.C0 = CFrame.new(keep) * fromRot:Lerp(toRot, eased)
+			RunService.Heartbeat:Wait()
+		end
+		-- VALEUR EXACTE a l'arrivee : un lerp laisse toujours un residu, et un seau repris puis repose
+		-- accumulerait cet ecart a chaque fois.
+		if carried[model] == state and joint.Parent then
+			joint.C0 = CFrame.new(keep) * toRot
+		end
+	end)
+end
+
 local function onCarry(player: Player, bin: unknown, phase: unknown)
 	local model = isBin(bin)
 	if not model or typeof(phase) ~= "string" then
@@ -413,6 +455,8 @@ local function onCarry(player: Player, bin: unknown, phase: unknown)
 		local state = carried[model]
 		if state and state.owner == player then
 			slowForPlace(player)
+			-- Il se redresse pendant le geste, pas apres : au lacher il sera deja droit.
+			straightenInHands(model, state)
 		end
 	elseif phase == "place" then
 		place(player, model)

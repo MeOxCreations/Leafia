@@ -180,6 +180,15 @@ return {
 	PLACE_RAY_HEIGHT = 6,
 	PLACE_RAY_DEPTH = 24,
 
+	-- IL SE REDRESSE DANS LES MAINS, avant meme de partir. Le seau est TENU PENCHE -- c'est CARRY_C0 qui lui
+	-- donne cet angle. On l'amene a plat PENDANT le geste de repose, donc il est deja droit quand il quitte les
+	-- bras, et il ne lui reste plus qu'a descendre.
+	--
+	-- Le compte demarre a l'appui (phase "placeStart"), soit environ 0.8 s avant que la main s'ouvre : a 0.5 s
+	-- le redressement est fini bien avant le lacher. Le monter au-dela de ce delai le rendrait visible APRES.
+	-- 0 desactive le redressement -- le seau partira alors penche, comme avant.
+	PLACE_STRAIGHTEN_TIME = 0.5,
+
 	-- IL GLISSE JUSQU'AU SOL, il ne s'y teleporte pas. On MEMORISE la position et l'orientation qu'il a DANS LES
 	-- MAINS -- celles que l'animation lui donne -- et on l'anime jusqu'a sa pose finale au sol.
 	--

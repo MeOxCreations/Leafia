@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.429 — Le seau se redresse DANS LES MAINS, pendant le geste
+
+Il etait tenu PENCHE jusqu'au dernier instant, puis se remettait droit une fois lache. Le redressement se
+lisait donc comme une correction apres coup, pas comme une partie du geste.
+
+Il se redresse maintenant DANS LES BRAS, en 0.5 s, a partir de l'appui sur la touche. Le geste de repose dure
+environ 0.8 s avant que la main s'ouvre : le seau est donc deja a plat quand il quitte les mains, et il ne lui
+reste plus qu'a descendre. Le mouvement se cale sur l'animation.
+
+### Ce qu'on modifie, et ce qu'on ne touche pas
+
+Seule la ROTATION du joint change, jamais sa position : le seau reste au meme endroit dans les bras.
+
+Et on n'enleve que le TANGAGE et le ROULIS. Le LACET est ce qui fait suivre le joueur, on le garde -- sans quoi
+le seau tournerait sur lui-meme pendant qu'on le repose, et l'orientation de pose ne correspondrait plus a celle
+qu'on visait.
+
+### Aucun calcul en repere monde
+
+L'UpperTorso d'un personnage debout est DROIT. Retirer tangage et roulis du C0 suffit donc a mettre le seau a
+plat DANS LE MONDE -- pas besoin de recalculer une orientation monde a chaque image pendant que le joueur bouge.
+
+### Le compte s'arrete si le seau n'est plus a nous
+
+Lache, repris par un autre, personnage detruit : la boucle sort. Et `grab` remet `CARRY_C0` d'origine, donc une
+reprise redonne bien le seau penche dans les bras.
+
+### Le reglage
+
+`PLACE_STRAIGHTEN_TIME` (0.5 s). Le monter au-dela de ~0.8 s rendrait le redressement visible APRES le lacher,
+ce qui annulerait tout l'interet. A 0, le seau part penche comme avant.
+
 ## 0.0.428 — Le seau est deja droit quand il commence a descendre
 
 `PLACE_TWEEN_ROT_TIME` 0.08 -> 0.001. Le redressement tient dans la premiere image : on ne voit plus la
