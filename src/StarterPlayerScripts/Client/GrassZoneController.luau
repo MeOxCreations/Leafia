@@ -13,8 +13,26 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 
 local GrassZoneConfigs = require(ReplicatedStorage.Modules.Configs.GrassZoneConfigs)
+
+-- ===== PROFIL D'APPAREIL =====
+-- Sur mobile, la pelouse coute trop cher : moins de touffes, et un rayon d'animation plus court.
+--
+-- ON LIT LA CAPACITE (`TouchEnabled`), PAS L'INPUT ACTIF. Deux raisons :
+--   1. C'est une decision STABLE, prise une fois au demarrage. Elle ne doit pas changer parce que le joueur a
+--      pose son doigt sur l'ecran -- re-semer une pelouse en pleine partie serait pire que tout.
+--   2. `InputDevice` suit le DERNIER input utilise et demarre sur "clavier" : il aurait donne le profil PC a tout
+--      le monde au boot, soit exactement le cas qu'on veut eviter.
+-- On n'ajoute PAS `and not KeyboardEnabled` : l'emulateur d'appareil de Studio garde le clavier du PC, donc ce
+-- combo rendrait le profil mobile intestable (deja au journal).
+local MOBILE = UserInputService.TouchEnabled
+
+local DENSITY = if MOBILE then GrassZoneConfigs.MOBILE_DENSITY else GrassZoneConfigs.DENSITY
+local WIND_VIEW = if MOBILE then GrassZoneConfigs.MOBILE_WIND_VIEW_DISTANCE else GrassZoneConfigs.WIND_VIEW_DISTANCE
+local WIND_FADE = if MOBILE then GrassZoneConfigs.MOBILE_WIND_FADE_START else GrassZoneConfigs.WIND_FADE_START
+local BUDGET = if MOBILE then GrassZoneConfigs.MOBILE_CREATE_BUDGET else GrassZoneConfigs.CREATE_BUDGET
 
 local GrassZoneController = {}
 
@@ -548,7 +566,7 @@ local function populate(zone: Zone)
 
 	-- GRILLE. Une case par touffe, sur TOUTE la surface du dessus : c'est ce qui garantit qu'aucun coin ne reste
 	-- chauve. `spacing` est le cote d'une case, deduit de la densite voulue.
-	local spacing = 1 / math.sqrt(GrassZoneConfigs.DENSITY)
+	local spacing = 1 / math.sqrt(DENSITY)
 	local cols = math.max(1, math.ceil(size.X / spacing))
 	local rows = math.max(1, math.ceil(size.Z / spacing))
 	if cols * rows > GrassZoneConfigs.MAX_CLUMPS then
@@ -563,7 +581,7 @@ local function populate(zone: Zone)
 		local got = (cols * rows) / math.max(size.X * size.Z, 1e-3)
 		warn(
 			`[GrassZone] "{zone.part.Name}" PLAFONNE : densite {string.format("%.2f", got)} au lieu de `
-				.. `{GrassZoneConfigs.DENSITY} (grille {cols}x{rows} sur {math.floor(size.X)}x{math.floor(size.Z)} studs). `
+				.. `{DENSITY} (grille {cols}x{rows} sur {math.floor(size.X)}x{math.floor(size.Z)} studs). `
 				.. `Cette zone est anormalement grande : verifie sa taille dans Studio.`
 		)
 	end
@@ -580,7 +598,7 @@ local function populate(zone: Zone)
 	local blockers = collectBlockers(zone)
 	zone.blockers = blockers
 	local skipped = 0
-	local budget = GrassZoneConfigs.CREATE_BUDGET
+	local budget = BUDGET
 	local made = 0
 	local flowersMade = 0
 
@@ -798,9 +816,13 @@ local function populate(zone: Zone)
 		end
 	end
 
-	if flowersMade > 0 then
-		print(`[GrassZone] "{zone.part.Name}" : {flowersMade} fleur(s) parmi l'herbe.`)
-	end
+	-- ON DIT COMBIEN, ET SOUS QUEL PROFIL. Une pelouse qui rame se diagnostique avec un NOMBRE, pas avec une
+	-- impression : sans ce compte, on ne sait pas si le probleme vient de la densite, du rayon d'animation ou
+	-- d'autre chose entierement, et on regle des boutons au hasard.
+	print(
+		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffes, {flowersMade} fleur(s) `
+			.. `(profil {if MOBILE then "MOBILE" else "PC"}, densite {DENSITY}, rayon d'animation {WIND_VIEW}).`
+	)
 
 	if skipped > 0 then
 		-- On NOMME les objets, pas seulement leur nombre : le jour ou une pelouse se vide entierement, cette ligne dit
@@ -1099,12 +1121,12 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 end
 
 local function updateZone(zone: Zone, positions: { Vector3 }, anchor: Vector3, now: number, dt: number)
-	local windReach = GrassZoneConfigs.WIND_VIEW_DISTANCE
+	local windReach = WIND_VIEW
 	local crushReach = GrassZoneConfigs.CRUSH_RADIUS
 	local zoneMoving = 0
 	local near: { Vector3 } = {} -- reutilisee d'un pave a l'autre : pas une table neuve par pave et par image
 
-	local fadeStart = GrassZoneConfigs.WIND_FADE_START
+	local fadeStart = WIND_FADE
 	local fadeSpan = math.max(windReach - fadeStart, 1e-3)
 
 	for _, bucket in ipairs(zone.buckets) do
@@ -1183,7 +1205,7 @@ local function update(dt: number)
 			-- Ecarte d'un bloc les zones hors de vue. Une zone dont des touffes se relevent encore garde la main, sinon
 			-- elles se figeraient couchees des qu'on tourne la camera.
 			local d = zone.part.Position - anchor
-			local reach = zone.radius + GrassZoneConfigs.WIND_VIEW_DISTANCE
+			local reach = zone.radius + WIND_VIEW
 			-- `fading` passe AUSSI ici, pas seulement au niveau des paves : une zone entiere trop loin etait sautee,
 			-- donc son herbe ne s'allumait jamais et restait verte pendant que le reste passait au bleu.
 			if d.Magnitude < reach or zone.settling or fading then

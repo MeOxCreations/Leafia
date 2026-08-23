@@ -62,6 +62,24 @@ local GrassZoneConfigs = {
 	-- Injouable. A 0.2 on retombe autour de 3 700, avec des touffes 2.2x plus grosses (voir AUTO_SCALE_WITH_DENSITY)
 	-- donc une couverture visuelle equivalente. C'est LE bouton pour arbitrer entre finesse et nombre de parts.
 	DENSITY = 0.35,
+	-- ===== PROFIL MOBILE =====
+	-- Le public Roblox est majoritairement mobile. Un telephone n'a ni la puissance de calcul ni la bande passante
+	-- graphique d'un PC : la meme pelouse y devient injouable alors qu'elle tourne a 200 images par seconde ici.
+	--
+	-- Ces valeurs REMPLACENT leurs equivalentes sur un appareil tactile. Elles ne sont pas "la version degradee" :
+	-- elles sont la version qui TOURNE, et c'est la seule qui compte pour la moitie des joueurs.
+	--
+	-- DENSITE MOBILE. Le mecanisme de compensation (AUTO_SCALE_WITH_DENSITY) fait le gros du travail : a 0.12 les
+	-- touffes sont bien plus larges, donc la pelouse reste COUVERTE. On divise le nombre de parts par trois sans
+	-- que la pelouse ait l'air trouee.
+	MOBILE_DENSITY = 0.12,
+	-- RAYON D'ANIMATION MOBILE. C'est l'autre moitie du cout : moins de touffes ANIMEES par image, pas seulement
+	-- moins de touffes. Au-dela de ce rayon elles sont posees et immobiles -- ce qui ne se voit pas de loin.
+	MOBILE_WIND_VIEW_DISTANCE = 14,
+	MOBILE_WIND_FADE_START = 6,
+	-- Combien de touffes on cree par image pendant le semis. Plus bas sur mobile : le semis est etale sur plus
+	-- d'images, donc l'arrivee dans un jardin ne fait pas tomber le jeu a genoux pendant une seconde.
+	MOBILE_CREATE_BUDGET = 120,
 	-- Deplacement au hasard de chaque touffe DANS sa case, en fraction de la case. 0 = alignement parfaitement
 	-- regulier, 1 = la touffe peut aller jusqu'au bord de sa case.
 	-- ATTENTION, c'est LUI qui fait les trous : a 0.8, deux voisines peuvent s'ecarter de 80 % d'une case, et l'ecart

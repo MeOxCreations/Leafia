@@ -2204,6 +2204,50 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.383 — PROFIL MOBILE pour l'herbe : le jeu etait injouable sur telephone
+
+Regarder la pelouse ou marcher dessus faisait tomber le jeu a genoux sur mobile.
+
+Ce n'est pas une surprise : la limite etait connue et notee depuis la bascule vers la tonte -- une part par touffe
+ne tient pas sur une carte entiere (18 546 mesurees a pleine densite sur quatre pelouses). Elle vient d'etre
+atteinte.
+
+### Trois valeurs changent sur un appareil tactile
+
+- `MOBILE_DENSITY` (0.12 au lieu de 0.35) : trois fois moins de parts. La pelouse ne se troue PAS pour autant --
+  `AUTO_SCALE_WITH_DENSITY` grossit les touffes d'autant, donc la couverture reste.
+- `MOBILE_WIND_VIEW_DISTANCE` (14 au lieu de 26) : c'est l'AUTRE moitie du cout. Moins de touffes ANIMEES par
+  image, pas seulement moins de touffes. Au-dela, elles sont posees et immobiles -- ce qui ne se voit pas de loin.
+- `MOBILE_CREATE_BUDGET` (120 au lieu de 500) : le semis s'etale sur plus d'images, donc arriver dans un jardin ne
+  fait plus tomber le jeu pendant une seconde.
+
+Ce ne sont pas "les valeurs degradees". C'est la version qui TOURNE, et c'est la seule qui compte pour la moitie
+des joueurs de la plateforme.
+
+### On lit la CAPACITE, pas l'input actif
+
+`UserInputService.TouchEnabled`, et surtout pas `InputDevice` :
+
+- C'est une decision STABLE, prise une fois au demarrage. Elle ne doit pas changer parce que le joueur a pose son
+  doigt sur l'ecran -- re-semer une pelouse en pleine partie serait pire que le probleme.
+- `InputDevice` suit le DERNIER input utilise et demarre sur "clavier". Il aurait donne le profil PC a tout le
+  monde au boot : exactement le cas qu'on veut eviter.
+
+Et PAS de `and not KeyboardEnabled` : l'emulateur d'appareil de Studio garde le clavier du PC, donc ce combo
+rendrait le profil mobile intestable (deja au journal).
+
+### Le semis DIT ce qu'il a fait
+
+Chaque zone annonce maintenant son nombre de touffes, son profil, sa densite et son rayon d'animation. Une pelouse
+qui rame se diagnostique avec un NOMBRE, pas avec une impression : sans ce compte, on ne sait pas si le probleme
+vient de la densite, du rayon ou d'autre chose, et on regle des boutons au hasard.
+
+### Ce que ca ne resout PAS
+
+C'est une reduction, pas un changement d'echelle. Le vrai plafond reste : une part par touffe. Le jour ou il
+faudra couvrir une carte entiere, il faudra un POOL de touffes qui suit le joueur -- creees et recyclees autour de
+lui au lieu d'exister toutes en meme temps. C'est note depuis longtemps, et ca reste a faire.
+
 ## 0.0.382 — Plus de secousse de camera au coup de corde
 
 Retiree, avec ses trois reglages.
