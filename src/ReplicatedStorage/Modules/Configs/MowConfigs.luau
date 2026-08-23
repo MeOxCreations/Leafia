@@ -130,10 +130,18 @@ return {
 	-- SI UN SON NE SORT PAS : la console dit le NOM et le DOSSIER exacts qu'elle a cherches, une fois par nom
 	-- manquant. Pas besoin de deviner -- il suffit de comparer a l'arborescence de Studio.
 	SOUND_FOLDER = { "Sounds", "Engins", "LawnMower" },
-	-- Joue pendant le TIRAGE de corde. Une fois, non bouclee.
+	-- Joue a chaque coup de corde qui RATE. Une fois, non bouclee.
 	PULL_SOUND = "TryLaunchSound",
+	-- Joue a la place du precedent sur le coup qui VA REUSSIR.
+	--
+	-- AU MOMENT DU TIRAGE, pas apres. C'est ce qui fait la difference entre "le moteur a demarre" et "je l'ai
+	-- demarre" : l'oreille entend la prise pendant que le bras tire encore, donc elle l'attribue au geste. Joue
+	-- une seconde plus tard, elle en ferait une consequence du hasard.
+	-- Le serveur sait combien de coups il faut et combien ont ete donnes : il n'y a rien a deviner.
+	-- (Nom ecrit tel qu'il est dans Studio, faute comprise -- il vaut mieux qu'il corresponde.)
+	SUCCESS_SOUND = "SucessTryLaunchSound",
 	-- Boucle du moteur, des qu'il a demarre et tant qu'on pousse.
-	RUN_SOUND = "IdleSound",
+	RUN_SOUND = "IdleLawnMowerSound",
 	-- Hauteur AJOUTEE a la boucle a plein regime. Le moteur monte donc dans les aigus quand on accelere, comme le
 	-- levier monte dans son animation -- les deux racontent la meme chose.
 	-- 0 = son a hauteur constante.

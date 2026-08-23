@@ -305,9 +305,18 @@ local function yankStarter(model: Model, state: CarryState)
 		end
 	end
 
+	-- LE COUP QUI VA REUSSIR SONNE DIFFEREMMENT, et il sonne MAINTENANT -- pendant que le bras tire encore.
+	--
+	-- C'est ce qui fait la difference entre "le moteur a demarre" et "JE l'ai demarre" : l'oreille entend la prise
+	-- au moment du geste, donc elle l'attribue au geste. Le meme son joue une seconde plus tard en ferait une
+	-- consequence du hasard.
+	--
+	-- `pulls` compte les coups TERMINES ; celui-ci est donc le suivant. Rien a deviner : le serveur sait depuis le
+	-- depart combien il en faut.
 	local root = rootOf(model)
 	if root then
-		playOnce(root, MowConfigs.PULL_SOUND)
+		local decisive = state.pulls + 1 >= state.pullsNeeded
+		playOnce(root, if decisive then MowConfigs.SUCCESS_SOUND else MowConfigs.PULL_SOUND)
 	end
 end
 

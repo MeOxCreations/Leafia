@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.399 — Le coup de corde qui REUSSIT sonne different, et il sonne AU MOMENT du geste
+
+Trois sons, et une sequence :
+
+- `TryLaunchSound` a chaque coup qui RATE ;
+- `SucessTryLaunchSound` sur le coup qui VA reussir, a sa place ;
+- `IdleLawnMowerSound` en boucle ensuite. (L'ancien nom cherche, `IdleSound`, n'existait pas -- c'est ce que
+  l'avertissement du commit precedent a permis de voir tout de suite.)
+
+### Pourquoi il sonne PENDANT le tirage et pas apres
+
+C'est toute la difference entre "le moteur a demarre" et "JE l'ai demarre". L'oreille entend la prise pendant que
+le bras tire encore, donc elle l'attribue au GESTE. Le meme son une seconde plus tard en ferait une consequence du
+hasard -- et le joueur n'aurait plus l'impression d'y etre pour quelque chose.
+
+C'est le meme principe que la secousse posee a l'instant de l'appui plutot qu'au retour du serveur : un retour qui
+arrive apres coup ne se ressent plus comme la consequence de son propre geste.
+
+### Rien a deviner
+
+Le serveur sait depuis le depart combien de coups il faut, et il compte ceux qui sont termines. Le coup en cours
+est donc le suivant : une comparaison suffit a savoir s'il est le bon.
+
 ## 0.0.398 — Les sons de la tondeuse remplacent ceux du taille-haie
 
 `SOUND_FOLDER` pointe sur `Sounds/Engins/LawnMower`. Le code ne connait que des NOMS, donc changer de sons ne
