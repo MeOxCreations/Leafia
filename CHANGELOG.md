@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.421 — Le joueur marche jusqu'au seau au lieu de tendre les bras
+
+Le prompt apparait a huit studs, et le geste partait sur place : les bras se refermaient dans le vide pendant
+que le seau se soudait au torse depuis l'autre bout. Le joueur MARCHE maintenant jusqu'a lui, comme il marche
+deja jusqu'au guidon de la tondeuse.
+
+En 0.0.415 il ne faisait que PIVOTER. C'etait le choix de l'epoque, pris sur une lecture fausse : j'avais
+affirme que la tondeuse n'avait pas de marche d'approche, alors qu'elle en a une (`MowController`,
+`approachThenGrab`). La marche remplace le pivot des que la distance le justifie ; le pivot reste pour le reste
+du geste.
+
+### On s'arrete du cote d'ou l'on vient
+
+Aucun contournement a faire : un seau se prend de n'importe quel bord. C'est ce qui le distingue du guidon d'une
+tondeuse, qui est DERRIERE elle et qu'il faut aller chercher -- d'ou le detour que fait `MowController` et qu'on
+n'a pas ici.
+
+### Pas de PathfindingService
+
+Quelques studs dans un jardin ouvert : `Humanoid:MoveTo` suffit. Un vrai chemin calcule serait plus fragile
+(bloque, sol irregulier, autre joueur) pour un gain nul a cette distance. Meme choix que la tondeuse, a revoir
+si un seau se prend un jour derriere un obstacle.
+
+### Trois garde-fous
+
+- **Deja sur place** (`APPROACH_SKIP_DIST`) : aucun deplacement n'est fabrique, on prend. Regle apprise sur
+  l'echelle, ou tout un systeme de marche forcee avait ete construit pour un joueur qui etait deja arrive.
+- **Plafond de temps** (`APPROACH_TIMEOUT`) : `MoveTo` n'abandonne jamais tout seul. Mieux vaut une prise un peu
+  de travers qu'un joueur bloque parce qu'un caillou lui barre le chemin.
+- **Le seau peut disparaitre pendant le trajet** : un autre joueur le prend, le streaming l'enleve. On revalide
+  a l'arrivee au lieu de prendre le vide.
+
+Un drapeau empeche de lancer une seconde marche en appuyant pendant la premiere, et il est remis a zero a la
+mort comme a l'arret du controller.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.420 — Le seau se repose exactement comme on le tenait
 
 Au lacher, le seau PIVOTAIT d'un quart de tour. La repose alignait l'axe -Z du model sur le regard du joueur --

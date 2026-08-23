@@ -61,6 +61,8 @@ local holdConn: RBXScriptConnection? = nil
 -- La part qu'on a ancree pour figer le joueur pendant le geste. On retient LAQUELLE, pas un simple booleen :
 -- celui qui modifie est celui qui restaure, et le personnage peut avoir change entre-temps.
 local anchoredRoot: BasePart? = nil
+-- Une marche d'approche est en cours. Sans ce drapeau, re-appuyer pendant le trajet en lancerait une seconde.
+local approaching = false
 local stepConn: RBXScriptConnection? = nil
 local remote: RemoteEvent? = nil
 
@@ -447,6 +449,61 @@ local function placeBin()
 	end)
 end
 
+-- APPROCHE : le joueur MARCHE jusqu'au seau, puis le prend. C'est lui qui va a l'objet, pas l'objet qui lui
+-- saute dans les bras.
+--
+-- Si on est DEJA sur place, on ne fabrique AUCUN deplacement. Fabriquer une marche pour un joueur deja arrive a
+-- coute un systeme entier sur l'echelle, pour rien : on mesure d'abord, on marche seulement si besoin.
+--
+-- On s'arrete DU COTE D'OU L'ON VIENT. Un seau se prend de n'importe quel bord : aucun contournement a faire,
+-- contrairement au guidon d'une tondeuse, qui est derriere elle et qu'il faut aller chercher.
+local function approachThenPickUp(model: Model)
+	if approaching or carriedBin then
+		return
+	end
+	local humanoid = getHumanoid()
+	local hrp = getRoot()
+	local binPart = binRoot(model)
+	if not (BinConfigs.APPROACH_ENABLED and humanoid and hrp and binPart) then
+		pickUp(model)
+		return
+	end
+
+	local away = hrp.Position - binPart.Position
+	away = Vector3.new(away.X, 0, away.Z)
+	away = if away.Magnitude > 1e-3 then away.Unit else hrp.CFrame.LookVector
+	-- Point d'arret a HAUTEUR DU JOUEUR : MoveTo vise un point au sol, viser la hauteur du seau ferait
+	-- travailler l'Humanoid contre la pente pour rien.
+	local spot = binPart.Position + away * BinConfigs.APPROACH_STOP_DIST
+	spot = Vector3.new(spot.X, hrp.Position.Y, spot.Z)
+
+	if ((spot - hrp.Position) * Vector3.new(1, 0, 1)).Magnitude <= BinConfigs.APPROACH_SKIP_DIST then
+		pickUp(model)
+		return
+	end
+
+	approaching = true
+	task.spawn(function()
+		local done = false
+		local conn = humanoid.MoveToFinished:Connect(function()
+			done = true
+		end)
+		humanoid:MoveTo(spot)
+		-- PLAFOND DE TEMPS. Mieux vaut une prise un peu de travers qu'un joueur bloque parce qu'un caillou lui
+		-- barre le chemin : MoveTo n'abandonne jamais tout seul.
+		local deadline = os.clock() + BinConfigs.APPROACH_TIMEOUT
+		while not done and os.clock() < deadline do
+			task.wait()
+		end
+		conn:Disconnect()
+		approaching = false
+		-- Le trajet a pris du temps : quelqu'un a pu prendre le seau entre-temps, ou il a pu disparaitre.
+		if model.Parent and not model:GetAttribute(BinConfigs.CARRIED_ATTRIBUTE) then
+			pickUp(model)
+		end
+	end)
+end
+
 local function toggleCarry()
 	local now = os.clock()
 	if now - lastActionAt < BinConfigs.PICKUP_DEBOUNCE then
@@ -464,7 +521,7 @@ local function toggleCarry()
 	end
 	local target = freeBinNear(root.Position, now)
 	if target then
-		pickUp(target)
+		approachThenPickUp(target)
 	end
 end
 
@@ -616,6 +673,7 @@ function BinCarryController.init()
 	-- croirait encore porter un seau qui n'est plus dans nos mains.
 	player.CharacterRemoving:Connect(function()
 		carriedBin = nil
+		approaching = false
 		stopTracks()
 		hideOurs()
 		setActionBound(false)
@@ -633,6 +691,7 @@ function BinCarryController.stop()
 	hideOurs()
 	setActionBound(false)
 	carriedBin = nil
+	approaching = false
 end
 
 return BinCarryController

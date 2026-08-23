@@ -101,6 +101,24 @@ return {
 	TAKE_FADE = 0.1,
 	CARRY_FADE = 0.15,
 
+	-- ===== APPROCHE =====
+	-- Le joueur MARCHE jusqu'au seau avant de le prendre, au lieu de tendre les bras a huit studs.
+	--
+	-- Pas de PathfindingService : quelques studs dans un jardin ouvert, `Humanoid:MoveTo` suffit. Un vrai chemin
+	-- calcule serait plus fragile (bloque, sol irregulier, autre joueur) pour un gain nul a cette distance. Meme
+	-- choix que la tondeuse. A revoir SI un jour un seau se prend derriere un obstacle.
+	APPROACH_ENABLED = true,
+	-- Distance a laquelle on s'arrete du seau. On s'arrete DU COTE D'OU L'ON VIENT : un seau se prend de
+	-- n'importe quel bord, donc aucun contournement a faire -- contrairement au guidon d'une tondeuse, qui est
+	-- derriere elle et qu'il faut aller chercher.
+	APPROACH_STOP_DIST = 2.5,
+	-- Deja a moins de ca du point d'arret : on ne fabrique AUCUN deplacement, on prend. Regle apprise sur
+	-- l'echelle, ou tout un systeme de marche forcee avait ete construit pour un joueur deja arrive.
+	APPROACH_SKIP_DIST = 1.2,
+	-- Au-dela, on prend quand meme : mieux vaut une prise un peu de travers qu'un joueur bloque parce qu'un
+	-- caillou lui barre le chemin.
+	APPROACH_TIMEOUT = 2.5,
+
 	-- ===== ORIENTATION A LA PRISE =====
 	-- ON NE FABRIQUE AUCUN DEPLACEMENT : le joueur PIVOTE face au seau, il n'avance pas d'un stud. Une marche
 	-- forcee avait ete codee pour l'echelle (priorite Camera, marqueurs, secours distance) puis SUPPRIMEE : le
