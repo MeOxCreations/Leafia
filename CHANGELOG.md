@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.407 — La touffe sort de terre TOUT DE SUITE, et se couche apres
+
+Un defaut introduit par le temps mort du 0.0.405, et il etait pire qu'il n'en avait l'air.
+
+### La touffe restait ENFOUIE pendant l'attente
+
+La sortie de terre et l'abaissement partageaient le meme compteur. En retardant ce compteur, on a retarde les DEUX :
+pendant les 0.35 s de temps mort, la touffe restait donc sous la surface -- invisible.
+
+Le joueur voyait un TROU dans la pelouse derriere la machine, puis l'herbe remonter. L'inverse exact de l'effet
+cherche, qui etait justement de ne PAS voir le remplacement.
+
+### Deux compteurs, deux moments
+
+Ils n'ont rien a voir l'un avec l'autre :
+
+- **Sortir de terre** doit etre immediat et bref (`CUT_RISE_UP_TIME`, 0.15 s). C'est le remplacement du maillage :
+  il ne doit PAS se voir.
+- **Se coucher** doit venir apres le temps mort et prendre son temps. C'est la coupe : elle, doit se voir.
+
+Quatrieme fois aujourd'hui qu'un reglage partage forcait a sacrifier un besoin pour l'autre -- apres la hauteur et
+l'emprise de l'herbe tondue, l'arrivee et le retour de la camera, le delai et la vitesse de la coupe.
+
+Le motif est assez net pour en faire une regle : quand un reglage sert DEUX moments differents, il finira par les
+opposer.
+
 ## 0.0.406 — La touffe tombe plus tard, mais tombe plus vite
 
 - `CUT_RISE_DELAY` : 0.18 -> **0.35**. Elle tient plus longtemps apres le passage de la lame.

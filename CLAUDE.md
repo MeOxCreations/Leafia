@@ -612,6 +612,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   que Roblox fournit en SOURCE : quand un comportement d'input surprend, aller le lire coute dix minutes et bat
   n'importe quel raisonnement.
 
+- **Un reglage qui sert DEUX moments differents finira par les opposer.** Motif rencontre quatre fois dans la meme
+  journee : hauteur ET emprise au sol de l'herbe tondue (un seul facteur -> soit trop haute, soit des trous),
+  arrivee ET retour d'une camera scriptee (une seule duree -> soit ca traine, soit ca claque), delai ET vitesse de
+  la coupe, sortie de terre ET abaissement d'une touffe (un seul compteur -> retarder l'un enfouissait l'autre,
+  donc un TROU visible dans la pelouse). A chaque fois le symptome ressemble a un mauvais REGLAGE, et on passe du
+  temps a chercher la bonne valeur -- alors qu'aucune valeur ne peut satisfaire deux besoins opposes. Dedoubler
+  supprime le probleme au lieu de l'arbitrer, et coute une ligne. Signal d'alerte : des qu'on se surprend a
+  "compenser" un reglage en tournant un autre, ils sont deja en train de se battre.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

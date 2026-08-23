@@ -63,6 +63,15 @@ local GrassZoneConfigs = {
 	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.
 	CUT_RISE_DEPTH = 1,
+	-- DUREE DE LA SORTIE DE TERRE, en secondes. Elle a son PROPRE temps, et elle part IMMEDIATEMENT.
+	--
+	-- Elle etait accrochee au meme compteur que l'abaissement. Resultat, quand le temps mort a ete ajoute
+	-- (CUT_RISE_DELAY), la touffe restait ENFOUIE pendant toute l'attente -- donc invisible -- avant de sortir.
+	-- On voyait un trou dans la pelouse, puis l'herbe remonter : l'inverse de l'effet cherche.
+	--
+	-- Les deux moments n'ont rien a voir : SORTIR DE TERRE doit etre immediat et bref (c'est un remplacement, il
+	-- ne doit pas se voir), SE COUCHER doit venir apres et se voir (c'est la coupe).
+	CUT_RISE_UP_TIME = 0.15,
 
 	-- Delai TOTAL pour trouver la racine et le mesh au demarrage (un seul delai pour tout le chemin).
 	RESOLVE_TIMEOUT = 15,
