@@ -42,6 +42,18 @@ local base: Frame? = nil
 local knob: Frame? = nil
 local finger: InputObject? = nil
 local origin = Vector2.zero
+-- ECART ENTRE LES DEUX REPERES D'ECRAN, MESURE et non deduit.
+--
+-- `InputObject.Position` et `UserInputService:GetMouseLocation()` ne partent pas forcement du meme coin, et le
+-- sens de la difference ne se DEDUIT pas -- ce projet l'a paye trois fois (GetMouseLocation, WorldAnchor, puis
+-- ici, ou une correction posee au raisonnement a AGGRAVE le decalage).
+--
+-- On arrete donc de raisonner : au moment ou le doigt se pose, on lit les DEUX et on garde leur difference. Le
+-- resultat est juste quel que soit le repere de chacun, sur n'importe quel appareil, sans rien a regler.
+--
+-- Pourquoi viser le repere de `GetMouseLocation` : c'est celui du curseur custom du jeu, qui tombe au bon endroit
+-- depuis toujours. On se cale sur ce qui est deja prouve a l'ecran plutot que sur ce qui devrait marcher.
+local spaceOffset = Vector2.zero
 local radius = 90
 local value = Vector3.zero
 local active = false
@@ -115,18 +127,11 @@ local function build()
 			return
 		end
 		finger = input
-		-- POSITION BRUTE, SANS TOUCHER A L'INSET.
-		--
-		-- `InputObject.Position` est deja dans le repere ABSOLU de l'ecran -- le meme que `GetMouseLocation`, et le
-		-- meme que cette interface, qui ignore l'inset. Il n'y a donc RIEN a convertir.
-		--
-		-- Une correction d'inset a ete ajoutee ici, puis retiree : elle DEPLACAIT le joystick au lieu de le
-		-- recaler. Le sens de ces conversions ne se DEDUIT pas, il se verifie a l'ecran -- c'est deja trois fois
-		-- que ce projet le paie (GetMouseLocation, WorldAnchor, et ici).
-		--
-		-- SI LE JOYSTICK RESTE DECALE : le signe est alors l'autre, et il faut RETRANCHER `GuiService:GetGuiInset()`
-		-- des deux cotes (ici et dans le glissement). Ne jamais ne le faire que d'un cote.
-		origin = Vector2.new(input.Position.X, input.Position.Y)
+		-- ON MESURE L'ECART DES DEUX REPERES, ICI, au moment ou le doigt se pose : les deux valeurs designent
+		-- alors le MEME point physique, donc leur difference EST le decalage. Voir `spaceOffset`.
+		local raw = Vector2.new(input.Position.X, input.Position.Y)
+		spaceOffset = UserInputService:GetMouseLocation() - raw
+		origin = raw + spaceOffset
 		local camera = workspace.CurrentCamera
 		radius = math.max((if camera then camera.ViewportSize.Y else 720) * RADIUS_SCALE, 40)
 		ring.Size = UDim2.fromOffset(radius * BASE_SIZE, radius * BASE_SIZE)
@@ -141,9 +146,12 @@ local function build()
 		if input ~= finger then
 			return
 		end
-		-- MEME repere qu'a la prise. Un delta calcule entre deux reperes differents serait faux d'un decalage
-		-- constant, donc le joystick partirait deja incline.
-		local delta = Vector2.new(input.Position.X, input.Position.Y) - origin
+		-- MEME ecart qu'a la prise, applique des DEUX cotes : un delta calcule entre deux reperes differents serait
+		-- faux d'un decalage constant, donc le joystick partirait deja incline.
+		-- On garde l'ecart MESURE a la prise plutot que d'en relire un : celui du doigt qui tient le joystick, pas
+		-- celui d'un autre doigt pose entre-temps sur l'ecran.
+		local point = Vector2.new(input.Position.X, input.Position.Y) + spaceOffset
+		local delta = point - origin
 		local length = delta.Magnitude
 		local clamped = if length > radius then delta.Unit * radius else delta
 		head.Position = UDim2.fromOffset(origin.X + clamped.X, origin.Y + clamped.Y)

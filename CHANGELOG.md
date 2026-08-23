@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.392 — L'ecart entre reperes d'ecran est MESURE, plus deduit
+
+Le joystick apparaissait loin du pouce. Deux tentatives de le recaler au raisonnement ont echoue, dont une qui a
+AGGRAVE le decalage.
+
+### On arrete de raisonner
+
+`InputObject.Position` et `UserInputService:GetMouseLocation()` ne partent pas forcement du meme coin de l'ecran,
+et le sens de la difference ne se DEDUIT pas. Ce projet l'a paye trois fois : `GetMouseLocation`, `WorldAnchor`,
+et ici.
+
+Au moment ou le doigt se pose, les deux valeurs designent le MEME point physique. Leur difference EST donc le
+decalage, quel qu'il soit. On la mesure une fois, a la prise, et on l'applique.
+
+Le resultat est juste sur n'importe quel appareil, sans rien a regler et sans savoir laquelle des deux valeurs
+inclut la barre du haut.
+
+### Pourquoi viser le repere de GetMouseLocation
+
+C'est celui du CURSEUR CUSTOM du jeu, qui tombe au bon endroit depuis toujours -- c'est d'ailleurs a lui que le
+joueur a compare pour montrer l'ecart. On se cale sur ce qui est deja prouve a l'ecran plutot que sur ce qui
+devrait marcher.
+
+### L'ecart est celui du BON doigt
+
+Il est mesure a la prise et GARDE, au lieu d'etre relu pendant le glissement : sinon un deuxieme doigt pose sur
+l'ecran (pour tourner la camera) changerait la reference en plein mouvement, et le joystick sauterait.
+
 ## 0.0.391 — Retour en arriere : la correction d'inset DEPLACAIT le joystick
 
 L'ajout du 0.0.390 est retire. Il ne recalait rien : il decalait.
