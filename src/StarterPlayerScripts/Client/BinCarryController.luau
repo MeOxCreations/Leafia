@@ -4,13 +4,16 @@
 -- est volontairement absent ici.
 --
 --   PRISE   : on joue TakeAnimation ; au marqueur TakeBucketEvent (la main se referme), on demande au SERVEUR de
---             souder le seau. Puis on enchaine sur la pose de portage.
+--             souder le seau ; au marqueur EndTakeEventBin (fin du geste), on enchaine sur la pose de portage.
 --   REPOSE  : on demande au serveur, qui retire le joint et pose le seau AU SOL devant nous.
 --
 -- POURQUOI ON SOUDE AU MARQUEUR ET PAS A L'APPUI. L'echelle, elle, soude des l'appui : elle est enorme et le
 -- geste est rapide, le saut ne se voit pas. Un seau pose par terre, lui, se teleporterait dans la main avant que
--- la main l'atteigne. FILET : si le marqueur ne tire pas (asset pas encore charge a la 1re lecture de la
--- session), l'arret de la piste declenche quand meme la soudure -- sinon le seau ne se prendrait pas DU TOUT.
+-- la main l'atteigne.
+--
+-- CE SONT LES MARQUEURS QUI MENENT, et c'est voulu : deplacer l'un d'eux dans l'editeur change le geste sans
+-- toucher au code. Chacun a son filet, parce qu'un marqueur muet (asset pas encore charge a la 1re lecture de la
+-- session) voudrait dire soit un seau qui ne se prend PAS, soit un joueur fige sans pose de portage.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -41,7 +44,8 @@ local actionBound = false
 local takeTrack: AnimationTrack? = nil
 local carryTrack: AnimationTrack? = nil
 local markerConn: RBXScriptConnection? = nil
--- Avance le temps du geste de prise A LA MAIN. Voir pickUp : c'est ce qui lui fait TENIR sa derniere image.
+local endConn: RBXScriptConnection? = nil
+-- Boucle du geste de prise : elle fait pivoter le joueur vers le seau et tient les filets des deux marqueurs.
 local holdConn: RBXScriptConnection? = nil
 -- La part qu'on a ancree pour figer le joueur pendant le geste. On retient LAQUELLE, pas un simple booleen :
 -- celui qui modifie est celui qui restaure, et le personnage peut avoir change entre-temps.
@@ -163,6 +167,10 @@ local function clearTakeConns()
 		markerConn:Disconnect()
 		markerConn = nil
 	end
+	if endConn then
+		endConn:Disconnect()
+		endConn = nil
+	end
 	if holdConn then
 		holdConn:Disconnect()
 		holdConn = nil
@@ -260,16 +268,19 @@ local function pickUp(model: Model)
 	takeTrack = track
 	track.Priority = Enum.AnimationPriority.Action2
 	-- LOOPED = TRUE, ET C'EST VOULU ICI. Une piste NON bouclee SE RELACHE a sa derniere image : les bras
-	-- retombent vers la pose neutre juste avant que le portage arrive, et ca se lit comme un bug. On la laisse
-	-- donc bouclee -- puis on lui retire tout moyen de reboucler : vitesse ZERO, et c'est NOUS qui avancons son
-	-- temps image par image, avec un plafond. Elle joue une fois, et elle TIENT.
+	-- retombent vers la pose neutre juste avant que le portage arrive, et ca se lit comme un bug. Bouclee, elle
+	-- tient sa pose -- et c'est le marqueur EndTakeEventBin qui la coupe avant qu'elle ne reboucle.
+	--
+	-- LA LECTURE RESTE NORMALE (vitesse 1). Avancer le temps a la main tiendrait la pose aussi, mais rien ne
+	-- garantit qu'un marqueur tire encore quand c'est NOUS qui ecrivons TimePosition -- et tout le geste repose
+	-- desormais sur les marqueurs.
 	track.Looped = true
 
 	local fired = false
+	local ended = false
 	clearTakeConns()
 	-- Le drapeau garantit UN seul envoi : marqueur et filet demanderaient sinon la prise deux fois.
-	-- On ne coupe QUE le marqueur ici, surtout pas clearTakeConns : ca tuerait la boucle qui avance le temps,
-	-- et le geste se figerait en plein vol.
+	-- On ne coupe QUE le marqueur de prise ici, surtout pas clearTakeConns : ca tuerait la surveillance de fin.
 	local function doGrab()
 		if fired or carriedBin ~= model then
 			return
@@ -281,24 +292,32 @@ local function pickUp(model: Model)
 		end
 		request(model, "grab")
 	end
-	markerConn = track:GetMarkerReachedSignal(BinConfigs.TAKE_EVENT):Connect(doGrab)
-	track:Play(BinConfigs.TAKE_FADE)
-	track:AdjustSpeed(0)
 
-	local elapsed = 0
+	-- FIN DU GESTE : on gele la piste sur son image courante, puis la pose de portage monte par-dessus en fondu
+	-- croise. A aucun instant les bras ne repassent par la position neutre.
 	local function finish()
+		if ended then
+			return
+		end
+		ended = true
 		clearTakeConns()
 		releaseStance()
-		-- L'animation est finie : le seau DOIT etre en main, quoi qu'il se soit passe avant.
+		-- Le geste est fini : le seau DOIT etre en main, quoi qu'il se soit passe avant.
 		doGrab()
-		-- FONDU CROISE. La pose de portage monte pendant que le geste descend, sur la meme duree : a aucun
-		-- instant les bras ne repassent par la position neutre.
+		track:AdjustSpeed(0)
 		playCarryPose()
 		track:Stop(BinConfigs.CARRY_FADE)
 		if takeTrack == track then
 			takeTrack = nil
 		end
 	end
+
+	markerConn = track:GetMarkerReachedSignal(BinConfigs.TAKE_EVENT):Connect(doGrab)
+	endConn = track:GetMarkerReachedSignal(BinConfigs.END_EVENT):Connect(finish)
+	track:Play(BinConfigs.TAKE_FADE)
+
+	local elapsed = 0
+	local lastTime = 0
 	holdConn = RunService.Heartbeat:Connect(function(dt)
 		-- Le joueur a repose le seau, ou une autre prise a pris la main : on lache tout.
 		if takeTrack ~= track or carriedBin ~= model then
@@ -319,21 +338,24 @@ local function pickUp(model: Model)
 				fromRot = nil
 			end
 		end
-		-- FILET DE PRISE. Rien ne garantit qu'un marqueur tire quand c'est NOUS qui ecrivons TimePosition. Il est
-		-- regle apres le marqueur, donc sans effet tant que celui-ci parle.
+		-- FILET DE PRISE, si TAKE_EVENT se tait. Sans effet tant que le marqueur parle.
 		if elapsed >= BinConfigs.TAKE_GRAB_FALLBACK then
 			doGrab()
 		end
+
+		-- FILET DE FIN, si END_EVENT se tait. On surveille le TEMPS RECULER : la piste est bouclee, donc un
+		-- marqueur muet la fait repartir a zero. Ce retour en arriere est un fait, pas une fenetre a rater --
+		-- contrairement a un test "assez proche de la fin", qu'un FPS bas peut sauter.
 		local length = track.Length
 		if length > 0 then
-			-- CLAMP A Length - 0.001, jamais a Length pile : pile au bout, Roblox reboucle.
-			local last = math.max(length - 0.001, 0)
-			track.TimePosition = math.min(elapsed, last)
-			if elapsed >= last then
+			local now = track.TimePosition
+			if now < lastTime - 0.001 then
 				finish()
+				return
 			end
+			lastTime = now
 		elseif elapsed > BinConfigs.TAKE_LOAD_TIMEOUT then
-			-- Length reste a zero : l'animation n'a jamais charge. On ne laisse pas le joueur coince sans pose.
+			-- Duree a zero : l'animation n'a jamais charge. On ne laisse pas le joueur coince sans pose.
 			finish()
 		end
 	end)

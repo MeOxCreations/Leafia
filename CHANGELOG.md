@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.416 — Le marqueur de fin decide quand le seau passe en portage
+
+`TakeAnimation` a maintenant un marqueur `EndTakeEventBin` en bout de geste. C'est lui qui declenche
+`IdleAnimation`, la pose de portage.
+
+### Ce que ce marqueur repare vraiment
+
+La version precedente tenait la pose en avancant le temps de l'animation A LA MAIN (vitesse zero, TimePosition
+ecrite image par image). Ca marchait, mais avec un doute signale a l'epoque : rien ne garantit qu'un marqueur
+tire encore quand c'est nous qui ecrivons le temps.
+
+La lecture redevient donc NORMALE, et les marqueurs tirent pour de vrai. La piste reste bouclee -- une piste non
+bouclee se relache a sa derniere image, les bras retombent -- et c'est le marqueur qui la coupe avant qu'elle ne
+reboucle.
+
+A la fin : gel sur l'image courante, puis la pose de portage monte par-dessus en fondu croise.
+
+### C'est l'animateur qui decide, plus une constante
+
+Deplacer `EndTakeEventBin` dans l'editeur change la bascule sans toucher au code.
+
+### Le filet de fin ne guette plus une fenetre
+
+Un test "assez proche de la fin" peut etre SAUTE par un FPS bas : la piste reboucle au lieu de tenir. On
+surveille donc le TEMPS RECULER. La piste etant bouclee, un marqueur muet la fait repartir a zero -- ce retour
+en arriere est un fait, pas une fenetre a rater.
+
+Meme famille que les autres filets du fichier : chaque marqueur en a un, parce qu'un marqueur muet voudrait dire
+soit un seau qui ne se prend pas, soit un joueur fige sans pose de portage.
+
+### Nettoyage
+
+`TakeTestAnimation` a ete supprimee des assets. La ligne de `BinConfigs` qui proposait de la mettre a la place
+de `TAKE_ANIM` part avec : un commentaire faux est pire que pas de commentaire.
+
+### A faire dans Studio
+
+Le marqueur `EndTakeEventBin` doit exister dans `TakeAnimation`. Rojo ne synchronise pas les animations : si le
+nom differe d'un caractere, le filet prend le relais et la pose arrivera au rebouclage, donc plus tard que voulu.
+
 ## 0.0.415 — Le geste de prise du seau tient sa pose, et se joue face a l'objet
 
 Deux defauts du portage precedent, tous deux visibles a l'ecran.

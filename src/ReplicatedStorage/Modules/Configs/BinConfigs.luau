@@ -78,7 +78,7 @@ return {
 	-- ===== ANIMATIONS =====
 	ANIM_FOLDER = { "Animations", "Player", "Tools", "Bin" },
 	-- Geste de PRISE, joue une fois. Il cle les jambes, ce qui est acceptable pour un geste ponctuel : le
-	-- joueur se fige un court instant. Mettre "TakeTestAnimation" ici pour essayer l'autre version.
+	-- joueur se fige un court instant.
 	TAKE_ANIM = "TakeAnimation",
 	-- Pose de PORTAGE, tenue tant qu'on porte. Elle ne cle QUE les bras et le torse (verifie) : une pose de
 	-- maintien qui clerait les jambes ecraserait la marche, et le joueur glisserait au lieu de marcher.
@@ -86,10 +86,16 @@ return {
 	-- Marqueur dans TAKE_ANIM (a 0.33s) : l'instant ou la main se referme. C'est LA qu'on soude, pas a
 	-- l'appui -- sinon le seau saute dans la main avant que la main l'atteigne.
 	TAKE_EVENT = "TakeBucketEvent",
-	-- FILET DE SECURITE, en secondes depuis le debut de TAKE_ANIM. Le geste de prise avance son temps A LA MAIN
-	-- (voir TAKE_ANIM ci-dessus et le controller) pour pouvoir TENIR sa derniere image : rien ne garantit qu'un
-	-- marqueur tire encore quand c'est nous qui ecrivons TimePosition. Regle un peu APRES le marqueur, pour que
-	-- le marqueur reste le declencheur normal et que ceci ne serve que s'il se tait.
+	-- Marqueur de FIN, pose en bout de TAKE_ANIM : l'instant ou l'on bascule sur la pose de portage.
+	--
+	-- C'EST L'ANIMATEUR QUI DECIDE, pas une constante. Deplacer ce marqueur dans l'editeur change la bascule,
+	-- sans toucher au code. Et surtout il supprime un vrai risque : sans lui il fallait guetter la fin en
+	-- comparant le temps a la duree, fenetre qu'un FPS bas peut RATER -- la piste rebouclait alors au lieu de
+	-- tenir. Un marqueur, lui, ne se rate pas.
+	END_EVENT = "EndTakeEventBin",
+	-- FILET, en secondes depuis le debut de TAKE_ANIM : demande la soudure si TAKE_EVENT se tait (asset pas
+	-- encore charge a la 1re lecture de la session). Regle APRES le marqueur, donc sans effet tant qu'il parle.
+	-- Sans lui, un marqueur muet voudrait dire que le seau ne se prend PAS DU TOUT.
 	TAKE_GRAB_FALLBACK = 0.45,
 	-- Fondus d'entree. Le geste arrive vite (c'est un geste), la pose de portage prend son temps (c'est un etat).
 	TAKE_FADE = 0.1,
