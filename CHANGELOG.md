@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.423 — L'ecrasement du seau est plus franc
+
+Reglage seul, aucun code touche. `SQUASH_Y` 0.78 -> 0.55 (il tombe a un peu plus de la moitie de sa hauteur au
+lieu des trois quarts), `SQUASH_SPREAD` 0.6 -> 0.9 (il s'elargit presque autant qu'il s'aplatit),
+`SQUASH_TIME` 0.28 -> 0.34 (le rebond a le temps de se lire).
+
+En dessous de ~0.35 sur `SQUASH_Y`, le seau se lit comme une galette et non plus comme un choc : c'est la
+limite utile, pas une limite technique.
+
 ## 0.0.422 — Le seau s'ecrase en touchant le sol
 
 Il s'aplatit une fraction de seconde au contact, puis reprend sa forme en depassant un peu -- c'est ce

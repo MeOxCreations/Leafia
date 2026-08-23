@@ -185,14 +185,14 @@ return {
 	-- ne depend de sa taille, et il finit toujours a ses dimensions d'origine, meme si le geste est interrompu.
 	--
 	-- Duree totale, en secondes. 0 eteint l'effet.
-	SQUASH_TIME = 0.28,
-	-- Hauteur au moment du contact, en proportion. 0.78 = il fait un peu plus des trois quarts de sa hauteur.
-	-- Plus bas = plus cartoon.
-	SQUASH_Y = 0.78,
+	SQUASH_TIME = 0.34,
+	-- Hauteur au moment du contact, en proportion. 0.55 = il tombe a un peu plus de la moitie de sa hauteur.
+	-- Plus bas = plus cartoon. En dessous de ~0.35 le seau se lit comme une galette, pas comme un choc.
+	SQUASH_Y = 0.55,
 	-- Etalement en largeur, en proportion de la HAUTEUR PERDUE. Exprime comme un ECART et pas comme une valeur
 	-- absolue : il tombe donc a zero pile en meme temps que l'ecrasement, sans qu'aucune constante n'ait a
 	-- rester d'accord avec l'autre. 1 = il s'elargit d'autant qu'il s'aplatit.
-	SQUASH_SPREAD = 0.6,
+	SQUASH_SPREAD = 0.9,
 
 	-- ===== DIVERS =====
 	-- TRACE DE MISE AU POINT. Imprime toutes les DEBUG_INTERVAL secondes ce que la detection VOIT reellement :
