@@ -9,8 +9,19 @@
 -- plusieurs corrections a cote -- verrouillage de souris, detection d'appareil -- avant qu'on remonte a la cause.
 -- D'ou ce module : la prochaine feature qui prend la camera n'aura qu'a l'allumer.
 --
--- DYNAMIQUE : il apparait la ou le doigt se pose, dans une zone en bas a gauche. On ne mesure que le DELTA depuis
--- le point de contact, ce qui le rend insensible a l'inset de la barre Roblox -- le decalage se simplifie.
+-- FIXE, ET C'EST UN CHOIX. Il a d'abord ete DYNAMIQUE -- il apparaissait la ou le doigt se posait -- et il s'est
+-- pose a cote du pouce sur tous les ecrans. Quatre tentatives pour recaler les coordonnees ont echoue, dont deux
+-- qui ont AGGRAVE le decalage.
+--
+-- Le probleme n'etait pas le reglage mais l'APPROCHE : convertir une position de doigt en position d'interface
+-- demande de savoir laquelle des deux compte la barre du haut, et ca ne se deduit pas.
+--
+-- En le posant a une place FIXE, exprimee en fraction d'ecran, il n'y a plus AUCUNE conversion : la place est
+-- juste sur tous les formats par construction. Et le bouton ne suit que le DELTA du doigt -- une difference, qui
+-- annule n'importe quel decalage de repere sans avoir a le connaitre.
+--
+-- Le joueur pose son pouce n'importe ou dans la zone du bas ; c'est le mouvement qui compte, pas l'endroit. C'est
+-- d'ailleurs ce que font la plupart des jeux mobiles.
 --
 -- Purement client, purement visuel : il ne fait que RENDRE une valeur, il ne deplace personne.
 
@@ -25,9 +36,12 @@ local player = Players.LocalPlayer
 -- Studio comme sur un vrai telephone.
 local IS_TOUCH = UserInputService.TouchEnabled
 
--- Zone du bas-gauche ou poser le doigt fait apparaitre le joystick, en fraction d'ecran.
+-- Zone du bas-gauche ou poser le doigt prend le joystick, en fraction d'ecran.
 local ZONE_WIDTH = 0.45
 local ZONE_HEIGHT = 0.55
+-- OU LE JOYSTICK EST DESSINE, en fraction d'ecran. En SCALE et pas en pixels : c'est ce qui le place au meme
+-- endroit relatif sur un petit telephone comme sur une tablette, sans une ligne de calcul.
+local ANCHOR_POS = UDim2.fromScale(0.17, 0.74)
 -- Rayon de deplacement maximal du bouton, en fraction de la HAUTEUR d'ecran. En fraction et pas en pixels : sur
 -- une tablette un rayon en pixels serait minuscule, sur un petit telephone il sortirait de l'ecran.
 local RADIUS_SCALE = 0.11
@@ -42,18 +56,6 @@ local base: Frame? = nil
 local knob: Frame? = nil
 local finger: InputObject? = nil
 local origin = Vector2.zero
--- ECART ENTRE LES DEUX REPERES D'ECRAN, MESURE et non deduit.
---
--- `InputObject.Position` et `UserInputService:GetMouseLocation()` ne partent pas forcement du meme coin, et le
--- sens de la difference ne se DEDUIT pas -- ce projet l'a paye trois fois (GetMouseLocation, WorldAnchor, puis
--- ici, ou une correction posee au raisonnement a AGGRAVE le decalage).
---
--- On arrete donc de raisonner : au moment ou le doigt se pose, on lit les DEUX et on garde leur difference. Le
--- resultat est juste quel que soit le repere de chacun, sur n'importe quel appareil, sans rien a regler.
---
--- Pourquoi viser le repere de `GetMouseLocation` : c'est celui du curseur custom du jeu, qui tombe au bon endroit
--- depuis toujours. On se cale sur ce qui est deja prouve a l'ecran plutot que sur ce qui devrait marcher.
-local spaceOffset = Vector2.zero
 local radius = 90
 local value = Vector3.zero
 local active = false
@@ -61,6 +63,11 @@ local active = false
 local function hideVisuals()
 	finger = nil
 	value = Vector3.zero
+	if knob then
+		-- Le bouton revient au centre du fond : lache en pleine course, il resterait sinon colle sur le bord et la
+		-- prochaine prise partirait d'une image fausse.
+		(knob :: Frame).Position = ANCHOR_POS
+	end
 	if base then
 		(base :: Frame).Visible = false
 	end
@@ -127,17 +134,16 @@ local function build()
 			return
 		end
 		finger = input
-		-- ON MESURE L'ECART DES DEUX REPERES, ICI, au moment ou le doigt se pose : les deux valeurs designent
-		-- alors le MEME point physique, donc leur difference EST le decalage. Voir `spaceOffset`.
-		local raw = Vector2.new(input.Position.X, input.Position.Y)
-		spaceOffset = UserInputService:GetMouseLocation() - raw
-		origin = raw + spaceOffset
+		-- ON NE RETIENT QUE LE POINT DE DEPART, jamais pour le DESSINER : il ne sert qu'a mesurer un DELTA. Aucune
+		-- conversion de repere n'est donc necessaire -- une difference annule n'importe quel decalage.
+		origin = Vector2.new(input.Position.X, input.Position.Y)
 		local camera = workspace.CurrentCamera
 		radius = math.max((if camera then camera.ViewportSize.Y else 720) * RADIUS_SCALE, 40)
 		ring.Size = UDim2.fromOffset(radius * BASE_SIZE, radius * BASE_SIZE)
 		head.Size = UDim2.fromOffset(radius * KNOB_SIZE, radius * KNOB_SIZE)
-		ring.Position = UDim2.fromOffset(origin.X, origin.Y)
-		head.Position = ring.Position
+		-- LE FOND NE BOUGE PAS. Il est pose en fraction d'ecran, donc au meme endroit relatif partout.
+		ring.Position = ANCHOR_POS
+		head.Position = ANCHOR_POS
 		ring.Visible = true
 		head.Visible = true
 	end)
@@ -146,15 +152,18 @@ local function build()
 		if input ~= finger then
 			return
 		end
-		-- MEME ecart qu'a la prise, applique des DEUX cotes : un delta calcule entre deux reperes differents serait
-		-- faux d'un decalage constant, donc le joystick partirait deja incline.
-		-- On garde l'ecart MESURE a la prise plutot que d'en relire un : celui du doigt qui tient le joystick, pas
-		-- celui d'un autre doigt pose entre-temps sur l'ecran.
-		local point = Vector2.new(input.Position.X, input.Position.Y) + spaceOffset
-		local delta = point - origin
+		-- UNE DIFFERENCE, RIEN QU'UNE DIFFERENCE. C'est ce qui rend ce joystick insensible au repere : peu importe
+		-- d'ou l'on compte, l'ecart entre deux points du meme repere est le meme.
+		local delta = Vector2.new(input.Position.X, input.Position.Y) - origin
 		local length = delta.Magnitude
 		local clamped = if length > radius then delta.Unit * radius else delta
-		head.Position = UDim2.fromOffset(origin.X + clamped.X, origin.Y + clamped.Y)
+		-- Le bouton s'ecarte du FOND, qui lui ne bouge pas : on ajoute donc le delta a la position d'ancrage.
+		head.Position = UDim2.new(
+			ANCHOR_POS.X.Scale,
+			ANCHOR_POS.X.Offset + clamped.X,
+			ANCHOR_POS.Y.Scale,
+			ANCHOR_POS.Y.Offset + clamped.Y
+		)
 		-- L'ECRAN DESCEND QUAND Y MONTE, le monde AVANCE quand Z descend : les deux conventions s'annulent, donc
 		-- tirer le doigt vers le BAS donne bien Z positif, c'est-a-dire reculer.
 		value = Vector3.new(clamped.X / radius, 0, clamped.Y / radius)

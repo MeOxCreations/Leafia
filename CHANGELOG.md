@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.393 — Le joystick devient FIXE : on supprime le probleme au lieu de le corriger
+
+Il se posait a cote du pouce sur tous les ecrans. QUATRE tentatives de recaler les coordonnees ont echoue, dont
+deux qui ont AGGRAVE le decalage.
+
+### Le probleme n'etait pas le reglage, c'etait l'APPROCHE
+
+Convertir une position de doigt en position d'interface demande de savoir laquelle des deux compte la barre du
+haut -- et ca ne se deduit pas. Chaque tentative etait un pari a 50 %, et j'en ai perdu plusieurs de suite.
+
+En posant le joystick a une place FIXE, exprimee en fraction d'ecran, il n'y a plus AUCUNE conversion. La place est
+juste sur tous les formats par construction, sans une ligne de calcul.
+
+Et le bouton ne suit que le DELTA du doigt. Une DIFFERENCE annule n'importe quel decalage de repere sans avoir a le
+connaitre : peu importe d'ou l'on compte, l'ecart entre deux points du meme repere est le meme.
+
+### Ce que ca change pour le joueur
+
+Il pose son pouce n'importe ou dans la zone du bas ; c'est le MOUVEMENT qui compte, pas l'endroit. Le dessin, lui,
+reste toujours au meme endroit -- ce que font d'ailleurs la plupart des jeux mobiles, et qui a l'avantage de
+s'apprendre en une seconde.
+
+Le rayon, lui, reste proportionnel a la hauteur d'ecran : sur une tablette un rayon en pixels serait minuscule,
+sur un petit telephone il sortirait de l'ecran.
+
+### La lecon
+
+Quand une correction echoue plusieurs fois de suite sur le meme point, ce n'est pas la valeur qui est fausse,
+c'est la question. Ici la bonne question n'etait pas "de combien recaler" mais "comment ne plus avoir a recaler".
+
 ## 0.0.392 — L'ecart entre reperes d'ecran est MESURE, plus deduit
 
 Le joystick apparaissait loin du pouce. Deux tentatives de le recaler au raisonnement ont echoue, dont une qui a
