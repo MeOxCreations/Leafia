@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.417 — Reposer le seau rejoue le geste a l'envers
+
+La repose coupait tout d'un coup : le seau disparaissait des mains et le joueur revenait a sa pose neutre en une
+image. `TakeAnimation` est maintenant rejouee A L'ENVERS.
+
+On part de sa DERNIERE image -- celle que la pose de portage tient deja, donc le raccord ne se voit pas -- et on
+remonte le temps jusqu'a la position neutre. La pose de portage s'efface en fondu croise pendant que le geste
+inverse monte.
+
+`Looped = false` ici, contrairement a la prise : arrivee a zero, la piste DOIT se relacher, puisque la pose
+d'arrivee est justement la position neutre. C'est la recette du journal de CLAUDE.md, sortie inverse comprise.
+
+### Le seau quitte les mains quand la MAIN S'OUVRE
+
+Pas a l'appui. En marche arriere, c'est le MEME marqueur qu'a la prise (`TakeBucketEvent`), repasse dans l'autre
+sens. Aucun marqueur a poser : celui de la prise sert deux fois.
+
+Rejouer le geste A L'ENDROIT aurait montre un RAMASSAGE alors qu'on lache -- le bras qui descend vers le sol
+puis se referme, exactement le contraire de ce qui se passe.
+
+### Un filet sur son propre minuteur
+
+C'est le seul defaut de ce fichier qu'un joueur ne peut PAS rattraper lui-meme : si le marqueur se tait, le seau
+reste soude au personnage pour toujours.
+
+Le filet ne vit donc pas dans la boucle du geste -- elle, une nouvelle prise ou un respawn peut la couper. Il
+tourne sur un `task.delay` independant : quoi qu'il arrive au geste, la repose part.
+
+`PLACE_SETTLE` couvre l'autre bord : au tout premier passage, `TimePosition` peut encore lire zero alors qu'on
+vient d'y ecrire la derniere image. Sans ce delai, le seau serait lache dans l'image qui suit l'appui.
+
+### A faire dans Studio
+
+Rien. Le geste inverse n'utilise que ce qui existe deja.
+
 ## 0.0.416 — Le marqueur de fin decide quand le seau passe en portage
 
 `TakeAnimation` a maintenant un marqueur `EndTakeEventBin` en bout de geste. C'est lui qui declenche

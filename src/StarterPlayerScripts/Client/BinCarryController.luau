@@ -5,7 +5,9 @@
 --
 --   PRISE   : on joue TakeAnimation ; au marqueur TakeBucketEvent (la main se referme), on demande au SERVEUR de
 --             souder le seau ; au marqueur EndTakeEventBin (fin du geste), on enchaine sur la pose de portage.
---   REPOSE  : on demande au serveur, qui retire le joint et pose le seau AU SOL devant nous.
+--   REPOSE  : on rejoue TakeAnimation A L'ENVERS depuis sa derniere image ; en repassant TakeBucketEvent dans
+--             l'autre sens (la main s'ouvre), on demande au serveur de retirer le joint et de poser le seau AU
+--             SOL devant nous.
 --
 -- POURQUOI ON SOUDE AU MARQUEUR ET PAS A L'APPUI. L'echelle, elle, soude des l'appui : elle est enorme et le
 -- geste est rapide, le saut ne se voit pas. Un seau pose par terre, lui, se teleporterait dans la main avant que
@@ -361,14 +363,81 @@ local function pickUp(model: Model)
 	end)
 end
 
+-- REPOSE : TAKE_ANIM JOUEE A L'ENVERS. On part de sa derniere image -- celle que la pose de portage tient deja,
+-- donc le raccord ne se voit pas -- et on remonte le temps. Le seau quitte les mains quand la MAIN S'OUVRE, pas
+-- a l'appui : en marche arriere c'est le meme marqueur qu'a la prise, repasse dans l'autre sens.
 local function placeBin()
 	local model = carriedBin
 	if not model then
 		return
 	end
 	carriedBin = nil
-	stopTracks()
-	request(model, "place")
+	clearTakeConns()
+	releaseStance()
+
+	local released = false
+	local function doRelease()
+		if released then
+			return
+		end
+		released = true
+		request(model, "place")
+	end
+	-- FILET DUR, sur son PROPRE minuteur. Tout le reste peut etre coupe par une nouvelle prise ou un respawn :
+	-- lui non. Sans lui, un marqueur muet laisserait le seau soude au joueur pour toujours.
+	task.delay(BinConfigs.PLACE_TIMEOUT, doRelease)
+
+	local animator = getAnimator()
+	local track = if animator then loadTrack(animator, BinConfigs.TAKE_ANIM) else nil
+	if not track then
+		-- Sans animation on repose quand meme : garder un seau colle serait pire que perdre le geste.
+		stopTracks()
+		doRelease()
+		return
+	end
+
+	-- L'ancien geste laisse la place : deux pistes de MEME priorite se MELANGENT, elles ne se remplacent pas.
+	if takeTrack then
+		takeTrack:Stop(BinConfigs.TAKE_FADE)
+	end
+	takeTrack = track
+	track.Priority = Enum.AnimationPriority.Action2
+	-- LOOPED = FALSE ici, contrairement a la prise : arrivee a zero la piste DOIT se relacher, puisque la pose
+	-- d'arrivee est justement la position neutre.
+	track.Looped = false
+	track:Play(BinConfigs.TAKE_FADE)
+	track.TimePosition = math.max(track.Length - 0.001, 0)
+	track:AdjustSpeed(-BinConfigs.PLACE_SPEED)
+
+	-- La pose de portage s'efface pendant que le geste inverse monte : fondu croise, comme a la prise.
+	if carryTrack then
+		carryTrack:Stop(BinConfigs.CARRY_FADE)
+		carryTrack = nil
+	end
+
+	markerConn = track:GetMarkerReachedSignal(BinConfigs.TAKE_EVENT):Connect(doRelease)
+
+	local elapsed = 0
+	holdConn = RunService.Heartbeat:Connect(function(dt)
+		-- Une nouvelle prise a pris la main : ce geste ne nous appartient plus. Le filet dur reste en place.
+		if takeTrack ~= track then
+			clearTakeConns()
+			return
+		end
+		elapsed += dt
+		if elapsed < BinConfigs.PLACE_SETTLE then
+			return
+		end
+		-- Retour termine (ou trop long) : on lache et on rend la main a la marche.
+		if track.TimePosition <= 0.001 or elapsed >= BinConfigs.PLACE_TIMEOUT then
+			doRelease()
+			clearTakeConns()
+			track:Stop(BinConfigs.TAKE_FADE)
+			if takeTrack == track then
+				takeTrack = nil
+			end
+		end
+	end)
 end
 
 local function toggleCarry()

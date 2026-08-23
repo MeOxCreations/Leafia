@@ -120,6 +120,23 @@ return {
 	-- qu'on corrige.
 	ANCHOR_DURING_TAKE = true,
 
+	-- ===== GESTE DE REPOSE =====
+	-- La repose joue TAKE_ANIM A L'ENVERS. On part de sa derniere image -- celle que la pose de portage tient
+	-- deja, donc le raccord est invisible -- et on remonte le temps jusqu'a la position neutre.
+	--
+	-- Rejouer le geste A L'ENDROIT montrerait un RAMASSAGE alors qu'on lache : le bras descend vers le sol puis
+	-- se referme, exactement le contraire de ce qui se passe.
+	--
+	-- Vitesse de ce retour. 1 = meme cadence qu'a la prise. Plus haut = on lache plus vite.
+	PLACE_SPEED = 1,
+	-- On ne teste la fin du retour qu'apres ce delai : au tout premier passage TimePosition peut encore lire
+	-- zero, alors qu'on vient tout juste d'y ecrire la derniere image.
+	PLACE_SETTLE = 0.08,
+	-- FILET DUR, en secondes. Un marqueur muet laisserait le seau soude au joueur POUR TOUJOURS -- c'est le seul
+	-- defaut de ce fichier qu'un joueur ne peut pas rattraper lui-meme. Il tourne sur son PROPRE minuteur, donc
+	-- il survit meme si le geste est interrompu par une autre prise.
+	PLACE_TIMEOUT = 3,
+
 	-- ===== REPOSE =====
 	-- Le seau est porte DEVANT le torse, en l'air. Le reposer sur place le laisserait FLOTTER a hauteur de
 	-- poitrine : il faut donc chercher le sol. Distance devant le joueur ou on le pose.
