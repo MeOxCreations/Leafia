@@ -9,19 +9,16 @@
 -- plusieurs corrections a cote -- verrouillage de souris, detection d'appareil -- avant qu'on remonte a la cause.
 -- D'ou ce module : la prochaine feature qui prend la camera n'aura qu'a l'allumer.
 --
--- FIXE, ET C'EST UN CHOIX. Il a d'abord ete DYNAMIQUE -- il apparaissait la ou le doigt se posait -- et il s'est
--- pose a cote du pouce sur tous les ecrans. Quatre tentatives pour recaler les coordonnees ont echoue, dont deux
--- qui ont AGGRAVE le decalage.
+-- DYNAMIQUE : il apparait exactement la ou le doigt se pose.
 --
--- Le probleme n'etait pas le reglage mais l'APPROCHE : convertir une position de doigt en position d'interface
--- demande de savoir laquelle des deux compte la barre du haut, et ca ne se deduit pas.
+-- LE REPERE, ET IL A COUTE CINQ TENTATIVES. `InputObject.Position` est exprimee dans le repere d'un ScreenGui
+-- ORDINAIRE, celui dont l'origine est SOUS la barre Roblox du haut. Cette interface ne doit donc surtout PAS
+-- ignorer l'inset : avec `IgnoreGuiInset = true`, son origine passe au coin absolu de l'ecran et tout se retrouve
+-- decale de la hauteur de la barre.
 --
--- En le posant a une place FIXE, exprimee en fraction d'ecran, il n'y a plus AUCUNE conversion : la place est
--- juste sur tous les formats par construction. Et le bouton ne suit que le DELTA du doigt -- une difference, qui
--- annule n'importe quel decalage de repere sans avoir a le connaitre.
---
--- Le joueur pose son pouce n'importe ou dans la zone du bas ; c'est le mouvement qui compte, pas l'endroit. C'est
--- d'ailleurs ce que font la plupart des jeux mobiles.
+-- La reponse vient du `TouchThumbstick` de Roblox, fourni en source : son TouchGui ne touche pas a l'inset, et il
+-- utilise `inputObject.Position` DIRECTEMENT comme offset. C'est la preuve du repere -- et elle etait lisible
+-- depuis le debut. Quatre tentatives de le deduire ont echoue, dont deux qui ont aggrave le decalage.
 --
 -- Purement client, purement visuel : il ne fait que RENDRE une valeur, il ne deplace personne.
 
@@ -40,9 +37,6 @@ local IS_TOUCH = UserInputService.TouchEnabled
 -- Zone du bas-gauche ou poser le doigt prend le joystick, en fraction d'ecran.
 local ZONE_WIDTH = 0.45
 local ZONE_HEIGHT = 0.55
--- OU LE JOYSTICK EST DESSINE, en fraction d'ecran. En SCALE et pas en pixels : c'est ce qui le place au meme
--- endroit relatif sur un petit telephone comme sur une tablette, sans une ligne de calcul.
-local ANCHOR_POS = UDim2.fromScale(0.17, 0.74)
 -- Rayon de deplacement maximal du bouton, en fraction de la HAUTEUR d'ecran. En fraction et pas en pixels : sur
 -- une tablette un rayon en pixels serait minuscule, sur un petit telephone il sortirait de l'ecran.
 local RADIUS_SCALE = 0.11
@@ -64,11 +58,6 @@ local active = false
 local function hideVisuals()
 	finger = nil
 	value = Vector3.zero
-	if knob then
-		-- Le bouton revient au centre du fond : lache en pleine course, il resterait sinon colle sur le bord et la
-		-- prochaine prise partirait d'une image fausse.
-		(knob :: Frame).Position = ANCHOR_POS
-	end
 	if base then
 		(base :: Frame).Visible = false
 	end
@@ -105,10 +94,10 @@ local function build()
 	local screen = Instance.new("ScreenGui")
 	screen.Name = "LeafiaMoveThumb"
 	screen.ResetOnSpawn = false
-	-- Coordonnees ECRAN brutes : on compare des positions de doigt a des positions d'element, il faut le meme
-	-- repere des deux cotes.
-	screen.IgnoreGuiInset = true
-	screen.ScreenInsets = Enum.ScreenInsets.None
+	-- ON NE TOUCHE PAS A L'INSET, et c'est LE point qui fait que le joystick tombe sous le pouce.
+	-- `InputObject.Position` est dans le repere d'un ScreenGui ordinaire (origine SOUS la barre du haut) : ignorer
+	-- l'inset decalerait toute l'interface de la hauteur de cette barre. Le thumbstick de Roblox fait pareil --
+	-- c'est-a-dire rien.
 	screen.DisplayOrder = 20
 	screen.Enabled = false
 	screen.Parent = playerGui
@@ -147,16 +136,15 @@ local function build()
 			return
 		end
 		finger = input
-		-- ON NE RETIENT QUE LE POINT DE DEPART, jamais pour le DESSINER : il ne sert qu'a mesurer un DELTA. Aucune
-		-- conversion de repere n'est donc necessaire -- une difference annule n'importe quel decalage.
 		origin = Vector2.new(input.Position.X, input.Position.Y)
 		local camera = workspace.CurrentCamera
 		radius = math.max((if camera then camera.ViewportSize.Y else 720) * RADIUS_SCALE, 40)
 		ring.Size = UDim2.fromOffset(radius * BASE_SIZE, radius * BASE_SIZE)
 		head.Size = UDim2.fromOffset(radius * KNOB_SIZE, radius * KNOB_SIZE)
-		-- LE FOND NE BOUGE PAS. Il est pose en fraction d'ecran, donc au meme endroit relatif partout.
-		ring.Position = ANCHOR_POS
-		head.Position = ANCHOR_POS
+		-- LE JOYSTICK SE POSE SOUS LE DOIGT. Les deux cercles sont ancres en leur CENTRE, donc l'offset EST le
+		-- point touche -- rien a corriger de la taille.
+		ring.Position = UDim2.fromOffset(origin.X, origin.Y)
+		head.Position = ring.Position
 		ring.Visible = true
 		head.Visible = true
 	end)
@@ -173,13 +161,7 @@ local function build()
 		local delta = Vector2.new(input.Position.X, input.Position.Y) - origin
 		local length = delta.Magnitude
 		local clamped = if length > radius then delta.Unit * radius else delta
-		-- Le bouton s'ecarte du FOND, qui lui ne bouge pas : on ajoute donc le delta a la position d'ancrage.
-		head.Position = UDim2.new(
-			ANCHOR_POS.X.Scale,
-			ANCHOR_POS.X.Offset + clamped.X,
-			ANCHOR_POS.Y.Scale,
-			ANCHOR_POS.Y.Offset + clamped.Y
-		)
+		head.Position = UDim2.fromOffset(origin.X + clamped.X, origin.Y + clamped.Y)
 		-- L'ECRAN DESCEND QUAND Y MONTE, le monde AVANCE quand Z descend : les deux conventions s'annulent, donc
 		-- tirer le doigt vers le BAS donne bien Z positif, c'est-a-dire reculer.
 		value = Vector3.new(clamped.X / radius, 0, clamped.Y / radius)

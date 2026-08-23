@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.396 — Le joystick redevient DYNAMIQUE, et tombe enfin sous le doigt
+
+Il se pose exactement la ou le doigt touche. Le repli en position fixe est annule : ce n'etait qu'un contournement
+du vrai probleme.
+
+### Le repere, apres cinq tentatives
+
+`InputObject.Position` est exprimee dans le repere d'un ScreenGui ORDINAIRE -- celui dont l'origine est SOUS la
+barre Roblox du haut.
+
+Notre interface ignorait l'inset (`IgnoreGuiInset = true`), donc son origine etait au coin ABSOLU de l'ecran. Tout
+se retrouvait decale de la hauteur de cette barre. Et la "correction" ajoutee au 0.0.390 allait dans le mauvais
+sens, ce qui a double l'ecart.
+
+Le correctif tient en une suppression : on ne touche plus a l'inset.
+
+### La preuve etait lisible depuis le debut
+
+Le `TouchThumbstick` de Roblox est fourni en SOURCE, et il est forke dans l'autre projet du joueur. Son TouchGui ne
+touche pas a l'inset, et il utilise `inputObject.Position` DIRECTEMENT comme offset. C'est la preuve du repere.
+
+Quatre tentatives de le DEDUIRE ont echoue. Dix minutes de lecture auraient suffi.
+
+La regle est desormais au journal : quand un comportement d'input surprend, lire le PlayerModule bat n'importe quel
+raisonnement.
+
 ## 0.0.395 — Le joystick ne marchait "que parfois" : trois erreurs d'evenement tactile
 
 Reponses trouvees en lisant le thumbstick de Roblox lui-meme, forke dans l'autre projet du joueur. C'est la
