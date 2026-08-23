@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.398 — Les sons de la tondeuse remplacent ceux du taille-haie
+
+`SOUND_FOLDER` pointe sur `Sounds/Engins/LawnMower`. Le code ne connait que des NOMS, donc changer de sons ne
+demande de toucher qu'a ce bloc -- c'etait prevu depuis l'emprunt.
+
+### Et il DIT ce qu'il n'a pas trouve
+
+L'avertissement existait deja, mais avec un seul drapeau global : un dossier correct et un NOM de son faux ne se
+signalaient qu'une fois. On corrigeait le premier, et le deuxieme restait muet.
+
+Il est maintenant pose PAR NOM manquant. Chaque son absent se signale une fois, avec le nom ET le dossier exacts
+qu'il a cherches -- il n'y a donc rien a deviner, il suffit de comparer a l'arborescence de Studio.
+
+Une fois par PRISE, en revanche, remplirait la console : c'est le juste milieu entre "muet" et "illisible".
+
+### Ce qui reste a faire
+
+Le joueur veut des sons qui se CHEVAUCHENT (le demarrage qui se fond dans le regime, la coupe par-dessus le
+moteur). Aujourd'hui il n'y a que deux sons, joues l'un apres l'autre : un pour le tirage, une boucle pour le
+moteur dont la hauteur suit le regime. Le melange viendra apres.
+
 ## 0.0.397 — Du VENT quand on avance, des BRINS D'HERBE quand on coupe
 
 Deux groupes de ParticleEmitter poses dans Studio, pilotes par ce que la machine fait vraiment.

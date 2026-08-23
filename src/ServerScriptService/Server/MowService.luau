@@ -147,7 +147,7 @@ end
 -- SONS. Clones sur la MACHINE (pas sur le joueur) : le son sort donc de la tondeuse, se spatialise, et tout le
 -- monde l'entend puisque tout ca se passe cote serveur.
 -- On CLONE au lieu de jouer l'original : deux joueurs qui tondent en meme temps ont chacun le sien.
-local warnedNoSound = false
+local warnedNoSound: { [string]: boolean } = {}
 local function findSound(name: string): Sound?
 	local node: Instance? = SoundService
 	for _, step in ipairs(MowConfigs.SOUND_FOLDER) do
@@ -157,11 +157,15 @@ local function findSound(name: string): Sound?
 	if sound and sound:IsA("Sound") then
 		return sound
 	end
-	if not warnedNoSound then
-		warnedNoSound = true
-		-- Anormal ET actionnable : ces sons sont ceux du taille-haie, ils DOIVENT etre la. Un seul mot, pas un
-		-- par prise, sinon la console devient illisible.
-		warn(`[MowService] Son "{name}" introuvable sous SoundService.{table.concat(MowConfigs.SOUND_FOLDER, ".")}`)
+	-- UNE FOIS PAR NOM MANQUANT, et pas une fois pour toutes : avec un seul drapeau global, un dossier correct
+	-- mais un NOM de son faux ne se signalait qu'une fois -- on corrigeait le premier et le deuxieme restait muet.
+	-- Une fois par prise, en revanche, remplirait la console.
+	if not warnedNoSound[name] then
+		warnedNoSound[name] = true
+		warn(
+			`[MowService] Son "{name}" introuvable sous SoundService.`
+				.. `{table.concat(MowConfigs.SOUND_FOLDER, ".")} -- verifie le NOM et le DOSSIER dans Studio.`
+		)
 	end
 	return nil
 end

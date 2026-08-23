@@ -123,10 +123,13 @@ return {
 	APPROACH_DETOUR = 4,
 
 	-- ===== SONS =====
-	-- EMPRUNTES AU TAILLE-HAIE en attendant ceux de la tondeuse. Rien de definitif : le jour ou les vrais sons
-	-- existent, seul ce bloc change -- le code, lui, ne connait que des noms.
-	-- Chemin du dossier dans SoundService.
-	SOUND_FOLDER = { "Sounds", "Engins", "HedgeTrimmer" },
+	-- Chemin du dossier dans SoundService. Le code ne connait QUE des noms : changer de sons ne demande de toucher
+	-- qu'a ce bloc.
+	--
+	-- Les sons du taille-haie servaient d'emprunt en attendant ceux de la tondeuse.
+	-- SI UN SON NE SORT PAS : la console dit le NOM et le DOSSIER exacts qu'elle a cherches, une fois par nom
+	-- manquant. Pas besoin de deviner -- il suffit de comparer a l'arborescence de Studio.
+	SOUND_FOLDER = { "Sounds", "Engins", "LawnMower" },
 	-- Joue pendant le TIRAGE de corde. Une fois, non bouclee.
 	PULL_SOUND = "TryLaunchSound",
 	-- Boucle du moteur, des qu'il a demarre et tant qu'on pousse.
