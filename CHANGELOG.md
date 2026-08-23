@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.425 — Le seau glisse jusqu'au sol au lieu d'y sauter
+
+Il se TELEPORTAIT a plat a l'instant du lacher, pendant que le geste de repose jouait encore : le personnage se
+penchait vers un objet qui n'etait deja plus la. C'est ca, le saut qu'on voyait.
+
+On MEMORISE maintenant la position ET l'orientation qu'il a DANS LES MAINS -- celles que l'animation lui donne
+-- et il GLISSE de la jusqu'a sa pose finale au sol. Les deux mouvements se recouvrent, le geste se lit en
+entier.
+
+`CFrame:Lerp` interpole position et rotation d'un coup : c'est ce qui redresse le seau progressivement au lieu
+de le claquer droit. Easing Quad Out -- il part vite et se pose doucement, comme un objet qu'on depose.
+
+### On pose pour mesurer, puis on remet
+
+Le point le plus bas depend de l'orientation finale : il faut donc l'appliquer pour le connaitre. Tout se passe
+dans la MEME image, avant la moindre replication -- personne ne voit ce va-et-vient, et le trajet part bien de
+la pose des mains.
+
+### Un seul jeton pour le trajet ET l'ecrasement
+
+Reprendre le seau en plein trajet ou en plein ecrasement doit couper les DEUX d'un coup : sinon une boucle
+continuerait d'ecrire les positions des parts par-dessus la soudure, et le seau partirait en vrille dans les
+mains. Chaque sortie rend le jeton, y compris les sorties d'erreur -- un jeton oublie laisserait le seau marque
+"en cours d'animation" pour toujours.
+
+L'ecrasement part maintenant A L'ARRIVEE, plus au lacher : c'est le contact avec le sol qu'il represente.
+
+### Le reglage
+
+`PLACE_TWEEN_TIME` (0.22 s). A 0 on retrouve le saut instantane.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.424 — Le seau reste a plat une fois pose
 
 Il se posait de travers. Le weld n'y etait pour rien : il est detruit des le debut de la repose (`detach`).

@@ -130,13 +130,53 @@ local function stopSquash(model: Model)
 	squashTokens[model] = nil
 end
 
-local function squashOnLand(model: Model)
-	if BinConfigs.SQUASH_TIME <= 0 then
+-- TRAJET VERS LE SOL. Le seau ne se teleporte pas a plat : il PART de la pose que l'animation lui donne dans
+-- les mains, et il GLISSE jusqu'a sa pose finale.
+--
+-- Sans ce trajet, il saute a plat pendant que le geste de repose joue encore -- le personnage se penche alors
+-- vers un objet qui n'est deja plus la. Avec, les deux mouvements se recouvrent et le geste se lit en entier.
+--
+-- `CFrame:Lerp` interpole la POSITION ET LA ROTATION d'un coup : c'est ce qui redresse le seau progressivement
+-- au lieu de le claquer droit.
+local function slideToGround(model: Model, from: CFrame, to: CFrame, token: number, onDone: () -> ())
+	if BinConfigs.PLACE_TWEEN_TIME <= 0 then
+		model:PivotTo(to)
+		onDone()
 		return
 	end
+	model:PivotTo(from)
+	task.spawn(function()
+		local t0 = os.clock()
+		while squashTokens[model] == token do
+			local a = (os.clock() - t0) / BinConfigs.PLACE_TWEEN_TIME
+			if a >= 1 then
+				break
+			end
+			-- Quad Out : il part vite et se pose doucement, comme un objet qu'on depose et qu'on relache.
+			model:PivotTo(from:Lerp(to, TweenService:GetValue(a, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)))
+			RunService.Heartbeat:Wait()
+		end
+		-- Repris en plein trajet : on ne le repose pas de force, la soudure a repris la main.
+		if squashTokens[model] ~= token then
+			return
+		end
+		-- VALEUR EXACTE a l'arrivee : un lerp laisse toujours un residu, et un seau repris puis repose
+		-- accumulerait cet ecart a chaque fois.
+		model:PivotTo(to)
+		onDone()
+	end)
+end
+
+local function squashOnLand(model: Model, token: number)
+	if squashTokens[model] ~= token then
+		return -- repris entre-temps : ce n'est plus notre affaire
+	end
+	-- CHAQUE SORTIE REND LE JETON. Le garder laisserait le seau marque "en cours d'animation" pour toujours, et
+	-- c'est le genre d'etat mort dont on ne se souvient plus six mois apres.
 	local pivot = model:GetPivot()
 	local bottom = lowestY(model)
-	if bottom >= math.huge then
+	if BinConfigs.SQUASH_TIME <= 0 or bottom >= math.huge then
+		squashTokens[model] = nil
 		return
 	end
 	-- REPERE POSE AU SOL, sous le seau. C'est autour de lui qu'on ecrase : la base ne decolle donc jamais,
@@ -151,11 +191,9 @@ local function squashOnLand(model: Model)
 		end
 	end
 	if #saved == 0 then
+		squashTokens[model] = nil
 		return
 	end
-
-	local token = (squashTokens[model] or 0) + 1
-	squashTokens[model] = token
 
 	local function apply(sy: number, sxz: number)
 		local scale = Vector3.new(sxz, sy, sxz)
@@ -276,6 +314,10 @@ local function place(player: Player, model: Model)
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
 	local landed = false
+	-- POSE DE DEPART DU TRAJET : celle que l'ANIMATION lui donne dans les mains, capturee AVANT qu'on touche a
+	-- quoi que ce soit. C'est de la qu'il partira pour glisser au sol.
+	local startCF = model:GetPivot()
+	local finalCF: CFrame? = nil
 
 	detach(state)
 	carried[model] = nil
@@ -314,17 +356,21 @@ local function place(player: Player, model: Model)
 
 		-- On garde la hauteur courante pour cette pose provisoire : seule l'orientation compte ici, la hauteur
 		-- definitive est corrigee juste apres, une fois le point le plus bas connu.
-		local base = Vector3.new(spot.X, model:GetPivot().Position.Y, spot.Z)
+		local base = Vector3.new(spot.X, startCF.Position.Y, spot.Z)
 		local target = CFrame.lookAt(base, base + placeDir)
+		-- ON POSE POUR MESURER, PUIS ON REMET. Le point le plus bas depend de l'orientation qu'on vient
+		-- d'appliquer : il faut donc l'appliquer pour le connaitre. Tout se passe dans la MEME image, avant la
+		-- moindre replication -- personne ne voit ce va-et-vient, et le trajet part bien de la pose des mains.
 		model:PivotTo(target)
 		if groundY then
-			-- Mesure APRES la pose : le point le plus bas depend de l'orientation qu'on vient d'appliquer.
 			local bottom = lowestY(model)
 			if bottom < math.huge then
-				model:PivotTo(target + Vector3.new(0, groundY - bottom, 0))
+				target += Vector3.new(0, groundY - bottom, 0)
 				landed = true
 			end
 		end
+		model:PivotTo(startCF)
+		finalCF = target
 	end
 
 	restore(state)
@@ -342,28 +388,41 @@ local function place(player: Player, model: Model)
 		end
 	end
 
-	-- MESURE, pas supposition. Si le seau parait encore penche, ces nombres disent OU est l'angle : dans la pose
-	-- (tangage/roulis non nuls sur la racine juste apres l'avoir posee) ou dans le MODEL lui-meme (racine a plat
-	-- mais mesh penche dedans -- aucun script ne corrigera ca, ca se regle dans Studio).
-	if BinConfigs.DEBUG then
-		local refPart = binRoot(model)
-		local rx, rz = 0, 0
-		if refPart then
-			local a, _, c = refPart.CFrame:ToOrientation()
-			rx, rz = a, c
-		end
-		print(
-			`[BinCarryService] pose | PrimaryPart {tostring(model.PrimaryPart ~= nil)}`
-				.. ` | ancre {tostring(BinConfigs.PLACE_ANCHOR)} | sol trouve {tostring(landed)}`
-				.. ` | racine tangage {string.format("%.1f", math.deg(rx))} roulis {string.format("%.1f", math.deg(rz))}`
-		)
+	local target = finalCF
+	if not target then
+		return -- pas de personnage : rien a viser, le seau reste ou il est
 	end
 
-	-- APRES restore : l'ecrasement ecrit les Size et les CFrame des parts, il doit donc partir d'un objet deja
-	-- rendu a son etat normal. Et seulement si le seau a vraiment TOUCHE un sol : rien ne s'ecrase dans le vide.
-	if landed then
-		squashOnLand(model)
-	end
+	-- UN SEUL JETON pour tout ce qui suit. Reprendre le seau en plein trajet ou en plein ecrasement doit couper
+	-- les DEUX d'un coup, sinon une boucle continuerait d'ecrire ses positions par-dessus la soudure.
+	local token = (squashTokens[model] or 0) + 1
+	squashTokens[model] = token
+
+	slideToGround(model, startCF, target, token, function()
+		-- L'ecrasement part A L'ARRIVEE, pas au lacher : c'est le contact avec le sol qu'il represente.
+		if landed then
+			squashOnLand(model, token)
+		else
+			squashTokens[model] = nil
+		end
+
+		-- MESURE, pas supposition. Si le seau parait encore penche, ces nombres disent OU est l'angle : dans la
+		-- pose (tangage/roulis non nuls sur la racine) ou dans le MODEL lui-meme (racine a plat mais mesh penche
+		-- dedans -- aucun script ne corrigera ca, ca se regle dans Studio).
+		if BinConfigs.DEBUG then
+			local refPart = binRoot(model)
+			local rx, rz = 0, 0
+			if refPart then
+				local a, _, c = refPart.CFrame:ToOrientation()
+				rx, rz = a, c
+			end
+			print(
+				`[BinCarryService] pose | PrimaryPart {tostring(model.PrimaryPart ~= nil)}`
+					.. ` | ancre {tostring(BinConfigs.PLACE_ANCHOR)} | sol trouve {tostring(landed)}`
+					.. ` | racine tangage {string.format("%.1f", math.deg(rx))} roulis {string.format("%.1f", math.deg(rz))}`
+			)
+		end
+	end)
 end
 
 -- RELACHE IMMEDIAT : mort, respawn, depart. On detache et on restaure sur place, sans chercher le sol (le

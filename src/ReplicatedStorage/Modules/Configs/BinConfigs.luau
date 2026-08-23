@@ -180,6 +180,13 @@ return {
 	PLACE_RAY_HEIGHT = 6,
 	PLACE_RAY_DEPTH = 24,
 
+	-- IL GLISSE JUSQU'AU SOL, il ne s'y teleporte pas. On MEMORISE la position et l'orientation qu'il a DANS LES
+	-- MAINS -- celles que l'animation lui donne -- et on l'anime jusqu'a sa pose finale au sol.
+	--
+	-- Sans ce trajet, le seau saute d'un coup a plat pendant que le geste de repose joue encore : le personnage
+	-- se penche vers un objet qui n'est deja plus la. Duree en secondes, 0 pour retrouver le saut instantane.
+	PLACE_TWEEN_TIME = 0.22,
+
 	-- ANCRE UNE FOIS POSE. Le seau est DESANCRE pour etre porte (une part ancree ignore sa soudure). A la
 	-- repose, on lui rendait son etat d'origine -- et s'il etait LIBRE dans Studio, la physique reprend la main
 	-- juste apres : il glisse, il bascule, il finit DE TRAVERS. Le calcul de pose est pourtant juste, mais on ne
