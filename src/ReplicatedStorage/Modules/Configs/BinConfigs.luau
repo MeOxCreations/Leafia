@@ -132,6 +132,15 @@ return {
 	-- On ne teste la fin du retour qu'apres ce delai : au tout premier passage TimePosition peut encore lire
 	-- zero, alors qu'on vient tout juste d'y ecrire la derniere image.
 	PLACE_SETTLE = 0.08,
+	-- LE JOUEUR S'ARRETE PENDANT QU'IL POSE. Sans ca il repose son seau en pleine course et le geste glisse a
+	-- cote de lui. Ce n'est pas un blocage : la vitesse DESCEND a zero, puis remonte.
+	--
+	-- Cadence PROPRE a ce geste, en studs/s par seconde. Les rythmes globaux de CharacterConfigs sont regles
+	-- pour le travail de haie (arret en ~1 s) : beaucoup trop mou ici. A 60, l'arret prend moins de 0.2 s.
+	PLACE_SLOW_RATE = 60,
+	-- Duree du bridage. Volontairement INDEPENDANTE de la duree de l'animation : la vitesse revient toute seule
+	-- au bout, meme si le geste a ete interrompu, donc aucun joueur ne peut rester coince au ralenti.
+	PLACE_SLOW_TIME = 0.45,
 	-- FILET DUR, en secondes. Un marqueur muet laisserait le seau soude au joueur POUR TOUJOURS -- c'est le seul
 	-- defaut de ce fichier qu'un joueur ne peut pas rattraper lui-meme. Il tourne sur son PROPRE minuteur, donc
 	-- il survit meme si le geste est interrompu par une autre prise.

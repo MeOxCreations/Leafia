@@ -27,6 +27,10 @@ local speedOverride: { [Player]: number } = {}
 -- Joueurs dont la vitesse est en train de rejoindre sa cible. Sert de liste de travail a la boucle : elle ne
 -- touche qu'a eux, donc elle ne coute rien quand personne ne bouge de regime.
 local recovering: { [Player]: boolean } = {}
+-- Rythme de rampe DEMANDE par l'appelant, quand les rythmes globaux ne conviennent pas a son geste. Les valeurs
+-- de CharacterConfigs sont reglees pour le travail de haie (arret en ~1 s) : beaucoup trop mou pour un geste
+-- ponctuel d'une seconde. Un seul reglage pour les deux finirait par les opposer.
+local speedRate: { [Player]: number } = {}
 -- Piste d'atterrissage de chaque joueur, gardee pour pouvoir la COUPER. Elle est en priorite Action, donc elle
 -- masque la marche de Roblox tant qu'elle joue : si on la laisse aller au bout, les jambes restent figees puis
 -- la marche apparait d'un coup.
@@ -173,9 +177,10 @@ local function stepRecovery(dt: number)
 		-- feature impose une vitesse de travail. Montee et descente ont leur propre rythme.
 		local target = targetSpeed(player)
 		local current = humanoid.WalkSpeed
-		local rate = if target > current
-			then CharacterConfigs.SPEED_SPEEDUP_RATE
-			else CharacterConfigs.SPEED_SLOWDOWN_RATE
+		local rate = speedRate[player]
+			or (if target > current
+				then CharacterConfigs.SPEED_SPEEDUP_RATE
+				else CharacterConfigs.SPEED_SLOWDOWN_RATE)
 		local step = rate * dt
 
 		if math.abs(target - current) <= step then
@@ -183,6 +188,9 @@ local function stepRecovery(dt: number)
 			-- pour toujours, et deux joueurs cote a cote finiraient par se decaler.
 			humanoid.WalkSpeed = target
 			recovering[player] = nil
+			-- Le rythme ne vaut QUE pour la transition demandee : la suivante repart des rythmes globaux, sauf
+			-- si son appelant en redemande un. Sinon un geste ponctuel imposerait sa cadence a tout le reste.
+			speedRate[player] = nil
 		else
 			humanoid.WalkSpeed = current + (if target > current then step else -step)
 		end
@@ -192,11 +200,16 @@ end
 --
 -- Impose une vitesse a un joueur, ou la retire avec `nil`. La transition est progressive dans les deux sens :
 -- l'appelant declare une intention, il ne pilote pas la valeur frame par frame.
-function CharacterService.setSpeedOverride(player: Player, speed: number?)
-	if speedOverride[player] == speed then
+--
+-- `rate` (studs/s par seconde) impose la CADENCE de cette transition, pour un geste que les rythmes globaux
+-- rendraient trop mou. Omis, ce sont ceux de CharacterConfigs qui s'appliquent. Il est oublie des que la cible
+-- est atteinte : un geste ponctuel n'impose pas sa cadence au reste du jeu.
+function CharacterService.setSpeedOverride(player: Player, speed: number?, rate: number?)
+	if speedOverride[player] == speed and speedRate[player] == rate then
 		return
 	end
 	speedOverride[player] = speed
+	speedRate[player] = rate
 	-- Reveille la rampe : c'est elle qui rejoindra la nouvelle cible.
 	recovering[player] = true
 end
@@ -220,6 +233,7 @@ function CharacterService.init()
 		sprinting[player] = nil
 		recovering[player] = nil
 		speedOverride[player] = nil
+		speedRate[player] = nil
 		landingTracks[player] = nil
 	end)
 end

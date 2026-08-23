@@ -16,6 +16,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
+-- WalkSpeed a UN SEUL ecrivain, et c'est lui. On declare une intention, il tranche et il ramene la vitesse en
+-- douceur : ecrire WalkSpeed ici se battrait avec sa rampe d'atterrissage.
+local CharacterService = require(script.Parent.CharacterService)
 
 local BinCarryService = {}
 
@@ -249,6 +252,25 @@ local function releaseAllOf(player: Player)
 	end
 end
 
+-- Un jeton par joueur : reposer deux fois de suite ne doit pas laisser le premier minuteur rendre la vitesse
+-- pendant le second geste. Seul le dernier demandeur a le droit de la rendre.
+local slowTokens: { [Player]: number } = {}
+
+-- LE JOUEUR S'ARRETE PENDANT QU'IL POSE, puis repart. La vitesse revient TOUTE SEULE au bout du minuteur, meme
+-- si le geste a ete interrompu : personne ne peut rester coince au ralenti.
+local function slowForPlace(player: Player)
+	CharacterService.setSpeedOverride(player, 0, BinConfigs.PLACE_SLOW_RATE)
+	local token = (slowTokens[player] or 0) + 1
+	slowTokens[player] = token
+	task.delay(BinConfigs.PLACE_SLOW_TIME, function()
+		if slowTokens[player] ~= token then
+			return
+		end
+		slowTokens[player] = nil
+		CharacterService.setSpeedOverride(player, nil, BinConfigs.PLACE_SLOW_RATE)
+	end)
+end
+
 local function onCarry(player: Player, bin: unknown, phase: unknown)
 	local model = isBin(bin)
 	if not model or typeof(phase) ~= "string" then
@@ -256,6 +278,13 @@ local function onCarry(player: Player, bin: unknown, phase: unknown)
 	end
 	if phase == "grab" then
 		grab(player, model)
+	elseif phase == "placeStart" then
+		-- Debut du geste de repose. Le seau n'est PAS encore lache : il se detache plus tard, quand la main
+		-- s'ouvre. Ici on ne fait que couper l'elan du joueur.
+		local state = carried[model]
+		if state and state.owner == player then
+			slowForPlace(player)
+		end
 	elseif phase == "place" then
 		place(player, model)
 	elseif phase == "release" then
@@ -280,7 +309,10 @@ function BinCarryService.init()
 			releaseAllOf(player)
 		end)
 	end)
-	Players.PlayerRemoving:Connect(releaseAllOf)
+	Players.PlayerRemoving:Connect(function(player: Player)
+		slowTokens[player] = nil
+		releaseAllOf(player)
+	end)
 end
 
 return BinCarryService

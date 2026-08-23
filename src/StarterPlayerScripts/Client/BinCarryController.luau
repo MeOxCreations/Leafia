@@ -374,6 +374,10 @@ local function placeBin()
 	carriedBin = nil
 	clearTakeConns()
 	releaseStance()
+	-- L'ELAN DU JOUEUR EST COUPE DES L'APPUI, pas a la fin : sans ca il repose son seau en pleine course et le
+	-- geste glisse a cote de lui. C'est le serveur qui pilote la vitesse -- il en est le seul ecrivain -- et il
+	-- la rend tout seul, meme si ce geste est interrompu.
+	request(model, "placeStart")
 
 	local released = false
 	local function doRelease()

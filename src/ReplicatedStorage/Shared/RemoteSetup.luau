@@ -127,7 +127,11 @@ local REMOTES: { { any } } = {
 	{ "PullMowStarter", E, "Mow" },
 
 	-- [ BIN ] --
-	-- PRISE / REPOSE du SEAU. Deux arguments : le seau (Instance) et une PHASE ("grab", "place", "release").
+	-- PRISE / REPOSE du SEAU. Deux arguments : le seau (Instance) et une PHASE.
+	--   "grab"       : la main s'est refermee, on soude.
+	--   "placeStart" : le geste de repose commence. Le seau reste en main ; seul l'elan du joueur est coupe.
+	--   "place"      : la main s'est rouverte, on retire le joint et on pose au sol.
+	--   "release"    : repose seche, sans geste (mort / respawn).
 	-- Le serveur SOUDE le seau au torse du porteur (Motor6D) : sa position se replique alors a tous sans flot de
 	-- remotes. Aucun CFrame envoye par le client -- l'offset de portage est une CONSTANTE de BinConfigs, mesuree
 	-- sur le rig d'animation, donc rien a falsifier. Le serveur valide (vrai seau, libre, proximite) et decide

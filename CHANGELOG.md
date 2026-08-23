@@ -2204,6 +2204,48 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.418 — Le joueur s'arrete en douceur pour poser son seau
+
+On reposait son seau en pleine course : le geste glissait a cote du personnage. La vitesse DESCEND maintenant a
+zero des l'appui, puis remonte. Ce n'est pas un blocage, c'est un freinage.
+
+### C'est le serveur qui pilote, comme partout ailleurs
+
+`WalkSpeed` a UN SEUL ecrivain, `CharacterService`. Le seau declare une intention
+(`setSpeedOverride(player, 0)`), il ne touche pas a la valeur -- ecrire dedans se battrait avec la rampe
+d'atterrissage, qui tourne sur la meme propriete.
+
+L'elan est coupe DES L'APPUI, pas a la fin du geste : nouvelle phase `placeStart` sur le remote du seau. A cet
+instant le seau est toujours en main ; il ne se detache que plus tard, quand la main s'ouvre.
+
+### La cadence de rampe devient reglable par appelant
+
+`CharacterService.setSpeedOverride(player, speed, rate?)` accepte un rythme.
+
+Les rythmes globaux de `CharacterConfigs` sont regles pour le travail de haie : un arret prend environ une
+seconde. Beaucoup trop mou pour un geste d'une seconde -- le joueur serait deja en train de reposer son seau que
+sa vitesse baisserait encore.
+
+On ne les a PAS changes pour autant : un reglage qui sert deux moments differents finit toujours par les
+opposer. Le seau demande donc sa propre cadence (`PLACE_SLOW_RATE = 60`, arret en moins de 0.2 s), et le rythme
+est OUBLIE des que la cible est atteinte : un geste ponctuel n'impose pas sa cadence au reste du jeu.
+
+Les appelants existants (`HedgeService`, `MowService`) ne passent pas de rythme et gardent exactement le
+comportement d'avant.
+
+### La vitesse revient toute seule
+
+`PLACE_SLOW_TIME` est volontairement INDEPENDANTE de la duree de l'animation. Elle rend la vitesse au bout du
+compte a rebours, meme si le geste a ete interrompu par une autre prise ou un respawn : aucun joueur ne peut
+rester coince au ralenti.
+
+Un jeton par joueur evite l'autre bord : reposer deux fois de suite ne doit pas laisser le premier minuteur
+rendre la vitesse en plein milieu du second geste.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.417 — Reposer le seau rejoue le geste a l'envers
 
 La repose coupait tout d'un coup : le seau disparaissait des mains et le joueur revenait a sa pose neutre en une
