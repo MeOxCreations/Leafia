@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.410 — L'herbe coupee remonte de beaucoup moins loin
+
+`CUT_RISE_DEPTH` : 1 -> 0.35. La touffe partait ENTIEREMENT sous la surface, donc le trajet etait long et on
+voyait clairement quelque chose sortir du sol.
+
+C'est un contresens sur le role de cet effet : le but n'est PAS de montrer une pousse, c'est de CACHER un
+remplacement de maillage. Plus le trajet est court, mieux il fait son travail.
+
+A zero il ne cacherait plus rien -- mais entre les deux, il n'y a rien a admirer : ce mouvement doit passer
+inapercu, pas etre reussi.
+
 ## 0.0.409 — Les emetteurs introuvables se signalent, et listent ce qui EXISTE
 
 Le code qui allume les particules etait bien en place depuis le 0.0.397. Mais un nom d'emetteur qui ne correspond

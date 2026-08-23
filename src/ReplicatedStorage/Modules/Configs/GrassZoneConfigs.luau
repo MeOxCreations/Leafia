@@ -62,7 +62,11 @@ local GrassZoneConfigs = {
 	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
 	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.
-	CUT_RISE_DEPTH = 1,
+	-- Descendu de 1, ou la touffe partait ENTIEREMENT sous la surface : le trajet etait trop long, on voyait
+	-- clairement quelque chose sortir du sol au lieu de ne rien voir du tout.
+	-- Le but n'est PAS de montrer une pousse, c'est de CACHER un remplacement de maillage. Plus le trajet est
+	-- court, mieux il fait son travail -- a 0 il ne cache plus rien, mais il n'y a rien a admirer entre les deux.
+	CUT_RISE_DEPTH = 0.35,
 	-- DUREE DE LA SORTIE DE TERRE, en secondes. Elle a son PROPRE temps, et elle part IMMEDIATEMENT.
 	--
 	-- Elle etait accrochee au meme compteur que l'abaissement. Resultat, quand le temps mort a ete ajoute
