@@ -328,6 +328,37 @@ local function place(player: Player, model: Model)
 	end
 
 	restore(state)
+
+	-- ANCRE APRES restore, qui vient justement de rendre l'etat d'origine. Un seau laisse LIBRE repart en
+	-- physique des cette image : il glisse, il bascule, et on le retrouve de travers alors que la pose etait
+	-- juste. On ne verrait alors que le resultat, pas la cause.
+	if BinConfigs.PLACE_ANCHOR then
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("BasePart") then
+				d.AssemblyLinearVelocity = Vector3.zero
+				d.AssemblyAngularVelocity = Vector3.zero
+				d.Anchored = true
+			end
+		end
+	end
+
+	-- MESURE, pas supposition. Si le seau parait encore penche, ces nombres disent OU est l'angle : dans la pose
+	-- (tangage/roulis non nuls sur la racine juste apres l'avoir posee) ou dans le MODEL lui-meme (racine a plat
+	-- mais mesh penche dedans -- aucun script ne corrigera ca, ca se regle dans Studio).
+	if BinConfigs.DEBUG then
+		local refPart = binRoot(model)
+		local rx, rz = 0, 0
+		if refPart then
+			local a, _, c = refPart.CFrame:ToOrientation()
+			rx, rz = a, c
+		end
+		print(
+			`[BinCarryService] pose | PrimaryPart {tostring(model.PrimaryPart ~= nil)}`
+				.. ` | ancre {tostring(BinConfigs.PLACE_ANCHOR)} | sol trouve {tostring(landed)}`
+				.. ` | racine tangage {string.format("%.1f", math.deg(rx))} roulis {string.format("%.1f", math.deg(rz))}`
+		)
+	end
+
 	-- APRES restore : l'ecrasement ecrit les Size et les CFrame des parts, il doit donc partir d'un objet deja
 	-- rendu a son etat normal. Et seulement si le seau a vraiment TOUCHE un sol : rien ne s'ecrase dans le vide.
 	if landed then

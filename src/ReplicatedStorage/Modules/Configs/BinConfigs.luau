@@ -180,6 +180,15 @@ return {
 	PLACE_RAY_HEIGHT = 6,
 	PLACE_RAY_DEPTH = 24,
 
+	-- ANCRE UNE FOIS POSE. Le seau est DESANCRE pour etre porte (une part ancree ignore sa soudure). A la
+	-- repose, on lui rendait son etat d'origine -- et s'il etait LIBRE dans Studio, la physique reprend la main
+	-- juste apres : il glisse, il bascule, il finit DE TRAVERS. Le calcul de pose est pourtant juste, mais on ne
+	-- voit que le resultat apres que la physique l'a bouge.
+	--
+	-- Mettre false pour le laisser libre (il roulera, tombera des pentes) : c'est un choix de gameplay, pas un
+	-- reglage a l'aveugle.
+	PLACE_ANCHOR = true,
+
 	-- ===== ECRASEMENT A L'ATTERRISSAGE =====
 	-- Le seau s'aplatit une fraction de seconde en touchant le sol, puis reprend sa forme. PUR HABILLAGE : rien
 	-- ne depend de sa taille, et il finit toujours a ses dimensions d'origine, meme si le geste est interrompu.

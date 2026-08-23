@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.424 — Le seau reste a plat une fois pose
+
+Il se posait de travers. Le weld n'y etait pour rien : il est detruit des le debut de la repose (`detach`).
+C'est ce qui se passe APRES qui le penchait.
+
+Pour etre porte, le seau doit etre DESANCRE -- une part ancree ignore sa soudure. A la repose, on lui rendait
+son etat d'origine. S'il etait LIBRE dans Studio, la physique reprenait donc la main dans la meme image : il
+glisse, il bascule, et on le retrouve penche alors que le calcul de pose etait juste.
+
+Symptome trompeur : on ne voit que le resultat, jamais le mouvement qui l'a produit. On va donc relire le calcul
+d'angle, qui est innocent.
+
+`PLACE_ANCHOR` (vrai par defaut) l'ancre une fois pose, vitesses remises a zero. Le mettre a faux le laisse
+libre -- il roulera, il tombera des pentes : c'est un choix de gameplay, pas un reglage a l'aveugle.
+
+### Une mesure, pour ne plus deviner
+
+La console dit maintenant a chaque pose : y a-t-il une PrimaryPart, un sol a-t-il ete trouve, et surtout le
+TANGAGE et le ROULIS reels de la racine.
+
+S'ils sont a zero et que le seau parait quand meme penche, l'angle est DANS le model (racine a plat, mesh
+penche dedans) : aucun script ne corrigera ca, ca se regle dans Studio. S'ils ne sont pas a zero, c'est la pose.
+Deux causes qui se ressemblent a l'ecran et se corrigent a deux endroits opposes.
+
+### A faire dans Studio
+
+Rien. Mais si le seau reste penche, la ligne `[BinCarryService] pose | ...` de la console dit ou chercher.
+
 ## 0.0.423 — L'ecrasement du seau est plus franc
 
 Reglage seul, aucun code touche. `SQUASH_Y` 0.78 -> 0.55 (il tombe a un peu plus de la moitie de sa hauteur au
