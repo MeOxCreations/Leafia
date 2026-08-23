@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.411 — Un nom d'effet peut designer l'EMETTEUR ou CE QUI LE CONTIENT
+
+L'avertissement du commit precedent a repondu tout seul :
+
+    Emetteur(s) introuvable(s) : Wind. Presents : Smoke2, Leafs, Debris, debris, ParticleEmitter.
+
+`Wind`, `LeafCutEffectsLeft` et `LeafCutEffectsRight` sont des PARTS, pas des emetteurs. C'est ainsi qu'on
+construit un effet dans Studio : une part posee au bon endroit, une Attachment dedans, et les ParticleEmitter au
+fond. Ce sont la part et l'attachment qui portent un nom parlant ; les emetteurs s'appellent "Leafs" ou
+"ParticleEmitter".
+
+Chercher un emetteur DU NOM demande ne trouvait donc rien, alors que tout etait deja en place.
+
+### Chaque emetteur est indexe sous SON nom et sous celui de ses parents
+
+Demander `Wind` rend tout ce qui souffle dans la part `Wind`, sans avoir a connaitre le nom des emetteurs.
+
+C'est aussi le bon reflexe pour la suite : nommer le CONTENEUR fait suivre automatiquement tout emetteur qu'on
+ajoutera dedans. Nommer les emetteurs un par un aurait oblige a revenir toucher la config a chaque ajout.
+
+### L'avertissement se pose PAR NOM
+
+Il etait pose une seule fois pour toutes : le premier manquant masquait les autres. C'est d'ailleurs pour ca que
+le message ne parlait que de `Wind` alors que les trois manquaient.
+
 ## 0.0.410 — L'herbe coupee remonte de beaucoup moins loin
 
 `CUT_RISE_DEPTH` : 1 -> 0.35. La touffe partait ENTIEREMENT sous la surface, donc le trajet etait long et on

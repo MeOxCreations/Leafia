@@ -508,9 +508,15 @@ return {
 	WHEEL_RADIUS_FALLBACK = 0.6,
 
 	-- ===== PARTICULES =====
-	-- Noms des ParticleEmitter poses dans Studio sur le modele de la tondeuse. Cherches PARTOUT dans le modele :
-	-- ils peuvent etre ranges sous n'importe quelle piece.
-	-- Un nom introuvable n'est PAS une erreur : un emetteur absent est une facon valable de couper l'effet.
+	-- Noms des effets poses dans Studio sur le modele de la tondeuse.
+	--
+	-- UN NOM PEUT DESIGNER L'EMETTEUR OU CE QUI LE CONTIENT -- une part, une Attachment, un dossier. C'est ainsi
+	-- qu'on construit un effet dans Studio : une PART au bon endroit, une Attachment dedans, et les emetteurs au
+	-- fond. Ce sont la part et l'attachment qui portent un nom parlant ; les emetteurs, eux, s'appellent "Leafs" ou
+	-- "ParticleEmitter".
+	-- Nommer le CONTENEUR est donc le bon reflexe : ajouter un deuxieme emetteur dedans le fait suivre tout seul.
+	--
+	-- Un nom introuvable n'est PAS une erreur, mais la console le dit ET liste les noms utilisables.
 	--
 	-- VENT : souffle tant que la machine AVANCE, moteur en marche. Une tondeuse a l'arret ne souffle pas.
 	WIND_EMITTERS = { "Wind" },

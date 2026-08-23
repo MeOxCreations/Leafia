@@ -459,26 +459,45 @@ local emitterModel: Model? = nil
 local emittersByName: { [string]: { ParticleEmitter } } = {}
 -- Les noms REELLEMENT presents, gardes pour pouvoir les afficher quand un nom attendu manque.
 local emitterNamesSeen: { string } = {}
-local emitterWarned = false
+local emitterWarned: { [string]: boolean } = {}
 
+-- UN NOM PEUT DESIGNER L'EMETTEUR, OU CE QUI LE CONTIENT.
+--
+-- C'est ainsi qu'on construit un effet dans Studio : une PART posee au bon endroit, une Attachment dedans, et les
+-- ParticleEmitter au fond. Ce sont la PART et l'Attachment qui portent un nom parlant ; les emetteurs, eux,
+-- s'appellent "Leafs", "Debris" ou "ParticleEmitter".
+--
+-- Chercher un emetteur DU NOM demande ne trouvait donc rien, alors que tout etait bien en place. On indexe chaque
+-- emetteur sous SON nom ET sous celui de chacun de ses parents : demander "Wind" rend tout ce qui souffle dans la
+-- part Wind, sans avoir a connaitre le nom des emetteurs eux-memes.
 local function emittersOf(model: Model, names: { string }): { ParticleEmitter }
 	if emitterModel ~= model then
 		emitterModel = model
 		table.clear(emittersByName)
 		table.clear(emitterNamesSeen)
+		table.clear(emitterWarned)
+		local function register(name: string, emitter: ParticleEmitter)
+			local list = emittersByName[name]
+			if not list then
+				list = {}
+				emittersByName[name] = list
+				emitterNamesSeen[#emitterNamesSeen + 1] = name
+			end
+			list[#list + 1] = emitter
+		end
 		for _, d in ipairs(model:GetDescendants()) do
 			if d:IsA("ParticleEmitter") then
-				local list = emittersByName[d.Name]
-				if not list then
-					list = {}
-					emittersByName[d.Name] = list
-					emitterNamesSeen[#emitterNamesSeen + 1] = d.Name
+				register(d.Name, d)
+				-- On remonte jusqu'au modele : chaque conteneur intermediaire devient un nom utilisable.
+				local parent = d.Parent
+				while parent and parent ~= model do
+					register(parent.Name, d)
+					parent = parent.Parent
 				end
-				list[#list + 1] = d
 			end
 		end
-		emitterWarned = false
 	end
+
 	local found: { ParticleEmitter } = {}
 	local missing: { string } = {}
 	for _, name in ipairs(names) do
@@ -487,22 +506,22 @@ local function emittersOf(model: Model, names: { string }): { ParticleEmitter }
 			for _, emitter in ipairs(list) do
 				found[#found + 1] = emitter
 			end
-		else
+		elseif not emitterWarned[name] then
 			missing[#missing + 1] = name
+			emitterWarned[name] = true
 		end
 	end
 
 	-- ON DIT CE QU'ON N'A PAS TROUVE, ET ON LISTE CE QU'IL Y A.
 	--
-	-- Sans ca, un nom d'emetteur mal orthographie donne exactement le meme resultat qu'un effet coupe : rien. On
+	-- Sans ca, un nom qui ne correspond a rien donne exactement le meme resultat qu'un effet coupe : rien. On
 	-- cherche alors le probleme dans le code, dans les conditions, dans les particules elles-memes -- partout sauf
 	-- dans le nom.
-	-- Lister les emetteurs REELLEMENT presents evite l'aller-retour : la reponse est dans le message.
-	if #missing > 0 and not emitterWarned then
-		emitterWarned = true
+	-- UNE FOIS PAR NOM manquant, et pas une seule fois pour toutes : sinon le premier manquant masque les autres.
+	if #missing > 0 then
 		warn(
 			`[Mow] Emetteur(s) introuvable(s) sous "{model.Name}" : {table.concat(missing, ", ")}. `
-				.. `Presents dans le modele : {if #emitterNamesSeen > 0 then table.concat(emitterNamesSeen, ", ") else "AUCUN"}.`
+				.. `Noms utilisables : {if #emitterNamesSeen > 0 then table.concat(emitterNamesSeen, ", ") else "AUCUN"}.`
 		)
 	end
 	return found
