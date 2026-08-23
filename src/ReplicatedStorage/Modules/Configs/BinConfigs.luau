@@ -97,6 +97,11 @@ return {
 	PLACE_RAY_DEPTH = 24,
 
 	-- ===== DIVERS =====
+	-- TRACE DE MISE AU POINT. Imprime toutes les DEBUG_INTERVAL secondes ce que la detection VOIT reellement :
+	-- combien de seaux, lequel est le plus proche, et ce qui bloque. A remettre a false une fois le portage
+	-- regle -- un log par seconde finit par masquer les vrais messages.
+	DEBUG = true,
+	DEBUG_INTERVAL = 2,
 	-- Le Highlight du seau (contour) sert a le reperer AU SOL. Soude au joueur il brillerait en permanence
 	-- pendant tout le portage. Mettre false pour le laisser allume.
 	HIDE_HIGHLIGHT_WHEN_CARRIED = true,

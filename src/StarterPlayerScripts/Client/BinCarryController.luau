@@ -34,6 +34,7 @@ local binsCache: { Model }? = nil
 local lastScanAt = 0
 local lastPromptAt = 0
 local lastActionAt = 0
+local lastDebugAt = 0
 local promptTarget: Model? = nil
 local promptAnchor: BasePart? = nil
 local actionBound = false
@@ -292,7 +293,53 @@ local function hideOurs()
 	promptAnchor = nil
 end
 
+-- Dit ce que la detection VOIT, pas ce qu'on croit qu'elle voit. "Aucun prompt" couvre plusieurs causes qui se
+-- ressemblent a l'ecran (aucun seau trouve / trop loin / deja porte / on porte autre chose) : les separer ici
+-- evite de chercher au mauvais endroit.
+local function debugTrace(now: number)
+	if not BinConfigs.DEBUG or now - lastDebugAt < BinConfigs.DEBUG_INTERVAL then
+		return
+	end
+	lastDebugAt = now
+
+	local root = getRoot()
+	if not root then
+		print("[BinCarry] pas de HumanoidRootPart (personnage pas encore la)")
+		return
+	end
+	local all = getBins(now)
+	if #all == 0 then
+		print(`[BinCarry] AUCUN model commencant par "{BinConfigs.MODEL_PREFIX}" dans le Workspace`)
+		return
+	end
+
+	local nearest, nearestDist, carriedBy = nil, math.huge, nil
+	for _, model in ipairs(all) do
+		local binPart = binRoot(model)
+		if binPart then
+			local dist = ((binPart.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude
+			if dist < nearestDist then
+				nearest, nearestDist = model, dist
+				carriedBy = model:GetAttribute(BinConfigs.CARRIED_ATTRIBUTE)
+			end
+		else
+			print(`[BinCarry] {model:GetFullName()} ignore : ni PrimaryPart ni {BinConfigs.ROOT_NAME}`)
+		end
+	end
+
+	if not nearest then
+		print(`[BinCarry] {#all} model(s) trouve(s), mais AUCUN n'a de reference de position`)
+		return
+	end
+	print(
+		`[BinCarry] {#all} seau(x) | plus proche "{nearest.Name}" a {string.format("%.1f", nearestDist)} studs `
+			.. `(rayon {BinConfigs.DETECT_RADIUS}) | porte par {tostring(carriedBy)} | occupe ailleurs : {tostring(busyWithSomethingElse())} `
+			.. `| porte : {tostring(carriedBin ~= nil)} | touche branchee : {tostring(actionBound)}`
+	)
+end
+
 local function updatePrompt(now: number)
+	debugTrace(now)
 	if now - lastPromptAt < BinConfigs.PROMPT_INTERVAL then
 		return
 	end
