@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.401 — Les sons sont precharges dans les lieux qui affichent le rideau
+
+Ils ne l'etaient pas. Le premier son d'une session partait donc en retard, ou pas du tout.
+
+### Un trou ouvert par un `return`
+
+L'ecran de chargement PRINCIPAL precharge deja tout : il balaye ReplicatedStorage, StarterGui et SoundService.
+Mais le RIDEAU -- celui des lieux qui ne sont pas le hub -- sort par un `return` bien avant ce code.
+
+Le tuto, et demain les jardins de clients, n'avaient donc AUCUN son precharge. C'est exactement la ou vit la
+tondeuse.
+
+Symptome : le PREMIER coup de corde sonne creux. Le moment ou il ne faut surtout pas -- c'est lui qui doit donner
+l'impression d'avoir demarre la machine soi-meme.
+
+### Le rideau a dix secondes a ne rien faire
+
+Autant s'en servir. Le prechargement tourne en tache de fond pendant que le rideau s'anime, et on le laisse FINIR
+meme si le rideau part avant : un son precharge trop tard reste precharge.
+
+Il annonce son compte dans la console -- un prechargement muet ne se distingue pas d'un prechargement absent.
+
+### Ce que ca ne couvre pas
+
+Le serveur, lui, ne prechargeait que les ANIMATIONS de la tondeuse, et c'est normal : le prechargement vaut par
+MACHINE. Un son charge sur le serveur n'aide aucun joueur a l'entendre a l'heure.
+
 ## 0.0.400 — La camera revient derriere le joueur en douceur
 
 `PULL_CAM_OUT_TIME` : 0.2 -> 0.6. L'arrivee, elle, ne bouge pas.

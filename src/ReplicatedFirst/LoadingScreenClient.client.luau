@@ -625,6 +625,37 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		end
 	end)
 
+	-- ===== PRECHARGEMENT DES SONS =====
+	-- Le rideau tient dix secondes a ne RIEN faire. Autant s'en servir.
+	--
+	-- POURQUOI ICI. L'ecran de chargement PRINCIPAL precharge deja tout (il balaye SoundService parmi le reste),
+	-- mais ce rideau sort par un `return` bien avant ce code. Les lieux qui l'affichent -- le tuto, et demain les
+	-- jardins de clients -- n'avaient donc AUCUN son precharge.
+	--
+	-- Ce que ca coute quand ce n'est pas fait : la PREMIERE lecture d'un son part en retard, ou pas du tout. Sur un
+	-- demarrage de tondeuse, c'est precisement le premier coup de corde qui sonne creux -- le moment ou il ne faut
+	-- surtout pas.
+	--
+	-- EN TACHE DE FOND : `PreloadAsync` attend le reseau. Il n'a rien a faire dans le fil du rideau, qui doit
+	-- continuer a s'animer pendant ce temps. Et on le laisse FINIR meme si le rideau part avant : un son
+	-- precharge trop tard reste precharge.
+	task.spawn(function()
+		local sounds: { Instance } = {}
+		for _, d in ipairs(SoundService:GetDescendants()) do
+			if d:IsA("Sound") then
+				sounds[#sounds + 1] = d
+			end
+		end
+		if #sounds == 0 then
+			return
+		end
+		-- pcall : une coupure reseau ou un asset absent ne doit pas empecher le jeu de demarrer.
+		local ok = pcall(function()
+			ContentProvider:PreloadAsync(sounds)
+		end)
+		print(`[LoadingScreen] {#sounds} son(s) precharge(s){if ok then "" else " (interrompu)"}.`)
+	end)
+
 	-- Chat + liste joueurs : la CoreGui passe AU-DESSUS des ScreenGui, le rideau ne la couvre pas -> on la coupe.
 	pcall(function()
 		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, false)
