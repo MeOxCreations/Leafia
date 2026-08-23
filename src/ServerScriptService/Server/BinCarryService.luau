@@ -200,6 +200,20 @@ local function place(player: Player, model: Model)
 		flat = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
 		local spot = hrp.Position + flat * BinConfigs.PLACE_DISTANCE
 
+		-- IL SE REPOSE COMME ON LE TENAIT. On compose le regard du joueur avec la rotation de la prise, donc on
+		-- retrouve l'angle exact qu'il a dans les mains -- aucun pivot sec au lacher. Aligner betement le -Z du
+		-- model sur le regard le ferait tourner de tout l'angle de CARRY_C0 : rien ne garantit que le -Z d'un
+		-- model soit son "devant", ca vient du rig.
+		local held = CFrame.lookAt(Vector3.zero, flat)
+			* (BinConfigs.CARRY_C0 - BinConfigs.CARRY_C0.Position)
+			* CFrame.Angles(0, math.rad(BinConfigs.PLACE_YAW), 0)
+		-- REMIS A PLAT : un seau se pose droit. On ne garde que la direction horizontale de cette orientation,
+		-- ce qui efface le tangage et le roulis que la pose de portage peut lui donner. Repli sur le regard si
+		-- elle pointe droit vers le haut ou le bas, cas ou la direction horizontale n'existe pas.
+		local heldLook = held.LookVector
+		local placeDir = Vector3.new(heldLook.X, 0, heldLook.Z)
+		placeDir = if placeDir.Magnitude > 1e-3 then placeDir.Unit else flat
+
 		local ignore: { Instance } = { model }
 		if character then
 			table.insert(ignore, character)
@@ -211,7 +225,7 @@ local function place(player: Player, model: Model)
 		-- On garde la hauteur courante pour cette pose provisoire : seule l'orientation compte ici, la hauteur
 		-- definitive est corrigee juste apres, une fois le point le plus bas connu.
 		local base = Vector3.new(spot.X, model:GetPivot().Position.Y, spot.Z)
-		local target = CFrame.lookAt(base, base + flat)
+		local target = CFrame.lookAt(base, base + placeDir)
 		model:PivotTo(target)
 		if groundY then
 			-- Mesure APRES la pose : le point le plus bas depend de l'orientation qu'on vient d'appliquer.

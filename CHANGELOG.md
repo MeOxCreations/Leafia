@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.420 — Le seau se repose exactement comme on le tenait
+
+Au lacher, le seau PIVOTAIT d'un quart de tour. La repose alignait l'axe -Z du model sur le regard du joueur --
+mais le seau est porte avec un quart de tour dans les mains (`CARRY_C0` contient `math.rad(90)`). Les deux
+orientations differaient donc de cet angle, et l'ecart se voyait d'un coup a l'instant precis ou il quittait les
+mains.
+
+Rien ne garantit que le -Z d'un model soit son "devant" : ca vient du rig, pas du bon sens. On ne suppose donc
+plus aucun axe. On compose le regard du joueur avec la rotation de la prise, ce qui redonne l'angle REEL qu'il a
+a l'ecran, et on le repose la-dessus.
+
+### Remis a plat
+
+Un seau se pose droit. On ne garde que la direction HORIZONTALE de cette orientation, ce qui efface le tangage
+et le roulis que la pose de portage peut lui donner. Repli sur le regard du joueur si cette direction n'existe
+pas (objet pointant droit vers le haut).
+
+### Le reglage
+
+`PLACE_YAW` (degres) s'ajoute a cet angle. A 0, le seau se pose exactement comme on le porte. Le mettre a -90
+alignerait le -Z du model sur le regard du joueur, c'est-a-dire le comportement d'avant -- avec le pivot sec
+qui allait avec.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.419 — Plus de soubresaut entre le geste de prise et le portage
 
 On voyait le personnage s'arreter une fraction de seconde puis reprendre, au moment ou la prise laisse la place

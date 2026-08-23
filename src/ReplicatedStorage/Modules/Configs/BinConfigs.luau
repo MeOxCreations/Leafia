@@ -144,6 +144,16 @@ return {
 	PLACE_TIMEOUT = 3,
 
 	-- ===== REPOSE =====
+	-- ORIENTATION AU SOL. Le seau se repose EXACTEMENT comme on le tenait : on part du regard du joueur et on y
+	-- rajoute le decalage de la prise (le quart de tour de CARRY_C0).
+	--
+	-- Sans ce rappel, aligner betement l'axe -Z du model sur le regard le ferait PIVOTER d'un coup au moment du
+	-- lacher -- de tout l'angle que CARRY_C0 lui donne dans les mains. Rien ne garantit que le -Z d'un model
+	-- soit son "devant" : ca vient du rig, pas du bon sens. On ne suppose donc aucun axe, on reprend l'angle
+	-- qu'il a REELLEMENT a l'ecran.
+	--
+	-- Degres a AJOUTER si tu veux qu'il se pose autrement que comme tu le portes. 0 = pas de rotation.
+	PLACE_YAW = 0,
 	-- Le seau est porte DEVANT le torse, en l'air. Le reposer sur place le laisserait FLOTTER a hauteur de
 	-- poitrine : il faut donc chercher le sol. Distance devant le joueur ou on le pose.
 	PLACE_DISTANCE = 3,
