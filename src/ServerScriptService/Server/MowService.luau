@@ -52,6 +52,7 @@ type CarryState = {
 	liftVel: number, -- vitesse du ressort de cabrage. C'est ELLE qu'on pousse, pas la position.
 	pulls: number, -- tirages deja faits sur cette prise
 	pullsNeeded: number, -- combien il en faut pour que le moteur prenne. Tire au sort a la prise.
+	success: Sound?, -- le son de reussite en cours : la boucle moteur s'enchaine sur SA fin
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
 	armAmount: number, -- pose des BRAS, lissee. Suit l'input quand on braque, le ballant sinon.
@@ -171,10 +172,11 @@ local function findSound(name: string): Sound?
 end
 
 -- Son PONCTUEL sur la machine : il se detruit tout seul a la fin, sinon chaque prise laisserait une instance.
-local function playOnce(parent: BasePart, name: string)
+-- Rend le clone joue, pour que l'appelant puisse s'y accrocher (enchainer un autre son sur sa fin, par exemple).
+local function playOnce(parent: BasePart, name: string): Sound?
 	local source = findSound(name)
 	if not source then
-		return
+		return nil
 	end
 	local sound = source:Clone()
 	sound.Looped = false
@@ -183,6 +185,7 @@ local function playOnce(parent: BasePart, name: string)
 		sound:Destroy()
 	end)
 	sound:Play()
+	return sound
 end
 
 -- L'Animator du PERSONNAGE. Un seul endroit le sait : le demarrage et la pose du guidon en ont besoin, et deux
@@ -316,7 +319,11 @@ local function yankStarter(model: Model, state: CarryState)
 	local root = rootOf(model)
 	if root then
 		local decisive = state.pulls + 1 >= state.pullsNeeded
-		playOnce(root, if decisive then MowConfigs.SUCCESS_SOUND else MowConfigs.PULL_SOUND)
+		local played = playOnce(root, if decisive then MowConfigs.SUCCESS_SOUND else MowConfigs.PULL_SOUND)
+		if decisive then
+			-- Garde pour que la boucle moteur puisse s'enchainer sur SA fin, et pas lui passer dessus.
+			state.success = played
+		end
 	end
 end
 
@@ -569,14 +576,37 @@ end
 -- -- une animation dont on ne lit qu'une IMAGE, jamais le defilement.
 local function startMachine(model: Model, state: CarryState)
 	-- BOUCLE MOTEUR. Elle demarre ICI et pas a la prise : le moteur ne tourne qu'une fois la corde tiree.
+	--
+	-- MAIS PAS TOUT DE SUITE : elle attend la FIN du son de reussite, qu'elle rejoint en CHEVAUCHANT. Lancee a
+	-- l'instant ou le moteur prend, elle passait par-dessus lui et le rendait inaudible -- on croyait qu'il ne
+	-- jouait pas.
+	--
+	-- On demarre AVANT la fin et pas apres : deux sons colles bout a bout laissent un silence d'une image ou deux,
+	-- et ce silence s'entend plus que la transition elle-meme.
 	local root = rootOf(model)
-	local engine = findSound(MowConfigs.RUN_SOUND)
-	if root and engine then
-		local sound = engine:Clone()
-		sound.Looped = true
-		sound.Parent = root
-		sound:Play()
-		state.run = sound
+	local wait = 0
+	local success = state.success
+	if success and success.Parent and success.IsPlaying and success.TimeLength > 0 then
+		wait = math.max(success.TimeLength - success.TimePosition - MowConfigs.RUN_SOUND_OVERLAP, 0)
+	end
+	local function startLoop()
+		-- Il a pu reposer la machine, ou la couper, pendant ce court delai.
+		if carried[model] ~= state or state.run then
+			return
+		end
+		local engine = findSound(MowConfigs.RUN_SOUND)
+		if root and engine then
+			local sound = engine:Clone()
+			sound.Looped = true
+			sound.Parent = root
+			sound:Play()
+			state.run = sound
+		end
+	end
+	if wait > 0 then
+		task.delay(wait, startLoop)
+	else
+		startLoop()
 	end
 	-- Lu par le client : une machine a l'arret ne coupe rien.
 	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, true)
@@ -624,6 +654,9 @@ local function stopMachine(state: CarryState)
 		state.tick:Disconnect()
 		state.tick = nil
 	end
+	-- On LACHE la reference au son de reussite : il se detruit tout seul a la fin, mais garder un pointeur dessus
+	-- ferait croire a une prochaine prise qu'un enchainement est en cours.
+	state.success = nil
 	-- Une par une, et PAS via ipairs sur une table qui peut contenir un trou : ipairs s'arrete au premier nil,
 	-- donc un moteur absent aurait laisse le levier tourner pour toujours.
 	local function cut(track: AnimationTrack?)

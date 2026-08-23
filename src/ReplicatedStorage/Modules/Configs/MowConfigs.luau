@@ -142,6 +142,15 @@ return {
 	SUCCESS_SOUND = "SucessTryLaunchSound",
 	-- Boucle du moteur, des qu'il a demarre et tant qu'on pousse.
 	RUN_SOUND = "IdleLawnMowerSound",
+	-- CHEVAUCHEMENT : de combien la boucle moteur demarre AVANT la fin du son de reussite, en secondes.
+	--
+	-- Sans ca, la boucle partait a l'instant meme ou le moteur prend -- c'est-a-dire par-dessus le son de
+	-- reussite, qui devenait inaudible. On croyait qu'il ne jouait pas ; il jouait, il etait couvert.
+	--
+	-- Le faire demarrer AVANT la fin plutot qu'APRES est ce qui evite le TROU : deux sons colles bout a bout
+	-- laissent un silence d'une image ou deux, et ce silence s'entend plus que la transition elle-meme.
+	-- Monter si on entend encore une couture, descendre si le regime couvre trop tot la reussite.
+	RUN_SOUND_OVERLAP = 0.4,
 	-- Hauteur AJOUTEE a la boucle a plein regime. Le moteur monte donc dans les aigus quand on accelere, comme le
 	-- levier monte dans son animation -- les deux racontent la meme chose.
 	-- 0 = son a hauteur constante.

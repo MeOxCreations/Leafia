@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.402 — Le son de reussite s'entend enfin, et le moteur s'y enchaine
+
+`SucessTryLaunchSound` semblait ne pas jouer. Il jouait -- la boucle moteur partait a l'instant meme ou le moteur
+prend, c'est-a-dire par-dessus lui.
+
+### La boucle attend la FIN du son de reussite
+
+Elle la rejoint en CHEVAUCHANT, `RUN_SOUND_OVERLAP` (0.4 s) avant la fin.
+
+Avant la fin et pas apres, et c'est le point : deux sons colles bout a bout laissent un silence d'une image ou
+deux, et ce silence s'entend PLUS que la transition elle-meme. En se recouvrant, ils ne laissent aucune couture.
+
+L'attente est CALCULEE sur le son lui-meme (`TimeLength - TimePosition`), pas devinee : changer le fichier dans
+Studio ne demande donc pas de revenir regler un delai -- meme raison que le marqueur d'animation qui a remplace le
+delai du cabrage.
+
+### Ce qui ne bouge PAS
+
+L'attribut "moteur en marche" est pose IMMEDIATEMENT. Le deplacement et la coupe ne doivent pas attendre un son :
+seule la BOUCLE est retardee.
+
+Et le delai verifie que le joueur porte ENCORE la machine a l'echeance -- il a pu la reposer entre-temps, et une
+boucle moteur sur une tondeuse posee au sol tournerait toute seule.
+
 ## 0.0.401 — Les sons sont precharges dans les lieux qui affichent le rideau
 
 Ils ne l'etaient pas. Le premier son d'une session partait donc en retard, ou pas du tout.
