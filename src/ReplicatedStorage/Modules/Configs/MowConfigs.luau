@@ -378,7 +378,7 @@ return {
 	-- est-ce que l'input n'arrive pas (vecteur nul), que le moteur n'est pas vu comme demarre, ou que la vitesse
 	-- est a zero ? Les trois donnent le meme symptome a l'ecran et se corrigent a trois endroits differents.
 	-- A REPASSER A FALSE une fois la question reglee : ca imprime en continu.
-	STEER_DEBUG_INPUT = true,
+	STEER_DEBUG_INPUT = false,
 	STEER_DEBUG_POINTS = 14, -- nombre de points. Plus = courbe plus longue et plus lisible, un peu plus cher
 	STEER_DEBUG_STEP = 0.09, -- secondes simulees entre deux points. Plus grand = on voit plus loin, moins precis
 	STEER_DEBUG_SIZE = 0.35,

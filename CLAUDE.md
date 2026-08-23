@@ -585,6 +585,23 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   trois mecanismes (derivee, pivot a l'arret, filtre) au profit d'un seul, donc deux cas qui ne peuvent plus se
   contredire.
 
+- **Le thumbstick tactile de Roblox SE TAIT des qu'une feature prend la camera en main.** `GetMoveVector()` rend
+  ZERO, donc sur mobile le joueur ne peut plus bouger DU TOUT -- et rien ne le signale : l'input arrive bien au
+  jeu, il n'arrive juste plus jusqu'a nous. Constate sur le travail de haie, puis re-paye entierement sur la
+  tondeuse. La reponse est un joystick A NOUS (`Modules/UI/Core/MoveThumb`), allume par la feature concernee.
+  Corollaire de diagnostic : quand une machine ne bouge pas, TROIS causes donnent le meme symptome (input absent,
+  etat pas vu, vitesse a zero) et se corrigent a trois endroits differents -- afficher les trois d'un coup coute
+  cinq minutes et evite trois allers-retours. Et l'AFFICHER A L'ECRAN, pas dans la console : un bug qui n'existe
+  que sur mobile ne se diagnostique pas dans une console qu'on ne peut pas lire sur un telephone.
+- **Convertir une position de DOIGT en position d'INTERFACE est un pari a 50 %, et il se perd.** `InputObject.
+  Position`, `GetMouseLocation()` et les coordonnees d'un ScreenGui ne comptent pas forcement la barre du haut de
+  la meme facon, et le sens ne se DEDUIT pas. Quatre tentatives de recalage sur le joystick mobile, dont deux qui
+  ont AGGRAVE le decalage. La sortie n'est pas de trouver le bon signe : c'est de ne plus avoir a convertir --
+  poser l'element a une place FIXE en fraction d'ecran (juste sur tous les formats par construction) et ne lire
+  que des DELTAS (une difference annule n'importe quel decalage de repere sans avoir a le connaitre). Regle
+  generale : quand une correction echoue plusieurs fois de suite au meme endroit, ce n'est pas la valeur qui est
+  fausse, c'est la question.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

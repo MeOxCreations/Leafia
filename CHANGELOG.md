@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.394 — Le panneau de diagnostic s'eteint, et deux lecons entrent au journal
+
+`STEER_DEBUG_INPUT` repasse a false : la question est tranchee, le panneau n'a plus rien a montrer. Il reste en
+place, eteint -- c'est un outil de mesure, il resservira.
+
+Deux entrees ajoutees au journal de CLAUDE.md, parce que les deux ont coute cher :
+
+- **Le thumbstick tactile de Roblox se tait des qu'une feature prend la camera.** Constate sur la haie, re-paye
+  entierement sur la tondeuse alors que la reponse etait deja ecrite dans un fichier voisin.
+- **Convertir une position de doigt en position d'interface est un pari a 50 %.** Quatre tentatives, dont deux qui
+  ont aggrave le decalage. La sortie n'est pas de trouver le bon signe, c'est de ne plus avoir a convertir.
+
 ## 0.0.393 — Le joystick devient FIXE : on supprime le probleme au lieu de le corriger
 
 Il se posait a cote du pouce sur tous les ecrans. QUATRE tentatives de recaler les coordonnees ont echoue, dont
