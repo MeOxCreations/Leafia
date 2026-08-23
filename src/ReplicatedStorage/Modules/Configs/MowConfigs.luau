@@ -356,7 +356,15 @@ return {
 	--
 	-- Si ca redevenait trop sec, remonter par petits pas (0.26, 0.30), jamais d'un coup a l'ancienne valeur.
 	PULL_CAM_IN_TIME = 0.22,
-	PULL_CAM_OUT_TIME = 0.2,
+	-- LE RETOUR EST BIEN PLUS LENT QUE L'ARRIVEE, et ce n'est pas un oubli : les deux ne font pas le meme travail.
+	--
+	-- On ARRIVE parce qu'on veut y etre : tout ce qui traine avant de pouvoir agir se subit. On REPART parce qu'on
+	-- rend la main au joueur, et une vue qui claque derriere lui donne l'impression d'avoir rate quelque chose.
+	-- Monte de 0.2 : a cette vitesse la camera SAUTAIT derriere le joueur au lieu d'y revenir.
+	--
+	-- Meme asymetrie que le volet du rideau de chargement : couvrir vite (ca cache), decouvrir lentement (ca
+	-- montre).
+	PULL_CAM_OUT_TIME = 0.6,
 	-- COURBE de l'arrivee et du retour. `Quad` en sortie : ca part franc et ca se pose, sans rien de plus.
 	--
 	-- `Back` a ete essaye : il DEPASSE la cible puis revient, ce qui donne le rebond du reste de l'interface.

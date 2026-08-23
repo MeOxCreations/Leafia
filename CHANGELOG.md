@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.400 — La camera revient derriere le joueur en douceur
+
+`PULL_CAM_OUT_TIME` : 0.2 -> 0.6. L'arrivee, elle, ne bouge pas.
+
+### Les deux ne font pas le meme travail
+
+On ARRIVE parce qu'on veut y etre : tout ce qui traine avant de pouvoir agir se subit -- c'est pour ca que
+l'arrivee a ete raccourcie trois fois.
+
+On REPART parce qu'on rend la main au joueur. Une vue qui claque derriere lui donne l'impression d'avoir rate
+quelque chose, alors qu'il ne s'est rien passe. A 0.2 s la camera SAUTAIT derriere lui au lieu d'y revenir.
+
+Meme asymetrie que le volet du rideau de chargement : couvrir vite (ca cache), decouvrir lentement (ca montre).
+Une duree unique pour les deux sens aurait force a choisir lequel sacrifier.
+
 ## 0.0.399 — Le coup de corde qui REUSSIT sonne different, et il sonne AU MOMENT du geste
 
 Trois sons, et une sequence :
