@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.391 — Retour en arriere : la correction d'inset DEPLACAIT le joystick
+
+L'ajout du 0.0.390 est retire. Il ne recalait rien : il decalait.
+
+`InputObject.Position` est deja dans le repere ABSOLU de l'ecran -- le meme que `GetMouseLocation`, et le meme que
+cette interface, qui ignore l'inset. Il n'y avait donc RIEN a convertir, et ajouter la hauteur de la barre a
+introduit l'ecart au lieu de le corriger.
+
+L'`AnchorPoint` des deux cercles etait deja a 0.5, 0.5 : ce n'etait pas la non plus.
+
+### La lecon, pour la troisieme fois
+
+Le sens de ces conversions ne se DEDUIT pas, il se VERIFIE a l'ecran. Ce projet l'a paye sur `GetMouseLocation`,
+puis sur `WorldAnchor`, et maintenant ici. J'ai raisonne au lieu de mesurer, et j'ai ajoute un bug a un bug.
+
+La marche a suivre est ecrite sur place : si le joystick reste decale, le signe est l'autre -- il faut RETRANCHER
+l'inset, des DEUX cotes. Jamais d'un seul : un delta calcule entre deux reperes differents part deja incline.
+
 ## 0.0.390 — Le joystick apparait pile sous le pouce
 
 Il se posait a cote du doigt, decale vers le haut.
