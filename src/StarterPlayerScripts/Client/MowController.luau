@@ -65,6 +65,44 @@ local promptTarget: Model? = nil -- tondeuse dont le prompt est affiche (pour ne
 local promptAnchor: Vector3? = nil
 local actionBound = false
 local lastInputLog = 0 -- throttle du diagnostic d'input (voir STEER_DEBUG_INPUT)
+local debugLabel: TextLabel? = nil
+
+-- Affiche une ligne de diagnostic EN HAUT DE L'ECRAN. Cree l'etiquette a la premiere utilisation.
+--
+-- Volontairement moche et lisible : c'est un outil de mesure, pas une interface. Il disparait avec
+-- STEER_DEBUG_INPUT.
+local function showDebug(text: string)
+	local label = debugLabel
+	if not label then
+		local playerGui = player:FindFirstChildOfClass("PlayerGui")
+		if not playerGui then
+			return
+		end
+		local screen = Instance.new("ScreenGui")
+		screen.Name = "MowDebug"
+		screen.ResetOnSpawn = false
+		screen.IgnoreGuiInset = true
+		screen.DisplayOrder = 5000
+		screen.Parent = playerGui
+		local made = Instance.new("TextLabel")
+		made.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+		made.BackgroundTransparency = 0.35
+		made.Position = UDim2.fromScale(0.5, 0.02)
+		made.AnchorPoint = Vector2.new(0.5, 0)
+		made.Size = UDim2.fromScale(0.44, 0.16)
+		made.TextColor3 = Color3.fromRGB(255, 255, 255)
+		made.TextScaled = true
+		made.Font = Enum.Font.Code
+		-- N'AVALE AUCUN INPUT : un panneau pose par-dessus le joystick tactile empecherait justement de bouger,
+		-- et on croirait avoir aggrave le bug qu'on mesure.
+		made.Active = false
+		made.Parent = screen
+		debugLabel = made
+		label = made
+	end
+	label.Text = text
+end
+
 local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : donne la distance parcourue
 -- CONDUITE en cours. Sert a ne couper AutoRotate qu'une fois, et surtout a le RENDRE une fois -- une
 -- restauration ecrite a chaque image ecraserait un autre systeme qui l'aurait coupe pour ses raisons.
@@ -547,15 +585,20 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	local forwardAmount = math.clamp(-mv.Z, -1, 1)
 	local lateralAmount = math.clamp(mv.X, -1, 1)
 
-	-- DIAGNOSTIC. Voir MowConfigs.STEER_DEBUG_INPUT : quand la machine ne bouge pas, il y a TROIS causes possibles
-	-- qui donnent exactement le meme symptome, et elles se corrigent a trois endroits differents.
-	if MowConfigs.STEER_DEBUG_INPUT and os.clock() - lastInputLog > 0.5 then
+	-- DIAGNOSTIC A L'ECRAN. Voir MowConfigs.STEER_DEBUG_INPUT.
+	--
+	-- AFFICHE, PAS IMPRIME : ce probleme n'existe que sur mobile, et sur un telephone la console n'est pas
+	-- lisible. Un diagnostic qu'on ne peut pas lire la ou le bug se produit ne sert a rien.
+	--
+	-- Quand la machine ne bouge pas, TROIS causes donnent exactement le meme symptome et se corrigent a trois
+	-- endroits differents : l'input n'arrive pas, le moteur n'est pas vu comme demarre, ou la vitesse est a zero.
+	if MowConfigs.STEER_DEBUG_INPUT and os.clock() - lastInputLog > 0.2 then
 		lastInputLog = os.clock()
-		print(
-			`[Mow] input {string.format("%.2f", mv.X)},{string.format("%.2f", mv.Z)} `
-				.. `| vitesse {string.format("%.1f", humanoid.WalkSpeed)} `
-				.. `| moteur {if mower:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true then "ON" else "off"} `
-				.. `| tactile {if UserInputService.TouchEnabled then "oui" else "non"}`
+		showDebug(
+			`input {string.format("%.2f", mv.X)} , {string.format("%.2f", mv.Z)}`
+				.. `\nvitesse {string.format("%.1f", humanoid.WalkSpeed)}`
+				.. `\nmoteur {if mower:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true then "ON" else "OFF"}`
+				.. `\ntactile {if UserInputService.TouchEnabled then "oui" else "non"}`
 		)
 	end
 

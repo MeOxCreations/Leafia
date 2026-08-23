@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.386 — Le diagnostic de la tondeuse passe A L'ECRAN
+
+Le probleme n'existe QUE sur mobile, et sur un telephone la console n'est pas lisible. Un diagnostic qu'on ne peut
+pas lire la ou le bug se produit ne sert a rien -- c'est pour ca que le precedent n'a rien donne.
+
+Un panneau en haut de l'ecran affiche donc les quatre valeurs qui separent les trois causes possibles :
+
+- **input** : ce que la conduite recoit du joystick. A `0.00 , 0.00` alors qu'on pousse, l'input n'arrive pas.
+- **vitesse** : la WalkSpeed reelle. A `0.0`, le serveur bloque le deplacement.
+- **moteur** : ON ou OFF, tel que le CLIENT le voit. A OFF alors que la machine tourne, l'attribut ne remonte pas.
+- **tactile** : confirme qu'on est bien reconnu comme mobile.
+
+Ces trois causes donnent exactement le meme symptome a l'ecran et se corrigent a trois endroits differents. Les
+essayer une par une couterait trois allers-retours ; les mesurer en coute zero.
+
+Le panneau n'avale AUCUN input : pose par-dessus le joystick tactile, il empecherait justement de bouger, et on
+croirait avoir aggrave le bug qu'on mesure.
+
+A retirer avec `STEER_DEBUG_INPUT` une fois la question tranchee.
+
 ## 0.0.385 — L'herbe lointaine disparait sur mobile, et un diagnostic pour la tondeuse
 
 ### L'herbe lointaine est RETIREE (mobile uniquement)
