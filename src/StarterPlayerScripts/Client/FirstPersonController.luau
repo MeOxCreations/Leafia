@@ -55,6 +55,17 @@ local LOADING_DONE_ATTRIBUTE = "LeafiaLoadingDone"
 -- Au-dela, on demarre quand meme. Un garde-fou, pas une duree : si l'ecran de chargement disparaissait un jour
 -- sans poser son attribut, la vue subjective ne s'activerait plus JAMAIS et on chercherait longtemps pourquoi.
 local LOADING_TIMEOUT = 40
+-- Y A-T-IL UNE SOURIS A VERROUILLER ?
+--
+-- CE TEST N'EST PAS UN DETAIL, il a rendu la tondeuse INJOUABLE sur mobile. La vue subjective forcait
+-- `MouseBehavior = LockCenter` a chaque image, y compris sur un telephone -- et verrouiller une souris qui
+-- n'existe pas casse les controles TACTILES de Roblox : le joystick ne remontait plus rien du tout. Mesure a
+-- l'ecran : vecteur de deplacement a zero alors que le doigt poussait.
+--
+-- `MouseEnabled` et pas `TouchEnabled` : c'est la question exacte qu'on se pose. Un PC a ecran tactile a les
+-- DEUX, et sa souris doit rester verrouillee ; un telephone n'a que le tactile. Tester la presence du tactile
+-- aurait donc casse la vue subjective sur les PC tactiles.
+local HAS_MOUSE = UserInputService.MouseEnabled
 local RENDER_BIND = "LeafiaFirstPerson"
 
 local available = game.PlaceId ~= PlacesConfig.MAIN
@@ -149,6 +160,11 @@ local function step()
 	-- LE CURSEUR PASSE PAR CursorController, jamais par MouseIconEnabled en direct : le jeu affiche un curseur
 	-- CUSTOM (une ImageLabel qui suit la souris), et couper l'icone systeme ne l'aurait pas efface -- il serait
 	-- reste plante au centre de l'ecran par-dessus le point de visee. Ce module est le seul ecrivain des deux.
+	-- SANS SOURIS, ON NE TOUCHE A RIEN. Pas de curseur a cacher, pas de souris a verrouiller -- et surtout, y
+	-- toucher casse les controles tactiles.
+	if not HAS_MOUSE then
+		return
+	end
 	CursorController.setSuppressed(not free)
 	-- ON RECULE D'UN CHEVEU pour que Roblox cesse de verrouiller la souris. Ecrire MouseBehavior apres lui ne
 	-- suffit PAS : il repose la sienne et gagne (verifie a l'ecran). Tant que la camera est collee a la tete, la
@@ -176,9 +192,11 @@ local function setFirstPerson(on: boolean)
 
 	-- ON REND TOUT DE SUITE CE QUI EST BINAIRE : la souris, le curseur, le reticule. Rien a faire glisser la, et
 	-- garder la souris verrouillee pendant que la vue recule serait desagreable.
-	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-	CursorController.setSuppressed(false)
-	CameraEffects.SetFirstPersonGap(0)
+	if HAS_MOUSE then
+		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+		CursorController.setSuppressed(false)
+		CameraEffects.SetFirstPersonGap(0)
+	end
 	local screen = gui
 	if screen then
 		screen.Enabled = false

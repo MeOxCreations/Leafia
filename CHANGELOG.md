@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.387 — On ne verrouille plus une souris qui n'existe pas
+
+Le joystick tactile ne remontait RIEN : impossible de bouger avec la tondeuse sur mobile.
+
+### Ce que la mesure a donne
+
+    input 0.00 , 0.00   |  vitesse 6.0  |  moteur ON  |  tactile oui
+
+Trois valeurs sur quatre etaient bonnes. Le serveur autorisait le deplacement, le moteur tournait, l'appareil
+etait bien reconnu -- seul l'input etait mort. Sans ce panneau, les trois corrections auraient ete tentees une par
+une.
+
+### La cause
+
+La vue subjective forcait `MouseBehavior = LockCenter` A CHAQUE IMAGE, y compris sur un telephone. Verrouiller
+une souris qui n'existe pas casse les controles TACTILES de Roblox : le joystick cesse de remonter quoi que ce
+soit.
+
+C'est un defaut introduit avec la vue subjective, qui n'a jamais ete testee sur mobile -- et elle est active
+partout HORS du hub, donc exactement la ou se trouve la tondeuse.
+
+### Le test : `MouseEnabled`, pas `TouchEnabled`
+
+C'est la question exacte qu'on se pose : y a-t-il une souris a verrouiller ?
+
+Un PC a ecran tactile a les DEUX, et sa souris doit rester verrouillee. Un telephone n'a que le tactile. Tester la
+presence du TACTILE aurait donc casse la vue subjective sur les PC tactiles -- on aurait echange un bug contre un
+autre.
+
+Sans souris, le controller ne touche plus ni au curseur, ni au verrouillage, ni a l'ecart de camera. Il n'y a rien
+a y faire.
+
 ## 0.0.386 — Le diagnostic de la tondeuse passe A L'ECRAN
 
 Le probleme n'existe QUE sur mobile, et sur un telephone la console n'est pas lisible. Un diagnostic qu'on ne peut
