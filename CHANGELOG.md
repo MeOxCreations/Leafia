@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.430 — Le jeu dit si l'animation pilote vraiment le seau
+
+L'animation du seau anime le SEAU LUI-MEME : sa piste existe dans l'editeur, elle le pose a plat de 0 a 0.5 s
+puis le fait lever a 0.57 s. Si elle etait appliquee en jeu, tout le travail d'angle des versions precedentes
+serait inutile -- c'est l'animation qui commanderait, pas la config.
+
+Or une animation Roblox retrouve un joint PAR SON NOM. Si `JOINT_NAME` ne correspond pas au nom du Motor6D pose
+sur le rig d'animation, la piste du seau ne trouve rien et n'ecrit RIEN. Sans la moindre erreur. Le seau reste
+fige sur `CARRY_C0`, et on croit a un probleme d'angle alors que l'animation n'est jamais appliquee.
+
+C'est exactement le piege deja paye sur les PNJ (animations Mixamo sur un rig sans os correspondants) : la piste
+tourne, les joints restent a zero, rien ne signale l'echec.
+
+### On mesure le resultat, pas l'intention
+
+A la prise, le jeu regarde 0.6 s plus tard si le `Transform` du joint a bouge. Les animations ecrivent dans
+`Transform`, jamais dans `C0` : reste a l'identite = personne n'a ecrit dedans.
+
+La console dit alors l'un des deux :
+
+    l'animation pilote bien le seau (joint "X" anime).
+    l'animation NE pilote PAS le seau : le joint "X" sur "Y" n'a jamais bouge...
+
+Le second message nomme les deux causes possibles (`JOINT_NAME`, `JOINT_PARENT`) au lieu de laisser chercher.
+
+### Ce que ca decide pour la suite
+
+Si l'animation pilote le seau, tout le reglage d'angle devient inutile : `PLACE_STRAIGHTEN_TIME` et l'orientation
+composee a la repose sont a retirer, l'animation fait deja le travail. Si elle ne le pilote pas, il n'y a qu'un
+nom a corriger. Deux chemins opposes, une seule mesure pour trancher.
+
+### A faire dans Studio
+
+Rien pour ce commit. Mais le nom de la piste du seau dans l'editeur d'animation est la valeur a reporter dans
+`JOINT_NAME` si le message dit que rien ne bouge.
+
 ## 0.0.429 — Le seau se redresse DANS LES MAINS, pendant le geste
 
 Il etait tenu PENCHE jusqu'au dernier instant, puis se remettait droit une fois lache. Le redressement se

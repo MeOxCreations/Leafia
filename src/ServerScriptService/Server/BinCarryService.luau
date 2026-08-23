@@ -235,6 +235,31 @@ local function grab(player: Player, model: Model)
 	joint.Parent = anchorPart
 	state.joint = joint
 
+	-- L'ANIMATION PILOTE-T-ELLE VRAIMENT LE SEAU ? Une animation Roblox retrouve un joint PAR SON NOM. Si
+	-- JOINT_NAME ne correspond pas au nom du Motor6D utilise pour ANIMER, la piste du seau ne trouve rien et
+	-- n'ecrit RIEN -- sans la moindre erreur. Le seau reste alors fige sur CARRY_C0, et on croit a un probleme
+	-- d'angle alors que l'animation n'est jamais appliquee.
+	--
+	-- On mesure donc le RESULTAT, pas l'intention : les animations ecrivent dans `Transform`, jamais dans `C0`.
+	-- Reste a l'identite = personne n'a ecrit dedans.
+	if BinConfigs.DEBUG then
+		task.delay(BinConfigs.ANIM_CHECK_DELAY, function()
+			if carried[model] ~= state or not joint.Parent then
+				return
+			end
+			if joint.Transform == CFrame.identity then
+				print(
+					`[BinCarryService] l'animation NE pilote PAS le seau : le joint "{joint.Name}" sur`
+						.. ` "{joint.Part0 and joint.Part0.Name}" n'a jamais bouge. Le seau garde donc l'angle fige de`
+						.. " CARRY_C0. Cause la plus probable : le nom du joint ne correspond pas a celui du rig"
+						.. " d'animation (JOINT_NAME), ou l'anim est montee sur une autre part (JOINT_PARENT)."
+				)
+			else
+				print(`[BinCarryService] l'animation pilote bien le seau (joint "{joint.Name}" anime).`)
+			end
+		end)
+	end
+
 	carried[model] = state
 	model:SetAttribute(BinConfigs.CARRIED_ATTRIBUTE, player.UserId)
 	character:SetAttribute(BinConfigs.CARRYING_ATTRIBUTE, true)

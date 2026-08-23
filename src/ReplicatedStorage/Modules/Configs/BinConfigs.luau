@@ -32,9 +32,16 @@ return {
 	-- Position et angle du seau vus depuis JOINT_PARENT. Valeur relevee sur le rig. Z negatif = devant le
 	-- torse. Monter Z (vers 0) le rapproche du corps, baisser Y le fait descendre vers les jambes.
 	CARRY_C0 = CFrame.new(0, 0, -2.6) * CFrame.Angles(0, math.rad(90), 0),
-	-- Nom du joint cree. Sert aussi a le RETROUVER pour le detruire a la repose : un joint orphelin laisserait
-	-- le seau colle au joueur pour toujours.
+	-- NOM DU JOINT CREE, ET CE NOM EST CRITIQUE. Une animation Roblox retrouve un joint PAR SON NOM : pour que
+	-- la piste du seau (celle que tu animes dans l'editeur) pilote le seau EN JEU, ce nom doit etre EXACTEMENT
+	-- celui du Motor6D pose sur le rig d'animation. S'ils different, la piste ne trouve rien et n'ecrit RIEN,
+	-- sans la moindre erreur : le seau reste fige sur CARRY_C0 et on croit a un probleme d'angle.
+	--
+	-- Le nom du rig se lit dans l'editeur d'animation (c'est le nom de la PISTE) ou avec VerifierBin.lua.
 	JOINT_NAME = "BinCarryJoint",
+	-- Secondes apres la prise avant de verifier que l'animation a bien bouge le joint. Assez tard pour qu'une
+	-- piste ait eu le temps d'ecrire, assez tot pour que le message serve.
+	ANIM_CHECK_DELAY = 0.6,
 	-- Distance MAX joueur <-> seau acceptee par le serveur a la prise (anti-triche). Large expres : le client
 	-- a deja filtre par DETECT_RADIUS, ceci n'est qu'un garde-fou contre un remote falsifie.
 	MAX_DIST = 30,
