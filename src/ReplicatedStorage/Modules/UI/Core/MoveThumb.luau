@@ -25,6 +25,7 @@
 --
 -- Purement client, purement visuel : il ne fait que RENDRE une valeur, il ne deplace personne.
 
+local GuiService = game:GetService("GuiService")
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
@@ -130,7 +131,19 @@ local function build()
 	head.Parent = screen
 
 	zone.InputBegan:Connect(function(input: InputObject)
-		if not active or finger or input.UserInputType ~= Enum.UserInputType.Touch then
+		-- `UserInputState == Begin` EST INDISPENSABLE, et c'etait le bug.
+		--
+		-- L'`InputBegan` d'un element recoit AUSSI les doigts qui ont commence AILLEURS et qui GLISSENT dessus.
+		-- Sans ce test, le doigt qui tourne la camera etait pris pour le joystick des qu'il passait au-dessus de la
+		-- zone -- et comme il n'avait pas commence la, le bouton restait plante au centre. D'ou un joystick qui
+		-- "marche parfois".
+		-- C'est ecrit noir sur blanc dans le thumbstick de Roblox ; il a fallu aller le lire.
+		if
+			not active
+			or finger
+			or input.UserInputType ~= Enum.UserInputType.Touch
+			or input.UserInputState ~= Enum.UserInputState.Begin
+		then
 			return
 		end
 		finger = input
@@ -148,7 +161,10 @@ local function build()
 		head.Visible = true
 	end)
 
-	UserInputService.InputChanged:Connect(function(input: InputObject)
+	-- `TouchMoved` ET PAS `InputChanged` : c'est l'evenement dedie au tactile, et le seul qui tire de facon fiable
+	-- pour un doigt dont le geste a commence SUR un element d'interface. C'est celui qu'utilise le thumbstick de
+	-- Roblox lui-meme.
+	UserInputService.TouchMoved:Connect(function(input: InputObject)
 		if input ~= finger then
 			return
 		end
@@ -171,8 +187,16 @@ local function build()
 
 	-- ON ECOUTE LA FIN AU NIVEAU DU SERVICE, pas du bouton : un doigt qui GLISSE hors de la zone avant de se lever
 	-- ne declencherait jamais l'evenement du bouton, et le joystick resterait colle a fond pour toujours.
-	UserInputService.InputEnded:Connect(function(input: InputObject)
+	UserInputService.TouchEnded:Connect(function(input: InputObject)
 		if input == finger then
+			hideVisuals()
+		end
+	end)
+
+	-- LE MENU ROBLOX VOLE LE DOIGT. Quand il s'ouvre, le toucher en cours ne se termine JAMAIS : sans ce filet, on
+	-- ressort du menu avec le joystick colle a fond et le personnage qui part tout seul.
+	GuiService.MenuOpened:Connect(function()
+		if finger then
 			hideVisuals()
 		end
 	end)

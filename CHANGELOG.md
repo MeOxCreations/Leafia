@@ -2204,6 +2204,44 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.395 — Le joystick ne marchait "que parfois" : trois erreurs d'evenement tactile
+
+Reponses trouvees en lisant le thumbstick de Roblox lui-meme, forke dans l'autre projet du joueur. C'est la
+reference : autant partir de ce qui marche deja plutot que de re-deriver.
+
+### 1. Un autre doigt volait le joystick
+
+Le code de Roblox porte ce commentaire :
+
+> *A touch that starts elsewhere on the screen will be sent to a frame's InputBegan event if it moves over the
+> frame.*
+
+L'`InputBegan` d'un element recoit donc AUSSI les doigts qui ont commence AILLEURS et qui glissent dessus. Le doigt
+qui tourne la camera etait pris pour le joystick des qu'il passait au-dessus de la zone -- et comme il n'avait pas
+commence la, le bouton restait plante au centre.
+
+C'est CA, le "parfois ca marche pas" : ca dependait entierement du trajet de l'autre pouce.
+
+Le test `UserInputState == Begin` regle la question.
+
+### 2. `TouchMoved` et pas `InputChanged`
+
+C'est l'evenement dedie au tactile, et le seul qui tire de facon fiable pour un doigt dont le geste a commence SUR
+un element d'interface -- exactement notre cas, puisque la zone est un bouton.
+
+Meme chose pour la fin : `TouchEnded`.
+
+### 3. Le menu Roblox vole le doigt
+
+Quand il s'ouvre, le toucher en cours ne se termine JAMAIS. Sans filet, on ressort du menu avec le joystick colle a
+fond et le personnage qui part tout seul. `GuiService.MenuOpened` le relache.
+
+### La lecon
+
+Roblox fournit son PlayerModule en source. Quand un comportement d'input surprend, la reponse y est ecrite -- et
+elle est plus fiable que n'importe quel raisonnement. Trois des quatre echecs de la veille auraient ete evites en
+allant le lire d'abord.
+
 ## 0.0.394 — Le panneau de diagnostic s'eteint, et deux lecons entrent au journal
 
 `STEER_DEBUG_INPUT` repasse a false : la question est tranchee, le panneau n'a plus rien a montrer. Il reste en

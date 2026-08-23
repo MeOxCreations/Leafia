@@ -602,6 +602,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   generale : quand une correction echoue plusieurs fois de suite au meme endroit, ce n'est pas la valeur qui est
   fausse, c'est la question.
 
+- **Le `InputBegan` d'un element d'interface recoit AUSSI les doigts qui ont commence AILLEURS et qui glissent
+  dessus.** Sans tester `input.UserInputState == Enum.UserInputState.Begin`, un joystick tactile capture le doigt
+  qui tourne la camera des qu'il passe au-dessus -- et comme ce doigt n'a pas commence la, rien ne bouge ensuite.
+  Symptome : "ca marche parfois", en fonction du trajet de l'autre pouce. Corollaires du meme code : utiliser
+  `UserInputService.TouchMoved` / `TouchEnded` et PAS `InputChanged` / `InputEnded` (seuls les premiers tirent de
+  facon fiable pour un geste commence SUR un element), et relacher sur `GuiService.MenuOpened` (le menu Roblox vole
+  le doigt, dont le toucher ne se termine alors JAMAIS). Tout ca est ecrit dans le `TouchThumbstick` du PlayerModule,
+  que Roblox fournit en SOURCE : quand un comportement d'input surprend, aller le lire coute dix minutes et bat
+  n'importe quel raisonnement.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
