@@ -494,10 +494,16 @@ return {
 	WHEEL_MOTORS = { "WheelBackMotor6D", "WheelFrontMotor6D" },
 	-- Sens de rotation. Si les roues tournent a l'envers, mettre -1. Se voit a l'ecran, ne se deduit pas.
 	WHEEL_DIRECTION = 1,
-	-- AXE de rotation dans le repere du joint : "X", "Y" ou "Z". Depend de la facon dont le rig a ete monte, donc
-	-- il ne se DEDUIT pas : si la roue tourne sur le mauvais axe (elle roule de travers, ou elle pivote a plat),
-	-- essayer les deux autres. C'est l'ecran qui tranche, pas le raisonnement.
-	WHEEL_AXIS = "X",
+	-- AXE de rotation. "AUTO", ou "X" / "Y" / "Z" pour l'imposer.
+	--
+	-- EN AUTO, IL SE DEDUIT DE LA GEOMETRIE, et c'est fiable : une roue est LARGE x LARGE x MINCE. Son axe de
+	-- rotation est donc forcement le cote le plus MINCE -- c'est ce qui fait d'elle une roue et pas un disque
+	-- qu'on ferait tourner a plat.
+	--
+	-- Ca evite de tatonner entre trois valeurs a l'ecran, et surtout ca survit a un re-export du modele : si le rig
+	-- change d'orientation dans Blender, la deduction suit toute seule.
+	-- Passer a "X", "Y" ou "Z" seulement si la roue n'a pas des proportions de roue (un cube, par exemple).
+	WHEEL_AXIS = "AUTO",
 	-- Rayon de roue de secours (studs) si on n'arrive pas a le lire sur la part. Sinon il est MESURE sur la roue.
 	WHEEL_RADIUS_FALLBACK = 0.6,
 

@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.403 — L'axe de rotation des roues se DEDUIT de leur forme
+
+Les roues ne tournaient toujours pas visiblement. Les joints etaient bien trouves depuis le 0.0.332 -- restait
+l'AXE, qui etait ecrit en dur ("X") et qu'il fallait tatonner entre trois valeurs.
+
+### Une roue a une forme de roue
+
+LARGE x LARGE x MINCE. Son axe de rotation est donc forcement le cote le plus MINCE -- c'est ce qui en fait une
+roue et pas un disque qu'on ferait tourner a plat.
+
+`WHEEL_AXIS = "AUTO"` le deduit de la taille de la part. Deux avantages sur les trois essais a l'ecran :
+
+- On ne tatonne plus, et on ne se trompe pas de piste : une roue qui tourne sur le mauvais axe RESSEMBLE a une
+  roue qui ne tourne pas.
+- Ca survit a un re-export : si le rig change d'orientation dans Blender, la deduction suit toute seule.
+
+L'axe reste imposable ("X", "Y", "Z") pour une piece qui n'aurait pas des proportions de roue.
+
+Meme famille que le rayon, deja MESURE sur la part plutot que regle a la main : tout ce qu'on peut lire sur le
+modele n'a pas a etre recopie dans une config, ou il finira par diverger.
+
 ## 0.0.402 — Le son de reussite s'entend enfin, et le moteur s'y enchaine
 
 `SucessTryLaunchSound` semblait ne pas jouer. Il jouait -- la boucle moteur partait a l'instant meme ou le moteur

@@ -511,7 +511,21 @@ local function spinWheels(model: Model, distance: number)
 			local delta = MowConfigs.WHEEL_DIRECTION * distance / radius
 			local angle = ((wheelAngles[motor] or 0) + delta) % (math.pi * 2)
 			wheelAngles[motor] = angle
+			-- AXE DEDUIT DE LA GEOMETRIE. Une roue est LARGE x LARGE x MINCE : son axe de rotation est le cote le
+			-- plus MINCE, c'est ce qui fait d'elle une roue et pas un disque qu'on ferait tourner a plat.
+			-- Plus fiable que trois essais a l'ecran, et ca survit a un re-export du modele : si le rig change
+			-- d'orientation dans Blender, la deduction suit toute seule.
 			local axis = MowConfigs.WHEEL_AXIS
+			if axis == "AUTO" and wheel then
+				local w = wheel.Size
+				if w.X <= w.Y and w.X <= w.Z then
+					axis = "X"
+				elseif w.Y <= w.Z then
+					axis = "Y"
+				else
+					axis = "Z"
+				end
+			end
 			local spin = if axis == "Y"
 				then CFrame.Angles(0, angle, 0)
 				elseif axis == "Z" then CFrame.Angles(0, 0, angle)
