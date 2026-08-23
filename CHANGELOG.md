@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.409 — Les emetteurs introuvables se signalent, et listent ce qui EXISTE
+
+Le code qui allume les particules etait bien en place depuis le 0.0.397. Mais un nom d'emetteur qui ne correspond
+a rien donnait exactement le meme resultat qu'un effet coupe : RIEN. On cherche alors le probleme dans le code,
+dans les conditions, dans les particules elles-memes -- partout sauf dans le nom.
+
+L'avertissement dit maintenant :
+
+- les noms attendus qui n'ont PAS ete trouves ;
+- et la liste des emetteurs REELLEMENT presents dans le modele.
+
+C'est ce deuxieme point qui compte. Un message qui dit seulement "introuvable" oblige a aller comparer a la main
+dans Studio ; celui-ci contient la reponse. S'il affiche "Presents : AUCUN", c'est que les emetteurs ne sont pas
+sous le modele de la tondeuse -- une autre question, mais une question NETTE.
+
+Meme regle que les zones d'herbe et les animations d'ambiance : un systeme qui balaye doit dire ce qu'il n'a pas
+trouve, et NOMMER plutot que compter.
+
 ## 0.0.408 — Le degrade de l'etiquette TIPS passe a la verticale
 
 `TIPS_LABEL_SHADE_ROTATION` : 0 -> 90.

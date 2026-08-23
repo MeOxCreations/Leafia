@@ -457,27 +457,53 @@ end
 -- porte qu'une machine a la fois, donc rien a nettoyer, et on ne parcourt pas les descendants a chaque image.
 local emitterModel: Model? = nil
 local emittersByName: { [string]: { ParticleEmitter } } = {}
+-- Les noms REELLEMENT presents, gardes pour pouvoir les afficher quand un nom attendu manque.
+local emitterNamesSeen: { string } = {}
+local emitterWarned = false
 
 local function emittersOf(model: Model, names: { string }): { ParticleEmitter }
 	if emitterModel ~= model then
 		emitterModel = model
 		table.clear(emittersByName)
+		table.clear(emitterNamesSeen)
 		for _, d in ipairs(model:GetDescendants()) do
 			if d:IsA("ParticleEmitter") then
 				local list = emittersByName[d.Name]
 				if not list then
 					list = {}
 					emittersByName[d.Name] = list
+					emitterNamesSeen[#emitterNamesSeen + 1] = d.Name
 				end
 				list[#list + 1] = d
 			end
 		end
+		emitterWarned = false
 	end
 	local found: { ParticleEmitter } = {}
+	local missing: { string } = {}
 	for _, name in ipairs(names) do
-		for _, emitter in ipairs(emittersByName[name] or {}) do
-			found[#found + 1] = emitter
+		local list = emittersByName[name]
+		if list then
+			for _, emitter in ipairs(list) do
+				found[#found + 1] = emitter
+			end
+		else
+			missing[#missing + 1] = name
 		end
+	end
+
+	-- ON DIT CE QU'ON N'A PAS TROUVE, ET ON LISTE CE QU'IL Y A.
+	--
+	-- Sans ca, un nom d'emetteur mal orthographie donne exactement le meme resultat qu'un effet coupe : rien. On
+	-- cherche alors le probleme dans le code, dans les conditions, dans les particules elles-memes -- partout sauf
+	-- dans le nom.
+	-- Lister les emetteurs REELLEMENT presents evite l'aller-retour : la reponse est dans le message.
+	if #missing > 0 and not emitterWarned then
+		emitterWarned = true
+		warn(
+			`[Mow] Emetteur(s) introuvable(s) sous "{model.Name}" : {table.concat(missing, ", ")}. `
+				.. `Presents dans le modele : {if #emitterNamesSeen > 0 then table.concat(emitterNamesSeen, ", ") else "AUCUN"}.`
+		)
 	end
 	return found
 end
