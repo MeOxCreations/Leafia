@@ -13,6 +13,8 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
@@ -113,10 +115,97 @@ local function restore(state: CarryState)
 end
 
 -- PRISE : desancre + soude la racine du seau a JOINT_PARENT du porteur, avec le C0 mesure sur le rig.
+-- ECRASEMENT A L'ATTERRISSAGE. Le seau s'aplatit au contact du sol puis reprend sa forme. Pur habillage.
+--
+-- ON NE PEUT PAS ECRASER UN MODEL AVEC `ScaleTo` : il est UNIFORME (il retrecirait le seau au lieu de
+-- l'aplatir) et il travaille autour du PIVOT, qui suit la bounding box. On anime donc chaque part a la main,
+-- autour d'un repere pose AU SOL : la base reste collee par terre pendant que le haut descend.
+--
+-- Cote SERVEUR, pour que tout le monde le voie -- en co-op un effet local ne serait vu que de celui qui pose.
+local squashTokens: { [Model]: number } = {}
+
+-- Coupe un ecrasement en cours. A appeler avant toute reprise : les parts redeviennent libres, et une soudure
+-- se battrait avec la boucle.
+local function stopSquash(model: Model)
+	squashTokens[model] = nil
+end
+
+local function squashOnLand(model: Model)
+	if BinConfigs.SQUASH_TIME <= 0 then
+		return
+	end
+	local pivot = model:GetPivot()
+	local bottom = lowestY(model)
+	if bottom >= math.huge then
+		return
+	end
+	-- REPERE POSE AU SOL, sous le seau. C'est autour de lui qu'on ecrase : la base ne decolle donc jamais,
+	-- contrairement a un ecrasement autour du centre, qui ferait s'enfoncer puis flotter l'objet.
+	local ground = CFrame.new(Vector3.new(pivot.Position.X, bottom, pivot.Position.Z)) * (pivot - pivot.Position)
+
+	type Saved = { part: BasePart, size: Vector3, rel: CFrame }
+	local saved: { Saved } = {}
+	for _, d in ipairs(model:GetDescendants()) do
+		if d:IsA("BasePart") then
+			table.insert(saved, { part = d, size = d.Size, rel = ground:ToObjectSpace(d.CFrame) })
+		end
+	end
+	if #saved == 0 then
+		return
+	end
+
+	local token = (squashTokens[model] or 0) + 1
+	squashTokens[model] = token
+
+	local function apply(sy: number, sxz: number)
+		local scale = Vector3.new(sxz, sy, sxz)
+		for _, item in ipairs(saved) do
+			if item.part.Parent then
+				item.part.Size = item.size * scale
+				local rel = item.rel
+				item.part.CFrame = ground * CFrame.new(rel.Position * scale) * (rel - rel.Position)
+			end
+		end
+	end
+
+	task.spawn(function()
+		local t0 = os.clock()
+		while squashTokens[model] == token do
+			local a = (os.clock() - t0) / BinConfigs.SQUASH_TIME
+			if a >= 1 then
+				break
+			end
+			-- Il part ECRASE et remonte en DEPASSANT un peu sa hauteur : c'est ce depassement qui fait le rebond.
+			local eased = TweenService:GetValue(a, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			local sy = BinConfigs.SQUASH_Y + (1 - BinConfigs.SQUASH_Y) * eased
+			apply(sy, 1 + (1 - sy) * BinConfigs.SQUASH_SPREAD)
+			RunService.Heartbeat:Wait()
+		end
+
+		local finished = squashTokens[model] == token
+		if finished then
+			squashTokens[model] = nil
+			-- Valeurs EXACTES a l'arrivee, pas approchees : une interpolation laisse toujours un residu, et un
+			-- seau repris puis repose garderait un ecart de taille qui s'accumulerait a chaque fois.
+			apply(1, 1)
+		else
+			-- Coupe en plein vol (le seau vient d'etre repris) : on rend les tailles, mais PAS les positions --
+			-- la soudure en est proprietaire desormais, et lui ecrire dessus la ferait sauter.
+			for _, item in ipairs(saved) do
+				if item.part.Parent then
+					item.part.Size = item.size
+				end
+			end
+		end
+	end)
+end
+
 local function grab(player: Player, model: Model)
 	if carried[model] then
 		return -- deja porte (par nous ou par un autre)
 	end
+	-- Un ecrasement en cours ecrirait les positions des parts a chaque image : il se battrait avec la soudure.
+	stopSquash(model)
 	local character = player.Character
 	if not character then
 		return
@@ -186,6 +275,7 @@ local function place(player: Player, model: Model)
 	end
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
+	local landed = false
 
 	detach(state)
 	carried[model] = nil
@@ -232,11 +322,17 @@ local function place(player: Player, model: Model)
 			local bottom = lowestY(model)
 			if bottom < math.huge then
 				model:PivotTo(target + Vector3.new(0, groundY - bottom, 0))
+				landed = true
 			end
 		end
 	end
 
 	restore(state)
+	-- APRES restore : l'ecrasement ecrit les Size et les CFrame des parts, il doit donc partir d'un objet deja
+	-- rendu a son etat normal. Et seulement si le seau a vraiment TOUCHE un sol : rien ne s'ecrase dans le vide.
+	if landed then
+		squashOnLand(model)
+	end
 end
 
 -- RELACHE IMMEDIAT : mort, respawn, depart. On detache et on restaure sur place, sans chercher le sol (le

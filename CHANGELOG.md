@@ -2204,6 +2204,47 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.422 — Le seau s'ecrase en touchant le sol
+
+Il s'aplatit une fraction de seconde au contact, puis reprend sa forme en depassant un peu -- c'est ce
+depassement qui fait le rebond. Pur habillage : rien ne depend de sa taille.
+
+### Pourquoi ce n'est pas un `ScaleTo`
+
+`Model:ScaleTo` est UNIFORME : il retrecirait le seau au lieu de l'aplatir. Et il travaille autour du PIVOT, qui
+suit la bounding box -- l'objet s'enfoncerait puis flotterait.
+
+Chaque part est donc animee a la main, autour d'un repere pose AU SOL, sous le seau. La base reste collee par
+terre pendant que le haut descend, ce qui est exactement ce qu'on veut voir.
+
+### Cote serveur
+
+En co-op, un effet local ne serait vu que de celui qui pose. Le seau est deja une affaire de serveur (soudure,
+recherche du sol), l'ecrasement y reste.
+
+### Il finit TOUJOURS a ses dimensions d'origine
+
+Valeurs exactes a l'arrivee, pas approchees : une interpolation laisse toujours un residu, et un seau repris
+puis repose garderait un ecart de taille qui s'accumulerait a chaque fois.
+
+Et s'il est repris EN PLEIN ECRASEMENT, on rend les tailles mais PAS les positions : la soudure en est
+proprietaire a cet instant, lui ecrire dessus la ferait sauter. `grab` coupe l'effet avant de souder, pour la
+meme raison.
+
+L'etalement en largeur est exprime comme un ECART de la hauteur perdue, pas comme une valeur absolue : il tombe
+donc a zero pile en meme temps que l'ecrasement, sans qu'aucune constante n'ait a rester d'accord avec l'autre.
+
+### Rien ne s'ecrase dans le vide
+
+L'effet ne part que si le seau a REELLEMENT touche un sol. Repose au bord d'une plateforme sans sol trouve : pas
+d'ecrasement, plutot qu'un rebond sur rien.
+
+### A FAIRE DANS STUDIO
+
+Regler `RenderFidelity` du mesh du seau sur **Precise** ou **Performance**. A `Automatic`, Roblox echange le
+maillage selon la taille a l'ecran : une part qui change fortement de taille en une fraction de seconde
+CLIGNOTE. Cette propriete ne s'ecrit PAS depuis un script (capacite Plugin), et Rojo ne la synchronise pas.
+
 ## 0.0.421 — Le joueur marche jusqu'au seau au lieu de tendre les bras
 
 Le prompt apparait a huit studs, et le geste partait sur place : les bras se refermaient dans le vide pendant
