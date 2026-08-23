@@ -186,6 +186,12 @@ return {
 	-- Sans ce trajet, le seau saute d'un coup a plat pendant que le geste de repose joue encore : le personnage
 	-- se penche vers un objet qui n'est deja plus la. Duree en secondes, 0 pour retrouver le saut instantane.
 	PLACE_TWEEN_TIME = 0.22,
+	-- DUREE SEPAREE POUR LA ROTATION, et il en faut une. Une seule duree pour les deux laisse le seau DE BIAIS
+	-- pendant tout le trajet : il ne se redresse qu'a la toute fin, donc on le voit pencher tout du long.
+	--
+	-- On veut l'inverse : il se REDRESSE TOUT DE SUITE, et il ne lui reste plus qu'a descendre. Garder cette
+	-- valeur nettement plus courte que PLACE_TWEEN_TIME.
+	PLACE_TWEEN_ROT_TIME = 0.08,
 
 	-- ANCRE UNE FOIS POSE. Le seau est DESANCRE pour etre porte (une part ancree ignore sa soudure). A la
 	-- repose, on lui rendait son etat d'origine -- et s'il etait LIBRE dans Studio, la physique reprend la main

@@ -131,24 +131,36 @@ end
 -- Sans ce trajet, il saute a plat pendant que le geste de repose joue encore -- le personnage se penche alors
 -- vers un objet qui n'est deja plus la. Avec, les deux mouvements se recouvrent et le geste se lit en entier.
 --
--- `CFrame:Lerp` interpole la POSITION ET LA ROTATION d'un coup : c'est ce qui redresse le seau progressivement
--- au lieu de le claquer droit.
+-- LA ROTATION ET LA POSITION ONT CHACUNE LEUR DUREE, et c'est le coeur de l'affaire. Une seule duree pour les
+-- deux laisse le seau DE BIAIS pendant tout le trajet : il ne se redresse qu'a l'arrivee, donc on le voit
+-- pencher tout du long. Avec deux durees il se REDRESSE TOUT DE SUITE et il ne lui reste qu'a descendre.
+--
+-- C'est pour ca qu'on n'utilise PAS `CFrame:Lerp` : il interpole les deux ENSEMBLE, sans moyen de les separer.
+-- On decompose donc a la main -- position d'un cote, rotation de l'autre -- et on recompose.
 local function slideToGround(model: Model, from: CFrame, to: CFrame, token: number, onDone: () -> ())
-	if BinConfigs.PLACE_TWEEN_TIME <= 0 then
+	local posTime = BinConfigs.PLACE_TWEEN_TIME
+	local rotTime = BinConfigs.PLACE_TWEEN_ROT_TIME
+	if posTime <= 0 and rotTime <= 0 then
 		model:PivotTo(to)
 		onDone()
 		return
 	end
+	local fromRot = from - from.Position
+	local toRot = to - to.Position
 	model:PivotTo(from)
 	task.spawn(function()
 		local t0 = os.clock()
 		while slideTokens[model] == token do
-			local a = (os.clock() - t0) / BinConfigs.PLACE_TWEEN_TIME
-			if a >= 1 then
+			local elapsed = os.clock() - t0
+			local ap = if posTime > 0 then math.min(elapsed / posTime, 1) else 1
+			local ar = if rotTime > 0 then math.min(elapsed / rotTime, 1) else 1
+			if ap >= 1 and ar >= 1 then
 				break
 			end
 			-- Quad Out : il part vite et se pose doucement, comme un objet qu'on depose et qu'on relache.
-			model:PivotTo(from:Lerp(to, TweenService:GetValue(a, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)))
+			local ep = TweenService:GetValue(ap, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			local er = TweenService:GetValue(ar, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+			model:PivotTo(CFrame.new(from.Position:Lerp(to.Position, ep)) * fromRot:Lerp(toRot, er))
 			RunService.Heartbeat:Wait()
 		end
 		-- Repris en plein trajet : on ne le repose pas de force, la soudure a repris la main.

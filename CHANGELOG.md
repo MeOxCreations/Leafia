@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.427 — Le seau se redresse tout de suite, puis descend
+
+Il restait DE BIAIS pendant tout le trajet vers le sol et ne se remettait droit qu'a l'arrivee. On le voyait donc
+pencher tout du long.
+
+Cause : UNE SEULE duree pilotait la position ET la rotation. Le motif deja rencontre quatre fois dans ce projet
+-- un reglage qui sert deux moments differents finit par les opposer. Aucune valeur ne pouvait convenir aux deux :
+courte, le seau claquait a sa place ; longue, il penchait pendant un quart de seconde.
+
+Deux durees maintenant. `PLACE_TWEEN_ROT_TIME` (0.08 s) le redresse presque tout de suite ; `PLACE_TWEEN_TIME`
+(0.22 s) lui laisse le temps de descendre. Il se met a plat, et il ne lui reste plus qu'a se poser.
+
+### Pourquoi on n'utilise plus `CFrame:Lerp`
+
+Il interpole position et rotation ENSEMBLE, sans moyen de les separer -- c'est justement ce qu'on ne veut plus.
+On decompose donc a la main, position d'un cote et rotation de l'autre, et on recompose.
+
+### Le reglage
+
+Garder `PLACE_TWEEN_ROT_TIME` nettement plus court que `PLACE_TWEEN_TIME` : c'est tout l'interet. A 0, le seau
+se redresse d'un coup a l'image du lacher.
+
 ## 0.0.426 — L'ecrasement du seau est retire
 
 Il brouillait la repose au lieu de l'appuyer.
