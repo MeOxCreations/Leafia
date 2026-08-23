@@ -66,6 +66,13 @@ local LOADING_TIMEOUT = 40
 -- DEUX, et sa souris doit rester verrouillee ; un telephone n'a que le tactile. Tester la presence du tactile
 -- aurait donc casse la vue subjective sur les PC tactiles.
 local HAS_MOUSE = UserInputService.MouseEnabled
+-- ON N'Y ENTRE PAS TOUT SEUL. Le joueur arrive en vue de dos et bascule avec la touche s'il le veut.
+--
+-- Demarrer en vue subjective etait le comportement d'origine, et il a ete retire : c'est un CONFORT, pas une regle
+-- du jeu. L'imposer a l'arrivee decide a la place du joueur, sur une preference tres personnelle -- et celui qui
+-- ne la supporte pas doit d'abord comprendre qu'une touche existe pour en sortir.
+-- Mettre a true pour retrouver l'ancien comportement.
+local START_IN_FIRST_PERSON = false
 local RENDER_BIND = "LeafiaFirstPerson"
 
 local available = game.PlaceId ~= PlacesConfig.MAIN
@@ -244,28 +251,27 @@ function FirstPersonController.init()
 	-- LE CURSEUR LIBRE N'A PAS DE PENDANT TACTILE, et c'est voulu : sans souris il n'y a rien a liberer, le doigt
 	-- touche directement l'interface. C'est la seule exception a la regle "tout input clavier a son bouton".
 
-	-- ON DEMARRE EN VUE SUBJECTIVE chez le client. Apres l'arrivee du personnage : effacer un corps qui n'existe
-	-- pas encore ne fait rien, et on se retrouverait en vue subjective avec un personnage plein a l'ecran.
-	task.spawn(function()
-		local character = player.Character or player.CharacterAdded:Wait()
-		-- Le personnage est parente avant d'etre complet : on laisse ses parts arriver avant de les effacer.
-		character:WaitForChild("Humanoid", 10)
+	-- ENTREE EN VUE SUBJECTIVE, seulement si on la demande (voir START_IN_FIRST_PERSON). Par defaut le joueur
+	-- arrive en vue de dos et bascule quand il veut.
+	if START_IN_FIRST_PERSON then
+		task.spawn(function()
+			local character = player.Character or player.CharacterAdded:Wait()
+			-- Le personnage est parente avant d'etre complet : on laisse ses parts arriver avant de les effacer.
+			character:WaitForChild("Humanoid", 10)
 
-		-- ON ATTEND QUE LE RIDEAU DE CHARGEMENT SOIT PARTI.
-		--
-		-- Il tient dix secondes APRES l'arrivee du personnage. Prendre la souris a cet instant verrouillait le
-		-- curseur au centre et l'effacait pendant tout ce temps : le joueur se retrouvait devant un ecran qu'il ne
-		-- peut de toute facon pas viser, sans pouvoir bouger sa souris -- ca ressemble a un jeu fige, pas a un
-		-- chargement.
-		--
-		-- Sondage plutot qu'une ecoute d'evenement : l'attribut peut deja etre pose quand on arrive ici, et une
-		-- ecoute seule attendrait alors un changement qui n'aura jamais lieu.
-		local deadline = os.clock() + LOADING_TIMEOUT
-		while player:GetAttribute(LOADING_DONE_ATTRIBUTE) ~= true and os.clock() < deadline do
-			task.wait(0.2)
-		end
-		setFirstPerson(true)
-	end)
+			-- ON ATTEND QUE LE RIDEAU DE CHARGEMENT SOIT PARTI. Il tient dix secondes APRES l'arrivee du
+			-- personnage : prendre la souris a cet instant la verrouillait au centre pendant tout ce temps, devant
+			-- un ecran qu'on ne peut de toute facon pas viser.
+			--
+			-- Sondage plutot qu'une ecoute d'evenement : l'attribut peut deja etre pose quand on arrive ici, et une
+			-- ecoute seule attendrait alors un changement qui n'aura jamais lieu.
+			local deadline = os.clock() + LOADING_TIMEOUT
+			while player:GetAttribute(LOADING_DONE_ATTRIBUTE) ~= true and os.clock() < deadline do
+				task.wait(0.2)
+			end
+			setFirstPerson(true)
+		end)
+	end
 
 	-- A LA MORT, on relache. Le personnage suivant est neuf : la transparence posee sur l'ancien ne le suit pas,
 	-- et rester en vue subjective pendant l'ecran de mort n'a aucun sens.

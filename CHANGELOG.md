@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.404 — On n'entre plus en vue subjective tout seul
+
+Le joueur arrive en vue de dos, et bascule avec `C` s'il le veut.
+
+Demarrer en vue subjective etait le comportement d'origine. Retire : c'est un CONFORT, pas une regle du jeu.
+L'imposer a l'arrivee decide a la place du joueur sur une preference tres personnelle -- et celui qui ne la
+supporte pas doit d'abord DEVINER qu'une touche existe pour en sortir.
+
+Une preference ne s'impose pas, elle s'offre.
+
+`START_IN_FIRST_PERSON` permet de retrouver l'ancien comportement. L'attente du rideau de chargement reste
+attachee a ce chemin-la : elle n'a de sens que si l'on prend la souris automatiquement.
+
 ## 0.0.403 — L'axe de rotation des roues se DEDUIT de leur forme
 
 Les roues ne tournaient toujours pas visiblement. Les joints etaient bien trouves depuis le 0.0.332 -- restait
