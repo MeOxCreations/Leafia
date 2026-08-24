@@ -2204,6 +2204,49 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.441 — Un prompt sur la porte pour lancer la mission
+
+Le halo dit OU aller ; le prompt dit QUOI faire une fois arrive. Il apparait a moins de 10 studs de la porte,
+affiche "KNOCK", et lance la mission.
+
+### Le prompt partage, pas un deuxieme
+
+`InteractionPrompt` sert deja a l'echelle, la tondeuse, le seau et la boite aux lettres. On le REUTILISE. C'est
+un SINGLETON, donc on ne cache que le NOTRE : appeler `hide()` sans regarder ferait disparaitre celui d'une
+autre feature en plein milieu.
+
+### Detection RADIALE, pas une box
+
+Colle a un bout de la porte, une box laterale laisserait tomber dehors -- et l'agrandir ne bouche pas le trou,
+elle reste au mauvais endroit. Un seul nombre, aucun angle mort, independant de l'orientation. Mesuree depuis la
+PrimaryPart et jamais depuis `GetPivot`, qui suit la bounding box.
+
+### Jouable sans clavier
+
+`ContextActionService` avec `createTouchButton` : bouton a l'ecran sur tactile, touche sur PC, d'un seul geste.
+Une action clavier-only rendrait le didacticiel infranchissable pour la moitie des joueurs Roblox.
+
+L'action est en `Pass` et pas en `Sink` : E est partagee avec le seau et la tondeuse, avaler l'input les
+casserait. Conflit connu, note dans la config : un seau pose devant la porte repondrait en meme temps.
+
+### Un drapeau par avertissement
+
+Porte introuvable et Highlight introuvable ont chacun le leur. Partage, le premier masquerait le second -- et on
+chercherait le probleme du halo alors que c'est la porte qui manque. Meme bug que les sons de la tondeuse, ou un
+seul drapeau global ne signalait que le premier son absent.
+
+### Ce que l'appui fait aujourd'hui
+
+Il eteint le guidage -- halo, prompt et touche -- et le marque demarre. `startMission()` est idempotent : un
+double appui ne relancera pas une scene deja en cours.
+
+Rien de plus pour l'instant : l'animation de la porte, la sonnette et la scene cinematique se brancheront la,
+quand les animations du grand-pere existeront.
+
+### A FAIRE DANS STUDIO
+
+Rien de neuf. Toujours le `Highlight` sous le Model "Door", et la porte doit exister dans la place testee.
+
 ## 0.0.440 — La porte du grand-pere respire pour dire ou aller
 
 Premiere brique du didacticiel guide. En arrivant dans le tuto, le joueur voit un halo battre doucement sur la
