@@ -61,7 +61,7 @@ return {
 	-- rayon demande. "Aucun prompt" couvre plusieurs causes qui se ressemblent a l'ecran (porte introuvable /
 	-- trop loin / mission deja lancee) : les separer ici evite de chercher au mauvais endroit.
 	-- A remettre a false une fois le didacticiel regle.
-	DEBUG = true,
+	DEBUG = false,
 	DEBUG_INTERVAL = 2,
 	-- Toujours rien apres ce delai : on le DIT. Un halo qui ne s'allume jamais ne produit aucune erreur, et sans
 	-- ce message on chercherait le bug dans l'animation du halo au lieu du nom de la porte.

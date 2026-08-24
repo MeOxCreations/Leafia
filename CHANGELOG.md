@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.445 — La trace du didacticiel se tait
+
+Le parcours complet a ete valide a l'ecran : 134 studs -> 114 -> 80 -> 48 -> 15.8 -> 5.0, la touche se branche,
+la mission demarre. `DEBUG` repasse a false.
+
+Un log toutes les deux secondes finit par noyer les vrais messages, et un journal qu'on n'ose plus lire ne sert
+plus a rien. Le reglage reste : le remettre a true le jour ou la detection redevient suspecte.
+
 ## 0.0.444 — Le prompt se pose au milieu de la porte
 
 Il sortait SUR LE COTE. La PrimaryPart de la porte est le "Handle" -- la CHARNIERE -- et c'est elle qui servait
