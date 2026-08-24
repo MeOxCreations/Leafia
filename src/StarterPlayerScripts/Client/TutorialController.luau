@@ -26,6 +26,10 @@ local TutorialController = {}
 local door: Model? = nil
 local highlight: Highlight? = nil
 local anchor: BasePart? = nil
+-- Point vise par le prompt : le CENTRE de la porte, pas sa PrimaryPart. Celle-ci est le "Handle", la CHARNIERE
+-- posee sur le COTE, donc le badge sortait a cote de la porte. Le centre de la boite englobante ne depend
+-- d'aucun choix de PrimaryPart, et il reste juste meme si on en change dans Studio.
+local anchorPos = Vector3.zero
 local lastScanAt = 0
 local lastPromptAt = 0
 local lastDebugAt = 0
@@ -70,7 +74,7 @@ end
 -- Le prompt est un SINGLETON partage (echelle, tondeuse, seau, boite aux lettres). On ne cache donc QUE le
 -- notre : appeler hide() sans regarder ferait disparaitre celui d'une autre feature en plein milieu.
 local function hideOurs()
-	if promptShown and anchor and InteractionPrompt.currentTarget() == anchor then
+	if promptShown and InteractionPrompt.currentTarget() == anchorPos then
 		InteractionPrompt.hide()
 	end
 	promptShown = false
@@ -183,20 +187,26 @@ local function step(dt: number)
 	end
 
 	-- ===== LE PROMPT =====
+	-- LE CENTRE DE LA PORTE, pas sa PrimaryPart. Celle-ci est le "Handle" : la CHARNIERE, posee sur le COTE. Le
+	-- badge sortait donc a cote de la porte, et la distance se comptait depuis ce bord. La boite englobante ne
+	-- depend d'aucun choix de PrimaryPart -- et elle reste juste si on en change dans Studio.
+	--
+	-- Recalculee a chaque test : deplacer la porte pendant une partie doit suivre. Une boite englobante sur une
+	-- poignee de parts ne coute rien, et la valeur est IDENTIQUE tant que la porte ne bouge pas -- donc le
+	-- prompt n'est pas re-affiche pour rien.
+	anchorPos = (door :: Model):GetBoundingBox().Position
+
 	local root = getRoot()
-	local target = anchor
 
 	-- Dit ce que la detection VOIT, pas ce qu'on croit qu'elle voit.
 	if TutorialConfigs.DEBUG and now - lastDebugAt >= TutorialConfigs.DEBUG_INTERVAL then
 		lastDebugAt = now
-		if not (door and target) then
-			print(`[Tutorial] porte "{TutorialConfigs.DOOR_NAME}" pas encore utilisable (Model ou parts absents)`)
-		elseif not root then
+		if not root then
 			print("[Tutorial] pas de HumanoidRootPart (personnage pas encore la)")
 		else
-			local d = ((target.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude
+			local d = ((anchorPos - root.Position) * Vector3.new(1, 0, 1)).Magnitude
 			print(
-				`[Tutorial] porte "{door.Name}" | ancre "{target.Name}" a {string.format("%.1f", d)} studs `
+				`[Tutorial] porte "{(door :: Model).Name}" | centre a {string.format("%.1f", d)} studs `
 					.. `(rayon {TutorialConfigs.PROMPT_RADIUS}) | halo {tostring(highlight ~= nil)} `
 					.. `| mission lancee {tostring(missionStarted)} | touche branchee {tostring(actionBound)}`
 			)
@@ -211,7 +221,7 @@ local function step(dt: number)
 	end
 	lastPromptAt = now
 
-	if not (root and target and target.Parent) then
+	if not root then
 		hideOurs()
 		setActionBound(false)
 		return
@@ -219,7 +229,7 @@ local function step(dt: number)
 
 	-- DISTANCE RADIALE, a plat. Une box orientee laisserait des angles morts : colle a un bout de la porte on
 	-- tomberait dehors, et l'agrandir ne bouche pas le trou puisqu'elle reste au mauvais endroit.
-	local flat = (target.Position - root.Position) * Vector3.new(1, 0, 1)
+	local flat = (anchorPos - root.Position) * Vector3.new(1, 0, 1)
 	if flat.Magnitude > TutorialConfigs.PROMPT_RADIUS then
 		hideOurs()
 		setActionBound(false)
@@ -229,10 +239,10 @@ local function step(dt: number)
 	setActionBound(true)
 	-- On re-montre au CHANGEMENT de cible, mais AUSSI quand le prompt ne nous appartient plus : une autre
 	-- feature a pu prendre le singleton entre-temps. Sans ce second test, le notre disparaitrait pour de bon.
-	if not promptShown or InteractionPrompt.currentTarget() ~= target then
+	if not promptShown or InteractionPrompt.currentTarget() ~= anchorPos then
 		promptShown = true
 		InteractionPrompt.show(
-			target,
+			anchorPos,
 			TutorialConfigs.PROMPT_KEY,
 			TutorialConfigs.PROMPT_LABEL,
 			TutorialConfigs.PROMPT_OFFSET,

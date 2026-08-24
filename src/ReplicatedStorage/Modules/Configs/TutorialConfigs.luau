@@ -31,8 +31,9 @@ return {
 	-- de la porte on tomberait HORS d'une box laterale, et l'agrandir ne bouche pas le trou -- elle reste au
 	-- mauvais endroit. Un seul nombre, aucun angle mort, independant de l'orientation.
 	--
-	-- Mesuree depuis la PrimaryPart de la porte, jamais depuis GetPivot : le pivot d'un Model suit sa bounding
-	-- box, donc ajouter la moindre part enfant le decale sans prevenir.
+	-- Mesuree depuis le CENTRE de la porte. Pas depuis sa PrimaryPart : celle-ci est le "Handle", la CHARNIERE,
+	-- posee sur le COTE -- le badge sortait donc a cote de la porte et la distance se comptait de travers.
+	-- Le centre de la boite englobante, lui, ne depend d'aucun choix de PrimaryPart.
 	PROMPT_RADIUS = 10,
 	-- On ne teste pas la proximite a chaque image : ca ne se voit pas et ca coute.
 	PROMPT_INTERVAL = 0.15,
@@ -41,9 +42,10 @@ return {
 	-- n'est traduit nulle part et le jeu devient illisible pour presque toute la plateforme.
 	PROMPT_LABEL = "KNOCK",
 	PROMPT_TITLE = "GRANDPA",
-	-- Hauteur d'AFFICHAGE du badge au-dessus de la porte. Sans rapport avec PROMPT_RADIUS, qui est la distance a
-	-- laquelle il apparait : deux reglages differents, ne pas confondre.
-	PROMPT_OFFSET = Vector3.new(0, 3, 0),
+	-- Decalage d'AFFICHAGE du badge, en studs, a partir du centre de la porte. A zero il est pile au milieu.
+	-- Sans rapport avec PROMPT_RADIUS, qui est la distance a laquelle il apparait : deux reglages differents, ne
+	-- pas confondre -- l'un dit OU il se dessine, l'autre QUAND.
+	PROMPT_OFFSET = Vector3.new(0, 0, 0),
 	-- ContextActionService : createTouchButton fait apparaitre un bouton a l'ecran UNIQUEMENT sur tactile ET
 	-- bind la touche sur PC, d'un seul geste. Sans lui, le didacticiel serait infranchissable sans clavier --
 	-- donc pour la moitie des joueurs Roblox.

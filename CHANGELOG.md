@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.444 — Le prompt se pose au milieu de la porte
+
+Il sortait SUR LE COTE. La PrimaryPart de la porte est le "Handle" -- la CHARNIERE -- et c'est elle qui servait
+de point d'accroche. Le badge s'affichait donc au bord, et la distance se comptait depuis ce bord.
+
+Le prompt vise maintenant le CENTRE de la boite englobante du Model. Ce centre ne depend d'aucun choix de
+PrimaryPart : changer celle-ci dans Studio ne deplacera plus le badge.
+
+La distance de detection part du meme point, ce qui la rend juste aussi -- avant, on mesurait depuis un bord.
+
+### Recalcule a chaque test
+
+Deplacer la porte pendant une partie doit suivre. Une boite englobante sur une poignee de parts ne coute rien,
+et la valeur est IDENTIQUE tant que la porte ne bouge pas : le prompt n'est donc pas re-affiche pour rien.
+
+### PROMPT_OFFSET passe a zero
+
+Il valait 3 studs de haut, pour compenser une accroche au sol. Au centre de la porte, il n'y a plus rien a
+compenser : a zero le badge est pile au milieu. Le reglage reste, pour le remonter ou le descendre a l'oeil.
+
 ## 0.0.443 — Le prompt de la porte sort enfin
 
 La trace du commit precedent a nomme le coupable en une ligne :
