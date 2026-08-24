@@ -15,11 +15,10 @@ return {
 	DOOR_NAME = "Door",
 	HIGHLIGHT_NAME = "Highlight",
 
-	-- Chemin normal de la porte. Essaye EN PREMIER parce qu'il coute trois FindFirstChild, la ou un balayage du
-	-- Workspace parcourt des milliers d'instances. Si la maison est rangee ailleurs un jour, le balayage de
-	-- secours la retrouve quand meme : le chemin est une optimisation, pas une obligation.
-	DOOR_PATH = { "Worlds", "Maps", "Assets", "House" },
-
+	-- ON CHERCHE PAR NOM DANS TOUT LE WORKSPACE, jamais par un chemin fixe. La porte a deja demenage une fois
+	-- (de House vers House.HouseModel), et elle redemenagera : un chemin en dur transforme chaque rangement dans
+	-- l'editeur en panne silencieuse. Le balayage ne tourne QUE tant que la porte n'est pas trouvee, donc il ne
+	-- coute rien une fois qu'elle est la. L'ergonomie prime : c'est le code qui s'adapte au rangement.
 	-- Le halo RESPIRE entre ces deux transparences de remplissage. 1 = invisible, 0 = plein.
 	FILL_MIN = 0.5,
 	FILL_MAX = 1,
@@ -56,6 +55,12 @@ return {
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,
+	-- TRACE DE MISE AU POINT. Dit ce que la detection VOIT reellement : porte trouvee ou non, distance reelle,
+	-- rayon demande. "Aucun prompt" couvre plusieurs causes qui se ressemblent a l'ecran (porte introuvable /
+	-- trop loin / mission deja lancee) : les separer ici evite de chercher au mauvais endroit.
+	-- A remettre a false une fois le didacticiel regle.
+	DEBUG = true,
+	DEBUG_INTERVAL = 2,
 	-- Toujours rien apres ce delai : on le DIT. Un halo qui ne s'allume jamais ne produit aucune erreur, et sans
 	-- ce message on chercherait le bug dans l'animation du halo au lieu du nom de la porte.
 	NOT_FOUND_WARN_AFTER = 12,

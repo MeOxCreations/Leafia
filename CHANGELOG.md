@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.442 — La porte se trouve par son NOM, ou qu'elle soit rangee
+
+Le didacticiel cherchait la porte a un chemin fixe (`Worlds/Maps/Assets/House/Door`). Elle vient de demenager
+dans `HouseModel`, et elle redemenagera : un chemin en dur transforme chaque rangement dans l'editeur en panne
+SILENCIEUSE -- ni halo, ni prompt, ni erreur.
+
+Recherche par NOM dans tout le Workspace. Le balayage ne tourne QUE tant que la porte n'est pas trouvee, donc il
+ne coute rien une fois qu'elle est la. C'est le code qui s'adapte au rangement, pas l'inverse.
+
+Meme regle que pour les zones d'herbe et les PNJ : racine LARGE avec un filtre cheap, plutot qu'une racine
+etroite qui oblige a ranger les objets au bon endroit.
+
+### Une trace pour ne plus deviner
+
+"Aucun prompt" couvre plusieurs causes qui se ressemblent a l'ecran : porte introuvable, porte sans BasePart,
+personnage pas encore la, ou simplement trop loin. La console les separe maintenant, et donne la DISTANCE reelle
+a cote du rayon demande :
+
+    [Tutorial] porte "Door" | ancre "Handle" a 14.2 studs (rayon 10) | halo true | mission lancee false...
+
+`DEBUG` a remettre a false une fois le didacticiel regle.
+
 ## 0.0.441 — Un prompt sur la porte pour lancer la mission
 
 Le halo dit OU aller ; le prompt dit QUOI faire une fois arrive. Il apparait a moins de 10 studs de la porte,

@@ -28,6 +28,7 @@ local highlight: Highlight? = nil
 local anchor: BasePart? = nil
 local lastScanAt = 0
 local lastPromptAt = 0
+local lastDebugAt = 0
 local startedAt = 0
 -- UN DRAPEAU PAR AVERTISSEMENT, pas un seul pour les deux. Partage, le premier manquant masque le second : la
 -- porte absente ferait taire le message du Highlight absent, et on chercherait au mauvais endroit.
@@ -46,18 +47,10 @@ local function getRoot(): BasePart?
 	return if hrp and hrp:IsA("BasePart") then hrp else nil
 end
 
--- La porte, ou nil. On tente le CHEMIN d'abord (quelques FindFirstChild), et on ne balaye le Workspace qu'en
--- secours : le balayage marche meme si la maison demenage, mais il parcourt des milliers d'instances.
+-- La porte, ou nil. RECHERCHE PAR NOM dans tout le Workspace, jamais par un chemin fixe : elle a deja demenage
+-- une fois et elle redemenagera, et un chemin en dur transforme chaque rangement dans l'editeur en panne
+-- silencieuse. Le balayage ne tourne QUE tant qu'elle n'est pas trouvee.
 local function findDoor(): Model?
-	local node: Instance? = Workspace
-	for _, name in ipairs(TutorialConfigs.DOOR_PATH) do
-		node = node and node:FindFirstChild(name)
-	end
-	local found = node and node:FindFirstChild(TutorialConfigs.DOOR_NAME)
-	if found and found:IsA("Model") then
-		return found
-	end
-
 	for _, d in ipairs(Workspace:GetDescendants()) do
 		if d:IsA("Model") and d.Name == TutorialConfigs.DOOR_NAME then
 			return d
@@ -178,6 +171,28 @@ local function step(dt: number)
 	end
 
 	-- ===== LE PROMPT =====
+	local root = getRoot()
+	local target = anchor
+
+	-- Dit ce que la detection VOIT, pas ce qu'on croit qu'elle voit.
+	if TutorialConfigs.DEBUG and now - lastDebugAt >= TutorialConfigs.DEBUG_INTERVAL then
+		lastDebugAt = now
+		if not door then
+			print(`[Tutorial] porte "{TutorialConfigs.DOOR_NAME}" INTROUVABLE dans le Workspace`)
+		elseif not target then
+			print(`[Tutorial] porte trouvee mais AUCUNE BasePart dedans : rien ou accrocher le prompt`)
+		elseif not root then
+			print("[Tutorial] pas de HumanoidRootPart (personnage pas encore la)")
+		else
+			local d = ((target.Position - root.Position) * Vector3.new(1, 0, 1)).Magnitude
+			print(
+				`[Tutorial] porte "{door.Name}" | ancre "{target.Name}" a {string.format("%.1f", d)} studs `
+					.. `(rayon {TutorialConfigs.PROMPT_RADIUS}) | halo {tostring(highlight ~= nil)} `
+					.. `| mission lancee {tostring(missionStarted)} | touche branchee {tostring(actionBound)}`
+			)
+		end
+	end
+
 	if missionStarted then
 		return
 	end
@@ -186,8 +201,6 @@ local function step(dt: number)
 	end
 	lastPromptAt = now
 
-	local root = getRoot()
-	local target = anchor
 	if not (root and target and target.Parent) then
 		hideOurs()
 		setActionBound(false)
