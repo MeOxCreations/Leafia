@@ -801,11 +801,11 @@ local TITLE_TEXT = "LEAFIA"
 
 -- Messages d'etat qui defilent pendant le chargement. Generiques, aucun nom de jeu connu. A ENRICHIR librement.
 local STATUS_MESSAGES = {
-	"Generation des terrains",
-	"Creation des massifs",
-	"Plantation des haies",
-	"Preparation des outils",
-	"Ouverture des chantiers",
+	"Shaping the ground",
+	"Planting flower beds",
+	"Planting the hedges",
+	"Getting the tools ready",
+	"Opening the job sites",
 }
 
 -- ===== Zoom de reveal (fin du loading) : plan large qui se resserre sur le joueur =====
@@ -1085,7 +1085,7 @@ wordmark.Text = TITLE_TEXT
 wordmark.Size = UDim2.fromScale(1, 1)
 wordmark.ZIndex = 6
 
--- TEXTE D'ETAT ("Preparation des massifs..."). Pose BAS sur l'ecran (sur root, HORS de la colonne centrale) : le joueur
+-- TEXTE D'ETAT ("Planting flower beds..."). Pose BAS sur l'ecran (sur root, HORS de la colonne centrale) : le joueur
 -- le veut plus bas. KNOB : le Y (0.72) le monte / descend.
 local statusText = text("Text", root, FONT_BOLD, WHITE)
 statusText.RichText = true
@@ -1406,9 +1406,9 @@ while not skipRequested do
 	RunService.Heartbeat:Wait()
 end
 
--- Etat final "C'est pret !" avant le fondu de sortie ; on le laisse une image a l'ecran.
+-- Etat final "Ready!" avant le fondu de sortie ; on le laisse une image a l'ecran.
 ready = true
-statusText.Text = "C'est pret !"
+statusText.Text = "Ready!"
 task.wait(if skipRequested then 0 else 0.35)
 
 -- ============================================================

@@ -33,7 +33,7 @@ local LADDER_PREFIX = "Escabaut"
 -- Prompt "[F] PRENDRE" affiche quand le joueur est assez PRES d'une echelle. Verifie a intervalle (pas chaque frame :
 -- la detection balaie les echelles). Detection RADIALE (DETECT_RADIUS), pas une box : aucun angle mort. Cf ladderAt.
 local PROMPT_KEY = "F" -- PRENDRE l'echelle sur F (E est reserve a MONTER, cote LadderController)
-local PROMPT_LABEL = "PRENDRE"
+local PROMPT_LABEL = "TAKE"
 local PROMPT_TITLE = "LADDER" -- titre au-dessus du prompt (comme "MAILBOX" sur la boite), meme objet que la montee
 local PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-dessus de la racine (pas la distance de detection)
 local DETECT_RADIUS = 8 -- distance HORIZONTALE (studs) sous laquelle le prompt PRENDRE apparait. LE knob "detecter plus loin"

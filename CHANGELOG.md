@@ -2204,6 +2204,47 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.433 — Le jeu parle anglais partout, donc il se traduit
+
+Des textes vus par le joueur etaient restes en francais. Le traducteur automatique de Roblox part de l'ANGLAIS :
+un texte ecrit en francais n'est traduit nulle part, et reste illisible pour la quasi-totalite des joueurs de la
+plateforme. Ce n'est donc pas un detail de forme, c'est de l'audience perdue.
+
+### Ce qui etait en francais
+
+Le plus visible en premier -- l'ecran de chargement, vu par CHAQUE joueur a CHAQUE lancement :
+
+    "Generation des terrains"  -> "Shaping the ground"
+    "Creation des massifs"     -> "Planting flower beds"
+    "Plantation des haies"     -> "Planting the hedges"
+    "Preparation des outils"   -> "Getting the tools ready"
+    "Ouverture des chantiers"  -> "Opening the job sites"
+    "C'est pret !"             -> "Ready!"
+
+Puis les badges d'interaction, poses au-dessus des objets :
+
+    seau     "PRENDRE" / "SEAU"  -> "TAKE" / "BUCKET"
+    echelle  "MONTER"            -> "CLIMB"
+    echelle  "PRENDRE"           -> "TAKE"
+
+Le texte par defaut d'`InteractionPrompt` disait "PRENDRE" lui aussi : une feature qui oublie de passer son label
+affichait donc du francais sans que personne le remarque.
+
+Et la notification de montee de niveau :
+
+    "NIVEAU 4" / "Bravo ! Ton entreprise grandit."  ->  "LEVEL 4" / "Nice! Your business is growing."
+
+La tondeuse, elle, etait deja en anglais ("TAKE" / "MOWER") : c'est le seau et l'echelle qui ont derive.
+
+### Ce qui reste en francais, volontairement
+
+Les commandes d'admin (`AdminCommandConfigs`, la barre de saisie) : aucun joueur ne les voit, seuls les
+developpeurs les lisent. Les traduire ne rapporterait rien et rendrait l'outil moins pratique a utiliser.
+
+Les COMMENTAIRES de code restent en francais, comme le veut la convention du projet. Les trois qui citaient un
+texte joueur ont ete remis d'accord avec ce que le code affiche vraiment : un commentaire faux coute plus cher
+qu'un commentaire absent.
+
 ## 0.0.432 — Le seau : on cherchait le bon nom au mauvais endroit
 
 Les deux versions precedentes ont conclu, mesure a l'appui, que l'animation ne pilote pas le seau. La mesure est

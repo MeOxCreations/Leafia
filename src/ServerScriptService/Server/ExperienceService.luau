@@ -95,8 +95,8 @@ function ExperienceService.grantXp(player: Player, cells: number)
 		if sideNotify then
 			sideNotify:FireClient(player, {
 				kind = "Success",
-				title = "NIVEAU " .. s.level,
-				description = "Bravo ! Ton entreprise grandit.",
+				title = "LEVEL " .. s.level,
+				description = "Nice! Your business is growing.",
 			})
 		end
 	elseif not s.flashing then

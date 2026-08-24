@@ -66,8 +66,8 @@ return {
 	-- un scan unique au boot ne le verrait jamais.
 	RESCAN_INTERVAL = 2,
 	PROMPT_KEY = "E",
-	PROMPT_LABEL = "PRENDRE",
-	PROMPT_TITLE = "SEAU",
+	PROMPT_LABEL = "TAKE",
+	PROMPT_TITLE = "BUCKET",
 	-- Hauteur d'AFFICHAGE du badge au-dessus de la racine. Sans rapport avec DETECT_RADIUS (la distance a
 	-- laquelle il apparait) : deux reglages differents, ne pas confondre.
 	PROMPT_OFFSET = Vector3.new(0, 4, 0),

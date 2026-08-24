@@ -199,7 +199,7 @@ local function build()
 	al.TextColor3 = LABEL_COLOR
 	al.TextSize = 20
 	al.LayoutOrder = 2
-	al.Text = "PRENDRE"
+	al.Text = "TAKE"
 	al.Parent = btn
 
 	-- PULSE du FOND de la pilule en boucle (aller-retour A <-> B). Une seule fois, joue en continu : ca ne se
@@ -231,7 +231,7 @@ local function build()
 end
 
 -- Montre le prompt sur `target` (BasePart suivie, ou Vector3 fixe). `key` = la touche affichee (ex "E"), `label`
--- = l'action (ex "PRENDRE"). `offset` decale le point vise dans le monde (studs), pour flotter au-dessus. Sur
+-- = l'action (ex "TAKE"). `offset` decale le point vise dans le monde (studs), pour flotter au-dessus. Sur
 -- mobile, le badge de touche est cache ; `onActivate` est appele au tap (et au clic, partout, en bonus).
 function InteractionPrompt.show(
 	target: WorldAnchor.Target,

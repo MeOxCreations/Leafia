@@ -73,7 +73,7 @@ local MOUNT_BACK = 1.25 -- recul du point de montage depuis le centre de la zone
 -- Prompt "[E] MONTER" affiche quand on entre dans une zone de grimpe (box_detecte_A / _B). On ne monte PLUS
 -- automatiquement en entrant : il faut appuyer E (ou taper le bouton sur mobile). F est la prise (LadderMoveController).
 local MOUNT_PROMPT_KEY = "E"
-local MOUNT_PROMPT_LABEL = "MONTER"
+local MOUNT_PROMPT_LABEL = "CLIMB"
 local MOUNT_PROMPT_TITLE = "LADDER" -- titre au-dessus du prompt, comme "MAILBOX" sur la boite aux lettres
 local MOUNT_PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-dessus de la zone (pas la distance de detection)
 
