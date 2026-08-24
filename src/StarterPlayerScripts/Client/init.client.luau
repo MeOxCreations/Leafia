@@ -67,6 +67,10 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.BinCarryController).init()
 	-- Nuages : du ciel, rien d'autre. Local, aucun reseau. Ordre indifferent.
 	require(script.CloudController).init()
+	-- DIDACTICIEL : le halo qui respire sur la porte du grand-pere, pour dire ou aller sans l'ecrire. Purement
+	-- visuel, ne depend de rien. TUTO UNIQUEMENT : il n'y a pas de porte a montrer dans le hub.
+	-- Necessite un Highlight pose A LA MAIN sous le Model "Door" (Rojo ne synchronise pas le Workspace).
+	require(script.TutorialController).init()
 
 	-- Musique de fond du TUTO : MusicBuild4 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
 	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.

@@ -2204,6 +2204,49 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.440 — La porte du grand-pere respire pour dire ou aller
+
+Premiere brique du didacticiel guide. En arrivant dans le tuto, le joueur voit un halo battre doucement sur la
+porte du grand-pere.
+
+On le lui MONTRE au lieu de le lui ECRIRE. Un halo qui respire se lit sans lire, il ne demande aucune traduction
+et il ne pose aucune interface par-dessus le monde.
+
+### Le Highlight vient de Studio, pas du code
+
+Le code ne touche QU'A UNE propriete : `FillTransparency`. La couleur du contour, sa transparence, le mode
+d'affichage restent exactement ce qui a ete choisi dans l'editeur. Creer le Highlight en code aurait oblige a
+refaire ce reglage a l'aveugle, et Rojo ne synchronise pas le Workspace de toute facon.
+
+### Un sinus, pas un aller-retour
+
+Une respiration n'a ni depart ni arrivee. Le cosinus repart de lui-meme, donc aucune saccade au bouclage -- un
+lerp aller-retour casse a chaque extremite.
+
+### La boucle part meme sans porte
+
+Avec StreamingEnabled, la porte arrive souvent APRES le spawn. Sortir au demarrage laisserait le halo mort pour
+toute la session, sans la moindre erreur : le piege deja paye sur l'herbe de zone. Elle coute une comparaison de
+date tant qu'il n'y a rien a animer, et re-cherche toutes les 2 s.
+
+Et si la porte n'est toujours pas la au bout de 12 s, elle le DIT, en nommant ce qu'elle cherchait.
+
+### Un interrupteur, prevu pour la suite
+
+`TutorialController.setDoorHint(false)` eteint le halo. Un halo qui continue de respirer pendant une cinematique
+tirerait l'oeil hors du plan. Il ecrit la valeur eteinte au lieu de sortir en silence : coupe en plein
+battement, le halo resterait sinon fige a moitie visible.
+
+### A FAIRE DANS STUDIO
+
+Poser un `Highlight` nomme "Highlight" sous le Model "Door", avec `FillTransparency = 1` au repos. Rojo ne
+synchronise pas le Workspace : ce Highlight se pose A LA MAIN dans CHAQUE place ou la porte existe.
+
+### Suite prevue
+
+Toquer (prompt + `DoorShakeAnimation` + `SonnetteAnimation`), puis la scene cinematique avec ses barres noires.
+Les deux attendent les animations du grand-pere.
+
 ## 0.0.439 — Les scripts d'attache ne mentent plus sur le nom de la piste
 
 `AttacherCanneAuPapi.lua` et `AttacherObjetAuRig.lua` annonçaient tous les deux que le nom du Motor6D devenait
