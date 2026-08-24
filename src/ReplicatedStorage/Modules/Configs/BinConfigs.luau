@@ -31,13 +31,18 @@ return {
 	-- devinee : le jeu doit rejouer EXACTEMENT le joint qui a servi a animer, sinon le seau est de travers en
 	-- jeu alors que l'animation est bonne -- et on cherche l'erreur dans l'animation.
 	--
-	-- UpperTorso et non RightHand : le seau est porte DEVANT LE CORPS, il ne suit donc pas le bras. Pour qu'il
-	-- pende au bout du bras, refaire l'attache du rig sur RightHand (AttacherObjetAuRig.lua) et reporter ici
-	-- le nouveau C0 -- les deux valeurs vont ENSEMBLE, changer l'une sans l'autre donne n'importe quoi.
-	JOINT_PARENT = "UpperTorso",
-	-- Position et angle du seau vus depuis JOINT_PARENT. Valeur relevee sur le rig. Z negatif = devant le
-	-- torse. Monter Z (vers 0) le rapproche du corps, baisser Y le fait descendre vers les jambes.
-	CARRY_C0 = CFrame.new(0, 0, -2.6) * CFrame.Angles(0, math.rad(90), 0),
+	-- HumanoidRootPart, et surtout PAS UpperTorso. Le torse est LUI-MEME anime : il figure dans les pistes des
+	-- deux animations du seau. Un seau accroche a lui recoit donc le mouvement du torse EN PLUS du sien -- deux
+	-- mouvements additionnes au lieu d'un, et le geste ne ressemble plus a celui de l'editeur alors que
+	-- l'animation, elle, est bonne. La position finale vaut `part porteuse x C0 x ce qu'ecrit l'animation` : les
+	-- deux premiers termes doivent etre EXACTEMENT ceux du rig, sinon le troisieme s'applique de travers.
+	--
+	-- Va ENSEMBLE avec CARRY_C0 : changer l'une sans l'autre donne n'importe quoi.
+	JOINT_PARENT = "HumanoidRootPart",
+	-- Position et angle du seau vus depuis JOINT_PARENT. RELEVEE sur le rig par VerifierBin.lua, jamais reglee a
+	-- l'oeil : c'est le placement fait dans l'editeur qui est la source de verite, et toute retouche a la main
+	-- eloigne le jeu de l'animation. Z negatif = devant le corps.
+	CARRY_C0 = CFrame.new(0, 0.2, -2.6) * CFrame.Angles(0, math.rad(90), 0),
 	-- Nom du Motor6D cree. Sert a le RETROUVER et a le lire dans l'Explorer, RIEN D'AUTRE.
 	--
 	-- Il ne joue AUCUN role dans l'animation, contrairement a ce que disaient les versions 0.0.430 / 0.0.431. Une
@@ -234,7 +239,7 @@ return {
 	-- TRACE DE MISE AU POINT. Imprime toutes les DEBUG_INTERVAL secondes ce que la detection VOIT reellement :
 	-- combien de seaux, lequel est le plus proche, et ce qui bloque. A remettre a false une fois le portage
 	-- regle -- un log par seconde finit par masquer les vrais messages.
-	DEBUG = true,
+	DEBUG = false,
 	DEBUG_INTERVAL = 2,
 	-- Le Highlight du seau (contour) sert a le reperer AU SOL. Soude au joueur il brillerait en permanence
 	-- pendant tout le portage. Mettre false pour le laisser allume.

@@ -206,7 +206,10 @@ local function grab(player: Player, model: Model)
 		return
 	end
 	if not (anchorPart and anchorPart:IsA("BasePart")) then
-		warn(`[BinCarryService] "{BinConfigs.JOINT_PARENT}" absent de {player.Name} : rig R6 au lieu de R15 ?`)
+		-- Ne PAS accuser R6 ici : HumanoidRootPart existe sur R6 comme sur R15. Absent, c'est un personnage pas
+		-- fini de charger ou en train d'etre detruit. Un message qui nomme la mauvaise cause coute plus cher
+		-- que pas de message : il envoie chercher a cote.
+		warn(`[BinCarryService] "{BinConfigs.JOINT_PARENT}" absent de {player.Name} : personnage incomplet ou detruit`)
 		return
 	end
 	local root = binRoot(model)

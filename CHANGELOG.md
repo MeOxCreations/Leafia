@@ -2204,6 +2204,60 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.434 — Le seau bouge enfin comme dans l'editeur
+
+Il etait anime depuis le debut. Mal, mais anime. On croyait qu'il ne l'etait pas du tout.
+
+### La mesure qui a tout retourne
+
+`VerifierBin.lua` sur le rig d'animation :
+
+    Workspace.Bin   PrimaryPart (propriete) = "PrimaryPart" -> OK
+    joint "Bin"     HumanoidRootPart -> PrimaryPart
+    C0              CFrame.new(0.0000, 0.2000, -2.6000) * CFrame.Angles(0, math.rad(90), 0)
+
+Le nom correspondait DEJA des deux cotes (`PrimaryPart`). Il n'y avait donc aucun renommage a faire -- ni du joint
+(0.0.431), ni de la part (0.0.432). Ces deux versions cherchaient au bon endroit une erreur qui n'y etait pas.
+
+Ce qui ne correspondait pas, c'est la PART PORTEUSE et le C0.
+
+### La position d'un objet anime tient en trois termes
+
+    position du seau = part porteuse x C0 x ce qu'ecrit l'animation
+
+L'animation n'ecrit QUE le troisieme. Les deux premiers viennent du code. Si l'un des deux differe du rig, le
+meme mouvement s'applique depuis une base differente et donne autre chose a l'ecran.
+
+Le jeu accrochait le seau a `UpperTorso`. Or le torse est LUI-MEME anime : il figure dans les pistes des deux
+animations. Le seau recevait donc le mouvement du torse EN PLUS du sien -- deux mouvements additionnes au lieu
+d'un. D'ou un geste qui bougeait bien, mais qui ne ressemblait pas a l'editeur.
+
+    JOINT_PARENT   "UpperTorso"              ->  "HumanoidRootPart"
+    CARRY_C0       CFrame.new(0, 0,   -2.6)  ->  CFrame.new(0, 0.2, -2.6)
+
+Verifie en jeu : le geste ressemble maintenant a l'animation.
+
+### Le message d'erreur d'a cote devenait faux
+
+Il accusait un « rig R6 au lieu de R15 » quand la part porteuse manque. C'etait vrai pour `UpperTorso`, absent en
+R6. `HumanoidRootPart` existe sur les deux : absent, il ne dit rien du rig, il dit un personnage pas fini de
+charger. Un diagnostic qui nomme la mauvaise cause coute plus cher que pas de diagnostic -- c'est exactement ce
+qui a fait tourner en rond les versions 0.0.430 et 0.0.431.
+
+### Ce qui reste, et qui n'est PAS fait ici
+
+- **La soudure arrive trop tard.** La piste du seau a des cles des t=0, mais le joint n'est cree qu'a 0.45 s : le
+  debut du geste ne s'applique jamais. Pire, le marqueur `TakeBucketEvent` est a 0.57 s alors que le filet de
+  secours `TAKE_GRAB_FALLBACK` est a 0.45 s. Le filet gagne donc A TOUS LES COUPS, et le commentaire qui dit
+  « sans effet tant que le marqueur parle » est faux. Le commentaire annonce aussi le marqueur « a 0.33s » : il a
+  bouge depuis.
+- **La repose ecrase l'animation.** `straightenInHands` reecrit le `C0` du joint a chaque image. Le code et
+  l'animation ecrivent alors sur le meme seau en meme temps. Ce code compensait l'absence d'animation : il n'a
+  plus de raison d'etre.
+- **La sonde d'animation mesure du mauvais cote.** Elle lit `Transform` cote SERVEUR alors que l'animation est
+  calculee cote CLIENT : elle lira l'identite quoi qu'il arrive, et continuera d'affirmer que l'animation ne
+  pilote pas le seau alors qu'on le voit bouger. A deplacer cote client ou a retirer.
+
 ## 0.0.433 — Le jeu parle anglais partout, donc il se traduit
 
 Des textes vus par le joueur etaient restes en francais. Le traducteur automatique de Roblox part de l'ANGLAIS :
