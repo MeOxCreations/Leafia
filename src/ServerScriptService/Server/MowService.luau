@@ -18,13 +18,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local CharacterService = require(script.Parent.CharacterService)
 local ToolService = require(script.Parent.ToolService)
-
--- LES DEUX MAINS SONT PRISES. Drapeau pose sur le JOUEUR (pas sur la machine) : c'est lui qu'on interroge quand on
--- veut savoir s'il peut sortir un outil, et un attribut de joueur se replique, donc le client le lit aussi.
--- Meme convention que LeafiaCarryingLadder.
-local CARRYING_ATTRIBUTE = "LeafiaCarryingMower"
 
 local MowService = {}
 
@@ -815,12 +811,17 @@ local function release(model: Model)
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
 	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, nil)
-	state.owner:SetAttribute(CARRYING_ATTRIBUTE, nil)
+	CarryUtils.release(state.owner, "Mower")
 end
 
 local function grab(player: Player, model: Model)
 	if carried[model] then
 		return -- deja portee, par ce joueur ou un autre
+	end
+	-- LES MAINS SONT DEJA PRISES (seau, echelle). Ce service ne verifiait RIEN avant : on pouvait pousser la
+	-- tondeuse en portant un seau ou une echelle.
+	if not CarryUtils.isFree(player) then
+		return
 	end
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
@@ -913,7 +914,7 @@ local function grab(player: Player, model: Model)
 	-- On RANGE l'outil au lieu de refuser la prise. Refuser laisserait le joueur appuyer sur E devant sa tondeuse
 	-- sans que rien ne se passe et sans savoir pourquoi -- un cul-de-sac. Le ranger est ce qu'il aurait fait
 	-- lui-meme, et la reciproque (sortir un outil pendant qu'on pousse) est bien REFUSEE, elle, dans ToolService.
-	player:SetAttribute(CARRYING_ATTRIBUTE, true)
+	CarryUtils.claim(player, "Mower")
 	ToolService.unequip(player)
 
 	-- SEQUENCE : on tire la corde, PUIS on empoigne le guidon et le moteur se lance. Le moteur demarrait avec

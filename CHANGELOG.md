@@ -2204,6 +2204,76 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.436 — Reposer le seau claque au lieu de trainer
+
+Ramasser est un EFFORT : on se baisse, on empoigne. Reposer est un relachement. Les deux jouaient a la meme
+cadence, donc la fin du geste trainait et le joueur attendait de recuperer ses commandes.
+
+    PLACE_SPEED   1  ->  1.8
+
+Le seau quitte les mains en ~0.35 s au lieu de ~0.65 s.
+
+### Deux reglages en dependent, et ils ont bouge avec
+
+C'est le piege deja paye quatre fois ici (un reglage qu'on monte, un autre qu'on oublie). Les deux sont
+explicitement lies a `PLACE_SPEED` dans la config, avec ce qu'ils attendent :
+
+- `PLACE_STRAIGHTEN_TIME` 0.5 -> 0.25. Le redressement doit finir AVANT que la main s'ouvre. La main s'ouvre au
+  marqueur, atteint en marche arriere au bout de `(duree - 0.57) / PLACE_SPEED`. Laisse a 0.5, le seau serait
+  encore penche au lacher et se redresserait EN L'AIR -- exactement la correction apres coup que 0.0.429 avait
+  supprimee.
+- `PLACE_SLOW_TIME` 0.45 -> 0.35. Le bridage de vitesse durait plus longtemps que le geste : on ralentissait un
+  joueur qui avait deja fini de poser. Cale sur l'instant du lacher, pas sur la fin du geste.
+
+## 0.0.435 — On ne porte plus qu'une seule chose a la fois, pour de bon
+
+Un joueur pouvait porter le seau ET prendre l'echelle, ET la tondeuse, ET sortir un taille-haie.
+
+### Ce qui n'allait pas
+
+Chaque objet posait SON drapeau et gardait SA liste de ceux qui le bloquent. Trois drapeaux, deux porteurs
+differents, deux autorites differentes :
+
+    LeafiaCarryingBin      sur le PERSONNAGE   ecrit par le serveur
+    LeafiaCarryingLadder   sur le PERSONNAGE   ecrit par le CLIENT
+    LeafiaCarryingMower    sur le JOUEUR       ecrit par le serveur
+
+Sur les 12 paires a tenir d'accord, 7 manquaient. `LeafiaCarryingBin` etait meme ecrit sans que PERSONNE ne le
+lise : le seau ne bloquait rien du tout. La tondeuse, elle, ne verifiait personne.
+
+Un piege dormait en plus dans le seau : sa garde lisait ses drapeaux sur le PERSONNAGE, alors que celui de la
+tondeuse est sur le JOUEUR. Ajouter la tondeuse a sa liste pour boucher le trou n'aurait donc rien donne, sans
+la moindre erreur pour le dire.
+
+Et le drapeau de l'echelle etait pose par le CLIENT : un client modifie ne le posait pas et portait tout a la fois.
+
+### Une seule question, une seule reponse
+
+`Modules/Utils/CarryUtils` detient l'etat "les mains de ce joueur tiennent quoi". Un attribut, sur le joueur,
+ecrit par le serveur seul.
+
+    CarryUtils.isFree(player)          -- puis-je prendre ?
+    CarryUtils.claim(player, "Bin")    -- je prends (false si deja pris par autre chose)
+    CarryUtils.release(player, "Bin")  -- je rends (et seulement ce que je tiens)
+    CarryUtils.holds(player, "Ladder") -- tient-il precisement ca ?
+
+Les quatre systemes y sont branches : seau, echelle, tondeuse, outils. Le refus est applique cote SERVEUR dans
+les trois `grab` et dans `ToolService.equip`, la seule porte d'entree de l'equipement. Le client ne fait plus que
+masquer le prompt, ce qui est du confort d'affichage et non une regle.
+
+Avec N objets, l'ancien modele demandait N x (N-1) verifications a maintenir a la main, et chaque nouvel objet
+obligeait a modifier tous les autres -- ce que personne ne fait, parce que rien ne le rappelle. Ajouter un
+cinquieme objet ne touche desormais aucun des quatre autres.
+
+Au passage : prendre le seau ou l'echelle RANGE l'outil en main, comme le faisait deja la tondeuse. On range au
+lieu de refuser -- refuser laisserait le joueur appuyer sur E sans que rien ne se passe et sans savoir pourquoi.
+
+### Un trou trouve en chemin
+
+L'echelle ne se relachait qu'au DEPART du joueur, jamais a sa MORT. Invisible tant que "on porte" vivait sur le
+personnage, detruit avec lui. Maintenant que cet etat vit sur le joueur et survit au respawn, l'oubli aurait
+bloque ses mains POUR TOUTE LA SESSION. `CharacterRemoving` ajoute, comme sur le seau et la tondeuse.
+
 ## 0.0.434 — Le seau bouge enfin comme dans l'editeur
 
 Il etait anime depuis le debut. Mal, mais anime. On croyait qu'il ne l'etait pas du tout.

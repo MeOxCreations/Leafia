@@ -49,7 +49,7 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(RS.Modules.UI.Core.Toast).init()
 	require(script.ComboController).init()
 	require(RS.Modules.UI.Notification.SideNotificationHandler).init()
-	-- Echelle COMPLETE dans le tuto (on l'enseigne) : grimpe + portage + auto-equip. Le flag LeafiaCarryingLadder coupe la
+	-- Echelle COMPLETE dans le tuto (on l'enseigne) : grimpe + portage + auto-equip. Le drapeau de portage (CarryUtils) coupe la
 	-- grimpe pendant le portage (pas d'auto-accroche a sa propre echelle). Necessite la VRAIE echelle de jeu dans la map.
 	require(script.LadderController).init()
 	require(script.LadderMoveController).init()

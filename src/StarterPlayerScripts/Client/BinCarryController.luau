@@ -34,10 +34,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
-
--- Attributs poses par les AUTRES systemes de portage. On ne porte qu'une chose a la fois : tant que l'un d'eux
--- est actif, on ne propose pas le seau (et on ne branche pas la touche, qui est partagee avec la tondeuse).
-local BLOCKING_ATTRIBUTES = { "LeafiaCarryingLadder" }
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 
 local player = Players.LocalPlayer
 
@@ -152,19 +149,17 @@ local function getBins(now: number): { Model }
 	return list
 end
 
--- On ne porte qu'une chose a la fois. Un joueur qui tient deja l'echelle ne doit ni voir le prompt du seau, ni
--- pouvoir le prendre : la touche E est en plus partagee avec la tondeuse.
+-- On ne porte qu'une chose a la fois. Un joueur qui tient deja l'echelle ou la tondeuse ne doit ni voir le prompt
+-- du seau, ni pouvoir le prendre -- la touche E est en plus partagee avec la tondeuse.
+--
+-- Une seule question posee a une seule source. Avant, ce test tenait sa PROPRE liste d'attributs a bloquer, et
+-- il y manquait la tondeuse ; pire, il lisait sur le PERSONNAGE alors que le drapeau de la tondeuse etait sur le
+-- JOUEUR -- l'ajouter a la liste n'aurait donc rien donne, sans la moindre erreur pour le signaler.
 local function busyWithSomethingElse(): boolean
-	local character = player.Character
-	if not character then
+	if not player.Character then
 		return true
 	end
-	for _, attribute in ipairs(BLOCKING_ATTRIBUTES) do
-		if character:GetAttribute(attribute) then
-			return true
-		end
-	end
-	return false
+	return not CarryUtils.isFree(player)
 end
 
 -- Seau LIBRE le plus proche. Detection RADIALE (distance horizontale a une part FIXE) : un seul rayon, aucun

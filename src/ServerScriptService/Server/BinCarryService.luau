@@ -18,9 +18,11 @@ local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 -- WalkSpeed a UN SEUL ecrivain, et c'est lui. On declare une intention, il tranche et il ramene la vitesse en
 -- douceur : ecrire WalkSpeed ici se battrait avec sa rampe d'atterrissage.
 local CharacterService = require(script.Parent.CharacterService)
+local ToolService = require(script.Parent.ToolService)
 
 local BinCarryService = {}
 
@@ -194,6 +196,11 @@ local function grab(player: Player, model: Model)
 	if carried[model] then
 		return -- deja porte (par nous ou par un autre)
 	end
+	-- LES MAINS SONT DEJA PRISES (echelle, tondeuse). Le client filtre deja de son cote pour ne pas proposer le
+	-- prompt ; ce refus-ci tient meme si le remote est falsifie.
+	if not CarryUtils.isFree(player) then
+		return
+	end
 	-- Un trajet en cours ecrirait les positions du model a chaque image : il se battrait avec la soudure.
 	stopSlide(model)
 	local character = player.Character
@@ -282,7 +289,11 @@ local function grab(player: Player, model: Model)
 
 	carried[model] = state
 	model:SetAttribute(BinConfigs.CARRIED_ATTRIBUTE, player.UserId)
-	character:SetAttribute(BinConfigs.CARRYING_ATTRIBUTE, true)
+	CarryUtils.claim(player, "Bin")
+	-- ON PORTE A DEUX MAINS : plus d'outil pendant ce temps. On le RANGE au lieu de refuser la prise -- refuser
+	-- laisserait le joueur appuyer sur E sans que rien ne se passe et sans savoir pourquoi. La reciproque
+	-- (sortir un outil pendant qu'on porte) est refusee, elle, dans ToolService.
+	ToolService.unequip(player)
 end
 
 -- REPOSE : on detache, on oriente sur le YAW du joueur (jamais son tangage, sinon le seau se pose penche) et
@@ -303,9 +314,7 @@ local function place(player: Player, model: Model)
 	detach(state)
 	carried[model] = nil
 	model:SetAttribute(BinConfigs.CARRIED_ATTRIBUTE, nil)
-	if character then
-		character:SetAttribute(BinConfigs.CARRYING_ATTRIBUTE, nil)
-	end
+	CarryUtils.release(player, "Bin")
 
 	if hrp and hrp:IsA("BasePart") then
 		local look = hrp.CFrame.LookVector
@@ -410,10 +419,7 @@ local function releaseImmediate(model: Model)
 	detach(state)
 	carried[model] = nil
 	model:SetAttribute(BinConfigs.CARRIED_ATTRIBUTE, nil)
-	local character = state.owner.Character
-	if character then
-		character:SetAttribute(BinConfigs.CARRYING_ATTRIBUTE, nil)
-	end
+	CarryUtils.release(state.owner, "Bin")
 	model:PivotTo(pivot)
 	restore(state)
 end

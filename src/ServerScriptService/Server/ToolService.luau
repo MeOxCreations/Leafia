@@ -15,6 +15,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 
 local ToolService = {}
@@ -362,11 +363,13 @@ function ToolService.equip(player: Player, toolName: string): boolean
 		return false
 	end
 
-	-- LES DEUX MAINS SONT DEJA PRISES. On pousse la tondeuse a deux mains : en sortir un taille-haie en meme
-	-- temps n'a aucun sens, et ca donnait un joueur avec un outil qui flotte a cote d'un guidon.
-	-- Le drapeau est pose par MowService sur le JOUEUR. Verifie ICI, dans la seule porte d'entree de l'equipement
-	-- (toggle et selection y passent tous les deux) : le refus tient donc quel que soit le chemin.
-	if player:GetAttribute("LeafiaCarryingMower") then
+	-- LES DEUX MAINS SONT DEJA PRISES. Tondeuse, echelle ou seau : tous se portent a deux mains, en sortir un
+	-- taille-haie en meme temps n'a aucun sens et donnait un outil qui flotte a cote d'un guidon.
+	--
+	-- Verifie ICI, dans la seule porte d'entree de l'equipement (toggle et selection y passent tous les deux) :
+	-- le refus tient donc quel que soit le chemin. Avant, ce test ne connaissait QUE la tondeuse -- on pouvait
+	-- sortir un outil en portant l'echelle ou le seau.
+	if not CarryUtils.isFree(player) then
 		return false
 	end
 

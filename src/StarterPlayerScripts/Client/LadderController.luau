@@ -18,6 +18,7 @@ local UserInputService = game:GetService("UserInputService")
 local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 
 local LadderController = {}
@@ -27,7 +28,7 @@ local player = Players.LocalPlayer
 -- Pose par LadderMoveController sur le perso pendant qu'on PORTE une echelle. Tant qu'il est vrai, on ne grimpe
 -- pas : l'echelle portee est soudee a nous, ses zones de grimpe nous suivent, on grimperait sa propre echelle.
 -- Meme nom cote LadderMoveController (les deux doivent rester d'accord).
-local CARRYING_ATTR = "LeafiaCarryingLadder"
+-- "on porte une echelle" se lit maintenant sur la source unique CarryUtils, plus sur un attribut a nous.
 
 -- Rigs poses a la main dans le Workspace, leurs deux zones, et le dossier des anims (renomme Escabaut -> Ladder).
 -- PREFIXE et non nom exact : on gere PLUSIEURS echelles. Tout enfant du Workspace dont le nom commence par ce
@@ -582,7 +583,7 @@ local function tryMount()
 		return
 	end
 	local character = player.Character
-	if character and character:GetAttribute(CARRYING_ATTR) == true then
+	if character and CarryUtils.holds(player, "Ladder") then
 		return -- on porte une echelle : ses zones nous suivent, pas de grimpe
 	end
 	local root = getRoot()
@@ -606,7 +607,7 @@ local function update(dt: number)
 	-- dismount est idempotent : rien si on n'etait pas accroche ; sinon il sort proprement (cas ou on prend l'echelle
 	-- alors qu'on etait deja accroche).
 	local character = player.Character
-	if character and character:GetAttribute(CARRYING_ATTR) == true then
+	if character and CarryUtils.holds(player, "Ladder") then
 		dismount()
 		return
 	end

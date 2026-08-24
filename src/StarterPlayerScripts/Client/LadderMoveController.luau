@@ -19,6 +19,7 @@ local CollectionService = game:GetService("CollectionService")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 
@@ -48,10 +49,6 @@ local PLAYER_ROTATE_ANIM = "RotateLadderAnimation" -- geste de MAIN a la rotatio
 local TAKE_EVENT = "TakeLadderEvent" -- marqueur dans PLAYER_ANIM : instant ou on demande au serveur le repli
 local ROTATE_EVENT = "RotateAnimEvent" -- marqueur dans PLAYER_ROTATE_ANIM : instant ou on demande au serveur de tourner
 local CLOSED_ATTR = "LeafiaLadderClosed" -- attribut pose par le SERVEUR : true = repliee (lu a la prise / repose)
--- Pose sur le PERSO pendant qu'on porte une echelle (client-local). LadderController le lit pour NE PAS grimper :
--- une echelle portee est soudee a nous, donc ses zones de grimpe nous suivent et on grimperait sa propre echelle.
--- Meme nom cote LadderController (les deux doivent rester d'accord).
-local CARRYING_ATTR = "LeafiaCarryingLadder"
 local TAKE_KEY = Enum.KeyCode.F -- prendre / reposer l'echelle (E est reserve a MONTER, cote LadderController)
 local ROTATE_KEY = Enum.KeyCode.R -- tourne l'echelle 180 degres pendant qu'on la porte
 local ROTATE_DEBOUNCE = 0.45 -- anti-spam de R : environ la duree du tween serveur, pour ne pas relancer en plein tour
@@ -368,12 +365,10 @@ end
 -- PRISE : on soude (grab). ownsLadder retient qu'on tient l'echelle, pour la relacher meme sur une mort.
 local function grabCarry(ladder: Instance, c0: CFrame)
 	ownsLadder = true
-	-- On PORTE : bloque la grimpe (LadderController lit cet attribut). Pose des la prise, avant que le weld ne
-	-- fasse suivre les zones de grimpe.
-	local character = player.Character
-	if character then
-		character:SetAttribute(CARRYING_ATTR, true)
-	end
+	-- "On porte" n'est PLUS pose ici : c'est LadderMoveService qui le fait, dans le meme geste que la soudure.
+	-- Le client le posait lui-meme, donc un client modifie pouvait ne pas le poser et porter l'echelle PLUS le
+	-- reste. Bonus : l'attribut et la soudure arrivent maintenant ENSEMBLE, au lieu que notre pose optimiste
+	-- prenne de l'avance sur les zones de grimpe qui, elles, n'ont commence a suivre qu'au weld.
 	fireCarry(ladder, "grab", c0)
 end
 
@@ -383,11 +378,7 @@ local function endCarry(ladder: Instance, phase: string)
 		return
 	end
 	ownsLadder = false
-	-- Fin de portage : on rend la grimpe possible.
-	local character = player.Character
-	if character then
-		character:SetAttribute(CARRYING_ATTR, nil)
-	end
+	-- La grimpe redevient possible quand le SERVEUR rend les mains, pas quand on le decide ici.
 	fireCarry(ladder, phase)
 end
 
@@ -974,11 +965,11 @@ function LadderMoveController.init()
 		if carriedLadder or isTrimmerEquipped() or not toggleToolRemote then
 			return
 		end
-		-- TONDEUSE EN MAIN : on la pousse a deux mains, pas d'outil pendant ce temps. Le serveur refuse deja
-		-- l'equipement, mais sans ce test l'auto-equip retirerait le remote toutes les 0.2 s pour rien -- l'outil
-		-- ne s'equipant jamais, la condition "pas encore equipe" resterait vraie pour toujours.
-		-- Drapeau pose par MowService sur le JOUEUR ; un attribut de joueur se replique, donc on le lit d'ici.
-		if player:GetAttribute("LeafiaCarryingMower") then
+		-- LES MAINS SONT PRISES (tondeuse, echelle, seau) : tous se portent a deux mains, pas d'outil pendant ce
+		-- temps. Le serveur refuse deja l'equipement, mais sans ce test l'auto-equip tirerait le remote toutes les
+		-- 0.2 s pour rien -- l'outil ne s'equipant jamais, la condition "pas encore equipe" resterait vraie pour
+		-- toujours. Avant, ce test ne connaissait que la tondeuse.
+		if not CarryUtils.isFree(player) then
 			return
 		end
 		-- Sur l'echelle : l'outil est RANGE le temps de la grimpe (cote serveur). On NE le re-sort pas ici, sinon

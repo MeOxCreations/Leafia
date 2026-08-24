@@ -24,7 +24,7 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.ComboService).init()
 	require(script.HedgeCutService).init()
 	-- Echelle COMPLETE dans le tuto (portage + grimpe) : on l'ENSEIGNE ici (les grandes haies). Le "magnet" precedent
-	-- venait surtout du rail de portage qui gelait sur getMoveVector (corrige) ; le flag LeafiaCarryingLadder coupe deja
+	-- venait surtout du rail de portage qui gelait sur getMoveVector (corrige) ; le drapeau de portage (CarryUtils) coupe deja
 	-- la grimpe pendant qu'on porte. Necessite la VRAIE echelle de jeu dans la map (pas le rig d'anim Escabaut_..._rig).
 	require(script.LadderMoveService).init()
 	require(script.LadderZoneService).init()

@@ -14,6 +14,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local ToolService = require(script.Parent.ToolService)
 
 local LADDER_PREFIX = "Escabaut"
 local MAX_DIST = 30 -- distance MAX joueur <-> echelle a la prise (anti-triche)
@@ -130,6 +132,11 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 	if carried[model] then
 		return
 	end
+	-- LES MAINS SONT DEJA PRISES (seau, tondeuse). Refus AUTORITAIRE : c'est ici que la regle "on ne porte qu'une
+	-- chose a la fois" est appliquee pour de bon, le filtre du client n'etant qu'un confort d'affichage.
+	if not CarryUtils.isFree(player) then
+		return
+	end
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
 	if not (hrp and hrp:IsA("BasePart")) then
@@ -181,6 +188,13 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 	-- Orientation de reference pour la rotation : on la memorise APRES avoir pose le C0 de portage.
 	state.baseC0 = weld.C0
 	carried[model] = state
+	-- LES MAINS SONT PRISES. Ecrit ICI et plus dans LadderMoveController : le client posait ce drapeau lui-meme,
+	-- donc un client modifie pouvait ne pas le poser et porter l'echelle PLUS tout le reste. Bonus de timing :
+	-- l'attribut part maintenant en meme temps que la soudure, donc le client le recoit pile quand les zones de
+	-- grimpe commencent a suivre le porteur -- avant, sa pose optimiste et la soudure du serveur se decalaient.
+	CarryUtils.claim(player, "Ladder")
+	-- Une echelle se porte a deux mains : on RANGE l'outil, comme la tondeuse et le seau.
+	ToolService.unequip(player)
 
 	-- On CHARGE la piste de repli des la prise (sans la jouer) : au "close" (~0.23s plus tard) elle sera prete,
 	-- marqueurs inclus. Sinon, a la 1re prise de la session, l'asset n'est pas encore charge cote serveur et les
@@ -237,6 +251,7 @@ local function place(player: Player, model: Model)
 	local mt = state.foldTrack
 	unweld(state, model)
 	carried[model] = nil
+	CarryUtils.release(player, "Ladder")
 	if mt then
 		mt:AdjustSpeed(1) -- repart de CLOSE_EVENT vers OPEN_EVENT : depli
 	else
@@ -255,6 +270,7 @@ local function releaseImmediate(player: Player, model: Model)
 	end
 	unweld(state, model)
 	carried[model] = nil
+	CarryUtils.release(player, "Ladder")
 end
 
 -- ROTATION ("rotate", touche R) : chaque appui BASCULE entre l'orientation de base et la retournee de 180 degres.
@@ -367,14 +383,30 @@ function LadderMoveService.init()
 		end
 	end)
 
-	game:GetService("Players").PlayerRemoving:Connect(function(player: Player)
+	local function releaseAllOf(player: Player)
 		for model, state in pairs(carried) do
 			if state.owner == player then
 				releaseImmediate(player, model)
 			end
 		end
 		climbRelease(player)
-	end)
+	end
+
+	game:GetService("Players").PlayerRemoving:Connect(releaseAllOf)
+
+	-- LA MORT AUSSI. Ce service ne lachait l'echelle qu'au DEPART du joueur : mourir en la portant la laissait
+	-- soudee a un personnage detruit. Ca ne se voyait pas tant que "on porte" vivait sur le PERSONNAGE (detruit
+	-- avec lui, donc nettoye tout seul) ; maintenant que cet etat vit sur le JOUEUR et survit au respawn, un
+	-- oubli ici bloquerait ses mains POUR TOUTE LA SESSION. Meme filet que le seau et la tondeuse.
+	local function watch(player: Player)
+		player.CharacterRemoving:Connect(function()
+			releaseAllOf(player)
+		end)
+	end
+	for _, player in ipairs(game:GetService("Players"):GetPlayers()) do
+		watch(player)
+	end
+	game:GetService("Players").PlayerAdded:Connect(watch)
 end
 
 return LadderMoveService

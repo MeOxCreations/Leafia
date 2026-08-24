@@ -92,9 +92,9 @@ return {
 	-- Pose par le SERVEUR sur le seau : UserId du porteur. Le client le lit pour ne pas proposer un seau
 	-- deja pris par quelqu'un d'autre.
 	CARRIED_ATTRIBUTE = "LeafiaBinCarriedBy",
-	-- Pose sur le PERSONNAGE pendant le portage. Lu par les autres systemes de portage (echelle, tondeuse)
-	-- pour ne pas se declencher par-dessus : on ne porte qu'UNE chose a la fois.
-	CARRYING_ATTRIBUTE = "LeafiaCarryingBin",
+	-- Le drapeau "ce joueur porte quelque chose" ne vit PLUS ici. Il etait cense empecher les autres systemes de
+	-- portage de se declencher par-dessus, mais personne ne le lisait : on pouvait porter le seau ET prendre
+	-- l'echelle, la tondeuse, ou sortir un outil. Une seule reponse pour tout le monde, dans Modules/Utils/CarryUtils.
 
 	-- ===== ANIMATIONS =====
 	ANIM_FOLDER = { "Animations", "Player", "Tools", "Bin" },
@@ -164,7 +164,15 @@ return {
 	-- se referme, exactement le contraire de ce qui se passe.
 	--
 	-- Vitesse de ce retour. 1 = meme cadence qu'a la prise. Plus haut = on lache plus vite.
-	PLACE_SPEED = 1,
+	--
+	-- 1.8 : reposer a la meme cadence qu'on ramasse rendait la fin de geste molle. Ramasser est un EFFORT (on se
+	-- baisse, on empoigne), reposer est un relachement -- ca doit claquer. Le seau quitte les mains en ~0.35 s au
+	-- lieu de ~0.65 s, et la marche revient deux fois plus tot.
+	--
+	-- DEUX REGLAGES DEPENDENT DE CELUI-CI, ne pas le monter sans les redescendre : PLACE_STRAIGHTEN_TIME (le
+	-- redressement doit finir AVANT que la main s'ouvre) et PLACE_SLOW_TIME (le bridage doit finir AVEC le geste,
+	-- pas apres). Chacun dit ce qu'il attend a sa ligne.
+	PLACE_SPEED = 1.8,
 	-- On ne teste la fin du retour qu'apres ce delai : au tout premier passage TimePosition peut encore lire
 	-- zero, alors qu'on vient tout juste d'y ecrire la derniere image.
 	PLACE_SETTLE = 0.08,
@@ -176,7 +184,12 @@ return {
 	PLACE_SLOW_RATE = 60,
 	-- Duree du bridage. Volontairement INDEPENDANTE de la duree de l'animation : la vitesse revient toute seule
 	-- au bout, meme si le geste a ete interrompu, donc aucun joueur ne peut rester coince au ralenti.
-	PLACE_SLOW_TIME = 0.45,
+	--
+	-- Descendue de 0.45 avec PLACE_SPEED : brider plus longtemps que le geste ne dure, c'est rendre les commandes
+	-- a un joueur qu'on a fini de ralentir pour rien -- l'attente qu'on cherche justement a supprimer. Cale sur
+	-- l'instant ou le seau quitte les mains (~0.35 s), pas sur la fin du geste : apres le lacher, plus rien ne
+	-- justifie de le retenir.
+	PLACE_SLOW_TIME = 0.35,
 	-- FILET DUR, en secondes. Un marqueur muet laisserait le seau soude au joueur POUR TOUJOURS -- c'est le seul
 	-- defaut de ce fichier qu'un joueur ne peut pas rattraper lui-meme. Il tourne sur son PROPRE minuteur, donc
 	-- il survit meme si le geste est interrompu par une autre prise.
@@ -205,10 +218,13 @@ return {
 	-- donne cet angle. On l'amene a plat PENDANT le geste de repose, donc il est deja droit quand il quitte les
 	-- bras, et il ne lui reste plus qu'a descendre.
 	--
-	-- Le compte demarre a l'appui (phase "placeStart"), soit environ 0.8 s avant que la main s'ouvre : a 0.5 s
-	-- le redressement est fini bien avant le lacher. Le monter au-dela de ce delai le rendrait visible APRES.
-	-- 0 desactive le redressement -- le seau partira alors penche, comme avant.
-	PLACE_STRAIGHTEN_TIME = 0.5,
+	-- Le compte demarre a l'appui (phase "placeStart"). La main s'ouvre au marqueur TakeBucketEvent, place a
+	-- 0.57 s dans l'animation et donc atteint en marche arriere au bout de (duree - 0.57) / PLACE_SPEED --
+	-- environ 0.35 s a la vitesse actuelle. CETTE VALEUR DOIT RESTER SOUS CE DELAI : au-dela, le seau est encore
+	-- penche quand il quitte les mains et se redresse tout seul en l'air, ce qui est exactement l'effet de
+	-- correction apres coup qu'on cherchait a supprimer. Elle a donc ete divisee en meme temps que PLACE_SPEED a
+	-- ete multipliee. 0 desactive le redressement -- le seau partira penche, comme avant la version 0.0.429.
+	PLACE_STRAIGHTEN_TIME = 0.25,
 
 	-- IL GLISSE JUSQU'AU SOL, il ne s'y teleporte pas. On MEMORISE la position et l'orientation qu'il a DANS LES
 	-- MAINS -- celles que l'animation lui donne -- et on l'anime jusqu'a sa pose finale au sol.
