@@ -586,6 +586,13 @@ local function pickUp(ladder: Instance)
 	if carriedLadder then
 		return
 	end
+	-- LES MAINS SONT DEJA PRISES (seau, tondeuse). Le serveur refuse deja la soudure, mais SANS ce test le geste
+	-- partait quand meme : animation de prise, son, et rien au bout. Le joueur voyait son perso attraper une
+	-- echelle qu'il n'attrapait pas. Un refus serveur silencieux n'est pas un refus : il faut aussi que le client
+	-- n'ait rien joue.
+	if not CarryUtils.isFree(player) then
+		return
+	end
 	local animator = getPlayerAnimator()
 	if not animator then
 		return
@@ -768,7 +775,10 @@ local function updatePrompt()
 	lastPromptAt = os.clock()
 
 	local root = getRoot()
-	local ladder: Instance? = if root and not carriedLadder then ladderAt(root.Position) else nil
+	-- On ne propose pas ce qu'on ne pourra pas prendre : mains deja prises (seau, tondeuse) = pas de prompt. Sans
+	-- ca le badge "F PRENDRE" restait affiche par-dessus un seau qu'on porte, et l'appui ne donnait rien.
+	local free = CarryUtils.isFree(player)
+	local ladder: Instance? = if root and not carriedLadder and free then ladderAt(root.Position) else nil
 	if ladder == currentPromptLadder then
 		return
 	end

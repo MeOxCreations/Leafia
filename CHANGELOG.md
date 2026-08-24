@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.437 — Plus de geste qui part dans le vide
+
+En portant un seau, le badge "F PRENDRE" de l'echelle restait affiche. On appuyait : le personnage jouait tout le
+geste de prise, le son partait... et rien. Le seau restait dans les mains, l'echelle par terre.
+
+La version precedente avait pose le refus cote SERVEUR, ce qui empeche bien la triche. Mais le CLIENT, lui,
+n'avait pas ete prevenu : il proposait toujours l'action et jouait le geste entier avant que le serveur ne dise
+non, en silence.
+
+**Un refus serveur silencieux n'est pas un refus vu par le joueur.** Il ne suffit pas d'empecher : il faut que
+rien ne se joue. Sinon le jeu a l'air casse, ce qui est pire qu'une action interdite -- le joueur voit son perso
+attraper une echelle qu'il n'attrape pas, et il ne peut pas savoir pourquoi.
+
+### Les deux endroits, sur les deux systemes
+
+L'echelle ET la tondeuse avaient le meme trou, aux memes deux endroits :
+
+- **Le badge.** Il ne s'affiche plus quand les mains sont prises par autre chose. On ne propose pas ce qu'on ne
+  pourra pas prendre.
+- **Le geste.** Bloque a son point de passage unique (`pickUp` pour l'echelle, `toggleCarry` pour la tondeuse),
+  et pas seulement sur le chemin du badge : la touche et le bouton tactile passent ailleurs. Sur la tondeuse, le
+  test est pose APRES la repose (on peut toujours reposer SA machine) et AVANT la marche d'approche -- sinon le
+  joueur partait marcher vers une tondeuse qu'il ne pouvait pas prendre.
+
+La tondeuse debranche en plus sa touche : E est partage avec le seau, la laisser branchee ferait repondre deux
+actions au meme appui.
+
+Le seau, lui, avait deja ces deux gardes : c'est le seul des trois qui filtrait son prompt.
+
+### Reste ouvert
+
+Grimper a une echelle en portant un seau reste possible. C'est de la meme famille, mais c'est une question de
+DESIGN et pas un bug : monter avec son seau est un geste de jardinier credible. A trancher, pas a corriger en
+passant.
+
 ## 0.0.436 — Reposer le seau claque au lieu de trainer
 
 Ramasser est un EFFORT : on se baisse, on empoigne. Reposer est un relachement. Les deux jouaient a la meme

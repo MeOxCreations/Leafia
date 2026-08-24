@@ -21,6 +21,7 @@ local ContextActionService = game:GetService("ContextActionService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
@@ -946,6 +947,12 @@ local function toggleCarry()
 	if approaching then
 		return -- deja en train de rejoindre une tondeuse : on ne relance pas la marche par-dessus
 	end
+	-- Mains prises par autre chose (seau, echelle) : le serveur refusera la prise. Teste APRES la repose
+	-- ci-dessus, pour qu'on puisse toujours reposer SA tondeuse, et avant la marche d'approche : sans ca le
+	-- joueur partait marcher vers une tondeuse qu'il ne pouvait pas prendre.
+	if not CarryUtils.isFree(player) then
+		return
+	end
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
 	if hrp and hrp:IsA("BasePart") then
@@ -1024,6 +1031,13 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 		-- On pousse : plus de badge sur la tondeuse (on est dessus), mais l'action reste branchee pour la reposer.
 		hideOurs()
 		setActionBound(true)
+		return
+	end
+	-- LES MAINS SONT PRISES PAR AUTRE CHOSE (seau, echelle). On ne propose pas ce que le serveur refusera, et on
+	-- DEBRANCHE la touche : E est partage avec le seau, la laisser branchee ferait repondre deux actions.
+	if not CarryUtils.isFree(player) then
+		hideOurs()
+		setActionBound(false)
 		return
 	end
 
