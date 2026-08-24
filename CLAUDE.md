@@ -689,6 +689,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   direction. Quand une sonde nomme une cause, verifier qu'elle a le droit de la nommer -- ici elle ne mesurait que
   "ca n'a pas bouge", ce qui ne designe personne.
 
+- **Avec le streaming, un Model arrive AVANT ses parts : resoudre une reference UNE SEULE FOIS la fige a `nil`
+  pour toute la session.** Vecu sur le prompt de la porte du tuto : le Model `Door` etait bien trouve au boot,
+  mais `PrimaryPart` et `FindFirstChildWhichIsA("BasePart")` rendaient `nil` -- pas encore repliques. Le code
+  gardait le Model en cache et ne re-resolvait l'ancre que si le MODEL disparaissait : elle restait donc vide
+  a jamais, et le prompt ne sortait jamais. Symptome trompeur au possible : la porte EST trouvee (donc on
+  cherche du cote de la distance, du rayon, du prompt) alors que le trou est dans la replication. Regle : ce
+  qu'on garde en cache, c'est le RESULTAT COMPLET ; tant qu'une piece manque, on re-resout. Et une fonction de
+  recherche ne doit rendre que ce qui est UTILISABLE (ici : un Model qui a deja une part), sinon elle se fige
+  sur un candidat vide au lieu de continuer a chercher. Meme famille que le `return` pose sur "rien a faire
+  POUR L'INSTANT" qui court-circuitait l'abonnement de l'herbe de zone.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

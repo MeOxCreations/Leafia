@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.443 — Le prompt de la porte sort enfin
+
+La trace du commit precedent a nomme le coupable en une ligne :
+
+    [Tutorial] porte trouvee mais AUCUNE BasePart dedans : rien ou accrocher le prompt
+
+Avec StreamingEnabled, le Model `Door` est replique AVANT ses parts. Au boot, `PrimaryPart` et
+`FindFirstChildWhichIsA("BasePart")` rendaient donc `nil`.
+
+Et le code ne re-resolvait l'ancre que si le MODEL disparaissait. Il gardait la porte en cache avec une ancre
+VIDE, pour toute la session : le prompt ne pouvait plus jamais sortir.
+
+Symptome trompeur au possible : la porte EST trouvee. On va donc chercher du cote de la distance, du rayon ou du
+prompt lui-meme, alors que le trou est dans la replication.
+
+### Ce qu'on garde en cache, c'est le RESULTAT COMPLET
+
+Tant qu'une piece manque -- le Model, l'ancre, le Highlight -- on re-resout a chaque balayage. Le Highlight a
+droit au meme traitement : il peut arriver apres les parts.
+
+### Une recherche ne rend que ce qui est UTILISABLE
+
+`findDoor` ne rend plus un Model nu mais un couple (Model, part). Un Model sans aucune part est ignore et la
+recherche CONTINUE -- ce qui regle du meme coup l'autre cas : un autre Model du meme nom, vide, qui aurait
+capture la recherche pour toujours.
+
+### A FAIRE DANS STUDIO
+
+Rien. Mais le message d'avertissement de `AmbientAnimService` reste vrai : le Model du grand-pere s'appelle
+`OldmanOriginal` alors que la config attend `GrandFather`. Il ne respire donc pas, et il ne se promene pas.
+
 ## 0.0.442 — La porte se trouve par son NOM, ou qu'elle soit rangee
 
 Le didacticiel cherchait la porte a un chemin fixe (`Worlds/Maps/Assets/House/Door`). Elle vient de demenager

@@ -50,13 +50,21 @@ end
 -- La porte, ou nil. RECHERCHE PAR NOM dans tout le Workspace, jamais par un chemin fixe : elle a deja demenage
 -- une fois et elle redemenagera, et un chemin en dur transforme chaque rangement dans l'editeur en panne
 -- silencieuse. Le balayage ne tourne QUE tant qu'elle n'est pas trouvee.
-local function findDoor(): Model?
+local function findDoor(): (Model?, BasePart?)
 	for _, d in ipairs(Workspace:GetDescendants()) do
 		if d:IsA("Model") and d.Name == TutorialConfigs.DOOR_NAME then
-			return d
+			-- Reference FIXE, jamais GetPivot : le pivot d'un Model suit sa bounding box, donc ajouter la
+			-- moindre part enfant le decale et le prompt part de travers sans que rien ne le signale.
+			local part = d.PrimaryPart or d:FindFirstChildWhichIsA("BasePart", true)
+			-- ON N'ACCEPTE QUE CE QUI EST UTILISABLE. Une porte sans aucune part ne sert a rien : soit ses parts
+			-- ne sont pas encore repliquees (streaming), soit c'est un autre Model qui porte le meme nom. Dans
+			-- les deux cas on continue de chercher au lieu de se figer sur elle.
+			if part then
+				return d, part
+			end
 		end
 	end
-	return nil
+	return nil, nil
 end
 
 -- Le prompt est un SINGLETON partage (echelle, tondeuse, seau, boite aux lettres). On ne cache donc QUE le
@@ -119,30 +127,34 @@ end
 local function step(dt: number)
 	local now = os.clock()
 
-	if not (door and door.Parent) then
-		door, highlight, anchor = nil, nil, nil
+	-- ON REVALIDE TANT QU'IL MANQUE QUELQUE CHOSE, pas seulement au premier passage. Avec StreamingEnabled le
+	-- Model arrive souvent AVANT ses parts : resoudre l'ancre une seule fois la laissait a nil pour TOUTE la
+	-- session, et le prompt ne sortait jamais -- sans la moindre erreur. Le Model etait pourtant bien trouve,
+	-- donc on cherchait le probleme du cote de la distance ou du prompt, pas du cote de la replication.
+	if not (door and door.Parent and anchor and anchor.Parent) then
+		door, anchor = nil, nil
 		if now - lastScanAt < TutorialConfigs.RESCAN_INTERVAL then
 			return
 		end
 		lastScanAt = now
-		local found = findDoor()
-		if not found then
+		door, anchor = findDoor()
+		if not door then
 			if not warnedNoDoor and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
 				warnedNoDoor = true
 				warn(
-					`[Tutorial] Aucun Model "{TutorialConfigs.DOOR_NAME}" dans le Workspace : ni halo, ni prompt. `
-						.. "Rojo ne synchronise pas le Workspace, la porte doit exister dans CETTE place."
+					`[Tutorial] Aucun Model "{TutorialConfigs.DOOR_NAME}" utilisable dans le Workspace : ni halo, `
+						.. "ni prompt. Rojo ne synchronise pas le Workspace, la porte doit exister dans CETTE place."
 				)
 			end
 			return
 		end
-		door = found
-		-- Reference FIXE, jamais GetPivot : le pivot d'un Model suit sa bounding box, donc ajouter la moindre
-		-- part enfant le decale et le prompt part de travers sans que rien ne le signale.
-		anchor = found.PrimaryPart or found:FindFirstChildWhichIsA("BasePart", true)
-		local halo = found:FindFirstChild(TutorialConfigs.HIGHLIGHT_NAME)
+	end
+
+	-- Le Highlight peut arriver APRES les parts : meme raison, on le re-cherche tant qu'on ne l'a pas.
+	if not (highlight and highlight.Parent) then
+		local halo = (door :: Model):FindFirstChild(TutorialConfigs.HIGHLIGHT_NAME)
 		highlight = if halo and halo:IsA("Highlight") then halo else nil
-		if not highlight and not warnedNoHighlight then
+		if not highlight and not warnedNoHighlight and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
 			warnedNoHighlight = true
 			warn(
 				`[Tutorial] Porte trouvee mais aucun Highlight "{TutorialConfigs.HIGHLIGHT_NAME}" dedans : elle ne `
@@ -177,10 +189,8 @@ local function step(dt: number)
 	-- Dit ce que la detection VOIT, pas ce qu'on croit qu'elle voit.
 	if TutorialConfigs.DEBUG and now - lastDebugAt >= TutorialConfigs.DEBUG_INTERVAL then
 		lastDebugAt = now
-		if not door then
-			print(`[Tutorial] porte "{TutorialConfigs.DOOR_NAME}" INTROUVABLE dans le Workspace`)
-		elseif not target then
-			print(`[Tutorial] porte trouvee mais AUCUNE BasePart dedans : rien ou accrocher le prompt`)
+		if not (door and target) then
+			print(`[Tutorial] porte "{TutorialConfigs.DOOR_NAME}" pas encore utilisable (Model ou parts absents)`)
 		elseif not root then
 			print("[Tutorial] pas de HumanoidRootPart (personnage pas encore la)")
 		else
