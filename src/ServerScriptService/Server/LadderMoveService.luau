@@ -15,7 +15,6 @@ local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
-local ToolService = require(script.Parent.ToolService)
 
 local LADDER_PREFIX = "Escabaut"
 local MAX_DIST = 30 -- distance MAX joueur <-> echelle a la prise (anti-triche)
@@ -193,8 +192,17 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 	-- l'attribut part maintenant en meme temps que la soudure, donc le client le recoit pile quand les zones de
 	-- grimpe commencent a suivre le porteur -- avant, sa pose optimiste et la soudure du serveur se decalaient.
 	CarryUtils.claim(player, "Ladder")
-	-- Une echelle se porte a deux mains : on RANGE l'outil, comme la tondeuse et le seau.
-	ToolService.unequip(player)
+	-- ON NE RANGE PAS L'OUTIL ICI, contrairement a la tondeuse et au seau. L'echelle n'est pas une tache en soi :
+	-- c'est le MOYEN d'atteindre le haut d'une haie, et une fois en haut il faut pouvoir couper.
+	--
+	-- Le ranger ici CASSE la boucle de travail, et de facon indirecte. `HedgeService.syncLadderTool` range l'outil
+	-- pendant la grimpe en MEMORISANT SON NOM, puis le rend a l'identique en haut. Ce souvenir se prend sur
+	-- l'outil EN MAIN au debut de la montee : si on a deja vide les mains a la prise de l'echelle, il n'y a rien a
+	-- memoriser, donc rien a rendre -- le joueur arrive en haut les mains vides devant la haie qu'il venait
+	-- chercher, et rien n'explique pourquoi.
+	--
+	-- Porter l'echelle avec un taille-haie a la main n'est pas ideal a l'oeil. Casser la boucle de travail pour un
+	-- detail visuel est un mauvais echange.
 
 	-- On CHARGE la piste de repli des la prise (sans la jouer) : au "close" (~0.23s plus tard) elle sera prete,
 	-- marqueurs inclus. Sinon, a la 1re prise de la session, l'asset n'est pas encore charge cote serveur et les

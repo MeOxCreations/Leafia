@@ -582,9 +582,15 @@ local function tryMount()
 	if mountCFrame or not (zone and ladder and canMount) then
 		return
 	end
+	-- LES MAINS SONT PRISES : pas de grimpe. Deux cas differents sous la meme regle.
+	--   L'ECHELLE : portee, elle est soudee a nous, donc ses zones de grimpe nous suivent et on grimperait sa
+	--   propre echelle en permanence.
+	--   LE SEAU (et la tondeuse) : on monte a une echelle avec les mains, pas avec un seau dans les bras.
+	-- L'OUTIL, lui, ne compte pas : il n'occupe pas les mains au sens de CarryUtils, et c'est justement pour
+	-- couper en haut qu'on monte.
 	local character = player.Character
-	if character and CarryUtils.holds(player, "Ladder") then
-		return -- on porte une echelle : ses zones nous suivent, pas de grimpe
+	if character and not CarryUtils.isFree(player) then
+		return
 	end
 	local root = getRoot()
 	if not root then
@@ -602,12 +608,11 @@ local function update(dt: number)
 		return
 	end
 
-	-- On PORTE une echelle (LadderMoveController) : elle est soudee a nous, donc ses zones de grimpe nous suivent
-	-- et on serait en permanence "dans la zone" -> on grimperait sa propre echelle. Tant qu'on porte, pas de grimpe.
-	-- dismount est idempotent : rien si on n'etait pas accroche ; sinon il sort proprement (cas ou on prend l'echelle
-	-- alors qu'on etait deja accroche).
+	-- Meme regle qu'a la montee, appliquee en continu : si les mains se remplissent PENDANT qu'on est accroche
+	-- (on ramasse un seau depuis l'echelle), on redescend au lieu de rester perche avec les bras pleins.
+	-- dismount est idempotent : rien si on n'etait pas accroche ; sinon il sort proprement.
 	local character = player.Character
-	if character and CarryUtils.holds(player, "Ladder") then
+	if character and not CarryUtils.isFree(player) then
 		dismount()
 		return
 	end

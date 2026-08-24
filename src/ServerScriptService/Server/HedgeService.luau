@@ -483,8 +483,13 @@ local function syncLadderTool(player: Player)
 	if wantsTool then
 		local stashed = ladderStash[player]
 		if stashed then
-			ladderStash[player] = nil
-			ToolService.equip(player, stashed)
+			-- On n'oublie l'outil QUE s'il est vraiment revenu. `equip` peut refuser -- il refuse desormais quand
+			-- les mains sont prises (un seau ramasse entre-temps) -- et vider le souvenir avant de connaitre la
+			-- reponse perdait le nom POUR DE BON : le joueur ne revoyait plus jamais son outil, sans la moindre
+			-- erreur pour le signaler. Garde, le souvenir sera resservi au prochain passage.
+			if ToolService.equip(player, stashed) then
+				ladderStash[player] = nil
+			end
 		end
 	elseif not ladderStash[player] then
 		-- On grimpe : ranger l'outil une seule fois, en memorisant son nom pour le rendre a l'identique.

@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.438 — L'outil revient en haut de l'echelle, et on n'y monte plus les bras pleins
+
+Deux corrections sur la meme famille, dont une REGRESSION introduite la veille.
+
+### Ranger l'outil a la prise de l'echelle cassait la taille en hauteur
+
+La version 0.0.435 ajoutait un `ToolService.unequip` a la prise de l'echelle, "par coherence avec la tondeuse et
+le seau". Personne ne l'avait demande, et ca cassait la boucle de travail -- de facon indirecte, donc invisible a
+la relecture.
+
+`HedgeService.syncLadderTool` range l'outil pendant la grimpe en MEMORISANT SON NOM, puis le rend a l'identique
+une fois en haut. Ce souvenir se prend sur l'outil EN MAIN au debut de la montee. Les mains deja vides a la prise
+de l'echelle, il n'y a rien a memoriser, donc rien a rendre : le joueur arrive en haut sans outil, devant la haie
+qu'il venait tailler, et rien ne lui dit pourquoi.
+
+L'echelle n'est pas une tache en soi : c'est le MOYEN d'atteindre le haut d'une haie. Elle ne vide donc plus les
+mains. Le seau et la tondeuse, eux, gardent ce rangement : ce sont des taches a part entiere.
+
+Lecon : ajouter une regle "par coherence" sur un systeme qu'on n'a pas suivi jusqu'au bout coute plus cher que
+l'incoherence qu'elle voulait supprimer. Trois systemes qui se ressemblent ne servent pas le meme but.
+
+### Un souvenir efface avant d'etre rendu
+
+Trouve en relisant le chemin ci-dessus. `syncLadderTool` vidait `ladderStash` AVANT de savoir si l'equipement
+avait reussi. Tant que `equip` ne refusait jamais, ca ne se voyait pas. Il refuse maintenant quand les mains sont
+prises (0.0.435) : un joueur qui redescend en ayant ramasse un seau perdait le nom de son outil POUR DE BON,
+sans la moindre erreur. Le souvenir n'est efface que si l'outil est vraiment revenu.
+
+### On ne monte plus a une echelle avec un seau dans les bras
+
+La montee ne verifiait qu'une chose : "est-ce que je porte une echelle ?" -- pour ne pas grimper la sienne, dont
+les zones nous suivent. Elle verifie maintenant que les mains sont LIBRES, ce qui couvre aussi le seau et la
+tondeuse.
+
+L'OUTIL, lui, ne compte pas : il n'occupe pas les mains au sens de CarryUtils, et c'est justement pour couper en
+haut qu'on monte. La question laissee ouverte en 0.0.437 est donc tranchee : monter avec un seau est refuse.
+
+La meme regle tourne aussi EN CONTINU, pas seulement a la montee : si les mains se remplissent pendant qu'on est
+accroche, on redescend au lieu de rester perche les bras pleins.
+
 ## 0.0.437 — Plus de geste qui part dans le vide
 
 En portant un seau, le badge "F PRENDRE" de l'echelle restait affiche. On appuyait : le personnage jouait tout le
