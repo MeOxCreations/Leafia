@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.439 — Les scripts d'attache ne mentent plus sur le nom de la piste
+
+`AttacherCanneAuPapi.lua` et `AttacherObjetAuRig.lua` annonçaient tous les deux que le nom du Motor6D devenait
+le nom de la PISTE dans l'editeur d'animation. C'est faux, et c'est exactement l'erreur qui a coute deux
+versions entieres sur le portage du seau (0.0.432).
+
+Une animation retrouve ce qu'elle doit bouger par le nom de la PART1 du joint. Une anim R15 cle "UpperTorso"
+(une part), jamais "Waist" (le Motor6D qui la tire). Le nom du joint ne sert qu'a le RETROUVER pour le
+remplacer.
+
+Les deux scripts le disent maintenant en tete, avec la consequence : c'est le nom de la PART qui doit
+correspondre entre le rig d'animation et le jeu.
+
+### Pourquoi ca valait un commit a soi seul
+
+Ces scripts sont ce qu'on relit AVANT d'animer. Une regle deja notee dans le journal ne protege que si elle est
+la ou l'on travaille -- le projet la connaissait a deux endroits et l'a quand meme repayee.
+
 ## 0.0.438 — L'outil revient en haut de l'echelle, et on n'y monte plus les bras pleins
 
 Deux corrections sur la meme famille, dont une REGRESSION introduite la veille.

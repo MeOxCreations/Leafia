@@ -25,7 +25,12 @@
 --   1. Place l'objet dans la main du rig, a l'oeil, comme tu veux qu'il le tienne.
 --   2. Selectionne le RIG (le Model du personnage).
 --   3. Colle ce script dans la barre de commandes.
---   4. Ouvre l'editeur d'animation : une piste au nom de l'objet est apparue.
+--   4. Ouvre l'editeur d'animation : une piste au NOM DE LA PART soudee est apparue.
+--
+-- LE NOM DE LA PISTE EST CELUI DE LA PART, PAS CELUI DU JOINT. Une animation Roblox retrouve ce qu'elle doit
+-- bouger par le nom de la PART1 du joint -- une anim R15 cle "UpperTorso" (une part), jamais "Waist" (le Motor6D
+-- qui la tire). Le nom du joint ne sert qu'a le RETROUVER pour le remplacer. Deux versions du portage du seau ont
+-- ete construites sur l'idee inverse : c'est le nom de la PART qui doit correspondre entre le rig et le jeu.
 --
 -- Relancer le script REFAIT le joint depuis la position actuelle : on corrige la prise et on rejoue.
 --
@@ -108,7 +113,8 @@ if object.Parent ~= rig then
 end
 
 local joint = Instance.new("Motor6D")
-joint.Name = OBJECT_NAME -- NOM DE LA PISTE dans l'editeur d'animation : c'est ce nom qu'on verra
+-- Sert UNIQUEMENT a retrouver ce joint pour le remplacer. La PISTE de l'editeur, elle, prend le nom de la PART.
+joint.Name = OBJECT_NAME
 joint.Part0 = hand
 joint.Part1 = part
 -- C0 = la position ACTUELLE de l'objet vue depuis la main. C'est ce qui fige le placement fait a l'oeil.

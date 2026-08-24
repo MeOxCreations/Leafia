@@ -15,9 +15,14 @@
 -- MODE D'EMPLOI
 --   1. Place la canne dans la main de Papi, a l'oeil, comme tu veux qu'il la tienne.
 --   2. Colle ce script dans la barre de commandes.
---   3. Ouvre l'editeur d'animation sur Papi : une piste "Canne" est apparue.
+--   3. Ouvre l'editeur d'animation sur Papi : une piste au NOM DE LA PART de la canne est apparue.
 --
 -- Relancer le script REFAIT le joint depuis la position actuelle : on peut donc corriger la prise et rejouer.
+--
+-- LE NOM DE LA PISTE EST CELUI DE LA PART, PAS CELUI DU JOINT. Une animation Roblox retrouve ce qu'elle doit
+-- bouger par le nom de la PART1 du joint -- une anim R15 cle "UpperTorso" (une part), jamais "Waist" (le Motor6D
+-- qui la tire). Le nom du joint ne sert qu'a le RETROUVER pour le remplacer. Deux versions du portage du seau ont
+-- ete construites sur l'idee inverse : c'est le nom de la PART qui doit correspondre entre le rig et le jeu.
 --
 -- ATTENTION : Rojo ne synchronise PAS le Workspace. Ce joint doit etre refait dans CHAQUE place (Leafia ET le
 -- tuto), sinon Papi tiendra sa canne dans l'une et pas dans l'autre.
@@ -29,7 +34,9 @@
 local PAPI_NAME = "GrandFather" -- nom du MODELE dans le Workspace
 local CANE_NAME = "Canne"
 local HAND_NAME = "RightHand" -- main qui tient la canne. "LeftHand" si tu preferes l'autre.
-local JOINT_NAME = "Canne" -- NOM DE LA PISTE dans l'editeur d'animation. C'est ce nom que tu verras.
+-- Nom du Motor6D. Sert UNIQUEMENT a le retrouver pour le remplacer quand on relance le script : la piste de
+-- l'editeur, elle, prend le nom de la PART de la canne (voir la note en tete).
+local JOINT_NAME = "Canne"
 
 local papi = workspace:FindFirstChild(PAPI_NAME, true)
 if not (papi and papi:IsA("Model")) then
