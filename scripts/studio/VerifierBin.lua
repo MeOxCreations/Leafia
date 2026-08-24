@@ -28,7 +28,36 @@ local LEG_PARTS = {
 	["Right Leg"] = true,
 }
 
+-- Parts d'un rig de personnage. Sert a ISOLER, dans les pistes d'une animation, celle qui n'est PAS un membre :
+-- cette piste-la est celle du seau, et son nom est exactement celui que la part du seau doit porter en jeu.
+local RIG_PARTS = {
+	HumanoidRootPart = true,
+	Head = true,
+	LowerTorso = true,
+	UpperTorso = true,
+	LeftUpperArm = true,
+	LeftLowerArm = true,
+	LeftHand = true,
+	RightUpperArm = true,
+	RightLowerArm = true,
+	RightHand = true,
+	LeftUpperLeg = true,
+	LeftLowerLeg = true,
+	LeftFoot = true,
+	RightUpperLeg = true,
+	RightLowerLeg = true,
+	RightFoot = true,
+	Torso = true,
+	["Left Arm"] = true,
+	["Right Arm"] = true,
+	["Left Leg"] = true,
+	["Right Leg"] = true,
+}
+
 local problems = {}
+-- Nom de la part racine de chaque seau REEL (hors rig). C'est CE nom que l'animation doit cler pour piloter le
+-- seau en jeu : une animation retrouve sa cible par le nom de la PART1 du joint, jamais par le nom du joint.
+local binRootNames = {}
 local function fail(message)
 	table.insert(problems, message)
 	warn(`[VerifierBin] MANQUE : {message}`)
@@ -74,6 +103,11 @@ for _, model in ipairs(bins) do
 	end
 
 	-- LE PIEGE : la PROPRIETE PrimaryPart, pas une part qui porte ce nom.
+	-- Meme resolution que le jeu (BinCarryService.binRoot) : PrimaryPart d'abord, sinon l'enfant RootPart.
+	local root = model.PrimaryPart or model:FindFirstChild("RootPart")
+	if root and root:IsA("BasePart") then
+		binRootNames[root.Name] = true
+	end
 	if model.PrimaryPart then
 		print(`[VerifierBin]   PrimaryPart (propriete) = "{model.PrimaryPart.Name}" -> OK`)
 	elseif model:FindFirstChild("RootPart") then
@@ -209,6 +243,53 @@ else
 					else
 						print("[VerifierBin]   aucune jambe clee -> OK pour une pose de maintien")
 					end
+
+					-- LA PISTE DU SEAU, ET LE NOM QU'ELLE EXIGE. Une animation retrouve ce qu'elle bouge par le
+					-- nom de la PART1 du joint, jamais par le nom du joint : le nom affiche ici est donc celui
+					-- que la part racine du seau doit porter EN JEU. S'ils different, la piste joue dans le vide,
+					-- le seau reste fige sur CARRY_C0, et on cherche l'erreur dans l'angle.
+					local pistes, horsRig = {}, {}
+					for name in pairs(posed) do
+						table.insert(pistes, name)
+						if not RIG_PARTS[name] then
+							table.insert(horsRig, name)
+						end
+					end
+					table.sort(pistes)
+					table.sort(horsRig)
+					print(`[VerifierBin]   PISTES ({#pistes}) : {table.concat(pistes, ", ")}`)
+
+					if #horsRig == 0 then
+						print(
+							"[VerifierBin]   aucune piste hors membres : cette animation ne bouge QUE le personnage, elle ne pilote pas le seau"
+						)
+					elseif not next(binRootNames) then
+						print(
+							`[VerifierBin]   piste(s) hors membres (= le seau) : {table.concat(horsRig, ", ")}. Aucun seau dans le Workspace, comparaison impossible.`
+						)
+					else
+						local attendus = {}
+						for name in pairs(binRootNames) do
+							table.insert(attendus, `"{name}"`)
+						end
+						table.sort(attendus)
+						local match = nil
+						for _, name in ipairs(horsRig) do
+							if binRootNames[name] then
+								match = name
+								break
+							end
+						end
+						if match then
+							print(
+								`[VerifierBin]   piste du seau = "{match}", et une part racine porte ce nom -> l'animation pilotera bien le seau`
+							)
+						else
+							fail(
+								`{anim.Name} cle {table.concat(horsRig, ", ")}, mais la part racine des seaux du Workspace s'appelle {table.concat(attendus, " / ")}. Les deux doivent porter le MEME nom : renomme la part racine du seau comme la piste, et reporte ce nom dans BinConfigs.ROOT_NAME. Sinon la piste joue dans le vide et le seau garde l'angle fige de CARRY_C0`
+							)
+						end
+					end
 				end
 			end
 		end
@@ -218,7 +299,7 @@ end
 -- ===== RESUME =====
 print("[VerifierBin] ==========")
 if #problems == 0 then
-	print("[VerifierBin] Tout est en place. Donne-moi le nom du MARQUEUR et la ligne C0 affiches ci-dessus.")
+	print("[VerifierBin] Tout est en place. Donne-moi les lignes MARQUEURS, PISTES et C0 affichees ci-dessus.")
 else
 	warn(`[VerifierBin] {#problems} chose(s) a corriger :`)
 	for i, p in ipairs(problems) do

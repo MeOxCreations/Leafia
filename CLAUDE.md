@@ -677,6 +677,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   reconnexion Rojo ne repare plus rien. Indice qui pointe droit sur la cause : le CODE recule pendant que la MAP
   reste bonne -- Rojo ne synchronise que `src/`.
 
+- **Une animation ne retrouve JAMAIS un joint par le nom du MOTOR6D : elle cherche par le nom de sa PART1.** Ses
+  poses portent des noms de PARTS. Une anim R15 cle `UpperTorso` et `LeftUpperArm` (des parts), jamais `Waist` ni
+  `LeftShoulder` (les Motor6D qui les tirent). Vecu sur le seau porte : deux versions entieres ont ete construites sur
+  l'idee inverse, avec une sonde qui MESURAIT juste (le joint ne bouge pas) mais ACCUSAIT le mauvais reglage
+  (`JOINT_NAME`) -- renommer le Motor6D n'aurait rien change, c'est la part racine du seau qui devait porter le nom
+  de la piste. Le projet le savait pourtant deja a deux endroits (`ComparerAnimEtRig.lua` construit ses noms depuis
+  les `Part1`, et l'entree Papi ci-dessus le dit en toutes lettres) : une regle notee dans le journal ne protege que
+  si on la RELIT au moment d'ecrire le code voisin. Lecon jumelle : un diagnostic qui designe le mauvais coupable
+  coute PLUS cher que pas de diagnostic du tout, parce qu'il envoie travailler avec confiance dans la mauvaise
+  direction. Quand une sonde nomme une cause, verifier qu'elle a le droit de la nommer -- ici elle ne mesurait que
+  "ca n'a pas bouge", ce qui ne designe personne.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

@@ -18,6 +18,12 @@ return {
 	-- Part fixe de reference. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc ajouter la
 	-- moindre part enfant le decale et tous les calculs partent de travers. On prend la PrimaryPart, sinon
 	-- un enfant portant ce nom.
+	--
+	-- CE NOM EST AUSSI CELUI QUE L'ANIMATION CHERCHE. La part designee ici devient la Part1 du Motor6D de
+	-- portage, et une animation retrouve ce qu'elle doit bouger par le nom de la PART1. Pour que la piste du
+	-- seau (celle que tu animes dans l'editeur) morde EN JEU, la part du seau doit donc porter ici le MEME nom
+	-- que sur le rig d'animation. Si les deux different, la piste ne trouve rien et n'ecrit RIEN, sans la
+	-- moindre erreur : le seau reste fige sur CARRY_C0 et on croit a un probleme d'angle.
 	ROOT_NAME = "RootPart",
 
 	-- ===== PRISE =====
@@ -32,12 +38,15 @@ return {
 	-- Position et angle du seau vus depuis JOINT_PARENT. Valeur relevee sur le rig. Z negatif = devant le
 	-- torse. Monter Z (vers 0) le rapproche du corps, baisser Y le fait descendre vers les jambes.
 	CARRY_C0 = CFrame.new(0, 0, -2.6) * CFrame.Angles(0, math.rad(90), 0),
-	-- NOM DU JOINT CREE, ET CE NOM EST CRITIQUE. Une animation Roblox retrouve un joint PAR SON NOM : pour que
-	-- la piste du seau (celle que tu animes dans l'editeur) pilote le seau EN JEU, ce nom doit etre EXACTEMENT
-	-- celui du Motor6D pose sur le rig d'animation. S'ils different, la piste ne trouve rien et n'ecrit RIEN,
-	-- sans la moindre erreur : le seau reste fige sur CARRY_C0 et on croit a un probleme d'angle.
+	-- Nom du Motor6D cree. Sert a le RETROUVER et a le lire dans l'Explorer, RIEN D'AUTRE.
 	--
-	-- Le nom du rig se lit dans l'editeur d'animation (c'est le nom de la PISTE) ou avec VerifierBin.lua.
+	-- Il ne joue AUCUN role dans l'animation, contrairement a ce que disaient les versions 0.0.430 / 0.0.431. Une
+	-- animation Roblox ne cherche pas un joint par le nom DU JOINT : elle cherche par le nom de sa PART1. Ses
+	-- poses portent des noms de PARTS. C'est pour ca qu'une anim R15 contient "UpperTorso" et "LeftUpperArm" (des
+	-- parts) et jamais "Waist" ni "LeftShoulder" (les Motor6D qui les tirent).
+	--
+	-- Le nom qui compte pour que l'animation pilote le seau est donc ROOT_NAME (la part soudee, Part1 du joint),
+	-- pas celui-ci. Le renommer ne changera jamais rien.
 	JOINT_NAME = "BinCarryJoint",
 	-- Secondes apres la prise avant de verifier que l'animation a bien bouge le joint. Assez tard pour qu'une
 	-- piste ait eu le temps d'ecrire, assez tot pour que le message serve.

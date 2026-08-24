@@ -2204,6 +2204,53 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.432 — Le seau : on cherchait le bon nom au mauvais endroit
+
+Les deux versions precedentes ont conclu, mesure a l'appui, que l'animation ne pilote pas le seau. La mesure est
+bonne. La CAUSE annoncee est fausse, et la correction demandee (« relever le nom de la piste et le reporter dans
+`JOINT_NAME` ») n'aurait rien change.
+
+### Une animation ne cherche pas un joint par le nom DU JOINT
+
+Elle cherche par le nom de sa **Part1**. Ses poses portent des noms de PARTS. C'est pour ca qu'une animation R15
+contient `UpperTorso` et `LeftUpperArm` -- des parts -- et jamais `Waist` ni `LeftShoulder`, les Motor6D qui les
+tirent.
+
+Le nom qui compte pour le seau est donc celui de sa **part racine** (`ROOT_NAME`, la Part1 du joint de portage),
+pas `JOINT_NAME`. Ce dernier ne sert qu'a retrouver le Motor6D dans l'Explorer, et le renommer n'aura jamais le
+moindre effet sur l'animation.
+
+Le projet le savait deja a deux endroits : `ComparerAnimEtRig.lua` construit la liste des noms acceptes a partir
+des `Part1`, et le journal de `CLAUDE.md` (piege des animations Mixamo sur Papi) dit noir sur blanc « comparer les
+noms de poses de la KeyframeSequence aux noms des `Part1` du rig ». Le code du seau, ecrit plus tard, a pose la
+regle a l'envers -- et deux versions ont ete construites par-dessus.
+
+### Le diagnostic accusait le mauvais reglage
+
+Le message de la sonde envoyait renommer `JOINT_NAME`. Il nomme maintenant la vraie cause, et la part concernee :
+
+    l'animation NE pilote PAS le seau : la part "RootPart" (soudee a "UpperTorso") n'a jamais bouge...
+    Cause : l'animation ne contient AUCUNE piste portant ce nom de part.
+
+Un diagnostic qui designe le mauvais coupable coute plus cher que pas de diagnostic du tout : il envoie travailler
+avec confiance dans la mauvaise direction. C'est exactement ce qui s'est passe ici.
+
+### La mesure devient automatique
+
+Il fallait ouvrir l'editeur d'animation et lire un nom de piste a la main. `VerifierBin.lua` le fait maintenant :
+il liste les pistes de chaque animation du seau, ISOLE celle qui n'est pas un membre de personnage (c'est celle du
+seau), et la compare au nom de la part racine des seaux du Workspace. Il dit alors l'un des deux :
+
+    piste du seau = "X", et une part racine porte ce nom -> l'animation pilotera bien le seau
+    MANQUE : ... cle "X", mais la part racine des seaux s'appelle "RootPart". Les deux doivent porter le MEME nom
+
+Plus de nom a relever a l'oeil, plus de nom a recopier : la comparaison est faite et le verdict est rendu.
+
+### A faire dans Studio
+
+Lancer `VerifierBin.lua`. S'il signale un ecart, renommer la part racine du seau avec le nom de la piste, puis
+reporter ce nom dans `BinConfigs.ROOT_NAME` -- les deux valeurs vont ENSEMBLE.
+
 ## 0.0.431 — Un seau monte sur un rig d'animation n'est plus un seau du jeu
 
 Mesure du commit precedent, en jeu :
