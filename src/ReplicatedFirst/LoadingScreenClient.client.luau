@@ -238,10 +238,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
 	local LEAF_GAUGE_POS = UDim2.fromScale(0.965, 0.906)
-	local LEAF_GAUGE_SIZE = UDim2.fromScale(0.26, 0.055)
-	-- Largeur d'une feuille dans sa case, en fraction. En dessous de 1, l'espace restant fait l'ecart entre
-	-- elles : un seul reglage pour la taille ET l'espacement, qui ne peuvent donc pas se contredire.
-	local LEAF_FILL = 0.72
+	-- LA LARGEUR DE LA JAUGE COMMANDE L'ECART ENTRE LES FEUILLES, pas leur taille.
+	--
+	-- Elles sont en `Fit` : leur taille est donc bornee par la HAUTEUR de la case, pas par sa largeur. Elargir la
+	-- jauge ne les grossit pas, ca les ECARTE ; la retrecir les rapproche sans les rapetisser -- jusqu'au point
+	-- ou la case devient plus etroite que haute, et la elles retrecissent pour de bon.
+	--
+	-- C'est aussi elle qui borne le texte des conseils, qui s'arrete juste avant : la retrecir donne donc plus de
+	-- place au texte, sans rien avoir a regler d'autre.
+	local LEAF_GAUGE_SIZE = UDim2.fromScale(0.2, 0.055)
+	-- Part de la case occupee par la feuille. Proche de 1 : la case ne sert presque plus de marge, et c'est la
+	-- largeur de la jauge ci-dessus qui fait l'espacement. Baisser cette valeur remet de la marge PARTOUT, y
+	-- compris aux deux bouts.
+	local LEAF_FILL = 0.95
 	local LEAF_ANGLE = -10
 	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
 	-- monte tout droit se lit comme un fondu, pas comme une arrivee.

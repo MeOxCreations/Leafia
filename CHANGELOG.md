@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.483 — Les six feuilles se rapprochent
+
+Un seul reglage faisait la TAILLE et l'ESPACEMENT : `LEAF_FILL`, la part de sa case occupee par une feuille. Le
+monter les rapprochait mais les grossissait, le baisser faisait l'inverse. Aucune valeur ne pouvait donner des
+feuilles serrees ET de la meme taille.
+
+Les deux sont separes.
+
+### La LARGEUR de la jauge commande l'ecart
+
+Les feuilles sont en `Fit` : leur taille est bornee par la HAUTEUR de leur case, pas par sa largeur. Elargir la
+jauge ne les grossit donc pas, ca les ECARTE -- et la retrecir les rapproche sans les rapetisser, jusqu'au point
+ou la case devient plus etroite que haute.
+
+Jauge 0.26 -> 0.2, et `LEAF_FILL` monte a 0.95 : la case ne sert presque plus de marge.
+
+### Effet de bord voulu
+
+La largeur de la jauge borne aussi le texte des conseils, qui s'arrete juste avant. La retrecir donne donc plus
+de place au texte, sans rien avoir a regler d'autre -- c'est tout l'interet d'avoir calcule cette largeur au
+lieu de l'ecrire.
+
 ## 0.0.482 — La feuille grossit d'abord, PUIS elle saute
 
 C'etait un seul geste : elle tombait de nulle part et rebondissait. Ce sont DEUX mouvements.
