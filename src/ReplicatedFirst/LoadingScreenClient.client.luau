@@ -268,7 +268,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Grossissement, puis temps mort avant le saut. Ce temps mort est ce qui SEPARE les deux mouvements : sans
 	-- lui ils se chevauchent et on n'en lit plus qu'un seul.
-	local LEAF_GROW_TIME = 0.22
+	local LEAF_GROW_TIME = 0.3
 	local LEAF_JUMP_DELAY = 0.1
 	-- Hauteur du saut, en fraction de la hauteur de la jauge. Montee puis retombee : la montee RALENTIT (elle
 	-- perd son elan), la retombee ACCELERE. L'inverse n'aurait aucun poids.
@@ -668,11 +668,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		leaf.ImageTransparency = 0
 		local grow = TweenService:Create(
 			leaf,
-			-- `Quad Out` et surtout PAS `Back` : un `Back` DEPASSE la taille de repos avant d'y revenir. Sur
-			-- l'apparition ce sursaut se lit comme un tic, et il vole la vedette au saut qui suit -- alors que
-			-- c'est le saut qui porte le mouvement. La feuille GROSSIT, un point c'est tout ; la matiere molle
-			-- s'exprime a l'atterrissage.
-			TweenInfo.new(LEAF_GROW_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			-- `Sine InOut`, la courbe la plus DOUCE des deux cotes : elle demarre sans a-coup et s'arrete sans
+			-- a-coup. `Quad Out` partait encore a pleine vitesse, et un depart sec sur une apparition se ressent
+			-- comme un tic meme quand la fin est douce.
+			--
+			-- Surtout PAS `Back` : il DEPASSE la taille de repos avant d'y revenir, et ce sursaut vole la vedette
+			-- au saut qui suit -- alors que c'est le saut qui porte le mouvement. La feuille GROSSIT, un point
+			-- c'est tout ; la matiere molle s'exprime a l'atterrissage.
+			TweenInfo.new(LEAF_GROW_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
 			{ Size = rest }
 		)
 		grow.Completed:Connect(function()

@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.485 — L'apparition de la feuille devient franchement douce
+
+`Quad Out` partait encore a PLEINE VITESSE : seule la fin etait adoucie. Un depart sec se ressent comme un tic
+meme quand l'arrivee est propre -- c'est le premier instant du mouvement qu'on remarque, pas le dernier.
+
+`Sine InOut` est la courbe la plus douce des deux cotes : elle demarre sans a-coup et s'arrete sans a-coup.
+Duree 0.22 -> 0.3.
+
 ## 0.0.484 — L'apparition de la feuille se calme
 
 Elle grossissait avec un `Back`, qui DEPASSE la taille de repos avant d'y revenir. Ce sursaut se lit comme un
