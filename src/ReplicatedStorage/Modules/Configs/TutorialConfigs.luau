@@ -110,7 +110,7 @@ return {
 	-- RECUL DE LA CAMERA a chaque coup, en studs. Elle part en arriere d'un coup sec et revient toute seule :
 	-- l'image encaisse le choc en meme temps que la porte, donc les coups se SENTENT au lieu de s'entendre.
 	-- Les trois s'additionnent -- c'est ce que fait une vraie camera qu'on bouscule.
-	KNOCK_KICK = 0.8,
+	KNOCK_KICK = 0.3,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la

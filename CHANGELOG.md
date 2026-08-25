@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.459 — Les secousses des coups sont plus discretes
+
+`KNOCK_KICK` 0.8 -> 0.3. Reglage seul.
+
+A 0.8 le recul se VOYAIT ; a 0.3 il se sent. C'est le but d'un choc de camera : accompagner le coup, pas le
+commenter. Et comme les trois coups s'additionnent, une valeur trop haute se cumulait en plus.
+
 ## 0.0.458 — La camera encaisse chaque coup frappe
 
 A chaque `TocEvent`, la camera part en arriere d'un coup sec et revient toute seule. L'image encaisse le choc en
