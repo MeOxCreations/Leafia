@@ -218,6 +218,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local TIPS_LABEL_COLOR = Color3.fromRGB(255, 255, 255)
 	-- Place de l'etiquette "TIPS". Ancree en son CENTRE : la position designe alors le milieu du bloc, ce qui la
 	-- garde sur son axe quelle que soit sa taille -- avec une ancre en coin, changer la taille la deplace.
+	-- Bord gauche du texte du conseil, et ecart minimal qu'il garde avec la jauge de feuilles.
+	local TIPS_ROW_START = 0.15
+	local TIPS_ROW_GAP = 0.02
 	local TIPS_LABEL_POS = UDim2.fromScale(0.07, 0.916)
 	local TIPS_LABEL_SIZE = UDim2.fromScale(0.156, 0.088)
 	-- NUANCE sur l'etiquette : elle reste franche sur la premiere moitie, puis s'eteint tres legerement. La
@@ -522,8 +525,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tipsRow.Name = "TipsDescription"
 	tipsRow.BackgroundTransparency = 1
 	tipsRow.AnchorPoint = Vector2.new(0, 0.5)
-	tipsRow.Position = UDim2.fromScale(0.15, BANNER_POS.Y.Scale)
-	tipsRow.Size = UDim2.fromScale(0.8, 0.045)
+	tipsRow.Position = UDim2.fromScale(TIPS_ROW_START, BANNER_POS.Y.Scale)
+	-- LARGEUR CALCULEE, PAS ECRITE. Elle s'arrete juste avant la jauge de feuilles -- deux reglages ecrits a la
+	-- main auraient fini par se chevaucher des que l'un des deux bouge, et le texte passait alors SOUS les
+	-- feuilles. Deplacer la jauge deplace donc aussi la fin du texte, sans y penser.
+	tipsRow.Size = UDim2.fromScale(
+		LEAF_GAUGE_POS.X.Scale - LEAF_GAUGE_SIZE.X.Scale - TIPS_ROW_GAP - TIPS_ROW_START,
+		0.045
+	)
 	-- Les lettres DEBORDENT pendant leur rebond : elles arrivent d'en dessous. Un clip les couperait en plein vol.
 	tipsRow.ClipsDescendants = false
 	tipsRow.ZIndex = 3
@@ -576,6 +585,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		-- La taille du texte se DEDUIT de la hauteur de la ligne : le conseil garde donc les memes proportions sur
 		-- tous les ecrans, sans qu'on ait a poser une taille en pixels qui serait juste sur un seul.
 		local size = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
+		-- Largeur reellement occupee par le conseil, mesuree a l'image PRECEDENTE. Zero au depart : tant
+		-- qu'on n'a rien mesure, on ne retrecit rien.
+		--
+		-- PAS `total` : ce nom est deja pris plus bas par la DUREE de l'animation, et un nom reutilise dans
+		-- une portee interne masque celui du dessus sans le moindre avertissement -- on lirait une duree
+		-- en croyant lire des pixels.
+		local textWidth = 0
 
 		local letters: { TextLabel } = {}
 		for _, code in utf8.codes(text) do
@@ -648,7 +664,17 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 				-- l'attente sortait tout de suite. Il n'y a pas d'instant ou l'on peut dire "maintenant c'est bon".
 				-- On cesse donc de chercher cet instant -- on relit, et on corrige si ca a bouge. Meme raison que
 				-- pour les largeurs juste en dessous, et ca couvre aussi le redimensionnement de la fenetre.
+				-- LA HAUTEUR DONNE LA TAILLE, LA LARGEUR LA CORRIGE. Le cadre ne CONTRAINT PAS les lettres :
+				-- elles sont posees a la main, donc un conseil long depassait tranquillement jusque sous la
+				-- jauge de feuilles. On mesure ce qu'il occupe vraiment et on retrecit ce qu'il faut.
+				--
+				-- Relu a chaque image : ca converge en une ou deux images, et ca se recorrige tout seul si la
+				-- fenetre change de taille en cours de route.
 				local live = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
+				local room = tipsRow.AbsoluteSize.X
+				if room > 1 and textWidth > room then
+					live = math.max(math.floor(live * room / textWidth), 8)
+				end
 				if live ~= size then
 					size = live
 					for _, label in ipairs(letters) do
@@ -656,6 +682,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 					end
 				end
 				local rise = size * TIP_LETTER_RISE
+				textWidth = 0
 				-- LARGEURS RELUES A CHAQUE IMAGE. Une espace ne mesure rien (Roblox rogne les blancs de bord) :
 				-- on lui donne une avance fixe, sinon les mots se colleraient.
 				local x = 0
@@ -676,6 +703,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 						w = size * TIP_SPACE_WIDTH
 					end
 					x += w
+					textWidth = x
 				end
 				if now >= watchUntil then
 					return

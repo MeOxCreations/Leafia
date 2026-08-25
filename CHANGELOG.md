@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.471 — Le conseil ne passe plus sous les feuilles
+
+Le texte des conseils courait jusque sous la jauge : deux choses lisibles au meme endroit, donc aucune des deux.
+
+### Le cadre du conseil CALCULE sa largeur
+
+Il s'arrete juste avant la jauge, a partir de la position et de la taille de celle-ci. Deux valeurs ecrites a la
+main auraient fini par se chevaucher des que l'une des deux bouge -- et le texte serait repasse dessous sans
+prevenir. Deplacer la jauge deplace maintenant la fin du texte, sans y penser.
+
+### Mais le cadre ne suffisait pas
+
+Les lettres sont posees UNE PAR UNE, a la main : le cadre ne les contraint pas. Un conseil long depassait
+tranquillement, quelle que soit la largeur qu'on lui donne.
+
+La taille du texte vient donc toujours de la HAUTEUR de la ligne, mais elle est CORRIGEE par la largeur : on
+mesure ce que le conseil occupe vraiment et on retrecit ce qu'il faut. Relu a chaque image, donc ca converge en
+une ou deux images et ca se recorrige tout seul si la fenetre change de taille.
+
+### Un nom qui en masquait un autre
+
+La variable de largeur s'appelait d'abord `total` -- nom deja pris, plus bas, par la DUREE de l'animation. Le
+`local` interne masquait celui du dessus SANS aucun avertissement de Luau : le code lisait une duree en croyant
+lire des pixels. Seul le linter l'a vu, en signalant l'autre comme inutilisee.
+
 ## 0.0.470 — Le rideau de changement de map change de tete
 
 ### La feuille centrale devient une jauge de six feuilles, en bas a droite
