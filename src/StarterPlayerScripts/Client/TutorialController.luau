@@ -410,6 +410,7 @@ local function knockOnce()
 		return -- porte pas encore repliquee : la boucle de resolution la reprendra, rien a signaler ici
 	end
 	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
+	SceneCamera.kick(TutorialConfigs.KNOCK_KICK)
 
 	local shake = shakeTrack
 	if not shake then

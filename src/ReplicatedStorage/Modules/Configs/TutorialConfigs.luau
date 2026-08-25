@@ -62,7 +62,9 @@ return {
 	-- CADRAGE PAR DEFAUT, calcule depuis le JOUEUR au moment ou il toque. Il fait deja face a la porte, donc ce
 	-- repere est juste par construction. "Se mettre devant la porte" supposerait au contraire de savoir quel axe
 	-- du Model est son devant -- et rien ne le garantit, ca vient du rig et pas du bon sens.
-	SCENE_CAM_BACK = 6, -- studs derriere le joueur
+	-- Studs derriere le joueur. A ne pas confondre avec KNOCK_KICK, qui est un recul PONCTUEL a chaque coup :
+	-- celui-ci est le CADRAGE, il ne bouge pas de toute la scene.
+	SCENE_CAM_BACK = 8.5,
 	-- Studs au-dessus du joueur. Le repere est sa RootPart, deja a hauteur de torse : plus on monte, plus la
 	-- camera plonge sur lui, ce qui ecrase le decor et rapetisse le personnage. A 0.7 on est juste sous la
 	-- hauteur d'yeux -- l'oeil arrive donc sur la porte de face, pas d'en haut.
@@ -105,6 +107,10 @@ return {
 	-- Un marqueur par coup. Une LISTE et pas trois constantes : ajouter un quatrieme coup dans l'editeur ne
 	-- demande alors qu'une ligne ici, et le code n'a pas a savoir combien il y en a.
 	KNOCK_EVENTS = { "Toc1Event", "Toc2Event", "Toc3Event" },
+	-- RECUL DE LA CAMERA a chaque coup, en studs. Elle part en arriere d'un coup sec et revient toute seule :
+	-- l'image encaisse le choc en meme temps que la porte, donc les coups se SENTENT au lieu de s'entendre.
+	-- Les trois s'additionnent -- c'est ce que fait une vraie camera qu'on bouscule.
+	KNOCK_KICK = 0.8,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la

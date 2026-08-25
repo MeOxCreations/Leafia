@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.458 — La camera encaisse chaque coup frappe
+
+A chaque `TocEvent`, la camera part en arriere d'un coup sec et revient toute seule. L'image encaisse le choc en
+meme temps que la porte : les coups se SENTENT au lieu de s'entendre.
+
+### Le depart est instantane, le retour progressif
+
+L'inverse donnerait une poussee, pas un choc. Le retour est exponentiel -- franc au debut, de plus en plus doux.
+
+Et il est CALE A ZERO des qu'il devient negligeable : une exponentielle n'atteint jamais sa cible, donc sans ce
+clamp la camera garderait un recul minuscule pour toujours, et trois coups d'affilee l'accumuleraient. Piege
+deja paye sur le fondu du personnage, ou un residu de transparence faisait passer les membres dans le rendu
+transparent.
+
+### Les coups s'additionnent, et c'est voulu
+
+Trois coups rapproches reculent plus que trois coups espaces. C'est exactement ce que fait une vraie camera
+qu'on bouscule.
+
+### Le recul est en repere CAMERA
+
+Sur son +Z, c'est-a-dire son arriere. Pas en repere monde : le coup doit reculer quel que soit l'endroit ou elle
+regarde, sans qu'on ait a connaitre son orientation.
+
+### Le cadrage recule aussi
+
+`SCENE_CAM_BACK` 6 -> 8.5. A ne pas confondre avec `KNOCK_KICK` : celui-la est ponctuel, celui-ci ne bouge pas
+de toute la scene.
+
 ## 0.0.457 — La porte reste ouverte pour de bon, et elle grince
 
 ### Elle se fige, definitivement
