@@ -162,9 +162,16 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local LEAF_ANGLE = -10
 	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
 	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
-	local LEAF_POP_TIME = 0.55
+	local LEAF_POP_TIME = 0.9
+	-- ON ATTEND AVANT DE LA FAIRE APPARAITRE. Le rideau arrive par-dessus une transition : une apparition lancee
+	-- dans la meme image se joue pendant que l'ecran est encore en train de se poser, et on ne la voit pas.
+	local LEAF_POP_DELAY = 0.4
 	local LEAF_POP_SOUND = { "Sounds", "UI", "PopSound_1" }
 	local LEAF_POP_VOLUME = 0.45
+	-- COMBIEN DE TEMPS ON RE-CHERCHE LE SON. Ce fichier tourne depuis ReplicatedFirst, au tout premier instant :
+	-- SoundService n'est pas encore replique, donc une recherche immediate rend TOUJOURS nil et le son ne part
+	-- jamais. Meme boucle de reessai que le son de feuilles plus bas.
+	local LEAF_POP_WAIT = 3
 	-- Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le rideau s'en va. Une jauge qui se
 	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
@@ -347,15 +354,30 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local leafScale = Instance.new("UIScale")
 	leafScale.Scale = 0
 	leafScale.Parent = leafBox
-	TweenService
-		:Create(leafScale, TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-			Scale = 1,
-		})
-		:Play()
-	local pop = findSound(LEAF_POP_SOUND)
-	if pop then
-		playSound(pop, LEAF_POP_VOLUME)
-	end
+	task.spawn(function()
+		task.wait(LEAF_POP_DELAY)
+		-- On cherche le son TANT QU'IL PEUT ENCORE ARRIVER, et l'image attend avec lui : le son et le rebond
+		-- doivent partir ENSEMBLE. Un son cale a cote de son image se ressent comme un decalage meme quand on ne
+		-- sait pas dire lequel des deux est en retard.
+		local deadline = os.clock() + LEAF_POP_WAIT
+		local pop = findSound(LEAF_POP_SOUND)
+		while not pop and os.clock() < deadline and sg.Parent do
+			task.wait(0.1)
+			pop = findSound(LEAF_POP_SOUND)
+		end
+		-- Le rideau est deja parti : plus rien a montrer, et jouer le son maintenant serait un bruit sans image.
+		if not sg.Parent then
+			return
+		end
+		if pop then
+			playSound(pop, LEAF_POP_VOLUME)
+		end
+		TweenService
+			:Create(leafScale, TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Scale = 1,
+			})
+			:Play()
+	end)
 
 	-- Le remplissage passe par la TRANSPARENCE du degrade, pas par sa couleur : la partie pas encore remplie est
 	-- transparente, donc on voit le fond a travers. Une couleur ne se retire pas, une transparence si.

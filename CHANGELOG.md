@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.466 — L'apparition de la feuille se voit, et on l'entend
+
+Deux defauts, deux causes differentes.
+
+### Le son ne partait jamais
+
+Ce fichier tourne depuis `ReplicatedFirst`, au tout premier instant. `findByPath` utilise `FindFirstChild`,
+qui est INSTANTANE : a ce moment-la `SoundService` n'est pas encore replique, donc la recherche rendait toujours
+nil et le son ne partait pas. Silencieusement, evidemment.
+
+Le son de feuilles du meme fichier avait deja sa boucle de reessai, pour cette raison exacte. Celui-ci l'a
+maintenant aussi.
+
+### L'apparition passait inapercue
+
+Deux choses : elle durait 0.55 s, et surtout elle partait dans la MEME IMAGE que le rideau. Elle se jouait donc
+pendant que l'ecran etait encore en train de se poser -- il n'y avait rien a rater, il n'y avait rien a voir.
+
+`LEAF_POP_DELAY` (0.4 s) la laisse arriver une fois le rideau en place, et `LEAF_POP_TIME` passe a 0.9 s.
+
+### L'image ATTEND le son
+
+Elles partent ensemble, et c'est l'image qui patiente. Un son cale a cote de son image se ressent comme un
+decalage meme quand on ne sait pas dire lequel des deux est en retard.
+
+Si le son n'arrive jamais (3 s), la feuille apparait quand meme : un asset absent ne doit pas supprimer un
+element de l'ecran.
+
 ## 0.0.465 — Le rideau de changement de map : deux feuilles, une arrivee qui claque
 
 ### Deux feuilles au lieu d'une
