@@ -256,9 +256,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Court expres : au-dela de ~0.5 s le rebond traine et la jauge a l'air molle.
 	local LEAF_POP_TIME = 0.42
-	-- Calee sur MIN_ARRIVAL : la derniere feuille s'allume au moment ou le rideau s'en va. Une jauge qui se
-	-- remplit AVANT la fin ment sur ce qu'il reste.
-	local FILL_DURATION = 10
+	-- Hauteur de CHUTE d'une feuille qui s'allume, en fraction de la hauteur de la jauge. Elle tombe de la et
+	-- rebondit en touchant sa place. En FRACTION et pas en pixels : une valeur en pixels serait un saut de puce
+	-- sur un grand ecran et un plongeon sur un telephone.
+	local LEAF_DROP = 0.9
+	-- Ecart entre deux crans, et temps mort avant que le cycle reparte. Le temps mort est ce qui separe deux
+	-- tours : sans lui, le sixieme et le premier s'enchainent et le cycle n'a plus de debut visible.
+	local LEAF_STEP = 0.12
+	local LEAF_CYCLE_PAUSE = 0.5
 
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
 	local TIPS_LABEL = "TIPS"
@@ -521,6 +526,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- ou le cran s'allume. Une seule feuille qui grandirait depuis rien laisserait un TROU dans la jauge tant
 	-- qu'elle n'est pas atteinte -- on ne verrait plus combien il en reste.
 	local scales: { UIScale } = {}
+	local lits: { ImageLabel } = {}
+	-- Place de repos d'une feuille verte, retenue pour pouvoir l'y RAMENER apres le rebond. La relire sur
+	-- l'objet ne marcherait pas : au moment ou on la relit, elle est deja en train de tomber.
+	local restY: { number } = {}
 	for i = 1, LEAF_COUNT do
 		local function slot(name: string, tint: Color3, z: number): ImageLabel
 			local leaf = Instance.new("ImageLabel")
@@ -540,6 +549,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			return leaf
 		end
 		slot(`LeafBack{i}`, LEAF_BACK_TINT, 4)
+		restY[i] = 0.5
 		local lit = slot(`LeafLit{i}`, LEAF_TINT, 5)
 		-- L'echelle vit sur la feuille VERTE seule : la sombre ne bouge jamais, donc la forme du cran reste
 		-- lisible pendant que la verte pousse dedans.
@@ -547,34 +557,55 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		scale.Scale = 0
 		scale.Parent = lit
 		scales[i] = scale
+		lits[i] = lit
+	end
+
+	-- ALLUME UN CRAN. La feuille TOMBE de plus haut et REBONDIT en touchant sa place, comme une balle sur le
+	-- sol : `Bounce` en sortie fait exactement ce rebond amorti. L'echelle, elle, monte tout droit et vite --
+	-- deux rebonds a la fois se marcheraient dessus et on ne lirait plus ni l'un ni l'autre.
+	local function lightLeaf(i: number)
+		local leaf = lits[i]
+		if not leaf.Parent then
+			return
+		end
+		-- EN FRACTION, jamais en pixels : une chute en pixels serait un saut de puce sur un grand ecran et un
+		-- plongeon sur un telephone. Ici elle vaut toujours la meme part de la hauteur de la jauge.
+		local x = leaf.Position.X.Scale
+		leaf.Position = UDim2.fromScale(x, restY[i] - LEAF_DROP)
+		scales[i].Scale = 0
+		TweenService
+			:Create(leaf, TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {
+				Position = UDim2.fromScale(x, restY[i]),
+			})
+			:Play()
+		TweenService
+			:Create(scales[i], TweenInfo.new(LEAF_POP_TIME * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+				Scale = 1,
+			})
+			:Play()
 	end
 
 	task.spawn(function()
-		local t0 = os.clock()
-		local lit = 0
+		-- INDICATEUR QUI TOURNE, plus une jauge de progression. Les six s'allumaient une fois puis s'arretaient
+		-- -- un ecran fige, alors que le chargement, lui, continue. Un mouvement qui tourne dit "ca travaille"
+		-- sans mentir sur le temps qu'il reste, ce qu'une jauge calee sur une duree devinee finissait par faire.
+		--
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
 		-- instance detruite.
 		while sg.Parent do
-			local e = math.clamp((os.clock() - t0) / FILL_DURATION, 0, 1)
-			local want = math.floor(e * LEAF_COUNT)
-			-- UNE BOUCLE, PAS UN SEUL PAS : a bas FPS on peut franchir deux crans entre deux images, et une
-			-- feuille sautee resterait eteinte jusqu'a la fin sans que rien ne le signale.
-			while lit < want do
-				lit += 1
-				-- DE ZERO A SA TAILLE, en depassant. `Back` en sortie franchit la cible puis y revient : c'est
-				-- ce depassement qui donne le rebond. Une echelle qui monte tout droit se lit comme un fondu.
-				TweenService
-					:Create(
-						scales[lit],
-						TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-						{ Scale = 1 }
-					)
-					:Play()
+			for i = 1, LEAF_COUNT do
+				if not sg.Parent then
+					return
+				end
+				lightLeaf(i)
+				task.wait(LEAF_STEP)
 			end
-			if e >= 1 then
-				break
+			task.wait(LEAF_CYCLE_PAUSE)
+			-- Elles s'eteignent TOUTES A LA FOIS avant le tour suivant : les eteindre une par une lirait comme un
+			-- second passage, en sens inverse, et on ne saurait plus ou commence le cycle.
+			for i = 1, LEAF_COUNT do
+				scales[i].Scale = 0
 			end
-			task.wait()
 		end
 	end)
 

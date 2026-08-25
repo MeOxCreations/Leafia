@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.480 — Les six feuilles tournent en boucle, et rebondissent
+
+Elles s'arretaient : c'etait une JAUGE DE PROGRESSION, six crans repartis sur une duree devinee. Une fois les
+six allumes, l'ecran se figeait alors que le chargement, lui, continuait.
+
+C'est devenu un INDICATEUR QUI TOURNE. Un mouvement qui ne s'arrete pas dit "ca travaille" sans mentir sur le
+temps qu'il reste -- ce qu'une jauge calee sur une duree devinee finissait toujours par faire.
+
+`FILL_DURATION` disparait avec : plus rien ne pretend savoir combien de temps ca prendra.
+
+### Chaque feuille TOMBE et REBONDIT
+
+Elle arrive de plus haut et rebondit en touchant sa place, comme une balle sur le sol. `Bounce` en sortie fait
+exactement ce rebond amorti.
+
+L'echelle, elle, monte tout droit et vite : deux rebonds a la fois se marcheraient dessus et on ne lirait plus
+ni l'un ni l'autre.
+
+### La chute est en FRACTION, pas en pixels
+
+Une valeur en pixels serait un saut de puce sur un grand ecran et un plongeon sur un telephone.
+
+### Elles s'eteignent toutes a la fois
+
+Les eteindre une par une se lirait comme un second passage, en sens inverse, et on ne saurait plus ou commence
+le cycle. Un temps mort les separe : sans lui, le sixieme et le premier s'enchainent et le tour n'a plus de
+debut visible.
+
 ## 0.0.479 — Un reflet balaie la maison du client
 
 Une bande claire traverse le dessin en diagonale, de temps en temps.
