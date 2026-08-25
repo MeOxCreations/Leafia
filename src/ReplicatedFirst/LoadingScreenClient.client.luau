@@ -179,7 +179,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le rideau s'en va. Une jauge qui se
 	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
-	local FILL_SOFT = 0.14 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
+	-- DOUCEUR DU BORD. A 0, la coupure est NETTE : c'est un niveau qui monte, pas une lueur qui grandit. Un bord
+	-- adouci brouillait la limite -- on ne savait plus ou en etait le remplissage, donc la jauge ne mesurait plus
+	-- rien. Monter cette valeur reflouterait le bord.
+	local FILL_SOFT = 0
 	local FILL_ROTATION = 270 -- sens du remplissage. 90 = l'autre sens (verifie a l'ecran : 270 est le bon)
 
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
@@ -401,9 +404,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			if e >= 1 then
 				fill.Transparency = NumberSequence.new(0)
 			else
-				-- Bord ADOUCI plutot que net : une coupure franche se lit comme un masque, un degrade comme un
-				-- liquide qui monte. Les temps d'une NumberSequence doivent croitre STRICTEMENT, d'ou l'ecart
-				-- minimal force : sinon Roblox refuse la sequence des que le bord touche un bord.
+				-- Les temps d'une NumberSequence doivent croitre STRICTEMENT : d'ou l'ecart minimal force entre
+				-- les deux points du bord, et les bornes qui l'empechent de toucher 0 ou 1. Sans ca Roblox
+				-- refuse la sequence entiere des que le remplissage arrive contre un bord -- et le remplissage
+				-- se figerait la, sans erreur, juste avant d'etre fini.
 				local b = math.clamp(e, 0.002, 0.998)
 				local a = math.clamp(b - FILL_SOFT, 0.001, b - 0.001)
 				fill.Transparency = NumberSequence.new({

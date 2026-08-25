@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.469 — Le remplissage de la feuille a un bord NET
+
+`FILL_SOFT` 0.14 -> 0.
+
+Le bord adouci brouillait la limite : on ne savait plus ou en etait le remplissage, donc la jauge ne mesurait
+plus rien. Net, c'est un niveau qui monte -- et un niveau, ca se lit d'un coup d'oeil.
+
+Le commentaire d'origine defendait l'inverse ("une coupure franche se lit comme un masque"). Il avait tort, et
+c'est l'ecran qui tranche. Il est corrige plutot que laisse a contredire le code.
+
+L'ecart minimal entre les deux points du bord reste force : les temps d'une NumberSequence doivent croitre
+STRICTEMENT, sinon Roblox refuse la sequence entiere des que le remplissage arrive contre un bord -- et il se
+figerait la, sans erreur, juste avant d'etre fini.
+
 ## 0.0.468 — La feuille du rideau retrecit
 
 `LEAF_IMAGE_SIZE` (0.675 / 0.673) sur les images, pas sur leur contenant.
