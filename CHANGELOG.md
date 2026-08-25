@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.476 — Le bandeau garde la meme densite sous le texte
+
+Sa transparence montait tout droit de 0 a 1 : il palissait donc regulierement sur toute sa largeur, et le texte
+pose dessus devenait moins lisible a droite qu'a gauche.
+
+La courbe est maintenant PLATE sur presque toute sa longueur (0.319) puis monte SEC dans son dernier dixieme.
+Le bandeau garde la meme densite partout ou il y a quelque chose a lire, et ne s'efface qu'a son extremite.
+
+`BANNER_FADE_AT` disparait au profit de la sequence complete : un seul nombre ne pouvait pas decrire un palier.
+
+### Valeurs lues sur un graphe
+
+Le point (0.897 / 0.319) est le seul dont la valeur exacte etait affichee. Les trois autres sont lus au pixel :
+(0, 0), (0.25, 0.319) et (1, 1). A corriger si l'ecran dit autre chose.
+
 ## 0.0.475 — Les deux degrades du rideau prennent leurs vraies valeurs
 
 Reglages, plus un correctif qui n'en est pas un.

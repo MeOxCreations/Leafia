@@ -136,7 +136,16 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BANNER_SIZE = UDim2.fromScale(1.002, 0.132)
 	-- Le bandeau n'est PAS plein d'un bout a l'autre : sa transparence monte le long de sa largeur. C'est un
 	-- FONDU, pas un reflet -- il ne s'anime pas. L'avoir promene une fois a suffi a le rendre completement opaque.
-	local BANNER_FADE_AT = 0.95 -- ou la transparence atteint 1
+	--
+	-- La courbe est PLATE sur presque toute sa longueur puis monte SEC a la toute fin : le bandeau garde donc la
+	-- meme densite sous le texte -- ce qui le rend lisible partout -- et ne s'efface que dans son dernier
+	-- dixieme. Un fondu regulier d'un bout a l'autre rendrait le texte plus pale a droite qu'a gauche.
+	local BANNER_FADE = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0),
+		NumberSequenceKeypoint.new(0.25, 0.319),
+		NumberSequenceKeypoint.new(0.897, 0.319),
+		NumberSequenceKeypoint.new(1, 1),
+	})
 	-- TEINTE du bandeau : vert vif d'un cote, noir de l'autre. Le meme UIGradient porte donc DEUX choses -- la
 	-- couleur et la transparence -- et c'est voulu : elles decrivent le meme voyage le long du bandeau, les
 	-- separer sur deux objets obligerait a les garder d'accord a la main.
@@ -509,11 +518,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- bandeau, qui redeviendrait donc completement opaque.
 	local bannerFade = Instance.new("UIGradient")
 	bannerFade.Color = BANNER_COLOR
-	bannerFade.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(BANNER_FADE_AT, 1),
-		NumberSequenceKeypoint.new(1, 1),
-	})
+	bannerFade.Transparency = BANNER_FADE
 	bannerFade.Parent = banner
 
 	-- ===== CONSEILS =====
