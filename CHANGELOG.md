@@ -2204,6 +2204,57 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.449 — Le joueur toque trois fois, et la porte tremble
+
+La scene commence maintenant par le geste : le joueur toque. `Scene1_TocToc_Animation` porte trois marqueurs, et
+chacun donne un coup -- son au niveau de la porte, et la porte qui tremble.
+
+    toque (E)
+      -> barres + camera
+      -> animation du JOUEUR
+         -> Toc1Event / Toc2Event / Toc3Event : son + tremblement de la porte
+      -> fin des coups : le grand-pere prend la suite
+      -> ... (0.0.448)
+
+### C'est l'animation qui dit QUAND, pas un minuteur
+
+Trois coups cadences par un `task.wait` finiraient toujours par se decaler de l'animation, et il faudrait les
+re-synchroniser a chaque retouche. Les marqueurs, eux, suivent.
+
+Et c'est une LISTE dans la config, pas trois constantes : ajouter un quatrieme coup dans l'editeur ne demandera
+qu'une ligne, et le code n'a pas a savoir combien il y en a.
+
+### Le tremblement se REMBOBINE, il ne se rejoue pas
+
+Trois coups rapproches : un `Stop` coupe en fondu, donc le deuxieme partirait par-dessus la fin du premier et le
+tremblement s'aplatirait. On remet `TimePosition` a zero quand la piste tourne encore.
+
+Le son, lui, est CLONE a chaque coup (`SoundUtils`) : rejouer la meme instance couperait le son en cours, et
+deux coups rapproches ne s'entendraient qu'une fois.
+
+### Spatial, pas global
+
+Le son sort de la PORTE. Un bruit de porte qui vient du centre de la tete se decolle de l'image -- surtout avec
+une camera posee a six studs de la.
+
+### Le piege evite de justesse
+
+Le nettoyage des quatre pistes etait ecrit `for _, t in ipairs({ a, b, c, d })`. `ipairs` S'ARRETE AU PREMIER
+NIL : une seule piste absente et la boucle ne tourne pas du tout, les trois autres restent en place. Exactement
+le bug qui laissait l'animation de recul de la tondeuse tourner pour toujours. Chaque piste est coupee
+separement.
+
+### Note
+
+Cette entree est ecrite APRES son commit (f24f913) : l'ancre du script d'insertion visait le titre du commit et
+non celui de l'entree, et l'ecriture a echoue sans empecher le push. Le CHANGELOG doit partir dans le MEME commit
+que la feature -- ici il a fallu un rattrapage.
+
+### A FAIRE DANS STUDIO
+
+Rien de neuf. `Scene1_TocToc_Animation`, `DoorShakeAnimation` et `KnockDoorSound` existent deja. Restent les deux
+instances de 0.0.448 : `Scene1_grandpa` et `Scene1_door`.
+
 ## 0.0.448 — La porte s'ouvre a moitie, le grand-pere parle, puis elle s'ouvre en grand
 
 L'enchainement complet de la scene est branche.
