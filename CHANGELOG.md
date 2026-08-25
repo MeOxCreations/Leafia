@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.477 — Le bas du mot TIPS fonce un peu
+
+Dernier point du degrade de l'etiquette : 214 -> `#b4b4b4` (180). L'ecart avec le haut se creuse, donc la lumiere
+posee sur le mot se voit davantage.
+
+### Une difference de structure a savoir
+
+La sequence du code a QUATRE points, avec un ressaut net vers 0.47 : blanc, blanc, 229, puis la fin. Le graphe
+de reference n'en a que TROIS. "Point 3" a donc ete lu comme le point de FIN, le seul que les deux versions ont
+en commun.
+
+Si c'est la courbe a trois points qu'il faut, c'est la sequence entiere qu'on remplace -- pas une couleur.
+
 ## 0.0.476 — Le bandeau garde la meme densite sous le texte
 
 Sa transparence montait tout droit de 0 a 1 : il palissait donc regulierement sur toute sa largeur, et le texte

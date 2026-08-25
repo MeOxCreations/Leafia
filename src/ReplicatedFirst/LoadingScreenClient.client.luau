@@ -273,7 +273,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
 		ColorSequenceKeypoint.new(0.463, Color3.fromRGB(255, 255, 255)),
 		ColorSequenceKeypoint.new(0.483, Color3.fromRGB(229, 229, 229)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 214, 214)),
+		ColorSequenceKeypoint.new(1, Color3.fromHex("b4b4b4")),
 	})
 	-- Sens de la nuance, en degres. 0 = de gauche a droite, 90 = de haut en bas.
 	-- A 90, le ressaut de la sequence tombe donc a mi-HAUTEUR des lettres : le mot s'eclaircit du haut vers le bas,
