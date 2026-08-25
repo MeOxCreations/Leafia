@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.482 — La feuille grossit d'abord, PUIS elle saute
+
+C'etait un seul geste : elle tombait de nulle part et rebondissait. Ce sont DEUX mouvements.
+
+    1. elle GROSSIT a sa place, depuis rien
+    2. un court instant plus tard, elle SAUTE -- montee, retombee, ecrasement, redressement
+
+Le temps mort entre les deux est ce qui les SEPARE. Sans lui ils se chevauchent et on n'en lit plus qu'un seul --
+c'est exactement ce que faisait la version precedente, ou l'apparition etait noyee dans la chute.
+
+### Le saut a un poids
+
+La montee RALENTIT (elle perd son elan), la retombee ACCELERE. L'inverse n'aurait aucun poids. La feuille
+s'ETIRE en l'air -- plus fine, plus haute -- et s'ECRASE en touchant.
+
+### Le temps mort du cycle est CALCULE
+
+Il doit laisser la DERNIERE feuille finir son geste, sinon elle est coupee en plein saut. Il se deduit donc de
+la somme des durees, moins l'ecart entre deux crans -- et non d'un nombre pose a la main, qui deviendrait faux
+des qu'on touche a l'une des six durees.
+
+C'est le meme principe que la largeur du texte des conseils, calculee depuis la jauge : deux valeurs qui doivent
+rester d'accord ne s'ecrivent pas deux fois.
+
 ## 0.0.481 — Un vrai rebond de balle molle, et les feuilles noires disparaissent
 
 ### Le rebond etait faux

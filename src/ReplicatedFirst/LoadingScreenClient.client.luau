@@ -253,23 +253,44 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- LA DEFORMATION SE FAIT SUR LA TAILLE, pas sur un UIScale : une echelle est UNIFORME, donc elle ne peut ni
 	-- etirer ni ecraser. Elle ne sait que grossir.
 	--
-	-- Etirement pendant la chute : plus fin, plus haut.
+	-- DEUX MOUVEMENTS, PAS UN. D'abord la feuille GROSSIT a sa place ; un court instant plus tard, elle SAUTE et
+	-- retombe. Tout fondre en un seul geste -- une chute qui arrive de nulle part -- ne montrait ni l'apparition
+	-- ni le saut : on ne voyait qu'un objet qui tombe.
+	--
+	-- Grossissement, puis temps mort avant le saut. Ce temps mort est ce qui SEPARE les deux mouvements : sans
+	-- lui ils se chevauchent et on n'en lit plus qu'un seul.
+	local LEAF_GROW_TIME = 0.18
+	local LEAF_JUMP_DELAY = 0.1
+	-- Hauteur du saut, en fraction de la hauteur de la jauge. Montee puis retombee : la montee RALENTIT (elle
+	-- perd son elan), la retombee ACCELERE. L'inverse n'aurait aucun poids.
+	local LEAF_JUMP_HEIGHT = 0.55
+	local LEAF_JUMP_UP_TIME = 0.16
+	local LEAF_JUMP_DOWN_TIME = 0.14
+	-- Etirement EN L'AIR : plus fin, plus haut.
 	local LEAF_STRETCH_X, LEAF_STRETCH_Y = 0.82, 1.28
 	-- Ecrasement au contact : plus large, plus plat.
 	local LEAF_SQUASH_X, LEAF_SQUASH_Y = 1.34, 0.66
-	-- Chute, contact, redressement. La chute ACCELERE (`Quad In`, comme une vraie chute), le contact est presque
-	-- instantane, et le redressement DEPASSE avant de se poser.
-	local LEAF_FALL_TIME = 0.22
+	-- Contact et redressement. Le contact est presque instantane ; le redressement DEPASSE avant de se poser.
 	local LEAF_SQUASH_TIME = 0.07
 	local LEAF_SETTLE_TIME = 0.3
 	-- Hauteur de CHUTE d'une feuille qui s'allume, en fraction de la hauteur de la jauge. Elle tombe de la et
-	-- rebondit en touchant sa place. En FRACTION et pas en pixels : une valeur en pixels serait un saut de puce
-	-- sur un grand ecran et un plongeon sur un telephone.
-	local LEAF_DROP = 1.6
-	-- Ecart entre deux crans, et temps mort avant que le cycle reparte. Le temps mort est ce qui separe deux
-	-- tours : sans lui, le sixieme et le premier s'enchainent et le cycle n'a plus de debut visible.
+	-- Ecart entre deux crans : c'est lui qui fait la VAGUE. Court, les six partent presque ensemble ; long, on
+	-- les compte un par un.
 	local LEAF_STEP = 0.12
-	local LEAF_CYCLE_PAUSE = 0.5
+	-- Duree TOTALE du geste d'un cran. Calculee, jamais ecrite : elle sert a savoir quand la derniere feuille a
+	-- fini, et un nombre pose a la main deviendrait faux des qu'on touche a l'une des durees ci-dessus.
+	local LEAF_SEQUENCE = LEAF_GROW_TIME
+		+ LEAF_JUMP_DELAY
+		+ LEAF_JUMP_UP_TIME
+		+ LEAF_JUMP_DOWN_TIME
+		+ LEAF_SQUASH_TIME
+		+ LEAF_SETTLE_TIME
+	-- Blanc entre deux tours, une fois la derniere feuille posee. Sans lui, le sixieme et le premier s'enchainent
+	-- et le cycle n'a plus de debut visible.
+	local LEAF_CYCLE_GAP = 0.25
+	-- Temps mort reel : il laisse la DERNIERE feuille finir son geste, sinon elle est coupee en plein saut. Elle
+	-- part LEAF_STEP avant la fin de la boucle, d'ou la soustraction.
+	local LEAF_CYCLE_PAUSE = math.max(LEAF_SEQUENCE - LEAF_STEP, 0) + LEAF_CYCLE_GAP
 
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
 	local TIPS_LABEL = "TIPS"
@@ -562,9 +583,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		lits[i] = lit
 	end
 
-	-- ALLUME UN CRAN : elle TOMBE etiree, s'ECRASE en touchant, puis se REDRESSE en depassant.
+	-- ALLUME UN CRAN, EN DEUX MOUVEMENTS SEPARES :
+	--   1. la feuille GROSSIT a sa place, depuis rien ;
+	--   2. un court instant plus tard, elle SAUTE -- montee, retombee, ecrasement, redressement.
 	--
-	-- Trois temps enchaines sur la fin du precedent, jamais sur des delais poses cote a cote : des delais
+	-- Chaque temps s'enchaine sur la FIN du precedent, jamais sur des delais poses cote a cote : des delais
 	-- deriveraient des que le jeu rame, et l'ecrasement partirait avant que la feuille ait touche.
 	local function lightLeaf(i: number)
 		local leaf = lits[i]
@@ -572,44 +595,81 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			return
 		end
 		local x = leaf.Position.X.Scale
-		-- EN FRACTION, jamais en pixels : une chute en pixels serait un saut de puce sur un grand ecran et un
-		-- plongeon sur un telephone. Ici elle vaut toujours la meme part de la hauteur de la jauge.
-		leaf.Position = UDim2.fromScale(x, 1 - LEAF_DROP)
-		leaf.Size = UDim2.fromScale(leafW * LEAF_STRETCH_X, LEAF_STRETCH_Y)
-		leaf.ImageTransparency = 0
+		local rest = UDim2.fromScale(leafW, 1)
 
-		local fall = TweenService:Create(
-			leaf,
-			-- `Quad In` : elle ACCELERE en tombant. Une chute a vitesse constante n'a aucun poids.
-			TweenInfo.new(LEAF_FALL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-			{ Position = UDim2.fromScale(x, 1) }
-		)
-		fall.Completed:Connect(function()
-			if not leaf.Parent then
-				return
-			end
+		local function settle()
+			-- `Back` en sortie DEPASSE la taille de repos avant d'y revenir : c'est ce sursaut qui donne la
+			-- matiere molle. Sans lui, elle se contenterait de reprendre sa forme.
+			TweenService
+				:Create(leaf, TweenInfo.new(LEAF_SETTLE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Size = rest,
+				})
+				:Play()
+		end
+
+		local function land()
 			local squash = TweenService:Create(
 				leaf,
 				TweenInfo.new(LEAF_SQUASH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
 				{ Size = UDim2.fromScale(leafW * LEAF_SQUASH_X, LEAF_SQUASH_Y) }
 			)
 			squash.Completed:Connect(function()
+				if leaf.Parent then
+					settle()
+				end
+			end)
+			squash:Play()
+		end
+
+		local function jump()
+			if not leaf.Parent then
+				return
+			end
+			-- ELLE S'ETIRE EN L'AIR. Une balle molle est plus fine et plus haute quand elle ne touche rien.
+			leaf.Size = UDim2.fromScale(leafW * LEAF_STRETCH_X, LEAF_STRETCH_Y)
+			-- `Quad Out` a la montee : elle PERD SON ELAN en s'elevant.
+			local up = TweenService:Create(
+				leaf,
+				TweenInfo.new(LEAF_JUMP_UP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Position = UDim2.fromScale(x, 1 - LEAF_JUMP_HEIGHT) }
+			)
+			up.Completed:Connect(function()
 				if not leaf.Parent then
 					return
 				end
-				-- `Back` en sortie DEPASSE la taille de repos avant d'y revenir : c'est ce sursaut qui donne la
-				-- matiere molle. Sans lui, elle se contenterait de reprendre sa forme.
-				TweenService
-					:Create(
-						leaf,
-						TweenInfo.new(LEAF_SETTLE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-						{ Size = UDim2.fromScale(leafW, 1) }
-					)
-					:Play()
+				-- `Quad In` a la retombee : elle ACCELERE. Une chute a vitesse constante n'a aucun poids.
+				local down = TweenService:Create(
+					leaf,
+					TweenInfo.new(LEAF_JUMP_DOWN_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+					{ Position = UDim2.fromScale(x, 1) }
+				)
+				down.Completed:Connect(function()
+					if leaf.Parent then
+						land()
+					end
+				end)
+				down:Play()
 			end)
-			squash:Play()
+			up:Play()
+		end
+
+		-- 1. ELLE GROSSIT A SA PLACE. Elle ne vient de nulle part : elle apparait la ou elle restera.
+		leaf.Position = UDim2.fromScale(x, 1)
+		leaf.Size = UDim2.fromScale(0, 0)
+		leaf.ImageTransparency = 0
+		local grow = TweenService:Create(
+			leaf,
+			TweenInfo.new(LEAF_GROW_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+			{ Size = rest }
+		)
+		grow.Completed:Connect(function()
+			if leaf.Parent then
+				-- 2. LE SAUT, apres un temps mort. C'est lui qui SEPARE les deux mouvements : sans lui ils se
+				-- chevauchent et on n'en lit plus qu'un seul.
+				task.delay(LEAF_JUMP_DELAY, jump)
+			end
 		end)
-		fall:Play()
+		grow:Play()
 	end
 
 	task.spawn(function()
