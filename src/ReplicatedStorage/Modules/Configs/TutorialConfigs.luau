@@ -120,8 +120,20 @@ return {
 	-- APRES les coups et AVANT l'ouverture. Sa fin enchaine toute seule sur l'ouverture -- c'est l'animation qui
 	-- dit quand elle a fini, pas un delai pose a cote.
 	TRY_OPEN_ANIM = "Scene1_oldman_TryOpenDoor",
+	-- SUR QUEL MODEL cette animation se joue. Le NOM de l'animation ne le dit pas : "oldman_TryOpenDoor" peut
+	-- tres bien animer la POIGNEE de la porte plutot que le vieux.
+	--
+	-- Et se tromper ne produit AUCUNE erreur : une animation retrouve ses cibles par leur NOM, donc si aucune ne
+	-- correspond au rig, elle joue a plein poids et n'ecrit rien. Le son part, la piste tourne, l'ecran ne bouge
+	-- pas -- et on cherche le bug dans le declenchement, qui est parfait.
+	--
+	-- Mettre le nom du Model de la porte si c'est la poignee qui bouge.
+	TRY_OPEN_MODEL = "OldmanOriginal",
 	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte.
 	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
+	-- Secondes apres le lancement avant de verifier qu'une animation a REELLEMENT bouge quelque chose. Assez
+	-- tard pour qu'elle ait eu le temps d'ecrire, assez tot pour que le message serve encore.
+	ANIM_CHECK_DELAY = 0.4,
 
 	-- ELLE MENE LA SCENE. C'est elle qui declenche la porte, et c'est SA FIN qui termine la scene.
 	GRANDPA_ANIM = "Scene1_oldman_OpenDoor",

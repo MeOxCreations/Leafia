@@ -178,6 +178,30 @@ local function animatorOf(model: Model): Animator?
 	return if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
 end
 
+-- EST-CE QUE L'ANIMATION A REELLEMENT BOUGE QUELQUE CHOSE ? Une animation retrouve ses cibles par leur NOM : si
+-- aucune ne correspond au rig, elle joue a plein poids et n'ecrit RIEN, sans la moindre erreur. La piste tourne,
+-- le son part, l'ecran ne bouge pas -- et on cherche le bug dans le declenchement, qui est parfait.
+--
+-- On mesure donc le RESULTAT. Les animations ecrivent dans `Transform`, jamais dans `C0` : un Transform reste a
+-- l'identite = personne n'a ecrit dedans. Piege deja paye deux fois -- sur les PNJ, puis sur le seau porte.
+local function checkAnimMoved(model: Model, animName: string)
+	task.delay(TutorialConfigs.ANIM_CHECK_DELAY, function()
+		if not model.Parent then
+			return
+		end
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("Motor6D") and d.Transform ~= CFrame.identity then
+				return -- au moins un joint a bouge : l'animation s'applique bien
+			end
+		end
+		warn(
+			`[Tutorial] "{animName}" tourne mais n'a RIEN bouge sur "{model.Name}" : aucune de ses pistes ne porte `
+				.. "le nom d'une part de ce rig. Elle anime probablement un AUTRE model -- verifie la cible dans "
+				.. "TutorialConfigs (le nom de l'animation ne dit pas sur quoi elle joue)."
+		)
+	end)
+end
+
 local function stopTrack(track: AnimationTrack?)
 	if track then
 		track:Stop(0)
@@ -259,6 +283,7 @@ local function openDoor()
 		track:AdjustSpeed(0)
 	end)
 	track:Play()
+	checkAnimMoved(model, TutorialConfigs.DOOR_ANIM)
 end
 
 -- LE GRAND-PERE MENE LA SCENE. Son animation declenche la porte, et sa fin termine la scene : c'est elle qui
@@ -287,13 +312,16 @@ local function playGrandpa()
 	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.
 	track.Stopped:Connect(endScene)
 	track:Play()
+	checkAnimMoved(model :: Model, TutorialConfigs.GRANDPA_ANIM)
 end
 
 -- IL S'ACHARNE SUR LA POIGNEE. Entre les coups et l'ouverture : le grand-pere se bat avec sa vieille porte.
 -- Quand l'animation s'acheve, l'ouverture prend la suite -- c'est elle qui dit quand elle a fini, pas un delai
 -- pose a cote qui se decalerait a la premiere retouche.
 local function playTryOpen()
-	local model = findModel(TutorialConfigs.GRANDPA_NAME)
+	-- LA CIBLE EST DANS LA CONFIG, pas deduite du nom de l'animation : "oldman_TryOpenDoor" peut tres bien
+	-- animer la poignee de la porte plutot que le vieux.
+	local model = findModel(TutorialConfigs.TRY_OPEN_MODEL)
 	local animator = if model then animatorOf(model) else nil
 	local track = if animator then loadSceneTrack(animator, TutorialConfigs.TRY_OPEN_ANIM) else nil
 	if not track then
@@ -302,9 +330,9 @@ local function playTryOpen()
 		-- de quoi la jouer. `loadSceneTrack` parle deja quand c'est l'Animation qui manque ; ici on couvre les
 		-- deux autres causes.
 		if not model then
-			warn(`[Tutorial] Model "{TutorialConfigs.GRANDPA_NAME}" introuvable : pas de geste de poignee.`)
+			warn(`[Tutorial] Model "{TutorialConfigs.TRY_OPEN_MODEL}" introuvable : pas de geste de poignee.`)
 		elseif not animator then
-			warn(`[Tutorial] Pas d'Animator sous "{TutorialConfigs.GRANDPA_NAME}" : pas de geste de poignee.`)
+			warn(`[Tutorial] Pas d'Animator sous "{TutorialConfigs.TRY_OPEN_MODEL}" : pas de geste de poignee.`)
 		end
 		playGrandpa() -- l'etape saute, la scene continue
 		return
@@ -313,6 +341,7 @@ local function playTryOpen()
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = false
 	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, anchor)
+	checkAnimMoved(model :: Model, TutorialConfigs.TRY_OPEN_ANIM)
 
 	local chained = false
 	track.Stopped:Connect(function()

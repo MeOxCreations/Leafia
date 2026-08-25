@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.455 — Une animation qui tourne sans rien bouger le DIT
+
+`Scene1_oldman_TryOpenDoor` ne se voyait pas, alors que son SON partait. Or le son est joue APRES le chargement
+de la piste : elle etait donc bien chargee, et `Play()` bien appele.
+
+Elle tourne. Elle n'ecrit simplement rien.
+
+C'est le piege des PNJ, puis du seau porte, une troisieme fois : une animation retrouve ses cibles PAR LEUR NOM.
+Si aucune ne correspond au rig sur lequel on la joue, elle joue a plein poids et n'ecrit RIEN -- sans la moindre
+erreur. La piste tourne, le son part, l'ecran ne bouge pas, et on cherche le bug dans le declenchement, qui est
+parfait.
+
+### On mesure le resultat, sur les TROIS animations
+
+Les animations ecrivent dans `Transform`, jamais dans `C0` : un `Transform` reste a l'identite = personne n'a
+ecrit dedans. Une seconde apres chaque lancement, le jeu regarde si un joint a bouge, et le dit sinon :
+
+    "Scene1_oldman_TryOpenDoor" tourne mais n'a RIEN bouge sur "OldmanOriginal" : aucune de ses pistes ne porte
+    le nom d'une part de ce rig. Elle anime probablement un AUTRE model...
+
+### La cible passe dans la config
+
+`TRY_OPEN_MODEL`. Le NOM d'une animation ne dit pas sur quoi elle joue : "oldman_TryOpenDoor" peut tres bien
+animer la POIGNEE de la porte plutot que le vieux -- et c'est l'hypothese la plus probable ici, puisque la porte
+est encore fermee a ce moment et que le grand-pere serait de toute facon invisible derriere.
+
+Si la sonde confirme, la correction est UNE ligne : `TRY_OPEN_MODEL = "Door"`.
+
 ## 0.0.454 — L'image se resserre quand la porte s'ouvre
 
 A `OuvertureDoorEvent` -- l'instant precis ou la main du grand-pere pousse la porte -- le champ de vision perd
