@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.463 — La grande ouverture se fait trois fois plus lentement
+
+Apres la pause, la porte finissait de s'ouvrir beaucoup trop vite : le mouvement etait termine avant qu'on ait
+le temps de regarder. `DOOR_FULL_OPEN_SPEED = 1/3`.
+
+### Seule la SECONDE moitie ralentit
+
+Le debut garde sa vitesse. La porte qui s'entrebaille d'un coup est un mouvement SEC -- c'est la surprise, et la
+ralentir l'enleverait. La fin, elle, est le moment ou l'on decouvre le grand-pere : elle a besoin de durer.
+
+Deux moments differents, deux vitesses. Une seule valeur pour les deux aurait force a choisir lequel sacrifier.
+
+### Le gel a la derniere image n'est pas touche
+
+La detection de fin se fait sur `TimePosition`, pas sur le temps ecoule : elle marche a n'importe quelle vitesse
+de lecture.
+
 ## 0.0.462 — La porte s'epingle a la DERNIERE IMAGE de son animation
 
 Elle se refermait encore, et la cause etait en amont de tout ce qu'on avait corrige : on epinglait la piste sur

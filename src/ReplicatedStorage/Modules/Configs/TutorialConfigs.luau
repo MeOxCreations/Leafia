@@ -157,6 +157,12 @@ return {
 	-- La porte se FIGE entrebaillee a ce marqueur, le temps que le grand-pere parle, puis elle repart.
 	DOOR_MID_EVENT = "MidAnimationEventDoor",
 	DOOR_PAUSE = 1.5,
+	-- VITESSE DE LA SECONDE MOITIE, apres la pause. La grande ouverture arrivait beaucoup trop vite : a 1/3 elle
+	-- prend trois fois plus de temps, et on voit le vieux pousser la porte au lieu de la voir sauter.
+	--
+	-- Ne concerne QUE ce segment. Le debut -- la porte qui s'entrebaille d'un coup -- garde sa vitesse : c'est un
+	-- mouvement sec, et le ralentir enleverait la surprise. Deux moments differents, deux vitesses.
+	DOOR_FULL_OPEN_SPEED = 1 / 3,
 	-- PAS DE MARQUEUR DE FIN. La porte est epinglee a la DERNIERE IMAGE de l'animation, pas la ou un marqueur
 	-- tombe : s'arreter avant fige une pose intermediaire, et le reste du mouvement ne joue jamais.
 	-- `EndOpenDoorEvent` existe toujours dans l'animation, il n'est simplement plus lu par le code.

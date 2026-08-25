@@ -291,7 +291,9 @@ local function openDoor()
 			-- attente pourrait faire repartir une piste qu'on vient d'epingler, et la porte se refermerait --
 			-- avec un retard qui rendrait la cause introuvable.
 			if doorTrack == track and track.IsPlaying and frozenAt == nil then
-				track:AdjustSpeed(1)
+				-- Elle repart AU RALENTI : la fin de l'ouverture est le moment ou l'on decouvre le grand-pere, et
+				-- a vitesse pleine elle etait finie avant qu'on ait le temps de regarder.
+				track:AdjustSpeed(TutorialConfigs.DOOR_FULL_OPEN_SPEED)
 			end
 		end)
 	end)
