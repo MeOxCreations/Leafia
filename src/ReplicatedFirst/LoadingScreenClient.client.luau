@@ -152,6 +152,21 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		ColorSequenceKeypoint.new(1, Color3.fromHex("11191f")),
 	})
 
+	-- ===== MAISON DU CLIENT =====
+	-- Le dessin de la maison ou l'on va, en plein cadre derriere la tuile. C'est ce qui fait qu'un chargement
+	-- ressemble a un DEPART chez quelqu'un plutot qu'a une barre qui avance.
+	local HOUSE_IMAGE_ID = "rbxassetid://87460183788335"
+	-- FONDU EN DIAGONALE. La maison doit rester un FOND : lisible d'un cote, effacee de l'autre, sinon elle
+	-- concurrence le bandeau et le texte poses dessus.
+	--
+	-- LE SENS NE SE DEDUIT PAS. L'orientation d'un UIGradient est une de ces choses que seul l'ecran tranche :
+	-- si le fondu part du mauvais coin, changer ce nombre de 180 est la premiere chose a essayer.
+	local HOUSE_FADE_ROTATION = 35
+	local HOUSE_FADE = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 0.3),
+		NumberSequenceKeypoint.new(0.55, 0.62),
+		NumberSequenceKeypoint.new(1, 1),
+	})
 	-- ===== DESTINATION =====
 	-- Le lieu ou l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend.
 	-- ReplicatedFirst ne peut pas require PlacesConfig : les identifiants sont donc EN DUR ici, comme
@@ -334,6 +349,29 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	bgGradient.Rotation = BG_ROTATION
 	bgGradient.Parent = bg
 
+	-- ===== MAISON DU CLIENT =====
+	-- Posee entre le degrade et la tuile : la tuile passe DESSUS, ce qui l'inscrit dans le decor au lieu de la
+	-- laisser flotter comme une vignette collee.
+	--
+	-- `Crop` et pas `Fit` : elle remplit l'ecran et deborde, donc aucune bande vide sur les formats larges. Un
+	-- `Fit` laisserait le degrade nu sur les cotes en 21/9.
+	local house = Instance.new("ImageLabel")
+	house.Name = "HouseClientImage"
+	house.BackgroundTransparency = 1
+	house.Image = HOUSE_IMAGE_ID
+	house.ScaleType = Enum.ScaleType.Crop
+	house.Size = UDim2.fromScale(1, 1)
+	house.ZIndex = 1
+	house.Active = false
+	house.Parent = curtain
+	local houseFade = Instance.new("UIGradient")
+	houseFade.Name = "UIGradient"
+	-- Le degrade ne touche QUE la transparence : la couleur du dessin reste la sienne. Une teinte ici raboterait
+	-- ses couleurs en silence, et on reglerait un dessin qu'on ne voit jamais vraiment.
+	houseFade.Transparency = HOUSE_FADE
+	houseFade.Rotation = HOUSE_FADE_ROTATION
+	houseFade.Parent = house
+
 	-- ===== FOND TUILE =====
 	-- Le defilement DIAGONAL n'est pas un caprice : horizontal ou vertical, ca se lit comme un decor qui glisse ;
 	-- en diagonale, ca se lit comme un mouvement propre.
@@ -347,7 +385,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tile.AnchorPoint = Vector2.new(0.5, 0.5)
 	tile.Position = UDim2.fromScale(0.5, 0.5)
 	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
-	tile.ZIndex = 1
+	tile.ZIndex = 2 -- AU-DESSUS de la maison : le motif s'inscrit sur le dessin
 	tile.Parent = curtain
 	-- Le fondu vit sur un UIGradient enfant de la tuile. Il ne s'anime PAS : c'est la tuile qui defile dessous, et
 	-- comme elle ne se deplace que d'une case a la fois, le fondu reste ou il est.
@@ -389,7 +427,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	gauge.AnchorPoint = Vector2.new(1, 0.5)
 	gauge.Position = LEAF_GAUGE_POS
 	gauge.Size = LEAF_GAUGE_SIZE
-	gauge.ZIndex = 3
+	gauge.ZIndex = 4
 	gauge.Parent = curtain
 
 	local leaves: { ImageLabel } = {}
@@ -406,7 +444,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 0.5)
 		leaf.Size = UDim2.fromScale(LEAF_FILL / LEAF_COUNT, 1)
 		leaf.Rotation = LEAF_ANGLE
-		leaf.ZIndex = 3
+		leaf.ZIndex = 4
 		leaf.Parent = gauge
 		leaves[i] = leaf
 	end
@@ -455,7 +493,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	banner.AnchorPoint = Vector2.new(0.5, 0.5)
 	banner.Position = BANNER_POS
 	banner.Size = BANNER_SIZE
-	banner.ZIndex = 2
+	banner.ZIndex = 3
 	banner.Parent = curtain
 	-- Son degrade est un FONDU FIXE, pas un reflet a promener : sa transparence monte le long de la largeur pour
 	-- que le bandeau ne soit pas plein d'un bout a l'autre. Deplacer son offset pousserait cette rampe HORS du
@@ -484,7 +522,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tipsLabel.TextScaled = true
 	tipsLabel.TextXAlignment = Enum.TextXAlignment.Center
 	tipsLabel.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-	tipsLabel.ZIndex = 3
+	tipsLabel.ZIndex = 4
 	tipsLabel.Parent = curtain
 
 	-- ===== DESTINATION =====
@@ -503,7 +541,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	dest.TextScaled = true
 	dest.TextXAlignment = Enum.TextXAlignment.Right
 	dest.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-	dest.ZIndex = 3
+	dest.ZIndex = 4
 	dest.Parent = curtain
 	local tipsShade = Instance.new("UIGradient")
 	tipsShade.Color = TIPS_LABEL_SHADE
@@ -533,7 +571,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	)
 	-- Les lettres DEBORDENT pendant leur rebond : elles arrivent d'en dessous. Un clip les couperait en plein vol.
 	tipsRow.ClipsDescendants = false
-	tipsRow.ZIndex = 3
+	tipsRow.ZIndex = 4
 	tipsRow.Parent = curtain
 
 	-- Montserrat en GRAS, designee par sa FAMILLE et pas par un Enum.Font : les enums de police sont en cours de
@@ -604,7 +642,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			label.TextSize = size
 			label.TextTransparency = 1 -- invisible tant qu'elle n'est pas arrivee
 			label.FontFace = TIP_FONT
-			label.ZIndex = 3
+			label.ZIndex = 4
 			label.Parent = tipsRow
 			letters[#letters + 1] = label
 		end

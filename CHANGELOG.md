@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.474 — La maison du client apparait derriere le rideau
+
+Le dessin de la maison ou l'on va, en plein cadre. C'est ce qui fait qu'un chargement ressemble a un DEPART chez
+quelqu'un plutot qu'a une barre qui avance.
+
+### Entre le degrade et la tuile
+
+La tuile passe DESSUS : le motif s'inscrit sur le dessin au lieu de passer dessous, donc la maison appartient au
+decor au lieu de flotter comme une vignette collee.
+
+Les plans ont ete renumerotes en consequence -- maison, tuile, bandeau, puis tout ce qui se LIT au-dessus.
+
+### `Crop`, pas `Fit`
+
+Elle remplit l'ecran et deborde. Un `Fit` laisserait le degrade nu sur les cotes en 21/9, et le cadrage
+changerait avec le format.
+
+### Le degrade ne touche QUE la transparence
+
+La couleur du dessin reste la sienne. Une teinte ici raboterait ses couleurs en silence, et on reglerait un
+dessin qu'on ne voit jamais vraiment -- meme piege que le bandeau, qui doit etre en blanc pur pour que son
+degrade rende ce qu'il annonce.
+
+Le fondu est en DIAGONALE : la maison reste lisible d'un cote et s'efface de l'autre, sinon elle concurrence le
+bandeau et le texte poses dessus.
+
+### Le sens ne se deduit pas
+
+L'orientation d'un UIGradient est une de ces choses que seul l'ecran tranche. Si le fondu part du mauvais coin,
+`HOUSE_FADE_ROTATION` + 180 est la premiere chose a essayer.
+
 ## 0.0.473 — Les feuilles de la jauge s'allument en silence
 
 Chaque cran jouait `PopSound_1`. Six sons pendant un chargement, ce n'est plus un retour, c'est un compte a
