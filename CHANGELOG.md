@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.460 — Le coup de camera s'encaisse au lieu de claquer
+
+Le recul partait D'UN COUP et redescendait doucement. Un depart instantane se lit comme un a-coup, pas comme un
+choc encaisse -- c'est ce qui le rendait sec.
+
+Deux valeurs maintenant : l'IMPULSION retombe d'un cote, et la camera la SUIT AVEC DU RETARD de l'autre. Ce
+retard est tout l'effet. Il arrondit le depart sans rien enlever a la force du coup.
+
+Deux reglages separes plutot qu'un, parce qu'ils servent deux moments opposes : `KICK_RISE` (11) adoucit le
+DEPART, `KICK_DECAY` (5.5) regle le RETOUR. Une seule valeur pour les deux aurait force a choisir entre un
+depart mou et un retour lent.
+
+Les deux compteurs sont cales a zero des qu'ils sont negligeables : une exponentielle n'atteint jamais sa cible,
+et les coups suivants accumuleraient ce reste.
+
 ## 0.0.459 — Les secousses des coups sont plus discretes
 
 `KNOCK_KICK` 0.8 -> 0.3. Reglage seul.

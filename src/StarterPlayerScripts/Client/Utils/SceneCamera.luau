@@ -35,10 +35,15 @@ local SWAY_ROLL = 0.45
 -- qui ne retombent jamais ensemble donnent un mouvement qui ne se repete jamais a l'oeil.
 local SWAY_A, SWAY_B, SWAY_C = 0.83, 1.27, 0.61
 
--- ===== LE COUP SEC =====
--- Vitesse de RETOUR du recul. Le depart, lui, est instantane : c'est ce qui en fait un coup et pas une poussee.
--- Plus haut = revient plus vite. En dessous de ~5 le recul traine et on dirait que la camera flotte.
-local KICK_DECAY = 9
+-- ===== LE COUP =====
+-- DEUX VALEURS, et c'est ce qui rend le coup doux. L'impulsion tombe d'un cote, la camera la SUIT AVEC DU
+-- RETARD de l'autre. Un seul compteur qui partirait a fond et redescendrait donnerait un depart net -- ce qui se
+-- lit comme un a-coup, pas comme un choc encaisse.
+--
+-- Vitesse a laquelle la camera rattrape l'impulsion. C'est elle qui adoucit le DEPART : plus bas = plus mou.
+local KICK_RISE = 11
+-- Vitesse a laquelle l'impulsion retombe. C'est elle qui regle le RETOUR : plus haut = revient plus vite.
+local KICK_DECAY = 5.5
 -- En dessous de ce reste, on met a ZERO. Un retour exponentiel n'atteint JAMAIS sa cible : sans ce clamp la
 -- camera garderait un recul minuscule pour toujours, et deux coups d'affilee l'accumuleraient.
 local KICK_SNAP = 0.002
@@ -55,6 +60,7 @@ local elapsed = 0
 local phase = 0
 local target = CFrame.identity
 local kick = 0
+local kickTarget = 0
 local startCF = CFrame.identity
 local enterSeconds = ENTER_TIME
 local exitSeconds = EXIT_TIME
@@ -126,12 +132,16 @@ local function stepCamera(dt: number)
 	-- comme un a-coup pile au moment ou l'oeil se pose sur le plan.
 	phase += dt
 	elapsed += dt
-	-- LE RECUL REVIENT TOUT SEUL, en exponentielle : franc au depart, de plus en plus doux. Cale a zero des
-	-- qu'il est negligeable -- une exponentielle n'atteint jamais sa cible, et deux coups d'affilee
-	-- accumuleraient ce reste.
-	if kick ~= 0 then
-		kick -= kick * math.min(1, KICK_DECAY * dt)
-		if math.abs(kick) < KICK_SNAP then
+	-- L'IMPULSION RETOMBE, ET LA CAMERA LA SUIT AVEC DU RETARD. Ce retard est tout l'effet : il arrondit le
+	-- depart, donc le coup s'encaisse au lieu de claquer. Les deux sont cales a ZERO des qu'ils sont
+	-- negligeables -- une exponentielle n'atteint jamais sa cible, et les coups suivants accumuleraient ce reste.
+	if kickTarget ~= 0 or kick ~= 0 then
+		kickTarget -= kickTarget * math.min(1, KICK_DECAY * dt)
+		if math.abs(kickTarget) < KICK_SNAP then
+			kickTarget = 0
+		end
+		kick += (kickTarget - kick) * math.min(1, KICK_RISE * dt)
+		if math.abs(kick) < KICK_SNAP and kickTarget == 0 then
 			kick = 0
 		end
 	end
@@ -260,7 +270,7 @@ end
 --- Les coups s'ADDITIONNENT : trois coups rapproches reculent plus que trois coups espaces, ce qui est
 --- exactement ce que fait une vraie camera qu'on bouscule.
 function SceneCamera.kick(studs: number)
-	kick += studs
+	kickTarget += studs
 end
 
 --- Coupe tout et rend la camera IMMEDIATEMENT. Pour les cas ou il n'y a plus rien a menager : mort, teleport,
@@ -270,7 +280,7 @@ function SceneCamera.abort()
 		return
 	end
 	onArrived = nil
-	kick = 0
+	kick, kickTarget = 0, 0
 	handBackToGame()
 end
 
