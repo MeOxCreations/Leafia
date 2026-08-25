@@ -255,12 +255,12 @@ local function openDoor()
 	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
 	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
 
-	-- Le tremblement tourne sur le MEME Animator. Deux pistes de meme priorite se melangeraient : celle des
-	-- coups a fini son travail, on la coupe avant que l'ouverture commence.
-	if shakeTrack then
-		shakeTrack:Stop(0)
-		shakeTrack = nil
-	end
+	-- TROIS ANIMATIONS SE PARTAGENT L'ANIMATOR DE LA PORTE : le tremblement des coups, le geste de poignee, et
+	-- l'ouverture. A priorite EGALE, Roblox ne choisit pas, il MELANGE : deux poses actives donnent leur
+	-- moyenne, et la porte s'ouvrirait a moitie de travers. On efface donc les deux precedentes avant.
+	stopTrack(shakeTrack)
+	stopTrack(tryTrack)
+	shakeTrack, tryTrack = nil, nil
 	doorTrack = track
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = true
@@ -349,14 +349,9 @@ local function playTryOpen()
 			return
 		end
 		chained = true
-		-- LE SON S'ARRETE AVEC LE GESTE. Il dure cinq secondes : le laisser courir ferait grincer une poignee
-		-- que plus personne ne touche, pendant que la porte s'ouvre.
-		local sfx = trySound
+		-- LE SON CONTINUE. Il dure plus longtemps que le geste, et le couper net s'entend comme un bug -- alors
+		-- qu'il deborde sur l'ouverture sans deranger personne. SoundUtils detruit le clone tout seul a la fin.
 		trySound = nil
-		if sfx and sfx.Parent then
-			sfx:Stop()
-			sfx:Destroy()
-		end
 		playGrandpa()
 	end)
 	track:Play()

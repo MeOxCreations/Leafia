@@ -127,9 +127,11 @@ return {
 	-- correspond au rig, elle joue a plein poids et n'ecrit rien. Le son part, la piste tourne, l'ecran ne bouge
 	-- pas -- et on cherche le bug dans le declenchement, qui est parfait.
 	--
-	-- Mettre le nom du Model de la porte si c'est la poignee qui bouge.
-	TRY_OPEN_MODEL = "OldmanOriginal",
-	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte.
+	-- C'est la PORTE : a cet instant elle est encore fermee, le grand-pere est derriere et on ne le verrait pas
+	-- de toute facon. Le nom de l'animation raconte l'histoire ("oldman"), pas la cible.
+	TRY_OPEN_MODEL = "Door",
+	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte. Il va JUSQU'AU BOUT, meme si le geste se
+	-- termine avant : un bruit coupe net s'entend comme un bug, alors qu'il deborde ici sans deranger personne.
 	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
 	-- Secondes apres le lancement avant de verifier qu'une animation a REELLEMENT bouge quelque chose. Assez
 	-- tard pour qu'elle ait eu le temps d'ecrire, assez tot pour que le message serve encore.

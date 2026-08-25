@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.456 — Le geste de poignee joue sur la PORTE, et le son va au bout
+
+La sonde du commit precedent avait vu juste : `Scene1_oldman_TryOpenDoor` anime la PORTE, pas le grand-pere.
+
+Logique, une fois dit : a cet instant la porte est encore fermee et le vieux est derriere -- on ne le verrait pas
+de toute facon. Le nom de l'animation raconte l'histoire ("oldman"), il ne dit pas sur quoi elle joue.
+
+`TRY_OPEN_MODEL = "Door"`. Une ligne, comme annonce.
+
+### Trois animations se partagent l'Animator de la porte
+
+Le tremblement des coups, le geste de poignee, puis l'ouverture. A priorite EGALE, Roblox ne choisit pas : il
+MELANGE. Deux poses actives donnent leur moyenne, et la porte s'ouvrirait a moitie de travers.
+
+Les deux precedentes sont donc effacees avant que l'ouverture commence. C'est la reponse a "il faut superposer
+des animations ?" : non, il faut au contraire s'assurer qu'elles ne se superposent PAS.
+
+### Le son de poignee va jusqu'au bout
+
+Il etait coupe a la fin du geste, au motif qu'il ferait grincer une poignee que plus personne ne touche. A
+l'oreille c'est l'inverse : un bruit coupe net s'entend comme un bug, alors qu'il deborde sur l'ouverture sans
+deranger personne. `SoundUtils` detruit le clone tout seul quand il finit.
+
 ## 0.0.455 — Une animation qui tourne sans rien bouger le DIT
 
 `Scene1_oldman_TryOpenDoor` ne se voyait pas, alors que son SON partait. Or le son est joue APRES le chargement
