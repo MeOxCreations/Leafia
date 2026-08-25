@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
+local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
@@ -154,6 +155,7 @@ local function endScene()
 	sceneEnded = true
 	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
+	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
@@ -351,6 +353,9 @@ function TutorialController.startMission()
 	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
 	-- n'attend pas que le noir soit en place.
 	Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
+	-- LE JEU BAISSE, il ne se tait pas. Un silence total s'entend comme une coupure et le monde a l'air de
+	-- s'eteindre : on veut que l'oreille se tourne vers la scene, pas que le reste disparaisse.
+	SoundDuck.duck(TutorialConfigs.SCENE_DUCK, TutorialConfigs.SCENE_DUCK_TIME)
 	local cf = sceneCFrame()
 	if not cf then
 		-- Pas de cadrage possible (pas de personnage) : on ne prend pas la camera pour rien.
@@ -499,6 +504,7 @@ function TutorialController.init()
 		if SceneCamera.isActive() or Letterbox.isShown() then
 			SceneCamera.abort()
 			Letterbox.hide(0)
+			SoundDuck.restore(0)
 		end
 	end)
 	-- LA BOUCLE PART MEME SI LA PORTE N'EST PAS ENCORE LA. Avec StreamingEnabled elle arrive souvent apres le
@@ -518,6 +524,9 @@ function TutorialController.stop()
 	-- porte resterait ouverte sur rien. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 	SceneCamera.abort()
 	Letterbox.hide(0)
+	-- Le son est BAISSE, pas coupe : l'oublier laisserait le jeu a un quart de volume pour toujours, et personne
+	-- ne ferait le lien avec une scene finie depuis longtemps.
+	SoundDuck.restore(0)
 	-- UNE PAR UNE, jamais `ipairs` sur une liste de valeurs nilables : ipairs S'ARRETE AU PREMIER NIL. Une seule
 	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
 	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.

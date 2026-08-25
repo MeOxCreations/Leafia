@@ -63,13 +63,21 @@ return {
 	-- repere est juste par construction. "Se mettre devant la porte" supposerait au contraire de savoir quel axe
 	-- du Model est son devant -- et rien ne le garantit, ca vient du rig et pas du bon sens.
 	SCENE_CAM_BACK = 6, -- studs derriere le joueur
-	-- Studs au-dessus du joueur. Le repere est sa RootPart, deja a hauteur de torse : a 2.5 la camera plongeait
-	-- sur lui de haut, ce qui ecrase le decor et rapetisse le personnage. A 1.2 elle est a peu pres a hauteur
-	-- d'yeux, donc a la hauteur de ce qu'on regarde -- la porte et le visage du grand-pere.
-	SCENE_CAM_UP = 1.2,
+	-- Studs au-dessus du joueur. Le repere est sa RootPart, deja a hauteur de torse : plus on monte, plus la
+	-- camera plonge sur lui, ce qui ecrase le decor et rapetisse le personnage. A 0.7 on est juste sous la
+	-- hauteur d'yeux -- l'oeil arrive donc sur la porte de face, pas d'en haut.
+	SCENE_CAM_UP = 0.7,
 	SCENE_CAM_SIDE = 2, -- decalage lateral : un cadrage parfaitement centre est plat
 	-- Ce que la camera VISE, en studs au-dessus du centre de la porte. A zero elle vise le milieu exact.
 	SCENE_LOOK_UP = 0.5,
+
+	-- ===== LE SON BAISSE PENDANT LA SCENE =====
+	-- Volume du reste du jeu pendant la cinematique, en fraction. 0.25 = un quart. Pas ZERO : un silence total
+	-- s'entend comme une coupure, et le monde a l'air de s'eteindre. On veut que l'oreille se tourne vers la
+	-- scene, pas que le jeu disparaisse.
+	SCENE_DUCK = 0.25,
+	-- Duree du fondu. Assez lent pour ne pas se remarquer, assez court pour etre en place quand la scene demarre.
+	SCENE_DUCK_TIME = 0.5,
 
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau
 	-- descend, il n'attend pas.
@@ -99,13 +107,13 @@ return {
 	-- rien -- les deux devront finir par s'accorder, sinon il ne respire pas pendant qu'on lui parle.
 	GRANDPA_NAME = "OldmanOriginal",
 	-- ELLE MENE LA SCENE. C'est elle qui declenche la porte, et c'est SA FIN qui termine la scene.
-	GRANDPA_ANIM = "Scene1_grandpa",
+	GRANDPA_ANIM = "Scene1_oldman_OpenDoor",
 	-- Marqueur DANS l'animation du grand-pere : l'instant ou sa main pousse la porte.
 	DOOR_START_EVENT = "OuvertureDoorEvent",
 
 	-- Animation de la PORTE. Un nom SEPARE de celui du grand-pere : les deux ont deja porte le meme, et un nom
 	-- qui designe deux choses finit toujours par en perdre une.
-	DOOR_ANIM = "Scene1_door",
+	DOOR_ANIM = "Scene1_opendoor",
 	-- La porte se FIGE entrebaillee a ce marqueur, le temps que le grand-pere parle, puis elle repart.
 	DOOR_MID_EVENT = "MidAnimationEventDoor",
 	DOOR_PAUSE = 1.5,

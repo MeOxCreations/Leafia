@@ -2204,6 +2204,44 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.451 — Le son du jeu baisse pendant la scene, et les animations portent leur vrai nom
+
+### Les deux noms d'animation etaient faux
+
+`Scene1_grandpa` et `Scene1_door` n'existent pas. Les vrais sont `Scene1_oldman_OpenDoor` (le grand-pere) et
+`Scene1_opendoor` (la porte). La console le disait deja nommement -- c'est pour ca qu'elle le dit.
+
+### Le jeu BAISSE, il ne se tait pas
+
+Nouveau module `Modules/UI/Core/SoundDuck`. Pendant la scene, le reste du jeu tombe a un quart de son volume.
+
+Pas a zero : un silence total s'entend comme une COUPURE, et le monde a l'air de s'eteindre. On veut que
+l'oreille se tourne vers la scene, pas que le jeu disparaisse.
+
+### Un SoundGroup, pas les volumes un par un
+
+Baisser le GROUPE baisse tout d'un coup, sans jamais toucher au `Volume` de chaque son -- celui-la reste ce qui a
+ete regle dans Studio. Un module qui reecrirait les volumes un par un devrait les memoriser pour les rendre, et
+il finirait par en perdre un.
+
+Et LES CLONES EN HERITENT, ce qui rend l'affaire simple : `SoundUtils` joue chaque son ponctuel en clonant celui
+de SoundService, et un clone copie son SoundGroup. Les bruits declenches PENDANT la scene sont donc baisses
+aussi, sans une ligne de plus.
+
+On n'adopte que les sons SANS groupe : voler ceux qui en ont deja un ecraserait un reglage de Studio.
+
+Ce que ca ne couvre pas : les Sound poses sur des parts du Workspace, qui vivent hors de SoundService. A traiter
+le jour ou il y en aura un qui gene, pas avant.
+
+### Le volume est rendu par TOUS les chemins de sortie
+
+Fin normale, arret du controller, mort en pleine scene. Un son baisse qu'on oublie de rendre laisse le jeu a un
+quart de volume pour toujours, et plus personne ne fait le lien avec une scene finie depuis longtemps.
+
+### La camera descend encore
+
+`SCENE_CAM_UP` 1.2 -> 0.7. Juste sous la hauteur d'yeux : l'oeil arrive sur la porte de face, plus d'en haut.
+
 ## 0.0.450 — La camera de scene descend a hauteur d'yeux
 
 `SCENE_CAM_UP` 2.5 -> 1.2. Le repere est la RootPart du joueur, deja a hauteur de torse : a 2.5 la camera
