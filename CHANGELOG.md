@@ -2204,6 +2204,56 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.448 — La porte s'ouvre a moitie, le grand-pere parle, puis elle s'ouvre en grand
+
+L'enchainement complet de la scene est branche.
+
+    toque -> barres + camera
+      -> animation du grand-pere
+         -> OuvertureDoorEvent : la porte demarre
+            -> MidAnimationEventDoor : elle se FIGE entrebaillee
+            -> (pause) le grand-pere parle
+            -> elle repart
+            -> EndOpenDoorEvent : grande ouverte, elle TIENT
+      -> fin de l'animation du grand-pere : la scene rend la main
+
+### C'est l'animation qui decide de la duree, plus une constante
+
+`SCENE_HOLD` n'est plus le minuteur de la scene : c'est un FILET, qui ne sert que si l'animation est introuvable
+ou ne demarre pas. Une duree en dur et une animation finissent toujours par se contredire, et c'est la duree qui
+a tort -- elle ne suit pas quand on retouche l'animation.
+
+Sans ce filet, une animation absente laisserait le joueur coince en camera scriptee derriere des barres noires,
+sans aucun moyen d'en sortir. Un asset manquant ne doit jamais devenir une partie bloquee.
+
+### La porte se fige par la VITESSE, jamais par un Stop
+
+Arreter une piste lui fait rendre sa pose de repos : la porte se refermerait d'un coup au milieu de la scene.
+`AdjustSpeed(0)` la tient exactement ou elle est.
+
+Elle reste BOUCLEE pour la meme raison -- une piste non bouclee se relache a sa derniere image. Le gel a
+`EndOpenDoorEvent` l'empeche de reboucler, et la porte reste ouverte.
+
+### Deux animations, deux noms
+
+`Scene1_grandpa` et `Scene1_door`. Les deux ont deja porte le meme nom (`Scene1_opendoor`), et l'animation du
+grand-pere a disparu de la reference quand celle de la porte a pris sa place : un nom qui designe deux choses
+finit toujours par en perdre une.
+
+### Le nettoyage emporte les pistes
+
+La scene SURVIT au controller : la camera et les barres vivent dans la PlayerGui, et les pistes tournent sur des
+Animator du Workspace. `stop()` coupe les quatre.
+
+### A FAIRE DANS STUDIO
+
+Creer DEUX instances Animation dans `ReplicatedStorage/Animations/Scenes/Scenes1` :
+
+- **`Scene1_grandpa`** -> l'animation du grand-pere. Son ancien AnimationId etait `91299186233914`.
+- **`Scene1_door`** -> l'animation de la porte, `110159708902875`.
+
+Tant que ces deux noms n'existent pas, la console le DIT et la scene se joue a vide, sans bloquer le joueur.
+
 ## 0.0.447 — La scene part quand on toque : barres, camera, retour
 
 Toquer a la porte declenche maintenant une vraie scene. Les barres glissent, la camera se pose devant la porte

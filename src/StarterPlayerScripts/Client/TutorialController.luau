@@ -43,6 +43,9 @@ local warnedNoHighlight = false
 local elapsed = 0
 local doorHint = true
 local missionStarted = false
+local sceneEnded = false
+local grandpaTrack: AnimationTrack? = nil
+local doorTrack: AnimationTrack? = nil
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -139,9 +142,117 @@ local function sceneCFrame(): CFrame?
 end
 
 -- Rend la main au joueur : la camera glisse vers la vue de jeu pendant que les barres repartent dans les bords.
+-- Idempotent : la fin normale (l'animation du grand-pere s'acheve) et le filet de secours peuvent tirer tous les
+-- deux, et le second ne doit pas relancer une sortie deja en cours.
 local function endScene()
+	if sceneEnded then
+		return
+	end
+	sceneEnded = true
 	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
+end
+
+-- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
+local function findModel(name: string): Model?
+	for _, d in ipairs(Workspace:GetDescendants()) do
+		if d:IsA("Model") and d.Name == name then
+			return d
+		end
+	end
+	return nil
+end
+
+local function animatorOf(model: Model): Animator?
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	return if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+end
+
+local function loadSceneTrack(animator: Animator, animName: string): AnimationTrack?
+	local node: Instance? = ReplicatedStorage
+	for _, part in ipairs(TutorialConfigs.SCENE_ANIM_FOLDER) do
+		node = node and node:FindFirstChild(part)
+	end
+	local anim = node and node:FindFirstChild(animName)
+	if not (anim and anim:IsA("Animation")) then
+		warn(
+			`[Tutorial] Animation "{animName}" introuvable dans `
+				.. `ReplicatedStorage.{table.concat(TutorialConfigs.SCENE_ANIM_FOLDER, ".")}`
+		)
+		return nil
+	end
+	return animator:LoadAnimation(anim)
+end
+
+-- LA PORTE. Elle s'ouvre a MOITIE, se FIGE le temps que le grand-pere parle, puis finit de s'ouvrir et TIENT.
+--
+-- Le gel se fait a la VITESSE (AdjustSpeed 0), jamais par un Stop : arreter une piste lui fait rendre sa pose de
+-- repos, donc la porte se refermerait d'un coup. Et elle reste bouclee pour la meme raison -- une piste non
+-- bouclee se relache a sa derniere image.
+local function openDoor()
+	local model = door
+	if not model then
+		return
+	end
+	local animator = animatorOf(model)
+	if not animator then
+		warn(`[Tutorial] Pas d'Animator sous "{model.Name}" : la porte ne s'ouvrira pas.`)
+		return
+	end
+	local track = loadSceneTrack(animator, TutorialConfigs.DOOR_ANIM)
+	if not track then
+		return
+	end
+	doorTrack = track
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = true
+
+	local midDone = false
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_MID_EVENT):Connect(function()
+		if midDone then
+			return
+		end
+		midDone = true
+		track:AdjustSpeed(0)
+		task.delay(TutorialConfigs.DOOR_PAUSE, function()
+			if doorTrack == track and track.IsPlaying then
+				track:AdjustSpeed(1)
+			end
+		end)
+	end)
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_END_EVENT):Connect(function()
+		-- Grand ouverte : on gele ici. La suite de la piste est vide, et la laisser courir la ferait reboucler.
+		track:AdjustSpeed(0)
+	end)
+	track:Play()
+end
+
+-- LE GRAND-PERE MENE LA SCENE. Son animation declenche la porte, et sa fin termine la scene : c'est elle qui
+-- sait combien de temps ca dure, pas une constante.
+local function playScene()
+	local model = findModel(TutorialConfigs.GRANDPA_NAME)
+	local animator = if model then animatorOf(model) else nil
+	local track = if animator then loadSceneTrack(animator, TutorialConfigs.GRANDPA_ANIM) else nil
+	if not track then
+		if not model then
+			warn(`[Tutorial] Model "{TutorialConfigs.GRANDPA_NAME}" introuvable : la scene se jouera a vide.`)
+		elseif not animator then
+			warn(`[Tutorial] Pas d'Animator sous "{TutorialConfigs.GRANDPA_NAME}" : la scene se jouera a vide.`)
+		end
+		-- FILET : sans lui le joueur resterait coince en camera scriptee, derriere des barres noires, sans aucun
+		-- moyen d'en sortir. Une animation absente ne doit jamais devenir une partie bloquee.
+		task.delay(TutorialConfigs.SCENE_HOLD, endScene)
+		return
+	end
+
+	grandpaTrack = track
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = false
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_START_EVENT):Connect(openDoor)
+	-- C'EST LA FIN DE L'ANIMATION QUI TERMINE LA SCENE. Une duree en dur et une animation finissent toujours par
+	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.
+	track.Stopped:Connect(endScene)
+	track:Play()
 end
 
 --- Le joueur a toque : la mission commence. Le guidage s'eteint DEFINITIVEMENT -- halo, prompt et touche --
@@ -165,15 +276,13 @@ function TutorialController.startMission()
 	local cf = sceneCFrame()
 	if not cf then
 		-- Pas de cadrage possible (pas de personnage) : on ne prend pas la camera pour rien.
-		task.delay(TutorialConfigs.SCENE_HOLD, function()
-			Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
-		end)
+		task.delay(TutorialConfigs.SCENE_HOLD, endScene)
 		return
 	end
 	SceneCamera.enter(cf, TutorialConfigs.SCENE_CAM_IN, function()
-		-- Le rappel tire QUAND LA CAMERA EST ARRIVEE : c'est de la que la scene doit compter, pas de l'appui.
-		-- Sinon le temps de trajet mange la scene, et il change avec SCENE_CAM_IN sans qu'on y pense.
-		task.delay(TutorialConfigs.SCENE_HOLD, endScene)
+		-- Le rappel tire QUAND LA CAMERA EST ARRIVEE : la scene commence de la, pas de l'appui. Sinon le temps de
+		-- trajet mangerait le debut du plan, et il changerait avec SCENE_CAM_IN sans qu'on y pense.
+		playScene()
 	end)
 end
 
@@ -326,10 +435,19 @@ function TutorialController.stop()
 		conn:Disconnect()
 		conn = nil
 	end
-	-- La camera et les barres SURVIVENT au controller : elles vivent dans la PlayerGui et sur le Workspace. Les
-	-- laisser en place figerait le joueur dans une scene qui n'existe plus.
+	-- LA SCENE SURVIT AU CONTROLLER. La camera et les barres vivent dans la PlayerGui, et les pistes tournent sur
+	-- des Animator du Workspace : les laisser en place figerait le joueur dans une scene qui n'existe plus, et la
+	-- porte resterait ouverte sur rien. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 	SceneCamera.abort()
 	Letterbox.hide(0)
+	if grandpaTrack then
+		grandpaTrack:Stop(0)
+		grandpaTrack = nil
+	end
+	if doorTrack then
+		doorTrack:Stop(0)
+		doorTrack = nil
+	end
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

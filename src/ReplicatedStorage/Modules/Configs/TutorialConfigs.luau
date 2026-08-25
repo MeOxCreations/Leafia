@@ -73,10 +73,30 @@ return {
 	SCENE_BARS_TIME = 0.6,
 	SCENE_CAM_IN = 1,
 	SCENE_CAM_OUT = 0.8,
-	-- PROVISOIRE : duree de la scene tant que les animations ne la terminent pas elles-memes. A remplacer par la
-	-- fin de l'animation du grand-pere des qu'elle existe -- une duree en dur et une animation finissent toujours
-	-- par se contredire, et c'est la duree qui a tort.
+	-- FILET, en secondes. La scene se termine normalement a la FIN de l'animation du grand-pere. Ce delai ne sert
+	-- que si elle est introuvable ou ne demarre pas : sans lui le joueur resterait coince en camera scriptee,
+	-- derriere des barres noires, sans aucun moyen d'en sortir.
 	SCENE_HOLD = 3,
+
+	-- ===== LES ANIMATIONS DE LA SCENE =====
+	SCENE_ANIM_FOLDER = { "Animations", "Scenes", "Scenes1" },
+	-- Le Model du grand-pere dans le Workspace. ATTENTION : AmbientAnimConfigs attend "GrandFather" et ne trouve
+	-- rien -- les deux devront finir par s'accorder, sinon il ne respire pas pendant qu'on lui parle.
+	GRANDPA_NAME = "OldmanOriginal",
+	-- ELLE MENE LA SCENE. C'est elle qui declenche la porte, et c'est SA FIN qui termine la scene.
+	GRANDPA_ANIM = "Scene1_grandpa",
+	-- Marqueur DANS l'animation du grand-pere : l'instant ou sa main pousse la porte.
+	DOOR_START_EVENT = "OuvertureDoorEvent",
+
+	-- Animation de la PORTE. Un nom SEPARE de celui du grand-pere : les deux ont deja porte le meme, et un nom
+	-- qui designe deux choses finit toujours par en perdre une.
+	DOOR_ANIM = "Scene1_door",
+	-- La porte se FIGE entrebaillee a ce marqueur, le temps que le grand-pere parle, puis elle repart.
+	DOOR_MID_EVENT = "MidAnimationEventDoor",
+	DOOR_PAUSE = 1.5,
+	-- Grand ouverte : la piste se fige la et TIENT. Sans ce gel elle irait au bout de sa duree puis se
+	-- relacherait, et la porte se refermerait toute seule -- une piste non tenue rend sa pose de repos.
+	DOOR_END_EVENT = "EndOpenDoorEvent",
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,
