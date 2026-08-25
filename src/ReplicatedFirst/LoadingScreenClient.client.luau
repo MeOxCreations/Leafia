@@ -234,11 +234,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Le degrade pose sur la feuille ne touche QUE sa transparence (c'est lui qui la remplit) : sa couleur reste
 	-- neutre, donc ce vert s'affiche tel quel.
 	local LEAF_TINT = Color3.fromRGB(142, 255, 93)
-	-- FEUILLE DU DESSOUS, sombre et COMPLETE. C'est le contenant : elle dit tout de suite quelle forme va se
-	-- remplir. Sans elle, la partie pas encore remplie etait simplement transparente -- on voyait le fond a
-	-- travers, la jauge n'avait pas de bord, et le joueur ne lisait plus "combien il reste" mais "quelque chose
-	-- apparait".
-	local LEAF_BACK_TINT = Color3.fromRGB(0, 0, 0)
 	local LEAF_COUNT = 6
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
@@ -250,16 +245,27 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local LEAF_ANGLE = -10
 	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
 	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
-	-- LE CRAN POUSSE DEPUIS RIEN. La feuille verte part a une taille NULLE et grandit en depassant sa cible avant
-	-- d'y revenir -- c'est ce depassement qui fait le rebond. Un simple changement de couleur passait inapercu
-	-- dans un coin de l'ecran ; quelque chose qui POUSSE se voit du coin de l'oeil.
+	-- ===== LE REBOND DE BALLE =====
+	-- Une balle molle qui tombe fait TROIS choses, et il faut les trois : elle s'ETIRE en tombant, elle
+	-- s'ECRASE en touchant, puis elle se REDRESSE en depassant un peu. Un simple rebond de position sans
+	-- deformation se lit comme un objet rigide qui saute -- ce n'est pas la meme sensation du tout.
 	--
-	-- Court expres : au-dela de ~0.5 s le rebond traine et la jauge a l'air molle.
-	local LEAF_POP_TIME = 0.42
+	-- LA DEFORMATION SE FAIT SUR LA TAILLE, pas sur un UIScale : une echelle est UNIFORME, donc elle ne peut ni
+	-- etirer ni ecraser. Elle ne sait que grossir.
+	--
+	-- Etirement pendant la chute : plus fin, plus haut.
+	local LEAF_STRETCH_X, LEAF_STRETCH_Y = 0.82, 1.28
+	-- Ecrasement au contact : plus large, plus plat.
+	local LEAF_SQUASH_X, LEAF_SQUASH_Y = 1.34, 0.66
+	-- Chute, contact, redressement. La chute ACCELERE (`Quad In`, comme une vraie chute), le contact est presque
+	-- instantane, et le redressement DEPASSE avant de se poser.
+	local LEAF_FALL_TIME = 0.22
+	local LEAF_SQUASH_TIME = 0.07
+	local LEAF_SETTLE_TIME = 0.3
 	-- Hauteur de CHUTE d'une feuille qui s'allume, en fraction de la hauteur de la jauge. Elle tombe de la et
 	-- rebondit en touchant sa place. En FRACTION et pas en pixels : une valeur en pixels serait un saut de puce
 	-- sur un grand ecran et un plongeon sur un telephone.
-	local LEAF_DROP = 0.9
+	local LEAF_DROP = 1.6
 	-- Ecart entre deux crans, et temps mort avant que le cycle reparte. Le temps mort est ce qui separe deux
 	-- tours : sans lui, le sixieme et le premier s'enchainent et le cycle n'a plus de debut visible.
 	local LEAF_STEP = 0.12
@@ -522,14 +528,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	gauge.ZIndex = 4
 	gauge.Parent = curtain
 
-	-- DEUX COUCHES PAR CRAN. La sombre reste en place et tient la forme ; la verte pousse par-dessus au moment
-	-- ou le cran s'allume. Une seule feuille qui grandirait depuis rien laisserait un TROU dans la jauge tant
-	-- qu'elle n'est pas atteinte -- on ne verrait plus combien il en reste.
-	local scales: { UIScale } = {}
+	-- UNE SEULE COUCHE. Il y avait une feuille SOMBRE sous chaque cran, pour montrer combien il en restait --
+	-- ca avait un sens tant que c'etait une jauge de progression. Depuis que le cycle tourne en boucle, elle ne
+	-- dit plus rien : six formes noires posees en permanence qui n'informent de rien et alourdissent le coin de
+	-- l'ecran. Un decor qui a perdu sa fonction ne devient pas neutre, il devient du bruit.
 	local lits: { ImageLabel } = {}
-	-- Place de repos d'une feuille verte, retenue pour pouvoir l'y RAMENER apres le rebond. La relire sur
-	-- l'objet ne marcherait pas : au moment ou on la relit, elle est deja en train de tomber.
-	local restY: { number } = {}
+	local leafW = LEAF_FILL / LEAF_COUNT
 	for i = 1, LEAF_COUNT do
 		local function slot(name: string, tint: Color3, z: number): ImageLabel
 			local leaf = Instance.new("ImageLabel")
@@ -538,51 +542,74 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			leaf.Image = LEAF_ID
 			leaf.ImageColor3 = tint
 			leaf.ScaleType = Enum.ScaleType.Fit
-			leaf.AnchorPoint = Vector2.new(0.5, 0.5)
+			-- ANCREE EN BAS AU MILIEU, et c'est CE QUI REND LE REBOND POSSIBLE. Avec une ancre au centre, une
+			-- feuille qu'on ecrase s'enfonce dans le sol autant qu'elle s'etale ; ancree par le bas, elle
+			-- s'ecrase SUR le sol, comme une vraie balle molle. Le point d'ancrage EST le point de contact.
+			leaf.AnchorPoint = Vector2.new(0.5, 1)
 			-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image,
-			-- donc il ecraserait l'echelle qu'on leur donne. Les X poses une fois sont a nous.
-			leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 0.5)
-			leaf.Size = UDim2.fromScale(LEAF_FILL / LEAF_COUNT, 1)
+			-- donc il ecraserait la deformation qu'on leur donne. Les X poses une fois sont a nous.
+			leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 1)
+			leaf.Size = UDim2.fromScale(leafW, 1)
 			leaf.Rotation = LEAF_ANGLE
 			leaf.ZIndex = z
 			leaf.Parent = gauge
 			return leaf
 		end
-		slot(`LeafBack{i}`, LEAF_BACK_TINT, 4)
-		restY[i] = 0.5
-		local lit = slot(`LeafLit{i}`, LEAF_TINT, 5)
-		-- L'echelle vit sur la feuille VERTE seule : la sombre ne bouge jamais, donc la forme du cran reste
-		-- lisible pendant que la verte pousse dedans.
-		local scale = Instance.new("UIScale")
-		scale.Scale = 0
-		scale.Parent = lit
-		scales[i] = scale
+		local lit = slot(`Leaf{i}`, LEAF_TINT, 4)
+		-- Eteinte = INVISIBLE, pas de taille nulle. Une taille nulle ne peut pas etre etiree : il faudrait la
+		-- rendre a sa taille avant de commencer, et ce saut se verrait.
+		lit.ImageTransparency = 1
 		lits[i] = lit
 	end
 
-	-- ALLUME UN CRAN. La feuille TOMBE de plus haut et REBONDIT en touchant sa place, comme une balle sur le
-	-- sol : `Bounce` en sortie fait exactement ce rebond amorti. L'echelle, elle, monte tout droit et vite --
-	-- deux rebonds a la fois se marcheraient dessus et on ne lirait plus ni l'un ni l'autre.
+	-- ALLUME UN CRAN : elle TOMBE etiree, s'ECRASE en touchant, puis se REDRESSE en depassant.
+	--
+	-- Trois temps enchaines sur la fin du precedent, jamais sur des delais poses cote a cote : des delais
+	-- deriveraient des que le jeu rame, et l'ecrasement partirait avant que la feuille ait touche.
 	local function lightLeaf(i: number)
 		local leaf = lits[i]
 		if not leaf.Parent then
 			return
 		end
+		local x = leaf.Position.X.Scale
 		-- EN FRACTION, jamais en pixels : une chute en pixels serait un saut de puce sur un grand ecran et un
 		-- plongeon sur un telephone. Ici elle vaut toujours la meme part de la hauteur de la jauge.
-		local x = leaf.Position.X.Scale
-		leaf.Position = UDim2.fromScale(x, restY[i] - LEAF_DROP)
-		scales[i].Scale = 0
-		TweenService
-			:Create(leaf, TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Bounce, Enum.EasingDirection.Out), {
-				Position = UDim2.fromScale(x, restY[i]),
-			})
-			:Play()
-		TweenService
-			:Create(scales[i], TweenInfo.new(LEAF_POP_TIME * 0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-				Scale = 1,
-			})
-			:Play()
+		leaf.Position = UDim2.fromScale(x, 1 - LEAF_DROP)
+		leaf.Size = UDim2.fromScale(leafW * LEAF_STRETCH_X, LEAF_STRETCH_Y)
+		leaf.ImageTransparency = 0
+
+		local fall = TweenService:Create(
+			leaf,
+			-- `Quad In` : elle ACCELERE en tombant. Une chute a vitesse constante n'a aucun poids.
+			TweenInfo.new(LEAF_FALL_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+			{ Position = UDim2.fromScale(x, 1) }
+		)
+		fall.Completed:Connect(function()
+			if not leaf.Parent then
+				return
+			end
+			local squash = TweenService:Create(
+				leaf,
+				TweenInfo.new(LEAF_SQUASH_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Size = UDim2.fromScale(leafW * LEAF_SQUASH_X, LEAF_SQUASH_Y) }
+			)
+			squash.Completed:Connect(function()
+				if not leaf.Parent then
+					return
+				end
+				-- `Back` en sortie DEPASSE la taille de repos avant d'y revenir : c'est ce sursaut qui donne la
+				-- matiere molle. Sans lui, elle se contenterait de reprendre sa forme.
+				TweenService
+					:Create(
+						leaf,
+						TweenInfo.new(LEAF_SETTLE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+						{ Size = UDim2.fromScale(leafW, 1) }
+					)
+					:Play()
+			end)
+			squash:Play()
+		end)
+		fall:Play()
 	end
 
 	task.spawn(function()
@@ -604,7 +631,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			-- Elles s'eteignent TOUTES A LA FOIS avant le tour suivant : les eteindre une par une lirait comme un
 			-- second passage, en sens inverse, et on ne saurait plus ou commence le cycle.
 			for i = 1, LEAF_COUNT do
-				scales[i].Scale = 0
+				lits[i].ImageTransparency = 1
 			end
 		end
 	end)

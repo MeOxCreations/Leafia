@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.481 — Un vrai rebond de balle molle, et les feuilles noires disparaissent
+
+### Le rebond etait faux
+
+Il ne faisait que de la POSITION : la feuille descendait et remontait, sans jamais changer de forme. Ca se lit
+comme un objet RIGIDE qui saute, pas comme une balle molle.
+
+Une balle molle fait TROIS choses, et il faut les trois : elle S'ETIRE en tombant, elle S'ECRASE en touchant,
+puis elle SE REDRESSE en depassant un peu.
+
+### La deformation se fait sur la TAILLE, pas sur un UIScale
+
+Une echelle est UNIFORME : elle ne sait que grossir, elle ne peut ni etirer ni ecraser. C'est pour ca que la
+version precedente ne pouvait pas marcher, quels que soient les reglages.
+
+### L'ancrage EN BAS AU MILIEU est ce qui rend l'ecrasement possible
+
+Avec une ancre au centre, une feuille qu'on ecrase s'enfonce dans le sol autant qu'elle s'etale. Ancree par le
+BAS, elle s'ecrase SUR le sol : le point d'ancrage EST le point de contact.
+
+### Les trois temps s'enchainent sur la FIN du precedent
+
+Jamais sur des delais poses cote a cote : des delais deriveraient des que le jeu rame, et l'ecrasement partirait
+avant que la feuille ait touche.
+
+### Les six feuilles noires sont retirees
+
+Elles servaient a montrer combien il en restait -- ce qui avait un sens tant que c'etait une jauge de
+progression. Depuis que le cycle tourne en boucle, elles ne disent plus rien : six formes noires posees en
+permanence qui n'informent de rien.
+
+Un decor qui a perdu sa fonction ne devient pas neutre, il devient du bruit.
+
+Une feuille eteinte est desormais INVISIBLE, pas de taille nulle : une taille nulle ne peut pas etre etiree, il
+faudrait la rendre a sa taille avant de commencer et ce saut se verrait.
+
 ## 0.0.480 — Les six feuilles tournent en boucle, et rebondissent
 
 Elles s'arretaient : c'etait une JAUGE DE PROGRESSION, six crans repartis sur une duree devinee. Une fois les
