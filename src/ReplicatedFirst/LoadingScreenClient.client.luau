@@ -150,8 +150,21 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Le degrade pose sur la feuille ne touche QUE sa transparence (c'est lui qui la remplit) : sa couleur reste
 	-- neutre, donc ce vert s'affiche tel quel.
 	local LEAF_TINT = Color3.fromRGB(142, 255, 93)
+	-- FEUILLE DU DESSOUS, sombre et COMPLETE. C'est le contenant : elle dit tout de suite quelle forme va se
+	-- remplir. Sans elle, la partie pas encore remplie etait simplement transparente -- on voyait le fond a
+	-- travers, la jauge n'avait pas de bord, et le joueur ne lisait plus "combien il reste" mais "quelque chose
+	-- apparait".
+	local LEAF_BACK_TINT = Color3.fromRGB(18, 24, 15)
 	local LEAF_SIZE = UDim2.fromScale(0.2, 0.2)
 	local LEAF_CENTER = UDim2.fromScale(0.5, 0.46)
+	-- Inclinaison FIXE. Elle oscillait ; ce balancement permanent attirait l'oeil en continu alors que la seule
+	-- chose a suivre est le remplissage.
+	local LEAF_ANGLE = -10
+	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
+	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
+	local LEAF_POP_TIME = 0.55
+	local LEAF_POP_SOUND = { "Sounds", "UI", "PopSound_1" }
+	local LEAF_POP_VOLUME = 0.45
 	-- Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le rideau s'en va. Une jauge qui se
 	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
@@ -296,34 +309,53 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- ===== FEUILLE CENTRALE =====
 	-- Elle part invisible et se revele petit a petit : le joueur ne voit plus seulement "ca charge", il voit
 	-- COMBIEN il reste. Une attente qu'on peut mesurer est toujours plus courte qu'une attente muette.
-	local leaf = Instance.new("ImageLabel")
-	leaf.Name = "Leaf"
-	leaf.BackgroundTransparency = 1
-	leaf.AnchorPoint = Vector2.new(0.5, 0.5)
-	leaf.Position = LEAF_CENTER
-	leaf.Size = LEAF_SIZE
-	leaf.Image = LEAF_ID
-	leaf.ImageColor3 = LEAF_TINT
-	leaf.ScaleType = Enum.ScaleType.Fit
-	leaf.ZIndex = 2
-	leaf.Rotation = -10
-	leaf.Parent = curtain
+	-- DEUX FEUILLES SUPERPOSEES dans un meme contenant. Le contenant porte la position, l'inclinaison et
+	-- l'echelle : les deux images bougent donc ENSEMBLE. Les animer separement les desynchroniserait d'une image,
+	-- et le contour se decollerait de son remplissage.
+	local leafBox = Instance.new("Frame")
+	leafBox.Name = "Leaf"
+	leafBox.BackgroundTransparency = 1
+	leafBox.AnchorPoint = Vector2.new(0.5, 0.5)
+	leafBox.Position = LEAF_CENTER
+	leafBox.Size = LEAF_SIZE
+	leafBox.Rotation = LEAF_ANGLE
+	leafBox.ZIndex = 2
+	leafBox.Parent = curtain
 	-- La contrainte garde la feuille CARREE : sans elle, elle s'etire avec le format de l'ecran.
 	local leafRatio = Instance.new("UIAspectRatioConstraint")
 	leafRatio.AspectRatio = 1
 	leafRatio.DominantAxis = Enum.DominantAxis.Height
-	leafRatio.Parent = leaf
+	leafRatio.Parent = leafBox
 
+	local function leafImage(name: string, tint: Color3, z: number): ImageLabel
+		local image = Instance.new("ImageLabel")
+		image.Name = name
+		image.BackgroundTransparency = 1
+		image.Size = UDim2.fromScale(1, 1)
+		image.Image = LEAF_ID
+		image.ImageColor3 = tint
+		image.ScaleType = Enum.ScaleType.Fit
+		image.ZIndex = z
+		image.Parent = leafBox
+		return image
+	end
+	leafImage("LeafBack", LEAF_BACK_TINT, 2)
+	local leaf = leafImage("LeafFill", LEAF_TINT, 3)
+
+	-- L'APPARITION. Le `Back` en sortie depasse la taille cible puis revient : c'est ce depassement qui fait le
+	-- rebond. On l'applique au CONTENANT, donc les deux feuilles arrivent d'un bloc.
+	local leafScale = Instance.new("UIScale")
+	leafScale.Scale = 0
+	leafScale.Parent = leafBox
 	TweenService
-		:Create(leaf, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-			Rotation = 10,
+		:Create(leafScale, TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+			Scale = 1,
 		})
 		:Play()
-	TweenService
-		:Create(leaf, TweenInfo.new(2.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-			Position = UDim2.fromScale(LEAF_CENTER.X.Scale, LEAF_CENTER.Y.Scale - 0.02),
-		})
-		:Play()
+	local pop = findSound(LEAF_POP_SOUND)
+	if pop then
+		playSound(pop, LEAF_POP_VOLUME)
+	end
 
 	-- Le remplissage passe par la TRANSPARENCE du degrade, pas par sa couleur : la partie pas encore remplie est
 	-- transparente, donc on voit le fond a travers. Une couleur ne se retire pas, une transparence si.

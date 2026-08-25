@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.465 — Le rideau de changement de map : deux feuilles, une arrivee qui claque
+
+### Deux feuilles au lieu d'une
+
+Celle du dessous est SOMBRE et complete : c'est le contenant. Elle dit tout de suite quelle forme va se remplir.
+
+Avec une seule feuille, la partie pas encore remplie etait simplement TRANSPARENTE : on voyait le fond a
+travers, la jauge n'avait pas de bord, et le joueur ne lisait plus "combien il reste" mais "quelque chose
+apparait". Une jauge sans contenant n'est pas une jauge.
+
+### Un seul contenant pour les deux
+
+Il porte la position, l'inclinaison et l'echelle ; les deux images ne portent que leur couleur. Les animer
+separement les desynchroniserait d'une image, et le contour se decollerait de son remplissage.
+
+### L'oscillation disparait
+
+La feuille se balancait et flottait en permanence. Ce mouvement attirait l'oeil en continu alors que la seule
+chose a suivre est le REMPLISSAGE : deux mouvements se disputaient l'attention, et le plus visible n'etait pas
+celui qui portait l'information.
+
+### L'arrivee claque
+
+Echelle de 0 a 1 avec un `Back` en sortie : elle depasse sa taille puis revient. C'est ce depassement qui donne
+le rebond -- une echelle qui monte tout droit se lit comme un fondu, pas comme une arrivee.
+
+`PopSound_1` part avec elle. Le son et l'image arrivent ENSEMBLE : un son cale a cote de son image se ressent
+comme un decalage meme quand on ne sait pas dire lequel des deux est en retard.
+
+### Rien a changer pour la sortie
+
+Le rideau est un `CanvasGroup` : son fondu porte sur le groupe, donc les deux feuilles s'effacent ensemble sans
+une ligne de plus.
+
 ## 0.0.464 — Le joueur s'efface, et l'image se resserre sur le grand-pere
 
 ### Le personnage passe en fantome pendant la scene
