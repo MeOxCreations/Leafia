@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.475 — Les deux degrades du rideau prennent leurs vraies valeurs
+
+Reglages, plus un correctif qui n'en est pas un.
+
+### La tuile passe en BLANC PUR
+
+Elle etait en gris 38. Un UIGradient MULTIPLIE la couleur de l'objet : sur un gris, les valeurs du degrade sont
+rabotees en silence, et on regle une courbe dont on ne voit jamais le vrai rendu.
+
+C'est la meme regle que le bandeau et que l'etiquette TIPS, tous deux deja en blanc pur pour cette raison. La
+tuile etait la derniere a ne pas la suivre.
+
+### Sa courbe s'inverse, et tourne de 50 degres
+
+Elle partait pleine et s'effacait ; elle part maintenant INVISIBLE et se termine pleine. Le motif n'existe donc
+que d'un cote de l'ecran. Le long palier du debut evite qu'il commence a poindre des le premier pixel, ce qui
+donnerait l'air d'une erreur.
+
+### Le fondu de la maison prend ses cinq points
+
+Il descend plus tot et plus fort : le dessin ne concurrence plus le bandeau ni le texte.
+
+### Le point de depart, corrige au passage
+
+La courbe de la tuile etait donnee avec son premier point a l'instant 1 -- et son dernier aussi. Une
+NumberSequence DOIT commencer a 0, finir a 1, en temps strictement croissant : Roblox refuse la sequence entiere
+sinon, et le degrade disparait sans le moindre message. Lu comme un 0.
+
 ## 0.0.474 — La maison du client apparait derriere le rideau
 
 Le dessin de la maison ou l'on va, en plein cadre. C'est ce qui fait qu'un chargement ressemble a un DEPART chez

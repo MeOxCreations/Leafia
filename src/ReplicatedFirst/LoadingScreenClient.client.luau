@@ -107,21 +107,27 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 	-- FOND TUILE qui defile en diagonale.
 	local TILE_IMAGE_ID = "rbxassetid://78626050824347"
-	local TILE_TINT = Color3.fromRGB(38, 38, 38)
+	-- BLANC PUR, et ce n'est pas cosmetique : un UIGradient MULTIPLIE la couleur de l'objet. Sur un gris, les
+	-- valeurs du degrade sont rabotees en silence et on regle une courbe dont on ne voit jamais le vrai rendu.
+	-- Meme regle que le bandeau et que l'etiquette TIPS.
+	local TILE_TINT = Color3.fromRGB(255, 255, 255)
 	local TILE_CELL = UDim2.fromScale(0.005, 0.01) -- taille d'UNE tuile, en fraction de l'ImageLabel
 	local TILE_DRIFT = 15 -- vitesse de defilement, en pixels par seconde
 	-- FONDU SUR LA TUILE. Le motif ne doit pas etre present partout avec la meme force : plein cadre et uniforme,
 	-- il se lit comme un papier peint et rentre en concurrence avec la feuille du milieu. On le laisse dense d'un
 	-- cote et on le fait disparaitre de l'autre.
 	--
-	-- La courbe part a PLAT (le motif reste franc au debut), MONTE VITE, puis s'aplatit vers l'invisible. C'est ce
-	-- palier de depart qui evite que le fondu commence des le premier pixel et donne l'air d'une erreur.
+	-- La courbe part INVISIBLE et se termine PLEINE : le motif n'existe que d'un cote de l'ecran. Le long palier
+	-- du debut evite qu'il commence a poindre des le premier pixel, ce qui donnerait l'air d'une erreur.
+	--
+	-- Une NumberSequence DOIT commencer a 0 et finir a 1, en temps strictement croissant : Roblox refuse la
+	-- sequence entiere sinon, et le degrade disparait sans le moindre message.
+	local TILE_FADE_ROTATION = 50
 	local TILE_FADE = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.15, 0),
-		NumberSequenceKeypoint.new(0.288, 0.512),
-		NumberSequenceKeypoint.new(0.6, 0.86),
-		NumberSequenceKeypoint.new(1, 1),
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.36, 1),
+		NumberSequenceKeypoint.new(0.748, 0.813),
+		NumberSequenceKeypoint.new(1, 0),
 	})
 
 	-- BANDEAU du bas, avec son degrade de transparence.
@@ -163,8 +169,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- si le fondu part du mauvais coin, changer ce nombre de 180 est la premiere chose a essayer.
 	local HOUSE_FADE_ROTATION = 35
 	local HOUSE_FADE = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.3),
-		NumberSequenceKeypoint.new(0.55, 0.62),
+		NumberSequenceKeypoint.new(0, 0.231),
+		NumberSequenceKeypoint.new(0.152, 0.612),
+		NumberSequenceKeypoint.new(0.449, 0.919),
+		NumberSequenceKeypoint.new(0.653, 1),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	-- ===== DESTINATION =====
@@ -391,6 +399,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- comme elle ne se deplace que d'une case a la fois, le fondu reste ou il est.
 	local tileFade = Instance.new("UIGradient")
 	tileFade.Transparency = TILE_FADE
+	tileFade.Rotation = TILE_FADE_ROTATION
 	tileFade.Parent = tile
 
 	local tileConn: RBXScriptConnection? = nil
