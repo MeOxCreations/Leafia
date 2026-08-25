@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.457 — La porte reste ouverte pour de bon, et elle grince
+
+### Elle se fige, definitivement
+
+`AdjustSpeed(0)` et jamais `Stop` : un Stop ferait rendre a la piste sa pose de repos, donc la porte se
+refermerait d'un coup.
+
+### Et un filet, parce que la piste est BOUCLEE
+
+Elle l'est expres -- une piste non bouclee se relache a sa derniere image, et la porte se refermerait la aussi.
+Mais du coup, si `EndOpenDoorEvent` se tait, elle repart a zero : la porte s'ouvrirait et se refermerait EN
+BOUCLE, pour toujours.
+
+Le garde surveille le TEMPS QUI RECULE, pas une fenetre "assez proche de la fin". Une fenetre peut etre SAUTEE
+par un FPS bas ; un retour en arriere est un fait qu'on ne peut pas rater. Meme recette que le geste de prise du
+seau.
+
+Le marqueur et le filet peuvent tirer tous les deux : le gel est idempotent, et il coupe sa propre surveillance.
+
+### Le grincement
+
+`OpenDoorSound`, au niveau de la porte. Il part AVEC le mouvement, pas au marqueur de mi-course : c'est
+l'ouverture elle-meme qu'il accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en
+retard.
+
+### A voir a l'oreille
+
+La porte bouge DEUX fois : elle s'entrebaille, puis elle finit de s'ouvrir apres la pause. Le grincement ne joue
+que sur la premiere -- celle demandee. Si le second mouvement parait muet, c'est une ligne a ajouter.
+
 ## 0.0.456 — Le geste de poignee joue sur la PORTE, et le son va au bout
 
 La sonde du commit precedent avait vu juste : `Scene1_oldman_TryOpenDoor` anime la PORTE, pas le grand-pere.

@@ -145,6 +145,9 @@ return {
 	-- Animation de la PORTE. Un nom SEPARE de celui du grand-pere : les deux ont deja porte le meme, et un nom
 	-- qui designe deux choses finit toujours par en perdre une.
 	DOOR_ANIM = "Scene1_opendoor",
+	-- Le grincement de la porte qui s'ouvre. Joue au DEBUT du mouvement, avec lui : un bruit qui arrive une fois
+	-- la porte deja entrebaillee sonne en retard. Spatial, au niveau de la porte.
+	OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "OpenDoorSound" },
 	-- La porte se FIGE entrebaillee a ce marqueur, le temps que le grand-pere parle, puis elle repart.
 	DOOR_MID_EVENT = "MidAnimationEventDoor",
 	DOOR_PAUSE = 1.5,

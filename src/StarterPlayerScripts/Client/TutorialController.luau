@@ -53,6 +53,8 @@ local doorTrack: AnimationTrack? = nil
 local knockTrack: AnimationTrack? = nil
 local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
+-- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
+local doorWatch: RBXScriptConnection? = nil
 local trySound: Sound? = nil
 local promptShown = false
 local actionBound = false
@@ -254,6 +256,9 @@ local function openDoor()
 	-- propriete et sa boucle tourne meme pendant la scene. Ecrire dessus en parallele donnerait un champ de
 	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
 	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
+	-- Le grincement part AVEC le mouvement, pas au marqueur de mi-course : c'est l'ouverture elle-meme qu'il
+	-- accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en retard.
+	SoundUtils.play(TutorialConfigs.OPEN_SOUND, anchor)
 
 	-- TROIS ANIMATIONS SE PARTAGENT L'ANIMATOR DE LA PORTE : le tremblement des coups, le geste de poignee, et
 	-- l'ouverture. A priorite EGALE, Roblox ne choisit pas, il MELANGE : deux poses actives donnent leur
@@ -278,9 +283,49 @@ local function openDoor()
 			end
 		end)
 	end)
-	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_END_EVENT):Connect(function()
-		-- Grand ouverte : on gele ici. La suite de la piste est vide, et la laisser courir la ferait reboucler.
+	-- LA PORTE RESTE OUVERTE, DEFINITIVEMENT. On gele la piste sur l'image ou elle est : `AdjustSpeed(0)` et
+	-- jamais `Stop`, parce qu'un Stop lui ferait rendre sa pose de repos -- la porte se refermerait d'un coup.
+	--
+	-- Idempotent : le marqueur et le filet peuvent tirer tous les deux.
+	local frozen = false
+	local lastTime = 0
+	local function freeze()
+		if frozen then
+			return
+		end
+		frozen = true
 		track:AdjustSpeed(0)
+		if doorWatch then
+			doorWatch:Disconnect()
+			doorWatch = nil
+		end
+	end
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_END_EVENT):Connect(freeze)
+
+	-- FILET, si le marqueur se tait. La piste est BOUCLEE -- une piste non bouclee se relache a sa derniere
+	-- image, et la porte se refermerait -- donc sans ce garde elle repartirait a zero : la porte s'ouvrirait et
+	-- se refermerait en boucle, pour toujours.
+	--
+	-- On surveille le TEMPS QUI RECULE, pas une fenetre "assez proche de la fin" : une fenetre peut etre SAUTEE
+	-- par un FPS bas, alors qu'un retour en arriere est un fait qu'on ne peut pas rater.
+	doorWatch = RunService.Heartbeat:Connect(function()
+		if doorTrack ~= track or not track.IsPlaying then
+			if doorWatch then
+				doorWatch:Disconnect()
+				doorWatch = nil
+			end
+			return
+		end
+		local now = track.TimePosition
+		if now < lastTime - 0.001 then
+			local length = track.Length
+			if length > 0 then
+				track.TimePosition = math.max(length - 0.001, 0)
+			end
+			freeze()
+			return
+		end
+		lastTime = now
 	end)
 	track:Play()
 	checkAnimMoved(model, TutorialConfigs.DOOR_ANIM)
@@ -620,6 +665,10 @@ function TutorialController.stop()
 	stopTrack(knockTrack)
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
+	if doorWatch then
+		doorWatch:Disconnect()
+		doorWatch = nil
+	end
 	grandpaTrack, doorTrack, knockTrack, shakeTrack, tryTrack = nil, nil, nil, nil, nil
 	local sfx = trySound
 	trySound = nil
