@@ -219,6 +219,17 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Place de l'etiquette "TIPS". Ancree en son CENTRE : la position designe alors le milieu du bloc, ce qui la
 	-- garde sur son axe quelle que soit sa taille -- avec une ancre en coin, changer la taille la deplace.
 	-- Bord gauche du texte du conseil, et ecart minimal qu'il garde avec la jauge de feuilles.
+	-- Le conseil se REPLIE sur deux lignes quand il ne rentre pas. Au-dela, il ne se lit plus d'un coup d'oeil --
+	-- et un conseil qu'on doit lire deux fois n'aide personne pendant un chargement.
+	local TIP_MAX_LINES = 2
+	-- Hauteur d'une ligne, en multiples de la taille du texte. En dessous de ~1.05 les lettres se touchent.
+	local TIP_LINE_HEIGHT = 1.12
+	-- Marge sur l'estimation avant de retrecir. Un repli aux mots ne remplit jamais ses lignes a ras : sans cette
+	-- marge on ne retrecirait pas assez, et la derniere ligne deborderait quand meme.
+	local TIP_FIT_MARGIN = 0.9
+	-- Taille d'un conseil REPLIE, en fraction de celle d'un conseil sur une ligne. Deux lignes a taille pleine
+	-- deborderaient sur le bandeau.
+	local TIP_TWO_LINE_SCALE = 0.78
 	local TIPS_ROW_START = 0.15
 	local TIPS_ROW_GAP = 0.02
 	local TIPS_LABEL_POS = UDim2.fromScale(0.07, 0.916)
@@ -664,16 +675,38 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 				-- l'attente sortait tout de suite. Il n'y a pas d'instant ou l'on peut dire "maintenant c'est bon".
 				-- On cesse donc de chercher cet instant -- on relit, et on corrige si ca a bouge. Meme raison que
 				-- pour les largeurs juste en dessous, et ca couvre aussi le redimensionnement de la fenetre.
-				-- LA HAUTEUR DONNE LA TAILLE, LA LARGEUR LA CORRIGE. Le cadre ne CONTRAINT PAS les lettres :
-				-- elles sont posees a la main, donc un conseil long depassait tranquillement jusque sous la
-				-- jauge de feuilles. On mesure ce qu'il occupe vraiment et on retrecit ce qu'il faut.
+				-- LA HAUTEUR DONNE LA TAILLE, LA LARGEUR DECIDE DU NOMBRE DE LIGNES. Le cadre ne CONTRAINT PAS
+				-- les lettres -- elles sont posees a la main -- donc un conseil long depassait jusque sous la
+				-- jauge de feuilles.
+				--
+				-- On le REPLIE plutot que de le retrecir : deux lignes se lisent, un texte rapetisse ne se lit
+				-- plus. Le retrecissement ne sert que quand meme deux lignes ne suffisent pas.
 				--
 				-- Relu a chaque image : ca converge en une ou deux images, et ca se recorrige tout seul si la
 				-- fenetre change de taille en cours de route.
-				local live = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
 				local room = tipsRow.AbsoluteSize.X
-				if room > 1 and textWidth > room then
-					live = math.max(math.floor(live * room / textWidth), 8)
+				local base = math.max(math.floor(tipsRow.AbsoluteSize.Y), 8)
+
+				-- TOUT SE DECIDE SUR LA LARGEUR A LA TAILLE DE BASE, jamais sur la taille courante.
+				--
+				-- C'est ce qui empeche une OSCILLATION : retrecir un conseil peut le faire rentrer sur une seule
+				-- ligne, donc il n'aurait plus besoin d'etre retreci, donc il regrossirait, donc il repasserait
+				-- sur deux lignes -- et ainsi de suite, indefiniment. En raisonnant sur une largeur qui ne depend
+				-- PAS de la reduction en cours, la decision est stable des la premiere image.
+				local widthAtBase = if size > 0 then textWidth * base / size else textWidth
+
+				local live = base
+				-- SUR DEUX LIGNES, IL RETRECIT AUSSI. Deux lignes prennent une hauteur que le bandeau n'a pas :
+				-- a taille pleine elles deborderaient dessus.
+				if room > 1 and widthAtBase > room then
+					live = math.max(math.floor(base * TIP_TWO_LINE_SCALE), 8)
+				end
+				-- Et si meme deux lignes a cette taille ne suffisent pas, on retrecit encore. Ce cas est le
+				-- dernier recours : il n'arrive que pour un conseil vraiment tres long.
+				local fit = room * TIP_MAX_LINES * TIP_FIT_MARGIN
+				local widthAtLive = widthAtBase * live / base
+				if room > 1 and widthAtLive > fit then
+					live = math.max(math.floor(live * fit / widthAtLive), 8)
 				end
 				if live ~= size then
 					size = live
@@ -682,28 +715,74 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 					end
 				end
 				local rise = size * TIP_LETTER_RISE
-				textWidth = 0
+				local lineH = size * TIP_LINE_HEIGHT
+
 				-- LARGEURS RELUES A CHAQUE IMAGE. Une espace ne mesure rien (Roblox rogne les blancs de bord) :
 				-- on lui donne une avance fixe, sinon les mots se colleraient.
-				local x = 0
+				local widths = table.create(#letters)
+				local blank = table.create(#letters)
+				textWidth = 0
 				for i, label in ipairs(letters) do
 					if not label.Parent then
 						return
 					end
-					local progress = math.clamp((now - (i - 1) * TIP_LETTER_STAGGER) / TIP_LETTER_TIME, 0, 1)
+					local w = label.AbsoluteSize.X
+					blank[i] = w < 1
+					if blank[i] then
+						w = size * TIP_SPACE_WIDTH
+					end
+					widths[i] = w
+					textWidth += w
+				end
+
+				-- ON REPLIE AUX ESPACES, jamais au milieu d'un mot : couper "hedge" en "hed / ge" ne se lit plus.
+				-- On avance donc MOT PAR MOT, et on ne change de ligne que si le mot entier ne rentre pas.
+				local lineOf = table.create(#letters)
+				local xOf = table.create(#letters)
+				local line, x, lines = 1, 0, 1
+				local i = 1
+				while i <= #letters do
+					local j, wordW = i, 0
+					while j <= #letters and not blank[j] do
+						wordW += widths[j]
+						j += 1
+					end
+					-- `x > 0` : un mot plus large que la ligne entiere reste quand meme place, sinon on
+					-- bouclerait a l'infini sans jamais le poser. C'est le retrecissement qui traite ce cas.
+					if x > 0 and x + wordW > room and line < TIP_MAX_LINES then
+						line += 1
+						lines = line
+						x = 0
+					end
+					for k = i, j - 1 do
+						lineOf[k] = line
+						xOf[k] = x
+						x += widths[k]
+					end
+					-- Les espaces restent sur la ligne du mot qu'ils suivent : les reporter au debut de la
+					-- suivante la decalerait d'un cran.
+					while j <= #letters and blank[j] do
+						lineOf[j] = line
+						xOf[j] = x
+						x += widths[j]
+						j += 1
+					end
+					i = j
+				end
+
+				-- LE BLOC RESTE CENTRE sur la ligne du bandeau : deux lignes montent d'une demi-hauteur au lieu
+				-- de descendre sous le bandeau.
+				local yBase = -(lines - 1) * lineH * 0.5
+				for i2, label in ipairs(letters) do
+					local progress = math.clamp((now - (i2 - 1) * TIP_LETTER_STAGGER) / TIP_LETTER_TIME, 0, 1)
 					-- `Back` DEPASSE la place puis y revient : sur du texte ce depassement se lit comme du rebond.
 					local eased = TweenService:GetValue(progress, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-					label.Position = UDim2.fromOffset(x, math.floor(rise * (1 - eased)))
+					local y = yBase + (lineOf[i2] - 1) * lineH + rise * (1 - eased)
+					label.Position = UDim2.fromOffset(math.floor(xOf[i2]), math.floor(y))
 					-- La transparence ne rebondit PAS : elle fond droit. Un `Back` la ferait passer sous zero, donc
 					-- clignoter. Elle finit aussi plus tot que le mouvement : la lettre est deja lisible quand elle
 					-- se pose.
 					label.TextTransparency = 1 - math.clamp(progress * 2, 0, 1)
-					local w = label.AbsoluteSize.X
-					if w < 1 then
-						w = size * TIP_SPACE_WIDTH
-					end
-					x += w
-					textWidth = x
 				end
 				if now >= watchUntil then
 					return

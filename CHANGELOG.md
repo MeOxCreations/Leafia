@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.472 — Un conseil trop long se replie sur deux lignes, et retrecit
+
+Il etait seulement RETRECI. Deux lignes se lisent ; un texte rapetisse, non -- et un conseil qu'on doit lire
+deux fois n'aide personne pendant un chargement.
+
+### Le repli se fait AUX ESPACES
+
+On avance mot par mot, et on ne change de ligne que si le mot ENTIER ne rentre pas. Couper "hedge" en "hed /
+ge" ne se lit plus. Un mot plus large que la ligne entiere reste quand meme place -- sinon la boucle tournerait
+sans jamais le poser -- et c'est le retrecissement qui traite ce cas.
+
+Les espaces restent sur la ligne du mot qu'ils suivent : les reporter au debut de la suivante la decalerait d'un
+cran vers la droite.
+
+### Le bloc reste centre sur le bandeau
+
+Deux lignes montent d'une demi-hauteur au lieu de descendre sous lui.
+
+### Deux lignes retrecissent AUSSI
+
+Elles prennent une hauteur que le bandeau n'a pas : a taille pleine elles deborderaient dessus.
+
+### Le piege evite : l'oscillation
+
+Retrecir un conseil peut le faire rentrer sur UNE ligne, donc il n'aurait plus besoin d'etre retreci, donc il
+regrossirait, donc il repasserait sur deux lignes -- indefiniment, a chaque image.
+
+Tout se decide donc sur la largeur qu'il occuperait A LA TAILLE DE BASE, jamais sur la taille courante. Une
+grandeur qui ne depend pas de la reduction en cours rend la decision stable des la premiere image.
+
 ## 0.0.471 — Le conseil ne passe plus sous les feuilles
 
 Le texte des conseils courait jusque sous la jauge : deux choses lisibles au meme endroit, donc aucune des deux.
