@@ -90,55 +90,6 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 		end
 	end)
 
-	-- TEMP (test de la boite de dialogue) : joue la narration d'intro UNE fois, ~1.5 s apres le 1er spawn, pour regler
-	-- le visuel et le texte avec le joueur. A RETIRER quand le tuto la declenchera pour de vrai (mission / TutorialService).
-	task.spawn(function()
-		local plr = game:GetService("Players").LocalPlayer
-		local Dialogue = require(RS.Modules.UI.Core.Dialogue)
-		if not game:IsLoaded() then
-			game.Loaded:Wait() -- attendre que TOUT soit charge
-		end
-		if not plr.Character then
-			plr.CharacterAdded:Wait() -- attendre que le joueur soit spawn
-		end
-		task.wait(3) -- puis 3 s avant d'afficher le dialogue
-		Dialogue.play({
-			-- EN ANGLAIS, comme tout texte vu par le joueur : le traducteur automatique de Roblox part de l'anglais.
-			-- Vocabulaire simple : le public est jeune, et une phrase qu'on ne comprend pas casse l'immersion.
-			{ speaker = "Papi", emotion = "wink", text = "There you are, " .. plr.DisplayName .. "! I knew you'd come." },
-			{
-				speaker = "Papi",
-				emotion = "happy",
-				text = "Look at this. My old hedge trimmer. It has cut more hedges than you can count.",
-			},
-			{
-				speaker = "Papi",
-				emotion = "sad",
-				text = "I can't use it anymore. My back hurts too much.",
-			},
-			{
-				speaker = "Papi",
-				emotion = "sad",
-				text = "And all my customers are gone. Their gardens are a mess now.",
-			},
-			{
-				speaker = "Papi",
-				emotion = "normal",
-				text = "So I am giving you my business. The tools, the customers, everything.",
-			},
-			{
-				speaker = "Papi",
-				emotion = "happy",
-				text = "Start with that hedge over there. Show me what you can do.",
-			},
-			{
-				speaker = "Papi",
-				emotion = "wink",
-				text = "And don't make me look bad, kid!",
-			},
-		})
-	end)
-
 	print("[Client] Pret (tuto)")
 	return
 end

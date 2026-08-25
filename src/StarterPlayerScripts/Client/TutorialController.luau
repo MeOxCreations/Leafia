@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
+local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
@@ -50,6 +51,8 @@ local grandpaTrack: AnimationTrack? = nil
 local doorTrack: AnimationTrack? = nil
 local knockTrack: AnimationTrack? = nil
 local shakeTrack: AnimationTrack? = nil
+local tryTrack: AnimationTrack? = nil
+local trySound: Sound? = nil
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -277,6 +280,41 @@ local function playGrandpa()
 	track:Play()
 end
 
+-- IL S'ACHARNE SUR LA POIGNEE. Entre les coups et l'ouverture : le grand-pere se bat avec sa vieille porte.
+-- Quand l'animation s'acheve, l'ouverture prend la suite -- c'est elle qui dit quand elle a fini, pas un delai
+-- pose a cote qui se decalerait a la premiere retouche.
+local function playTryOpen()
+	local model = findModel(TutorialConfigs.GRANDPA_NAME)
+	local animator = if model then animatorOf(model) else nil
+	local track = if animator then loadSceneTrack(animator, TutorialConfigs.TRY_OPEN_ANIM) else nil
+	if not track then
+		playGrandpa() -- pas d'animation de poignee : on n'arrete pas la scene pour autant
+		return
+	end
+	tryTrack = track
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = false
+	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, anchor)
+
+	local chained = false
+	track.Stopped:Connect(function()
+		if chained then
+			return
+		end
+		chained = true
+		-- LE SON S'ARRETE AVEC LE GESTE. Il dure cinq secondes : le laisser courir ferait grincer une poignee
+		-- que plus personne ne touche, pendant que la porte s'ouvre.
+		local sfx = trySound
+		trySound = nil
+		if sfx and sfx.Parent then
+			sfx:Stop()
+			sfx:Destroy()
+		end
+		playGrandpa()
+	end)
+	track:Play()
+end
+
 -- UN COUP : la porte tremble et on entend le choc. Appele une fois par marqueur de l'animation du joueur, donc
 -- c'est l'ANIMATION qui dit quand -- pas un minuteur qui finirait par se decaler d'elle.
 local function knockOnce()
@@ -313,7 +351,7 @@ local function playScene()
 	local track = if animator then loadSceneTrack(animator, TutorialConfigs.KNOCK_ANIM) else nil
 	if not track then
 		-- Pas d'animation de coups : on ne bloque pas la scene pour autant, le grand-pere vient quand meme.
-		playGrandpa()
+		playTryOpen()
 		return
 	end
 	knockTrack = track
@@ -330,7 +368,7 @@ local function playScene()
 			return
 		end
 		chained = true
-		playGrandpa()
+		playTryOpen()
 	end)
 	track:Play()
 end
@@ -356,6 +394,9 @@ function TutorialController.startMission()
 	-- LE JEU BAISSE, il ne se tait pas. Un silence total s'entend comme une coupure et le monde a l'air de
 	-- s'eteindre : on veut que l'oreille se tourne vers la scene, pas que le reste disparaisse.
 	SoundDuck.duck(TutorialConfigs.SCENE_DUCK, TutorialConfigs.SCENE_DUCK_TIME)
+	-- LA BOITE DE DIALOGUE S'EFFACE. Elle occupe le bas de l'ecran, pile ou les barres arrivent : une bulle qui
+	-- reste ouverte pendant qu'on toque parle par-dessus le geste. Elle reviendra quand la SCENE la demandera.
+	Dialogue.hide()
 	local cf = sceneCFrame()
 	if not cf then
 		-- Pas de cadrage possible (pas de personnage) : on ne prend pas la camera pour rien.
@@ -534,7 +575,14 @@ function TutorialController.stop()
 	stopTrack(doorTrack)
 	stopTrack(knockTrack)
 	stopTrack(shakeTrack)
-	grandpaTrack, doorTrack, knockTrack, shakeTrack = nil, nil, nil, nil
+	stopTrack(tryTrack)
+	grandpaTrack, doorTrack, knockTrack, shakeTrack, tryTrack = nil, nil, nil, nil, nil
+	local sfx = trySound
+	trySound = nil
+	if sfx and sfx.Parent then
+		sfx:Stop()
+		sfx:Destroy()
+	end
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

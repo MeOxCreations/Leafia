@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.452 — Le grand-pere se bat avec sa poignee, et le dialogue ne coupe plus les coups
+
+### La narration d'intro ne se declenche plus toute seule
+
+Un bloc marque TEMP dans le bootstrap jouait la narration ~3 s apres le spawn, "pour regler le visuel avec le
+joueur". Son propre commentaire disait de le retirer quand le tuto la declencherait pour de vrai.
+
+C'est le cas, et surtout elle tombait EN PLEIN pendant les coups a la porte : une bulle ouverte en bas de
+l'ecran, pile ou les barres noires arrivent, qui parle par-dessus le geste. Bloc retire (49 lignes).
+
+La boite est aussi effacee au demarrage de la scene, au cas ou autre chose l'aurait ouverte. Elle reviendra
+quand la SCENE la demandera -- reste a dire ou.
+
+### Une etape de plus entre les coups et l'ouverture
+
+    ... coups a la porte
+      -> Scene1_oldman_TryOpenDoor : il s'acharne sur la poignee
+         + TryUnlockDoorSound, au niveau de la porte
+      -> Scene1_oldman_OpenDoor : il ouvre
+      -> ...
+
+Chaque etape enchaine sur la FIN de son animation. Aucun delai pose a cote : un delai se decale a la premiere
+retouche, une animation non.
+
+### Le son de poignee s'arrete avec le geste
+
+`TryUnlockDoorSound` dure 5.2 s. Le laisser courir ferait grincer une poignee que plus personne ne touche,
+pendant que la porte s'ouvre. Il est coupe a la fin de l'animation, et au nettoyage du controller.
+
+### Chaque etape peut manquer sans bloquer
+
+Animation de coups absente -> on passe a la poignee. Poignee absente -> on passe a l'ouverture. Un asset qui
+manque fait sauter SON etape, jamais la scene entiere.
+
 ## 0.0.451 — Le son du jeu baisse pendant la scene, et les animations portent leur vrai nom
 
 ### Les deux noms d'animation etaient faux

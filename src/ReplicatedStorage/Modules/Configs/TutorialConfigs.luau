@@ -106,6 +106,13 @@ return {
 	-- Le Model du grand-pere dans le Workspace. ATTENTION : AmbientAnimConfigs attend "GrandFather" et ne trouve
 	-- rien -- les deux devront finir par s'accorder, sinon il ne respire pas pendant qu'on lui parle.
 	GRANDPA_NAME = "OldmanOriginal",
+	-- IL S'ACHARNE SUR LA POIGNEE avant d'ouvrir : "encore cette porte, faut vraiment que je la change". Joue
+	-- APRES les coups et AVANT l'ouverture. Sa fin enchaine toute seule sur l'ouverture -- c'est l'animation qui
+	-- dit quand elle a fini, pas un delai pose a cote.
+	TRY_OPEN_ANIM = "Scene1_oldman_TryOpenDoor",
+	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte.
+	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
+
 	-- ELLE MENE LA SCENE. C'est elle qui declenche la porte, et c'est SA FIN qui termine la scene.
 	GRANDPA_ANIM = "Scene1_oldman_OpenDoor",
 	-- Marqueur DANS l'animation du grand-pere : l'instant ou sa main pousse la porte.
