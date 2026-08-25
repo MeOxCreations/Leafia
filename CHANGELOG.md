@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.473 — Les feuilles de la jauge s'allument en silence
+
+Chaque cran jouait `PopSound_1`. Six sons pendant un chargement, ce n'est plus un retour, c'est un compte a
+rebours qu'on subit.
+
+Le SURSAUT reste, et il fait le travail mieux qu'un son : il se remarque si on regarde l'ecran, et il se tait si
+on regarde ailleurs. Un son ne sait pas faire cette difference.
+
+Reglages et recherche du son retires avec, pas seulement l'appel : une constante qui ne sert plus finit par
+faire croire qu'un effet existe encore.
+
 ## 0.0.472 — Un conseil trop long se replie sur deux lignes, et retrecit
 
 Il etait seulement RETRECI. Deux lignes se lisent ; un texte rapetisse, non -- et un conseil qu'on doit lire

@@ -170,7 +170,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Elle remplace la grande feuille du milieu, qui se remplissait en continu. Une jauge CONTINUE dit "ca
 	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur compte au lieu d'estimer, et chaque cran
-	-- qui s'allume est un evenement -- avec son bruit -- au lieu d'un mouvement qu'on finit par ne plus voir.
+	-- qui s'allume SURSAUTE, au lieu d'un mouvement qu'on finit par ne plus voir.
+	--
+	-- SANS BRUIT : six sons pendant un chargement, c'est un compte a rebours qu'on subit. Le sursaut se fait
+	-- remarquer si on regarde l'ecran, et se tait si on regarde ailleurs -- ce qu'un son ne sait pas faire.
 	local LEAF_ID = "rbxassetid://117703108607506"
 	-- LE MEME VERT QUE LE DEBUT DU BANDEAU : la feuille et le bandeau se repondent, l'ecran a une seule couleur
 	-- d'accent au lieu de deux elements gris qui se ressemblent sans se parler.
@@ -198,12 +201,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- changement de couleur passe inapercu dans un coin de l'ecran.
 	local LEAF_BUMP = 1.45
 	local LEAF_BUMP_TIME = 0.35
-	local LEAF_POP_SOUND = { "Sounds", "UI", "PopSound_1" }
-	local LEAF_POP_VOLUME = 0.45
-	-- COMBIEN DE TEMPS ON RE-CHERCHE LE SON. Ce fichier tourne depuis ReplicatedFirst, au tout premier instant :
-	-- SoundService n'est pas encore replique, donc une recherche immediate rend TOUJOURS nil et le son ne part
-	-- jamais. Meme boucle de reessai que le son de feuilles plus bas.
-	local LEAF_POP_WAIT = 3
 	-- Calee sur MIN_ARRIVAL : la derniere feuille s'allume au moment ou le rideau s'en va. Une jauge qui se
 	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
@@ -380,7 +377,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Elle remplace la grande feuille du milieu qui se remplissait en continu. Une jauge CONTINUE dit "ca
 	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur COMPTE au lieu d'estimer, et chaque cran
-	-- qui s'allume est un evenement -- avec son bruit -- au lieu d'un mouvement qu'on finit par ne plus voir.
+	-- qui s'allume SURSAUTE, au lieu d'un mouvement qu'on finit par ne plus voir.
+	--
+	-- SANS BRUIT : six sons pendant un chargement, c'est un compte a rebours qu'on subit. Le sursaut se fait
+	-- remarquer si on regarde l'ecran, et se tait si on regarde ailleurs -- ce qu'un son ne sait pas faire.
 	local gauge = Instance.new("Frame")
 	gauge.Name = "LeafGauge"
 	gauge.BackgroundTransparency = 1
@@ -412,16 +412,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	end
 
 	task.spawn(function()
-		-- Le son vit dans SoundService, qui n'est pas encore replique quand ReplicatedFirst construit le rideau.
-		-- On le cherche EN FOND, sans faire attendre la jauge : une feuille muette vaut mieux qu'une feuille en
-		-- retard.
-		local deadline = os.clock() + LEAF_POP_WAIT
-		local pop = findSound(LEAF_POP_SOUND)
-		while not pop and os.clock() < deadline and sg.Parent do
-			task.wait(0.1)
-			pop = findSound(LEAF_POP_SOUND)
-		end
-
 		local t0 = os.clock()
 		local lit = 0
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
@@ -445,9 +435,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 						Scale = 1,
 					})
 					:Play()
-				if pop then
-					playSound(pop, LEAF_POP_VOLUME)
-				end
 			end
 			if e >= 1 then
 				break
