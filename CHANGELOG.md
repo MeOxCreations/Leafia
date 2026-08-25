@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.450 — La camera de scene descend a hauteur d'yeux
+
+`SCENE_CAM_UP` 2.5 -> 1.2. Le repere est la RootPart du joueur, deja a hauteur de torse : a 2.5 la camera
+plongeait sur lui de haut, ce qui ecrase le decor et rapetisse le personnage.
+
+A 1.2 elle est a peu pres a hauteur d'yeux, donc a la hauteur de ce qu'elle doit montrer -- la porte, puis le
+visage du grand-pere. Reglage seul, aucun code touche.
+
 ## 0.0.449 — Le joueur toque trois fois, et la porte tremble
 
 La scene commence maintenant par le geste : le joueur toque. `Scene1_TocToc_Animation` porte trois marqueurs, et

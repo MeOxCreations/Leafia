@@ -63,7 +63,10 @@ return {
 	-- repere est juste par construction. "Se mettre devant la porte" supposerait au contraire de savoir quel axe
 	-- du Model est son devant -- et rien ne le garantit, ca vient du rig et pas du bon sens.
 	SCENE_CAM_BACK = 6, -- studs derriere le joueur
-	SCENE_CAM_UP = 2.5, -- studs au-dessus de lui
+	-- Studs au-dessus du joueur. Le repere est sa RootPart, deja a hauteur de torse : a 2.5 la camera plongeait
+	-- sur lui de haut, ce qui ecrase le decor et rapetisse le personnage. A 1.2 elle est a peu pres a hauteur
+	-- d'yeux, donc a la hauteur de ce qu'on regarde -- la porte et le visage du grand-pere.
+	SCENE_CAM_UP = 1.2,
 	SCENE_CAM_SIDE = 2, -- decalage lateral : un cadrage parfaitement centre est plat
 	-- Ce que la camera VISE, en studs au-dessus du centre de la porte. A zero elle vise le milieu exact.
 	SCENE_LOOK_UP = 0.5,
