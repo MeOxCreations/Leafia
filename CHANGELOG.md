@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.478 — Les crans de la jauge poussent depuis rien
+
+Un cran s'allumait par un changement de COULEUR, avec un leger sursaut. Ca passait inapercu dans un coin de
+l'ecran. Il POUSSE maintenant : la feuille verte part d'une taille NULLE, depasse sa cible, puis y revient.
+
+C'est le depassement qui fait le rebond. Une echelle qui monte tout droit se lit comme un fondu, pas comme une
+arrivee. Et quelque chose qui pousse se voit du coin de l'oeil, la ou une couleur qui change ne se voit pas.
+
+### Deux couches par cran
+
+La sombre reste en place et tient la forme ; la verte pousse par-dessus. Une seule feuille qui grandirait depuis
+rien laisserait un TROU dans la jauge tant qu'elle n'est pas atteinte -- et on ne verrait plus combien il en
+reste, ce qui est exactement ce que la jauge sert a dire.
+
+L'echelle vit donc sur la feuille VERTE seule.
+
+### Plus court
+
+0.42 s. Au-dela de ~0.5 le rebond traine et la jauge a l'air molle.
+
 ## 0.0.477 — Le bas du mot TIPS fonce un peu
 
 Dernier point du degrade de l'etiquette : 214 -> `#b4b4b4` (180). L'ecart avec le haut se creuse, donc la lumiere

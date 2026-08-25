@@ -229,10 +229,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local LEAF_ANGLE = -10
 	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
 	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
-	-- Le cran POUSSE en s'allumant : il part plus GROS et revient a sa taille. Sans ce sursaut, un simple
-	-- changement de couleur passe inapercu dans un coin de l'ecran.
-	local LEAF_BUMP = 1.45
-	local LEAF_BUMP_TIME = 0.35
+	-- LE CRAN POUSSE DEPUIS RIEN. La feuille verte part a une taille NULLE et grandit en depassant sa cible avant
+	-- d'y revenir -- c'est ce depassement qui fait le rebond. Un simple changement de couleur passait inapercu
+	-- dans un coin de l'ecran ; quelque chose qui POUSSE se voit du coin de l'oeil.
+	--
+	-- Court expres : au-dela de ~0.5 s le rebond traine et la jauge a l'air molle.
+	local LEAF_POP_TIME = 0.42
 	-- Calee sur MIN_ARRIVAL : la derniere feuille s'allume au moment ou le rideau s'en va. Une jauge qui se
 	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
@@ -448,23 +450,36 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	gauge.ZIndex = 4
 	gauge.Parent = curtain
 
-	local leaves: { ImageLabel } = {}
+	-- DEUX COUCHES PAR CRAN. La sombre reste en place et tient la forme ; la verte pousse par-dessus au moment
+	-- ou le cran s'allume. Une seule feuille qui grandirait depuis rien laisserait un TROU dans la jauge tant
+	-- qu'elle n'est pas atteinte -- on ne verrait plus combien il en reste.
+	local scales: { UIScale } = {}
 	for i = 1, LEAF_COUNT do
-		local leaf = Instance.new("ImageLabel")
-		leaf.Name = `Leaf{i}`
-		leaf.BackgroundTransparency = 1
-		leaf.Image = LEAF_ID
-		leaf.ImageColor3 = LEAF_BACK_TINT
-		leaf.ScaleType = Enum.ScaleType.Fit
-		leaf.AnchorPoint = Vector2.new(0.5, 0.5)
-		-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image, donc
-		-- il ecraserait toute animation qu'on voudrait leur donner. Les X poses une fois sont a nous.
-		leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 0.5)
-		leaf.Size = UDim2.fromScale(LEAF_FILL / LEAF_COUNT, 1)
-		leaf.Rotation = LEAF_ANGLE
-		leaf.ZIndex = 4
-		leaf.Parent = gauge
-		leaves[i] = leaf
+		local function slot(name: string, tint: Color3, z: number): ImageLabel
+			local leaf = Instance.new("ImageLabel")
+			leaf.Name = name
+			leaf.BackgroundTransparency = 1
+			leaf.Image = LEAF_ID
+			leaf.ImageColor3 = tint
+			leaf.ScaleType = Enum.ScaleType.Fit
+			leaf.AnchorPoint = Vector2.new(0.5, 0.5)
+			-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image,
+			-- donc il ecraserait l'echelle qu'on leur donne. Les X poses une fois sont a nous.
+			leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 0.5)
+			leaf.Size = UDim2.fromScale(LEAF_FILL / LEAF_COUNT, 1)
+			leaf.Rotation = LEAF_ANGLE
+			leaf.ZIndex = z
+			leaf.Parent = gauge
+			return leaf
+		end
+		slot(`LeafBack{i}`, LEAF_BACK_TINT, 4)
+		local lit = slot(`LeafLit{i}`, LEAF_TINT, 5)
+		-- L'echelle vit sur la feuille VERTE seule : la sombre ne bouge jamais, donc la forme du cran reste
+		-- lisible pendant que la verte pousse dedans.
+		local scale = Instance.new("UIScale")
+		scale.Scale = 0
+		scale.Parent = lit
+		scales[i] = scale
 	end
 
 	task.spawn(function()
@@ -479,17 +494,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			-- feuille sautee resterait eteinte jusqu'a la fin sans que rien ne le signale.
 			while lit < want do
 				lit += 1
-				local leaf = leaves[lit]
-				leaf.ImageColor3 = LEAF_TINT
-				-- Le cran POUSSE en s'allumant : sans ce sursaut, un simple changement de couleur passe
-				-- inapercu dans un coin de l'ecran.
-				local bump = Instance.new("UIScale")
-				bump.Scale = LEAF_BUMP
-				bump.Parent = leaf
+				-- DE ZERO A SA TAILLE, en depassant. `Back` en sortie franchit la cible puis y revient : c'est
+				-- ce depassement qui donne le rebond. Une echelle qui monte tout droit se lit comme un fondu.
 				TweenService
-					:Create(bump, TweenInfo.new(LEAF_BUMP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-						Scale = 1,
-					})
+					:Create(
+						scales[lit],
+						TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+						{ Scale = 1 }
+					)
 					:Play()
 			end
 			if e >= 1 then
