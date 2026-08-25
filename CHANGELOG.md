@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.484 — L'apparition de la feuille se calme
+
+Elle grossissait avec un `Back`, qui DEPASSE la taille de repos avant d'y revenir. Ce sursaut se lit comme un
+tic -- et surtout il vole la vedette au saut qui suit, alors que c'est le saut qui porte le mouvement.
+
+`Quad Out` : elle grossit, un point c'est tout. La matiere molle s'exprime a l'ATTERRISSAGE, la ou elle a un
+sens -- une feuille qui apparait ne rebondit sur rien.
+
+Duree 0.18 -> 0.22, pour la meme raison : moins pressee, moins de tic.
+
 ## 0.0.483 — Les six feuilles se rapprochent
 
 Un seul reglage faisait la TAILLE et l'ESPACEMENT : `LEAF_FILL`, la part de sa case occupee par une feuille. Le
