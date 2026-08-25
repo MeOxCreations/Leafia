@@ -154,7 +154,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- remplir. Sans elle, la partie pas encore remplie etait simplement transparente -- on voyait le fond a
 	-- travers, la jauge n'avait pas de bord, et le joueur ne lisait plus "combien il reste" mais "quelque chose
 	-- apparait".
-	local LEAF_BACK_TINT = Color3.fromRGB(18, 24, 15)
+	local LEAF_BACK_TINT = Color3.fromRGB(0, 0, 0)
 	local LEAF_SIZE = UDim2.fromScale(0.2, 0.2)
 	local LEAF_CENTER = UDim2.fromScale(0.5, 0.46)
 	-- Inclinaison FIXE. Elle oscillait ; ce balancement permanent attirait l'oeil en continu alors que la seule

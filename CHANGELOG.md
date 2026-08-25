@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.467 — La feuille du fond passe en noir pur
+
+`LEAF_BACK_TINT` 18/24/15 -> 0/0/0. Reglage seul.
+
+J'avais choisi un noir legerement verdi en pensant l'accorder a la feuille du dessus. C'est le contraire de ce
+qu'on veut d'un contenant : plus il est neutre, plus le remplissage ressort. Le noir pur donne le contraste
+maximal avec le vert, donc la jauge se lit de plus loin.
+
 ## 0.0.466 — L'apparition de la feuille se voit, et on l'entend
 
 Deux defauts, deux causes differentes.
