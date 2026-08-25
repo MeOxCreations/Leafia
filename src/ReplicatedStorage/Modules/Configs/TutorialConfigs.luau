@@ -55,6 +55,29 @@ return {
 	ACTION_NAME = "LeafiaTutorialKnock",
 	ACTION_KEY = Enum.KeyCode.E,
 
+	-- ===== LA SCENE DU GRAND-PERE =====
+	-- Part optionnelle posee dans Studio : si un objet de ce nom existe, sa CFrame EST le cadrage de la scene.
+	-- Rien a poser pour que ca marche -- c'est un moyen de reprendre la main sur le cadrage, pas une obligation.
+	SCENE_CAM_NAME = "SceneCam1",
+	-- CADRAGE PAR DEFAUT, calcule depuis le JOUEUR au moment ou il toque. Il fait deja face a la porte, donc ce
+	-- repere est juste par construction. "Se mettre devant la porte" supposerait au contraire de savoir quel axe
+	-- du Model est son devant -- et rien ne le garantit, ca vient du rig et pas du bon sens.
+	SCENE_CAM_BACK = 6, -- studs derriere le joueur
+	SCENE_CAM_UP = 2.5, -- studs au-dessus de lui
+	SCENE_CAM_SIDE = 2, -- decalage lateral : un cadrage parfaitement centre est plat
+	-- Ce que la camera VISE, en studs au-dessus du centre de la porte. A zero elle vise le milieu exact.
+	SCENE_LOOK_UP = 0.5,
+
+	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau
+	-- descend, il n'attend pas.
+	SCENE_BARS_TIME = 0.6,
+	SCENE_CAM_IN = 1,
+	SCENE_CAM_OUT = 0.8,
+	-- PROVISOIRE : duree de la scene tant que les animations ne la terminent pas elles-memes. A remplacer par la
+	-- fin de l'animation du grand-pere des qu'elle existe -- une duree en dur et une animation finissent toujours
+	-- par se contredire, et c'est la duree qui a tort.
+	SCENE_HOLD = 3,
+
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,
 	-- TRACE DE MISE AU POINT. Dit ce que la detection VOIT reellement : porte trouvee ou non, distance reelle,

@@ -17,7 +17,9 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
+local SceneCamera = require(script.Parent.Utils.SceneCamera)
 
 local player = Players.LocalPlayer
 
@@ -112,11 +114,42 @@ function TutorialController.setDoorHint(on: boolean)
 	end
 end
 
---- Le joueur a toque : la mission commence. Le guidage s'eteint DEFINITIVEMENT -- halo, prompt et touche.
---- Idempotent, parce qu'un double appui ne doit pas relancer une scene deja en cours.
+-- CADRAGE DE LA SCENE. Une part posee dans Studio a le dernier mot ; sinon on cadre depuis le JOUEUR, qui fait
+-- deja face a la porte. Se placer "devant la porte" supposerait de savoir quel axe du Model est son devant --
+-- rien ne le garantit, ca vient du rig.
+local function sceneCFrame(): CFrame?
+	local placed = Workspace:FindFirstChild(TutorialConfigs.SCENE_CAM_NAME, true)
+	if placed and placed:IsA("BasePart") then
+		return placed.CFrame
+	end
+	local root = getRoot()
+	if not root then
+		return nil
+	end
+	local cf = root.CFrame
+	local look = cf.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	flat = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
+	local side = flat:Cross(Vector3.new(0, 1, 0))
+	local pos = root.Position
+		- flat * TutorialConfigs.SCENE_CAM_BACK
+		+ Vector3.new(0, TutorialConfigs.SCENE_CAM_UP, 0)
+		+ side * TutorialConfigs.SCENE_CAM_SIDE
+	return CFrame.lookAt(pos, anchorPos + Vector3.new(0, TutorialConfigs.SCENE_LOOK_UP, 0))
+end
+
+-- Rend la main au joueur : la camera glisse vers la vue de jeu pendant que les barres repartent dans les bords.
+local function endScene()
+	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
+	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
+end
+
+--- Le joueur a toque : la mission commence. Le guidage s'eteint DEFINITIVEMENT -- halo, prompt et touche --
+--- puis la scene part. Idempotent : un double appui ne doit pas relancer une scene deja en cours.
 ---
---- C'EST ICI QUE LA SUITE SE BRANCHE : animation de la porte, sonnette, puis la scene cinematique. Rien de tout
---- ca n'existe encore, donc pour l'instant l'appui ne fait qu'eteindre le guidage.
+--- ETAT ACTUEL : les barres et la camera sont branchees, les ANIMATIONS ne le sont pas encore. La scene tient
+--- donc SCENE_HOLD secondes puis rend la main. Des que l'animation du grand-pere existe, c'est ELLE qui doit
+--- decider de la fin -- une duree en dur et une animation finissent toujours par se contredire.
 function TutorialController.startMission()
 	if missionStarted then
 		return
@@ -125,7 +158,23 @@ function TutorialController.startMission()
 	TutorialController.setDoorHint(false)
 	hideOurs()
 	setActionBound(false)
-	print("[Tutorial] Mission demarree : le joueur a toque a la porte.")
+
+	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
+	-- n'attend pas que le noir soit en place.
+	Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
+	local cf = sceneCFrame()
+	if not cf then
+		-- Pas de cadrage possible (pas de personnage) : on ne prend pas la camera pour rien.
+		task.delay(TutorialConfigs.SCENE_HOLD, function()
+			Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
+		end)
+		return
+	end
+	SceneCamera.enter(cf, TutorialConfigs.SCENE_CAM_IN, function()
+		-- Le rappel tire QUAND LA CAMERA EST ARRIVEE : c'est de la que la scene doit compter, pas de l'appui.
+		-- Sinon le temps de trajet mange la scene, et il change avec SCENE_CAM_IN sans qu'on y pense.
+		task.delay(TutorialConfigs.SCENE_HOLD, endScene)
+	end)
 end
 
 local function step(dt: number)
@@ -257,6 +306,14 @@ function TutorialController.init()
 		return
 	end
 	startedAt = os.clock()
+	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres
+	-- noires, et AUCUN moyen d'en sortir : la scene attend une fin qui ne viendra jamais.
+	player.CharacterRemoving:Connect(function()
+		if SceneCamera.isActive() or Letterbox.isShown() then
+			SceneCamera.abort()
+			Letterbox.hide(0)
+		end
+	end)
 	-- LA BOUCLE PART MEME SI LA PORTE N'EST PAS ENCORE LA. Avec StreamingEnabled elle arrive souvent apres le
 	-- spawn : sortir ici laisserait le guidage mort pour toute la session, sans la moindre erreur pour le dire.
 	-- Elle coute une comparaison de date tant qu'il n'y a rien a animer.
@@ -269,6 +326,10 @@ function TutorialController.stop()
 		conn:Disconnect()
 		conn = nil
 	end
+	-- La camera et les barres SURVIVENT au controller : elles vivent dans la PlayerGui et sur le Workspace. Les
+	-- laisser en place figerait le joueur dans une scene qui n'existe plus.
+	SceneCamera.abort()
+	Letterbox.hide(0)
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

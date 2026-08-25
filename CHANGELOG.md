@@ -2204,6 +2204,59 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.447 — La scene part quand on toque : barres, camera, retour
+
+Toquer a la porte declenche maintenant une vraie scene. Les barres glissent, la camera se pose devant la porte
+et RESPIRE, puis tout revient.
+
+### La camera de scene devient une primitive
+
+`Client/Utils/SceneCamera`. Cinq controllers de ce projet ont chacun leur camera scriptee et leur propre retour
+vers la camera de jeu ; celui-ci existe pour que la SIXIEME soit la derniere ecrite.
+
+Elle porte les deux pieges deja payes ailleurs :
+
+- **Le retour re-ancre sur la position VIVE du joueur** a chaque image. Un tween vers une CFrame fixe planterait
+  la camera s'il repart pendant la transition.
+- **L'etat de repos de la camera de jeu est MESURE a l'entree** -- distance, hauteur du focus, inclinaison. En
+  repassant en Custom, Custom garde le yaw mais REMET son pitch de repos : finir sur une valeur devinee laisse un
+  saut sub-perceptible et pourtant bien visible.
+
+Le retour interpole la position et le point vise SEPAREMENT, jamais la CFrame entiere : lerper une CFrame fait
+passer la camera par des orientations qui n'existent sur aucun des deux plans, et elle plonge en chemin.
+
+### La respiration
+
+Trois sinusoides sans rapport entre elles. Une seule se lit comme un balancier de metronome ; trois qui ne
+retombent jamais ensemble donnent un mouvement qui ne se repete jamais a l'oeil. Elle s'arrete en sortie : un
+tremblement a l'instant precis ou la camera de jeu reprend, c'est pile la ou un saut se remarque.
+
+### Le cadrage se calcule depuis le JOUEUR
+
+Il fait deja face a la porte quand il toque : ce repere est donc juste par construction. Se placer "devant la
+porte" supposerait de savoir quel axe du Model est son devant, et rien ne le garantit -- ca vient du rig.
+
+Une part nommee `SceneCam1` posee dans Studio prend le dessus si elle existe. C'est un moyen de reprendre la
+main sur le cadrage, pas une obligation.
+
+### Le filet qui evite un joueur coince
+
+Mourir en pleine scene ressusciterait le joueur avec une camera scriptee et des barres noires, sans aucun moyen
+d'en sortir : la scene attendrait une fin qui ne viendrait jamais. `CharacterRemoving` coupe les deux.
+
+### PROVISOIRE, et il faut le savoir
+
+La scene tient `SCENE_HOLD` (3 s) puis rend la main. Des que l'animation du grand-pere existe, c'est ELLE qui
+doit decider de la fin : une duree en dur et une animation finissent toujours par se contredire, et c'est la
+duree qui a tort.
+
+Le compte part QUAND LA CAMERA EST ARRIVEE, pas a l'appui -- sinon le temps de trajet mangerait la scene, et il
+changerait avec `SCENE_CAM_IN` sans qu'on y pense.
+
+### A FAIRE DANS STUDIO
+
+Rien. Une part `SceneCam1` est possible si le cadrage automatique ne convient pas.
+
 ## 0.0.446 — Les barres noires de cinema
 
 Premiere brique des scenes scriptees. Deux bandes qui glissent depuis le haut et le bas de l'ecran.
