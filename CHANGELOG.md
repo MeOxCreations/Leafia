@@ -2204,6 +2204,43 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.446 — Les barres noires de cinema
+
+Premiere brique des scenes scriptees. Deux bandes qui glissent depuis le haut et le bas de l'ecran.
+
+Elles ne decorent pas : elles DISENT au joueur que la main lui est retiree. Tant qu'elles sont la, il regarde ;
+quand elles partent, il rejoue. C'est la convention la plus lisible qui existe, et elle ne demande aucune
+traduction.
+
+### Une primitive, pas un morceau de scene
+
+`Modules/UI/Core/Letterbox` ne connait ni le grand-pere, ni la porte, ni aucune scene. On l'allume, on l'eteint.
+Toute scene future passera par la, sinon la meme paire de Frames serait recopiee a chaque fois.
+
+### Les details qui evitent des bugs discrets
+
+- **Aucun inset** : les bandes touchent les bords ABSOLUS de l'ecran, barre Roblox comprise. Sans ca, une bande
+  de jeu resterait visible au-dessus de la barre du haut.
+- **`DisplayOrder` tres haut** : une barre de cinema qui passe SOUS une interface de jeu ne veut plus rien dire,
+  puisque c'est justement l'interface qu'elle remplace le temps de la scene.
+- **Elles n'avalent aucun clic** : deux bandes actives rendraient le haut et le bas de l'ecran morts, et on
+  chercherait le probleme dans les boutons.
+- **Hauteur en FRACTION d'ecran**, pas en pixels : une valeur en pixels mangerait la moitie d'un telephone et ne
+  se verrait pas sur un grand ecran.
+- **Ancrees sur leur bord** : on n'anime QUE la hauteur. Animer aussi la position se decalerait a coup sur.
+- **Les tweens en cours sont coupes** avant d'en lancer d'autres : deux tweens sur la meme propriete se disputent
+  la bande, et la valeur finale devient celle du dernier a FINIR, pas du dernier demande.
+
+### `show` rend la main quand les bandes sont EN PLACE
+
+Son rappel se declenche a la fin du glissement, pas au debut : c'est la que la scene peut commencer. Demarrer
+avant ferait jouer le premier plan pendant que le rideau descend encore.
+
+### Ce qui suit
+
+La camera de scene et l'enchainement (animation du grand-pere, marqueur `OuvertureDoorEvent`, ouverture de la
+porte, dialogue). Rien n'est encore branche sur `startMission()`.
+
 ## 0.0.445 — La trace du didacticiel se tait
 
 Le parcours complet a ete valide a l'ecran : 134 studs -> 114 -> 80 -> 48 -> 15.8 -> 5.0, la touche se branche,
