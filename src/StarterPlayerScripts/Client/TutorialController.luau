@@ -270,6 +270,11 @@ local function openDoor()
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = true
 
+	-- Instant ou la porte est EPINGLEE ouverte, ou nil tant qu'elle bouge encore. Declare ici et pas plus bas :
+	-- la reprise apres la pause doit pouvoir le consulter, et elle est ecrite avant.
+	local frozenAt: number? = nil
+	local lastTime = 0
+
 	local midDone = false
 	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_MID_EVENT):Connect(function()
 		if midDone then
@@ -278,51 +283,76 @@ local function openDoor()
 		midDone = true
 		track:AdjustSpeed(0)
 		task.delay(TutorialConfigs.DOOR_PAUSE, function()
-			if doorTrack == track and track.IsPlaying then
+			-- On ne relance QUE si la porte n'est pas deja tenue ouverte. Sans ce test, une pause encore en
+			-- attente pourrait faire repartir une piste qu'on vient d'epingler, et la porte se refermerait --
+			-- avec un retard qui rendrait la cause introuvable.
+			if doorTrack == track and track.IsPlaying and frozenAt == nil then
 				track:AdjustSpeed(1)
 			end
 		end)
 	end)
-	-- LA PORTE RESTE OUVERTE, DEFINITIVEMENT. On gele la piste sur l'image ou elle est : `AdjustSpeed(0)` et
-	-- jamais `Stop`, parce qu'un Stop lui ferait rendre sa pose de repos -- la porte se refermerait d'un coup.
+	-- LA PORTE RESTE OUVERTE, ET ELLE EST TENUE -- pas juste gelee une fois.
 	--
-	-- Idempotent : le marqueur et le filet peuvent tirer tous les deux.
-	local frozen = false
-	local lastTime = 0
-	local function freeze()
-		if frozen then
+	-- Geler puis lacher la surveillance ne suffit pas : apres ca, plus rien ne defend la pose. Une piste qui se
+	-- relache, un Stop venu d'ailleurs, un rebouclage rate d'une image, et la porte se referme sans qu'on sache
+	-- lequel des trois. On RE-AFFIRME donc l'etat a chaque image tant que la scene dure. Deux ecritures par
+	-- frame sur un seul objet : ca ne se mesure pas.
+	--
+	-- Et jamais `Stop` pour figer : un Stop fait rendre a la piste sa pose de repos, donc la porte CLAQUE en
+	-- position fermee. C'est `AdjustSpeed(0)` plus un temps epingle.
+	local function freezeHere()
+		if frozenAt then
 			return
 		end
-		frozen = true
-		track:AdjustSpeed(0)
-		if doorWatch then
-			doorWatch:Disconnect()
-			doorWatch = nil
+		local now = track.TimePosition
+		local length = track.Length
+		-- JAMAIS PILE A `Length` : la piste est bouclee, donc le tout dernier instant repart a zero. On epingle
+		-- juste avant.
+		if length > 0 then
+			now = math.min(now, length - 0.001)
 		end
+		frozenAt = now
+		track:AdjustSpeed(0)
+		track.TimePosition = now
 	end
-	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_END_EVENT):Connect(freeze)
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_END_EVENT):Connect(freezeHere)
 
-	-- FILET, si le marqueur se tait. La piste est BOUCLEE -- une piste non bouclee se relache a sa derniere
-	-- image, et la porte se refermerait -- donc sans ce garde elle repartirait a zero : la porte s'ouvrirait et
-	-- se refermerait en boucle, pour toujours.
-	--
-	-- On surveille le TEMPS QUI RECULE, pas une fenetre "assez proche de la fin" : une fenetre peut etre SAUTEE
-	-- par un FPS bas, alors qu'un retour en arriere est un fait qu'on ne peut pas rater.
 	doorWatch = RunService.Heartbeat:Connect(function()
-		if doorTrack ~= track or not track.IsPlaying then
+		-- Une autre ouverture a pris la main (nouvelle scene) : ce gardien n'a plus rien a defendre.
+		if doorTrack ~= track then
 			if doorWatch then
 				doorWatch:Disconnect()
 				doorWatch = nil
 			end
 			return
 		end
+
+		local pinned = frozenAt
+		if pinned then
+			-- ON TIENT LA POSE. Si quelque chose a arrete la piste, on la relance : une piste arretee ne dessine
+			-- plus rien, et la porte revient a sa pose de repos, c'est-a-dire fermee.
+			if not track.IsPlaying then
+				track:Play(0)
+			end
+			if track.Speed ~= 0 then
+				track:AdjustSpeed(0)
+			end
+			if math.abs(track.TimePosition - pinned) > 0.001 then
+				track.TimePosition = pinned
+			end
+			return
+		end
+
+		-- FILET, si le marqueur de fin se tait. La piste est BOUCLEE : sans ce garde elle repartirait a zero, et
+		-- la porte s'ouvrirait et se refermerait en boucle, pour toujours.
+		--
+		-- On surveille le TEMPS QUI RECULE, pas une fenetre "assez proche de la fin" : une fenetre peut etre
+		-- SAUTEE par un FPS bas, alors qu'un retour en arriere est un fait qu'on ne peut pas rater.
 		local now = track.TimePosition
 		if now < lastTime - 0.001 then
 			local length = track.Length
-			if length > 0 then
-				track.TimePosition = math.max(length - 0.001, 0)
-			end
-			freeze()
+			track.TimePosition = if length > 0 then math.max(length - 0.001, 0) else lastTime
+			freezeHere()
 			return
 		end
 		lastTime = now

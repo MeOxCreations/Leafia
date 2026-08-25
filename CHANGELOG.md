@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.461 — La porte est TENUE ouverte, plus seulement gelee
+
+Elle se refermait. Le defaut : on gelait la piste UNE FOIS, puis on lachait la surveillance. Apres ca, plus rien
+ne defendait la pose.
+
+Trois choses peuvent alors la reprendre -- une piste voisine qui se relache sur le meme Animator, un `Stop` venu
+d'ailleurs, un rebouclage rate d'une image -- et rien ne dit laquelle. Une pose qu'on pose et qu'on abandonne
+n'est pas une pose tenue.
+
+### On re-affirme l'etat a chaque image
+
+Tant que la scene dure : la piste joue, sa vitesse est zero, son temps est celui qu'on a epingle. Et si quelque
+chose l'a ARRETEE, on la relance -- une piste arretee ne dessine plus rien, donc la porte revient a sa pose de
+repos, c'est-a-dire fermee.
+
+Deux ecritures par image sur un seul objet : ca ne se mesure pas.
+
+### Jamais `Stop` pour figer
+
+Un `Stop` fait rendre a la piste sa pose de repos : la porte CLAQUE en position fermee. C'est `AdjustSpeed(0)`
+plus un temps epingle, jamais autre chose.
+
+Et jamais epingle PILE a `Length` : la piste est bouclee, donc le tout dernier instant repart a zero. On epingle
+juste avant.
+
+### La pause ne peut plus rallumer une porte deja tenue
+
+La reprise d'apres la mi-course tirait sans regarder. Une pause encore en attente pouvait donc faire repartir
+une piste qu'on venait d'epingler -- et la porte se refermait avec un retard qui rendait la cause introuvable.
+
 ## 0.0.460 — Le coup de camera s'encaisse au lieu de claquer
 
 Le recul partait D'UN COUP et redescendait doucement. Un depart instantane se lit comme un a-coup, pas comme un
