@@ -177,6 +177,27 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- LE SENS NE SE DEDUIT PAS. L'orientation d'un UIGradient est une de ces choses que seul l'ecran tranche :
 	-- si le fondu part du mauvais coin, changer ce nombre de 180 est la premiere chose a essayer.
 	local HOUSE_FADE_ROTATION = 35
+	-- ===== REFLET QUI BALAIE LA MAISON =====
+	-- Une COPIE BLANCHE du dessin, posee par-dessus, dont seule une bande etroite est visible -- et cette bande
+	-- glisse. C'est le dessin lui-meme qui sert de masque : le reflet epouse donc sa forme, sans un pixel qui
+	-- deborde.
+	--
+	-- Une frame rectangulaire posee de travers ferait le meme trajet, mais elle deborderait sur les bords
+	-- transparents du dessin, et il faudrait un CanvasGroup rien que pour la decouper.
+	--
+	-- Demi-largeur de la bande, en fraction du balayage. Plus large = un voile qui passe ; plus etroit = un
+	-- eclat. Au-dela de ~0.15 ca cesse de ressembler a un reflet.
+	local SHINE_WIDTH = 0.07
+	-- Transparence AU COEUR de la bande. 1 = invisible, 0 = blanc plein. Volontairement haute : un reflet se
+	-- remarque une demi-seconde, il ne se regarde pas.
+	local SHINE_STRENGTH = 0.72
+	-- Inclinaison du balayage, et duree d'un passage. Court : c'est un eclat, pas un lever de soleil.
+	local SHINE_ROTATION = 20
+	local SHINE_SWEEP = 0.9
+	-- Temps mort entre deux passages. Un reflet qui ne s'arrete jamais devient un clignotant, et l'oeil finit
+	-- par le suivre au lieu de lire le reste de l'ecran.
+	local SHINE_PAUSE = 2.6
+
 	local HOUSE_FADE = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0.231),
 		NumberSequenceKeypoint.new(0.152, 0.612),
@@ -390,6 +411,52 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	houseFade.Transparency = HOUSE_FADE
 	houseFade.Rotation = HOUSE_FADE_ROTATION
 	houseFade.Parent = house
+
+	-- LE REFLET. Meme image, en blanc, avec une bande etroite pour seule partie visible.
+	local shine = Instance.new("ImageLabel")
+	shine.Name = "HouseShine"
+	shine.BackgroundTransparency = 1
+	shine.Image = HOUSE_IMAGE_ID
+	shine.ImageColor3 = Color3.fromRGB(255, 255, 255)
+	shine.ScaleType = Enum.ScaleType.Crop
+	shine.Size = UDim2.fromScale(1, 1)
+	shine.ZIndex = 1
+	shine.Active = false
+	shine.Parent = curtain
+
+	local shineBand = Instance.new("UIGradient")
+	-- La bande est posee AU CENTRE une fois pour toutes, et c'est l'OFFSET qui la promene. Reconstruire la
+	-- sequence a chaque image couterait bien plus, pour le meme trajet.
+	shineBand.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(math.max(0.5 - SHINE_WIDTH, 0.001), 1),
+		NumberSequenceKeypoint.new(0.5, SHINE_STRENGTH),
+		NumberSequenceKeypoint.new(math.min(0.5 + SHINE_WIDTH, 0.999), 1),
+		NumberSequenceKeypoint.new(1, 1),
+	})
+	shineBand.Rotation = SHINE_ROTATION
+	-- Hors cadre au depart : sans ca le premier reflet serait deja au milieu de l'ecran a la premiere image.
+	shineBand.Offset = Vector2.new(-1, 0)
+	shineBand.Parent = shine
+
+	task.spawn(function()
+		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
+		-- instance detruite.
+		while sg.Parent do
+			task.wait(SHINE_PAUSE)
+			local t0 = os.clock()
+			while sg.Parent do
+				local e = (os.clock() - t0) / SHINE_SWEEP
+				if e >= 1 then
+					break
+				end
+				-- De -1 a 1 : la bande entre par un bord et sort par l'autre.
+				shineBand.Offset = Vector2.new(-1 + e * 2, 0)
+				RunService.RenderStepped:Wait()
+			end
+			shineBand.Offset = Vector2.new(-1, 0)
+		end
+	end)
 
 	-- ===== FOND TUILE =====
 	-- Le defilement DIAGONAL n'est pas un caprice : horizontal ou vertical, ca se lit comme un decor qui glisse ;

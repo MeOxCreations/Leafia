@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.479 — Un reflet balaie la maison du client
+
+Une bande claire traverse le dessin en diagonale, de temps en temps.
+
+### Le dessin sert de MASQUE a son propre reflet
+
+C'est une COPIE BLANCHE de la maison, posee par-dessus, dont seule une bande etroite est visible -- et cette
+bande glisse. Le reflet epouse donc la forme du dessin, sans un pixel qui deborde.
+
+Une frame rectangulaire posee de travers ferait le meme trajet, mais elle deborderait sur les bords transparents
+du dessin, et il faudrait un CanvasGroup rien que pour la decouper. Deux objets et un masque, la ou une copie de
+l'image suffit.
+
+### C'est l'OFFSET qui promene la bande
+
+Elle est posee au centre une fois pour toutes. Reconstruire la NumberSequence a chaque image couterait bien plus
+cher pour le meme trajet.
+
+Elle demarre HORS CADRE : sans ca, le premier reflet serait deja au milieu de l'ecran a la premiere image.
+
+### Il s'arrete entre deux passages
+
+Un reflet qui ne s'arrete jamais devient un clignotant : l'oeil finit par le suivre au lieu de lire le reste de
+l'ecran. Un passage court (0.9 s), puis un temps mort (2.6 s).
+
+### Le compromis assume
+
+Le reflet ne connait pas le fondu de la maison : il passe donc aussi la ou le dessin est deja efface. C'est
+pour ca qu'il est FAIBLE (`SHINE_STRENGTH` a 0.72) -- assez pour se remarquer une demi-seconde, pas assez pour
+rallumer une zone qu'on avait volontairement eteinte.
+
 ## 0.0.478 — Les crans de la jauge poussent depuis rien
 
 Un cran s'allumait par un changement de COULEUR, avec un leger sursaut. Ca passait inapercu dans un coin de
