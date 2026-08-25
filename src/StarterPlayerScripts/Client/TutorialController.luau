@@ -23,6 +23,7 @@ local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
+local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
 
 local player = Players.LocalPlayer
@@ -151,6 +152,18 @@ local function sceneCFrame(): CFrame?
 	return CFrame.lookAt(pos, anchorPos + Vector3.new(0, TutorialConfigs.SCENE_LOOK_UP, 0))
 end
 
+-- LE JOUEUR S'EFFACE PENDANT LA SCENE. On regarde le grand-pere, pas son propre dos.
+--
+-- `LocalTransparencyModifier` et pas `Transparency` : ca ne se replique pas, donc en co-op les autres continuent
+-- de voir un personnage normal. Et ca s'AJOUTE a la transparence du jeu au lieu de l'ecraser -- il n'y a aucune
+-- valeur d'origine a memoriser pour pouvoir la rendre.
+local function fadePlayer(amount: number)
+	local character = player.Character
+	if character then
+		CharacterFade.apply(character, amount, amount)
+	end
+end
+
 -- Rend la main au joueur : la camera glisse vers la vue de jeu pendant que les barres repartent dans les bords.
 -- Idempotent : la fin normale (l'animation du grand-pere s'acheve) et le filet de secours peuvent tirer tous les
 -- deux, et le second ne doit pas relancer une sortie deja en cours.
@@ -163,6 +176,7 @@ local function endScene()
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 	CameraEffects.SetFovOffset(0)
+	fadePlayer(0)
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
@@ -323,6 +337,13 @@ local function openDoor()
 		frozenAt = last
 		track:AdjustSpeed(0)
 		track.TimePosition = last
+		-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee --
+		-- l'allure par defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le
+		-- moment qu'il souligne.
+		CameraEffects.SetFovOffset(
+			-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
+			TutorialConfigs.REVEAL_ZOOM_SPEED
+		)
 	end
 
 	doorWatch = RunService.Heartbeat:Connect(function()
@@ -523,6 +544,7 @@ function TutorialController.startMission()
 	-- LA BOITE DE DIALOGUE S'EFFACE. Elle occupe le bas de l'ecran, pile ou les barres arrivent : une bulle qui
 	-- reste ouverte pendant qu'on toque parle par-dessus le geste. Elle reviendra quand la SCENE la demandera.
 	Dialogue.hide()
+	fadePlayer(TutorialConfigs.SCENE_PLAYER_FADE)
 	local cf = sceneCFrame()
 	if not cf then
 		-- Pas de cadrage possible (pas de personnage) : on ne prend pas la camera pour rien.
@@ -673,6 +695,7 @@ function TutorialController.init()
 			Letterbox.hide(0)
 			SoundDuck.restore(0)
 			CameraEffects.SetFovOffset(0)
+			fadePlayer(0)
 		end
 	end)
 	-- LA BOUCLE PART MEME SI LA PORTE N'EST PAS ENCORE LA. Avec StreamingEnabled elle arrive souvent apres le
@@ -696,6 +719,7 @@ function TutorialController.stop()
 	-- ne ferait le lien avec une scene finie depuis longtemps.
 	SoundDuck.restore(0)
 	CameraEffects.SetFovOffset(0)
+	fadePlayer(0)
 	-- UNE PAR UNE, jamais `ipairs` sur une liste de valeurs nilables : ipairs S'ARRETE AU PREMIER NIL. Une seule
 	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
 	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.

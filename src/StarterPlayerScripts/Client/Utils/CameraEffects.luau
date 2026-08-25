@@ -36,6 +36,9 @@ local fovPunchDecay = 6
 -- l'un en reglant l'autre, et le compensateur serait toujours une estimation.
 -- BAS = lent et pose. 1.1 met environ deux secondes a s'installer.
 local FOV_OFFSET_LERP_SPEED = 1.1
+-- Cadence REELLEMENT utilisee, remise a la valeur ci-dessus a chaque appel qui n'en demande pas d'autre : une
+-- cadence exceptionnelle ne doit pas rester en place pour l'effet suivant.
+local fovOffsetSpeed = FOV_OFFSET_LERP_SPEED
 local fovOffset = 0
 local fovOffsetTarget = 0
 
@@ -118,8 +121,14 @@ end
 
 -- Offset de FOV TENU. S'ajoute au fond et n'en bouge plus jusqu'au prochain appel. Negatif = vue resserree.
 -- A remettre a 0 par l'appelant : ce module ne devine pas quand un effet tenu doit s'arreter.
-function CameraEffects.SetFovOffset(amount: number)
+--
+-- `speed` impose la CADENCE de cette transition, pour un effet que l'allure par defaut rendrait trop mou. Omise,
+-- c'est FOV_OFFSET_LERP_SPEED qui s'applique -- une allure lente, faite pour des resserrements de fond. Un
+-- resserrement qui doit CLAQUER a l'ouverture d'une porte n'a rien a voir avec elle : deux moments differents,
+-- deux cadences, sinon regler l'un derangerait l'autre.
+function CameraEffects.SetFovOffset(amount: number, speed: number?)
 	fovOffsetTarget = amount
+	fovOffsetSpeed = speed or FOV_OFFSET_LERP_SPEED
 end
 
 -- RECUL de camera TENU, en studs. 0 = la camera revient a la distance qu'avait choisie le joueur.
@@ -210,7 +219,7 @@ function CameraEffects.init()
 		if camera then
 			fovBase += (fovBaseTarget - fovBase) * math.min(1, FOV_LERP_SPEED * dt)
 			fovPunch += (0 - fovPunch) * math.min(1, fovPunchDecay * dt)
-			fovOffset += (fovOffsetTarget - fovOffset) * math.min(1, FOV_OFFSET_LERP_SPEED * dt)
+			fovOffset += (fovOffsetTarget - fovOffset) * math.min(1, fovOffsetSpeed * dt)
 			camera.FieldOfView = fovBase + fovPunch + fovOffset
 
 			-- RECUL. On capture la distance du joueur AU DEMARRAGE, pas a chaque image : la relire en continu

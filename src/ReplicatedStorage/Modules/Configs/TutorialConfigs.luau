@@ -90,6 +90,21 @@ return {
 	--
 	-- 12 degres, c'est un resserrement qu'on sent sans le voir. Au-dela de ~20 ca commence a deformer les bords.
 	SCENE_ZOOM = 12,
+	-- RESSERREMENT SUPPLEMENTAIRE quand la porte finit de s'ouvrir et que le grand-pere apparait. S'AJOUTE au
+	-- precedent : l'image se resserre une premiere fois sur la porte qui bouge, puis une seconde sur lui.
+	-- Volontairement petit -- c'est un accent, pas un gros plan.
+	REVEAL_ZOOM = 7,
+	-- Cadence de CE resserrement-la. L'allure par defaut de CameraEffects (1.1) est faite pour des effets de
+	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
+	REVEAL_ZOOM_SPEED = 6,
+
+	-- ===== LE JOUEUR S'EFFACE PENDANT LA SCENE =====
+	-- On regarde le grand-pere, pas son propre dos. A 0.7 le personnage reste LISIBLE -- on sait qu'on est la --
+	-- sans manger le cadre.
+	--
+	-- Passe par CharacterFade, donc par LocalTransparencyModifier : ca ne se replique pas. En co-op, les autres
+	-- continuent de voir un personnage normal.
+	SCENE_PLAYER_FADE = 0.7,
 
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau
 	-- descend, il n'attend pas.

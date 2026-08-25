@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.464 — Le joueur s'efface, et l'image se resserre sur le grand-pere
+
+### Le personnage passe en fantome pendant la scene
+
+On regarde le grand-pere, pas son propre dos. A 0.7 le personnage reste LISIBLE -- on sait qu'on est la -- sans
+manger le cadre.
+
+`CharacterFade` existait deja et fait exactement ca. Il passe par `LocalTransparencyModifier`, jamais par
+`Transparency` : ca ne se replique pas, donc en co-op les autres continuent de voir un personnage normal. Et ca
+s'AJOUTE a la transparence du jeu au lieu de l'ecraser -- il n'y a aucune valeur d'origine a memoriser pour
+pouvoir la rendre.
+
+Rendu par tous les chemins de sortie : fin de scene, arret du controller, mort en pleine scene.
+
+### Un second resserrement, sur lui
+
+Quand la porte finit de s'ouvrir et qu'il apparait, l'image se resserre une seconde fois. Il S'AJOUTE au premier
+-- une fois sur la porte qui bouge, une fois sur lui. Volontairement petit : c'est un accent, pas un gros plan.
+
+### La cadence du zoom devient reglable par appelant
+
+`CameraEffects.SetFovOffset(amount, speed?)`.
+
+L'allure par defaut (1.1) est faite pour des resserrements de FOND : elle mettrait deux secondes, et l'accent
+serait fini apres le moment qu'il souligne. Un resserrement qui doit claquer a l'ouverture d'une porte n'a rien a
+voir avec elle.
+
+On ne l'a PAS changee pour autant : deux moments differents, deux cadences, sinon regler l'un derangerait
+l'autre. La cadence exceptionnelle est OUBLIEE au prochain appel qui n'en demande pas d'autre -- un effet
+ponctuel n'impose pas son allure a la suite.
+
 ## 0.0.463 — La grande ouverture se fait trois fois plus lentement
 
 Apres la pause, la porte finissait de s'ouvrir beaucoup trop vite : le mouvement etait termine avant qu'on ait
