@@ -288,7 +288,16 @@ local function playTryOpen()
 	local animator = if model then animatorOf(model) else nil
 	local track = if animator then loadSceneTrack(animator, TutorialConfigs.TRY_OPEN_ANIM) else nil
 	if not track then
-		playGrandpa() -- pas d'animation de poignee : on n'arrete pas la scene pour autant
+		-- ON DIT POURQUOI ON SAUTE. Sans ces deux messages l'etape disparait EN SILENCE : la scene s'enchaine
+		-- normalement, rien ne casse, et on croit que le code ne joue pas l'animation alors qu'il ne trouve pas
+		-- de quoi la jouer. `loadSceneTrack` parle deja quand c'est l'Animation qui manque ; ici on couvre les
+		-- deux autres causes.
+		if not model then
+			warn(`[Tutorial] Model "{TutorialConfigs.GRANDPA_NAME}" introuvable : pas de geste de poignee.`)
+		elseif not animator then
+			warn(`[Tutorial] Pas d'Animator sous "{TutorialConfigs.GRANDPA_NAME}" : pas de geste de poignee.`)
+		end
+		playGrandpa() -- l'etape saute, la scene continue
 		return
 	end
 	tryTrack = track
@@ -320,7 +329,7 @@ end
 local function knockOnce()
 	local model = door
 	if not model then
-		return
+		return -- porte pas encore repliquee : la boucle de resolution la reprendra, rien a signaler ici
 	end
 	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
 

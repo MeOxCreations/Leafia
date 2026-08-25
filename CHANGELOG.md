@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.453 — Une etape de scene qui saute le DIT
+
+Le geste de poignee pouvait etre saute EN SILENCE. La scene s'enchainait normalement, rien ne cassait -- et on
+en concluait que le code ne jouait pas l'animation, alors qu'il ne trouvait pas de quoi la jouer.
+
+`loadSceneTrack` parlait deja quand c'est l'Animation qui manque. Les DEUX autres causes -- Model du grand-pere
+introuvable, pas d'Animator dessus -- ne disaient rien. Elles le disent maintenant, nommement.
+
+C'est la meme regle que partout ailleurs dans ce projet : un systeme qui peut echouer en silence doit mesurer
+son resultat et parler. Une etape absente est un etat NORMAL (l'asset n'existe pas encore) ; une etape absente
+et muette est un piege.
+
 ## 0.0.452 — Le grand-pere se bat avec sa poignee, et le dialogue ne coupe plus les coups
 
 ### La narration d'intro ne se declenche plus toute seule
