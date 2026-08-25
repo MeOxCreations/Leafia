@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.470 — Le rideau de changement de map change de tete
+
+### La feuille centrale devient une jauge de six feuilles, en bas a droite
+
+Une jauge CONTINUE dit "ca avance" ; une jauge A CRANS dit "il en reste trois". Le joueur COMPTE au lieu
+d'estimer, et chaque cran qui s'allume est un evenement -- avec son bruit et son sursaut -- au lieu d'un
+mouvement qu'on finit par ne plus voir.
+
+Deux details qui evitent des bugs discrets :
+
+- Les feuilles sont placees A LA MAIN, pas par un `UIListLayout` : un layout REPOSE ses enfants a chaque image,
+  donc il ecraserait le sursaut qu'on leur donne.
+- L'allumage tourne dans une BOUCLE, pas en un pas. A bas FPS on peut franchir deux crans entre deux images, et
+  une feuille sautee resterait eteinte jusqu'a la fin sans que rien ne le signale.
+
+### Un fond en degrade
+
+Rotation 88, du bleu ardoise vers un eclat vert puis du noir. Pose sur un CADRE dedie, PAS sur le CanvasGroup :
+sur le groupe il teinterait tout son contenu -- le texte blanc virerait au bleu, les feuilles perdraient leur
+vert.
+
+### La destination s'affiche en haut a droite
+
+"TUTORIAL" aujourd'hui, le nom du client demain. Le joueur sait ce qu'il attend, pas seulement QU'il attend.
+
+Ancree a DROITE : le texte grandit vers la gauche, donc un nom long garde son bord aligne sur le reste de
+l'ecran au lieu de deborder des deux cotes.
+
+Les identifiants de lieu sont EN DUR ici, comme `MAIN_PLACE_ID` : ce fichier tourne dans `ReplicatedFirst` et ne
+peut pas require `PlacesConfig`. A tenir d'accord a la main -- c'est le prix de tourner aussi tot.
+
+### Le bandeau passe en noir uni, et la tuile change
+
+`BANNER_COLOR` perd son vert. Nouvelle image de tuile, et une cellule deux fois plus fine.
+
+### A FAIRE ENCORE
+
+L'image de la maison du client, avec son degrade de transparence : il manque son asset ID.
+
 ## 0.0.469 — Le remplissage de la feuille a un bord NET
 
 `FILL_SOFT` 0.14 -> 0.

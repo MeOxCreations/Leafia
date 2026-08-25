@@ -106,9 +106,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 
 	-- FOND TUILE qui defile en diagonale.
-	local TILE_IMAGE_ID = "rbxassetid://86181241708864"
+	local TILE_IMAGE_ID = "rbxassetid://78626050824347"
 	local TILE_TINT = Color3.fromRGB(38, 38, 38)
-	local TILE_CELL = UDim2.fromScale(0.01, 0.017) -- taille d'UNE tuile, en fraction de l'ImageLabel
+	local TILE_CELL = UDim2.fromScale(0.005, 0.01) -- taille d'UNE tuile, en fraction de l'ImageLabel
 	local TILE_DRIFT = 15 -- vitesse de defilement, en pixels par seconde
 	-- FONDU SUR LA TUILE. Le motif ne doit pas etre present partout avec la meme force : plein cadre et uniforme,
 	-- il se lit comme un papier peint et rentre en concurrence avec la feuille du milieu. On le laisse dense d'un
@@ -137,12 +137,40 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Ces valeurs rendent EXACTEMENT ce qu'elles disent parce que l'image du bandeau est en blanc pur : un
 	-- UIGradient multiplie la couleur de l'objet, donc toute autre teinte les raboterait en silence.
-	local BANNER_COLOR = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(142, 255, 93)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(0, 0, 0)),
+	local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+
+	-- ===== FOND DEGRADE =====
+	-- Pose sur un CADRE dedie, pas sur le CanvasGroup. Un UIGradient sur le groupe teinterait TOUT ce qu'il
+	-- contient -- le texte blanc des conseils virerait au bleu, les feuilles perdraient leur vert. Un cadre au
+	-- fond du tas donne exactement la meme image sans toucher a ce qui est pose dessus.
+	local BG_ROTATION = 88
+	local BG_COLOR = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromHex("425974")),
+		ColorSequenceKeypoint.new(0.748, Color3.fromHex("425974")),
+		ColorSequenceKeypoint.new(0.977, Color3.fromHex("8ee38d")),
+		ColorSequenceKeypoint.new(0.998, Color3.fromHex("293747")),
+		ColorSequenceKeypoint.new(1, Color3.fromHex("11191f")),
 	})
 
-	-- FEUILLE centrale : elle oscille, elle flotte, et elle SE REMPLIT comme une jauge.
+	-- ===== DESTINATION =====
+	-- Le lieu ou l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend.
+	-- ReplicatedFirst ne peut pas require PlacesConfig : les identifiants sont donc EN DUR ici, comme
+	-- MAIN_PLACE_ID plus haut. A tenir d'accord a la main -- c'est le prix de tourner aussi tot.
+	local DEST_BY_PLACE = {
+		[84161484719535] = "LEAFIA",
+		[109440527457437] = "TUTORIAL",
+		[124669452423388] = "CLIENT",
+		[77113670151896] = "TEST",
+	}
+	local DEST_FALLBACK = "LOADING"
+	local DEST_POS = UDim2.fromScale(0.955, 0.075)
+	local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
+
+	-- JAUGE DE FEUILLES, en bas a droite. SIX feuilles qui s'allument une par une.
+	--
+	-- Elle remplace la grande feuille du milieu, qui se remplissait en continu. Une jauge CONTINUE dit "ca
+	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur compte au lieu d'estimer, et chaque cran
+	-- qui s'allume est un evenement -- avec son bruit -- au lieu d'un mouvement qu'on finit par ne plus voir.
 	local LEAF_ID = "rbxassetid://117703108607506"
 	-- LE MEME VERT QUE LE DEBUT DU BANDEAU : la feuille et le bandeau se repondent, l'ecran a une seule couleur
 	-- d'accent au lieu de deux elements gris qui se ressemblent sans se parler.
@@ -155,35 +183,30 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- travers, la jauge n'avait pas de bord, et le joueur ne lisait plus "combien il reste" mais "quelque chose
 	-- apparait".
 	local LEAF_BACK_TINT = Color3.fromRGB(0, 0, 0)
-	local LEAF_SIZE = UDim2.fromScale(0.2, 0.2)
-	-- Taille des IMAGES dans leur contenant. Le contenant, lui, garde sa taille et sa forme carree : c'est lui
-	-- qui tient la position et l'echelle d'apparition. Retrecir ici ne deplace donc rien -- la feuille maigrit
-	-- sur place, elle ne glisse pas.
-	local LEAF_IMAGE_SIZE = UDim2.fromScale(0.675, 0.673)
-	local LEAF_CENTER = UDim2.fromScale(0.5, 0.46)
-	-- Inclinaison FIXE. Elle oscillait ; ce balancement permanent attirait l'oeil en continu alors que la seule
-	-- chose a suivre est le remplissage.
+	local LEAF_COUNT = 6
+	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
+	-- autres, donc le bord reste ou il est.
+	local LEAF_GAUGE_POS = UDim2.fromScale(0.965, 0.906)
+	local LEAF_GAUGE_SIZE = UDim2.fromScale(0.26, 0.055)
+	-- Largeur d'une feuille dans sa case, en fraction. En dessous de 1, l'espace restant fait l'ecart entre
+	-- elles : un seul reglage pour la taille ET l'espacement, qui ne peuvent donc pas se contredire.
+	local LEAF_FILL = 0.72
 	local LEAF_ANGLE = -10
 	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
 	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
-	local LEAF_POP_TIME = 0.9
-	-- ON ATTEND AVANT DE LA FAIRE APPARAITRE. Le rideau arrive par-dessus une transition : une apparition lancee
-	-- dans la meme image se joue pendant que l'ecran est encore en train de se poser, et on ne la voit pas.
-	local LEAF_POP_DELAY = 0.4
+	-- Le cran POUSSE en s'allumant : il part plus GROS et revient a sa taille. Sans ce sursaut, un simple
+	-- changement de couleur passe inapercu dans un coin de l'ecran.
+	local LEAF_BUMP = 1.45
+	local LEAF_BUMP_TIME = 0.35
 	local LEAF_POP_SOUND = { "Sounds", "UI", "PopSound_1" }
 	local LEAF_POP_VOLUME = 0.45
 	-- COMBIEN DE TEMPS ON RE-CHERCHE LE SON. Ce fichier tourne depuis ReplicatedFirst, au tout premier instant :
 	-- SoundService n'est pas encore replique, donc une recherche immediate rend TOUJOURS nil et le son ne part
 	-- jamais. Meme boucle de reessai que le son de feuilles plus bas.
 	local LEAF_POP_WAIT = 3
-	-- Calee sur MIN_ARRIVAL : la feuille finit de se remplir au moment ou le rideau s'en va. Une jauge qui se
+	-- Calee sur MIN_ARRIVAL : la derniere feuille s'allume au moment ou le rideau s'en va. Une jauge qui se
 	-- remplit AVANT la fin ment sur ce qu'il reste.
 	local FILL_DURATION = 10
-	-- DOUCEUR DU BORD. A 0, la coupure est NETTE : c'est un niveau qui monte, pas une lueur qui grandit. Un bord
-	-- adouci brouillait la limite -- on ne savait plus ou en etait le remplissage, donc la jauge ne mesurait plus
-	-- rien. Monter cette valeur reflouterait le bord.
-	local FILL_SOFT = 0
-	local FILL_ROTATION = 270 -- sens du remplissage. 90 = l'autre sens (verifie a l'ecran : 270 est le bon)
 
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
 	local TIPS_LABEL = "TIPS"
@@ -276,11 +299,29 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- CanvasGroup : le fondu de sortie porte sur LUI, donc tout son contenu s'efface d'un seul mouvement au lieu
 	-- de partir element par element.
 	local curtain = Instance.new("CanvasGroup")
+	-- Couleur de secours seulement : le cadre degrade pose juste apres couvre tout l'ecran. Elle ne se voit que
+	-- l'instant ou le rideau existe sans encore son contenu.
 	curtain.BackgroundColor3 = BG
 	curtain.BorderSizePixel = 0
 	curtain.Size = UDim2.fromScale(1, 1)
 	curtain.Active = true -- absorbe les clics tant que le rideau couvre
 	curtain.Parent = sg
+
+	-- ===== FOND DEGRADE =====
+	-- Un cadre au fond du tas, et pas un UIGradient sur le CanvasGroup : sur le groupe il teinterait TOUT son
+	-- contenu -- le texte blanc virerait au bleu, les feuilles perdraient leur vert.
+	local bg = Instance.new("Frame")
+	bg.Name = "Background"
+	bg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+	bg.BorderSizePixel = 0
+	bg.Size = UDim2.fromScale(1, 1)
+	bg.ZIndex = 0
+	bg.Active = false
+	bg.Parent = curtain
+	local bgGradient = Instance.new("UIGradient")
+	bgGradient.Color = BG_COLOR
+	bgGradient.Rotation = BG_ROTATION
+	bgGradient.Parent = bg
 
 	-- ===== FOND TUILE =====
 	-- Le defilement DIAGONAL n'est pas un caprice : horizontal ou vertical, ca se lit comme un decor qui glisse ;
@@ -320,102 +361,82 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		end)
 	end
 
-	-- ===== FEUILLE CENTRALE =====
-	-- Elle part invisible et se revele petit a petit : le joueur ne voit plus seulement "ca charge", il voit
-	-- COMBIEN il reste. Une attente qu'on peut mesurer est toujours plus courte qu'une attente muette.
-	-- DEUX FEUILLES SUPERPOSEES dans un meme contenant. Le contenant porte la position, l'inclinaison et
-	-- l'echelle : les deux images bougent donc ENSEMBLE. Les animer separement les desynchroniserait d'une image,
-	-- et le contour se decollerait de son remplissage.
-	local leafBox = Instance.new("Frame")
-	leafBox.Name = "Leaf"
-	leafBox.BackgroundTransparency = 1
-	leafBox.AnchorPoint = Vector2.new(0.5, 0.5)
-	leafBox.Position = LEAF_CENTER
-	leafBox.Size = LEAF_SIZE
-	leafBox.Rotation = LEAF_ANGLE
-	leafBox.ZIndex = 2
-	leafBox.Parent = curtain
-	-- La contrainte garde la feuille CARREE : sans elle, elle s'etire avec le format de l'ecran.
-	local leafRatio = Instance.new("UIAspectRatioConstraint")
-	leafRatio.AspectRatio = 1
-	leafRatio.DominantAxis = Enum.DominantAxis.Height
-	leafRatio.Parent = leafBox
+	-- ===== JAUGE DE FEUILLES =====
+	-- SIX feuilles en bas a droite, qui s'allument une par une.
+	--
+	-- Elle remplace la grande feuille du milieu qui se remplissait en continu. Une jauge CONTINUE dit "ca
+	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur COMPTE au lieu d'estimer, et chaque cran
+	-- qui s'allume est un evenement -- avec son bruit -- au lieu d'un mouvement qu'on finit par ne plus voir.
+	local gauge = Instance.new("Frame")
+	gauge.Name = "LeafGauge"
+	gauge.BackgroundTransparency = 1
+	-- ANCREE A DROITE : ajouter une feuille etire le bloc vers la gauche au lieu de deplacer les autres, donc le
+	-- bord droit reste ou il est.
+	gauge.AnchorPoint = Vector2.new(1, 0.5)
+	gauge.Position = LEAF_GAUGE_POS
+	gauge.Size = LEAF_GAUGE_SIZE
+	gauge.ZIndex = 3
+	gauge.Parent = curtain
 
-	local function leafImage(name: string, tint: Color3, z: number): ImageLabel
-		local image = Instance.new("ImageLabel")
-		image.Name = name
-		image.BackgroundTransparency = 1
-		image.AnchorPoint = Vector2.new(0.5, 0.5)
-		image.Position = UDim2.fromScale(0.5, 0.5)
-		image.Size = LEAF_IMAGE_SIZE
-		image.Image = LEAF_ID
-		image.ImageColor3 = tint
-		image.ScaleType = Enum.ScaleType.Fit
-		image.ZIndex = z
-		image.Parent = leafBox
-		return image
+	local leaves: { ImageLabel } = {}
+	for i = 1, LEAF_COUNT do
+		local leaf = Instance.new("ImageLabel")
+		leaf.Name = `Leaf{i}`
+		leaf.BackgroundTransparency = 1
+		leaf.Image = LEAF_ID
+		leaf.ImageColor3 = LEAF_BACK_TINT
+		leaf.ScaleType = Enum.ScaleType.Fit
+		leaf.AnchorPoint = Vector2.new(0.5, 0.5)
+		-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image, donc
+		-- il ecraserait toute animation qu'on voudrait leur donner. Les X poses une fois sont a nous.
+		leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 0.5)
+		leaf.Size = UDim2.fromScale(LEAF_FILL / LEAF_COUNT, 1)
+		leaf.Rotation = LEAF_ANGLE
+		leaf.ZIndex = 3
+		leaf.Parent = gauge
+		leaves[i] = leaf
 	end
-	leafImage("LeafBack", LEAF_BACK_TINT, 2)
-	local leaf = leafImage("LeafFill", LEAF_TINT, 3)
 
-	-- L'APPARITION. Le `Back` en sortie depasse la taille cible puis revient : c'est ce depassement qui fait le
-	-- rebond. On l'applique au CONTENANT, donc les deux feuilles arrivent d'un bloc.
-	local leafScale = Instance.new("UIScale")
-	leafScale.Scale = 0
-	leafScale.Parent = leafBox
 	task.spawn(function()
-		task.wait(LEAF_POP_DELAY)
-		-- On cherche le son TANT QU'IL PEUT ENCORE ARRIVER, et l'image attend avec lui : le son et le rebond
-		-- doivent partir ENSEMBLE. Un son cale a cote de son image se ressent comme un decalage meme quand on ne
-		-- sait pas dire lequel des deux est en retard.
+		-- Le son vit dans SoundService, qui n'est pas encore replique quand ReplicatedFirst construit le rideau.
+		-- On le cherche EN FOND, sans faire attendre la jauge : une feuille muette vaut mieux qu'une feuille en
+		-- retard.
 		local deadline = os.clock() + LEAF_POP_WAIT
 		local pop = findSound(LEAF_POP_SOUND)
 		while not pop and os.clock() < deadline and sg.Parent do
 			task.wait(0.1)
 			pop = findSound(LEAF_POP_SOUND)
 		end
-		-- Le rideau est deja parti : plus rien a montrer, et jouer le son maintenant serait un bruit sans image.
-		if not sg.Parent then
-			return
-		end
-		if pop then
-			playSound(pop, LEAF_POP_VOLUME)
-		end
-		TweenService
-			:Create(leafScale, TweenInfo.new(LEAF_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-				Scale = 1,
-			})
-			:Play()
-	end)
 
-	-- Le remplissage passe par la TRANSPARENCE du degrade, pas par sa couleur : la partie pas encore remplie est
-	-- transparente, donc on voit le fond a travers. Une couleur ne se retire pas, une transparence si.
-	local fill = Instance.new("UIGradient")
-	fill.Name = "UIGradientFill"
-	-- Le SENS ne se DEDUIT pas : le sens d'un UIGradient est une de ces choses que seul l'ecran tranche.
-	fill.Rotation = FILL_ROTATION
-	fill.Parent = leaf
-	task.spawn(function()
 		local t0 = os.clock()
+		local lit = 0
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
 		-- instance detruite.
 		while sg.Parent do
 			local e = math.clamp((os.clock() - t0) / FILL_DURATION, 0, 1)
+			local want = math.floor(e * LEAF_COUNT)
+			-- UNE BOUCLE, PAS UN SEUL PAS : a bas FPS on peut franchir deux crans entre deux images, et une
+			-- feuille sautee resterait eteinte jusqu'a la fin sans que rien ne le signale.
+			while lit < want do
+				lit += 1
+				local leaf = leaves[lit]
+				leaf.ImageColor3 = LEAF_TINT
+				-- Le cran POUSSE en s'allumant : sans ce sursaut, un simple changement de couleur passe
+				-- inapercu dans un coin de l'ecran.
+				local bump = Instance.new("UIScale")
+				bump.Scale = LEAF_BUMP
+				bump.Parent = leaf
+				TweenService
+					:Create(bump, TweenInfo.new(LEAF_BUMP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+						Scale = 1,
+					})
+					:Play()
+				if pop then
+					playSound(pop, LEAF_POP_VOLUME)
+				end
+			end
 			if e >= 1 then
-				fill.Transparency = NumberSequence.new(0)
-			else
-				-- Les temps d'une NumberSequence doivent croitre STRICTEMENT : d'ou l'ecart minimal force entre
-				-- les deux points du bord, et les bornes qui l'empechent de toucher 0 ou 1. Sans ca Roblox
-				-- refuse la sequence entiere des que le remplissage arrive contre un bord -- et le remplissage
-				-- se figerait la, sans erreur, juste avant d'etre fini.
-				local b = math.clamp(e, 0.002, 0.998)
-				local a = math.clamp(b - FILL_SOFT, 0.001, b - 0.001)
-				fill.Transparency = NumberSequence.new({
-					NumberSequenceKeypoint.new(0, 0),
-					NumberSequenceKeypoint.new(a, 0),
-					NumberSequenceKeypoint.new(b, 1),
-					NumberSequenceKeypoint.new(1, 1),
-				})
+				break
 			end
 			task.wait()
 		end
@@ -464,6 +485,25 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tipsLabel.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
 	tipsLabel.ZIndex = 3
 	tipsLabel.Parent = curtain
+
+	-- ===== DESTINATION =====
+	-- OU l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend -- et quand
+	-- il ira chez un client, c'est le nom du client qui s'affichera la.
+	local dest = Instance.new("TextLabel")
+	dest.Name = "ClientName"
+	dest.BackgroundTransparency = 1
+	-- Ancree a DROITE, pas au centre : le texte grandit alors vers la GAUCHE. Un nom long garde donc son bord
+	-- droit aligne sur le reste de l'ecran, au lieu de deborder des deux cotes.
+	dest.AnchorPoint = Vector2.new(1, 0.5)
+	dest.Position = DEST_POS
+	dest.Size = DEST_SIZE
+	dest.Text = DEST_BY_PLACE[game.PlaceId] or DEST_FALLBACK
+	dest.TextColor3 = Color3.fromRGB(255, 255, 255)
+	dest.TextScaled = true
+	dest.TextXAlignment = Enum.TextXAlignment.Right
+	dest.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+	dest.ZIndex = 3
+	dest.Parent = curtain
 	local tipsShade = Instance.new("UIGradient")
 	tipsShade.Color = TIPS_LABEL_SHADE
 	tipsShade.Rotation = TIPS_LABEL_SHADE_ROTATION
