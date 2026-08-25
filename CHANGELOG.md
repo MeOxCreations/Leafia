@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.468 — La feuille du rideau retrecit
+
+`LEAF_IMAGE_SIZE` (0.675 / 0.673) sur les images, pas sur leur contenant.
+
+Le contenant garde sa taille et sa forme carree : c'est lui qui porte la position, l'inclinaison et l'echelle
+d'apparition. Retrecir les images ne deplace donc rien -- la feuille maigrit SUR PLACE au lieu de glisser vers un
+coin, et le rebond reste centre sur elle.
+
+Les images sont ancrees en leur centre pour la meme raison : avec une ancre en coin, changer leur taille les
+aurait decalees.
+
 ## 0.0.467 — La feuille du fond passe en noir pur
 
 `LEAF_BACK_TINT` 18/24/15 -> 0/0/0. Reglage seul.

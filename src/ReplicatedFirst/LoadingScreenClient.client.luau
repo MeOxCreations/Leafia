@@ -156,6 +156,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- apparait".
 	local LEAF_BACK_TINT = Color3.fromRGB(0, 0, 0)
 	local LEAF_SIZE = UDim2.fromScale(0.2, 0.2)
+	-- Taille des IMAGES dans leur contenant. Le contenant, lui, garde sa taille et sa forme carree : c'est lui
+	-- qui tient la position et l'echelle d'apparition. Retrecir ici ne deplace donc rien -- la feuille maigrit
+	-- sur place, elle ne glisse pas.
+	local LEAF_IMAGE_SIZE = UDim2.fromScale(0.675, 0.673)
 	local LEAF_CENTER = UDim2.fromScale(0.5, 0.46)
 	-- Inclinaison FIXE. Elle oscillait ; ce balancement permanent attirait l'oeil en continu alors que la seule
 	-- chose a suivre est le remplissage.
@@ -338,7 +342,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		local image = Instance.new("ImageLabel")
 		image.Name = name
 		image.BackgroundTransparency = 1
-		image.Size = UDim2.fromScale(1, 1)
+		image.AnchorPoint = Vector2.new(0.5, 0.5)
+		image.Position = UDim2.fromScale(0.5, 0.5)
+		image.Size = LEAF_IMAGE_SIZE
 		image.Image = LEAF_ID
 		image.ImageColor3 = tint
 		image.ScaleType = Enum.ScaleType.Fit
