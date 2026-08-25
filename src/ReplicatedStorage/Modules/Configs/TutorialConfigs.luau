@@ -78,6 +78,18 @@ return {
 	-- derriere des barres noires, sans aucun moyen d'en sortir.
 	SCENE_HOLD = 3,
 
+	-- ===== LE JOUEUR TOQUE =====
+	-- Animation du JOUEUR : elle OUVRE la scene. Il toque, PUIS le grand-pere vient.
+	KNOCK_ANIM = "Scene1_TocToc_Animation",
+	-- Un marqueur par coup. Une LISTE et pas trois constantes : ajouter un quatrieme coup dans l'editeur ne
+	-- demande alors qu'une ligne ici, et le code n'a pas a savoir combien il y en a.
+	KNOCK_EVENTS = { "Toc1Event", "Toc2Event", "Toc3Event" },
+	-- La porte TREMBLE a chaque coup.
+	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
+	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la
+	-- tete se decolle de l'image, surtout avec une camera posee a six studs de la.
+	KNOCK_SOUND = { "Sounds", "Scenes", "Scene1", "KnockDoorSound" },
+
 	-- ===== LES ANIMATIONS DE LA SCENE =====
 	SCENE_ANIM_FOLDER = { "Animations", "Scenes", "Scenes1" },
 	-- Le Model du grand-pere dans le Workspace. ATTENTION : AmbientAnimConfigs attend "GrandFather" et ne trouve

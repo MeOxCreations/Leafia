@@ -18,6 +18,7 @@ local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
 
@@ -46,6 +47,8 @@ local missionStarted = false
 local sceneEnded = false
 local grandpaTrack: AnimationTrack? = nil
 local doorTrack: AnimationTrack? = nil
+local knockTrack: AnimationTrack? = nil
+local shakeTrack: AnimationTrack? = nil
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -168,6 +171,17 @@ local function animatorOf(model: Model): Animator?
 	return if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
 end
 
+local function stopTrack(track: AnimationTrack?)
+	if track then
+		track:Stop(0)
+	end
+end
+
+local function playerAnimator(): Animator?
+	local character = player.Character
+	return if character then animatorOf(character) else nil
+end
+
 local function loadSceneTrack(animator: Animator, animName: string): AnimationTrack?
 	local node: Instance? = ReplicatedStorage
 	for _, part in ipairs(TutorialConfigs.SCENE_ANIM_FOLDER) do
@@ -203,6 +217,12 @@ local function openDoor()
 	if not track then
 		return
 	end
+	-- Le tremblement tourne sur le MEME Animator. Deux pistes de meme priorite se melangeraient : celle des
+	-- coups a fini son travail, on la coupe avant que l'ouverture commence.
+	if shakeTrack then
+		shakeTrack:Stop(0)
+		shakeTrack = nil
+	end
 	doorTrack = track
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = true
@@ -229,7 +249,7 @@ end
 
 -- LE GRAND-PERE MENE LA SCENE. Son animation declenche la porte, et sa fin termine la scene : c'est elle qui
 -- sait combien de temps ca dure, pas une constante.
-local function playScene()
+local function playGrandpa()
 	local model = findModel(TutorialConfigs.GRANDPA_NAME)
 	local animator = if model then animatorOf(model) else nil
 	local track = if animator then loadSceneTrack(animator, TutorialConfigs.GRANDPA_ANIM) else nil
@@ -252,6 +272,64 @@ local function playScene()
 	-- C'EST LA FIN DE L'ANIMATION QUI TERMINE LA SCENE. Une duree en dur et une animation finissent toujours par
 	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.
 	track.Stopped:Connect(endScene)
+	track:Play()
+end
+
+-- UN COUP : la porte tremble et on entend le choc. Appele une fois par marqueur de l'animation du joueur, donc
+-- c'est l'ANIMATION qui dit quand -- pas un minuteur qui finirait par se decaler d'elle.
+local function knockOnce()
+	local model = door
+	if not model then
+		return
+	end
+	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
+
+	local shake = shakeTrack
+	if not shake then
+		local animator = animatorOf(model)
+		shake = if animator then loadSceneTrack(animator, TutorialConfigs.DOOR_SHAKE_ANIM) else nil
+		if not shake then
+			return
+		end
+		shake.Priority = Enum.AnimationPriority.Action
+		shake.Looped = false
+		shakeTrack = shake
+	end
+	-- ON REMBOBINE plutot que d'enchainer Stop puis Play. Trois coups rapproches : un Stop coupe en fondu, donc
+	-- le deuxieme coup partirait par-dessus la fin du premier et le tremblement s'aplatirait.
+	if shake.IsPlaying then
+		shake.TimePosition = 0
+	else
+		shake:Play(0)
+	end
+end
+
+-- LE JOUEUR TOQUE, et c'est ce qui OUVRE la scene. Chaque marqueur de son animation donne un coup ; quand elle
+-- s'acheve, le grand-pere prend la suite.
+local function playScene()
+	local animator = playerAnimator()
+	local track = if animator then loadSceneTrack(animator, TutorialConfigs.KNOCK_ANIM) else nil
+	if not track then
+		-- Pas d'animation de coups : on ne bloque pas la scene pour autant, le grand-pere vient quand meme.
+		playGrandpa()
+		return
+	end
+	knockTrack = track
+	track.Priority = Enum.AnimationPriority.Action
+	track.Looped = false
+	for _, eventName in ipairs(TutorialConfigs.KNOCK_EVENTS) do
+		track:GetMarkerReachedSignal(eventName):Connect(knockOnce)
+	end
+	-- La fin des coups enchaine sur le grand-pere. Un drapeau garantit UN seul enchainement : `Stopped` peut
+	-- aussi tirer si la piste est coupee, et la scene partirait deux fois.
+	local chained = false
+	track.Stopped:Connect(function()
+		if chained then
+			return
+		end
+		chained = true
+		playGrandpa()
+	end)
 	track:Play()
 end
 
@@ -440,14 +518,14 @@ function TutorialController.stop()
 	-- porte resterait ouverte sur rien. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 	SceneCamera.abort()
 	Letterbox.hide(0)
-	if grandpaTrack then
-		grandpaTrack:Stop(0)
-		grandpaTrack = nil
-	end
-	if doorTrack then
-		doorTrack:Stop(0)
-		doorTrack = nil
-	end
+	-- UNE PAR UNE, jamais `ipairs` sur une liste de valeurs nilables : ipairs S'ARRETE AU PREMIER NIL. Une seule
+	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
+	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.
+	stopTrack(grandpaTrack)
+	stopTrack(doorTrack)
+	stopTrack(knockTrack)
+	stopTrack(shakeTrack)
+	grandpaTrack, doorTrack, knockTrack, shakeTrack = nil, nil, nil, nil
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX
