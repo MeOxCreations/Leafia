@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.454 — L'image se resserre quand la porte s'ouvre
+
+A `OuvertureDoorEvent` -- l'instant precis ou la main du grand-pere pousse la porte -- le champ de vision perd
+12 degres. L'image se resserre sur la porte pile quand elle bouge, donc l'oeil y va sans qu'on lui dise.
+
+### On ne bouge PAS la camera pour zoomer
+
+L'avancer risquerait de la faire traverser le perron ou la rambarde, et il faudrait alors regler un trajet par
+decor. Le champ de vision, lui, ne rentre dans rien.
+
+### Et on ne l'ecrit pas nous-memes
+
+`CameraEffects` est declare SEUL ECRIVAIN de `FieldOfView`, et sa boucle tourne meme pendant la scene. Ecrire
+dessus en parallele donnerait un champ de vision qui vibre entre deux valeurs -- et on chercherait la cause dans
+le zoom, pas dans le deuxieme ecrivain.
+
+`SetFovOffset` fait le travail, avec son propre lissage.
+
+### Rendu par tous les chemins de sortie
+
+Fin de scene, arret du controller, mort en pleine scene. Un zoom qu'on oublie de rendre, c'est un joueur qui
+garde un champ de vision serre pour le reste de la partie, sans que rien ne rappelle pourquoi.
+
+### Le reglage
+
+`SCENE_ZOOM = 12`. Un resserrement qu'on sent sans le voir ; au-dela de ~20 ca commence a deformer les bords.
+
 ## 0.0.453 — Une etape de scene qui saute le DIT
 
 Le geste de poignee pouvait etre saute EN SILENCE. La scene s'enchainait normalement, rien ne cassait -- et on

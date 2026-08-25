@@ -79,6 +79,16 @@ return {
 	-- Duree du fondu. Assez lent pour ne pas se remarquer, assez court pour etre en place quand la scene demarre.
 	SCENE_DUCK_TIME = 0.5,
 
+	-- ===== LE ZOOM QUAND LA PORTE S'OUVRE =====
+	-- Degres RETIRES au champ de vision a l'instant ou la porte part. Moins de champ = plus serre : l'image se
+	-- resserre sur la porte pile quand elle bouge, donc l'oeil y va sans qu'on lui dise.
+	--
+	-- On ne bouge PAS la camera pour zoomer. L'avancer risquerait de la faire traverser le perron ou la
+	-- rambarde, et il faudrait alors regler un trajet par decor. Le champ de vision, lui, ne rentre dans rien.
+	--
+	-- 12 degres, c'est un resserrement qu'on sent sans le voir. Au-dela de ~20 ca commence a deformer les bords.
+	SCENE_ZOOM = 12,
+
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau
 	-- descend, il n'attend pas.
 	SCENE_BARS_TIME = 0.6,

@@ -22,6 +22,7 @@ local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
+local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
 
 local player = Players.LocalPlayer
@@ -159,6 +160,7 @@ local function endScene()
 	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
+	CameraEffects.SetFovOffset(0)
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
@@ -222,6 +224,13 @@ local function openDoor()
 	if not track then
 		return
 	end
+	-- L'IMAGE SE RESSERRE PILE QUAND LA PORTE PART. L'oeil suit le mouvement sans qu'on lui dise ou regarder.
+	--
+	-- On passe par CameraEffects et pas par `camera.FieldOfView` : il est declare SEUL ECRIVAIN de cette
+	-- propriete et sa boucle tourne meme pendant la scene. Ecrire dessus en parallele donnerait un champ de
+	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
+	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
+
 	-- Le tremblement tourne sur le MEME Animator. Deux pistes de meme priorite se melangeraient : celle des
 	-- coups a fini son travail, on la coupe avant que l'ouverture commence.
 	if shakeTrack then
@@ -555,6 +564,7 @@ function TutorialController.init()
 			SceneCamera.abort()
 			Letterbox.hide(0)
 			SoundDuck.restore(0)
+			CameraEffects.SetFovOffset(0)
 		end
 	end)
 	-- LA BOUCLE PART MEME SI LA PORTE N'EST PAS ENCORE LA. Avec StreamingEnabled elle arrive souvent apres le
@@ -577,6 +587,7 @@ function TutorialController.stop()
 	-- Le son est BAISSE, pas coupe : l'oublier laisserait le jeu a un quart de volume pour toujours, et personne
 	-- ne ferait le lien avec une scene finie depuis longtemps.
 	SoundDuck.restore(0)
+	CameraEffects.SetFovOffset(0)
 	-- UNE PAR UNE, jamais `ipairs` sur une liste de valeurs nilables : ipairs S'ARRETE AU PREMIER NIL. Une seule
 	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
 	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.
