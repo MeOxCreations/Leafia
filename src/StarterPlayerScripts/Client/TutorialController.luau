@@ -236,6 +236,10 @@ end
 -- Le gel se fait a la VITESSE (AdjustSpeed 0), jamais par un Stop : arreter une piste lui fait rendre sa pose de
 -- repos, donc la porte se refermerait d'un coup. Et elle reste bouclee pour la meme raison -- une piste non
 -- bouclee se relache a sa derniere image.
+-- Marge avant la fin sous laquelle on considere l'animation terminee. Une image a 30 FPS fait 0.033 s : en
+-- dessous de ca, la fenetre serait sautee a chaque partie un peu chargee.
+local END_WINDOW = 0.05
+
 local function openDoor()
 	local model = door
 	if not model then
@@ -300,22 +304,24 @@ local function openDoor()
 	--
 	-- Et jamais `Stop` pour figer : un Stop fait rendre a la piste sa pose de repos, donc la porte CLAQUE en
 	-- position fermee. C'est `AdjustSpeed(0)` plus un temps epingle.
-	local function freezeHere()
+	-- ON EPINGLE A LA DERNIERE IMAGE, pas la ou un marqueur tombe. La porte est grande ouverte AU BOUT de
+	-- l'animation : s'arreter avant fige une pose intermediaire et le reste du mouvement ne joue jamais.
+	--
+	-- JAMAIS PILE A `Length` : la piste est bouclee, donc le tout dernier instant repart a zero. On epingle juste
+	-- avant.
+	local function pinAtEnd()
 		if frozenAt then
 			return
 		end
-		local now = track.TimePosition
 		local length = track.Length
-		-- JAMAIS PILE A `Length` : la piste est bouclee, donc le tout dernier instant repart a zero. On epingle
-		-- juste avant.
-		if length > 0 then
-			now = math.min(now, length - 0.001)
+		if length <= 0 then
+			return -- duree pas encore connue : on repassera a l'image suivante
 		end
-		frozenAt = now
+		local last = math.max(length - 0.001, 0)
+		frozenAt = last
 		track:AdjustSpeed(0)
-		track.TimePosition = now
+		track.TimePosition = last
 	end
-	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_END_EVENT):Connect(freezeHere)
 
 	doorWatch = RunService.Heartbeat:Connect(function()
 		-- Une autre ouverture a pris la main (nouvelle scene) : ce gardien n'a plus rien a defendre.
@@ -343,16 +349,16 @@ local function openDoor()
 			return
 		end
 
-		-- FILET, si le marqueur de fin se tait. La piste est BOUCLEE : sans ce garde elle repartirait a zero, et
-		-- la porte s'ouvrirait et se refermerait en boucle, pour toujours.
+		-- LA FIN SE DETECTE DE DEUX FACONS, et il faut les deux.
 		--
-		-- On surveille le TEMPS QUI RECULE, pas une fenetre "assez proche de la fin" : une fenetre peut etre
-		-- SAUTEE par un FPS bas, alors qu'un retour en arriere est un fait qu'on ne peut pas rater.
+		-- La fenetre "assez proche de la fin" attrape le cas normal, mais un FPS bas peut la SAUTER : entre deux
+		-- images la piste passe par-dessus et reboucle. Le retour en arriere, lui, est un fait qu'on ne peut pas
+		-- rater. Les deux menent au meme endroit -- epingle a la derniere image -- donc rater la premiere ne
+		-- coute qu'une image de plus.
 		local now = track.TimePosition
-		if now < lastTime - 0.001 then
-			local length = track.Length
-			track.TimePosition = if length > 0 then math.max(length - 0.001, 0) else lastTime
-			freezeHere()
+		local length = track.Length
+		if now < lastTime - 0.001 or (length > 0 and now >= length - END_WINDOW) then
+			pinAtEnd()
 			return
 		end
 		lastTime = now

@@ -157,9 +157,9 @@ return {
 	-- La porte se FIGE entrebaillee a ce marqueur, le temps que le grand-pere parle, puis elle repart.
 	DOOR_MID_EVENT = "MidAnimationEventDoor",
 	DOOR_PAUSE = 1.5,
-	-- Grand ouverte : la piste se fige la et TIENT. Sans ce gel elle irait au bout de sa duree puis se
-	-- relacherait, et la porte se refermerait toute seule -- une piste non tenue rend sa pose de repos.
-	DOOR_END_EVENT = "EndOpenDoorEvent",
+	-- PAS DE MARQUEUR DE FIN. La porte est epinglee a la DERNIERE IMAGE de l'animation, pas la ou un marqueur
+	-- tombe : s'arreter avant fige une pose intermediaire, et le reste du mouvement ne joue jamais.
+	-- `EndOpenDoorEvent` existe toujours dans l'animation, il n'est simplement plus lu par le code.
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,

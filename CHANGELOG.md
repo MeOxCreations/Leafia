@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.462 — La porte s'epingle a la DERNIERE IMAGE de son animation
+
+Elle se refermait encore, et la cause etait en amont de tout ce qu'on avait corrige : on epinglait la piste sur
+`EndOpenDoorEvent`, a 0.53 s d'une animation qui en dure 1.
+
+On figeait donc une pose INTERMEDIAIRE, et la fin du mouvement ne jouait jamais. La porte restait a moitie --
+puis n'importe quel accroc la ramenait a sa pose de repos.
+
+Elle est desormais epinglee a `Length - 0.001`. La porte est grande ouverte AU BOUT de l'animation : c'est la
+qu'il faut rester.
+
+### `EndOpenDoorEvent` n'est plus lu
+
+Il existe toujours dans l'animation, le code ne s'en sert simplement plus. La fin d'une animation se mesure sur
+sa DUREE, qui suit toute retouche ; un marqueur, lui, reste ou on l'a pose.
+
+### La fin se detecte de DEUX facons, et il faut les deux
+
+La fenetre "assez proche de la fin" attrape le cas normal, mais un FPS bas peut la SAUTER : entre deux images la
+piste passe par-dessus et reboucle. Le retour en arriere, lui, est un fait qu'on ne peut pas rater.
+
+Les deux menent au meme endroit -- epingle a la derniere image -- donc rater la premiere ne coute qu'une image de
+plus. La marge est de 0.05 s : une image a 30 FPS en fait 0.033.
+
+### Ce qui reste de 0.0.461
+
+Le maintien image par image : la piste joue, vitesse zero, temps epingle, et on la relance si quelque chose
+l'arrete. C'etait juste, ca defendait simplement la mauvaise pose.
+
 ## 0.0.461 — La porte est TENUE ouverte, plus seulement gelee
 
 Elle se refermait. Le defaut : on gelait la piste UNE FOIS, puis on lachait la surveillance. Apres ca, plus rien
