@@ -654,6 +654,8 @@ local function updateMarker(model: Model)
 		-- decor et croiraient a un obstacle.
 		clone.CanQuery = false
 		clone.CastShadow = false
+		-- La taille est posee UNE FOIS ici, jamais par frame : voir MARKER_SCALE pour le clignotement.
+		clone.Size = source.Size * MowConfigs.MARKER_SCALE
 		clone.Parent = Workspace
 		marker = clone
 		m = clone
@@ -661,7 +663,12 @@ local function updateMarker(model: Model)
 		-- marqueur le poserait devant la machine et sous elle. On prend donc le centre de la boite englobante,
 		-- ramene en repere machine -- une seule fois, tant que le modele ne change pas.
 		local center = model:GetBoundingBox()
-		markerOffset = rootPart.CFrame:Inverse() * CFrame.new(center.Position) * CFrame.new(MowConfigs.MARKER_OFFSET)
+		-- La rotation vient EN DERNIER : posee apres le deplacement, elle fait pivoter le marqueur SUR PLACE.
+		-- Avant, elle ferait tourner le decalage avec lui et la fleche partirait ailleurs.
+		markerOffset = rootPart.CFrame:Inverse()
+			* CFrame.new(center.Position)
+			* CFrame.new(MowConfigs.MARKER_OFFSET)
+			* CFrame.Angles(0, math.rad(MowConfigs.MARKER_YAW), 0)
 	end
 	local offset = markerOffset
 	if m and offset then

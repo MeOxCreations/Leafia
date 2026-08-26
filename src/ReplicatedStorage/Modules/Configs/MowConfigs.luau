@@ -286,7 +286,19 @@ return {
 	MARKER_PATH = { "Contents", "MarkerDirection" },
 	-- DECALAGE EN PLUS du milieu de la machine, dans SON repere : X = cote, Y = hauteur, Z = arriere (donc -Z
 	-- vers l'avant). Le milieu, lui, n'est pas ici : il est MESURE au premier affichage.
-	MARKER_OFFSET = Vector3.new(0, 0, 0),
+	--
+	-- Y NEGATIF le fait DESCENDRE. Le milieu mesure tombe a mi-hauteur du carter, ce qui est bien trop haut pour
+	-- une fleche au sol : on redescend d'a peu pres la demi-hauteur de la machine.
+	MARKER_OFFSET = Vector3.new(0, -1.5, 0),
+	-- ORIENTATION, en degres autour de la verticale. 180 = demi-tour.
+	--
+	-- Le sens ne se DEDUIT pas : il depend de la facon dont le mesh a ete modelise, pas d'un calcul. Ca se voit a
+	-- l'ecran, et c'est la seule facon de le savoir.
+	MARKER_YAW = 180,
+	-- TAILLE, en multiple de celle du mesh d'origine. Appliquee UNE FOIS a la creation : un mesh qu'on
+	-- redimensionne en jeu CLIGNOTE quand sa RenderFidelity est `Automatic` (Roblox echange le maillage selon la
+	-- taille a l'ecran). Fixe, il ne clignote pas.
+	MARKER_SCALE = 1.8,
 
 	-- ===== CONDUITE =====
 	-- (Le seuil "le joueur demande d'avancer" n'est PAS ici : c'est STEER_MOVE_EPSILON, plus bas, deja utilise

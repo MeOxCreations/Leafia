@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.511 — La fleche est retournee, descendue et grossie
+
+Trois reglages, tous dans `MowConfigs` :
+
+- `MARKER_YAW = 180` -- elle pointait a l'envers. Le sens depend de la facon dont le mesh a ete modelise, pas
+  d'un calcul : ca ne se deduit pas, ca se voit a l'ecran.
+- `MARKER_OFFSET` descend de 1.5 stud. Le milieu mesure tombe a mi-hauteur du carter, bien trop haut pour une
+  fleche au sol.
+- `MARKER_SCALE = 1.8`.
+
+### Deux details qui evitent des bugs plus tard
+
+La ROTATION vient en dernier dans le calcul, apres le deplacement : posee ainsi, elle fait pivoter le marqueur
+SUR PLACE. Avant le deplacement, elle aurait fait tourner le decalage avec lui et la fleche serait partie
+ailleurs -- on aurait alors regle la position pour compenser une erreur d'ordre.
+
+La TAILLE est posee UNE FOIS a la creation, jamais par frame. Un mesh redimensionne en jeu CLIGNOTE quand sa
+`RenderFidelity` est `Automatic` : Roblox echange le maillage selon la taille a l'ecran. Fixe, il ne clignote
+pas.
+
 ## 0.0.510 — Un marqueur de direction posee sur la tondeuse
 
 `Assets/Contents/MarkerDirection` suit la machine tant qu'elle tourne. Premiere etape : il se place au milieu.
