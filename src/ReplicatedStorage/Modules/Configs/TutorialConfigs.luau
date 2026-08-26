@@ -141,6 +141,13 @@ return {
 	-- l'image encaisse le choc en meme temps que la porte, donc les coups se SENTENT au lieu de s'entendre.
 	-- Les trois s'additionnent -- c'est ce que fait une vraie camera qu'on bouscule.
 	KNOCK_KICK = 0.3,
+	-- ECLAIR A CHAQUE COUP. Un Beam AU HASARD parmi ceux du conteneur s'allume une fraction de seconde. Au
+	-- hasard, et pas toujours le meme : trois coups identiques se lisent comme une boucle, trois coups qui
+	-- claquent ailleurs se lisent comme trois vrais chocs.
+	KNOCK_BEAM_PARENT = "KnockEffect1",
+	-- Duree de l'eclair. TRES court : c'est un flash, pas un eclairage. Au-dela de ~0.15 s on a le temps de
+	-- regarder ce que c'est, et l'illusion tombe.
+	KNOCK_BEAM_TIME = 0.07,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la

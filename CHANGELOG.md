@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.490 — Un eclair claque a chaque coup frappe
+
+Un Beam AU HASARD parmi ceux de `KnockEffect1` s'allume une fraction de seconde a chaque `TocEvent`.
+
+Au hasard, et c'est le point : trois coups identiques se lisent comme une BOUCLE, trois coups qui claquent
+ailleurs se lisent comme trois VRAIS chocs. La meme raison qui fait varier un son de pas.
+
+### Tres court
+
+0.07 s. Au-dela de ~0.15 on a le temps de regarder ce que c'est, et l'illusion tombe. C'est un flash, pas un
+eclairage.
+
+### Ils sont ETEINTS au premier passage
+
+Leur etat de repos est INVISIBLE. S'ils arrivent allumes depuis Studio, ils resteraient allumes toute la scene
+-- et on chercherait pourquoi un effet de coup est permanent.
+
+### La liste VIDE est gardee en cache
+
+Si le conteneur est introuvable, on garde quand meme le resultat : sans ca on re-balayerait tout le Workspace a
+chaque coup pour ne rien trouver.
+
+### Un eclair coupe en plein flash reste allume
+
+Il n'a personne pour l'eteindre une fois la scene finie. L'arret du controller les eteint tous.
+
+### `findModelOrFolder`
+
+Un conteneur d'effets n'est PAS un Model. Exiger l'un ou l'autre obligerait a ranger les objets d'une certaine
+facon dans Studio -- et c'est le code qui doit s'adapter au rangement, pas l'inverse.
+
 ## 0.0.489 — Le grand-pere respire de nouveau
 
 `AmbientAnimConfigs` attendait un Model nomme `GrandFather`. Il s'appelle `OldmanOriginal` depuis qu'il a ete

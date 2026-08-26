@@ -61,6 +61,8 @@ local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
 local doorWatch: RBXScriptConnection? = nil
 local trySound: Sound? = nil
+-- Eclairs des coups, resolus une seule fois puis gardes. `nil` = pas encore cherches.
+local knockBeams: { Beam }? = nil
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -184,6 +186,17 @@ local function endScene()
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
+-- Comme findModel, mais accepte AUSSI un Folder : un conteneur d'effets n'est pas un Model, et exiger l'un ou
+-- l'autre obligerait a ranger les objets d'une certaine facon dans Studio.
+local function findModelOrFolder(name: string): Instance?
+	for _, d in ipairs(Workspace:GetDescendants()) do
+		if d.Name == name and (d:IsA("Model") or d:IsA("Folder")) then
+			return d
+		end
+	end
+	return nil
+end
+
 local function findModel(name: string): Model?
 	for _, d in ipairs(Workspace:GetDescendants()) do
 		if d:IsA("Model") and d.Name == name then
@@ -497,6 +510,29 @@ end
 
 -- UN COUP : la porte tremble et on entend le choc. Appele une fois par marqueur de l'animation du joueur, donc
 -- c'est l'ANIMATION qui dit quand -- pas un minuteur qui finirait par se decaler d'elle.
+-- Les eclairs du conteneur, ou une liste VIDE si on ne l'a pas trouve. On garde la liste vide en cache : sans
+-- ca on re-balayerait tout le Workspace a chaque coup pour ne rien trouver.
+local function getKnockBeams(): { Beam }
+	local cached = knockBeams
+	if cached then
+		return cached
+	end
+	local found: { Beam } = {}
+	local holder = findModelOrFolder(TutorialConfigs.KNOCK_BEAM_PARENT)
+	if holder then
+		for _, d in ipairs(holder:GetDescendants()) do
+			if d:IsA("Beam") then
+				-- ETEINTS AU DEPART. Ce sont des eclairs : leur etat de repos est INVISIBLE. S'ils arrivent
+				-- allumes depuis Studio, ils resteraient allumes toute la scene et on chercherait pourquoi.
+				d.Enabled = false
+				table.insert(found, d)
+			end
+		end
+	end
+	knockBeams = found
+	return found
+end
+
 local function knockOnce()
 	local model = door
 	if not model then
@@ -504,6 +540,20 @@ local function knockOnce()
 	end
 	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
 	SceneCamera.kick(TutorialConfigs.KNOCK_KICK)
+
+	-- UN ECLAIR AU HASARD. Pas toujours le meme : trois coups identiques se lisent comme une boucle, trois coups
+	-- qui claquent ailleurs se lisent comme trois vrais chocs.
+	local beams = getKnockBeams()
+	if #beams > 0 then
+		local beam = beams[math.random(#beams)]
+		beam.Enabled = true
+		task.delay(TutorialConfigs.KNOCK_BEAM_TIME, function()
+			-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
+			if beam.Parent then
+				beam.Enabled = false
+			end
+		end)
+	end
 
 	local shake = shakeTrack
 	if not shake then
@@ -766,6 +816,15 @@ function TutorialController.stop()
 	if doorWatch then
 		doorWatch:Disconnect()
 		doorWatch = nil
+	end
+	-- Un eclair coupe en plein flash resterait ALLUME pour toujours : il n'a personne pour l'eteindre une fois
+	-- la scene finie.
+	if knockBeams then
+		for _, beam in ipairs(knockBeams) do
+			if beam.Parent then
+				beam.Enabled = false
+			end
+		end
 	end
 	grandpaTrack, doorTrack, knockTrack, shakeTrack, tryTrack = nil, nil, nil, nil, nil
 	local sfx = trySound
