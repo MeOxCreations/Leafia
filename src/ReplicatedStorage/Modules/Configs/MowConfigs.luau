@@ -584,6 +584,10 @@ return {
 	-- Ca evite de tatonner entre trois valeurs a l'ecran, et surtout ca survit a un re-export du modele : si le rig
 	-- change d'orientation dans Blender, la deduction suit toute seule.
 	-- Passer a "X", "Y" ou "Z" seulement si la roue n'a pas des proportions de roue (un cube, par exemple).
+	--
+	-- "AUTO" prend l'axe de SYMETRIE : celui dont les deux perpendiculaires se ressemblent le plus. C'est ce qui
+	-- definit une roue, et ca marche aussi bien pour un disque fin que pour une PAIRE montee sur un essieu -- le
+	-- cas de cette tondeuse, ou `WheelBack` mesure 3.15 x 1.09 x 1.14 : l'essieu est le LONG cote, pas le mince.
 	WHEEL_AXIS = "AUTO",
 	-- Rayon de roue de secours (studs) si on n'arrive pas a le lire sur la part. Sinon il est MESURE sur la roue.
 	WHEEL_RADIUS_FALLBACK = 0.6,

@@ -587,31 +587,49 @@ local function spinWheels(model: Model, distance: number)
 	end
 	for _, motor in ipairs(wheelMotorsOf(model)) do
 		local wheel = motor.Part1
-		-- Rayon MESURE sur la roue plutot que devine : changer la taille du modele ne demande alors aucun reglage.
+
+		-- L'AXE EST CELUI DE LA SYMETRIE, pas le cote le plus mince.
+		--
+		-- On cherchait le plus MINCE, en supposant un disque : LARGE x LARGE x FIN. Ca rate le cas reel de cette
+		-- tondeuse, ou `WheelBack` est une PAIRE de roues montees sur un essieu -- 3.15 x 1.09 x 1.14. Le long
+		-- cote est l'essieu, et c'est LUI l'axe ; le plus mince (Y) faisait tourner l'ensemble a plat.
+		--
+		-- Ce qui fait un axe de roue, ce n'est ni "long" ni "court" : c'est que les DEUX AUTRES cotes sont EGAUX.
+		-- Une roue tourne autour de son axe de symetrie. On prend donc l'axe dont les deux perpendiculaires se
+		-- ressemblent le plus -- vrai pour un disque fin comme pour une paire sur essieu, sans les distinguer.
+		local axis = MowConfigs.WHEEL_AXIS
+		if axis == "AUTO" and wheel then
+			local w = wheel.Size
+			local dX = math.abs(w.Y - w.Z) / math.max(w.Y, w.Z, 1e-4)
+			local dY = math.abs(w.X - w.Z) / math.max(w.X, w.Z, 1e-4)
+			local dZ = math.abs(w.X - w.Y) / math.max(w.X, w.Y, 1e-4)
+			if dX <= dY and dX <= dZ then
+				axis = "X"
+			elseif dY <= dZ then
+				axis = "Y"
+			else
+				axis = "Z"
+			end
+		end
+
+		-- LE RAYON SE MESURE PERPENDICULAIREMENT A L'AXE, jamais sur la plus grande dimension : sur une paire
+		-- montee sur essieu, la plus grande EST l'essieu -- on obtenait 1.58 au lieu de 0.57, donc des roues qui
+		-- tournent trois fois trop lentement pour la distance parcourue. Elles patineraient sur le sol.
 		local radius = MowConfigs.WHEEL_RADIUS_FALLBACK
 		if wheel then
-			local s = wheel.Size
-			radius = math.max(s.X, s.Y, s.Z) * 0.5
+			local w = wheel.Size
+			radius = if axis == "X"
+				then math.max(w.Y, w.Z) * 0.5
+				elseif axis == "Y" then math.max(w.X, w.Z) * 0.5
+				else math.max(w.X, w.Y) * 0.5
 		end
+
 		if radius > 1e-3 then
 			-- Distance SIGNEE : negative en marche arriere, donc les roues tournent a l'envers toutes seules.
 			local delta = MowConfigs.WHEEL_DIRECTION * distance / radius
 			local angle = ((wheelAngles[motor] or 0) + delta) % (math.pi * 2)
 			wheelAngles[motor] = angle
-			-- AXE DEDUIT DE LA GEOMETRIE. Une roue est LARGE x LARGE x MINCE : son axe de rotation est le cote le
-			-- plus MINCE, c'est ce qui fait d'elle une roue et pas un disque qu'on ferait tourner a plat.
-			local axis = MowConfigs.WHEEL_AXIS
-			if axis == "AUTO" and wheel then
-				local w = wheel.Size
-				if w.X <= w.Y and w.X <= w.Z then
-					axis = "X"
-				elseif w.Y <= w.Z then
-					axis = "Y"
-				else
-					axis = "Z"
-				end
-			end
-			local thin = if axis == "Y" then AXIS_Y elseif axis == "Z" then AXIS_Z else AXIS_X
+			local spinLocal = if axis == "Y" then AXIS_Y elseif axis == "Z" then AXIS_Z else AXIS_X
 
 			-- ON CHANGE DE REPERE, ET C'ETAIT LE BUG.
 			--
@@ -622,7 +640,7 @@ local function spinWheels(model: Model, distance: number)
 			-- `Part0.CFrame * C0 = Part1.CFrame * C1`, donc passer du repere de la roue a celui du joint, c'est
 			-- appliquer la rotation de `C1:Inverse()`. Avec C1 = identite on retombe sur l'ancien calcul : le cas
 			-- simple continue de marcher.
-			local spinAxis = motor.C1:Inverse():VectorToWorldSpace(thin)
+			local spinAxis = motor.C1:Inverse():VectorToWorldSpace(spinLocal)
 			local spin = if spinAxis.Magnitude > 1e-4
 				then CFrame.fromAxisAngle(spinAxis.Unit, angle)
 				else CFrame.Angles(angle, 0, 0)

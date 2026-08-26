@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.518 — L'axe d'une roue est celui de sa SYMETRIE, pas son cote le plus mince
+
+    taille roue 3.15/1.09/1.14 | axe roue Y | rayon 1.58
+
+Ces trois nombres disent tout. `WheelBack` n'est pas une roue fine : c'est une PAIRE de roues montee sur un
+ESSIEU. Le long cote (3.15) est l'essieu, chaque roue fait ~1.1 de diametre.
+
+### La deduction supposait un disque
+
+Elle cherchait le cote le plus MINCE, en supposant LARGE x LARGE x FIN. Sur une paire montee sur essieu, le plus
+mince est perpendiculaire a l'essieu : on faisait donc tourner l'ensemble A PLAT.
+
+Ce qui fait un axe de roue n'est ni "long" ni "court" : c'est que les DEUX AUTRES cotes sont EGAUX. Une roue
+tourne autour de son axe de symetrie. On prend donc l'axe dont les deux perpendiculaires se ressemblent le plus
+-- vrai pour un disque fin comme pour une paire sur essieu, sans avoir a distinguer les deux cas.
+
+### Le rayon etait faux avec, et c'est un second bug
+
+Il se prenait sur la plus GRANDE dimension. Sur une paire montee sur essieu, la plus grande EST l'essieu : 1.58
+au lieu de 0.57. Les roues auraient tourne TROIS FOIS trop lentement pour la distance parcourue -- elles
+auraient patine sur le sol, ce qu'on aurait mis sur le compte du reglage.
+
+Il se mesure maintenant PERPENDICULAIREMENT a l'axe.
+
+### La lecon
+
+Deux corrections de suite (0.0.517 sur le repere, celle-ci sur la forme) sur un calcul qui avait l'air simple.
+Les deux venaient de la meme chose : une hypothese jamais ecrite -- "une roue est un disque fin" -- posee dans le
+code sans que rien ne la verifie. La sonde qui affiche la TAILLE a tranche en une manche ce que trois
+raisonnements n'avaient pas trouve.
+
 ## 0.0.517 — Les roues tournaient AUTOUR DU MAUVAIS AXE
 
 Les sondes de 0.0.516 ont tranche en une manche. Tout etait bon sauf une chose :
