@@ -37,6 +37,10 @@ local anchor: BasePart? = nil
 -- posee sur le COTE, donc le badge sortait a cote de la porte. Le centre de la boite englobante ne depend
 -- d'aucun choix de PrimaryPart, et il reste juste meme si on en change dans Studio.
 local anchorPos = Vector3.zero
+-- Cadrage d'ENTREE de la scene, retenu pour pouvoir avancer DEPUIS lui quand la porte s'ouvre. Relire la camera
+-- a ce moment-la ne marcherait pas : elle porte le flottement de la respiration, et le rapprochement partirait
+-- d'un ecart aleatoire, different a chaque partie.
+local sceneCF: CFrame? = nil
 local lastScanAt = 0
 local lastPromptAt = 0
 local lastDebugAt = 0
@@ -274,6 +278,36 @@ local function openDoor()
 	-- propriete et sa boucle tourne meme pendant la scene. Ecrire dessus en parallele donnerait un champ de
 	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
 	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
+
+	-- LA CAMERA AVANCE VERS LUI. Le resserrement du champ ne deplace rien : l'image se serre, mais le cadre reste
+	-- ou il est. Le moment le plus fort de la scene se jouait donc sans que la camera bouge.
+	--
+	-- Elle AVANCE SUR SON AXE, elle ne change pas de place : le raccord ne se voit pas, contrairement a un saut
+	-- vers un autre point de vue.
+	local base = sceneCF
+	if base then
+		-- On vise le GRAND-PERE s'il est trouvable, sinon le centre de la porte -- c'est par la qu'il arrive de
+		-- toute facon, donc le cadrage reste juste meme sans lui.
+		local look = anchorPos + Vector3.new(0, TutorialConfigs.REVEAL_LOOK_UP, 0)
+		local model = findModel(TutorialConfigs.GRANDPA_NAME)
+		if model then
+			local part = model.PrimaryPart
+				or model:FindFirstChild("Head")
+				or model:FindFirstChildWhichIsA("BasePart", true)
+			if part and part:IsA("BasePart") then
+				look = part.Position + Vector3.new(0, TutorialConfigs.REVEAL_LOOK_UP, 0)
+			end
+		end
+		local toward = look - base.Position
+		local dist = toward.Magnitude
+		if dist > 1e-3 then
+			-- ON NE DEPASSE JAMAIS LA DISTANCE MINIMALE. Sans cette borne, un grand-pere pose plus pres que
+			-- prevu ferait traverser la camera au travers de lui -- et on ne verrait plus que l'interieur de sa
+			-- tete.
+			local push = math.clamp(TutorialConfigs.REVEAL_PUSH, 0, math.max(dist - TutorialConfigs.REVEAL_MIN_DIST, 0))
+			SceneCamera.moveTo(CFrame.lookAt(base.Position + toward.Unit * push, look), TutorialConfigs.REVEAL_MOVE_TIME)
+		end
+	end
 	-- Le grincement part AVEC le mouvement, pas au marqueur de mi-course : c'est l'ouverture elle-meme qu'il
 	-- accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en retard.
 	SoundUtils.play(TutorialConfigs.OPEN_SOUND, anchor)
@@ -551,6 +585,7 @@ function TutorialController.startMission()
 		task.delay(TutorialConfigs.SCENE_HOLD, endScene)
 		return
 	end
+	sceneCF = cf
 	SceneCamera.enter(cf, TutorialConfigs.SCENE_CAM_IN, function()
 		-- Le rappel tire QUAND LA CAMERA EST ARRIVEE : la scene commence de la, pas de l'appui. Sinon le temps de
 		-- trajet mangerait le debut du plan, et il changerait avec SCENE_CAM_IN sans qu'on y pense.
@@ -746,6 +781,7 @@ function TutorialController.stop()
 	hideOurs()
 	setActionBound(false)
 	door, highlight, anchor = nil, nil, nil
+	sceneCF = nil
 end
 
 return TutorialController

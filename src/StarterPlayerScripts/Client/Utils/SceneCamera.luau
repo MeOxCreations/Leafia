@@ -236,6 +236,28 @@ function SceneCamera.enter(cf: CFrame, seconds: number?, onDone: (() -> ())?)
 	bind()
 end
 
+--- Deplace la camera vers un NOUVEAU cadrage, sans quitter la scene. La respiration continue pendant le trajet.
+---
+--- On repart de la CIBLE en cours, pas de la CFrame affichee : celle-ci porte le flottement de la respiration,
+--- et le glissement se figerait donc sur un ecart aleatoire, different a chaque partie.
+---
+--- Sans effet si aucune scene ne tourne : deplacer une camera qu'on ne possede pas la volerait au joueur.
+function SceneCamera.moveTo(cf: CFrame, seconds: number?, onDone: (() -> ())?)
+	if mode == "off" or mode == "exit" then
+		if onDone then
+			onDone()
+		end
+		return
+	end
+	startCF = target
+	target = cf
+	enterSeconds = seconds or ENTER_TIME
+	elapsed = 0
+	onArrived = onDone
+	mode = "enter"
+	bind()
+end
+
 --- Rend la main a la camera de jeu, en glissant. `onDone` est appele une fois Custom repris.
 function SceneCamera.exit(seconds: number?, onDone: (() -> ())?)
 	if mode == "off" then

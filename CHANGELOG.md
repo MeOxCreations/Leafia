@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.488 — La camera avance vers le grand-pere quand la porte s'ouvre
+
+Le resserrement du champ de vision ne DEPLACE rien : l'image se serre, mais le cadre reste ou il est. Le moment
+le plus fort de la scene se jouait donc sans que la camera bouge.
+
+Elle avance maintenant vers lui, lentement, pendant que la porte s'ouvre.
+
+### `SceneCamera.moveTo`
+
+La camera de scene savait entrer et sortir, pas se DEPLACER en cours de route. Elle repart de la CIBLE en cours,
+jamais de la CFrame affichee : celle-ci porte le flottement de la respiration, et le glissement se figerait donc
+sur un ecart aleatoire, different a chaque partie.
+
+Sans effet si aucune scene ne tourne : deplacer une camera qu'on ne possede pas la volerait au joueur.
+
+### Elle AVANCE sur son axe, elle ne saute pas
+
+Pas de nouveau point de vue : elle se rapproche depuis la ou elle est deja. Le raccord ne se voit donc pas,
+contrairement a une coupe vers un autre angle.
+
+Lent (1.4 s) : un mouvement lent se lit comme de l'attention, un mouvement rapide comme une alerte -- et ici on
+DECOUVRE quelqu'un, on ne le fuit pas.
+
+### Deux garde-fous
+
+- Elle vise le GRAND-PERE s'il est trouvable, sinon le centre de la porte. C'est par la qu'il arrive de toute
+  facon, donc le cadrage reste juste meme si le Model change de nom.
+- Elle ne franchit JAMAIS `REVEAL_MIN_DIST`. Sans cette borne, un grand-pere pose plus pres que prevu ferait
+  traverser la camera au travers de lui -- et on ne verrait plus que l'interieur de sa tete.
+
 ## 0.0.487 — Le reflet devient une large nappe
 
 `SHINE_WIDTH` 0.07 -> 0.7, soit dix fois plus epais.

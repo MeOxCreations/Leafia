@@ -94,6 +94,21 @@ return {
 	-- precedent : l'image se resserre une premiere fois sur la porte qui bouge, puis une seconde sur lui.
 	-- Volontairement petit -- c'est un accent, pas un gros plan.
 	REVEAL_ZOOM = 7,
+	-- ===== LA CAMERA SE RAPPROCHE QUAND LA PORTE S'OUVRE =====
+	-- Le resserrement du champ de vision ne DEPLACE rien : l'image se serre, mais la camera reste au meme
+	-- endroit. Ca se voit -- le moment le plus fort de la scene se jouait sans que le cadre bouge.
+	--
+	-- Studs dont elle avance vers le grand-pere. Elle ne fait qu'AVANCER sur son axe : elle ne change pas de
+	-- place, donc le raccord ne se voit pas.
+	REVEAL_PUSH = 3.5,
+	-- Distance MINIMALE gardee avec lui, quoi qu'il arrive. Sans cette borne, un grand-pere pose plus pres que
+	-- prevu ferait traverser la camera au travers de lui.
+	REVEAL_MIN_DIST = 5,
+	-- Duree du rapprochement. LENT : un mouvement lent se lit comme de l'attention, un mouvement rapide comme
+	-- une alerte -- et ici on decouvre quelqu'un, on ne le fuit pas.
+	REVEAL_MOVE_TIME = 1.4,
+	-- Hauteur VISEE sur lui, en studs au-dessus de son point de reference. On regarde un visage, pas un torse.
+	REVEAL_LOOK_UP = 1.5,
 	-- Cadence de CE resserrement-la. L'allure par defaut de CameraEffects (1.1) est faite pour des effets de
 	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
 	REVEAL_ZOOM_SPEED = 6,
