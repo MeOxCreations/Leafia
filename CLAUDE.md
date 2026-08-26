@@ -67,6 +67,22 @@ l'habillage, c'est le substrat du geste central.
 Le projet est partage : un collaborateur tire le code depuis GitHub. Il doit toujours pouvoir recuperer une
 version qui TOURNE, sans avoir a demander.
 
+- **AVANT DE COMMENCER A TRAVAILLER, verifier si quelqu'un a pousse.** Pas seulement avant de pousser : AVANT
+  d'ecrire la premiere ligne.
+
+      git fetch origin main
+      git log --oneline HEAD..origin/main    # vide = rien de neuf
+
+  S'il y a quelque chose, `git pull --rebase origin main` d'abord. Deux raisons, et la seconde coute plus cher
+  que la premiere :
+  - un travail commence sur une base perimee se fusionne mal, et le conflit arrive au pire moment -- a la fin,
+    quand on croyait avoir fini ;
+  - on peut REFAIRE ce que l'autre vient de faire. Un fichier local en retard se lit comme du code valide :
+    rien ne signale qu'il est perime.
+
+  Ca vaut aussi pour l'ASSISTANT : verifier l'amont au debut d'un bloc de travail, pas seulement au moment du
+  commit.
+
 - **Des qu'un bloc coherent est fini, je commit ET je push sur `main`, sans qu'on me le demande.**
 - « Fini » = la feature ou le fix est complet et le jeu se lance. Pas un fichier a moitie modifie, pas un
   module qui appelle une fonction pas encore ecrite.

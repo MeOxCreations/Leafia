@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.495 — On verifie l'amont AVANT de travailler, plus seulement avant de pousser
+
+Les regles de `CLAUDE.md` decrivaient l'ordre du PUSH -- commit, pull --rebase, push. Elles ne disaient rien du
+DEBUT du travail.
+
+Une ligne ajoutee : `git fetch` puis `git log HEAD..origin/main` avant d'ecrire quoi que ce soit.
+
+Deux raisons, et la seconde coute plus cher que la premiere :
+
+- un travail commence sur une base perimee se fusionne mal, et le conflit arrive au pire moment -- a la fin,
+  quand on croyait avoir fini ;
+- on peut REFAIRE ce que l'autre vient de faire. Un fichier local en retard se lit comme du code valide : rien
+  ne signale qu'il est perime.
+
+La regle vaut pour l'assistant comme pour les deux personnes du projet.
+
 ## 0.0.494 — L'herbe coupee ne repasse plus au-dessus de l'herbe intacte
 
 La transition de coupe etait moche : la touffe remontait, et on la voyait DEPASSER l'herbe non coupee avant de
