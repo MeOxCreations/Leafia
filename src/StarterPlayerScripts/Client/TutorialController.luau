@@ -64,6 +64,13 @@ local trySound: Sound? = nil
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
 local knockBeams: { Beam }? = nil
+-- Transparence de repos de chaque Beam, relevee a la resolution. On l'anime jusqu'a l'invisible puis on la REND :
+-- sans cette copie, un eclair coupe en plein fondu resterait transparent pour toujours, et l'effet ne marcherait
+-- plus jamais -- sans que rien ne le signale.
+local knockBeamBase: { [Beam]: number } = {}
+-- Jeton du fondu en cours. Un nouveau coup annule le precedent : deux boucles ecriraient sur les memes Beams a
+-- chaque image, et la valeur finale serait celle de la derniere a FINIR, pas de la derniere demandee.
+local knockFadeToken = 0
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -615,6 +622,9 @@ local function getKnockBeams(): { Beam }
 				-- ETEINTS AU DEPART. Leur etat de repos est INVISIBLE : arrives allumes depuis Studio, ils le
 				-- resteraient toute la scene et on chercherait pourquoi un effet de coup est permanent.
 				d.Enabled = false
+				-- La transparence d'un Beam est une NumberSequence. Celles-ci sont UNIFORMES (une seule valeur,
+				-- reglee dans Studio), donc on retient ce nombre : l'animer a plat ne detruit aucun degrade.
+				knockBeamBase[d] = d.Transparency.Keypoints[1].Value
 				table.insert(found, d)
 			end
 		end
@@ -645,21 +655,46 @@ local function knockOnce()
 	-- de fondu, arret du controller, mort du joueur -- sous peine de les laisser a zero pour toujours. Trois
 	-- garde-fous pour trois images d'effet.
 	local beams = getKnockBeams()
+	if #beams == 0 then
+		return
+	end
 	for _, beam in ipairs(beams) do
 		beam.Enabled = true
+		beam.Transparency = NumberSequence.new(knockBeamBase[beam] or 0)
 	end
-	if #beams > 0 then
-		-- UN SEUL MINUTEUR pour tout le lot, pas un par eclair. Ils se sont allumes dans la meme image, ils
-		-- doivent s'eteindre dans la meme : des minuteurs separes derivent, et l'etoile se defait par morceaux.
-		task.delay(TutorialConfigs.KNOCK_BEAM_TIME, function()
+
+	-- UNE SEULE BOUCLE pour tout le lot, pas une par eclair. Ils s'allument dans la meme image, ils doivent
+	-- s'estomper dans la meme : des minuteurs separes derivent, et l'etoile se defait par morceaux.
+	knockFadeToken += 1
+	local token = knockFadeToken
+	task.spawn(function()
+		local t0 = os.clock()
+		while knockFadeToken == token do
+			local e = math.clamp((os.clock() - t0) / TutorialConfigs.KNOCK_BEAM_TIME, 0, 1)
 			for _, beam in ipairs(beams) do
 				-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
 				if beam.Parent then
-					beam.Enabled = false
+					local base = knockBeamBase[beam] or 0
+					beam.Transparency = NumberSequence.new(base + (1 - base) * e)
 				end
 			end
-		end)
-	end
+			if e >= 1 then
+				break
+			end
+			RunService.Heartbeat:Wait()
+		end
+		-- On ne coupe QUE si personne n'a repris la main : un coup suivant a pu relancer un fondu, et l'eteindre
+		-- ici le tuerait dans sa premiere image.
+		if knockFadeToken ~= token then
+			return
+		end
+		for _, beam in ipairs(beams) do
+			if beam.Parent then
+				beam.Enabled = false
+				beam.Transparency = NumberSequence.new(knockBeamBase[beam] or 0)
+			end
+		end
+	end)
 
 	local shake = shakeTrack
 	if not shake then
@@ -936,12 +971,14 @@ function TutorialController.stop()
 	end
 	hideOurs()
 	setActionBound(false)
-	-- Un eclair coupe en plein flash resterait ALLUME : son extinction vit dans un `task.delay` que personne ne
-	-- rattrape une fois la scene finie.
+	-- Un eclair coupe en plein fondu resterait ALLUME et TRANSPARENT : sa boucle ne tourne plus une fois la scene
+	-- finie, donc personne ne lui rend son etat.
+	knockFadeToken += 1
 	if knockBeams then
 		for _, beam in ipairs(knockBeams) do
 			if beam.Parent then
 				beam.Enabled = false
+				beam.Transparency = NumberSequence.new(knockBeamBase[beam] or 0)
 			end
 		end
 	end

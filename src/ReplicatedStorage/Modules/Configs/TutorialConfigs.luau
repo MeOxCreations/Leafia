@@ -169,13 +169,18 @@ return {
 	-- les allumer tous d'un coup DESSINE ce point, alors qu'en allumer trois au hasard ne dessinait qu'un
 	-- fragment, different a chaque coup -- ca se lisait comme un scintillement, pas comme une frappe.
 	--
-	-- Duree de l'eclair. Simple allume/eteint, sans fondu -- un Beam dont on anime l'eclat doit voir cet eclat
-	-- RENDU a chaque sortie possible, et ca faisait trois garde-fous pour trois images d'effet.
+	-- Duree de l'eclair : il apparait D'UN COUP puis S'ESTOMPE.
 	--
-	-- Borne haute a garder en tete : les coups s'enchainent toutes les ~0.35 s (les marqueurs de l'animation).
-	-- Au-dela, un eclair est encore allume quand le suivant part -- l'etoile ne s'eteint plus jamais entre deux
-	-- coups, et elle cesse de marquer l'impact pour devenir un eclairage permanent.
-	KNOCK_BEAM_TIME = 0.25,
+	-- LE FONDU EST CE QUI PERMET DE L'ALLONGER. Un allumage franc ne peut pas depasser ~0.35 s -- l'ecart entre
+	-- deux coups -- sans qu'un eclair soit encore allume quand le suivant part : l'etoile ne s'eteint alors plus
+	-- jamais, et elle cesse de marquer l'impact pour devenir un eclairage permanent.
+	--
+	-- Un fondu n'a pas ce probleme. Deux fondus qui se recouvrent ne se lisent pas comme une lumiere fixe mais
+	-- comme des ECHOS : le nouveau coup part a pleine force pendant que l'ancien finit de s'eteindre.
+	--
+	-- On anime la TRANSPARENCE et pas `Brightness` : les Beams ont `LightEmission` a 0, donc l'eclat n'y change
+	-- rien de visible. C'etait la vraie raison pour laquelle le premier fondu ne se voyait pas.
+	KNOCK_BEAM_TIME = 0.45,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la

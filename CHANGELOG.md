@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.502 — Les eclairs s'estompent au lieu de s'eteindre
+
+Ils ne pouvaient pas durer plus longtemps : au-dela de ~0.35 s -- l'ecart entre deux coups -- un eclair est
+encore allume quand le suivant part. L'etoile ne s'eteint alors plus jamais et devient un eclairage permanent.
+
+Un FONDU n'a pas ce probleme. Deux fondus qui se recouvrent ne se lisent pas comme une lumiere fixe mais comme
+des ECHOS : le nouveau coup part a pleine force pendant que l'ancien finit de s'eteindre. Duree portee a 0.45 s.
+
+### On anime la TRANSPARENCE, pas `Brightness`
+
+C'est la vraie raison pour laquelle le premier fondu (0.0.492) ne se voyait pas : les Beams ont `LightEmission`
+a 0, donc leur eclat ne change rien de visible. J'avais anime la seule propriete sans effet, puis conclu que le
+fondu ne valait pas ses garde-fous. Il les valait -- je m'etais trompe de propriete.
+
+La transparence d'un Beam est une NumberSequence, mais celles-ci sont UNIFORMES ici (une seule valeur reglee
+dans Studio). On retient donc ce nombre : l'animer a plat ne detruit aucun degrade.
+
+### Une seule boucle, et un jeton
+
+Une boucle pour tout le lot : ils s'allument dans la meme image, ils doivent s'estomper dans la meme.
+
+Le jeton fait qu'un nouveau coup ANNULE le fondu precedent. Sans lui, deux boucles ecriraient sur les memes
+Beams a chaque image et la valeur finale serait celle de la derniere a FINIR, pas de la derniere demandee. Et
+l'ancienne boucle, en se terminant, eteindrait l'eclair que le nouveau coup vient d'allumer.
+
+### L'etat de repos est RELEVE et RENDU
+
+A la fin du fondu comme a l'arret du controller. Coupe en plein fondu, un eclair resterait allume ET transparent
+-- l'effet ne marcherait plus jamais, sans que rien ne le signale.
+
 ## 0.0.501 — Les eclairs durent plus longtemps
 
 `KNOCK_BEAM_TIME` 0.12 -> 0.25. Reglage seul.
