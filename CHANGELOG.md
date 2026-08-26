@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.507 — La porte s'ouvre PAR LE CODE, et les eclairs des coups partent
+
+Deux changements dans le meme fichier.
+
+### La porte tourne par un angle, plus par une animation
+
+`Scene1_opendoor` n'est plus lue. La porte pivote sur son gond par un angle qu'on ecrit, en deux temps comme
+avant : elle s'entrebaille d'un coup, se fige, puis s'ouvre en grand lentement.
+
+CE N'EST PAS UN CAPRICE DE STYLE. Une pose d'animation doit etre DEFENDUE : une piste qui se relache, un `Stop`
+venu d'ailleurs, un rebouclage rate d'une image, et la porte se referme sans qu'on sache lequel des trois. D'ou
+l'epinglage a la derniere image, sa re-affirmation a chaque frame, la garde contre une pause en retard, le
+gardien qui verifie que personne n'a repris la main.
+
+Un CFrame pose par le code RESTE pose. Il n'y a plus rien a defendre, donc plus rien qui puisse lacher :
+**101 lignes remplacees par 17**.
+
+Et chaque temps se regle maintenant a la seconde, dans la config. Le meme reglage dans une animation demandait
+de rouvrir Blender, reexporter, recharger -- a chaque essai.
+
+Trois pieges connus, traites d'avance :
+
+- La base est relevee UNE FOIS. Le gond fait partie du modele, donc il tourne avec lui : relire le pivot a
+  chaque etape ferait repartir la rotation d'une base deja tournee, et l'angle s'accumulerait.
+- Un avertissement si le modele n'a pas de PrimaryPart. `GetPivot` suit alors la BOUNDING BOX, et la porte
+  tournerait autour de son MILIEU comme une porte de saloon -- on chercherait la cause dans l'angle, pas dans un
+  champ vide.
+- Un jeton annule le mouvement precedent, et `onDone` ne part que si le mouvement va au bout : un mouvement
+  annule ne doit pas declencher la suite d'une sequence qui n'existe plus.
+
+La porte se referme a l'arret de la scene, comme avant (l'animation, en s'arretant, rendait sa pose de repos).
+
+### Les eclairs des coups partent
+
+Il ne reste que les particules de `Mid` et la gerbe d'etoiles. Les Beams, leur fondu, le releve de leur
+transparence de repos et le nettoyage de fin s'en vont -- 90 lignes.
+
+`END_WINDOW` part aussi : il ne servait qu'a l'epinglage de la porte.
+
 ## 0.0.506 — Le personnage se fait embarquer par la tondeuse
 
 Quand la machine avance, il se penche en arriere, bras tendus -- comme si elle allait trop vite pour lui. C'est

@@ -161,26 +161,6 @@ return {
 	-- Particules crachees par emetteur et par coup. Le RESTE du reglage -- taille, duree de vie, vitesse,
 	-- couleur -- vit dans Studio, sur l'emetteur : c'est la qu'on le voit.
 	KNOCK_EMIT_COUNT = 1,
-	-- ET DES ECLAIRS, en plus des particules. Les Beams des attachments `P1` s'allument une fraction de seconde.
-	-- Les deux effets ne font pas le meme travail : les particules donnent la MATIERE qui gicle, les eclairs
-	-- donnent le CHOC. L'un sans l'autre se remarque a peine.
-	--
-	-- TOUS ENSEMBLE, et plus un tirage au sort. Les eclairs sont disposes en etoile autour du point d'impact :
-	-- les allumer tous d'un coup DESSINE ce point, alors qu'en allumer trois au hasard ne dessinait qu'un
-	-- fragment, different a chaque coup -- ca se lisait comme un scintillement, pas comme une frappe.
-	--
-	-- Duree de l'eclair : il apparait D'UN COUP puis S'ESTOMPE.
-	--
-	-- LE FONDU EST CE QUI PERMET DE L'ALLONGER. Un allumage franc ne peut pas depasser ~0.35 s -- l'ecart entre
-	-- deux coups -- sans qu'un eclair soit encore allume quand le suivant part : l'etoile ne s'eteint alors plus
-	-- jamais, et elle cesse de marquer l'impact pour devenir un eclairage permanent.
-	--
-	-- Un fondu n'a pas ce probleme. Deux fondus qui se recouvrent ne se lisent pas comme une lumiere fixe mais
-	-- comme des ECHOS : le nouveau coup part a pleine force pendant que l'ancien finit de s'eteindre.
-	--
-	-- On anime la TRANSPARENCE et pas `Brightness` : les Beams ont `LightEmission` a 0, donc l'eclat n'y change
-	-- rien de visible. C'etait la vraie raison pour laquelle le premier fondu ne se voyait pas.
-	KNOCK_BEAM_TIME = 0.45,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la
@@ -218,24 +198,35 @@ return {
 	-- Marqueur DANS l'animation du grand-pere : l'instant ou sa main pousse la porte.
 	DOOR_START_EVENT = "OuvertureDoorEvent",
 
-	-- Animation de la PORTE. Un nom SEPARE de celui du grand-pere : les deux ont deja porte le meme, et un nom
-	-- qui designe deux choses finit toujours par en perdre une.
-	DOOR_ANIM = "Scene1_opendoor",
 	-- Le grincement de la porte qui s'ouvre. Joue au DEBUT du mouvement, avec lui : un bruit qui arrive une fois
 	-- la porte deja entrebaillee sonne en retard. Spatial, au niveau de la porte.
 	OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "OpenDoorSound" },
-	-- La porte se FIGE entrebaillee a ce marqueur, le temps que le grand-pere parle, puis elle repart.
-	DOOR_MID_EVENT = "MidAnimationEventDoor",
-	DOOR_PAUSE = 1.5,
-	-- VITESSE DE LA SECONDE MOITIE, apres la pause. La grande ouverture arrivait beaucoup trop vite : a 1/3 elle
-	-- prend trois fois plus de temps, et on voit le vieux pousser la porte au lieu de la voir sauter.
+
+	-- ===== OUVERTURE, PAR LE CODE =====
+	-- La porte tournait par une ANIMATION (`Scene1_opendoor`). Elle tourne maintenant par un angle qu'on ecrit,
+	-- et l'animation n'est plus lue -- elle peut rester dans Studio, personne ne la charge.
 	--
-	-- Ne concerne QUE ce segment. Le debut -- la porte qui s'entrebaille d'un coup -- garde sa vitesse : c'est un
-	-- mouvement sec, et le ralentir enleverait la surprise. Deux moments differents, deux vitesses.
-	DOOR_FULL_OPEN_SPEED = 1 / 3,
-	-- PAS DE MARQUEUR DE FIN. La porte est epinglee a la DERNIERE IMAGE de l'animation, pas la ou un marqueur
-	-- tombe : s'arreter avant fige une pose intermediaire, et le reste du mouvement ne joue jamais.
-	-- `EndOpenDoorEvent` existe toujours dans l'animation, il n'est simplement plus lu par le code.
+	-- CE N'EST PAS UN CAPRICE DE STYLE : une pose d'animation doit etre DEFENDUE. Une piste qui se relache, un
+	-- Stop venu d'ailleurs, un rebouclage rate d'une image, et la porte se referme sans qu'on sache lequel des
+	-- trois -- d'ou l'epinglage a la derniere image et sa re-affirmation a chaque frame. Un CFrame pose par le
+	-- code, lui, RESTE pose. Il n'y a plus rien a defendre, donc plus rien qui puisse lacher.
+	--
+	-- Et chaque temps se regle ici, a la seconde. Le meme reglage dans une animation demande de rouvrir Blender,
+	-- de reexporter, de recharger -- et de refaire ca a chaque essai.
+
+	-- ELLE S'ENTREBAILLE D'UN COUP. Mouvement sec : c'est la surprise, la ralentir l'enleverait.
+	DOOR_HALF_ANGLE = 30,
+	DOOR_HALF_TIME = 0.35,
+	-- Puis elle se FIGE, le temps que le grand-pere se montre.
+	DOOR_PAUSE = 1.5,
+	-- ET ELLE S'OUVRE EN GRAND, LENTEMENT. C'est le moment ou l'on decouvre le grand-pere : a vitesse pleine il
+	-- etait fini avant qu'on ait le temps de regarder. Deux moments differents, deux allures -- et desormais deux
+	-- reglages separes, au lieu d'un facteur de vitesse applique a un segment.
+	DOOR_FULL_ANGLE = 100,
+	DOOR_FULL_TIME = 2.2,
+	-- La porte s'ouvre du mauvais cote ? Mettre true. Le sens depend de l'orientation du modele dans Studio : ca
+	-- ne se DEDUIT pas, ca se voit a l'ecran.
+	DOOR_OPEN_INVERT = false,
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,

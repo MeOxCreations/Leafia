@@ -55,26 +55,26 @@ local doorHint = true
 local missionStarted = false
 local sceneEnded = false
 local grandpaTrack: AnimationTrack? = nil
-local doorTrack: AnimationTrack? = nil
+-- Angle courant de la porte, en degres (0 = fermee). Une seule valeur : la sequence n'est qu'un enchainement de
+-- cibles, et repartir en plein mouvement ne demande donc aucun cas particulier.
+local doorAngle = 0
+-- Sa pose FERMEE, relevee UNE FOIS a l'ouverture. On ne peut pas la relire ensuite : le gond fait partie du
+-- modele, donc il tourne avec lui -- relire le pivot ferait tourner la porte a partir d'une base deja tournee, et
+-- l'angle s'accumulerait.
+local doorBasePivot: CFrame? = nil
+-- Jeton du mouvement en cours. Un nouveau mouvement annule le precedent : deux boucles ecriraient sur le meme
+-- modele a chaque image, et la pose finale serait celle de la derniere a FINIR, pas de la derniere demandee.
+local doorSwingToken = 0
 local knockTrack: AnimationTrack? = nil
 local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
-local doorWatch: RBXScriptConnection? = nil
 local trySound: Sound? = nil
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
-local knockBeams: { Beam }? = nil
 -- Le conteneur lui-meme, retenu a la resolution : c'est LUI qui donne le point d'impact a l'ecran. Le relire par
 -- son nom a chaque coup couterait un balayage du Workspace pour une valeur qui ne bouge pas.
 local knockHolder: Instance? = nil
--- Transparence de repos de chaque Beam, relevee a la resolution. On l'anime jusqu'a l'invisible puis on la REND :
--- sans cette copie, un eclair coupe en plein fondu resterait transparent pour toujours, et l'effet ne marcherait
--- plus jamais -- sans que rien ne le signale.
-local knockBeamBase: { [Beam]: number } = {}
--- Jeton du fondu en cours. Un nouveau coup annule le precedent : deux boucles ecriraient sur les memes Beams a
--- chaque image, et la valeur finale serait celle de la derniere a FINIR, pas de la derniere demandee.
-local knockFadeToken = 0
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -318,23 +318,60 @@ end
 -- Le gel se fait a la VITESSE (AdjustSpeed 0), jamais par un Stop : arreter une piste lui fait rendre sa pose de
 -- repos, donc la porte se refermerait d'un coup. Et elle reste bouclee pour la meme raison -- une piste non
 -- bouclee se relache a sa derniere image.
--- Marge avant la fin sous laquelle on considere l'animation terminee. Une image a 30 FPS fait 0.033 s : en
--- dessous de ca, la fenetre serait sautee a chaque partie un peu chargee.
-local END_WINDOW = 0.05
+-- Pose la porte a un angle donne. Tout part de sa pose FERMEE, jamais de sa pose courante : composer les
+-- rotations les unes sur les autres accumulerait l'erreur, et la porte finirait de travers.
+local function setDoorAngle(deg: number)
+	local model = door
+	local base = doorBasePivot
+	if not model or not base then
+		return
+	end
+	doorAngle = deg
+	local sign = if TutorialConfigs.DOOR_OPEN_INVERT then -1 else 1
+	model:PivotTo(base * CFrame.Angles(0, math.rad(deg * sign), 0))
+end
+
+-- Fait tourner la porte jusqu'a `target`, en `seconds`. `onDone` ne part QUE si le mouvement va au bout : un
+-- mouvement annule ne doit pas declencher la suite d'une sequence qui n'existe plus.
+local function swingDoor(target: number, seconds: number, onDone: (() -> ())?)
+	local from = doorAngle
+	doorSwingToken += 1
+	local token = doorSwingToken
+	task.spawn(function()
+		local t0 = os.clock()
+		while doorSwingToken == token do
+			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
+			-- `Quad Out` a la main : elle part franchement et se pose en douceur. Une porte poussee perd sa vitesse
+			-- en arrivant, elle ne s'arrete pas net.
+			setDoorAngle(from + (target - from) * (1 - (1 - e) * (1 - e)))
+			if e >= 1 then
+				break
+			end
+			RunService.Heartbeat:Wait()
+		end
+		if doorSwingToken == token and onDone then
+			onDone()
+		end
+	end)
+end
 
 local function openDoor()
 	local model = door
 	if not model then
 		return
 	end
-	local animator = animatorOf(model)
-	if not animator then
-		warn(`[Tutorial] Pas d'Animator sous "{model.Name}" : la porte ne s'ouvrira pas.`)
-		return
-	end
-	local track = loadSceneTrack(animator, TutorialConfigs.DOOR_ANIM)
-	if not track then
-		return
+	-- LA POSE FERMEE, RELEVEE MAINTENANT. Le gond fait partie du modele : une fois la porte tournee, son pivot a
+	-- tourne avec elle. Relire la base a chaque etape ferait donc repartir la rotation d'une base deja tournee.
+	doorBasePivot = model:GetPivot()
+	doorAngle = 0
+	-- `GetPivot` suit la BOUNDING BOX quand le modele n'a pas de PrimaryPart : la porte tournerait alors autour de
+	-- son MILIEU, comme une porte de saloon, au lieu de son gond. Ca se voit tout de suite a l'ecran, mais on
+	-- chercherait la cause dans l'angle plutot que dans un champ vide.
+	if not model.PrimaryPart then
+		warn(
+			`[Tutorial] "{model.Name}" n'a pas de PrimaryPart : elle tournera autour de son milieu, pas de son `
+				.. "gond. Poser le gond en PrimaryPart dans Studio."
+		)
 	end
 	-- L'IMAGE SE RESSERRE PILE QUAND LA PORTE PART. L'oeil suit le mouvement sans qu'on lui dise ou regarder.
 	--
@@ -379,116 +416,29 @@ local function openDoor()
 	-- accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en retard.
 	SoundUtils.play(TutorialConfigs.OPEN_SOUND, anchor)
 
-	-- TROIS ANIMATIONS SE PARTAGENT L'ANIMATOR DE LA PORTE : le tremblement des coups, le geste de poignee, et
-	-- l'ouverture. A priorite EGALE, Roblox ne choisit pas, il MELANGE : deux poses actives donnent leur
-	-- moyenne, et la porte s'ouvrirait a moitie de travers. On efface donc les deux precedentes avant.
+	-- LES DEUX ANIMATIONS DE LA PORTE S'ARRETENT ICI : le tremblement des coups et le geste de poignee. Elles
+	-- ecrivent sur les memes parts que nous ; laissees en route, elles se battraient avec l'angle qu'on pose et la
+	-- porte vibrerait.
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
 	shakeTrack, tryTrack = nil, nil
-	doorTrack = track
-	track.Priority = Enum.AnimationPriority.Action
-	track.Looped = true
 
-	-- Instant ou la porte est EPINGLEE ouverte, ou nil tant qu'elle bouge encore. Declare ici et pas plus bas :
-	-- la reprise apres la pause doit pouvoir le consulter, et elle est ecrite avant.
-	local frozenAt: number? = nil
-	local lastTime = 0
-
-	local midDone = false
-	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_MID_EVENT):Connect(function()
-		if midDone then
-			return
-		end
-		midDone = true
-		track:AdjustSpeed(0)
+	-- L'OUVERTURE, EN DEUX TEMPS. Chaque temps s'enchaine sur la FIN du precedent, jamais sur des delais poses
+	-- cote a cote : des delais deriveraient des que le jeu rame, et la grande ouverture partirait pendant que la
+	-- porte s'entrebaille encore.
+	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME, function()
 		task.delay(TutorialConfigs.DOOR_PAUSE, function()
-			-- On ne relance QUE si la porte n'est pas deja tenue ouverte. Sans ce test, une pause encore en
-			-- attente pourrait faire repartir une piste qu'on vient d'epingler, et la porte se refermerait --
-			-- avec un retard qui rendrait la cause introuvable.
-			if doorTrack == track and track.IsPlaying and frozenAt == nil then
-				-- Elle repart AU RALENTI : la fin de l'ouverture est le moment ou l'on decouvre le grand-pere, et
-				-- a vitesse pleine elle etait finie avant qu'on ait le temps de regarder.
-				track:AdjustSpeed(TutorialConfigs.DOOR_FULL_OPEN_SPEED)
-			end
+			swingDoor(TutorialConfigs.DOOR_FULL_ANGLE, TutorialConfigs.DOOR_FULL_TIME, function()
+				-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee --
+				-- l'allure par defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le
+				-- moment qu'il souligne.
+				CameraEffects.SetFovOffset(
+					-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
+					TutorialConfigs.REVEAL_ZOOM_SPEED
+				)
+			end)
 		end)
 	end)
-	-- LA PORTE RESTE OUVERTE, ET ELLE EST TENUE -- pas juste gelee une fois.
-	--
-	-- Geler puis lacher la surveillance ne suffit pas : apres ca, plus rien ne defend la pose. Une piste qui se
-	-- relache, un Stop venu d'ailleurs, un rebouclage rate d'une image, et la porte se referme sans qu'on sache
-	-- lequel des trois. On RE-AFFIRME donc l'etat a chaque image tant que la scene dure. Deux ecritures par
-	-- frame sur un seul objet : ca ne se mesure pas.
-	--
-	-- Et jamais `Stop` pour figer : un Stop fait rendre a la piste sa pose de repos, donc la porte CLAQUE en
-	-- position fermee. C'est `AdjustSpeed(0)` plus un temps epingle.
-	-- ON EPINGLE A LA DERNIERE IMAGE, pas la ou un marqueur tombe. La porte est grande ouverte AU BOUT de
-	-- l'animation : s'arreter avant fige une pose intermediaire et le reste du mouvement ne joue jamais.
-	--
-	-- JAMAIS PILE A `Length` : la piste est bouclee, donc le tout dernier instant repart a zero. On epingle juste
-	-- avant.
-	local function pinAtEnd()
-		if frozenAt then
-			return
-		end
-		local length = track.Length
-		if length <= 0 then
-			return -- duree pas encore connue : on repassera a l'image suivante
-		end
-		local last = math.max(length - 0.001, 0)
-		frozenAt = last
-		track:AdjustSpeed(0)
-		track.TimePosition = last
-		-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee --
-		-- l'allure par defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le
-		-- moment qu'il souligne.
-		CameraEffects.SetFovOffset(
-			-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
-			TutorialConfigs.REVEAL_ZOOM_SPEED
-		)
-	end
-
-	doorWatch = RunService.Heartbeat:Connect(function()
-		-- Une autre ouverture a pris la main (nouvelle scene) : ce gardien n'a plus rien a defendre.
-		if doorTrack ~= track then
-			if doorWatch then
-				doorWatch:Disconnect()
-				doorWatch = nil
-			end
-			return
-		end
-
-		local pinned = frozenAt
-		if pinned then
-			-- ON TIENT LA POSE. Si quelque chose a arrete la piste, on la relance : une piste arretee ne dessine
-			-- plus rien, et la porte revient a sa pose de repos, c'est-a-dire fermee.
-			if not track.IsPlaying then
-				track:Play(0)
-			end
-			if track.Speed ~= 0 then
-				track:AdjustSpeed(0)
-			end
-			if math.abs(track.TimePosition - pinned) > 0.001 then
-				track.TimePosition = pinned
-			end
-			return
-		end
-
-		-- LA FIN SE DETECTE DE DEUX FACONS, et il faut les deux.
-		--
-		-- La fenetre "assez proche de la fin" attrape le cas normal, mais un FPS bas peut la SAUTER : entre deux
-		-- images la piste passe par-dessus et reboucle. Le retour en arriere, lui, est un fait qu'on ne peut pas
-		-- rater. Les deux menent au meme endroit -- epingle a la derniere image -- donc rater la premiere ne
-		-- coute qu'une image de plus.
-		local now = track.TimePosition
-		local length = track.Length
-		if now < lastTime - 0.001 or (length > 0 and now >= length - END_WINDOW) then
-			pinAtEnd()
-			return
-		end
-		lastTime = now
-	end)
-	track:Play()
-	checkAnimMoved(model, TutorialConfigs.DOOR_ANIM)
 end
 
 -- LE GRAND-PERE MENE LA SCENE. Son animation declenche la porte, et sa fin termine la scene : c'est elle qui
@@ -630,32 +580,6 @@ local function knockPoint(): Vector3?
 	return nil
 end
 
--- Les eclairs du meme conteneur. Meme regle : on prend TOUT ce qu'il contient, sans nommer les Beams -- en
--- ajouter un dans Studio suffit alors a l'inclure.
-local function getKnockBeams(): { Beam }
-	local cached = knockBeams
-	if cached then
-		return cached
-	end
-	local found: { Beam } = {}
-	local holder = findByName(TutorialConfigs.KNOCK_EMIT_PARENT)
-	if holder then
-		for _, d in ipairs(holder:GetDescendants()) do
-			if d:IsA("Beam") then
-				-- ETEINTS AU DEPART. Leur etat de repos est INVISIBLE : arrives allumes depuis Studio, ils le
-				-- resteraient toute la scene et on chercherait pourquoi un effet de coup est permanent.
-				d.Enabled = false
-				-- La transparence d'un Beam est une NumberSequence. Celles-ci sont UNIFORMES (une seule valeur,
-				-- reglee dans Studio), donc on retient ce nombre : l'animer a plat ne detruit aucun degrade.
-				knockBeamBase[d] = d.Transparency.Keypoints[1].Value
-				table.insert(found, d)
-			end
-		end
-	end
-	knockBeams = found
-	return found
-end
-
 local function knockOnce()
 	local model = door
 	if not model then
@@ -679,54 +603,6 @@ local function knockOnce()
 	if point then
 		StarBurst.at(point)
 	end
-
-	-- LES ECLAIRS, en plus. Les particules donnent la MATIERE qui gicle, les eclairs donnent le CHOC : l'un sans
-	-- l'autre se remarque a peine.
-	--
-	-- Simple allume/eteint, sans fondu. Animer leur eclat obligeait a le RENDRE a chaque sortie possible -- fin
-	-- de fondu, arret du controller, mort du joueur -- sous peine de les laisser a zero pour toujours. Trois
-	-- garde-fous pour trois images d'effet.
-	local beams = getKnockBeams()
-	if #beams == 0 then
-		return
-	end
-	for _, beam in ipairs(beams) do
-		beam.Enabled = true
-		beam.Transparency = NumberSequence.new(knockBeamBase[beam] or 0)
-	end
-
-	-- UNE SEULE BOUCLE pour tout le lot, pas une par eclair. Ils s'allument dans la meme image, ils doivent
-	-- s'estomper dans la meme : des minuteurs separes derivent, et l'etoile se defait par morceaux.
-	knockFadeToken += 1
-	local token = knockFadeToken
-	task.spawn(function()
-		local t0 = os.clock()
-		while knockFadeToken == token do
-			local e = math.clamp((os.clock() - t0) / TutorialConfigs.KNOCK_BEAM_TIME, 0, 1)
-			for _, beam in ipairs(beams) do
-				-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
-				if beam.Parent then
-					local base = knockBeamBase[beam] or 0
-					beam.Transparency = NumberSequence.new(base + (1 - base) * e)
-				end
-			end
-			if e >= 1 then
-				break
-			end
-			RunService.Heartbeat:Wait()
-		end
-		-- On ne coupe QUE si personne n'a repris la main : un coup suivant a pu relancer un fondu, et l'eteindre
-		-- ici le tuerait dans sa premiere image.
-		if knockFadeToken ~= token then
-			return
-		end
-		for _, beam in ipairs(beams) do
-			if beam.Parent then
-				beam.Enabled = false
-				beam.Transparency = NumberSequence.new(knockBeamBase[beam] or 0)
-			end
-		end
-	end)
 
 	local shake = shakeTrack
 	if not shake then
@@ -982,15 +858,17 @@ function TutorialController.stop()
 	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
 	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.
 	stopTrack(grandpaTrack)
-	stopTrack(doorTrack)
 	stopTrack(knockTrack)
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
-	if doorWatch then
-		doorWatch:Disconnect()
-		doorWatch = nil
+	-- LA PORTE SE REFERME AVEC LA SCENE. On annule le mouvement en cours puis on la repose fermee : sans ca elle
+	-- resterait grande ouverte pour toujours, et rejouer la scene partirait d'une porte deja ouverte.
+	doorSwingToken += 1
+	if doorBasePivot then
+		setDoorAngle(0)
+		doorBasePivot = nil
 	end
-	grandpaTrack, doorTrack, knockTrack, shakeTrack, tryTrack = nil, nil, nil, nil, nil
+	grandpaTrack, knockTrack, shakeTrack, tryTrack = nil, nil, nil, nil
 	local sfx = trySound
 	trySound = nil
 	if sfx and sfx.Parent then
@@ -1003,17 +881,6 @@ function TutorialController.stop()
 	end
 	hideOurs()
 	setActionBound(false)
-	-- Un eclair coupe en plein fondu resterait ALLUME et TRANSPARENT : sa boucle ne tourne plus une fois la scene
-	-- finie, donc personne ne lui rend son etat.
-	knockFadeToken += 1
-	if knockBeams then
-		for _, beam in ipairs(knockBeams) do
-			if beam.Parent then
-				beam.Enabled = false
-				beam.Transparency = NumberSequence.new(knockBeamBase[beam] or 0)
-			end
-		end
-	end
 	door, highlight, anchor = nil, nil, nil
 	sceneCF = nil
 end
