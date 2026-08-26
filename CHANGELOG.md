@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.489 — Le grand-pere respire de nouveau
+
+`AmbientAnimConfigs` attendait un Model nomme `GrandFather`. Il s'appelle `OldmanOriginal` depuis qu'il a ete
+remodele. La cle passe donc a `OldmanOriginal`.
+
+La cle EST le nom du Model dans le Workspace, pas une etiquette libre. Renommer un objet dans Studio sans la
+changer ici coupe son animation -- et c'est le genre de panne qui ne casse rien : le PNJ est la, immobile,
+comme un decor qu'on aurait voulu fixe.
+
+C'est justement pour ca que le service NOMME ce qu'il n'a pas trouve. Le message tournait a chaque demarrage
+depuis plusieurs jours :
+
+    "GrandFather" est dans la config mais RIEN n'a ete anime sous ce nom.
+
+Un service qui balaye le monde doit dire ce qu'il n'a PAS trouve : un compteur global ("15 modeles animes") ne
+revele jamais l'absence du seizieme.
+
+### Le commentaire de TutorialConfigs suivait la mauvaise version
+
+Il signalait l'ecart comme une limite connue. Les deux configs designent le MEME objet -- il dit maintenant
+qu'elles doivent rester d'accord.
+
 ## 0.0.488 — La camera avance vers le grand-pere quand la porte s'ouvre
 
 Le resserrement du champ de vision ne DEPLACE rien : l'image se serre, mais le cadre reste ou il est. Le moment

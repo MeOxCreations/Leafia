@@ -149,8 +149,8 @@ return {
 
 	-- ===== LES ANIMATIONS DE LA SCENE =====
 	SCENE_ANIM_FOLDER = { "Animations", "Scenes", "Scenes1" },
-	-- Le Model du grand-pere dans le Workspace. ATTENTION : AmbientAnimConfigs attend "GrandFather" et ne trouve
-	-- rien -- les deux devront finir par s'accorder, sinon il ne respire pas pendant qu'on lui parle.
+	-- Le Model du grand-pere dans le Workspace. MEME NOM que la cle d'AmbientAnimConfigs : les deux designent le
+	-- meme objet, et les laisser diverger coupe son animation d'ambiance EN SILENCE.
 	GRANDPA_NAME = "OldmanOriginal",
 	-- IL S'ACHARNE SUR LA POIGNEE avant d'ouvrir : "encore cette porte, faut vraiment que je la change". Joue
 	-- APRES les coups et AVANT l'ouverture. Sa fin enchaine toute seule sur l'ouverture -- c'est l'animation qui

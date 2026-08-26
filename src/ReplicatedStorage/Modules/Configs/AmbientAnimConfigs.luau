@@ -27,7 +27,7 @@ local ANIMATIONS: { [string]: string } = {
 	--
 	-- LA CLE EST LE NOM DU MODELE DANS LE WORKSPACE, pas une etiquette libre. Le renommer dans Studio sans le
 	-- changer ici coupe son animation EN SILENCE : plus rien ne le trouve, et rien ne le signale.
-	GrandFather = "rbxassetid://102639960685891",
+	OldmanOriginal = "rbxassetid://102639960685891",
 }
 
 local AmbientAnimConfigs = {
