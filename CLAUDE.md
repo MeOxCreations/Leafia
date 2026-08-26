@@ -785,6 +785,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   sur un candidat vide au lieu de continuer a chercher. Meme famille que le `return` pose sur "rien a faire
   POUR L'INSTANT" qui court-circuitait l'abonnement de l'herbe de zone.
 
+- **Une part NON ANCREE qui porte des effets TOMBE, et ses effets vont jouer ailleurs -- ce qui se lit comme
+  "l'effet ne marche pas".** Vecu sur l'impact des coups a la porte : Beams puis ParticleEmitters ne se voyaient
+  pas, et deux diagnostics de code sont partis dessus (mauvaise classe cherchee, flash trop bref) avant qu'on
+  s'apercoive que la part conteneur n'etait simplement pas ancree. Elle avait glissee sous la map ; l'effet se
+  declenchait parfaitement, a un endroit qu'on ne regardait pas. Symptome trompeur : le code a l'air muet alors
+  qu'il fait exactement son travail. Regle : quand un effet POSE DANS LE MONDE ne se voit pas, verifier
+  `Anchored` AVANT de relire le code -- c'est gratuit et ca elimine la moitie des causes. Et une sonde qui dit
+  "j'ai trouve 2 emetteurs" ne suffit pas a le detecter : elle prouve qu'on les a, pas qu'ils sont au bon
+  endroit. Pour ca il faut afficher leur POSITION, pas leur nombre. Meme famille que l'herbe de zone posee en
+  coordonnees monde, qui restait sur place quand sa zone bougeait.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
