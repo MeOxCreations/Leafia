@@ -431,11 +431,15 @@ local function wheelMotorsOf(model: Model): { Motor6D }
 		return wheelMotorsList
 	end
 	local found: { Motor6D } = {}
+	-- ON CHERCHE PAR LA ROUE, pas par le joint : `Part1` est la piece que le joint fait bouger. Meme regle que les
+	-- animations Roblox, qui retrouvent leurs cibles par le nom de la Part1 et jamais par celui du Motor6D.
+	local driven: { [string]: boolean } = {}
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("Motor6D") then
-			for _, name in ipairs(MowConfigs.WHEEL_MOTORS) do
-				if d.Name == name then
+		if d:IsA("Motor6D") and d.Part1 then
+			for _, name in ipairs(MowConfigs.WHEEL_PARTS) do
+				if (d.Part1 :: BasePart).Name == name then
 					found[#found + 1] = d
+					driven[name] = true
 					break
 				end
 			end
@@ -443,13 +447,23 @@ local function wheelMotorsOf(model: Model): { Motor6D }
 	end
 	wheelMotorsModel = model
 	wheelMotorsList = found
-	if #found == 0 then
-		-- ACTIONNABLE : la liste est renseignee, donc les roues DOIVENT tourner, mais aucun joint ne porte ces
-		-- noms. Sans ce message, on regarde une tondeuse qui glisse sans savoir ou chercher.
-		warn(
-			`[Mow] Aucun Motor6D de roue trouve dans "{model.Name}" `
-				.. `(cherches : {table.concat(MowConfigs.WHEEL_MOTORS, ", ")}). Les roues ne tourneront pas.`
-		)
+
+	-- ON NOMME CE QUI MANQUE, ROUE PAR ROUE, et on separe les deux causes : une roue ABSENTE se corrige en
+	-- renommant la config, une roue SANS JOINT se corrige en creant le Motor6D dans Studio. Un compteur global
+	-- ("0 roue trouvee") ne dirait ni laquelle ni pourquoi -- et avec une seule roue motrice sur deux, il ne
+	-- dirait meme rien du tout.
+	for _, name in ipairs(MowConfigs.WHEEL_PARTS) do
+		if not driven[name] then
+			local part = model:FindFirstChild(name, true)
+			if part then
+				warn(
+					`[Mow] "{name}" existe dans "{model.Name}" mais AUCUN Motor6D ne la pilote `
+						.. "(il faut un Motor6D dont Part1 est cette roue). Elle ne tournera pas."
+				)
+			else
+				warn(`[Mow] Aucune roue nommee "{name}" dans "{model.Name}". Elle ne tournera pas.`)
+			end
+		end
 	end
 	return found
 end

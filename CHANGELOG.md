@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.515 — Les roues se trouvent par LEUR nom, plus par celui de leur joint
+
+La rotation des roues existait deja et marchait -- elle ne trouvait simplement rien a faire tourner.
+
+Elle cherchait des Motor6D nommes `WheelFrontMotor6D` / `WheelBackMotor6D`. Or le nom d'un joint est arbitraire
+et INVISIBLE dans l'Explorer tant qu'on ne deplie pas la roue, alors que le nom de la roue se lit d'un coup
+d'oeil. Le moindre re-export ou renommage cassait la rotation en silence.
+
+On prend maintenant le joint dont la PART1 porte le nom cherche -- `WheelBack`, `WheelFront`. C'est exactement ce
+que Roblox fait pour les animations, qui retrouvent leurs cibles par le nom de la Part1 et jamais par celui du
+Motor6D. Le projet le savait deja pour les animations ; il ne l'avait pas applique ici.
+
+### Le message nomme ce qui manque, ROUE PAR ROUE
+
+Et il separe les deux causes, qui se corrigent a deux endroits opposes :
+
+- la roue n'existe pas sous ce nom -> c'est la config qu'il faut corriger ;
+- la roue existe mais AUCUN Motor6D ne la pilote -> c'est un joint a creer dans Studio.
+
+L'ancien message etait un compteur global ("aucun Motor6D de roue trouve"). Avec une seule roue motrice sur deux,
+il ne disait rien du tout.
+
+### A FAIRE DANS STUDIO si elles ne tournent toujours pas
+
+Chaque roue a besoin d'un Motor6D dont `Part1` est la roue. Un Model ne cree AUCUN joint tout seul : la console
+dira laquelle des deux causes s'applique.
+
 ## 0.0.514 — En marche arriere, la fleche part du bon cote
 
 Reculer en braquant a gauche posait la fleche a DROITE.

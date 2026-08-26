@@ -564,9 +564,15 @@ return {
 	-- Les roues tournent EN CODE, pas par animation : une animation joue a vitesse fixe, donc la roue patinerait
 	-- des que le joueur change d'allure. Ici l'angle vient de la distance REELLEMENT parcourue, elle colle au sol.
 	-- Corollaire : ces joints ne doivent etre cles dans AUCUNE animation, sinon deux ecrivains sur le meme joint.
-	-- NOMS DES MOTOR6D, cherches PARTOUT dans le modele et pas seulement sous la RootPart : dans le rig, chaque
-	-- joint est range sous SA roue. Une recherche etroite ne trouvait donc rien -- et ne disait rien.
-	WHEEL_MOTORS = { "WheelBackMotor6D", "WheelFrontMotor6D" },
+	-- NOMS DES ROUES -- les PARTS, pas les joints.
+	--
+	-- On cherchait le Motor6D par SON nom (`WheelFrontMotor6D`...). Mauvaise idee : le nom d'un joint est
+	-- arbitraire et INVISIBLE dans l'Explorer tant qu'on ne deplie pas la roue, alors que le nom de la roue se lit
+	-- d'un coup d'oeil. Le moindre re-export ou renommage cassait la rotation en silence.
+	--
+	-- On prend donc le joint dont la PART1 porte ce nom : c'est ce que Roblox fait deja pour les animations, qui
+	-- retrouvent leurs cibles par le nom de la Part1 et jamais par celui du Motor6D.
+	WHEEL_PARTS = { "WheelBack", "WheelFront" },
 	-- Sens de rotation. Si les roues tournent a l'envers, mettre -1. Se voit a l'ecran, ne se deduit pas.
 	WHEEL_DIRECTION = 1,
 	-- AXE de rotation. "AUTO", ou "X" / "Y" / "Z" pour l'imposer.
