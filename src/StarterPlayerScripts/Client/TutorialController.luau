@@ -163,11 +163,46 @@ end
 -- `LocalTransparencyModifier` et pas `Transparency` : ca ne se replique pas, donc en co-op les autres continuent
 -- de voir un personnage normal. Et ca s'AJOUTE a la transparence du jeu au lieu de l'ecraser -- il n'y a aucune
 -- valeur d'origine a memoriser pour pouvoir la rendre.
+local fadeToken = 0
+local fadeNow = 0
+
 local function fadePlayer(amount: number)
+	-- Toute nouvelle demande annule la precedente : deux fondus en cours ecriraient sur les memes parts a chaque
+	-- image, et la valeur finale serait celle du dernier a FINIR, pas du dernier demande.
+	fadeToken += 1
+	fadeNow = amount
 	local character = player.Character
 	if character then
 		CharacterFade.apply(character, amount, amount)
 	end
+end
+
+-- Meme chose, mais EN FONDU. Passer d'une silhouette a l'invisible d'un coup se voit : une forme qui disparait
+-- d'un claquement attire justement l'oeil sur elle, au moment ou l'on veut qu'il aille ailleurs.
+local function fadePlayerTo(amount: number, seconds: number)
+	fadeToken += 1
+	local token = fadeToken
+	local from = fadeNow
+	if seconds <= 0 or math.abs(amount - from) < 0.001 then
+		fadePlayer(amount)
+		return
+	end
+	task.spawn(function()
+		local t0 = os.clock()
+		while fadeToken == token do
+			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
+			local character = player.Character
+			if not character then
+				return -- mort ou respawn : le personnage a change, ce fondu ne le concerne plus
+			end
+			fadeNow = from + (amount - from) * e
+			CharacterFade.apply(character, fadeNow, fadeNow)
+			if e >= 1 then
+				return
+			end
+			RunService.Heartbeat:Wait()
+		end
+	end)
 end
 
 -- Rend la main au joueur : la camera glisse vers la vue de jeu pendant que les barres repartent dans les bords.
@@ -295,6 +330,9 @@ local function openDoor()
 	-- propriete et sa boucle tourne meme pendant la scene. Ecrire dessus en parallele donnerait un champ de
 	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
 	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
+	-- LE JOUEUR S'EFFACE POUR DE BON. Une silhouette a 0.7 suffisait tant qu'on regardait une porte fermee ;
+	-- un GRAND avatar masque le grand-pere au moment precis ou l'on doit le voir.
+	fadePlayerTo(TutorialConfigs.REVEAL_PLAYER_FADE, TutorialConfigs.REVEAL_FADE_TIME)
 
 	-- LA CAMERA AVANCE VERS LUI. Le resserrement du champ ne deplace rien : l'image se serre, mais le cadre reste
 	-- ou il est. Le moment le plus fort de la scene se jouait donc sans que la camera bouge.

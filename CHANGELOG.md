@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.498 — Le joueur disparait completement quand la porte s'ouvre
+
+A 0.7 il restait une silhouette. Suffisant tant qu'on regarde une porte fermee -- mais un GRAND avatar masque le
+grand-pere au moment precis ou l'on doit le voir.
+
+Le personnage ne porte plus aucune information a cet instant : on sait ou l'on est, c'est LUI qu'on regarde.
+Autant liberer le cadre.
+
+### En fondu, pas d'un coup
+
+Passer de 0.7 a 1 d'un claquement se voit : une forme qui disparait brusquement attire justement l'oeil sur
+elle, au moment ou l'on veut qu'il aille ailleurs. 0.45 s.
+
+### Une seule demande a la fois
+
+Toute nouvelle demande annule la precedente. Deux fondus en cours ecriraient sur les memes parts a chaque image,
+et la valeur finale serait celle du dernier a FINIR, pas du dernier demande -- le meme piege que deux tweens sur
+une propriete.
+
+Le fondu sort aussi de lui-meme si le personnage change en cours de route : mort ou respawn, il ne le concerne
+plus.
+
+### Deux valeurs, deux moments
+
+`SCENE_PLAYER_FADE` (0.7) au debut de la scene, `REVEAL_PLAYER_FADE` (1) a l'ouverture. Une seule valeur aurait
+force a choisir : soit on se voit pendant qu'on toque, soit on ne masque pas le grand-pere.
+
 ## 0.0.497 — Le jeu dit COMBIEN d'emetteurs d'impact il a trouves
 
 "Aucun effet" couvre TROIS causes qui se ressemblent a l'ecran :

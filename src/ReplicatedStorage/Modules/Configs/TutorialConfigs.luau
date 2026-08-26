@@ -120,6 +120,15 @@ return {
 	-- Passe par CharacterFade, donc par LocalTransparencyModifier : ca ne se replique pas. En co-op, les autres
 	-- continuent de voir un personnage normal.
 	SCENE_PLAYER_FADE = 0.7,
+	-- ET IL DISPARAIT COMPLETEMENT quand la porte s'ouvre. A 0.7 il reste une silhouette -- suffisant tant qu'on
+	-- regarde une porte fermee, mais un GRAND avatar masque le grand-pere au moment precis ou l'on doit le voir.
+	--
+	-- Le personnage ne porte plus aucune information a cet instant : on sait ou l'on est, c'est lui qu'on
+	-- regarde. Autant liberer le cadre.
+	REVEAL_PLAYER_FADE = 1,
+	-- Duree du fondu vers l'invisible. Passer de 0.7 a 1 d'un coup se voit -- une silhouette qui disparait d'un
+	-- claquement attire justement l'oeil sur elle.
+	REVEAL_FADE_TIME = 0.45,
 
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau
 	-- descend, il n'attend pas.
