@@ -448,6 +448,22 @@ local function wheelMotorsOf(model: Model): { Motor6D }
 	wheelMotorsModel = model
 	wheelMotorsList = found
 
+	-- ON DIT CE QU'ON A TROUVE, pas seulement ce qui manque. "Les roues ne tournent pas" couvre plusieurs causes
+	-- qui se ressemblent a l'ecran, et la moitie ne sont pas des absences : un joint present mais branche a
+	-- l'envers, ou une roue ANCREE, se corrigent ailleurs que dans la config.
+	for _, motor in ipairs(found) do
+		local p0 = motor.Part0
+		local p1 = motor.Part1
+		print(
+			`[Mow] Roue : joint "{motor.Name}" Part0={p0 and p0.Name or "?"} Part1={p1 and p1.Name or "?"}`
+		)
+		-- UNE PART ANCREE IGNORE SON MOTOR6D, quoi qu'on ecrive dedans. Gratuit a verifier, et ca elimine d'un coup
+		-- la cause la plus silencieuse : tout est bon dans le code, la roue ne bouge pas.
+		if p1 and p1.Anchored then
+			warn(`[Mow] "{p1.Name}" est ANCREE : elle ignorera son Motor6D. La decocher dans Studio.`)
+		end
+	end
+
 	-- ON NOMME CE QUI MANQUE, ROUE PAR ROUE, et on separe les deux causes : une roue ABSENTE se corrige en
 	-- renommant la config, une roue SANS JOINT se corrige en creant le Motor6D dans Studio. Un compteur global
 	-- ("0 roue trouvee") ne dirait ni laquelle ni pourquoi -- et avec une seule roue motrice sur deux, il ne
@@ -553,6 +569,10 @@ local function setEmitters(model: Model, names: { string }, on: boolean)
 	end
 end
 
+-- Vrai des qu'une rotation a ete REELLEMENT ecrite. Sans ca, "aucune roue trouvee" et "trouvees mais jamais
+-- appelees" se lisent pareil : une tondeuse qui glisse.
+local wheelSpun = false
+
 local function spinWheels(model: Model, distance: number)
 	-- `== 0` et non `<= 0` : une distance NEGATIVE est une marche arriere, et les roues doivent tourner a
 	-- l'envers. La rejeter les figeait des qu'on recule.
@@ -599,6 +619,10 @@ local function spinWheels(model: Model, distance: number)
 				motor:SetAttribute("LeafiaBaseC0", base)
 			end
 			motor.C0 = (base :: CFrame) * spin
+			if not wheelSpun then
+				wheelSpun = true
+				print(`[Mow] Rotation appliquee sur "{motor.Name}" (axe {axis}, rayon {string.format("%.2f", radius)}).`)
+			end
 		end
 	end
 end

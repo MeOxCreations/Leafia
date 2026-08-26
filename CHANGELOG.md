@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.516 — Le jeu dit ce qu'il trouve sur les roues, et s'il tourne quelque chose
+
+Les roues ne tournent toujours pas apres 0.0.515, donc on arrete de deviner : trois diagnostics de suite sur le
+meme sujet, c'est un de trop.
+
+"Les roues ne tournent pas" couvre QUATRE causes qui se ressemblent a l'ecran, et la moitie ne sont pas des
+absences :
+
+- aucune roue de ce nom -> deja nomme ;
+- roue trouvee, aucun Motor6D -> deja nomme ;
+- joint present mais branche a l'envers (`Part0` / `Part1` inverses) -> il faut le VOIR ;
+- roue ANCREE -> une part ancree IGNORE son Motor6D, quoi qu'on ecrive dedans. Rien dans le code n'est faux, et
+  rien ne bouge.
+
+Deux traces, une fois chacune :
+
+    [Mow] Roue : joint "WheelFrontMotor6D" Part0=RootPart Part1=WheelFront
+    [Mow] Rotation appliquee sur "WheelFrontMotor6D" (axe X, rayon 0.55).
+
+La PREMIERE dit ce qui a ete trouve et comment c'est branche, plus un avertissement si la roue est ancree.
+
+La SECONDE ne sort que si une rotation est REELLEMENT ecrite. Sans elle, "aucune roue trouvee" et "trouvees mais
+jamais appelees" se lisent pareil -- une tondeuse qui glisse. Si la premiere sort et pas la seconde, le probleme
+n'est pas les roues : c'est que `spinWheels` n'est pas atteint (`CutZone` absente, distance nulle).
+
+A retirer une fois la cause trouvee.
+
 ## 0.0.515 — Les roues se trouvent par LEUR nom, plus par celui de leur joint
 
 La rotation des roues existait deja et marchait -- elle ne trouvait simplement rien a faire tourner.
