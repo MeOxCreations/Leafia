@@ -169,10 +169,13 @@ return {
 	-- les allumer tous d'un coup DESSINE ce point, alors qu'en allumer trois au hasard ne dessinait qu'un
 	-- fragment, different a chaque coup -- ca se lisait comme un scintillement, pas comme une frappe.
 	--
-	-- Duree de l'eclair. TRES court : c'est un flash. Simple allume/eteint, sans fondu -- un Beam dont on anime
-	-- l'eclat doit voir cet eclat RENDU a chaque sortie possible, et ca faisait trois garde-fous pour trois
-	-- images d'effet.
-	KNOCK_BEAM_TIME = 0.12,
+	-- Duree de l'eclair. Simple allume/eteint, sans fondu -- un Beam dont on anime l'eclat doit voir cet eclat
+	-- RENDU a chaque sortie possible, et ca faisait trois garde-fous pour trois images d'effet.
+	--
+	-- Borne haute a garder en tete : les coups s'enchainent toutes les ~0.35 s (les marqueurs de l'animation).
+	-- Au-dela, un eclair est encore allume quand le suivant part -- l'etoile ne s'eteint plus jamais entre deux
+	-- coups, et elle cesse de marquer l'impact pour devenir un eclairage permanent.
+	KNOCK_BEAM_TIME = 0.25,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la

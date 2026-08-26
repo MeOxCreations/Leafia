@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.501 — Les eclairs durent plus longtemps
+
+`KNOCK_BEAM_TIME` 0.12 -> 0.25. Reglage seul.
+
+### La borne haute, notee dans la config
+
+Les coups s'enchainent toutes les ~0.35 s -- c'est l'ecart entre les marqueurs de l'animation. Au-dela de cette
+valeur, un eclair est encore allume quand le suivant part : l'etoile ne s'eteint plus jamais entre deux coups,
+et elle cesse de MARQUER l'impact pour devenir un eclairage permanent.
+
+C'est le genre de limite qui ne se voit qu'a l'usage, et seulement sur le troisieme coup. Autant l'ecrire a cote
+du reglage.
+
 ## 0.0.500 — Les eclairs partent TOUS ENSEMBLE
 
 Ils sont disposes en etoile autour du point d'impact. En allumer trois au hasard ne dessinait qu'un fragment,
