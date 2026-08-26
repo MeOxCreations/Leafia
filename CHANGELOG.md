@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.513 — L'herbe coupee ne remonte plus du tout : elle DESCEND, un point c'est tout
+
+Le mouvement en cloche disparait. La touffe est ecrasee par la lame, on remplace son maillage pendant qu'elle est
+basse, et elle se reduit ensuite a sa hauteur tondue. Un seul mouvement, vers le bas.
+
+### La sortie de terre ne servait plus a rien
+
+Elle existait pour CACHER le remplacement du maillage. Mais ce remplacement se fait deja a MI-COUPE
+(`MOW_SWAP_AT`), quand la touffe est tassee sous la machine : il etait donc cache DEUX FOIS.
+
+Et le desordre venait de la : la sortie de terre partait TOUT DE SUITE, alors que la reduction de hauteur
+attendait `CUT_RISE_DELAY`. La touffe remontait donc a pleine hauteur avant de redescendre.
+
+La correction de 0.0.494 (le plafond de hauteur) empechait deja de DEPASSER l'herbe intacte, mais elle ne pouvait
+rien contre l'ordre des deux mouvements -- elle bornait le symptome.
+
+`CUT_RISE_DEPTH` et `CUT_RISE_UP_TIME` partent, avec le compteur d'emergence et sa ligne de cache.
+
+### La descente est adoucie aux deux bouts
+
+`e * e * (3 - 2e)` : elle part de zero, accelere, puis se repose.
+
+En lineaire, la descente demarre a PLEINE vitesse. Sur une seule touffe ca ne se remarque pas ; sur une bande
+entiere qui part en meme temps derriere la machine, ce depart sec se lit comme un clignotement au passage.
+
+### La regle generale
+
+Quand deux mouvements se contredisent, supprimer celui qui ne sert plus coute moins cher que de les mettre
+d'accord.
+
 ## 0.0.512 — La fleche orbite autour de la tondeuse et DEVANCE le virage
 
 On braque, elle part tout de suite -- et la machine la rattrape. C'est ce decalage qui la rend utile : une fleche

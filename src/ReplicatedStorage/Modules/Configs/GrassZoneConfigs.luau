@@ -47,6 +47,12 @@ local GrassZoneConfigs = {
 	-- trop lentement" avec celui-ci -- les confondre force a sacrifier l'un pour l'autre.
 	--
 	-- Et surtout pas MOW_RATE : celui-la decide si la touffe est coupee, pas de ce qu'on VOIT.
+	-- Duree de la DESCENTE, une fois le temps mort passe. La touffe glisse de sa hauteur ecrasee a sa hauteur
+	-- tondue.
+	--
+	-- La descente est ADOUCIE AUX DEUX BOUTS (voir le code) : elle part sans a-coup et se pose sans a-coup. Une
+	-- descente lineaire demarre a pleine vitesse, et sur une pelouse entiere ce depart sec se lit comme un
+	-- clignotement au passage de la machine.
 	CUT_RISE_TIME = 0.45,
 	-- TEMPS MORT avant que la touffe commence a descendre, en secondes.
 	--
@@ -64,18 +70,17 @@ local GrassZoneConfigs = {
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.
 	-- Descendu de 1, ou la touffe partait ENTIEREMENT sous la surface : le trajet etait trop long, on voyait
 	-- clairement quelque chose sortir du sol au lieu de ne rien voir du tout.
-	-- Le but n'est PAS de montrer une pousse, c'est de CACHER un remplacement de maillage. Plus le trajet est
-	-- court, mieux il fait son travail -- a 0 il ne cache plus rien, mais il n'y a rien a admirer entre les deux.
-	CUT_RISE_DEPTH = 0.35,
-	-- DUREE DE LA SORTIE DE TERRE, en secondes. Elle a son PROPRE temps, et elle part IMMEDIATEMENT.
+	-- PLUS DE SORTIE DE TERRE. La touffe ne s'enfouit plus et ne remonte plus : elle est ECRASEE par la lame, on
+	-- remplace son maillage pendant qu'elle est basse, et elle se reduit ensuite a sa hauteur tondue. Un seul
+	-- mouvement, vers le bas.
 	--
-	-- Elle etait accrochee au meme compteur que l'abaissement. Resultat, quand le temps mort a ete ajoute
-	-- (CUT_RISE_DELAY), la touffe restait ENFOUIE pendant toute l'attente -- donc invisible -- avant de sortir.
-	-- On voyait un trou dans la pelouse, puis l'herbe remonter : l'inverse de l'effet cherche.
+	-- L'enfouissement servait a cacher le remplacement du maillage. Mais ce remplacement se fait deja a MI-COUPE
+	-- (`MOW_SWAP_AT`), quand la touffe est tassee sous la machine -- il etait donc CACHE DEUX FOIS. Et comme la
+	-- sortie de terre partait tout de suite alors que la reduction de hauteur attendait `CUT_RISE_DELAY`, la
+	-- touffe REMONTAIT a pleine hauteur avant de redescendre. C'est ce mouvement en cloche qu'on voyait.
 	--
-	-- Les deux moments n'ont rien a voir : SORTIR DE TERRE doit etre immediat et bref (c'est un remplacement, il
-	-- ne doit pas se voir), SE COUCHER doit venir apres et se voir (c'est la coupe).
-	CUT_RISE_UP_TIME = 0.15,
+	-- Regle generale : quand deux mouvements se contredisent, supprimer celui qui ne sert plus coute moins cher
+	-- que de les mettre d'accord.
 
 	-- Delai TOTAL pour trouver la racine et le mesh au demarrage (un seul delai pour tout le chemin).
 	RESOLVE_TIMEOUT = 15,

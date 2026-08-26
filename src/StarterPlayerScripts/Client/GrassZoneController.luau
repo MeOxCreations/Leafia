@@ -100,7 +100,6 @@ type Clump = {
 	-- couleur de tonte ne partirait jamais dans ce cas-la.
 	cutStarted: boolean,
 	cutWait: number, -- temps restant avant que la touffe commence a se coucher. La lame passe, elle tient encore.
-	riseT: number, -- sortie de terre (0 = enfouie, 1 = en place). Part TOUT DE SUITE, contrairement a cutT.
 	-- Hauteur la plus BASSE atteinte depuis le debut de la coupe. Elle empeche la touffe de REMONTER pendant la
 	-- transition : voir le plafond pose plus bas.
 	cutHold: number,
@@ -231,10 +230,6 @@ local function apply(
 		-- ELLE TIENT ENCORE UN INSTANT. La lame vient de passer, mais une touffe ne tombe pas dans la meme image :
 		-- sans ce retard la coupe est SIMULTANEE au passage, et ca ressemble a un interrupteur.
 		clump.cutWait = GrassZoneConfigs.CUT_RISE_DELAY
-		-- LA SORTIE DE TERRE, elle, part MAINTENANT : c'est le remplacement du maillage, il ne doit pas se voir.
-		-- Elle n'attend pas le temps mort -- sinon la touffe resterait enfouie, donc invisible, pendant tout ce
-		-- temps, et on verrait un trou dans la pelouse avant de la voir remonter.
-		clump.riseT = 0
 		-- Repart de "aucun plafond" : le premier passage le posera a la hauteur reelle de l'instant.
 		clump.cutHold = math.huge
 		if cutMesh and myPart:IsA("MeshPart") then
@@ -264,8 +259,15 @@ local function apply(
 	-- Suivent l'EMERGENCE et non la coupe : la touffe sort du sol a sa nouvelle taille, en un seul mouvement.
 	local mownY, mownXZ = 1, 1
 	if not clump.flower then
-		mownY = 1 - clump.cutT * (1 - GrassZoneConfigs.MOWN_SCALE_Y)
-		mownXZ = 1 - clump.cutT * (1 - GrassZoneConfigs.MOWN_SCALE_XZ)
+		-- ADOUCIE AUX DEUX BOUTS. La courbe part de zero, accelere, puis se repose : la touffe quitte sa hauteur
+		-- ecrasee sans a-coup et arrive a sa hauteur tondue sans a-coup.
+		--
+		-- En lineaire, la descente demarre a PLEINE vitesse. Sur une seule touffe ca ne se remarque pas ; sur une
+		-- bande entiere qui part en meme temps derriere la machine, ce depart sec se lit comme un clignotement.
+		local e = clump.cutT
+		local cutEase = e * e * (3 - 2 * e)
+		mownY = 1 - cutEase * (1 - GrassZoneConfigs.MOWN_SCALE_Y)
+		mownXZ = 1 - cutEase * (1 - GrassZoneConfigs.MOWN_SCALE_XZ)
 	end
 	squash = math.floor(squash / SQUASH_STEP + 0.5) * SQUASH_STEP
 	-- Une seule valeur de cache pour les deux facteurs : ils varient ENSEMBLE (tous deux pilotes par l'emergence),
@@ -415,9 +417,6 @@ local function apply(
 	-- On descend le centre de la MOITIE de la hauteur perdue : le pied retrouve exactement sa place. Une seule
 	-- ligne qui couvre les deux causes, l'ecrasement et la coupe, sans avoir a les traiter separement.
 	local sink = clump.baseSize.Y * 0.5 * (1 - squash * shrinkY)
-	if clump.riseT < 1 then
-		sink += clump.baseSize.Y * squash * GrassZoneConfigs.CUT_RISE_DEPTH * (1 - clump.riseT)
-	end
 	-- ENFONCEMENT PERMANENT. La touffe est posee par son CENTRE sur la surface de la zone, mais la geometrie du
 	-- mesh n'occupe pas forcement toute sa boite : selon la marge laissee sous les brins, elle a l'air de
 	-- LEVITER. On l'enfonce donc d'un poil.
@@ -809,7 +808,6 @@ local function populate(zone: Zone)
 				gone = false,
 				cutStarted = false,
 				cutWait = 0,
-				riseT = 1,
 				cutHold = math.huge,
 				lastRiseT = 1,
 				cutT = 0,
@@ -984,9 +982,6 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- de l'avancement de la coupe -- celle-ci dure 0.125 s, bien trop court pour qu'on y lise une transition.
 		-- DEUX COMPTEURS, DEUX MOMENTS. La touffe SORT DE TERRE tout de suite (le maillage se remplace, ca ne doit
 		-- pas se voir), puis elle SE COUCHE apres le temps mort (la coupe, elle, doit se voir).
-		if clump.riseT < 1 then
-			clump.riseT = math.min(1, clump.riseT + dt / GrassZoneConfigs.CUT_RISE_UP_TIME)
-		end
 		if clump.cutStarted and clump.cutT < 1 then
 			-- Le temps mort s'ecoule D'ABORD. Tant qu'il reste, la touffe garde sa hauteur et sa couleur d'herbe
 			-- haute -- elle est coupee, elle ne le SAIT pas encore.
@@ -1063,7 +1058,6 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.colorCrush ~= target
 			or clump.mown ~= clump.lastMown
 			or clump.cutT ~= clump.lastCutT
-			or clump.riseT ~= clump.lastRiseT
 			-- LE TEMPS MORT COMPTE COMME DU MOUVEMENT, meme si rien ne bouge encore a l'ecran.
 			--
 			-- Sinon le pave se declare AU REPOS pendant l'attente, cesse d'etre mis a jour, et le compte a rebours
@@ -1163,7 +1157,6 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- L'EMERGENCE CONTINUE APRES LA COUPE. `mown` atteint 1 en 0.125 s et ne bouge plus ; sans ce test,
 			-- la touffe resterait enfouie et de la couleur de l'herbe haute POUR TOUJOURS, sauf coup de vent.
 			or clump.cutT ~= clump.lastCutT
-			or clump.riseT ~= clump.lastRiseT
 		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
 			-- Au moment du pas l'ecart est maximal ; une fois le lent arrive, il est NUL et la touffe est droite.
@@ -1183,7 +1176,6 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			clump.lastColorCrush = clump.colorCrush
 			clump.lastMown = clump.mown
 			clump.lastCutT = clump.cutT
-			clump.lastRiseT = clump.riseT
 		end
 	end
 
