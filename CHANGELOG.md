@@ -2204,6 +2204,44 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.503 — Une gerbe d'etoiles filantes a chaque coup
+
+Huit etoiles jaillissent du point d'impact et filent vers les bords de l'ecran.
+
+Elles ne remplacent pas les deux effets du monde, elles les DEBORDENT : particules et eclairs restent au point
+d'impact, la gerbe part au-dela du cadre. C'est ce qui donne son echelle au coup.
+
+### Nouveau primitif : `Modules/UI/Core/StarBurst`
+
+Un seul argument, un point du MONDE. Pas de reglage par appelant : il doit pouvoir servir a la tondeuse ou a
+n'importe quel impact sans etre retouche.
+
+### Les noms des images PORTENT la direction
+
+`MidUp`, `RightUp`, `RightMid`, `RightDown`, `MidDown`, `LeftDown`, `LeftMid`, `LeftTop` : chaque image est
+DESSINEE pour sa branche. Les tirer au hasard les montrerait de travers. Chacune part donc dans son sens, et les
+huit forment une etoile.
+
+### Tout en fraction de la HAUTEUR d'ecran
+
+Jamais en pixels : la gerbe garde la meme allure sur un telephone et sur un grand ecran. La hauteur et pas la
+largeur, parce que c'est elle qui varie le moins d'un format a l'autre -- en largeur, la meme valeur donnerait
+une gerbe ecrasee en 16:9 et enorme en 4:3.
+
+### Trois pieges connus, evites d'avance
+
+- `ScreenInsets = None`. `WorldToViewportPoint` rend des coordonnees dont l'origine est le coin ABSOLU de
+  l'ecran ; avec l'inset par defaut toute la gerbe suivrait ~36 px trop bas.
+- Chaque gerbe emporte SON lot. Balayer les enfants du ScreenGui a la fin ramasserait les etoiles d'une gerbe
+  precedente encore en vol : deux coups rapproches se couperaient l'un l'autre.
+- La duree de vie est CALCULEE depuis les durees d'animation, pas ecrite a la main. Le jour ou l'on allonge le
+  fondu, la gerbe serait detruite avant de l'avoir fini.
+
+### Rien a faire dans Studio
+
+Les huit images sont des assets, pas des objets a poser. C'est le premier effet de la scene qui ne depend de
+rien dans le Workspace.
+
 ## 0.0.502 — Les eclairs s'estompent au lieu de s'eteindre
 
 Ils ne pouvaient pas durer plus longtemps : au-dela de ~0.35 s -- l'ecart entre deux coups -- un eclair est

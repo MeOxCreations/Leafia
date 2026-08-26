@@ -20,6 +20,7 @@ local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionP
 local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
 local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
+local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
@@ -64,6 +65,9 @@ local trySound: Sound? = nil
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
 local knockBeams: { Beam }? = nil
+-- Le conteneur lui-meme, retenu a la resolution : c'est LUI qui donne le point d'impact a l'ecran. Le relire par
+-- son nom a chaque coup couterait un balayage du Workspace pour une valeur qui ne bouge pas.
+local knockHolder: Instance? = nil
 -- Transparence de repos de chaque Beam, relevee a la resolution. On l'anime jusqu'a l'invisible puis on la REND :
 -- sans cette copie, un eclair coupe en plein fondu resterait transparent pour toujours, et l'effet ne marcherait
 -- plus jamais -- sans que rien ne le signale.
@@ -603,8 +607,27 @@ local function getKnockEmitters(): { ParticleEmitter }
 		end
 		print(`[Tutorial] {#found} emetteur(s) d'impact : {table.concat(names, ", ")}`)
 	end
+	knockHolder = holder
 	knockEmitters = found
 	return found
+end
+
+-- Le point d'impact dans le MONDE. On ne suppose pas la classe du conteneur : une part, un model ou une
+-- attachment donnent leur position de trois facons differentes, et l'exiger obligerait a re-ranger Studio pour
+-- faire plaisir au code.
+local function knockPoint(): Vector3?
+	local h = knockHolder
+	if not h then
+		return nil
+	end
+	if h:IsA("BasePart") then
+		return h.Position
+	elseif h:IsA("Attachment") then
+		return h.WorldPosition
+	elseif h:IsA("Model") then
+		return h:GetPivot().Position
+	end
+	return nil
 end
 
 -- Les eclairs du meme conteneur. Meme regle : on prend TOUT ce qu'il contient, sans nommer les Beams -- en
@@ -646,6 +669,15 @@ local function knockOnce()
 	-- allumait des Beams, et il fallait un releve de leur eclat pour ne pas les laisser eteints a jamais.
 	for _, emitter in ipairs(getKnockEmitters()) do
 		emitter:Emit(TutorialConfigs.KNOCK_EMIT_COUNT)
+	end
+
+	-- LA GERBE D'ETOILES, a l'ecran. Elle ne remplace pas les deux effets du monde, elle les DEBORDE : particules
+	-- et eclairs restent au point d'impact, la gerbe part au-dela du cadre. C'est ce qui donne l'echelle du coup.
+	--
+	-- `getKnockEmitters` d'abord, toujours : c'est lui qui resout le conteneur dont on tire le point.
+	local point = knockPoint()
+	if point then
+		StarBurst.at(point)
 	end
 
 	-- LES ECLAIRS, en plus. Les particules donnent la MATIERE qui gicle, les eclairs donnent le CHOC : l'un sans
