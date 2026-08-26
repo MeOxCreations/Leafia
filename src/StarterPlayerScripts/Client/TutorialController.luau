@@ -186,11 +186,15 @@ local function endScene()
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
--- Comme findModel, mais accepte AUSSI un Folder : un conteneur d'effets n'est pas un Model, et exiger l'un ou
--- l'autre obligerait a ranger les objets d'une certaine facon dans Studio.
-local function findModelOrFolder(name: string): Instance?
+-- Comme findModel, mais SANS CONDITION DE CLASSE. Un conteneur d'effets peut etre un Folder, un Model ou une
+-- PART -- rien ne l'impose, et c'est ce qui vient de casser : on n'acceptait que Model ou Folder, et
+-- `KnockEffect1` est une part. Le filtre etait plus strict que la realite, donc il ne trouvait rien.
+--
+-- Regle : quand on cherche un objet POSE PAR QUELQU'UN dans Studio, on cherche par son NOM. Sa classe est un
+-- detail de rangement, pas une garantie.
+local function findByName(name: string): Instance?
 	for _, d in ipairs(Workspace:GetDescendants()) do
-		if d.Name == name and (d:IsA("Model") or d:IsA("Folder")) then
+		if d.Name == name then
 			return d
 		end
 	end
@@ -518,7 +522,7 @@ local function getKnockBeams(): { Beam }
 		return cached
 	end
 	local found: { Beam } = {}
-	local holder = findModelOrFolder(TutorialConfigs.KNOCK_BEAM_PARENT)
+	local holder = findByName(TutorialConfigs.KNOCK_BEAM_PARENT)
 	if holder then
 		for _, d in ipairs(holder:GetDescendants()) do
 			if d:IsA("Beam") then
@@ -527,6 +531,18 @@ local function getKnockBeams(): { Beam }
 				d.Enabled = false
 				table.insert(found, d)
 			end
+		end
+	end
+	-- ON DIT CE QU'ON N'A PAS TROUVE, et on distingue les deux cas : un conteneur absent et un conteneur vide
+	-- se ressemblent a l'ecran -- aucun eclair -- mais se corrigent a deux endroits opposes.
+	if #found == 0 then
+		if holder then
+			warn(`[Tutorial] "{TutorialConfigs.KNOCK_BEAM_PARENT}" trouve mais il ne contient AUCUN Beam.`)
+		else
+			warn(
+				`[Tutorial] "{TutorialConfigs.KNOCK_BEAM_PARENT}" introuvable dans le Workspace : pas d'eclair aux `
+					.. "coups. Rojo ne synchronise pas le Workspace, il doit exister dans CETTE place."
+			)
 		end
 	end
 	knockBeams = found

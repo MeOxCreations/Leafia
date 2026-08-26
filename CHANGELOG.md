@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.491 — Les eclairs ne partaient pas : le filtre etait plus strict que la realite
+
+La recherche du conteneur n'acceptait qu'un `Model` ou un `Folder`. `KnockEffect1` est une PART. Elle ne
+trouvait donc rien -- et ne disait rien.
+
+Elle cherche desormais par NOM, sans condition de classe.
+
+Regle : quand on cherche un objet POSE PAR QUELQU'UN dans Studio, on cherche par son nom. Sa classe est un
+detail de rangement, pas une garantie -- exactement comme le chemin fixe de la porte, qui a casse le jour ou
+elle a demenage.
+
+### Et le silence est corrige aussi
+
+Aucun eclair ne partait, aucun message ne le disait. Deux causes se ressemblent a l'ecran -- conteneur ABSENT ou
+conteneur VIDE -- et se corrigent a deux endroits opposes. Elles sont maintenant nommees separement.
+
+C'etait la vraie faute : le filtre trop strict n'aurait coute qu'une minute s'il avait parle.
+
 ## 0.0.490 — Un eclair claque a chaque coup frappe
 
 Un Beam AU HASARD parmi ceux de `KnockEffect1` s'allume une fraction de seconde a chaque `TocEvent`.
