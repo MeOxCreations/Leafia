@@ -141,17 +141,17 @@ return {
 	-- l'image encaisse le choc en meme temps que la porte, donc les coups se SENTENT au lieu de s'entendre.
 	-- Les trois s'additionnent -- c'est ce que fait une vraie camera qu'on bouscule.
 	KNOCK_KICK = 0.3,
-	-- ECLAIR A CHAQUE COUP. Un Beam AU HASARD parmi ceux du conteneur s'allume une fraction de seconde. Au
-	-- hasard, et pas toujours le meme : trois coups identiques se lisent comme une boucle, trois coups qui
-	-- claquent ailleurs se lisent comme trois vrais chocs.
-	KNOCK_BEAM_PARENT = "KnockEffect1",
-	-- Combien s'allument A LA FOIS. Un seul Beam fin parmi neuf se perd : on ne voit rien, meme en le laissant
-	-- plus longtemps. Trois d'un coup font un impact, sans jamais tout allumer.
-	KNOCK_BEAM_COUNT = 3,
-	-- Duree de l'eclair. Il s'allume D'UN COUP puis S'ETEINT EN FONDU -- attaque seche, extinction douce, comme
-	-- une etincelle. Un clignotement binaire de la meme duree est INVISIBLE : l'oeil ne retient qu'un
-	-- changement qui DURE un peu, et le fondu lui en donne un.
-	KNOCK_BEAM_TIME = 0.28,
+	-- IMPACT A CHAQUE COUP. Tous les ParticleEmitter trouves sous ce conteneur crachent d'un coup.
+	--
+	-- ON PREND TOUT CE QU'IL CONTIENT, sans nommer les emetteurs. Ajouter un effet dans Studio suffit alors a
+	-- l'inclure : le code n'a pas a savoir combien il y en a ni comment ils s'appellent.
+	--
+	-- `Emit` plutot qu'allumer puis eteindre : une bouffee ponctuelle n'a AUCUN etat a rendre. Un effet qu'on
+	-- allume peut rester allume -- et c'est exactement ce qui rendait la version a Beams fragile.
+	KNOCK_EMIT_PARENT = "KnockEffect1",
+	-- Particules crachees par emetteur et par coup. Le RESTE du reglage -- taille, duree de vie, vitesse,
+	-- couleur -- vit dans Studio, sur l'emetteur : c'est la qu'on le voit.
+	KNOCK_EMIT_COUNT = 1,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la

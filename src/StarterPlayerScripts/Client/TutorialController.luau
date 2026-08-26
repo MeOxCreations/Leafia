@@ -14,7 +14,6 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
@@ -62,12 +61,8 @@ local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
 local doorWatch: RBXScriptConnection? = nil
 local trySound: Sound? = nil
--- Eclairs des coups, resolus une seule fois puis gardes. `nil` = pas encore cherches.
-local knockBeams: { Beam }? = nil
--- Eclat d'origine de chaque Beam, releve a la resolution. On l'anime jusqu'a zero puis on le REND : sans cette
--- copie, un eclair coupe en plein fondu resterait eteint pour toujours -- et il faudrait rouvrir Studio pour
--- comprendre pourquoi un effet ne marche plus qu'une fois.
-local knockGlow: { [Beam]: number } = {}
+-- Emetteurs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
+local knockEmitters: { ParticleEmitter }? = nil
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -519,39 +514,37 @@ end
 
 -- UN COUP : la porte tremble et on entend le choc. Appele une fois par marqueur de l'animation du joueur, donc
 -- c'est l'ANIMATION qui dit quand -- pas un minuteur qui finirait par se decaler d'elle.
--- Les eclairs du conteneur, ou une liste VIDE si on ne l'a pas trouve. On garde la liste vide en cache : sans
+-- Les emetteurs du conteneur, ou une liste VIDE si on ne l'a pas trouve. On garde la liste vide en cache : sans
 -- ca on re-balayerait tout le Workspace a chaque coup pour ne rien trouver.
-local function getKnockBeams(): { Beam }
-	local cached = knockBeams
+local function getKnockEmitters(): { ParticleEmitter }
+	local cached = knockEmitters
 	if cached then
 		return cached
 	end
-	local found: { Beam } = {}
-	local holder = findByName(TutorialConfigs.KNOCK_BEAM_PARENT)
+	local found: { ParticleEmitter } = {}
+	local holder = findByName(TutorialConfigs.KNOCK_EMIT_PARENT)
 	if holder then
 		for _, d in ipairs(holder:GetDescendants()) do
-			if d:IsA("Beam") then
-				-- ETEINTS AU DEPART. Ce sont des eclairs : leur etat de repos est INVISIBLE. S'ils arrivent
-				-- allumes depuis Studio, ils resteraient allumes toute la scene et on chercherait pourquoi.
-				d.Enabled = false
-				knockGlow[d] = d.Brightness
+			if d:IsA("ParticleEmitter") then
 				table.insert(found, d)
 			end
 		end
 	end
-	-- ON DIT CE QU'ON N'A PAS TROUVE, et on distingue les deux cas : un conteneur absent et un conteneur vide
-	-- se ressemblent a l'ecran -- aucun eclair -- mais se corrigent a deux endroits opposes.
+	-- ON DIT CE QU'ON N'A PAS TROUVE, et on distingue les deux cas : un conteneur absent et un conteneur vide se
+	-- ressemblent a l'ecran -- aucun effet -- mais se corrigent a deux endroits opposes.
 	if #found == 0 then
 		if holder then
-			warn(`[Tutorial] "{TutorialConfigs.KNOCK_BEAM_PARENT}" trouve mais il ne contient AUCUN Beam.`)
+			warn(
+				`[Tutorial] "{TutorialConfigs.KNOCK_EMIT_PARENT}" trouve mais il ne contient AUCUN ParticleEmitter.`
+			)
 		else
 			warn(
-				`[Tutorial] "{TutorialConfigs.KNOCK_BEAM_PARENT}" introuvable dans le Workspace : pas d'eclair aux `
+				`[Tutorial] "{TutorialConfigs.KNOCK_EMIT_PARENT}" introuvable dans le Workspace : pas d'impact aux `
 					.. "coups. Rojo ne synchronise pas le Workspace, il doit exister dans CETTE place."
 			)
 		end
 	end
-	knockBeams = found
+	knockEmitters = found
 	return found
 end
 
@@ -563,32 +556,11 @@ local function knockOnce()
 	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
 	SceneCamera.kick(TutorialConfigs.KNOCK_KICK)
 
-	-- DES ECLAIRS AU HASARD. Pas toujours les memes : trois coups identiques se lisent comme une boucle, trois
-	-- coups qui claquent ailleurs se lisent comme trois vrais chocs.
-	local beams = getKnockBeams()
-	for _ = 1, math.min(TutorialConfigs.KNOCK_BEAM_COUNT, #beams) do
-		local beam = beams[math.random(#beams)]
-		-- ATTAQUE SECHE, EXTINCTION EN FONDU. Un clignotement binaire de la meme duree est invisible : l'oeil ne
-		-- retient qu'un changement qui DURE un peu. On anime donc l'eclat, et l'extinction devient lisible sans
-		-- que l'effet s'allonge.
-		--
-		-- C'est `Brightness` qu'on anime, pas `Transparency` : la transparence d'un Beam est une NumberSequence
-		-- -- elle porte le degrade dessine dans Studio, et l'ecraser par une valeur plate le detruirait.
-		beam.Brightness = knockGlow[beam] or beam.Brightness
-		beam.Enabled = true
-		local fade = TweenService:Create(
-			beam,
-			TweenInfo.new(TutorialConfigs.KNOCK_BEAM_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{ Brightness = 0 }
-		)
-		fade.Completed:Connect(function()
-			-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
-			if beam.Parent then
-				beam.Enabled = false
-				beam.Brightness = knockGlow[beam] or beam.Brightness
-			end
-		end)
-		fade:Play()
+	-- L'IMPACT. Une bouffee ponctuelle, pas un effet qu'on allume : `Emit` est fini a la seconde ou il part, donc
+	-- il n'y a AUCUN etat a rendre -- ni a l'arret de la scene, ni a la mort du joueur. La version precedente
+	-- allumait des Beams, et il fallait un releve de leur eclat pour ne pas les laisser eteints a jamais.
+	for _, emitter in ipairs(getKnockEmitters()) do
+		emitter:Emit(TutorialConfigs.KNOCK_EMIT_COUNT)
 	end
 
 	local shake = shakeTrack
@@ -852,18 +824,6 @@ function TutorialController.stop()
 	if doorWatch then
 		doorWatch:Disconnect()
 		doorWatch = nil
-	end
-	-- Un eclair coupe en plein flash resterait ALLUME pour toujours : il n'a personne pour l'eteindre une fois
-	-- la scene finie.
-	if knockBeams then
-		for _, beam in ipairs(knockBeams) do
-			if beam.Parent then
-				beam.Enabled = false
-				-- On rend l'eclat d'origine : coupe en plein fondu, il resterait a zero et l'effet ne marcherait
-				-- plus jamais -- sans que rien ne le signale.
-				beam.Brightness = knockGlow[beam] or beam.Brightness
-			end
-		end
 	end
 	grandpaTrack, doorTrack, knockTrack, shakeTrack, tryTrack = nil, nil, nil, nil, nil
 	local sfx = trySound

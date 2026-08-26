@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.496 — L'impact des coups passe des Beams a des particules
+
+Les Beams sont remplaces par les ParticleEmitter poses dans l'attachment `Mid` de `KnockEffect1`. Chaque coup
+les fait cracher d'un coup.
+
+### `Emit` n'a AUCUN etat a rendre
+
+C'est le vrai gain, au-dela du rendu. Une bouffee ponctuelle est finie a la seconde ou elle part : rien a
+eteindre a l'arret de la scene, rien a restaurer a la mort du joueur.
+
+La version a Beams demandait l'inverse. Il fallait relever leur eclat d'origine pour ne pas les laisser a zero
+apres un fondu interrompu -- sinon l'effet ne marchait plus JAMAIS, sans que rien ne le signale. Trois
+garde-fous pour un effet de trois images.
+
+### On prend TOUT ce que le conteneur contient
+
+Sans nommer les emetteurs. Ajouter un effet dans Studio suffit a l'inclure : le code n'a pas a savoir combien il
+y en a ni comment ils s'appellent.
+
+Le reste du reglage -- taille, duree de vie, vitesse, couleur -- vit sur l'emetteur, dans Studio. C'est la qu'on
+le voit, donc c'est la qu'il se regle.
+
+### Ce qui reste
+
+Le message qui nomme ce qu'on n'a pas trouve, et la distinction entre conteneur ABSENT et conteneur VIDE : deux
+causes qui se ressemblent a l'ecran et se corrigent a deux endroits opposes.
+
+`TweenService` part du fichier : plus personne ne l'y utilisait.
+
+### A FAIRE DANS STUDIO
+
+`KnockEffect1` doit contenir l'attachment `Mid` avec ses ParticleEmitter. Rojo ne synchronise pas le Workspace.
+
 ## 0.0.495 — On verifie l'amont AVANT de travailler, plus seulement avant de pousser
 
 Les regles de `CLAUDE.md` decrivaient l'ordre du PUSH -- commit, pull --rebase, push. Elles ne disaient rien du
