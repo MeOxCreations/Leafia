@@ -101,6 +101,9 @@ type Clump = {
 	cutStarted: boolean,
 	cutWait: number, -- temps restant avant que la touffe commence a se coucher. La lame passe, elle tient encore.
 	riseT: number, -- sortie de terre (0 = enfouie, 1 = en place). Part TOUT DE SUITE, contrairement a cutT.
+	-- Hauteur la plus BASSE atteinte depuis le debut de la coupe. Elle empeche la touffe de REMONTER pendant la
+	-- transition : voir le plafond pose plus bas.
+	cutHold: number,
 	lastRiseT: number, -- dernier avancement REELLEMENT dessine
 	cutT: number, -- avancement de l'emergence (0 = enfouie et couleur d'herbe haute, 1 = en place et tondue)
 	lastCutT: number, -- dernier avancement REELLEMENT dessine : sans lui la remontee ne serait pas redessinee
@@ -232,6 +235,8 @@ local function apply(
 		-- Elle n'attend pas le temps mort -- sinon la touffe resterait enfouie, donc invisible, pendant tout ce
 		-- temps, et on verrait un trou dans la pelouse avant de la voir remonter.
 		clump.riseT = 0
+		-- Repart de "aucun plafond" : le premier passage le posera a la hauteur reelle de l'instant.
+		clump.cutHold = math.huge
 		if cutMesh and myPart:IsA("MeshPart") then
 			myPart:ApplyMesh(cutMesh)
 			-- On ne SUPPOSE pas ce qu'ApplyMesh a touche (taille ? texture ? materiau ?) : on invalide les caches
@@ -266,6 +271,29 @@ local function apply(
 	-- Une seule valeur de cache pour les deux facteurs : ils varient ENSEMBLE (tous deux pilotes par l'emergence),
 	-- donc surveiller le premier suffit a savoir que le second a bouge.
 	local shrinkY = shrink * mownY
+
+	-- UNE TOUFFE COUPEE NE REMONTE PLUS, tant que la coupe n'est pas finie.
+	--
+	-- C'ETAIT LE BUG. La tondeuse ECRASE la touffe en passant, et c'est pendant qu'elle est basse qu'on remplace
+	-- son maillage -- silhouette petite, changement invisible. Mais la machine s'eloigne, l'ecrasement se
+	-- relache... et la touffe REMONTE a pleine hauteur, avec le maillage coupe. Sa reduction de hauteur, elle,
+	-- n'arrive qu'apres CUT_RISE_DELAY. Entre les deux, de l'herbe COUPEE depassait de l'herbe intacte.
+	--
+	-- On garde donc la hauteur la plus basse atteinte : la touffe reste couchee sous la lame, puis se reduit --
+	-- elle ne repasse jamais par le haut. Un PLAFOND, pas une nouvelle animation : rien a synchroniser avec
+	-- CUT_RISE_DELAY, donc rien qui puisse s'en desaccorder.
+	--
+	-- Le plafond ne vaut QUE pendant la transition. Le garder ensuite figerait la pelouse tondue : un pas ne
+	-- pourrait plus la coucher, et elle ne se releverait jamais.
+	local height = squash * shrinkY
+	if clump.cutStarted and clump.cutT < 1 then
+		clump.cutHold = math.min(clump.cutHold, height)
+		height = clump.cutHold
+		-- On repartage la hauteur plafonnee entre les deux facteurs : `shrinkY` porte la taille verticale, et
+		-- `squash` sert au reste du calcul (enfoncement, inclinaison). Diviser garde les deux d'accord.
+		shrinkY = if squash > 1e-3 then height / squash else height
+	end
+
 	if squash ~= clump.lastSquash or shrinkY ~= clump.lastShrink then
 		clump.part.Size = Vector3.new(
 			clump.baseSize.X * shrink * mownXZ,
@@ -782,6 +810,7 @@ local function populate(zone: Zone)
 				cutStarted = false,
 				cutWait = 0,
 				riseT = 1,
+				cutHold = math.huge,
 				lastRiseT = 1,
 				cutT = 0,
 				lastCutT = 0,

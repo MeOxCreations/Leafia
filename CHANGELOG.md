@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.494 — L'herbe coupee ne repasse plus au-dessus de l'herbe intacte
+
+La transition de coupe etait moche : la touffe remontait, et on la voyait DEPASSER l'herbe non coupee avant de
+se reduire.
+
+### Ce n'etait pas la sortie de terre
+
+C'etait l'ECRASEMENT DE LA TONDEUSE QUI SE RELACHE.
+
+La machine ecrase la touffe en passant, et c'est pendant qu'elle est basse qu'on remplace son maillage --
+silhouette petite, changement invisible. Puis la machine s'eloigne, l'ecrasement se relache, et la touffe
+REMONTE a pleine hauteur, avec le maillage coupe. Sa reduction de hauteur, elle, n'arrive qu'apres
+`CUT_RISE_DELAY`.
+
+Entre les deux, de l'herbe COUPEE depassait de l'herbe intacte.
+
+Le trajet hors du sol (`CUT_RISE_DEPTH`, `CUT_RISE_UP_TIME`) etait innocent -- c'est le premier endroit ou on
+serait alle regarder.
+
+### Un PLAFOND, pas une animation de plus
+
+La touffe garde la hauteur la plus BASSE atteinte depuis le debut de la coupe : elle reste couchee sous la lame,
+puis se reduit. Elle ne repasse jamais par le haut.
+
+Un plafond n'a rien a synchroniser avec `CUT_RISE_DELAY` -- donc rien qui puisse s'en desaccorder le jour ou on
+retouche l'un des deux. Une animation de plus aurait ajoute une troisieme duree a garder d'accord avec les
+autres.
+
+### Il ne vaut QUE pendant la transition
+
+Le garder ensuite figerait la pelouse tondue : un pas ne pourrait plus la coucher, et elle ne se releverait
+jamais.
+
 ## 0.0.493 — Le rateau ramasse les feuilles, et la tondeuse ne derape plus
 
 Une session de corrections, plus un nouvel outil.
