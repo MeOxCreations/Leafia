@@ -185,9 +185,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Une frame rectangulaire posee de travers ferait le meme trajet, mais elle deborderait sur les bords
 	-- transparents du dessin, et il faudrait un CanvasGroup rien que pour la decouper.
 	--
-	-- Demi-largeur de la bande, en fraction du balayage. Plus large = un voile qui passe ; plus etroit = un
-	-- eclat. Au-dela de ~0.15 ca cesse de ressembler a un reflet.
-	local SHINE_WIDTH = 0.07
+	-- Demi-largeur de la bande, en fraction du balayage. Etroit = un eclat sec ; large = un voile qui passe.
+	--
+	-- Au-dela de 0.5 la bande est plus large que l'espace du degrade : ses bords sont alors ROGNES, et le profil
+	-- devient une grande rampe douce plutot qu'une barre nette. C'est un choix, pas un defaut -- mais c'est pour
+	-- ca que le trajet ci-dessous s'elargit avec elle, sinon elle serait deja en place a la premiere image.
+	local SHINE_WIDTH = 0.7
 	-- Transparence AU COEUR de la bande. 1 = invisible, 0 = blanc plein. TRES haute : un reflet doit se remarquer
 	-- une demi-seconde sans qu'on sache dire ce qui a bouge. Des qu'on peut le montrer du doigt, il est trop
 	-- fort -- meme regle que le vignettage.
@@ -480,8 +483,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	shineBand.Rotation = SHINE_ROTATION
-	-- Hors cadre au depart : sans ca le premier reflet serait deja au milieu de l'ecran a la premiere image.
-	shineBand.Offset = Vector2.new(-1, 0)
+	-- TRAJET ELARGI AVEC LA BANDE. Une bande epaisse doit partir de plus loin pour entrer par un bord et sortir
+	-- par l'autre : a trajet fixe, une bande large serait deja au milieu de l'ecran a la premiere image.
+	local shineTravel = 1 + SHINE_WIDTH
+	shineBand.Offset = Vector2.new(-shineTravel, 0)
 	shineBand.Parent = shine
 
 	task.spawn(function()
@@ -495,11 +500,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 				if e >= 1 then
 					break
 				end
-				-- De -1 a 1 : la bande entre par un bord et sort par l'autre.
-				shineBand.Offset = Vector2.new(-1 + e * 2, 0)
+				-- D'un bout a l'autre du trajet : la bande entre par un bord et sort par l'autre.
+				shineBand.Offset = Vector2.new(-shineTravel + e * shineTravel * 2, 0)
 				RunService.RenderStepped:Wait()
 			end
-			shineBand.Offset = Vector2.new(-1, 0)
+			shineBand.Offset = Vector2.new(-shineTravel, 0)
 		end
 	end)
 

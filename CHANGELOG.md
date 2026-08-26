@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.487 — Le reflet devient une large nappe
+
+`SHINE_WIDTH` 0.07 -> 0.7, soit dix fois plus epais.
+
+### Le trajet s'elargit AVEC la bande
+
+Il allait de -1 a 1, ce qui suffisait a une bande fine. Une bande epaisse, elle, serait deja au milieu de
+l'ecran a la premiere image : elle doit partir de plus loin pour entrer par un bord et sortir par l'autre.
+
+Le trajet se DEDUIT donc de la largeur (`1 + SHINE_WIDTH`) au lieu d'etre ecrit : deux valeurs qui doivent
+rester d'accord ne s'ecrivent pas deux fois.
+
+### Ce que ca change au rendu
+
+Au-dela de 0.5, la bande est plus large que l'espace du degrade : ses bords sont ROGNES, et le profil devient
+une grande rampe douce plutot qu'une barre nette. Ce n'est plus un eclat qui passe, c'est une nappe qui balaie.
+
+C'est un choix, pas un defaut -- mais il vaut mieux le savoir avant de chercher pourquoi la barre n'a plus de
+bord.
+
 ## 0.0.486 — Le reflet sur la maison devient discret
 
 `SHINE_STRENGTH` 0.72 -> 0.9 (1 = invisible). Reglage seul.
