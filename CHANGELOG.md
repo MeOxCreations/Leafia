@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.486 — Le reflet sur la maison devient discret
+
+`SHINE_STRENGTH` 0.72 -> 0.9 (1 = invisible). Reglage seul.
+
+Un reflet doit se remarquer une demi-seconde sans qu'on sache dire ce qui a bouge. Des qu'on peut le montrer du
+doigt, il est trop fort -- meme regle que le vignettage.
+
+Il y a un second interet a le baisser : le reflet ne connait pas le fondu de la maison, donc il passe aussi la
+ou le dessin est deja efface. Plus il est faible, moins cette zone se rallume.
+
 ## 0.0.485 — L'apparition de la feuille devient franchement douce
 
 `Quad Out` partait encore a PLEINE VITESSE : seule la fin etait adoucie. Un depart sec se ressent comme un tic

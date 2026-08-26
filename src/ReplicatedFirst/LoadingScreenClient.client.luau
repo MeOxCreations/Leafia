@@ -188,9 +188,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Demi-largeur de la bande, en fraction du balayage. Plus large = un voile qui passe ; plus etroit = un
 	-- eclat. Au-dela de ~0.15 ca cesse de ressembler a un reflet.
 	local SHINE_WIDTH = 0.07
-	-- Transparence AU COEUR de la bande. 1 = invisible, 0 = blanc plein. Volontairement haute : un reflet se
-	-- remarque une demi-seconde, il ne se regarde pas.
-	local SHINE_STRENGTH = 0.72
+	-- Transparence AU COEUR de la bande. 1 = invisible, 0 = blanc plein. TRES haute : un reflet doit se remarquer
+	-- une demi-seconde sans qu'on sache dire ce qui a bouge. Des qu'on peut le montrer du doigt, il est trop
+	-- fort -- meme regle que le vignettage.
+	--
+	-- Et il ne connait pas le fondu de la maison : il passe donc aussi la ou le dessin est deja efface. Plus il
+	-- est faible, moins cette zone se rallume.
+	local SHINE_STRENGTH = 0.9
 	-- Inclinaison du balayage, et duree d'un passage. Court : c'est un eclat, pas un lever de soleil.
 	local SHINE_ROTATION = 20
 	local SHINE_SWEEP = 0.9
