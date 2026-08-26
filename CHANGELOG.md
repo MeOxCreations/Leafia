@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.514 — En marche arriere, la fleche part du bon cote
+
+Reculer en braquant a gauche posait la fleche a DROITE.
+
+### Une inversion vraie pour la machine, fausse pour la fleche
+
+La rotation de la tondeuse applique `dirSign`, qui s'inverse en marche arriere. C'est correct POUR ELLE : on se
+deplace le long de -cap, donc tourner le cap a droite envoie la machine a gauche -- sans l'inversion, reculer en
+braquant partirait du cote oppose a ce qu'on demande.
+
+La fleche, elle, montre CE QUE LE JOUEUR DEMANDE. Une demande ne s'inverse pas : gauche reste gauche, qu'on
+avance ou qu'on recule. Lui passer `dirSign` appliquait donc l'inversion DEUX FOIS.
+
+Elle garde `steerSign` (le reglage d'inversion du braquage), qui vaut dans les deux sens.
+
+### Le motif
+
+Deux consommateurs de la meme entree n'ont pas forcement besoin des memes corrections. Reutiliser le calcul
+voisin parce qu'il est juste a cote est le raccourci qui a produit le bug -- il fallait se demander a quelle
+QUESTION chacun repond.
+
 ## 0.0.513 — L'herbe coupee ne remonte plus du tout : elle DESCEND, un point c'est tout
 
 Le mouvement en cloche disparait. La touffe est ecrasee par la lame, on remplace son maillage pendant qu'elle est

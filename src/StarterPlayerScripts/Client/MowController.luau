@@ -944,13 +944,17 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
 
-	-- LE MARQUEUR, pose ICI et pas plus haut : c'est le premier endroit ou le SENS du virage est connu. Il tient
-	-- compte de la marche arriere (`dirSign`) et de l'inversion de reglage (`steerSign`), donc la fleche part du
-	-- meme cote que la machine, dans tous les cas.
+	-- LE MARQUEUR, pose ICI et pas plus haut : c'est le premier endroit ou le braquage est connu avec son reglage.
 	--
-	-- On lui donne l'INTENTION -- le meme produit que la rotation juste au-dessus, sans le taux ni le temps --
-	-- et surtout pas le cap obtenu : une fleche calee sur le cap SUIT la machine au lieu de la devancer.
-	updateMarker(mower, lateralAmount * steerSign * dirSign, dt)
+	-- On lui donne l'INTENTION -- le braquage demande -- et surtout pas le cap obtenu : une fleche calee sur le
+	-- cap SUIT la machine au lieu de la devancer.
+	--
+	-- SANS `dirSign`, contrairement a la rotation juste au-dessus. Cette inversion est vraie pour la MACHINE : en
+	-- marche arriere, tourner le cap a droite l'envoie a gauche, il faut donc inverser pour qu'elle parte du cote
+	-- demande. Mais la fleche montre CE QUE LE JOUEUR DEMANDE, et une demande ne s'inverse pas : reculer en
+	-- braquant a gauche doit poser la fleche a gauche. L'appliquer aux deux mettait la fleche du cote oppose des
+	-- qu'on reculait.
+	updateMarker(mower, lateralAmount * steerSign, dt)
 
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.
