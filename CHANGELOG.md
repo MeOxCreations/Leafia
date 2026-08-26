@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.509 — Le moteur redescend vraiment au ralenti
+
+A l'arret, la boucle du moteur tournait a sa hauteur NORMALE. Le regime montait bien en accelerant, mais il ne
+descendait jamais en dessous : on n'entendait donc pas la machine attendre.
+
+### Le plancher etait cache dans la formule
+
+`PlaybackSpeed = 1 + ratio * RUN_PITCH`. Ce `1` est le ralenti, et il n'apparaissait nulle part dans la config :
+rien ne montrait qu'il existait, rien ne permettait de le baisser.
+
+Les deux bouts sont nommes maintenant -- `RUN_PITCH_IDLE = 0.78`, `RUN_PITCH_FULL = 1.35`. Le haut ne bouge pas,
+le bas descend. Egaliser les deux redonne une hauteur constante.
+
+C'est le meme motif que les reglages dedoubles : une valeur qu'on ne peut pas regler parce qu'elle est ecrite en
+dur au milieu d'un calcul.
+
 ## 0.0.508 — La pose "embarque" repond tout de suite, et au bon rythme
 
 Trois symptomes, deux causes.

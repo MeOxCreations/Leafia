@@ -1086,7 +1086,8 @@ local function grab(player: Player, model: Model)
 		local span = MowConfigs.SPEED_MAX - MowConfigs.SPEED_MIN
 		local ratio = if span > 1e-3 then math.clamp((state.speed - MowConfigs.SPEED_MIN) / span, 0, 1) else 0
 		if state.run then
-			state.run.PlaybackSpeed = 1 + ratio * MowConfigs.RUN_PITCH
+			local idle = MowConfigs.RUN_PITCH_IDLE
+			state.run.PlaybackSpeed = idle + ratio * (MowConfigs.RUN_PITCH_FULL - idle)
 		end
 
 		local lever = state.lever

@@ -151,10 +151,17 @@ return {
 	-- laissent un silence d'une image ou deux, et ce silence s'entend plus que la transition elle-meme.
 	-- Monter si on entend encore une couture, descendre si le regime couvre trop tot la reussite.
 	RUN_SOUND_OVERLAP = 0.4,
-	-- Hauteur AJOUTEE a la boucle a plein regime. Le moteur monte donc dans les aigus quand on accelere, comme le
+	-- HAUTEUR DE LA BOUCLE, aux DEUX BOUTS du regime. Le son passe de l'une a l'autre avec la vitesse, comme le
 	-- levier monte dans son animation -- les deux racontent la meme chose.
-	-- 0 = son a hauteur constante.
-	RUN_PITCH = 0.35,
+	--
+	-- Deux valeurs et pas "une base plus un ajout" : la version precedente ajoutait au ralenti une hauteur de 1
+	-- PILE, cachee dans la formule. Le moteur ronflait donc a sa hauteur normale a l'arret, et rien dans la
+	-- config ne montrait ce plancher ni ne permettait de le baisser.
+	--
+	-- Au ralenti il tourne DESSOUS : c'est ce qui fait entendre qu'il attend. Egaliser les deux = hauteur
+	-- constante.
+	RUN_PITCH_IDLE = 0.78,
+	RUN_PITCH_FULL = 1.35,
 
 	-- ===== DEMARRAGE =====
 	-- Le joueur tire la corde avant de pousser. Jouee UNE fois a la prise ; la pose du guidon prend le relais quand
