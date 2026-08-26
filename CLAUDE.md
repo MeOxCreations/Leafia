@@ -796,6 +796,23 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   endroit. Pour ca il faut afficher leur POSITION, pas leur nombre. Meme famille que l'herbe de zone posee en
   coordonnees monde, qui restait sur place quand sa zone bougeait.
 
+- **L'axe de rotation d'une roue est son axe de SYMETRIE -- celui dont les deux perpendiculaires sont EGALES --
+  et pas son cote le plus mince.** L'hypothese "une roue est LARGE x LARGE x FIN" est fausse des qu'une part
+  contient une PAIRE de roues montee sur un essieu : la tondeuse mesure 3.15 x 1.09 x 1.14, le long cote EST
+  l'essieu. En prenant le plus mince on faisait tourner l'ensemble a plat. Le rayon se prend alors lui aussi
+  PERPENDICULAIREMENT a l'axe, jamais sur la plus grande dimension -- sinon on lit la demi-longueur de l'essieu
+  (1.58 au lieu de 0.57) et les roues tournent trois fois trop lentement, ce qu'on met sur le compte du reglage.
+- **Un axe deduit dans le repere d'une PART doit etre converti avant d'etre applique dans le repere d'un JOINT.**
+  `Part0.CFrame * C0 = Part1.CFrame * C1`, donc passer du repere de Part1 a celui du joint = appliquer
+  `C1:Inverse()`. Les deux ne coincident que si `C1` est l'identite, ce qui n'arrive presque jamais sur un rig
+  sorti de Blender. Symptome : un calcul JUSTE qui produit un mouvement dans le mauvais plan. Meme famille que
+  "l'angle d'un outil dans la main vient du Motor6D" et que le geste centre-corps mappe sur le centre de l'ECRAN.
+- **Une sonde doit afficher la MESURE, pas seulement la conclusion qu'on en tire.** Trois diagnostics de suite
+  ont rate la cause des roues qui ne tournaient pas ; c'est la ligne qui affichait enfin la TAILLE de la part
+  (3.15/1.09/1.14) qui a tranche en une manche. Afficher "axe Y" ne dit pas POURQUOI Y a ete choisi, donc ne
+  permet pas de voir que l'hypothese de depart est fausse. Regle : quand un calcul choisit entre plusieurs
+  possibilites, la sonde montre ses ENTREES, pas son verdict.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
