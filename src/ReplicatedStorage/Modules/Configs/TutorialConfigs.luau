@@ -165,9 +165,10 @@ return {
 	-- Les deux effets ne font pas le meme travail : les particules donnent la MATIERE qui gicle, les eclairs
 	-- donnent le CHOC. L'un sans l'autre se remarque a peine.
 	--
-	-- Combien s'allument par coup, pris AU HASARD parmi ceux du conteneur. Trois coups qui claquent au meme
-	-- endroit se lisent comme une boucle ; trois coups qui claquent ailleurs se lisent comme trois vrais chocs.
-	KNOCK_BEAM_COUNT = 3,
+	-- TOUS ENSEMBLE, et plus un tirage au sort. Les eclairs sont disposes en etoile autour du point d'impact :
+	-- les allumer tous d'un coup DESSINE ce point, alors qu'en allumer trois au hasard ne dessinait qu'un
+	-- fragment, different a chaque coup -- ca se lisait comme un scintillement, pas comme une frappe.
+	--
 	-- Duree de l'eclair. TRES court : c'est un flash. Simple allume/eteint, sans fondu -- un Beam dont on anime
 	-- l'eclat doit voir cet eclat RENDU a chaque sortie possible, et ca faisait trois garde-fous pour trois
 	-- images d'effet.

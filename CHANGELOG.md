@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.500 — Les eclairs partent TOUS ENSEMBLE
+
+Ils sont disposes en etoile autour du point d'impact. En allumer trois au hasard ne dessinait qu'un fragment,
+different a chaque coup : ca se lisait comme un scintillement, pas comme une frappe.
+
+Tous d'un coup DESSINENT le point d'impact. Le tirage au sort disparait, et `KNOCK_BEAM_COUNT` avec lui.
+
+### Un seul minuteur pour tout le lot
+
+Ils s'allument dans la meme image, ils doivent s'eteindre dans la meme. Un minuteur par eclair derive -- et
+l'etoile se defait par morceaux au lieu de disparaitre d'un bloc.
+
 ## 0.0.499 — Les eclairs reviennent, a cote des particules
 
 Ils avaient ete retires parce qu'on ne les voyait pas. Ils marchaient : la part qui les porte n'etait pas

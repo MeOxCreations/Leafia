@@ -645,13 +645,18 @@ local function knockOnce()
 	-- de fondu, arret du controller, mort du joueur -- sous peine de les laisser a zero pour toujours. Trois
 	-- garde-fous pour trois images d'effet.
 	local beams = getKnockBeams()
-	for _ = 1, math.min(TutorialConfigs.KNOCK_BEAM_COUNT, #beams) do
-		local beam = beams[math.random(#beams)]
+	for _, beam in ipairs(beams) do
 		beam.Enabled = true
+	end
+	if #beams > 0 then
+		-- UN SEUL MINUTEUR pour tout le lot, pas un par eclair. Ils se sont allumes dans la meme image, ils
+		-- doivent s'eteindre dans la meme : des minuteurs separes derivent, et l'etoile se defait par morceaux.
 		task.delay(TutorialConfigs.KNOCK_BEAM_TIME, function()
-			-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
-			if beam.Parent then
-				beam.Enabled = false
+			for _, beam in ipairs(beams) do
+				-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
+				if beam.Parent then
+					beam.Enabled = false
+				end
 			end
 		end)
 	end
