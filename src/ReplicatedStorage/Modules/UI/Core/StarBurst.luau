@@ -29,14 +29,15 @@ local STARS: { { image: string, dir: Vector2 } } = {
 -- et sur un grand ecran. La hauteur et pas la largeur, parce que c'est elle qui varie le moins d'un format a
 -- l'autre -- en largeur, la meme valeur donnerait une gerbe ecrasee en 16:9 et enorme en 4:3.
 local START_DIST = 0.03 -- elles ne partent pas du point exact : sinon elles se chevauchent toutes au depart
-local TRAVEL = 0.30
+local TRAVEL = 0.5
 local SIZE = 0.20
 
 local TRAVEL_TIME = 0.4
 local FADE_DELAY = 0.12
 local FADE_TIME = 0.28
--- Transparence de depart. Pas 0 : une gerbe pleinement opaque mange l'image au lieu de l'accompagner.
-local START_TRANSPARENCY = 0.25
+-- Transparence de depart. UNE GERBE DISCRETE : elle accompagne le coup, elle ne le remplace pas. Trop visible,
+-- elle devient le sujet -- et ce qu'on doit regarder a cet instant, c'est la porte.
+local START_TRANSPARENCY = 0.65
 
 -- CALCULEE, pas ecrite a la main. Deux durees qu'on garde d'accord de tete finissent toujours par diverger : le
 -- jour ou l'on allonge le fondu, la gerbe serait detruite avant de l'avoir fini.
