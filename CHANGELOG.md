@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.492 — Les eclairs des coups deviennent lisibles
+
+Ils partaient, mais on ne voyait rien. Trois causes, trois corrections.
+
+### Un clignotement binaire est INVISIBLE
+
+Allumer puis eteindre en 0.07 s ne laisse aucune trace : l'oeil ne retient qu'un changement qui DURE un peu.
+L'eclair s'allume donc d'un coup et S'ETEINT EN FONDU -- attaque seche, extinction douce, comme une etincelle.
+
+La duree passe a 0.28 s, mais elle ne se lit pas comme "plus long" : c'est la DECROISSANCE qui la rend visible,
+pas la duree seule.
+
+### On anime `Brightness`, pas `Transparency`
+
+La transparence d'un Beam est une NumberSequence : elle porte le degrade dessine dans Studio, et l'ecraser par
+une valeur plate le detruirait. L'eclat, lui, est un simple nombre.
+
+### Trois d'un coup
+
+Un seul Beam fin parmi neuf se perd, meme en le laissant plus longtemps. Trois font un impact, sans jamais tout
+allumer -- le hasard garde son interet.
+
+### L'eclat d'origine est RELEVE et RENDU
+
+On l'anime jusqu'a zero. Coupe en plein fondu -- rideau, mort, sortie de scene -- il resterait a zero et l'effet
+ne marcherait PLUS JAMAIS, sans que rien ne le signale. Il est rendu a la fin du fondu comme a l'arret du
+controller.
+
 ## 0.0.491 — Les eclairs ne partaient pas : le filtre etait plus strict que la realite
 
 La recherche du conteneur n'acceptait qu'un `Model` ou un `Folder`. `KnockEffect1` est une PART. Elle ne

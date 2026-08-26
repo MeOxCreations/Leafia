@@ -14,6 +14,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
@@ -63,6 +64,10 @@ local doorWatch: RBXScriptConnection? = nil
 local trySound: Sound? = nil
 -- Eclairs des coups, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockBeams: { Beam }? = nil
+-- Eclat d'origine de chaque Beam, releve a la resolution. On l'anime jusqu'a zero puis on le REND : sans cette
+-- copie, un eclair coupe en plein fondu resterait eteint pour toujours -- et il faudrait rouvrir Studio pour
+-- comprendre pourquoi un effet ne marche plus qu'une fois.
+local knockGlow: { [Beam]: number } = {}
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -529,6 +534,7 @@ local function getKnockBeams(): { Beam }
 				-- ETEINTS AU DEPART. Ce sont des eclairs : leur etat de repos est INVISIBLE. S'ils arrivent
 				-- allumes depuis Studio, ils resteraient allumes toute la scene et on chercherait pourquoi.
 				d.Enabled = false
+				knockGlow[d] = d.Brightness
 				table.insert(found, d)
 			end
 		end
@@ -557,18 +563,32 @@ local function knockOnce()
 	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
 	SceneCamera.kick(TutorialConfigs.KNOCK_KICK)
 
-	-- UN ECLAIR AU HASARD. Pas toujours le meme : trois coups identiques se lisent comme une boucle, trois coups
-	-- qui claquent ailleurs se lisent comme trois vrais chocs.
+	-- DES ECLAIRS AU HASARD. Pas toujours les memes : trois coups identiques se lisent comme une boucle, trois
+	-- coups qui claquent ailleurs se lisent comme trois vrais chocs.
 	local beams = getKnockBeams()
-	if #beams > 0 then
+	for _ = 1, math.min(TutorialConfigs.KNOCK_BEAM_COUNT, #beams) do
 		local beam = beams[math.random(#beams)]
+		-- ATTAQUE SECHE, EXTINCTION EN FONDU. Un clignotement binaire de la meme duree est invisible : l'oeil ne
+		-- retient qu'un changement qui DURE un peu. On anime donc l'eclat, et l'extinction devient lisible sans
+		-- que l'effet s'allonge.
+		--
+		-- C'est `Brightness` qu'on anime, pas `Transparency` : la transparence d'un Beam est une NumberSequence
+		-- -- elle porte le degrade dessine dans Studio, et l'ecraser par une valeur plate le detruirait.
+		beam.Brightness = knockGlow[beam] or beam.Brightness
 		beam.Enabled = true
-		task.delay(TutorialConfigs.KNOCK_BEAM_TIME, function()
+		local fade = TweenService:Create(
+			beam,
+			TweenInfo.new(TutorialConfigs.KNOCK_BEAM_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Brightness = 0 }
+		)
+		fade.Completed:Connect(function()
 			-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
 			if beam.Parent then
 				beam.Enabled = false
+				beam.Brightness = knockGlow[beam] or beam.Brightness
 			end
 		end)
+		fade:Play()
 	end
 
 	local shake = shakeTrack
@@ -839,6 +859,9 @@ function TutorialController.stop()
 		for _, beam in ipairs(knockBeams) do
 			if beam.Parent then
 				beam.Enabled = false
+				-- On rend l'eclat d'origine : coupe en plein fondu, il resterait a zero et l'effet ne marcherait
+				-- plus jamais -- sans que rien ne le signale.
+				beam.Brightness = knockGlow[beam] or beam.Brightness
 			end
 		end
 	end

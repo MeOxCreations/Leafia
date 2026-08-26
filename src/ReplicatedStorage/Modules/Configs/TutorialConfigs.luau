@@ -145,9 +145,13 @@ return {
 	-- hasard, et pas toujours le meme : trois coups identiques se lisent comme une boucle, trois coups qui
 	-- claquent ailleurs se lisent comme trois vrais chocs.
 	KNOCK_BEAM_PARENT = "KnockEffect1",
-	-- Duree de l'eclair. TRES court : c'est un flash, pas un eclairage. Au-dela de ~0.15 s on a le temps de
-	-- regarder ce que c'est, et l'illusion tombe.
-	KNOCK_BEAM_TIME = 0.07,
+	-- Combien s'allument A LA FOIS. Un seul Beam fin parmi neuf se perd : on ne voit rien, meme en le laissant
+	-- plus longtemps. Trois d'un coup font un impact, sans jamais tout allumer.
+	KNOCK_BEAM_COUNT = 3,
+	-- Duree de l'eclair. Il s'allume D'UN COUP puis S'ETEINT EN FONDU -- attaque seche, extinction douce, comme
+	-- une etincelle. Un clignotement binaire de la meme duree est INVISIBLE : l'oeil ne retient qu'un
+	-- changement qui DURE un peu, et le fondu lui en donne un.
+	KNOCK_BEAM_TIME = 0.28,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la
