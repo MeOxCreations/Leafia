@@ -544,6 +544,19 @@ local function getKnockEmitters(): { ParticleEmitter }
 			)
 		end
 	end
+	-- ON DIT CE QU'ON A TROUVE, pas seulement ce qui manque. "Aucun effet" couvre trois causes qui se ressemblent
+	-- a l'ecran : conteneur introuvable, conteneur sans emetteur, ou emetteurs bien trouves mais dont la bouffee
+	-- ne se voit pas. Les deux premieres sont deja nommees ci-dessus ; celle-ci separe la troisieme -- et c'est
+	-- la seule qui se corrige dans Studio, sur les emetteurs eux-memes.
+	--
+	-- Une fois par session, a la premiere frappe : ce n'est pas du bruit.
+	if #found > 0 then
+		local names = {}
+		for _, e in ipairs(found) do
+			table.insert(names, `{e.Parent and e.Parent.Name or "?"}/{e.Name}`)
+		end
+		print(`[Tutorial] {#found} emetteur(s) d'impact : {table.concat(names, ", ")}`)
+	end
 	knockEmitters = found
 	return found
 end

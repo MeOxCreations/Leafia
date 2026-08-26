@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.497 — Le jeu dit COMBIEN d'emetteurs d'impact il a trouves
+
+"Aucun effet" couvre TROIS causes qui se ressemblent a l'ecran :
+
+- le conteneur est introuvable ;
+- il est trouve mais ne contient aucun emetteur ;
+- les emetteurs sont bien trouves, et c'est leur bouffee qui ne se voit pas.
+
+Les deux premieres etaient deja nommees. La troisieme ne l'etait pas -- et c'est la seule qui se corrige dans
+STUDIO, sur les emetteurs eux-memes, pas dans le code.
+
+Une ligne a la premiere frappe, une fois par session :
+
+    [Tutorial] 2 emetteur(s) d'impact : Mid/Flare, Mid/Wave
+
+Si elle sort, le code fait son travail et le reglage est a chercher sur les emetteurs (nombre de particules,
+taille, duree de vie, transparence). Si elle ne sort pas, c'est l'un des deux autres cas, et l'avertissement le
+dit.
+
 ## 0.0.496 — L'impact des coups passe des Beams a des particules
 
 Les Beams sont remplaces par les ParticleEmitter poses dans l'attachment `Mid` de `KnockEffect1`. Chaque coup
