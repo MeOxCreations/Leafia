@@ -274,6 +274,8 @@ return {
 	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
 	-- ===== CONDUITE =====
+	-- (Le seuil "on avance" n'est PAS ici : c'est SPEED_MOVE_EPSILON, plus haut. Un second seuil pour la meme
+	-- question finirait par le contredire, et on aurait une pose qui s'installe alors que le regime retombe.)
 	-- Une tondeuse a du POIDS : on ne pivote pas sur place avec, on decrit un ARC. Par defaut le personnage Roblox
 	-- s'oriente INSTANTANEMENT vers la direction demandee (AutoRotate), ce qui donne un demi-tour sec sur un point.
 	--
@@ -422,26 +424,22 @@ return {
 	STEER_DEBUG_COLOR = Color3.fromRGB(255, 210, 60),
 
 	-- ===== POSE DE VIRAGE =====
-	-- Les bras accompagnent le virage, comme quand on redresse une vraie tondeuse. L'animation n'est PAS jouee :
-	-- elle est POSEE, comme le levier. Son MILIEU est la pose droite, un bout est le virage a gauche, l'autre a
-	-- droite -- on ecrit donc une IMAGE, jamais un defilement.
+	-- LE PERSONNAGE SE FAIT EMBARQUER. Quand la machine avance, il se penche en arriere, bras tendus -- comme si
+	-- elle allait trop vite pour lui. C'est une blague, pas une pose realiste, et c'est voulu.
 	--
-	-- Elle est pilotee par le BALLANT (voir plus bas) : deja signe, deja proportionnel au virage, et il revient
-	-- tout seul a zero quand le joueur roule droit. Rien de nouveau a lisser.
-	TURN_ANIM_ID = "rbxassetid://89239700900064",
-	-- Ou se trouve la pose DROITE dans l'animation, en fraction de sa duree. 0.5 = au milieu.
-	TURN_POSE_MIDDLE = 0.5,
-	-- Les bras partent du mauvais cote ? Mettre true. Le sens depend de la convention d'angle de Roblox ET du sens
-	-- dans lequel l'animation a ete faite : ca ne se DEDUIT pas, ca se voit a l'ecran.
-	TURN_POSE_INVERT = true,
-	-- Vitesse a laquelle les BRAS rejoignent la pose demandee, en fraction par seconde. HAUTE expres.
-	-- Les bras suivaient le BALLANT de la machine, qui met du temps a s'installer quand on manoeuvre lentement :
-	-- on braquait, et les bras ne bougeaient presque pas. Ils suivent maintenant l'INPUT en direct des qu'on
-	-- braque, et retombent sur le ballant le reste du temps.
-	TURN_POSE_SPEED = 9,
+	-- L'animation n'est PAS jouee : elle est POSEE, comme le levier et le regard arriere. Sa premiere image est
+	-- le repos, sa DERNIERE est la pose complete -- on ecrit une IMAGE, jamais un defilement.
+	--
+	-- C'est ce qui donne gratuitement le "jouer a l'envers quand on s'arrete" : la position remonte vers la fin
+	-- quand on pousse et redescend vers zero quand on s'arrete. Une seule valeur, deux sens, et repartir en plein
+	-- retour ne demande AUCUN cas particulier -- elle change juste de direction.
+	PUSH_ANIM_ID = "rbxassetid://130354141053420",
+	-- Vitesse a laquelle la pose s'installe et se defait, en fraction par seconde. Basse = le personnage se laisse
+	-- embarquer progressivement ; haute = il se jette en arriere des le premier stud.
+	PUSH_POSE_SPEED = 3.5,
 	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
-	TURN_PRIORITY = Enum.AnimationPriority.Action2,
+	PUSH_PRIORITY = Enum.AnimationPriority.Action2,
 
 	-- ===== REGARD ARRIERE =====
 	-- En marche arriere, le personnage tourne la tete pour voir ou il va. Comme dans la vraie vie -- et ca dit au

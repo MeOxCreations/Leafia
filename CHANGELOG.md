@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.506 — Le personnage se fait embarquer par la tondeuse
+
+Quand la machine avance, il se penche en arriere, bras tendus -- comme si elle allait trop vite pour lui. C'est
+une blague, pas une pose realiste, et c'est voulu.
+
+La pose de VIRAGE part : les bras n'accompagnent plus le braquage. `PushLawnMowerAnimation` prend sa place et sa
+priorite.
+
+### "Jouer a l'envers quand on s'arrete" ne demande AUCUN code en plus
+
+L'animation n'est pas jouee, elle est POSEE -- meme mecanique que le levier d'accelerateur et le regard arriere.
+Une seule valeur monte vers 1 quand la machine avance et redescend vers 0 quand elle s'arrete, et la
+`TimePosition` suit.
+
+Deux sens, une valeur. Repartir en plein retour ne demande aucun cas particulier : elle change juste de
+direction. Une version qui JOUE la piste puis la rejoue a l'envers aurait eu besoin d'un etat, d'une annulation,
+et d'un cas pour le redemarrage a mi-chemin.
+
+### On mesure l'avance REELLE, pas l'intention
+
+Comme le regard arriere. L'animation raconte que la machine VA VITE : pousser contre un mur ne doit donc rien
+declencher, alors que l'input de marche avant est a fond dans ce cas.
+
+### Le meme seuil que le regime moteur
+
+`SPEED_MOVE_EPSILON`, deja la. "Est-ce que la machine avance" est UNE question, elle ne peut pas avoir deux
+reponses : un second seuil finirait par le contredire, et on verrait le personnage se pencher pendant que le
+moteur redescend au ralenti.
+
+### Deux pieges de piste posee, repris tels quels
+
+- `Looped = true` malgre la vitesse zero : une piste non bouclee se RELACHE en arrivant a sa derniere image, et
+  la pose sauterait au moment precis ou l'on veut la tenir.
+- On s'arrete a `Length - epsilon` : sur la derniere image PILE, une piste bouclee est deja repartie a zero.
+
+### A FAIRE DANS STUDIO
+
+`PushLawnMowerAnimation` doit exister dans `Animations/Tools/LawnMower`. Son ID est en CODE (Rojo ne synchronise
+pas les Instances Animation vers la place tuto), donc rien a recopier a la main cette fois.
+
 ## 0.0.505 — La gerbe d'etoiles part plus loin, plus petite et plus discrete
 
 `TRAVEL` 0.30 -> 0.5, `SIZE` 0.20 -> 0.12 et `START_TRANSPARENCY` 0.25 -> 0.65. Reglages seuls.

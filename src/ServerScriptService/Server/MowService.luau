@@ -34,7 +34,7 @@ type CarryState = {
 	launcherJoint: Motor6D?, -- poignee du lanceur accrochee a la main du joueur pendant le demarrage
 	launcherHome: CFrame?, -- sa place SUR LA MACHINE, relevee a la prise pour l'y rendre ensuite
 	hold: AnimationTrack?, -- pose "mains sur le guidon", figee au marqueur. Coupee a la repose.
-	turn: AnimationTrack?, -- pose de VIRAGE des bras. Posee image par image, jamais jouee.
+	push: AnimationTrack?, -- pose EMBARQUE (penche en arriere). Posee image par image, jamais jouee.
 	reverse: AnimationTrack?, -- pose REGARD ARRIERE. Posee elle aussi.
 	reverseAmount: number, -- 0 = tete droite, 1 = tete tournee. Lisse, pour que le regard ne claque pas.
 	holdGuard: RBXScriptConnection?, -- filet : rattrape la pose si le marqueur est rate (image perdue)
@@ -51,7 +51,7 @@ type CarryState = {
 	success: Sound?, -- le son de reussite en cours : la boucle moteur s'enchaine sur SA fin
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
-	armAmount: number, -- pose des BRAS, lissee. Suit l'input quand on braque, le ballant sinon.
+	pushAmount: number, -- 0 = debout, 1 = penche en arriere. Lissee : c'est elle qui joue l'anim dans les deux sens.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -433,20 +433,24 @@ local function playHold(character: Model, state: CarryState)
 	track.TimePosition = 0
 	state.hold = track
 
-	-- POSE DE VIRAGE, sur le MEME Animator (c'est le joueur qui tourne, pas la machine).
+	-- POSE EMBARQUE, sur le MEME Animator (c'est le joueur qui se penche, pas la machine).
 	-- Vitesse ZERO des le depart : on ecrit sa position, elle ne defile jamais toute seule.
-	local turnAsset = machineAnimation(MowConfigs.TURN_ANIM_ID)
-	if turnAsset then
-		local okTurn, turnTrack = pcall(function()
-			return (animator :: Animator):LoadAnimation(turnAsset)
+	--
+	-- `Looped = true` MALGRE la vitesse zero : une piste non bouclee se RELACHE en arrivant a sa derniere image,
+	-- et la pose sauterait au moment precis ou l'on veut la tenir.
+	local pushAsset = machineAnimation(MowConfigs.PUSH_ANIM_ID)
+	if pushAsset then
+		local okPush, pushTrack = pcall(function()
+			return (animator :: Animator):LoadAnimation(pushAsset)
 		end)
-		if okTurn and typeof(turnTrack) == "Instance" then
-			local t = turnTrack :: AnimationTrack
+		if okPush and typeof(pushTrack) == "Instance" then
+			local t = pushTrack :: AnimationTrack
 			t.Looped = true
-			t.Priority = MowConfigs.TURN_PRIORITY
+			t.Priority = MowConfigs.PUSH_PRIORITY
 			t:Play(MowConfigs.HOLD_FADE)
 			t:AdjustSpeed(0)
-			state.turn = t
+			t.TimePosition = 0
+			state.push = t
 		end
 	end
 
@@ -525,8 +529,8 @@ local function stopHold(state: CarryState)
 	end
 	stopPose(state.start)
 	state.start = nil
-	stopPose(state.turn)
-	state.turn = nil
+	stopPose(state.push)
+	state.push = nil
 	stopPose(state.reverse)
 	state.reverse = nil
 	stopPose(state.hold)
@@ -869,7 +873,7 @@ local function grab(player: Player, model: Model)
 		pullsNeeded = rng:NextInteger(MowConfigs.PULL_TRIES_MIN, MowConfigs.PULL_TRIES_MAX),
 		swing = 0,
 		steerInput = 0,
-		armAmount = 0,
+		pushAmount = 0,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -1015,29 +1019,31 @@ local function grab(player: Player, model: Model)
 			back.TimePosition = math.clamp(state.reverseAmount, 0, 1) * (back.Length - HOLD_EPSILON)
 		end
 
-		-- POSE DE VIRAGE. Le ballant est deja SIGNE et proportionnel au virage, et il revient a zero quand le
-		-- joueur roule droit : il suffit de le ramener sur la timeline. Rien de plus a lisser.
-		-- Chaque moitie est mise a l'echelle de SA propre portee, donc le milieu peut etre ailleurs qu'a 0.5 sans
-		-- que la pose deborde d'un cote.
-		-- LES BRAS SUIVENT L'INPUT EN PRIORITE, le ballant seulement a defaut. Le ballant met du temps a
-		-- s'installer quand on manoeuvre lentement : cales dessus, on braquait et les bras ne bougeaient presque
-		-- pas. En manoeuvre c'est l'EFFORT qu'on montre, et l'effort est immediat.
+		-- POSE EMBARQUE. Le personnage se penche en arriere quand la machine avance, et se redresse quand elle
+		-- s'arrete.
+		--
+		-- ON MESURE L'AVANCE REELLE, pas l'intention -- comme le regard arriere juste au-dessus. L'animation
+		-- raconte que la machine VA VITE : pousser contre un mur ne doit donc rien declencher, alors que l'input
+		-- de marche avant, lui, est a fond dans ce cas.
+		--
+		-- MEME SEUIL que le regime moteur (`SPEED_MOVE_EPSILON`) : "est-ce que la machine avance" est UNE question,
+		-- elle ne peut pas avoir deux reponses. Un second seuil finirait par le contredire, et on verrait le
+		-- personnage se pencher pendant que le moteur redescend au ralenti.
+		--
 		-- Calcule HORS du bloc d'animation : l'etat doit rester coherent meme si la piste n'a pas pu charger.
-		local swingRatio = if maxSwing > 1e-4 then math.clamp(state.swing / maxSwing, -1, 1) else 0
-		local steerRatio = math.clamp(state.steerInput * steerSign, -1, 1)
-		local armTarget = if math.abs(steerRatio) > 0.05 then steerRatio else swingRatio
-		state.armAmount += (armTarget - state.armAmount) * math.min(1, MowConfigs.TURN_POSE_SPEED * dt)
-		-- Cle a la cible : un lerp exponentiel n'y arrive jamais, et les bras resteraient decentres a vie.
-		if math.abs(armTarget - state.armAmount) < SWING_SNAP then
-			state.armAmount = armTarget
+		local pushTarget = if -backward > MowConfigs.SPEED_MOVE_EPSILON then 1 else 0
+		state.pushAmount += (pushTarget - state.pushAmount) * math.min(1, MowConfigs.PUSH_POSE_SPEED * dt)
+		-- Cle a la cible : un lerp exponentiel n'y arrive jamais. Sans ca la pose ne serait jamais tout a fait
+		-- complete, ni tout a fait defaite -- le personnage garderait un residu de penche a l'arret.
+		if math.abs(pushTarget - state.pushAmount) < SWING_SNAP then
+			state.pushAmount = pushTarget
 		end
 
-		local turn = state.turn
-		if turn and turn.Length > HOLD_MIN_LENGTH then
-			local signed = if MowConfigs.TURN_POSE_INVERT then -state.armAmount else state.armAmount
-			local mid = MowConfigs.TURN_POSE_MIDDLE
-			local ratio = if signed >= 0 then mid + signed * (1 - mid) else mid + signed * mid
-			turn.TimePosition = math.clamp(ratio, 0, 1) * (turn.Length - HOLD_EPSILON)
+		local push = state.push
+		if push and push.Length > HOLD_MIN_LENGTH then
+			-- On s'arrete a Length - epsilon : sur la derniere image PILE, une piste bouclee est deja repartie a
+			-- zero, et la pose claquerait au repos juste au moment ou elle est la plus marquee.
+			push.TimePosition = math.clamp(state.pushAmount, 0, 1) * (push.Length - HOLD_EPSILON)
 		end
 
 		local weld = state.weld
@@ -1104,7 +1110,7 @@ function MowService.init()
 	-- En task.spawn : c'est un appel RESEAU, il n'a rien a faire dans le chemin de boot.
 	task.spawn(function()
 		local assets: { Instance } = { getHoldAnimation() }
-		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.TURN_ANIM_ID, MowConfigs.REVERSE_ANIM_ID, MowConfigs.START_ANIM_ID }) do
+		for _, id in ipairs({ MowConfigs.MOTOR_ANIM_ID, MowConfigs.LEVER_ANIM_ID, MowConfigs.PUSH_ANIM_ID, MowConfigs.REVERSE_ANIM_ID, MowConfigs.START_ANIM_ID }) do
 			local a = machineAnimation(id)
 			if a then
 				assets[#assets + 1] = a
