@@ -30,7 +30,7 @@ local STARS: { { image: string, dir: Vector2 } } = {
 -- l'autre -- en largeur, la meme valeur donnerait une gerbe ecrasee en 16:9 et enorme en 4:3.
 local START_DIST = 0.03 -- elles ne partent pas du point exact : sinon elles se chevauchent toutes au depart
 local TRAVEL = 0.5
-local SIZE = 0.20
+local SIZE = 0.12
 
 local TRAVEL_TIME = 0.4
 local FADE_DELAY = 0.12

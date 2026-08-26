@@ -2204,9 +2204,9 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
-## 0.0.505 — La gerbe d'etoiles part plus loin et se voit moins
+## 0.0.505 — La gerbe d'etoiles part plus loin, plus petite et plus discrete
 
-`TRAVEL` 0.30 -> 0.5 et `START_TRANSPARENCY` 0.25 -> 0.65. Reglages seuls.
+`TRAVEL` 0.30 -> 0.5, `SIZE` 0.20 -> 0.12 et `START_TRANSPARENCY` 0.25 -> 0.65. Reglages seuls.
 
 Une gerbe discrete ACCOMPAGNE le coup au lieu de le remplacer. Trop visible, elle devient le sujet -- et ce
 qu'on doit regarder a cet instant, c'est la porte.
