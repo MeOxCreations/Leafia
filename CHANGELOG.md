@@ -2204,6 +2204,141 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.493 — Le rateau ramasse les feuilles, et la tondeuse ne derape plus
+
+Une session de corrections, plus un nouvel outil.
+
+### LE RATEAU (touche 3)
+
+Il ramasse les petits tas que la taille laisse au sol et les rassemble en GROS tas. Le joueur TIRE A LUI : au
+marqueur de l'animation, les tas d'une bande devant lui (7 studs de portee, 5.2 de large) glissent en arc vers
+un point devant ses pieds et fusionnent. Quatre par coup au plus -- il faut VOIR le tas grossir, pas tout
+aspirer d'un coup. Un coup a moins de 5 studs d'un gros tas existant le rejoint au lieu d'en creer un deuxieme.
+
+Trois fichiers neufs : `RakeConfigs`, `RakeService` (toute la logique), `RakeController` (envoie le clic, rien
+d'autre). Le service est cote SERVEUR parce que les tas sont des objets du MONDE : si le client les ramassait,
+chaque joueur verrait une pelouse differente et le co-op serait faux des la premiere haie.
+
+`HedgeStockService` POSE les tas, `RakeService` les RAMASSE. Deux moments du cycle, deux fichiers -- l'entete de
+`HedgeStockService` l'avait deja prevu. Les gros tas vivent dans leur propre dossier (`workspace.LeafPiles`) et
+portent leur compte en attribut : ils n'appartiennent plus a aucune haie, parce qu'ils iront un jour dans la Bin.
+
+Effet de bord repare au passage : la liste de tas de `HedgeStockService` plafonne a 30 par zone et supprimait le
+plus ancien. Elle gardait des references vers des tas que le rateau venait de ramasser, donc elle comptait des
+morts -- et les NOUVEAUX tas s'effacaient tout seuls. Elle balaie maintenant les morts avant de mesurer.
+
+### L'aimant de haie ne s'active plus que pour un outil de taille
+
+Nouveau champ `cutsHedge` dans `ToolConfigs`. `HedgeService` n'accroche le chantier que si l'outil en main le
+declare. Le serveur avait deja la bonne regle -- "mains vides = pas de chantier, sinon c'est une contrainte sans
+contrepartie" -- elle est simplement generalisee : le rateau travaille le SOL, et l'aimant l'empechait de faire
+son travail (impossible de s'ecarter pour ramasser).
+
+Un champ EXPLICITE, jamais "cet outil a-t-il une lame ?". Deduire une intention d'un detail de fabrication rate
+tout outil bati autrement -- le rateau n'a pas de lame et n'en aura jamais.
+
+C'est exactement la faute qui RETIRAIT le rateau des mains du joueur pres d'une haie : l'auto-equip cherchait
+`HitBoxRoot`, ne la trouvait pas, croyait les mains vides et tirait `ToggleTool` -- qui est une BASCULE, donc les
+mains pleines il RANGE. Corrige des deux cotes (auto-equip et prise d'echelle) en lisant l'attribut `LeafiaTool`.
+
+### La cisaille figeait le personnage, et le coupable etait un cache
+
+`ToolService` indexait ses pistes d'animation par NOM COURT. Or la cisaille ET le taille-haie ont chacun leur
+`IdleAnimation` dans LEUR dossier : le premier charge gagnait et servait sa pose A L'AUTRE.
+
+Ca dormait depuis toujours. Ce qui l'a reveille : le prechauffage boucle avec `pairs(ToolConfigs)`, dont l'ordre
+n'est PAS defini et CHANGE quand on insere une cle. Ajouter le rateau -- qui n'a meme pas d'animation homonyme --
+a suffi a inverser le gagnant. La cisaille s'est mise a recevoir la pose du taille-haie, qui cle les jambes en
+priorite Action : plus d'animation de marche.
+
+La cle du cache est maintenant `dossier/nom`. La collision n'existe plus, quel que soit le nombre d'outils.
+
+### La tondeuse ne derape plus en sortie de virage
+
+Deux correctifs rates avant de mesurer : la trajectoire n'y etait pour RIEN. Un affichage temporaire a donne
+0.6 degre de glissade reelle -- droit. Le coupable etait le BALLANT (`state.swing`), qui revient a zero par un
+lerp exponentiel : il trainait encore 5 degres une seconde apres le virage et mettait plus de 3 secondes a
+passer sous 1. En ligne droite, la machine roulait EN CRABE, ce qui se lit exactement comme un derapage.
+
+Nouveau `SWING_SETTLE` (180 deg/s) : une vitesse de retour MINIMALE. Le lerp garde son elan au depart, le
+plancher termine la fin au lieu de la laisser trainer. Retour a droit en 0.15 s au lieu de 3.4 s.
+
+### La conduite repond mieux
+
+- `TURN_SLOWDOWN` passe a 0. Le geste central est d'enchainer les virages en tondant : un frein a chaque
+  braquage etait un frein permanent.
+- L'input passe du DISQUE au CARRE. `GetMoveVector` rend un vecteur NORMALISE : avant + cote donnait
+  (0.707, 0.707), donc braquer a fond en avancant coutait 29 % de vitesse ET 29 % de braquage. Ca n'a de sens
+  que pour un personnage, qui se DEPLACE dans les deux axes ; ici ils sont DECOUPLES, le cote ne fait que
+  braquer. La norme est preservee, donc le dosage analogique du joystick reste intact.
+- `STEER_RADIUS` 8 -> 6 et `STEER_CRAWL` 2 -> 4 : virages plus courts, reorientation sur place moins molle.
+
+### L'echelle ne se plante plus dans la haie
+
+Le joueur etait tenu a 3.5 studs de la haie, un chiffre regle a la main. Or le bord AVANT de l'echelle tombe a
+`CARRY_CLEARANCE + profondeur` devant lui : des qu'elle depasse 2.5 studs de profondeur, elle entre DANS la haie.
+
+En cascade : l'echelle plantee dans la haie y plante AUSSI ses zones de grimpe, donc on ne peut plus jamais
+monter dessus. Ce n'est pas la grimpe qui etait cassee, elle etait devenue inatteignable.
+
+La distance de travail est maintenant CALCULEE depuis la profondeur reelle de l'echelle, mesuree au yaw de
+portage (`ladderExtentsForYaw` rend le bord AVANT en plus du bord arriere -- c'est cette moitie qui manquait).
+Le knob devient `LADDER_HEDGE_GAP` : l'ecart voulu, valable pour n'importe quelle taille d'echelle.
+
+### L'aimant de portage ne colle plus au buisson
+
+`nearestHedge` classait les haies par distance au CENTRE, alors que l'aimant, la normale et la portee du focus
+travaillent tous sur la BOITE. Un petit buisson (`hedge_size_type_1`, donc une haie pour le jeu) battait la
+longue haie qu'on longe : le joueur se retrouvait aimante et oriente vers le buisson, avec l'echelle soudee
+devant lui qui rentrait dedans. Le classement utilise maintenant la meme mesure que le reste.
+
+### Le prompt PRENDRE s'affiche enfin tout le temps
+
+`InteractionPrompt` est un SINGLETON partage par six controllers. La PRISE d'echelle (radiale, 8 studs) et la
+MONTEE (zone laterale, ENTIEREMENT incluse dans ces 8 studs) se doublaient a tour de role, et chacune gardait un
+verrou "mon prompt est affiche" qu'elle ne rouvrait jamais : celle qui perdait ne revenait PLUS.
+
+Trompeur au carre : les deux pilules ont le meme TITRE ("LADDER"), la meme hauteur, et seule la touche change --
+on ne voit pas un prompt manquant, on voit le sien remplace sans le remarquer. Et la TOUCHE marchait toujours,
+donc ca ressemblait a un bug d'AFFICHAGE alors que c'est un bug de PROPRIETE.
+
+`show()` prend maintenant une PRIORITE et rend true/false ; une demande de priorite inferieure est refusee sans
+toucher l'affichage. Meme idee que `CarryUtils` pour les mains : une seule question, une seule reponse, et les
+deux features n'ont pas a se connaitre. La montee gagne dans sa zone, la prise partout ailleurs -- et F reste
+actif quoi qu'il soit affiche. Les controllers ne cachent plus que SI la pilule est la leur (avant, s'eloigner
+d'une echelle effacait le prompt du seau ou de la boite aux lettres).
+
+### A faire dans Studio
+
+Rojo ne synchronise ni les Assets ni les Animations : tout ce bloc se fait a la main.
+
+- `Assets.Tools.RateauFeuilleMesh` : une part `Handle`, une Attachment `Grip` dedans (c'est elle qui donne
+  l'orientation dans la main), un Humanoid + Animator (sinon `RatissageAnimation` ne joue pas), et des Motor6D
+  dont les **Part1** portent les noms des poses (une anim retrouve un joint par le nom de sa Part1, jamais par
+  celui du Motor6D).
+- Regler `gripOffset` du rateau a l'oeil dans `ToolConfigs` : il est a 0/0/0, l'outil sera de travers au premier
+  essai.
+- `RatissageHumanAnimation` : le marqueur `RattissageEvent` (deux T) doit etre dans l'asset PUBLIE. L'editeur le
+  garde en memoire, mais l'objet `Animation` pointe sur un ID -- republier apres l'avoir ajoute. Sans lui le
+  rateau ramasse quand meme en fin de geste, et le serveur dit dans la console ce qui manque.
+- `Shear/IdleAnimation` : si le personnage n'a toujours pas son animation de marche, cette pose cle les JAMBES.
+  En priorite Action elle passe au-dessus de la marche. Une pose de maintien ne doit cler que les bras et le
+  torse. Aucun reglage de code ne peut le corriger.
+- Son optionnel : `SoundService.Sounds.Tools.Rake.RakeSweepSound`. Absent, tout marche et le service le dit une
+  fois au boot.
+
+### Limite connue
+
+Les touches 1/2/3 n'existent pas au doigt : AUCUN outil n'est equipable sur mobile. Leur UTILISATION (le clic)
+marche deja. C'etait vrai avant le rateau, ce n'est pas aggrave -- mais ca demande une barre d'outils a l'ecran,
+un vrai chantier d'UI.
+
+### Dette signalee
+
+Le calcul de distance a la boite d'une haie existe maintenant en QUATRE exemplaires prives (`HedgeService`,
+`HedgeCellService`, `LadderMoveController`, `RakeService`). Il merite un `HedgeGeomUtils` partage, a faire quand
+on y retouchera.
+
 ## 0.0.492 — Les eclairs des coups deviennent lisibles
 
 Ils partaient, mais on ne voyait rien. Trois causes, trois corrections.

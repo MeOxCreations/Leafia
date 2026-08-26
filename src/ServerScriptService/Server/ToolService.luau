@@ -127,6 +127,21 @@ local function getAnimator(character: Model): Animator?
 	return animator
 end
 
+-- CLE DU CACHE D'ANIMATIONS : le DOSSIER ET le nom, jamais le nom seul.
+--
+-- Deux outils peuvent avoir une animation du meme nom dans leur propre dossier -- et c'est le cas : la cisaille
+-- ET le taille-haie ont chacun leur "IdleAnimation". Avec le nom seul, le premier charge gagnait et servait sa
+-- pose A L'AUTRE. Deux poses de maintien differentes, une seule piste : la cisaille recevait celle du
+-- taille-haie, qui cle les jambes en priorite Action -> personnage FIGE, incapable de marcher.
+--
+-- Le pire : le prechauffage boucle avec `pairs`, dont l'ordre n'est PAS defini et CHANGE quand on ajoute une
+-- entree a la table. Ajouter un troisieme outil (le rateau) a suffi a inverser le gagnant, donc a faire
+-- apparaitre le bug sur un outil auquel on n'avait pas touche. Un bug de ce genre "se deplace" a chaque ajout et
+-- ne se reproduit pas d'une version a l'autre : il faut supprimer la collision, pas chercher le coupable.
+local function trackKey(animationFolder: string, animName: string): string
+	return `{animationFolder}/{animName}`
+end
+
 -- Charge toutes les animations d'outils sur l'Animator du personnage, une bonne fois. Appelee au spawn.
 -- Le cout est paye pendant que le joueur regarde son perso apparaitre, pas au milieu de son premier geste.
 local function warmUpAnimations(player: Player, character: Model)
@@ -143,12 +158,13 @@ local function warmUpAnimations(player: Player, character: Model)
 			for _, anim in ipairs(folder:GetChildren()) do
 				-- On precharge TOUT le dossier, pas seulement holdAnimation : les autres animations reviendront
 				-- et il n'y a aucune raison de payer leur chargement plus tard.
-				if anim:IsA("Animation") and not tracks[anim.Name] then
+				local key = trackKey(config.animationFolder, anim.Name)
+				if anim:IsA("Animation") and not tracks[key] then
 					local ok, track = pcall(function()
 						return animator:LoadAnimation(anim)
 					end)
 					if ok and track then
-						tracks[anim.Name] = track
+						tracks[key] = track
 					end
 				end
 			end
@@ -166,9 +182,11 @@ local function getTrack(player: Player, animationFolder: string, animName: strin
 		return nil
 	end
 
+	-- Cle DOSSIER/NOM : deux outils ont des animations homonymes, voir trackKey.
+	local key = trackKey(animationFolder, animName)
 	local cache = animCache[player]
 	if cache and cache.character == character then
-		local cached = cache.tracks[animName]
+		local cached = cache.tracks[key]
 		if cached then
 			return cached
 		end
@@ -194,9 +212,9 @@ local function getTrack(player: Player, animationFolder: string, animName: strin
 
 	-- On la range dans le cache pour ne pas repayer, et surtout pour ne pas en creer une deuxieme.
 	if cache and cache.character == character then
-		cache.tracks[animName] = track
+		cache.tracks[key] = track
 	else
-		animCache[player] = { character = character, tracks = { [animName] = track } }
+		animCache[player] = { character = character, tracks = { [key] = track } }
 	end
 	return track
 end

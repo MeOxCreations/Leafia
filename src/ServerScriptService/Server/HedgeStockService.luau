@@ -228,6 +228,17 @@ function HedgeStockService.drop(hedge: BasePart, from: Vector3)
 		piles[zone] = list
 	end
 	table.insert(list, pile)
+
+	-- ON NE COMPTE QUE CE QUI EXISTE ENCORE. Depuis le rateau, ces tas peuvent disparaitre sans passer par ici
+	-- (RakeService les ramasse et les fusionne en gros tas). Une liste qui garde des references mortes compte
+	-- alors des tas qui ne sont plus la : le plafond se declenche trop tot, et le joueur qui vient de nettoyer
+	-- voit ses NOUVEAUX tas s'effacer. On balaie donc les morts avant de mesurer.
+	for index = #list, 1, -1 do
+		if not list[index].Parent then
+			table.remove(list, index)
+		end
+	end
+
 	-- PLAFOND : le plus ancien part. Sans lui, une haie qui repousse et se retaille empilerait pour toujours.
 	if #list > HedgeConfigs.STOCK_DEBRIS_MAX then
 		local oldest = table.remove(list, 1)

@@ -77,6 +77,11 @@ local MOUNT_PROMPT_KEY = "E"
 local MOUNT_PROMPT_LABEL = "CLIMB"
 local MOUNT_PROMPT_TITLE = "LADDER" -- titre au-dessus du prompt, comme "MAILBOX" sur la boite aux lettres
 local MOUNT_PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-dessus de la zone (pas la distance de detection)
+-- Priorite d'affichage. PLUS HAUTE que la PRISE (LadderMoveController, priorite 0) : les deux se recouvrent
+-- totalement (sa detection radiale de 8 studs contient nos zones laterales), et sans arbitrage les deux pilules se
+-- doublaient a tour de role -- meme titre, meme hauteur, seule la touche changeait. La zone de grimpe est petite et
+-- volontaire : y etre veut dire "je veux monter". La touche F reste active pour prendre l'echelle depuis la zone.
+local MOUNT_PROMPT_PRIORITY = 1
 
 local idleTrack: AnimationTrack? = nil
 local climbTrack: AnimationTrack? = nil
@@ -102,8 +107,10 @@ local lastStepPos = 0
 --   "exiting"  IdleDown a l'envers (max -> 0) ; arrive a 0, on lache l'echelle.
 local phase = "off"
 
--- Prompt de montee : est-il affiche, et sur quelle zone / echelle il pointe (pour monter au bon endroit a l'appui).
-local mountPromptShown = false
+-- Prompt de montee : sur quelle zone il est accroche (nil = pas affiche par nous), et sur quelle zone / echelle il
+-- pointe (pour monter au bon endroit a l'appui). On garde la ZONE et pas un simple booleen : le prompt est un
+-- singleton partage, il faut pouvoir dire s'il est encore a NOUS avant de le remontrer ou de le cacher.
+local mountPromptAnchor: BasePart? = nil
 local pendingZone: BasePart? = nil
 local pendingLadder: Instance? = nil
 
@@ -574,6 +581,16 @@ local function climbMoveVector(): Vector3
 	return Vector3.zero
 end
 
+-- Cache NOTRE prompt de montee, et LUI SEUL. Le prompt est un singleton partage (prise d'echelle, seau, tondeuse,
+-- boite aux lettres) : appeler hide() sans verifier volait la pilule de celui qui l'occupait.
+local function hideMountPrompt()
+	local mine = mountPromptAnchor
+	mountPromptAnchor = nil
+	if mine and InteractionPrompt.currentTarget() == mine then
+		InteractionPrompt.hide()
+	end
+end
+
 -- Monte sur l'echelle. Appele par la touche E (PC, via init) ET par le tap du prompt sur mobile (onActivate). Garde et
 -- idempotent : ne fait rien si deja accroche, si on porte une echelle, ou si aucune zone de grimpe n'est en attente.
 local function tryMount()
@@ -596,8 +613,7 @@ local function tryMount()
 	if not root then
 		return
 	end
-	InteractionPrompt.hide()
-	mountPromptShown = false
+	hideMountPrompt()
 	mount(zone, ladder, root)
 end
 
@@ -624,17 +640,27 @@ local function update(dt: number)
 			-- mobile). On ne monte QUE sur appui (tryMount), plus automatiquement. AUCUNE condition d'outil : il est
 			-- range pendant la grimpe (syncLadderTool) et rendu en haut pour tailler.
 			pendingZone, pendingLadder = zone, ladder
-			if not mountPromptShown then
-				mountPromptShown = true
-				InteractionPrompt.show(zone, MOUNT_PROMPT_KEY, MOUNT_PROMPT_LABEL, MOUNT_PROMPT_OFFSET, tryMount, MOUNT_PROMPT_TITLE)
+			-- On re-montre au CHANGEMENT de zone, mais AUSSI quand le prompt ne nous appartient plus : le singleton
+			-- a pu passer a la PRISE d'echelle (son rayon de 8 studs contient toute notre zone), au seau, a un
+			-- dialogue. Un simple booleen "deja affiche" restait alors ferme sur un prompt qui n'etait plus la, et
+			-- "MONTER" ne revenait jamais.
+			if mountPromptAnchor ~= zone or InteractionPrompt.currentTarget() ~= zone then
+				local ok = InteractionPrompt.show(
+					zone,
+					MOUNT_PROMPT_KEY,
+					MOUNT_PROMPT_LABEL,
+					MOUNT_PROMPT_OFFSET,
+					tryMount,
+					MOUNT_PROMPT_TITLE,
+					nil,
+					MOUNT_PROMPT_PRIORITY
+				)
+				mountPromptAnchor = if ok then zone else nil
 			end
 		else
 			-- Hors zone de grimpe (ou raccrochage encore bloque) : on cache le prompt et on oublie la cible.
 			pendingZone, pendingLadder = nil, nil
-			if mountPromptShown then
-				mountPromptShown = false
-				InteractionPrompt.hide()
-			end
+			hideMountPrompt()
 			if not zone then
 				-- On a quitte la zone : on pourra se raccrocher au prochain passage.
 				canMount = true
@@ -919,10 +945,9 @@ function LadderController.init()
 		phase = "off"
 		canMount = true
 		savedWalkSpeed = nil
-		mountPromptShown = false
 		pendingZone = nil
 		pendingLadder = nil
-		InteractionPrompt.hide()
+		hideMountPrompt() -- ne cache que SI la pilule est encore la notre (singleton partage)
 		-- Si on meurt en haut d'une echelle, les etats "taille echelle" et "sur l'echelle" resteraient poses cote
 		-- serveur et bloqueraient la taille au sol du nouveau perso. On les coupe (idempotent si deja coupes).
 		setLadderWork(false)

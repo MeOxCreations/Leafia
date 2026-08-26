@@ -36,6 +36,10 @@ local LADDER_PREFIX = "Escabaut"
 local PROMPT_KEY = "F" -- PRENDRE l'echelle sur F (E est reserve a MONTER, cote LadderController)
 local PROMPT_LABEL = "TAKE"
 local PROMPT_TITLE = "LADDER" -- titre au-dessus du prompt (comme "MAILBOX" sur la boite), meme objet que la montee
+-- Priorite d'affichage. PLUS BASSE que la MONTEE (LadderController) : sa zone laterale est petite et volontaire,
+-- elle est entierement incluse dans notre rayon de 8 studs. Dedans on montre donc "MONTER", ailleurs "PRENDRE".
+-- La touche F, elle, reste active quoi qu'il soit affiche : on peut toujours prendre l'echelle depuis la zone.
+local PROMPT_PRIORITY = 0
 local PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-dessus de la racine (pas la distance de detection)
 local DETECT_RADIUS = 8 -- distance HORIZONTALE (studs) sous laquelle le prompt PRENDRE apparait. LE knob "detecter plus loin"
 local PROMPT_INTERVAL = 0.2
@@ -49,6 +53,7 @@ local PLAYER_ROTATE_ANIM = "RotateLadderAnimation" -- geste de MAIN a la rotatio
 local TAKE_EVENT = "TakeLadderEvent" -- marqueur dans PLAYER_ANIM : instant ou on demande au serveur le repli
 local ROTATE_EVENT = "RotateAnimEvent" -- marqueur dans PLAYER_ROTATE_ANIM : instant ou on demande au serveur de tourner
 local CLOSED_ATTR = "LeafiaLadderClosed" -- attribut pose par le SERVEUR : true = repliee (lu a la prise / repose)
+local TOOL_ATTRIBUTE = "LeafiaTool" -- pose par ToolService sur le modele de l'outil en main (voir isToolEquipped)
 local TAKE_KEY = Enum.KeyCode.F -- prendre / reposer l'echelle (E est reserve a MONTER, cote LadderController)
 local ROTATE_KEY = Enum.KeyCode.R -- tourne l'echelle 180 degres pendant qu'on la porte
 local ROTATE_DEBOUNCE = 0.45 -- anti-spam de R : environ la duree du tween serveur, pour ne pas relancer en plein tour
@@ -56,11 +61,16 @@ local ROTATE_DEBOUNCE = 0.45 -- anti-spam de R : environ la duree du tween serve
 -- constante, face a elle. Il ne peut pas partir dans la map.
 local FACE_SPEED = 10 -- lissage du pivot vers la haie
 -- Distance joueur <-> face de la haie pendant le portage. PLUS GRANDE qu'en taille (1.9) : pour porter/poser l'echelle
--- on se tient EN RETRAIT, un peu en dehors de la zone, pas colle a la haie. Monte / baisse cette valeur pour ajuster.
--- 3.5 : l'echelle se posait trop loin de la surface. C'est ce reglage-ci qu'il faut bouger et pas CARRY_CLEARANCE :
--- il rapproche le joueur ET l'echelle en gardant leur ecart, alors que l'autre pousserait l'echelle plus loin devant
--- un joueur reste en arriere -- elle finirait par entrer dans la haie.
-local WORK_DIST = 3.5 -- distance perso <-> face de la haie en portage focus. Monter = perso plus RECULE de la haie.
+-- on se tient EN RETRAIT, un peu en dehors de la zone, pas colle a la haie.
+--
+-- PLANCHER SEULEMENT : la distance REELLE se CALCULE a la prise, a partir de la profondeur mesuree de l'echelle
+-- (carryWorkDist). Regler ce nombre a la main revenait a deviner la taille de l'echelle : a 3.5 le bord avant
+-- passait DANS la haie -- l'echelle s'y plantait, donc ses zones de grimpe aussi, et on ne pouvait plus monter
+-- dessus. On ne refait pas a la main un placement que le code sait calculer.
+local WORK_DIST_MIN = 3.5 -- distance MINIMALE perso <-> face de la haie. Monter = perso plus RECULE de la haie.
+-- Ecart voulu entre le BORD AVANT de l'echelle portee et la face de la haie. C'est LE knob "l'echelle se pose trop
+-- loin / trop pres" : il vaut pour toutes les echelles, quelle que soit leur taille.
+local LADDER_HEDGE_GAP = 0.4
 local MAGNET_K = 1.2 -- force de rappel a la distance de travail (proportionnelle a l'ecart)
 -- DEUX MODES de portage : FOCUS (rail le long de la haie) et LIBRE (detache, on se balade et on pose ou on veut).
 -- On DETACHE en poussant fort vers l'arriere (S) ; on RE-FOCUS en revenant pres d'une haie. Deux distances (entree /
@@ -76,10 +86,12 @@ local CARRY_CLEARANCE = 1
 -- son cote de grimpe soit bien vers la haie.
 local CARRY_YAW_DEGREES = 90
 local DETACH_INPUT = 0.5 -- pousse arriere (part Z de l'input) au-dela de laquelle on se detache de la haie
--- Portee du FOCUS : au-dela, la haie est ignoree (pas d'aimant vers une haie lointaine). DOIT rester > WORK_DIST (5),
--- sinon l'aimant tiendrait le joueur juste HORS de la portee et le focus se couperait aussitot. Baisser = il faut
--- s'approcher PLUS pres de la haie pour que l'aimant accroche.
-local FOCUS_RANGE = 6.5 -- on focus/re-focus une haie a moins de ca de sa boite (studs)
+-- Portee du FOCUS : au-dela, la haie est ignoree (pas d'aimant vers une haie lointaine). DOIT rester au-dessus de la
+-- distance de travail, sinon l'aimant tiendrait le joueur juste HORS de la portee et le focus se couperait aussitot.
+-- Comme cette distance est maintenant CALCULEE (elle depend de la taille de l'echelle), la portee l'est aussi : on
+-- garde toujours cette marge au-dessus d'elle. Baisser = il faut s'approcher PLUS pres pour que l'aimant accroche.
+local FOCUS_RANGE = 6.5 -- portee de base (studs)
+local FOCUS_MARGIN = 2 -- marge minimale gardee au-dessus de la distance de travail calculee
 -- Apres un DETACHEMENT VOLONTAIRE (pousse arriere), on bloque le re-focus ce court instant, le temps de s'ecarter.
 -- Base sur le TEMPS, pas la distance : sinon contourner la haie en restant pres ne rearmait jamais le re-focus, et on
 -- ne pouvait se re-aimanter que du cote de la prise. La, on revient sur N'IMPORTE QUEL cote et ca re-focus.
@@ -117,6 +129,10 @@ local RAIL_NAME = "LadderCarryRail"
 -- instant (os.clock) avant lequel le re-focus est bloque, pose apres un detachement volontaire (le temps de s'ecarter).
 local carryMode = "focus"
 local refocusBlockUntil = 0
+-- Distance perso <-> face de la haie POUR L'ECHELLE QU'ON PORTE. Calculee a la prise depuis sa profondeur reelle,
+-- pour que son bord avant s'arrete a LADDER_HEDGE_GAP de la haie au lieu d'entrer dedans. Une echelle plus grosse
+-- fait donc reculer le joueur d'autant, toute seule.
+local carryWorkDist = WORK_DIST_MIN
 -- ToggleTool bascule l'outil (equipe <-> range). On ne le declenche QUE quand le taille-haie est en main, pour le
 -- RANGER a la prise (sinon on l'equiperait par erreur). Prendre l'echelle ne demande PAS d'avoir l'outil.
 local toggleToolRemote: RemoteEvent? = nil
@@ -136,6 +152,9 @@ local bindCarryButtons: () -> () = function() end
 local unbindCarryButtons: () -> () = function() end
 local lastPromptAt = 0 -- throttle du test de zone pour le prompt
 local currentPromptLadder: Instance? = nil -- echelle dont le prompt est affiche (pour ne (re)montrer qu'au CHANGEMENT)
+-- Part sur laquelle NOTRE prompt est accroche. Le prompt est un singleton partage : sans ce temoin on ne peut
+-- ni savoir s'il est encore a nous (donc s'il faut le remontrer), ni cacher SANS voler celui d'un autre.
+local promptAnchor: BasePart? = nil
 -- Cache des modeles d'echelle : detecter la zone chaque tick sans balayer tous les descendants du workspace
 -- (des milliers de carreaux de haie). Reconstruit quand une echelle apparait / disparait.
 local laddersCache: { Instance }? = nil
@@ -163,32 +182,31 @@ end
 
 -- Taille-haie en main ? La lame (HitBoxRoot) n'existe dans le perso QUE quand l'outil est equipe (meme signal que
 -- LadderController / HedgeController). Sert UNIQUEMENT a decider s'il faut le RANGER a la prise, pas a l'exiger.
-local function isTrimmerEquipped(): boolean
+-- UN OUTIL, N'IMPORTE LEQUEL, est-il en main ? On lit l'attribut que ToolService pose sur le modele de l'outil :
+-- il se replique avec le modele, donc rien a synchroniser.
+--
+-- REMPLACE un ancien test qui cherchait "HitBoxRoot", la LAME. Celui-la marchait pour le taille-haie et la
+-- cisaille, qui en ont une, et ratait tout outil qui n'en a pas -- le rateau, par exemple. Consequence vecue :
+-- l'auto-equip croyait les mains vides pres d'une haie, tirait ToggleTool (une BASCULE), et le rateau se faisait
+-- RETIRER de force en pleine utilisation. Une question posee sur un DETAIL d'un outil ne peut pas repondre pour
+-- les autres : il faut demander l'etat, pas un indice.
+local function isToolEquipped(): boolean
 	local character = player.Character
-	return character ~= nil and character:FindFirstChild("HitBoxRoot", true) ~= nil
+	if not character then
+		return false
+	end
+	for _, child in ipairs(character:GetChildren()) do
+		if typeof(child:GetAttribute(TOOL_ATTRIBUTE)) == "string" then
+			return true
+		end
+	end
+	return false
 end
 
 local function getHumanoid(): Humanoid?
 	local character = player.Character
 	return character and character:FindFirstChildOfClass("Humanoid")
 end
-
--- Haie taguee la plus proche d'une position (les haies portent HedgeConfigs.TAG). Meme source que LadderController.
-local function nearestHedge(position: Vector3): BasePart?
-	local best: BasePart? = nil
-	local bestDist = math.huge
-	for _, inst in ipairs(CollectionService:GetTagged(HedgeConfigs.TAG)) do
-		if inst:IsA("BasePart") then
-			local d = (inst.Position - position).Magnitude
-			if d < bestDist then
-				best = inst
-				bestDist = d
-			end
-		end
-	end
-	return best
-end
-
 
 -- Normale SORTANTE de la face de haie la plus proche (on ignore Y : la haie est un mur vertical). Discrete : elle
 -- designe une face (X+ / X- / Z+ / Z-), suffisant pour poser une echelle.
@@ -210,6 +228,29 @@ local function distToHedgeBox(hedge: BasePart, position: Vector3): number
 	local dx = math.max(math.abs(localP.X) - half.X, 0)
 	local dz = math.max(math.abs(localP.Z) - half.Z, 0)
 	return math.sqrt(dx * dx + dz * dz)
+end
+
+-- Haie taguee la plus proche d'une position (les haies portent HedgeConfigs.TAG).
+--
+-- CLASSEE PAR DISTANCE A LA BOITE, PAS AU CENTRE. Tout le rail travaille sur la boite (l'aimant, la normale, la
+-- portee du focus) : classer au centre faisait gagner un petit BUISSON dont le centre est proche contre la LONGUE
+-- haie qu'on est en train de longer, dont le centre est a l'autre bout mais dont la surface est juste la. Le joueur
+-- se retrouvait aimante et oriente vers le buisson, donc colle dessus, et l'echelle soudee devant lui partait
+-- dedans. Les deux objets portent le meme prefixe "hedge_", rien ne les distingue : c'est bien la MESURE qui etait
+-- fausse, pas la map. Definie APRES distToHedgeBox, qu'elle appelle.
+local function nearestHedge(position: Vector3): BasePart?
+	local best: BasePart? = nil
+	local bestDist = math.huge
+	for _, inst in ipairs(CollectionService:GetTagged(HedgeConfigs.TAG)) do
+		if inst:IsA("BasePart") then
+			local d = distToHedgeBox(inst, position)
+			if d < bestDist then
+				best = inst
+				bestDist = d
+			end
+		end
+	end
+	return best
 end
 
 -- Normale VRAIE (continue) + distance EXACTE a la boite : on prend le point le plus proche du bord (XZ) et la
@@ -246,14 +287,18 @@ local function isDetectionPart(part: Instance, ladder: Instance): boolean
 	return false
 end
 
--- Encombrement ARRIERE de l'echelle (vers le joueur) quand elle est portee a un YAW donne, en distance depuis sa
+-- Encombrement de l'echelle le long de l'axe de portage quand elle est tenue a un YAW donne, en distance depuis sa
 -- RootPart. On mesure les 8 coins de chaque part STRUCTURELLE en repere ECHELLE (relatif a sa RootPart, donc
--- INDEPENDANT de son orientation actuelle), puis on applique le yaw de portage : ca donne de combien reculer
--- l'echelle pour que son dos soit a CARRY_CLEARANCE du joueur, a CE yaw. Robuste au rig (aucune supposition sur
--- quel axe est le devant).
-local function ladderBackOffsetForYaw(ladder: Instance, ladderRoot: BasePart, yaw: number): number
+-- INDEPENDANT de son orientation actuelle), puis on applique le yaw de portage. Robuste au rig (aucune supposition
+-- sur quel axe est le devant).
+--
+-- Rend DEUX valeurs : le bord ARRIERE (vers le joueur, +Z) et le bord AVANT (vers la haie, -Z). L'arriere dit de
+-- combien reculer l'echelle pour que son dos soit a CARRY_CLEARANCE du joueur ; l'avant dit jusqu'ou elle DEPASSE
+-- devant lui -- c'est cette moitie-la qui manquait, et sans elle rien n'empechait l'echelle d'entrer dans la haie.
+local function ladderExtentsForYaw(ladder: Instance, ladderRoot: BasePart, yaw: number): (number, number)
 	local rot = CFrame.Angles(0, yaw, 0)
 	local maxZ = -math.huge
+	local minZ = math.huge
 	for _, part in ipairs(ladder:GetDescendants()) do
 		if part:IsA("BasePart") and not isDetectionPart(part, ladder) then
 			local half = part.Size * 0.5
@@ -262,13 +307,18 @@ local function ladderBackOffsetForYaw(ladder: Instance, ladderRoot: BasePart, ya
 					for _, sz in ipairs({ -1, 1 }) do
 						local world = part.CFrame * Vector3.new(sx * half.X, sy * half.Y, sz * half.Z)
 						local localCorner = ladderRoot.CFrame:PointToObjectSpace(world)
-						maxZ = math.max(maxZ, (rot * localCorner).Z)
+						local z = (rot * localCorner).Z
+						maxZ = math.max(maxZ, z)
+						minZ = math.min(minZ, z)
 					end
 				end
 			end
 		end
 	end
-	return if maxZ > -math.huge then maxZ else 0
+	if maxZ == -math.huge then
+		return 0, 0
+	end
+	return maxZ, minZ
 end
 
 
@@ -296,13 +346,16 @@ local function carryStep(dt: number)
 
 	local hedge = nearestHedge(root.Position)
 	local dist = if hedge then distToHedgeBox(hedge, root.Position) else math.huge
+	-- La portee suit la distance de travail : celle-ci depend de la taille de l'echelle, donc une portee fixe
+	-- pourrait passer SOUS elle et couper le focus a l'instant meme ou l'aimant vient d'y amener le joueur.
+	local focusRange = math.max(FOCUS_RANGE, carryWorkDist + FOCUS_MARGIN)
 
 	-- FOCUS -> LIBRE : pousse arriere franche (S), ou aucune haie A PORTEE (nearestHedge renvoie toujours une haie,
 	-- meme a 100 studs : sans ce test de distance, l'aimant tirait le joueur vers une haie lointaine).
 	if carryMode == "focus" then
 		local mv = MoveInput.get()
 		local pushBack = mv.Z > DETACH_INPUT
-		if hedge == nil or dist > FOCUS_RANGE or pushBack then
+		if hedge == nil or dist > focusRange or pushBack then
 			carryMode = "libre"
 			humanoid.AutoRotate = true -- on rend au joueur le controle de son orientation
 			if pushBack then
@@ -313,7 +366,7 @@ local function carryStep(dt: number)
 		end
 	end
 
-	if carryMode == "focus" and hedge and dist <= FOCUS_RANGE then
+	if carryMode == "focus" and hedge and dist <= focusRange then
 		-- ===== RAIL (focus haie) =====
 		-- Normale VRAIE = direction du point le plus proche de la boite vers le joueur. Aucun lissage a fabriquer : le
 		-- lieu a distance constante d'une boite est deja un rectangle a coins ARRONDIS. Le long d'une face la normale
@@ -327,9 +380,9 @@ local function carryStep(dt: number)
 		local lateral = math.clamp(mv.X + math.min(mv.Z, 0), -1, 1)
 		local constrained = right * lateral
 
-		-- Aimant : rappel proportionnel a l'ecart pour tenir WORK_DIST du bord. boxDist est la distance EXACTE a la
-		-- boite (coin inclus), donc l'aimant tient la meme distance partout = le rail arrondi, coins compris.
-		local gap = boxDist - WORK_DIST
+		-- Aimant : rappel proportionnel a l'ecart pour tenir carryWorkDist du bord. boxDist est la distance EXACTE a
+		-- la boite (coin inclus), donc l'aimant tient la meme distance partout = le rail arrondi, coins compris.
+		local gap = boxDist - carryWorkDist
 		constrained += -normal * math.clamp(gap * MAGNET_K, -1, 1)
 
 		humanoid:Move(constrained, false)
@@ -342,7 +395,7 @@ local function carryStep(dt: number)
 	else
 		-- ===== LIBRE (detache) =====
 		-- Re-focus des qu'on revient pres d'une haie (N'IMPORTE QUEL cote) ET que le delai post-detachement est passe.
-		if hedge and dist < FOCUS_RANGE and os.clock() >= refocusBlockUntil then
+		if hedge and dist < focusRange and os.clock() >= refocusBlockUntil then
 			carryMode = "focus"
 			humanoid.AutoRotate = false -- on reprend la main sur l'orientation (face haie)
 		end
@@ -603,6 +656,9 @@ local function pickUp(ladder: Instance)
 		placeTrack = nil
 	end
 	carriedLadder = ladder
+	-- On repart du plancher : si la mesure plus bas ne peut pas se faire (racine absente), on ne veut pas garder la
+	-- distance calculee pour l'echelle PRECEDENTE, qui n'a aucune raison d'avoir la meme taille.
+	carryWorkDist = WORK_DIST_MIN
 	-- Son de prise RETARDE : le geste (MoveForwardLadderAnimation) attrape l'echelle un peu apres l'appui, le son colle
 	-- mieux decale. Garde : si on ne porte plus CETTE echelle a l'echeance (respawn, repose eclair), on ne joue rien.
 	task.delay(PICKUP_SOUND_DELAY, function()
@@ -616,9 +672,10 @@ local function pickUp(ladder: Instance)
 	-- pas le repli a la prise : elle est deja fermee, on part directement en portage.
 	local alreadyClosed = ladder:GetAttribute(CLOSED_ATTR) == true
 
-	-- Si le taille-haie est en main, on le RANGE : porter l'echelle et tenir l'outil en meme temps embrouille. On
+	-- Si UN outil est en main, on le RANGE : porter l'echelle et tenir un outil en meme temps embrouille. On
 	-- toggle SEULEMENT dans ce sens (equipe -> range) : sans outil, on ne fait rien et on prend l'echelle quand meme.
-	if isTrimmerEquipped() and toggleToolRemote then
+	-- N'IMPORTE QUEL outil, pas seulement celui qui a une lame : sinon on partait avec l'echelle ET le rateau.
+	if isToolEquipped() and toggleToolRemote then
 		toggleToolRemote:FireServer()
 	end
 
@@ -646,9 +703,16 @@ local function pickUp(ladder: Instance)
 		-- pose plantee", mais l'echelle REPLIEE est ~symetrique : le flip choisissait parfois l'oppose sans que ca se voie
 		-- a la prise, et au DEPLI (repose) l'echelle se retrouvait a 180 de travers. Un sens unique = repose toujours bonne.
 		local yaw = math.rad(CARRY_YAW_DEGREES)
-		-- Bord arriere mesure A CE yaw : l'echelle recule pile ce qu'il faut, quelle que soit l'orientation choisie.
-		local backOffset = ladderBackOffsetForYaw(ladder, ladderRoot, yaw)
+		-- Bords mesures A CE yaw : l'echelle recule pile ce qu'il faut, quelle que soit l'orientation choisie.
+		local backOffset, frontOffset = ladderExtentsForYaw(ladder, ladderRoot, yaw)
 		local offset = CFrame.new(0, heightY, -(CARRY_CLEARANCE + backOffset)) * CFrame.Angles(0, yaw, 0)
+
+		-- DISTANCE DE TRAVAIL CALCULEE, PAS DEVINEE. Le bord avant de l'echelle finit a (CARRY_CLEARANCE +
+		-- profondeur) devant le joueur : si le joueur se tient plus pres que ca de la haie, l'echelle entre DEDANS.
+		-- Elle s'y plantait, ses zones de grimpe avec, et on ne pouvait plus monter dessus -- le tout sans erreur,
+		-- juste une echelle inutilisable. On recule donc le joueur d'exactement ce qu'il faut, plus l'ecart voulu.
+		local depth = backOffset - frontOffset
+		carryWorkDist = math.max(WORK_DIST_MIN, CARRY_CLEARANCE + depth + LADDER_HEDGE_GAP)
 
 		-- SOUDURE : le serveur fige RootPart = HRP.CFrame * offset. Le HRP fait face a la haie EN PORTAGE (square0, le
 		-- rail l'y tient), donc l'echelle se cale droite devant et bien orientee des que le joueur l'est.
@@ -779,26 +843,40 @@ local function updatePrompt()
 	-- ca le badge "F PRENDRE" restait affiche par-dessus un seau qu'on porte, et l'appui ne donnait rien.
 	local free = CarryUtils.isFree(player)
 	local ladder: Instance? = if root and not carriedLadder and free then ladderAt(root.Position) else nil
-	if ladder == currentPromptLadder then
-		return
-	end
-	currentPromptLadder = ladder
 
 	if ladder and ladder:IsA("Model") then
 		local model = ladder
 		local target = model.PrimaryPart or model:FindFirstChild("RootPart")
 		if target and target:IsA("BasePart") then
-			InteractionPrompt.show(target, PROMPT_KEY, PROMPT_LABEL, PROMPT_OFFSET, function()
-				if os.clock() - lastActionAt < PICKUP_DEBOUNCE then
-					return
-				end
-				lastActionAt = os.clock()
-				pickUp(model)
-			end, PROMPT_TITLE)
+			-- On re-montre au CHANGEMENT d'echelle, mais AUSSI quand le prompt ne nous appartient plus : le
+			-- singleton a pu passer a la MONTEE (sa zone laterale est entierement dans notre rayon de 8 studs),
+			-- au seau, a la boite aux lettres. Sans ce second test, notre verrou restait ferme sur une echelle
+			-- dont le prompt n'etait plus affiche : "PRENDRE" ne revenait JAMAIS, alors que F, lui, marchait
+			-- toujours (il refait sa propre detection). C'est ce decalage qu'on voyait a l'ecran.
+			if model ~= currentPromptLadder or InteractionPrompt.currentTarget() ~= target then
+				-- Refuse si la MONTEE occupe la place (priorite plus haute) : on redemandera au prochain tick.
+				local ok = InteractionPrompt.show(target, PROMPT_KEY, PROMPT_LABEL, PROMPT_OFFSET, function()
+					if os.clock() - lastActionAt < PICKUP_DEBOUNCE then
+						return
+					end
+					lastActionAt = os.clock()
+					pickUp(model)
+				end, PROMPT_TITLE, nil, PROMPT_PRIORITY)
+				currentPromptLadder = if ok then model else nil
+				promptAnchor = if ok then target else nil
+			end
 			return
 		end
 	end
-	InteractionPrompt.hide()
+
+	-- Plus d'echelle a portee : on ne cache QUE si la pilule est encore la NOTRE. Cacher aveuglement volait le
+	-- prompt du seau ou de la boite aux lettres a chaque fois qu'on s'eloignait d'une echelle.
+	currentPromptLadder = nil
+	local mine = promptAnchor
+	promptAnchor = nil
+	if mine and InteractionPrompt.currentTarget() == mine then
+		InteractionPrompt.hide()
+	end
 end
 
 -- Declencheurs CENTRAUX des 3 actions, chacun anti-spammé. Clavier (UserInputService) ET tactile (ContextActionService,
@@ -948,9 +1026,14 @@ function LadderMoveController.init()
 	-- pistes lachees). Sans ca, le rail tournerait sur un root disparu et carriedLadder resterait bloque.
 	player.CharacterAdded:Connect(function()
 		stopCarry()
-		-- Nouveau perso : on repart sans prompt (l'ancien pointait sur l'ancienne position).
+		-- Nouveau perso : on repart sans prompt (l'ancien pointait sur l'ancienne position). On ne cache que SI la
+		-- pilule est encore la notre : un respawn ne doit pas effacer le prompt d'une autre feature.
+		local mine = promptAnchor
 		currentPromptLadder = nil
-		InteractionPrompt.hide()
+		promptAnchor = nil
+		if mine and InteractionPrompt.currentTarget() == mine then
+			InteractionPrompt.hide()
+		end
 	end)
 
 	-- Cache des echelles : invalide des qu'une echelle apparait / disparait (filtre par nom : les carreaux de
@@ -972,7 +1055,10 @@ function LadderMoveController.init()
 			return
 		end
 		lastEquipCheck = os.clock()
-		if carriedLadder or isTrimmerEquipped() or not toggleToolRemote then
+		-- N'IMPORTE QUEL outil deja en main coupe l'auto-equip, pas seulement le taille-haie. ToggleTool est une
+		-- BASCULE : appele les mains pleines, il RANGE ce qu'on tient. Avec l'ancien test (la lame), un rateau
+		-- pres d'une haie se faisait donc retirer de force, puis remplacer par l'outil de coupe -- en plein geste.
+		if carriedLadder or isToolEquipped() or not toggleToolRemote then
 			return
 		end
 		-- LES MAINS SONT PRISES (tondeuse, echelle, seau) : tous se portent a deux mains, pas d'outil pendant ce

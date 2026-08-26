@@ -297,8 +297,10 @@ return {
 	-- de braquage, la machine decrit toujours le meme cercle, qu'elle aille vite ou doucement. Elle devient donc
 	-- PREVISIBLE -- on sait ou elle va avant d'y aller, et c'est ca qui enleve le stress.
 	--
-	-- 8 studs : environ deux fois la largeur de la machine. Plus PETIT = elle tourne court (nerveux, peut vite
-	-- redevenir stressant). Plus GRAND = elle est lourde, il faut manoeuvrer pour se retourner.
+	-- Plus PETIT = elle tourne court (nerveux, peut vite redevenir stressant). Plus GRAND = elle est lourde, il faut
+	-- manoeuvrer pour se retourner.
+	-- 8 -> 6 : a 8 studs l'arc etait trop large, la machine mettait trop de distance a se retourner en bout de
+	-- bande. A 10 studs/s ca fait passer le braquage de 72 a 95 degres par seconde.
 	STEER_RADIUS = 8,
 	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
 	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
@@ -313,10 +315,15 @@ return {
 	-- BRAQUER SEUL FAIT AVANCER, doucement. On ne tourne pas une tondeuse sur un point : on la fait rouler juste
 	-- assez pour qu'elle pivote. Le corps tourne alors AUSSI -- c'est un vrai debut de virage, pas un ajustement.
 	--
-	-- En studs par seconde. Repere : la marche du jeu est a 10 studs/s, soit environ 10 km/h -- donc 2 studs/s font
-	-- a peu pres 2 km/h. C'est une avance de MANOEUVRE, pas un deplacement.
+	-- En studs par seconde. Repere : la marche du jeu est a 10 studs/s. C'est une avance de MANOEUVRE, pas un
+	-- deplacement.
 	-- 0 = on revient au comportement d'avant : le corps reste fige et seule la machine pivote.
-	STEER_CRAWL = 2,
+	--
+	-- C'EST AUSSI LE BOUTON "SE REORIENTER SUR PLACE EST TROP LENT". La rotation vient de la distance parcourue :
+	-- braquer sans avancer ne fait donc tourner qu'a la vitesse de ce crawl. A 2 studs/s et rayon 8, un quart de
+	-- tour prenait plus de six secondes -- le joueur avait l'impression que la machine ne repondait pas.
+	-- 2 -> 4, avec le rayon passe a 6 : environ 38 degres par seconde, soit un quart de tour en 2.4 s.
+	STEER_CRAWL = 4,
 	-- (Il n'y a plus de vitesse de rotation SEPAREE pour la manoeuvre. Avec un rayon, elle sort toute seule : en
 	-- braquant a l'arret la machine avance de STEER_CRAWL, donc elle tourne d'autant -- lentement, puisqu'elle
 	-- roule lentement. Un reglage de moins, et deux cas qui ne peuvent plus se contredire.)
@@ -387,18 +394,20 @@ return {
 
 	DRIVE_ZOOM = 4,
 
-
-	-- RALENTISSEMENT EN VIRAGE. On ralentit pour tourner, comme avec n'importe quelle machine : avancer et braquer
-	-- a fond en meme temps donnait un mouvement trop vif, pas naturel.
-	-- Fraction de vitesse PERDUE a fond de braquage. 0 = aucun ralentissement, 0.5 = moitie moins vite.
-	TURN_SLOWDOWN = 0.45,
+	-- RALENTISSEMENT EN VIRAGE. Fraction de vitesse PERDUE a fond de braquage. 0 = aucun ralentissement, 0.5 =
+	-- moitie moins vite.
+	--
+	-- A ZERO : freiner pour tourner semblait "naturel" en theorie, ca se joue mal. On sent une machine qui MOLLIT
+	-- des qu'on braque, alors que le geste central du jeu est de tondre en enchainant les virages -- donc on passe
+	-- son temps a subir ce frein. Le ressenti a l'ecran a tranche contre le raisonnement.
+	TURN_SLOWDOWN = 0,
 
 	-- ===== DEBUG DE TRAJECTOIRE =====
 	-- Des points poses devant la machine, qui dessinent la courbe QU'ELLE VA SUIVRE avec le braquage courant.
 	-- Sert a REGLER la conduite a l'oeil au lieu de deviner : on voit tout de suite si l'arc est trop serre, trop
 	-- mou, ou si le braquage part du mauvais cote.
 	-- A COUPER une fois la conduite validee.
-	STEER_DEBUG = true,
+	STEER_DEBUG = false,
 	-- DIAGNOSTIC D'INPUT. Affiche deux fois par seconde ce que la conduite RECOIT vraiment : le vecteur de
 	-- deplacement, la vitesse de marche, et si le moteur tourne.
 	--
@@ -475,6 +484,24 @@ return {
 	-- Une machine lancee revient droite toute seule, doucement, portee par son elan.
 	-- BAS = revient plus lentement. Trop bas et elle reste de travers en ligne droite.
 	SWING_RETURN = 1.6,
+	-- VITESSE DE RETOUR MINIMALE, en degres par seconde. Le lerp exponentiel ci-dessus donne le bon ELAN au depart
+	-- mais une queue interminable : depuis 26 degres, il reste encore ~5 degres de travers une seconde apres le
+	-- virage et pres d'un degre au bout de trois. La machine avance donc EN CRABE en pleine ligne droite -- ce qui
+	-- se lit comme un DERAPAGE, alors que la trajectoire est droite (mesure a l'ecran : 0.6 degre de glissade
+	-- reelle). Le probleme n'etait donc pas le deplacement mais l'angle de la machine sur le joueur.
+	--
+	-- Ce plancher ne touche PAS le depart du retour (le lerp y est bien plus rapide que lui) : il ne fait que
+	-- TERMINER la fin, au lieu de la laisser trainer. C'est LE knob "elle met trop longtemps a se remettre droite".
+	--
+	-- REPERES (temps pour effacer un travers de 26 degres, le maximum) :
+	--   30  -> 0.85 s   on VOIT la machine se remettre droite
+	--   80  -> 0.35 s   court mais encore lisible
+	--   180 -> 0.15 s   invisible a l'oeil, sans pop : la machine EST droite des qu'on lache
+	--   999 -> 1 image  vraiment instantane, mais un travers de 26 degres qui disparait d'un coup se voit
+	--
+	-- A 180 : le ballant fait toujours son travail PENDANT le virage (c'est la qu'il donne le poids), et il ne
+	-- laisse plus rien trainer APRES. C'est l'apres qui se lisait comme un derapage.
+	SWING_SETTLE = 180,
 	-- Plafond absolu, en degres. Filet : les deux angles ci-dessus doivent rester EN DESSOUS, sinon c'est lui qui
 	-- decide a leur place et les regler ne change plus rien.
 	SWING_MAX = 40,

@@ -21,10 +21,16 @@ local TOOL_ATTRIBUTE = "LeafiaTool"
 -- d'affilee ecriraient la meme valeur et l'attribut ne changerait pas.
 local PULL_TICK_ATTRIBUTE = "LeafiaPullTick"
 -- Emplacements d'outils facon inventaire : chaque touche equipe SON outil (ou le range si deja en main). 1 = cisaille
--- (outil de depart), 2 = taille-haie. Reflexe des joueurs sur la plateforme, et ca laisse E libre pour l'interaction.
+-- (outil de depart), 2 = taille-haie, 3 = rateau. Reflexe des joueurs sur la plateforme, et ca laisse E libre pour
+-- l'interaction.
+--
+-- CLAVIER SEULEMENT, ET C'EST UN TROU CONNU. Sur mobile ces touches n'existent pas : les outils sont donc
+-- inatteignables la-bas, alors que leur UTILISATION (le clic) marche deja au doigt. Il faudra une barre d'outils
+-- a l'ecran -- un vrai chantier d'UI, pas trois lignes ici, donc on ne le bricole pas en passant.
 local TOOL_SLOTS: { [Enum.KeyCode]: string } = {
 	[Enum.KeyCode.One] = "Shear",
 	[Enum.KeyCode.Two] = "HedgeTrimmer",
+	[Enum.KeyCode.Three] = "Rake",
 }
 local ASSET_TIMEOUT = 10
 -- Filet si un emetteur n'a pas de Lifetime exploitable. Les particules vivent rarement plus longtemps.

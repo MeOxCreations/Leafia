@@ -982,7 +982,17 @@ local function grab(player: Player, model: Model)
 		local rate = if math.abs(target) > math.abs(state.swing)
 			then MowConfigs.SWING_RECOVER
 			else MowConfigs.SWING_RETURN
-		state.swing += (target - state.swing) * math.min(1, rate * dt)
+		local step = (target - state.swing) * math.min(1, rate * dt)
+		-- PLANCHER DE VITESSE (SWING_SETTLE). Un lerp exponentiel n'atteint jamais sa cible : passe l'elan du
+		-- depart, il traine des degres de travers pendant des SECONDES. Sur une machine qu'on regarde de dos en
+		-- ligne droite, ca ne se lit pas comme du poids, ca se lit comme un DERAPAGE -- alors que la trajectoire
+		-- est droite (0.6 degre mesure). On garde donc le lerp pour l'elan, et on impose une vitesse minimale pour
+		-- que la fin se termine. Le clamp empeche de depasser la cible quand il ne reste presque rien.
+		local floor = math.rad(MowConfigs.SWING_SETTLE) * dt
+		if math.abs(step) < floor then
+			step = math.clamp(target - state.swing, -floor, floor)
+		end
+		state.swing += step
 		-- Cle a la cible : un lerp exponentiel ne l'atteint jamais, et la machine garderait un demi-degre de
 		-- travers POUR TOUJOURS -- avec les bras decentres avec elle, puisqu'ils lisent la meme valeur.
 		if math.abs(target - state.swing) < SWING_SNAP then

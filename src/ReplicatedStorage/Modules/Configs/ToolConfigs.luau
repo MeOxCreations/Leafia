@@ -184,6 +184,14 @@ export type ToolConfig = {
 	-- dans toolRunAnimations pour etre chargee sur l'animator du model. nil = pas de geste d'outil (taille-haie :
 	-- ses lames TOURNENT en continu via toolRunAnimations, pas de geste ponctuel).
 	cutAnimation: string?,
+	-- CET OUTIL TRAVAILLE-T-IL LA HAIE ? true = s'approcher d'une haie accroche le chantier (camera de travail,
+	-- orientation bloquee, aimant). false = on passe devant une haie sans que rien ne se declenche.
+	--
+	-- UN CHAMP EXPLICITE, et surtout pas "cet outil a-t-il une lame ?" : deduire l'intention d'un DETAIL de
+	-- l'outil rate tout outil bati autrement (le rateau n'a pas de lame et n'en aura jamais). C'est exactement la
+	-- faute qui faisait retirer le rateau des mains du joueur pres d'une haie -- une question posee sur un indice
+	-- ne peut pas repondre pour les autres.
+	cutsHedge: boolean,
 	-- REACTIVITE de la pose UP/DOWN (les bras qui suivent la visee haut / bas sur la face). Frequence du ressort amorti
 	-- au critique qui rejoint la hauteur visee : plus haut = plus reactif. 0 = AUCUN smooth, la pose COLLE a la visee
 	-- (outil LEGER, ex. cisaille). Le taille-haie, plus LOURD, garde un smooth. nil = defaut HedgeConfigs.UPDOWN_FOLLOW_SPEED.
@@ -207,6 +215,7 @@ type SimpleTool = {
 	cutReadyOnEquip: boolean?, -- true = coupe des l'equipement (pas de moteur a demarrer)
 	cutRateScale: number?, -- vitesse de coupe en maintenu (< 1 = plus lent que le taille-haie)
 	cutPerClick: number?, -- nombre = clic-par-clic, pousse retiree par clic (nil = maintenu)
+	cutsHedge: boolean?, -- true = s'approcher d'une haie accroche le chantier. Defaut false (un outil simple ne travaille pas la haie).
 	toolRunAnimations: { string }?, -- anims du MODEL de l'outil a charger sur son animator (lames), defaut {}
 	cutAnimation: string?, -- anim du model jouee une fois par clic (doit etre dans toolRunAnimations)
 	poseFollowSpeed: number?, -- reactivite de la pose up/down. 0 = aucun smooth (colle a la visee). nil = defaut global.
@@ -232,6 +241,7 @@ local function simpleTool(t: SimpleTool): ToolConfig
 		cutReadyOnEquip = t.cutReadyOnEquip or false,
 		cutRateScale = t.cutRateScale or 1,
 		cutPerClick = t.cutPerClick,
+		cutsHedge = t.cutsHedge or false,
 		cutAnimation = t.cutAnimation,
 		poseFollowSpeed = t.poseFollowSpeed,
 		-- ===== DEFAUTS MOTEUR : inutilises par un outil simple, presents seulement pour satisfaire le type. NE RIEN
@@ -290,6 +300,7 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- COUPE : prete des l'equipement (pas de moteur), CLIC-PAR-CLIC (un coup de cisaille par clic).
 		hitboxName = "HitBoxRoot", -- part le long de la lame -> findBlade la trouve (meme nom que le taille-haie)
 		cutReadyOnEquip = true,
+		cutsHedge = true, -- outil de taille : s'approcher d'une haie accroche le chantier
 		-- Bouchee par clic. CUT_RATE (taille-haie) = 3.5 pousse/seconde ; 0.4 par clic = "outil de merde" mais qui
 		-- avance visiblement. A REGLER a l'oeil pour la sensation avant l'upgrade.
 		cutPerClick = 0.4,
@@ -299,6 +310,33 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- geste se lise comme un bras qui bouge. 14 reste nettement plus vif que le taille-haie (8) : la
 		-- difference de poids se sent toujours, elle ne passe simplement plus par l'absence de lissage.
 		poseFollowSpeed = 14,
+	}),
+	-- RATEAU : il ne coupe RIEN. Il ramasse au sol les tas laisses par la taille (voir RakeService / RakeConfigs).
+	-- Aucun champ de coupe n'est rempli : pas de hitbox, pas de cutPerClick, donc HedgeCutService l'ignore
+	-- completement et le clic ne part que dans RakeSweep.
+	--
+	-- CE QUE LE MODELE DOIT AVOIR DANS STUDIO (Assets.Tools.RateauFeuilleMesh) :
+	--   - une part "Handle", qui sera accrochee a la main ;
+	--   - une Attachment "Grip" DANS ce Handle : c'est elle qui donne l'orientation du rateau dans la main ;
+	--   - un Humanoid (ou AnimationController) + Animator, sinon RatissageAnimation ne jouera pas -- et le
+	--     serveur le dira dans la console au lieu d'echouer en silence ;
+	--   - des Motor6D dont les Part1 portent les noms des poses de RatissageAnimation. Une animation retrouve un
+	--     joint par le nom de sa PART1, JAMAIS par celui du Motor6D (deja paye sur le seau, cf journal).
+	Rake = simpleTool({
+		assetName = "RateauFeuilleMesh",
+		handPart = "RightHand",
+		handleName = "Handle",
+		gripAttachment = "Grip",
+		-- A REGLER A L'OEIL, comme toutes les prises : par pas de 45 degres pour trouver l'axe, puis par 10.
+		--   X = bascule avant / arriere    Y = rotation autour du manche    Z = inclinaison laterale
+		gripOffset = CFrame.Angles(math.rad(0), math.rad(0), math.rad(0)),
+		spawnEffect = "SpawnToolHand",
+		emitCount = 4,
+		animationFolder = "Rateau",
+		holdAnimation = "RatissageIdleAnimation",
+		-- Jouee sur l'animator DU MODELE (les dents / le manche), pas sur les bras. RakeService la declenche a
+		-- chaque coup via ToolService.playToolAnimationOnce, comme la cisaille fait claquer ses lames.
+		toolRunAnimations = { "RatissageAnimation" },
 	}),
 	HedgeTrimmer = {
 		assetName = "HedgeTrimmer",
@@ -361,6 +399,7 @@ local ToolConfigs: { [string]: ToolConfig } = {
 		-- L'inclinaison reste entiere hors chantier, la ou elle sert a faire sentir le moteur.
 		tiltWorkingScale = 0,
 		hitboxName = "HitBoxRoot",
+		cutsHedge = true, -- outil de taille : s'approcher d'une haie accroche le chantier
 		bladeIdleSpeed = 0.15,
 		bladeMaxSpeed = 1.6,
 		bladeAccel = 1.6,

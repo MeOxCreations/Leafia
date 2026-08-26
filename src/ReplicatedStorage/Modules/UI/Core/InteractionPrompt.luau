@@ -66,6 +66,12 @@ local shown = false
 -- apres s'etre fait doubler (par un dialogue, une echelle, une boite aux lettres) : son prompt disparait pour
 -- de bon alors que rien n'a change de son point de vue.
 local activeTarget: WorldAnchor.Target? = nil
+-- PRIORITE du prompt affiche. Le temoin ci-dessus dit QUI occupe la place ; celle-ci dit qui a le DROIT de la
+-- prendre. Sans elle, deux features qui se recouvrent (l'echelle au sol : PRENDRE a 8 studs, MONTER dans la zone
+-- laterale, entierement incluse dedans) se doublent a tour de role : le joueur voit une pilule qui change de
+-- touche, avec le pop et son son a chaque bascule. Une priorite tranche UNE fois, sans que les deux features
+-- aient a se connaitre -- meme raison que CarryUtils pour les mains : une seule question, une seule reponse.
+local activePriority = 0
 -- Echelle CIBLE (proportionnelle a l'ecran) : c'est vers elle que le pop d'apparition tend, pas vers 1. Sinon un
 -- gros / petit ecran perdrait sa mise a l'echelle des la 1re apparition.
 local baseScale = 1
@@ -233,6 +239,10 @@ end
 -- Montre le prompt sur `target` (BasePart suivie, ou Vector3 fixe). `key` = la touche affichee (ex "E"), `label`
 -- = l'action (ex "TAKE"). `offset` decale le point vise dans le monde (studs), pour flotter au-dessus. Sur
 -- mobile, le badge de touche est cache ; `onActivate` est appele au tap (et au clic, partout, en bonus).
+--
+-- `priority` (0 par defaut) tranche quand deux features veulent la place EN MEME TEMPS : une demande de priorite
+-- INFERIEURE a celle qui occupe l'ecran est refusee. Rend true si le prompt est bien a nous. L'appelant peut
+-- redemander a chaque tick sans rien casser : un refus ne touche pas l'affichage, donc pas de clignotement.
 function InteractionPrompt.show(
 	target: WorldAnchor.Target,
 	key: string,
@@ -240,12 +250,18 @@ function InteractionPrompt.show(
 	offset: Vector3?,
 	onActivate: (() -> ())?,
 	title: string?,
-	cameraRelative: boolean?
-)
+	cameraRelative: boolean?,
+	priority: number?
+): boolean
+	local want = priority or 0
+	-- On ne se refuse pas a soi-meme : re-montrer SA propre cible reste permis (rafraichir un libelle).
+	if shown and activeTarget ~= target and want < activePriority then
+		return false
+	end
 	build()
 	local box, kl, al, bdg, ttl, s = container, keyLabel, actionLabel, badge, titleLabel, scale
 	if not (box and kl and al and bdg and ttl and s) then
-		return
+		return false
 	end
 	kl.Text = key
 	al.Text = label
@@ -256,6 +272,7 @@ function InteractionPrompt.show(
 	WorldAnchor.attach(box, target, offset, nil, nil, cameraRelative)
 	shown = true
 	activeTarget = target
+	activePriority = want
 
 	-- APPARITION "slime" : on repart de 0 et on rebondit jusqu'a l'echelle cible (Elastic), + le son de pop.
 	if popTween then
@@ -265,6 +282,7 @@ function InteractionPrompt.show(
 	popTween = TweenService:Create(s, POP_IN, { Scale = baseScale })
 	popTween:Play()
 	SoundUtils.play(POP_SOUND)
+	return true
 end
 
 -- Deplace le prompt EN COURS d'affichage (le meme repere que le offset passe a show : monde, ou camera si
@@ -289,6 +307,7 @@ function InteractionPrompt.hide()
 	end
 	shown = false
 	activeTarget = nil
+	activePriority = 0
 	onActivateFn = nil
 	local box, s = container, scale
 	if not box then

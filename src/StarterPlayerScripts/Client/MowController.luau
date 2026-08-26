@@ -652,6 +652,21 @@ local function drawTrail(origin: Vector3, yaw: number, turnPerSec: number, speed
 	end
 end
 
+-- AVANT de la machine, en horizontal. Mesure (RootPart -> CutZone, posee a l'avant sous le carter), jamais devine.
+-- Un seul endroit le sait : le point de prise ET le sens de rotation des roues en dependent, et deux calculs
+-- separes finiraient par diverger.
+-- Definie AVANT steer, qui s'en sert pour mesurer de combien la machine est de travers sur le joueur.
+local function forwardOf(model: Model): Vector3?
+	local root = rootOf(model)
+	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
+	if not (root and zone and zone:IsA("BasePart")) then
+		return nil
+	end
+	local d = zone.Position - root.Position
+	d = Vector3.new(d.X, 0, d.Z)
+	return if d.Magnitude > 1e-3 then d.Unit else nil
+end
+
 -- CONDUITE, facon VEHICULE. Deux commandes qui ne se melangent pas :
 --   avant / arriere -> on AVANCE le long du cap ;
 --   gauche / droite -> on BRAQUE, et RIEN d'autre. Appuyer sur la seule touche de cote ne doit pas faire avancer
@@ -684,6 +699,21 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- un simple "avance" produisait une composante laterale fantome qui dependait de l'orientation de la
 	-- vue, et la tondeuse partait en virage sans qu'on touche aux touches de cote.
 	local mv = MoveInput.get()
+
+	-- BRAQUER NE DOIT RIEN COUTER EN VITESSE. `GetMoveVector` rend un vecteur NORMALISE : avant + cote donne
+	-- (0.707, 0, -0.707), jamais (1, 0, -1). Lu tel quel, braquer a fond en avancant enlevait 29 % d'avance -- et
+	-- autant de braquage, puisque les deux composantes sont rabotees ensemble. Ca n'a de sens que pour un
+	-- personnage, qui se DEPLACE dans les deux axes : ici ils sont DECOUPLES, le cote ne fait que braquer.
+	--
+	-- On repasse donc du DISQUE au CARRE : on etire le vecteur jusqu'a ce que sa plus grande composante atteigne
+	-- le bord. Plein avant reste plein avant qu'on braque ou non, et plein braquage reste plein braquage.
+	--
+	-- La NORME est preservee (on multiplie par |mv| / plus_grande) : un stick pousse a moitie rend toujours une
+	-- demi-avance. Sans ca, une pichenette de joystick partirait plein gaz et le dosage analogique serait mort.
+	local biggest = math.max(math.abs(mv.X), math.abs(mv.Z))
+	if biggest > 1e-3 then
+		mv *= mv.Magnitude / biggest
+	end
 	local forwardAmount = math.clamp(-mv.Z, -1, 1)
 	local lateralAmount = math.clamp(mv.X, -1, 1)
 
@@ -694,11 +724,38 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	--
 	-- Quand la machine ne bouge pas, TROIS causes donnent exactement le meme symptome et se corrigent a trois
 	-- endroits differents : l'input n'arrive pas, le moteur n'est pas vu comme demarre, ou la vitesse est a zero.
+	-- Il sert AUSSI a mesurer l'ANGLE DE GLISSADE : l'ecart entre la ou la machine POINTE et la ou elle VA. C'est
+	-- la seule facon de trancher entre deux causes qui donnent le meme dessin a l'ecran. La vitesse est lue ICI, en
+	-- DEBUT d'image, donc avant tout ce qu'on lui fait plus bas : elle dit ce que le MOTEUR a reellement produit.
+	--   angle proche de 0 alors que ca a l'air de glisser -> le deplacement est droit, c'est la MACHINE qui est de
+	--   travers sur le joueur (soudure / ballant), pas la trajectoire.
+	--   angle qui reste grand -> la vitesse sort vraiment de l'axe, et notre remise dans l'axe ne prend pas.
 	if MowConfigs.STEER_DEBUG_INPUT and os.clock() - lastInputLog > 0.2 then
 		lastInputLog = os.clock()
+		local vNow = hrp.AssemblyLinearVelocity
+		local flatNow = Vector3.new(vNow.X, 0, vNow.Z)
+		local lookNow = hrp.CFrame.LookVector
+		local flatLook = Vector3.new(lookNow.X, 0, lookNow.Z)
+		local slide = 0
+		if flatNow.Magnitude > 0.5 and flatLook.Magnitude > 1e-4 then
+			-- math.acos borne a [-1, 1] : une erreur d'arrondi a 1.0000001 rendrait NaN.
+			local dot = math.clamp(flatNow.Unit:Dot(flatLook.Unit), -1, 1)
+			slide = math.deg(math.acos(math.abs(dot))) -- abs : la marche arriere n'est pas une glissade
+		end
+		-- ANGLE DE LA MACHINE SUR LE JOUEUR. La glissade mesuree ci-dessus etant quasi nulle, c'est ICI que se
+		-- joue ce qu'on voit : la tondeuse est soudee au HRP, mais le SERVEUR fait pivoter cette soudure (le
+		-- ballant). Une machine de travers sur un trajet droit se lit exactement comme un derapage.
+		local tilt = 0
+		local mowerForward = forwardOf(mower)
+		if mowerForward and flatLook.Magnitude > 1e-4 then
+			local dotF = math.clamp(mowerForward:Dot(flatLook.Unit), -1, 1)
+			tilt = math.deg(math.acos(dotF))
+		end
 		showDebug(
-			`input {string.format("%.2f", mv.X)} , {string.format("%.2f", mv.Z)}`
-				.. `\nvitesse {string.format("%.1f", humanoid.WalkSpeed)}`
+			`GLISSADE {string.format("%.1f", slide)} deg`
+				.. `\nMACHINE {string.format("%.1f", tilt)} deg de travers`
+				.. `\ninput {string.format("%.2f", mv.X)} , {string.format("%.2f", mv.Z)}`
+				.. `\nvitesse reelle {string.format("%.1f", flatNow.Magnitude)} / marche {string.format("%.1f", humanoid.WalkSpeed)}`
 				.. `\nmoteur {if mower:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true then "ON" else "OFF"}`
 				.. `\ntactile {if UserInputService.TouchEnabled then "oui" else "non"}`
 		)
@@ -775,6 +832,26 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	end
 	humanoid:Move(facing * drive, false)
 
+	-- ZERO DERAPAGE. Un vehicule ne glisse pas de cote : sa vitesse est TOUJOURS dans l'axe de sa carrosserie.
+	-- Ici deux choses la faisaient sortir de cet axe, et il fallait les deux pour comprendre la glissade :
+	--   1. Ecrire le CFrame pivote le corps INSTANTANEMENT, mais la vitesse est en coordonnees MONDE : elle reste
+	--      sur l'ancien cap.
+	--   2. `Humanoid:Move` ne fait que DEMANDER une direction. Le moteur met plusieurs images a la rejoindre, donc
+	--      meme apres le virage la vitesse reelle traine encore de biais.
+	-- Corriger seulement (1), au moment du braquage, ne suffit donc pas : c'est (2) qu'on voit en SORTIE de virage,
+	-- quand on a deja lache la touche. On remet la vitesse dans l'axe du cap A CHAQUE IMAGE.
+	--
+	-- La NORME est gardee telle quelle : on change une direction, jamais une vitesse. Ca ne ralentit rien.
+	local v = hrp.AssemblyLinearVelocity
+	local flatV = Vector3.new(v.X, 0, v.Z)
+	local flatSpeed = flatV.Magnitude
+	if flatSpeed > 1e-3 then
+		-- Le SENS est garde : en marche arriere la vitesse est a l'oppose du cap, elle doit le rester.
+		local axis = if flatV:Dot(facing) < 0 then -facing else facing
+		-- Y preserve : la chute et les pentes ne nous regardent pas.
+		hrp.AssemblyLinearVelocity = Vector3.new(axis.X * flatSpeed, v.Y, axis.Z * flatSpeed)
+	end
+
 	if MowConfigs.STEER_DEBUG then
 		-- MEME formule que le braquage ci-dessus, sinon la courbe affichee ne serait pas celle qu'on suit.
 		-- MEME taux que celui reellement applique : une courbe dessinee avec l'autre mentirait sur le trajet.
@@ -801,20 +878,6 @@ local function request(model: Model, phase: string)
 	end
 	lastActionAt = os.clock()
 	carryRemote:FireServer(model, phase)
-end
-
--- AVANT de la machine, en horizontal. Mesure (RootPart -> CutZone, posee a l'avant sous le carter), jamais devine.
--- Un seul endroit le sait : le point de prise ET le sens de rotation des roues en dependent, et deux calculs
--- separes finiraient par diverger.
-local function forwardOf(model: Model): Vector3?
-	local root = rootOf(model)
-	local zone = model:FindFirstChild(MowConfigs.CUT_ZONE_NAME, true)
-	if not (root and zone and zone:IsA("BasePart")) then
-		return nil
-	end
-	local d = zone.Position - root.Position
-	d = Vector3.new(d.X, 0, d.Z)
-	return if d.Magnitude > 1e-3 then d.Unit else nil
 end
 
 -- OU le joueur doit se tenir pour prendre la tondeuse : derriere le point le plus ARRIERE de la machine, face a

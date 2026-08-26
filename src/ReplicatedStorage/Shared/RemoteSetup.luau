@@ -111,6 +111,12 @@ local REMOTES: { { any } } = {
 	{ "SelectCompany", F, "Company" },
 	{ "StartGame", F, "Company" }, -- START : le serveur decide (nouvelle save -> teleport tuto, sinon -> entree jeu)
 
+	-- [ RAKE ] --
+	-- UN COUP DE RATEAU. Aucun argument : le client dit juste "j'ai clique". Le serveur sait deja ce que le joueur
+	-- tient et ou il regarde, donc il n'y a rien a valider et rien a falsifier -- il choisit lui-meme les tas
+	-- attrapes. Anti-spam borne cote serveur (RakeConfigs.COOLDOWN) : envoyer mille clics ne ratisse pas plus vite.
+	{ "RakeSweep", E, "Rake" },
+
 	-- [ MOW ] --
 	-- PRISE / REPOSE de la tondeuse. Deux arguments : la tondeuse (Instance) et une PHASE ("grab" ou "place").
 	-- Le serveur SOUDE la tondeuse au HRP du porteur, comme l'echelle : sa position se replique alors a tous sans

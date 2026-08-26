@@ -307,7 +307,13 @@ local function updatePlayer(player: Player)
 	--
 	-- Teste AVANT tout le reste, et pas seulement a l'accroche : ranger l'outil en plein chantier doit relacher
 	-- le joueur, pas le laisser coince jusqu'a ce qu'il pense a reculer.
-	if not ToolService.getHeld(player) then
+	--
+	-- MEME REGLE POUR UN OUTIL QUI NE TAILLE PAS. Le rateau travaille le SOL : lui coller la camera de taille et
+	-- l'aimant de haie l'empeche justement de faire son travail -- il ne peut plus s'ecarter pour ramasser les
+	-- tas. On lit un champ EXPLICITE de la config (cutsHedge), jamais "cet outil a-t-il une lame ?" : deduire
+	-- l'intention d'un detail de fabrication rate tout outil bati autrement.
+	local currentTool = ToolService.getHeld(player)
+	if not (currentTool and currentTool.config.cutsHedge) then
 		leaveHedge(player)
 		return
 	end

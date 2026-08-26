@@ -65,6 +65,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- ne l'initialisait ici -- donc pas la moindre trace dans la console, ce qui ressemble a un bug de detection
 	-- alors que le controller n'existe simplement pas dans cette place.
 	require(script.BinCarryController).init()
+	-- RATEAU : n'envoie que le clic, tout le ramassage est serveur. Present dans le tuto aussi, sinon la touche 3
+	-- equiperait un outil qui ne ferait rien -- le pire des deux mondes.
+	require(script.RakeController).init()
 	-- Nuages : du ciel, rien d'autre. Local, aucun reseau. Ordre indifferent.
 	require(script.CloudController).init()
 	-- DIDACTICIEL : le halo qui respire sur la porte du grand-pere, pour dire ou aller sans l'ecrire. Purement
@@ -156,6 +159,12 @@ MowController.init()
 -- sens, mais un seau et une tondeuse poses cote a cote repondraient tous les deux.
 local BinCarryController = require(script.BinCarryController)
 BinCarryController.init()
+
+-- RATEAU : il n'envoie que le clic, tout le ramassage est cote serveur (les tas sont des objets du monde).
+-- Ordre indifferent, il ne lit aucun autre controller. Le clic ne part que si le rateau est en main, donc il ne
+-- se dispute pas le clic gauche avec la taille ou la tondeuse.
+local RakeController = require(script.RakeController)
+RakeController.init()
 
 -- Nuages qui traversent le ciel en boucle. 100% LOCAL, comme l'herbe : c'est du decor, rien ne transite.
 -- Ordre indifferent, il ne partage rien avec les autres.

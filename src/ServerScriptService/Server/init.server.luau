@@ -44,6 +44,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- l'appelle : aucun prompt, aucun log, aucune erreur -- la signature d'un service gate hors de sa place.
 	-- Necessite le model "Bin" dans la MAP du tuto (Rojo ne synchronise pas le Workspace).
 	require(script.BinCarryService).init()
+	-- RATEAU : il ramasse les tas que la taille laisse au sol. Present dans le tuto AUSSI, parce que c'est ici
+	-- qu'on apprend la taille, donc ici que les premiers tas apparaissent. APRES HedgeStockService, qui les pose.
+	require(script.RakeService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end
@@ -146,6 +149,11 @@ MowService.init()
 -- qu'un remote et le Workspace.
 local BinCarryService = require(script.BinCarryService)
 BinCarryService.init()
+
+-- RATEAU : ramasse les petits tas laisses au sol par la taille et les rassemble en gros tas.
+-- APRES HedgeStockService, qui est celui qui POSE ces tas : sans lui il n'y aurait rien a ramasser.
+local RakeService = require(script.RakeService)
+RakeService.init()
 
 -- Animations d'ambiance : les plantes (arbres, buissons) et les PNJ qui respirent sur place. Boucles jouees cote
 -- serveur, donc repliquees a tous. Habillage, pas du gameplay. Ordre indifferent : il ne lit aucun autre service,

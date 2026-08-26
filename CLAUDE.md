@@ -689,6 +689,75 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   direction. Quand une sonde nomme une cause, verifier qu'elle a le droit de la nommer -- ici elle ne mesurait que
   "ca n'a pas bouge", ce qui ne designe personne.
 
+- **Un objet PORTE qui est de travers sur le joueur se lit EXACTEMENT comme une trajectoire qui derape.** Les deux
+  produisent le meme dessin a l'ecran -- un vehicule qui n'avance pas dans l'axe de son "avant" -- et ils se
+  corrigent a des endroits OPPOSES (le deplacement, ou la soudure). Sur la tondeuse, j'ai corrige DEUX FOIS le
+  deplacement (tourner la vitesse avec le corps a l'instant du braquage, puis la remettre dans l'axe a chaque
+  image) : les deux etaient inutiles, la trajectoire etait deja droite. La mesure a l'ecran a donne **0.6 degre**
+  de glissade reelle. Le vrai coupable etait le BALLANT (`state.swing`, applique au `weld.C0` cote serveur) : il
+  revient a zero par un lerp exponentiel a `SWING_RETURN = 1.6`, donc il traine encore 5 degres une seconde apres
+  le virage et met plus de 3 secondes a passer sous 1. En ligne droite, la machine roule en crabe. Regle :
+  **avant de corriger un "derapage", mesurer l'angle entre la VITESSE et le REGARD** ; s'il est nul, ce n'est pas
+  le trajet, c'est l'objet. Corollaire de methode : apres DEUX correctifs rates au meme endroit, arreter de
+  proposer un troisieme et fabriquer la mesure -- ca a coute 5 minutes et tranche en une manche (meme famille que
+  "l'etat reel du moteur bat l'etat qu'on croit avoir"). Et pour la classe entiere de bugs : **un lerp exponentiel
+  qui doit ARRIVER a une pose visible a besoin d'un plancher de vitesse** (deg/s), pas seulement d'un snap
+  epsilon -- un `SWING_SNAP` a 0.001 rad (0.06 degre) ne se declenche jamais assez tot pour empecher la trainee.
+
+- **Un prompt d'interaction SINGLETON + des detections qui se recouvrent = un prompt qui "s'affiche pas tout le
+  temps".** `InteractionPrompt` n'affiche qu'UNE pilule ; six controllers s'en servent. La PRISE d'echelle
+  (radiale, 8 studs) et la MONTEE (zone laterale, ENTIEREMENT incluse dans ces 8 studs) se doublaient a tour de
+  role, et chacune gardait un verrou "mon prompt est affiche" qu'elle ne rouvrait jamais -> celle qui perdait ne
+  revenait PLUS. Symptome trompeur au carre : les deux pilules ont le meme TITRE ("LADDER"), la meme hauteur, et
+  seule la touche change -- on ne voit pas un prompt manquant, on voit le sien remplace sans le remarquer. Et la
+  TOUCHE, elle, marchait toujours (elle refait sa propre detection), donc ca ressemblait a un bug d'AFFICHAGE
+  alors que c'est un bug de PROPRIETE. Deux regles : (1) tout appelant d'un singleton doit verifier qu'il le
+  possede encore (`currentTarget()`) avant de conclure "deja affiche", et ne CACHER que si c'est le sien -- sinon
+  il vole la pilule d'une autre feature ; (2) quand deux detections se recouvrent, il faut une PRIORITE dans le
+  singleton, pas un arbitrage reparti dans chaque feature (meme raison que `CarryUtils` pour les mains : une seule
+  question, une seule reponse, et les features n'ont pas a se connaitre).
+
+- **Une distance de placement reglee A LA MAIN ne peut pas connaitre la taille de l'objet PORTE : elle finit par
+  le planter dans le decor.** Le joueur etait tenu a `WORK_DIST = 3.5` studs de la haie pendant le portage de
+  l'echelle, alors que le bord AVANT de l'echelle tombe a `CARRY_CLEARANCE + profondeur` devant lui. Des que
+  l'echelle depasse 2.5 studs de profondeur, elle entre DANS la haie. Le code mesurait pourtant deja son bord
+  ARRIERE (pour ne pas la mettre dans le joueur) -- il manquait juste l'autre moitie de la meme mesure. Piege a
+  tiroirs : le commentaire de `WORK_DIST` racontait qu'on l'avait BAISSE (5 -> 3.5) parce que "l'echelle se posait
+  trop loin", donc le reglage a la main avait deja gagne une fois contre la geometrie. Et la consequence ne
+  ressemble pas a sa cause : l'echelle plantee dans la haie y plante AUSSI ses zones de grimpe, donc on ne peut
+  plus jamais monter dessus -- on va debugger la grimpe alors qu'elle est simplement devenue inatteignable.
+  Regle : toute distance qui doit tenir compte d'un objet porte se CALCULE depuis ses extremites reelles, et le
+  knob qui reste est l'ECART VOULU (ici `LADDER_HEDGE_GAP`), pas la distance totale.
+
+- **Un cache indexe par NOM COURT collisionne des qu'un deuxieme dossier a un homonyme -- et `pairs` decide qui
+  gagne, donc AJOUTER une entree ailleurs deplace le bug.** Le cache d'animations de `ToolService` etait
+  `tracks[anim.Name]`, rempli en bouclant `pairs(ToolConfigs)`. Or la cisaille ET le taille-haie ont chacun leur
+  `IdleAnimation` dans LEUR dossier : le premier charge gagnait et servait sa pose A L'AUTRE. Ca a dormi tant qu'il
+  n'y avait que deux outils, puis ajouter un TROISIEME (le rateau, qui n'a meme pas d'homonyme) a change l'ordre de
+  `pairs` -- l'ordre d'une table Lua n'est pas defini et bouge quand on insere une cle -- et la cisaille s'est mise
+  a recevoir la pose du taille-haie, qui cle les jambes en priorite Action : personnage FIGE. Symptome trompeur au
+  carre : le bug apparait sur un outil AUQUEL ON N'A PAS TOUCHE, en ajoutant du code ailleurs, et il ne se
+  reproduit pas forcement d'une session a l'autre. Regle : la cle d'un cache doit contenir tout ce qui distingue
+  l'entree (ici `dossier/nom`), jamais le seul segment "lisible". Et se mefier de tout ce qui depend de l'ordre de
+  `pairs` : si l'ordre compte, ce n'est pas la boucle qu'il faut trier, c'est la collision qu'il faut supprimer.
+
+- **Tester la PRESENCE D'UN DETAIL pour repondre a une question d'ETAT rate tous les cas qui n'ont pas ce detail.**
+  L'auto-equip du taille-haie demandait "les mains sont-elles vides ?" en cherchant `HitBoxRoot`, la LAME. Vrai pour
+  le taille-haie et la cisaille, faux pour le rateau, qui n'a pas de lame. Resultat : pres d'une haie, l'auto-equip
+  croyait les mains vides, tirait `ToggleTool` -- qui est une BASCULE, donc les mains pleines il RANGE -- et le
+  rateau se faisait retirer de force en plein geste, puis remplacer par l'outil de coupe. Regle : demander l'ETAT
+  (l'attribut `LeafiaTool`, pose par celui qui equipe) et jamais un INDICE observe sur un cas particulier. Meme
+  famille que `CarryUtils` : une seule question, une seule reponse, et ajouter un Nieme outil ne touche aucun autre.
+
+- **Classer des objets par distance a leur CENTRE quand tout le reste travaille sur leur BOITE fait gagner le
+  petit objet proche contre le grand objet colle a soi.** L'aimant de portage d'echelle choisissait sa haie par
+  `(inst.Position - position).Magnitude`, puis l'aimant, la normale et la portee du focus utilisaient tous
+  `distToHedgeBox`. Un buisson (`hedge_size_type_1`, donc une haie pour le jeu) battait la longue haie qu'on est
+  en train de longer : le joueur se retrouvait aimante et oriente vers le buisson, avec l'echelle soudee devant
+  lui qui rentrait dedans. Regle : dans une meme fonctionnalite, le critere de CHOIX et le critere de CALCUL
+  doivent etre la meme mesure. Ne se voit jamais tant qu'il n'y a qu'un seul objet dans la scene -- donc ca dort
+  pendant tout le prototypage (meme famille que `lastHedge` / `workHedge`).
+
 - **Avec le streaming, un Model arrive AVANT ses parts : resoudre une reference UNE SEULE FOIS la fige a `nil`
   pour toute la session.** Vecu sur le prompt de la porte du tuto : le Model `Door` etait bien trouve au boot,
   mais `PrimaryPart` et `FindFirstChildWhichIsA("BasePart")` rendaient `nil` -- pas encore repliques. Le code
