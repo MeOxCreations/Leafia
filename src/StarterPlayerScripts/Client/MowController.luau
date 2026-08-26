@@ -57,6 +57,7 @@ local pullBound = false
 -- Dernier braquage ENVOYE. On ne renvoie que sur un vrai changement : tenir une touche ne doit pas remplir
 -- le reseau d'un message par image pour une valeur qui ne bouge pas.
 local lastSteerSent = 0
+local lastDriveSent = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -774,10 +775,17 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- LE RETOUR A ZERO PART TOUJOURS, meme s'il est plus petit que le seuil. Sans ce cas particulier, relacher
 	-- la touche apres une poussee legere (0.05, un stick a peine effleure) ne franchissait pas le seuil : le
 	-- serveur gardait ce reste de braquage et poussait la machine de travers POUR TOUJOURS.
-	local releasing = lateralAmount == 0 and lastSteerSent ~= 0
-	if steerRemote and (releasing or math.abs(lateralAmount - lastSteerSent) > 0.08) then
+	-- L'AVANCE PART AVEC, dans le meme message. Le serveur en a besoin pour la pose "embarque" : il la calculait
+	-- avant sur la vitesse MESUREE, et il y avait donc un retard le temps que la machine prenne sa vitesse -- on
+	-- appuyait, et le personnage se penchait un instant plus tard. L'intention, elle, est connue tout de suite.
+	--
+	-- Meme message et pas un second remote : c'est la MEME donnee, la conduite demandee, envoyee au meme rythme.
+	local releasing = (lateralAmount == 0 and lastSteerSent ~= 0) or (forwardAmount == 0 and lastDriveSent ~= 0)
+	local changed = math.abs(lateralAmount - lastSteerSent) > 0.08 or math.abs(forwardAmount - lastDriveSent) > 0.08
+	if steerRemote and (releasing or changed) then
 		lastSteerSent = lateralAmount
-		steerRemote:FireServer(lateralAmount)
+		lastDriveSent = forwardAmount
+		steerRemote:FireServer(lateralAmount, forwardAmount)
 	end
 
 	-- BRAQUER SEUL FAIT ROULER, doucement, et le corps tourne AVEC. On ne fait pas pivoter une tondeuse sur un

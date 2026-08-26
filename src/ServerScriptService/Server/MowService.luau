@@ -51,7 +51,8 @@ type CarryState = {
 	success: Sound?, -- le son de reussite en cours : la boucle moteur s'enchaine sur SA fin
 	swing: number, -- retard angulaire courant, en radians. Positif = la machine traine d'un cote
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
-	pushAmount: number, -- 0 = debout, 1 = penche en arriere. Lissee : c'est elle qui joue l'anim dans les deux sens.
+	pushTime: number, -- ou l'on en est dans l'anime "embarque", en secondes. Avance quand on pousse, recule sinon.
+	driveInput: number, -- avance demandee par le client, bornee a [-1, 1]. L'INTENTION, pas la vitesse mesuree.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -873,7 +874,8 @@ local function grab(player: Player, model: Model)
 		pullsNeeded = rng:NextInteger(MowConfigs.PULL_TRIES_MIN, MowConfigs.PULL_TRIES_MAX),
 		swing = 0,
 		steerInput = 0,
-		pushAmount = 0,
+		pushTime = 0,
+		driveInput = 0,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -1019,31 +1021,31 @@ local function grab(player: Player, model: Model)
 			back.TimePosition = math.clamp(state.reverseAmount, 0, 1) * (back.Length - HOLD_EPSILON)
 		end
 
-		-- POSE EMBARQUE. Le personnage se penche en arriere quand la machine avance, et se redresse quand elle
-		-- s'arrete.
+		-- POSE EMBARQUE. Le personnage se penche en arriere quand on pousse, et se redresse quand on lache.
 		--
-		-- ON MESURE L'AVANCE REELLE, pas l'intention -- comme le regard arriere juste au-dessus. L'animation
-		-- raconte que la machine VA VITE : pousser contre un mur ne doit donc rien declencher, alors que l'input
-		-- de marche avant, lui, est a fond dans ce cas.
+		-- ON LIT L'INTENTION, pas la vitesse mesuree. La mesure arrive en retard -- le temps que la machine prenne
+		-- sa vitesse -- et ce retard entre l'appui et le geste se ressent tout de suite. Le regard arriere, lui,
+		-- garde la mesure : il repond a "ou va la machine", une question sur le MONDE. Celle-ci repond a "que
+		-- demande le joueur", une question sur l'INTENTION -- ce ne sont pas les memes, et elles n'ont donc pas la
+		-- meme source.
 		--
-		-- MEME SEUIL que le regime moteur (`SPEED_MOVE_EPSILON`) : "est-ce que la machine avance" est UNE question,
-		-- elle ne peut pas avoir deux reponses. Un second seuil finirait par le contredire, et on verrait le
-		-- personnage se pencher pendant que le moteur redescend au ralenti.
-		--
-		-- Calcule HORS du bloc d'animation : l'etat doit rester coherent meme si la piste n'a pas pu charger.
-		local pushTarget = if -backward > MowConfigs.SPEED_MOVE_EPSILON then 1 else 0
-		state.pushAmount += (pushTarget - state.pushAmount) * math.min(1, MowConfigs.PUSH_POSE_SPEED * dt)
-		-- Cle a la cible : un lerp exponentiel n'y arrive jamais. Sans ca la pose ne serait jamais tout a fait
-		-- complete, ni tout a fait defaite -- le personnage garderait un residu de penche a l'arret.
-		if math.abs(pushTarget - state.pushAmount) < SWING_SNAP then
-			state.pushAmount = pushTarget
-		end
+		-- MEME SEUIL que le client (`STEER_MOVE_EPSILON`), qui s'en sert deja pour "le joueur demande d'avancer".
+		-- Une seule question, une seule reponse.
+		local pushing = state.driveInput > MowConfigs.STEER_MOVE_EPSILON
 
 		local push = state.push
 		if push and push.Length > HOLD_MIN_LENGTH then
+			-- LECTURE LINEAIRE, dans un sens ou dans l'autre. On avance la position de `dt * vitesse`, donc
+			-- l'animation se joue au rythme ou elle a ete faite -- ses temps sont respectes image pour image.
+			--
+			-- Un lissage (lerp) a la place donnerait un depart rapide et une fin lente : il traverserait les trois
+			-- quarts du geste en quelques images. Une valeur interpolee ne peut PAS restituer un timing anime.
+			--
 			-- On s'arrete a Length - epsilon : sur la derniere image PILE, une piste bouclee est deja repartie a
 			-- zero, et la pose claquerait au repos juste au moment ou elle est la plus marquee.
-			push.TimePosition = math.clamp(state.pushAmount, 0, 1) * (push.Length - HOLD_EPSILON)
+			local step = dt * MowConfigs.PUSH_PLAY_SPEED * (if pushing then 1 else -1)
+			state.pushTime = math.clamp(state.pushTime + step, 0, push.Length - HOLD_EPSILON)
+			push.TimePosition = state.pushTime
 		end
 
 		local weld = state.weld
@@ -1156,14 +1158,19 @@ function MowService.init()
 
 	-- BRAQUAGE. Le client DEMANDE, le serveur borne : un client qui enverrait 50 n'obtiendrait pas plus d'angle,
 	-- parce que le resultat est de toute facon clampe par SWING_MAX plus bas.
+	-- Le message porte AUSSI l'avance demandee : c'est la meme donnee -- la conduite -- envoyee au meme rythme.
 	local steerRemote = RemoteSetup.getRemote("SetMowSteer", "Mow") :: RemoteEvent
-	steerRemote.OnServerEvent:Connect(function(player: Player, value: unknown)
+	steerRemote.OnServerEvent:Connect(function(player: Player, value: unknown, drive: unknown)
 		if type(value) ~= "number" or value ~= value then
 			return -- pas un nombre, ou NaN : un NaN se propagerait dans l'angle et figerait la machine de travers
 		end
+		-- L'avance est FACULTATIVE : un client d'une version precedente n'en envoie pas, et il doit continuer a
+		-- braquer normalement plutot que d'etre rejete.
+		local wantDrive = if type(drive) == "number" and drive == drive then math.clamp(drive, -1, 1) else 0
 		for _, state in pairs(carried) do
 			if state.owner == player then
 				state.steerInput = math.clamp(value, -1, 1)
+				state.driveInput = wantDrive
 			end
 		end
 	end)

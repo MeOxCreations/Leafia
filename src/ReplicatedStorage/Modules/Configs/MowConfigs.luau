@@ -274,8 +274,8 @@ return {
 	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
 	-- ===== CONDUITE =====
-	-- (Le seuil "on avance" n'est PAS ici : c'est SPEED_MOVE_EPSILON, plus haut. Un second seuil pour la meme
-	-- question finirait par le contredire, et on aurait une pose qui s'installe alors que le regime retombe.)
+	-- (Le seuil "le joueur demande d'avancer" n'est PAS ici : c'est STEER_MOVE_EPSILON, plus bas, deja utilise
+	-- pour la meme question cote client. Un second seuil finirait par le contredire.)
 	-- Une tondeuse a du POIDS : on ne pivote pas sur place avec, on decrit un ARC. Par defaut le personnage Roblox
 	-- s'oriente INSTANTANEMENT vers la direction demandee (AutoRotate), ce qui donne un demi-tour sec sur un point.
 	--
@@ -434,9 +434,16 @@ return {
 	-- quand on pousse et redescend vers zero quand on s'arrete. Une seule valeur, deux sens, et repartir en plein
 	-- retour ne demande AUCUN cas particulier -- elle change juste de direction.
 	PUSH_ANIM_ID = "rbxassetid://130354141053420",
-	-- Vitesse a laquelle la pose s'installe et se defait, en fraction par seconde. Basse = le personnage se laisse
-	-- embarquer progressivement ; haute = il se jette en arriere des le premier stud.
-	PUSH_POSE_SPEED = 3.5,
+	-- MULTIPLICATEUR de la vitesse d'origine. 1 = EXACTEMENT le rythme donne dans l'editeur d'animation.
+	--
+	-- La position avance de `dt * PUSH_PLAY_SPEED` chaque image : c'est une lecture LINEAIRE, elle respecte donc
+	-- les temps de l'animation image pour image.
+	--
+	-- Une version precedente lissait la position par un lerp exponentiel. Un lerp part VITE et finit LENT : il
+	-- traversait les trois quarts de l'animation en quelques images puis rampait sur le reste. Le geste arrivait
+	-- d'un bloc -- "trop sec" -- et les poses intermediaires passaient trop vite pour se voir. Une valeur
+	-- interpolee ne peut PAS restituer un timing anime : seule une lecture lineaire le peut.
+	PUSH_PLAY_SPEED = 1,
 	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
 	PUSH_PRIORITY = Enum.AnimationPriority.Action2,

@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.508 — La pose "embarque" repond tout de suite, et au bon rythme
+
+Trois symptomes, deux causes.
+
+### Le retard : on mesurait la CONSEQUENCE au lieu de l'INTENTION
+
+La pose partait sur la vitesse REELLE de la machine. Cette vitesse arrive en retard -- le temps que la tondeuse
+prenne son elan -- donc on appuyait, et le personnage se penchait un instant plus tard.
+
+Le client envoie desormais l'avance DEMANDEE, dans le meme message que le braquage : c'est la meme donnee, la
+conduite, au meme rythme. Aucun remote de plus.
+
+C'etait un choix explicite de la version precedente, et il etait faux : j'avais ecarte l'intention en pensant au
+cas du mur (pousser contre un obstacle ne doit pas montrer une machine qui file). Le retard coute bien plus cher
+que ce cas.
+
+Le regard arriere, lui, GARDE la mesure. Il repond a "ou va la machine", une question sur le MONDE. Celle-ci
+repond a "que demande le joueur", une question sur l'INTENTION. Deux questions differentes, deux sources.
+
+### Le geste trop sec et trop rapide : un lerp ne peut pas jouer un timing
+
+La position dans l'animation etait lissee par un lerp exponentiel. Un lerp part VITE et finit LENT : il
+traversait les trois quarts du geste en quelques images puis rampait sur le reste. Le mouvement arrivait d'un
+bloc, et les poses intermediaires passaient trop vite pour se voir -- d'ou "ce n'est pas ce que j'ai mis dans
+l'editeur".
+
+Lecture LINEAIRE maintenant : la position avance de `dt * vitesse` a chaque image, dans un sens ou dans l'autre.
+L'animation se joue au rythme ou elle a ete faite, ses temps respectes image pour image.
+
+`PUSH_PLAY_SPEED = 1` : exactement le rythme de l'editeur. Le monter accelere, le baisser ralentit.
+
+### Le meme seuil que le client
+
+`STEER_MOVE_EPSILON`, deja utilise cote client pour "le joueur demande d'avancer". Une seule question, une seule
+reponse.
+
 ## 0.0.507 — La porte s'ouvre PAR LE CODE, et les eclairs des coups partent
 
 Deux changements dans le meme fichier.
