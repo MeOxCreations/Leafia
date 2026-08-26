@@ -280,6 +280,14 @@ return {
 	-- la visee haut/bas du taille-haie : une animation dont on ne lit qu'une IMAGE, jamais le defilement.
 	LEVER_ANIM_ID = "rbxassetid://139358126737662",
 
+	-- ===== MARQUEUR DE DIRECTION =====
+	-- Un repere pose sur la machine. Chemin sous `ReplicatedStorage.Assets` : le mesh vit dans Studio, et Rojo ne
+	-- synchronise pas les Assets -- l'y chercher par son chemin evite de le recopier en code.
+	MARKER_PATH = { "Contents", "MarkerDirection" },
+	-- DECALAGE EN PLUS du milieu de la machine, dans SON repere : X = cote, Y = hauteur, Z = arriere (donc -Z
+	-- vers l'avant). Le milieu, lui, n'est pas ici : il est MESURE au premier affichage.
+	MARKER_OFFSET = Vector3.new(0, 0, 0),
+
 	-- ===== CONDUITE =====
 	-- (Le seuil "le joueur demande d'avancer" n'est PAS ici : c'est STEER_MOVE_EPSILON, plus bas, deja utilise
 	-- pour la meme question cote client. Un second seuil finirait par le contredire.)

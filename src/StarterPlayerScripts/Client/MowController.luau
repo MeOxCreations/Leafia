@@ -589,6 +589,86 @@ local function spinWheels(model: Model, distance: number)
 	end
 end
 
+-- ===== MARQUEUR DE DIRECTION =====
+-- Un mesh pose sur la machine, qui la suit tant qu'on la pousse.
+--
+-- IL N'EST PAS ENFANT DE LA TONDEUSE, et c'est important : un enfant de plus deplace la bounding box du modele,
+-- donc son pivot, donc tout ce qui se calcule dessus -- sans que rien ne le signale, puisque le coupable est un
+-- objet decoratif ajoute ailleurs. Il vit dans le Workspace et se contente de suivre.
+--
+-- Purement local : chacun voit le sien. Un repere de conduite aide CELUI QUI PILOTE, il n'a rien a faire chez
+-- les autres joueurs, et le garder client evite de le repliquer pour rien.
+local marker: BasePart? = nil
+-- Sa place sur la machine, en repere machine. MESUREE au premier affichage puis gardee : la mesurer a chaque
+-- image couterait un GetBoundingBox par frame, et la ferait trembler quand les roues tournent.
+local markerOffset: CFrame? = nil
+local warnedNoMarker = false
+
+local function clearMarker()
+	if marker then
+		marker:Destroy()
+		marker = nil
+	end
+	markerOffset = nil
+end
+
+-- Le mesh source, ou nil. On ne previent QU'UNE FOIS : ce chemin est relu a chaque image, et un avertissement par
+-- frame noierait la console.
+local function markerAsset(): BasePart?
+	local node: Instance? = ReplicatedStorage:FindFirstChild("Assets")
+	for _, step in ipairs(MowConfigs.MARKER_PATH) do
+		node = if node then node:FindFirstChild(step) else nil
+	end
+	if node and node:IsA("BasePart") then
+		return node
+	end
+	if not warnedNoMarker then
+		warnedNoMarker = true
+		warn(
+			`[MowController] Marqueur introuvable : Assets.{table.concat(MowConfigs.MARKER_PATH, ".")}. `
+				.. "Rojo ne synchronise pas les Assets, il doit exister dans CETTE place."
+		)
+	end
+	return nil
+end
+
+local function updateMarker(model: Model)
+	local root = model:FindFirstChild(MowConfigs.ROOT_NAME)
+	if not (root and root:IsA("BasePart")) then
+		clearMarker()
+		return
+	end
+	local rootPart = root :: BasePart
+	local m = marker
+	if not m or not m.Parent then
+		local source = markerAsset()
+		if not source then
+			return
+		end
+		local clone = source:Clone()
+		clone.Name = "LeafiaMowMarker"
+		clone.Anchored = true
+		clone.CanCollide = false
+		clone.CanTouch = false
+		-- `CanQuery` n'a d'effet QUE parce que CanCollide est faux. Sans ca, les raycasts de la coupe verraient ce
+		-- decor et croiraient a un obstacle.
+		clone.CanQuery = false
+		clone.CastShadow = false
+		clone.Parent = Workspace
+		marker = clone
+		m = clone
+		-- LE MILIEU EST MESURE, pas devine. La RootPart est a l'AVANT-BAS du carter, pas au centre : y coller le
+		-- marqueur le poserait devant la machine et sous elle. On prend donc le centre de la boite englobante,
+		-- ramene en repere machine -- une seule fois, tant que le modele ne change pas.
+		local center = model:GetBoundingBox()
+		markerOffset = rootPart.CFrame:Inverse() * CFrame.new(center.Position) * CFrame.new(MowConfigs.MARKER_OFFSET)
+	end
+	local offset = markerOffset
+	if m and offset then
+		m.CFrame = rootPart.CFrame * offset
+	end
+end
+
 -- ===== DEBUG DE TRAJECTOIRE =====
 -- Des points qui dessinent la courbe QUE LA MACHINE VA SUIVRE avec le braquage courant. On SIMULE quelques
 -- dixiemes de seconde en avant, avec exactement la meme formule que la conduite : si la courbe affichee ne
@@ -692,8 +772,12 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		-- donc ne rien faire laisserait SA demande de deplacement s'appliquer.
 		humanoid:Move(Vector3.zero, false)
 		clearTrail()
+		clearMarker()
 		return
 	end
+	-- Le marqueur suit la machine tant qu'elle tourne. Pose ICI et pas dans le bloc de debug juste en dessous :
+	-- ce n'est pas un outil de mise au point, il fait partie du jeu.
+	updateMarker(mower)
 	-- `GetMoveVector` rend un vecteur RELATIF A LA CAMERA : X = cote, Z = arriere. C'est POUR CA que
 	-- `Humanoid:Move(v, true)` existe -- le `true` demande a Roblox d'y appliquer la camera.
 	-- On lit donc ses composantes DIRECTEMENT. Les projeter sur des axes MONDE melangeait deux reperes :
@@ -1181,6 +1265,7 @@ local function update(dt: number)
 			RunService:UnbindFromRenderStep(STEER_BIND)
 		end)
 		clearTrail()
+		clearMarker()
 		if humanoid then
 			humanoid.AutoRotate = autoRotateWas
 		end

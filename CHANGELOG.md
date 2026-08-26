@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.510 — Un marqueur de direction posee sur la tondeuse
+
+`Assets/Contents/MarkerDirection` suit la machine tant qu'elle tourne. Premiere etape : il se place au milieu.
+
+### Il n'est PAS enfant de la tondeuse
+
+Un enfant de plus deplace la bounding box du modele, donc son pivot, donc tout ce qui se calcule dessus -- et
+rien ne le signale, puisque le coupable est un objet decoratif ajoute ailleurs. Le projet a deja paye ce piege
+sur l'echelle.
+
+Il vit donc dans le Workspace et se contente de suivre.
+
+### Le milieu est MESURE, pas devine
+
+La `RootPart` est a l'AVANT-BAS du carter, pas au centre : y coller le marqueur l'aurait pose devant la machine
+et sous elle. On prend le centre de la boite englobante, ramene en repere machine.
+
+Mesure UNE FOIS puis gardee : la refaire a chaque image couterait un `GetBoundingBox` par frame et la ferait
+trembler quand les roues tournent.
+
+### Purement local
+
+Un repere de conduite aide CELUI QUI PILOTE. Le garder cote client evite de le repliquer chez des joueurs a qui
+il ne sert a rien.
+
+`CanQuery = false` avec `CanCollide = false` : sans le second le premier n'a aucun effet, et les raycasts de la
+coupe verraient ce decor comme un obstacle.
+
+### A FAIRE DANS STUDIO
+
+Le mesh doit exister dans CETTE place : Rojo ne synchronise pas les Assets. S'il manque, un avertissement le dit
+UNE fois -- le chemin est relu a chaque image, un warn par frame noierait la console.
+
+`MARKER_OFFSET` decale le marqueur a partir du milieu, dans le repere de la machine.
+
 ## 0.0.509 — Le moteur redescend vraiment au ralenti
 
 A l'arret, la boucle du moteur tournait a sa hauteur NORMALE. Le regime montait bien en accelerant, mais il ne
