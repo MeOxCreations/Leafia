@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.504 — Les feuilles du chargement ne rebondissent plus
+
+Il ne reste qu'un mouvement : la feuille grossit a sa place, et elle y reste.
+
+Le saut et le rebond partent. Sur SIX feuilles qui s'allument coup sur coup, ils faisaient six gestes qui se
+recouvrent -- l'oeil ne suivait plus la vague, il voyait une agitation. Un indicateur de chargement doit se lire
+d'un coup d'oeil, pas se regarder.
+
+### Ce qui disparait avec
+
+Huit reglages (hauteur et durees du saut, etirement en l'air, ecrasement au contact, redressement) et les trois
+fonctions enchainees qui les jouaient. `LEAF_SEQUENCE` se reduit a la seule duree d'apparition -- et comme elle
+etait CALCULEE, la pause entre deux tours s'est ajustee toute seule.
+
+### Un commentaire mort emporte au passage
+
+`-- Hauteur de CHUTE d'une feuille qui s'allume...`, coupe en plein milieu, decrivait une chute retiree il y a
+plusieurs versions. Un commentaire faux coute plus cher que pas de commentaire : celui-la annoncait un reglage
+qui n'existait plus.
+
 ## 0.0.503 — Une gerbe d'etoiles filantes a chaque coup
 
 Huit etoiles jaillissent du point d'impact et filent vers les bords de l'ecran.
