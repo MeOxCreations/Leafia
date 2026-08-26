@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.499 — Les eclairs reviennent, a cote des particules
+
+Ils avaient ete retires parce qu'on ne les voyait pas. Ils marchaient : la part qui les porte n'etait pas
+ANCREE, elle avait glisse, et les effets jouaient a un endroit qu'on ne regardait pas.
+
+Ils reviennent donc, en plus des particules de `Mid`. Les deux ne font pas le meme travail : les particules
+donnent la MATIERE qui gicle, les eclairs donnent le CHOC. L'un sans l'autre se remarque a peine.
+
+### En version SIMPLE cette fois
+
+Allume/eteint, sans fondu d'eclat.
+
+La version precedente animait `Brightness` jusqu'a zero, ce qui obligeait a le RENDRE a chaque sortie possible
+-- fin de fondu, arret du controller, mort du joueur -- sous peine de laisser les Beams a zero POUR TOUJOURS.
+Trois garde-fous pour trois images d'effet, et aucun ne servait a rendre l'effet plus beau.
+
+Reste le seul qui compte : l'extinction vit dans un `task.delay` que personne ne rattrape si la scene finit
+avant lui. L'arret du controller les eteint tous.
+
+### Meme conteneur, meme regle
+
+Les Beams sont cherches sous `KNOCK_EMIT_PARENT`, comme les emetteurs : on prend TOUT ce qu'il contient sans
+nommer quoi que ce soit. En ajouter un dans Studio suffit a l'inclure.
+
+### A FAIRE DANS STUDIO
+
+ANCRER `KnockEffect1`. C'est ce qui manquait depuis le debut -- une part non ancree tombe, et ses effets vont
+jouer ailleurs.
+
 ## 0.0.498 — Le joueur disparait completement quand la porte s'ouvre
 
 A 0.7 il restait une silhouette. Suffisant tant qu'on regarde une porte fermee -- mais un GRAND avatar masque le

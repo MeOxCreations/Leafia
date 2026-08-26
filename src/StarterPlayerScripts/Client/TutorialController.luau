@@ -61,8 +61,9 @@ local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
 local doorWatch: RBXScriptConnection? = nil
 local trySound: Sound? = nil
--- Emetteurs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
+-- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
+local knockBeams: { Beam }? = nil
 local promptShown = false
 local actionBound = false
 local conn: RBXScriptConnection? = nil
@@ -599,6 +600,29 @@ local function getKnockEmitters(): { ParticleEmitter }
 	return found
 end
 
+-- Les eclairs du meme conteneur. Meme regle : on prend TOUT ce qu'il contient, sans nommer les Beams -- en
+-- ajouter un dans Studio suffit alors a l'inclure.
+local function getKnockBeams(): { Beam }
+	local cached = knockBeams
+	if cached then
+		return cached
+	end
+	local found: { Beam } = {}
+	local holder = findByName(TutorialConfigs.KNOCK_EMIT_PARENT)
+	if holder then
+		for _, d in ipairs(holder:GetDescendants()) do
+			if d:IsA("Beam") then
+				-- ETEINTS AU DEPART. Leur etat de repos est INVISIBLE : arrives allumes depuis Studio, ils le
+				-- resteraient toute la scene et on chercherait pourquoi un effet de coup est permanent.
+				d.Enabled = false
+				table.insert(found, d)
+			end
+		end
+	end
+	knockBeams = found
+	return found
+end
+
 local function knockOnce()
 	local model = door
 	if not model then
@@ -612,6 +636,24 @@ local function knockOnce()
 	-- allumait des Beams, et il fallait un releve de leur eclat pour ne pas les laisser eteints a jamais.
 	for _, emitter in ipairs(getKnockEmitters()) do
 		emitter:Emit(TutorialConfigs.KNOCK_EMIT_COUNT)
+	end
+
+	-- LES ECLAIRS, en plus. Les particules donnent la MATIERE qui gicle, les eclairs donnent le CHOC : l'un sans
+	-- l'autre se remarque a peine.
+	--
+	-- Simple allume/eteint, sans fondu. Animer leur eclat obligeait a le RENDRE a chaque sortie possible -- fin
+	-- de fondu, arret du controller, mort du joueur -- sous peine de les laisser a zero pour toujours. Trois
+	-- garde-fous pour trois images d'effet.
+	local beams = getKnockBeams()
+	for _ = 1, math.min(TutorialConfigs.KNOCK_BEAM_COUNT, #beams) do
+		local beam = beams[math.random(#beams)]
+		beam.Enabled = true
+		task.delay(TutorialConfigs.KNOCK_BEAM_TIME, function()
+			-- On revalide : le rideau, la mort ou une sortie de scene ont pu detruire l'objet entre-temps.
+			if beam.Parent then
+				beam.Enabled = false
+			end
+		end)
 	end
 
 	local shake = shakeTrack
@@ -889,6 +931,15 @@ function TutorialController.stop()
 	end
 	hideOurs()
 	setActionBound(false)
+	-- Un eclair coupe en plein flash resterait ALLUME : son extinction vit dans un `task.delay` que personne ne
+	-- rattrape une fois la scene finie.
+	if knockBeams then
+		for _, beam in ipairs(knockBeams) do
+			if beam.Parent then
+				beam.Enabled = false
+			end
+		end
+	end
 	door, highlight, anchor = nil, nil, nil
 	sceneCF = nil
 end

@@ -161,6 +161,17 @@ return {
 	-- Particules crachees par emetteur et par coup. Le RESTE du reglage -- taille, duree de vie, vitesse,
 	-- couleur -- vit dans Studio, sur l'emetteur : c'est la qu'on le voit.
 	KNOCK_EMIT_COUNT = 1,
+	-- ET DES ECLAIRS, en plus des particules. Les Beams des attachments `P1` s'allument une fraction de seconde.
+	-- Les deux effets ne font pas le meme travail : les particules donnent la MATIERE qui gicle, les eclairs
+	-- donnent le CHOC. L'un sans l'autre se remarque a peine.
+	--
+	-- Combien s'allument par coup, pris AU HASARD parmi ceux du conteneur. Trois coups qui claquent au meme
+	-- endroit se lisent comme une boucle ; trois coups qui claquent ailleurs se lisent comme trois vrais chocs.
+	KNOCK_BEAM_COUNT = 3,
+	-- Duree de l'eclair. TRES court : c'est un flash. Simple allume/eteint, sans fondu -- un Beam dont on anime
+	-- l'eclat doit voir cet eclat RENDU a chaque sortie possible, et ca faisait trois garde-fous pour trois
+	-- images d'effet.
+	KNOCK_BEAM_TIME = 0.12,
 	-- La porte TREMBLE a chaque coup.
 	DOOR_SHAKE_ANIM = "DoorShakeAnimation",
 	-- Son du coup, joue AU NIVEAU DE LA PORTE. Spatial et pas global : un bruit de porte qui sort du centre de la
