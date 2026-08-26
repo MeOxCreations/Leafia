@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.512 — La fleche orbite autour de la tondeuse et DEVANCE le virage
+
+On braque, elle part tout de suite -- et la machine la rattrape. C'est ce decalage qui la rend utile : une fleche
+calee sur le cap ne dirait rien de plus que le nez de la machine, qu'on voit deja.
+
+Elle ne se contente pas de pivoter, elle TOURNE AUTOUR de la tondeuse : elle sort du cote ou l'on va.
+
+### On lisse l'ANGLE, jamais la position
+
+Interpoler la position d'un objet qui ORBITE coupe la corde de l'arc : il plonge vers le centre puis ressort, et
+sa distance varie pendant le virage. En lissant l'angle puis en le posant SUR le cercle, la fleche reste a son
+rayon du debut a la fin.
+
+Le projet a deja paye ce piege sur la camera d'orbite.
+
+### On lui donne l'INTENTION, pas le cap obtenu
+
+Le meme produit que la rotation reelle -- braquage, sens de reglage, marche arriere -- sans le taux ni le temps.
+Une fleche calee sur le cap SUIT la machine au lieu de la devancer, ce qui est exactement l'inverse du but.
+
+C'est aussi pour ca que l'appel est descendu dans la fonction : c'est le premier endroit ou le SENS du virage est
+connu.
+
+### Reglages
+
+- `MARKER_LEAD_ANGLE = 55` (negatif pour partir de l'autre cote)
+- `MARKER_LEAD_SPEED = 8` -- haut expres : une intention est immediate. Trop bas, la fleche arrive APRES la
+  machine et l'effet s'inverse.
+- `MARKER_RADIUS = 2.5` -- a zero elle pivote sur place, ce qui permet de regler l'angle seul.
+- `MARKER_OFFSET` descend a -3.5.
+
 ## 0.0.511 — La fleche est retournee, descendue et grossie
 
 Trois reglages, tous dans `MowConfigs` :

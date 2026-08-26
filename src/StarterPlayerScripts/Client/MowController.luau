@@ -602,6 +602,12 @@ local marker: BasePart? = nil
 -- Sa place sur la machine, en repere machine. MESUREE au premier affichage puis gardee : la mesurer a chaque
 -- image couterait un GetBoundingBox par frame, et la ferait trembler quand les roues tournent.
 local markerOffset: CFrame? = nil
+-- Angle d'orbite courant, en degres. LISSE -- et c'est LUI qu'on lisse, jamais la position.
+--
+-- Interpoler la position d'un objet qui ORBITE coupe la corde de l'arc : il plonge vers le centre puis ressort,
+-- et sa distance varie pendant le virage. En lissant l'angle puis en le posant SUR le cercle, la fleche reste a
+-- son rayon du debut a la fin.
+local markerLead = 0
 local warnedNoMarker = false
 
 local function clearMarker()
@@ -610,6 +616,7 @@ local function clearMarker()
 		marker = nil
 	end
 	markerOffset = nil
+	markerLead = 0
 end
 
 -- Le mesh source, ou nil. On ne previent QU'UNE FOIS : ce chemin est relu a chaque image, et un avertissement par
@@ -632,7 +639,10 @@ local function markerAsset(): BasePart?
 	return nil
 end
 
-local function updateMarker(model: Model)
+-- `turnIntent` : -1 a 1, le braquage demande AVEC son sens reel (marche arriere comprise). C'est l'INTENTION et
+-- pas la rotation obtenue -- sans quoi la fleche suivrait la machine au lieu de la devancer, ce qui est
+-- exactement ce qu'on ne veut pas.
+local function updateMarker(model: Model, turnIntent: number, dt: number)
 	local root = model:FindFirstChild(MowConfigs.ROOT_NAME)
 	if not (root and root:IsA("BasePart")) then
 		clearMarker()
@@ -663,17 +673,33 @@ local function updateMarker(model: Model)
 		-- marqueur le poserait devant la machine et sous elle. On prend donc le centre de la boite englobante,
 		-- ramene en repere machine -- une seule fois, tant que le modele ne change pas.
 		local center = model:GetBoundingBox()
-		-- La rotation vient EN DERNIER : posee apres le deplacement, elle fait pivoter le marqueur SUR PLACE.
-		-- Avant, elle ferait tourner le decalage avec lui et la fleche partirait ailleurs.
-		markerOffset = rootPart.CFrame:Inverse()
-			* CFrame.new(center.Position)
-			* CFrame.new(MowConfigs.MARKER_OFFSET)
-			* CFrame.Angles(0, math.rad(MowConfigs.MARKER_YAW), 0)
+		-- SEULEMENT LE CENTRE DE L'ORBITE. L'orientation du mesh et l'angle du virage sont poses PAR IMAGE, plus
+		-- bas : les figer ici reviendrait a garder une fleche immobile.
+		markerOffset = rootPart.CFrame:Inverse() * CFrame.new(center.Position) * CFrame.new(MowConfigs.MARKER_OFFSET)
 	end
 	local offset = markerOffset
-	if m and offset then
-		m.CFrame = rootPart.CFrame * offset
+	if not (m and offset) then
+		return
 	end
+
+	-- L'ANGLE SE LISSE, la position se calcule. Voir `markerLead`.
+	local target = -turnIntent * MowConfigs.MARKER_LEAD_ANGLE
+	markerLead += (target - markerLead) * math.min(1, MowConfigs.MARKER_LEAD_SPEED * dt)
+	-- Cle a la cible : un lerp exponentiel ne l'atteint jamais, et la fleche garderait un residu d'angle en ligne
+	-- droite -- une fleche qui ne montre pas tout a fait devant soi quand on roule droit.
+	if math.abs(target - markerLead) < 0.05 then
+		markerLead = target
+	end
+
+	local spin = CFrame.Angles(0, math.rad(markerLead), 0)
+	-- Lue de gauche a droite : le centre de l'orbite, on tourne de l'angle courant, on s'ecarte du rayon vers
+	-- l'AVANT (-Z), puis on redresse le mesh. La correction du mesh vient EN DERNIER, sinon elle ferait tourner
+	-- l'ecart avec elle et la fleche sortirait du mauvais cote.
+	m.CFrame = rootPart.CFrame
+		* offset
+		* spin
+		* CFrame.new(0, 0, -MowConfigs.MARKER_RADIUS)
+		* CFrame.Angles(0, math.rad(MowConfigs.MARKER_YAW), 0)
 end
 
 -- ===== DEBUG DE TRAJECTOIRE =====
@@ -782,9 +808,6 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		clearMarker()
 		return
 	end
-	-- Le marqueur suit la machine tant qu'elle tourne. Pose ICI et pas dans le bloc de debug juste en dessous :
-	-- ce n'est pas un outil de mise au point, il fait partie du jeu.
-	updateMarker(mower)
 	-- `GetMoveVector` rend un vecteur RELATIF A LA CAMERA : X = cote, Z = arriere. C'est POUR CA que
 	-- `Humanoid:Move(v, true)` existe -- le `true` demande a Roblox d'y appliquer la camera.
 	-- On lit donc ses composantes DIRECTEMENT. Les projeter sur des axes MONDE melangeait deux reperes :
@@ -920,6 +943,14 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
+
+	-- LE MARQUEUR, pose ICI et pas plus haut : c'est le premier endroit ou le SENS du virage est connu. Il tient
+	-- compte de la marche arriere (`dirSign`) et de l'inversion de reglage (`steerSign`), donc la fleche part du
+	-- meme cote que la machine, dans tous les cas.
+	--
+	-- On lui donne l'INTENTION -- le meme produit que la rotation juste au-dessus, sans le taux ni le temps --
+	-- et surtout pas le cap obtenu : une fleche calee sur le cap SUIT la machine au lieu de la devancer.
+	updateMarker(mower, lateralAmount * steerSign * dirSign, dt)
 
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.

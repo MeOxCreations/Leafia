@@ -289,7 +289,7 @@ return {
 	--
 	-- Y NEGATIF le fait DESCENDRE. Le milieu mesure tombe a mi-hauteur du carter, ce qui est bien trop haut pour
 	-- une fleche au sol : on redescend d'a peu pres la demi-hauteur de la machine.
-	MARKER_OFFSET = Vector3.new(0, -1.5, 0),
+	MARKER_OFFSET = Vector3.new(0, -3.5, 0),
 	-- ORIENTATION, en degres autour de la verticale. 180 = demi-tour.
 	--
 	-- Le sens ne se DEDUIT pas : il depend de la facon dont le mesh a ete modelise, pas d'un calcul. Ca se voit a
@@ -299,6 +299,22 @@ return {
 	-- redimensionne en jeu CLIGNOTE quand sa RenderFidelity est `Automatic` (Roblox echange le maillage selon la
 	-- taille a l'ecran). Fixe, il ne clignote pas.
 	MARKER_SCALE = 1.8,
+
+	-- ===== LA FLECHE DEVANCE LE VIRAGE =====
+	-- Elle tourne PLUS que la machine, et plus TOT : on braque, elle part tout de suite, et la tondeuse la
+	-- rattrape. C'est ce decalage qui la rend utile -- une fleche calee sur le cap ne dirait rien de plus que le
+	-- nez de la machine, qu'on voit deja.
+	--
+	-- Angle atteint a fond de braquage, en degres. NEGATIF pour partir de l'autre cote : le sens depend de la
+	-- convention d'angle et de la facon dont le mesh est modelise, donc il se voit a l'ecran, il ne se deduit pas.
+	MARKER_LEAD_ANGLE = 55,
+	-- Vitesse a laquelle elle rejoint cet angle, en fraction par seconde. HAUTE : c'est une INTENTION qu'on
+	-- montre, et une intention est immediate. Trop basse, la fleche arrive apres la machine et l'effet s'inverse.
+	MARKER_LEAD_SPEED = 8,
+	-- RAYON DE L'ORBITE, en studs. La fleche ne se contente pas de pivoter : elle TOURNE AUTOUR de la machine, ce
+	-- qui la fait sortir du cote ou l'on va.
+	-- A zero elle pivote sur place -- utile pour regler l'angle seul, sans le deplacement.
+	MARKER_RADIUS = 2.5,
 
 	-- ===== CONDUITE =====
 	-- (Le seuil "le joueur demande d'avancer" n'est PAS ici : c'est STEER_MOVE_EPSILON, plus bas, deja utilise
