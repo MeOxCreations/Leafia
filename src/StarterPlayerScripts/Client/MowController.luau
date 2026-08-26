@@ -573,6 +573,12 @@ end
 -- appelees" se lisent pareil : une tondeuse qui glisse.
 local wheelSpun = false
 
+-- Axes en constantes : `Vector3.xAxis` et ses jumeaux ne sont pas reconnus par selene, qui les prend pour autre
+-- chose qu'un Vector3. Faux positif, mais un rouge de trop finit par masquer les vraies erreurs.
+local AXIS_X = Vector3.new(1, 0, 0)
+local AXIS_Y = Vector3.new(0, 1, 0)
+local AXIS_Z = Vector3.new(0, 0, 1)
+
 local function spinWheels(model: Model, distance: number)
 	-- `== 0` et non `<= 0` : une distance NEGATIVE est une marche arriere, et les roues doivent tourner a
 	-- l'envers. La rejeter les figeait des qu'on recule.
@@ -594,8 +600,6 @@ local function spinWheels(model: Model, distance: number)
 			wheelAngles[motor] = angle
 			-- AXE DEDUIT DE LA GEOMETRIE. Une roue est LARGE x LARGE x MINCE : son axe de rotation est le cote le
 			-- plus MINCE, c'est ce qui fait d'elle une roue et pas un disque qu'on ferait tourner a plat.
-			-- Plus fiable que trois essais a l'ecran, et ca survit a un re-export du modele : si le rig change
-			-- d'orientation dans Blender, la deduction suit toute seule.
 			local axis = MowConfigs.WHEEL_AXIS
 			if axis == "AUTO" and wheel then
 				local w = wheel.Size
@@ -607,9 +611,20 @@ local function spinWheels(model: Model, distance: number)
 					axis = "Z"
 				end
 			end
-			local spin = if axis == "Y"
-				then CFrame.Angles(0, angle, 0)
-				elseif axis == "Z" then CFrame.Angles(0, 0, angle)
+			local thin = if axis == "Y" then AXIS_Y elseif axis == "Z" then AXIS_Z else AXIS_X
+
+			-- ON CHANGE DE REPERE, ET C'ETAIT LE BUG.
+			--
+			-- La taille se mesure dans le repere de la ROUE. Mais `C0` s'ecrit dans le repere du JOINT, et les deux
+			-- ne coincident QUE si `C1` est l'identite -- ce qui n'arrive presque jamais sur un rig sorti de
+			-- Blender. On deduisait donc le bon axe... et on le posait sur les axes d'une autre piece.
+			--
+			-- `Part0.CFrame * C0 = Part1.CFrame * C1`, donc passer du repere de la roue a celui du joint, c'est
+			-- appliquer la rotation de `C1:Inverse()`. Avec C1 = identite on retombe sur l'ancien calcul : le cas
+			-- simple continue de marcher.
+			local spinAxis = motor.C1:Inverse():VectorToWorldSpace(thin)
+			local spin = if spinAxis.Magnitude > 1e-4
+				then CFrame.fromAxisAngle(spinAxis.Unit, angle)
 				else CFrame.Angles(angle, 0, 0)
 			-- On ecrit C0, PAS Transform : Transform appartient a l'Animator. Corollaire, ces joints ne doivent
 			-- etre cles dans AUCUNE animation, sinon deux ecrivains se disputent le meme joint.
@@ -621,7 +636,12 @@ local function spinWheels(model: Model, distance: number)
 			motor.C0 = (base :: CFrame) * spin
 			if not wheelSpun then
 				wheelSpun = true
-				print(`[Mow] Rotation appliquee sur "{motor.Name}" (axe {axis}, rayon {string.format("%.2f", radius)}).`)
+				local w = if wheel then wheel.Size else Vector3.zero
+				print(
+					`[Mow] Rotation sur "{motor.Name}" | taille roue {string.format("%.2f/%.2f/%.2f", w.X, w.Y, w.Z)}`
+						.. ` | axe roue {axis} -> axe joint {string.format("%.2f/%.2f/%.2f", spinAxis.X, spinAxis.Y, spinAxis.Z)}`
+						.. ` | rayon {string.format("%.2f", radius)}`
+				)
 			end
 		end
 	end

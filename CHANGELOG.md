@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.517 — Les roues tournaient AUTOUR DU MAUVAIS AXE
+
+Les sondes de 0.0.516 ont tranche en une manche. Tout etait bon sauf une chose :
+
+    [Mow] Roue : joint "WheelBackMotor6D" Part0=RootPart Part1=WheelBack
+    [Mow] Rotation appliquee sur "WheelBackMotor6D" (axe Y, rayon 1.58).
+
+Joints trouves, correctement branches, rotation REELLEMENT ecrite. Et un axe Y -- qui fait tourner une roue A
+PLAT, comme un disque sur une platine.
+
+### On mesurait dans un repere et on appliquait dans un autre
+
+La taille se mesure dans le repere de la ROUE. Mais `C0` s'ecrit dans le repere du JOINT, et les deux ne
+coincident QUE si `C1` est l'identite -- ce qui n'arrive presque jamais sur un rig sorti de Blender.
+
+On deduisait donc le BON axe, et on le posait sur les axes d'une autre piece.
+
+`Part0.CFrame * C0 = Part1.CFrame * C1` : passer du repere de la roue a celui du joint, c'est appliquer la
+rotation de `C1:Inverse()`. La rotation se fait maintenant par `CFrame.fromAxisAngle` autour de l'axe converti,
+au lieu d'un `CFrame.Angles` sur un axe suppose.
+
+Avec `C1` = identite on retombe exactement sur l'ancien calcul : le cas simple continue de marcher.
+
+### Ce que ca dit pour la suite
+
+C'est la meme famille que "l'angle d'un outil dans la main vient du Motor6D, pas de l'animation", et que le geste
+centre-corps mappe sur le centre de l'ECRAN : un calcul juste, pose dans le mauvais repere. Le symptome ne
+ressemble jamais a sa cause -- ici "les roues ne tournent pas" alors que le code ecrivait bien une rotation, a
+chaque image, dans le mauvais plan.
+
+### Les sondes restent
+
+La trace dit maintenant la taille de la roue, l'axe deduit et l'axe REELLEMENT utilise dans le joint. A retirer
+quand les roues seront validees a l'ecran.
+
 ## 0.0.516 — Le jeu dit ce qu'il trouve sur les roues, et s'il tourne quelque chose
 
 Les roues ne tournent toujours pas apres 0.0.515, donc on arrete de deviner : trois diagnostics de suite sur le
