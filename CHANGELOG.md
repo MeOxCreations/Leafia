@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.561 — Le grand-pere se remet sur son idle en arrivant
+
+Arrive devant sa porte, il arrete de marcher -- et on s'assure qu'un idle tourne.
+
+### On DEMANDE a l'Animator, on ne suppose pas
+
+En theorie l'idle d'ambiance ressort tout seul des qu'on arrete la marche : il tourne en dessous, en priorite
+`Idle`, et la marche etait en `Movement`. Mais une piste a pu etre coupee ailleurs -- la scene, un respawn, un
+rechargement -- et rien ne le dirait : le grand-pere resterait simplement fige, ce qui ressemble a une animation
+qui ne joue pas.
+
+`GetPlayingAnimationTracks` dit ce qui tourne REELLEMENT. Une liste tenue a la main dit ce qu'on croit avoir.
+
+### Et il ne le relance QUE s'il le faut
+
+Si un idle joue deja -- le cas normal -- on ne touche a rien. En lancer un second a la MEME priorite ne le
+remplacerait pas : Roblox MELANGE deux pistes de meme priorite au lieu d'en choisir une, et on obtiendrait une
+pose moyenne qu'on croirait mal animee.
+
+### Par CHEMIN, pas par identifiant
+
+L'Animation existe deja dans `ReplicatedStorage.Animations.Player.OldMan.Idle`. En recopier l'ID dans la config
+ferait deux endroits a garder d'accord pour rien.
+
+Et si elle est introuvable, on le dit : "il reste fige" a une cause, elle doit etre nommee.
+
 ## 0.0.560 — Le son de fermeture arrive une demi-seconde plus tard
 
 Il partait a l'appui, donc AVANT que la porte se soit refermee -- on entendait claquer une porte encore grande

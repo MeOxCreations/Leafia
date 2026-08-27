@@ -72,6 +72,49 @@ local function groundAt(position: Vector3, ignore: { Instance }): number?
 	return if hit then hit.Position.Y else nil
 end
 
+-- REMET LE GRAND-PERE SUR SON IDLE, une fois arrive.
+--
+-- ON DEMANDE A L'ANIMATOR ce qui joue REELLEMENT, au lieu de supposer. `AmbientAnimService` lance deja un idle au
+-- demarrage, et en theorie il ressort tout seul des qu'on arrete la marche -- mais une piste a pu etre coupee
+-- ailleurs (la scene, un respawn, un rechargement), et rien ne le dirait : le grand-pere resterait simplement
+-- fige, ce qui ressemble a une animation qui ne joue pas.
+--
+-- Le fait bat l'hypothese : `GetPlayingAnimationTracks` dit ce qui tourne, une liste tenue a la main dit ce qu'on
+-- croit avoir.
+local function ensureIdle(model: Model)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	if not animator then
+		return
+	end
+	for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
+		if playing.Priority == Enum.AnimationPriority.Idle then
+			return -- un idle tourne deja : en lancer un second les ferait MELANGER, pas se remplacer
+		end
+	end
+
+	local node: Instance? = ReplicatedStorage:FindFirstChild("Animations")
+	for _, name in TutorialConfigs.OLDMAN_IDLE_PATH do
+		node = node and node:FindFirstChild(name)
+	end
+	if not (node and node:IsA("Animation")) then
+		warn(
+			`[Tutorial] Idle introuvable : ReplicatedStorage.Animations.`
+				.. `{table.concat(TutorialConfigs.OLDMAN_IDLE_PATH, ".")}. Le grand-pere restera fige.`
+		)
+		return
+	end
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(node :: Animation)
+	end)
+	if ok and typeof(result) == "Instance" then
+		local t = result :: AnimationTrack
+		t.Looped = true
+		t.Priority = Enum.AnimationPriority.Idle
+		t:Play()
+	end
+end
+
 -- LE GRAND-PERE SORT DE CHEZ LUI. Il glisse jusqu'a la part posee dans Studio, puis se repose sur son idle.
 --
 -- ON LE DEPLACE PAR LE CODE, pas par `Humanoid:MoveTo`. Son rig doit rester ANCRE, et Roblox REFUSE de deplacer
@@ -175,11 +218,12 @@ local function walkOldMan()
 			end
 			task.wait()
 		end
-		-- ON ARRETE LA MARCHE, on ne rejoue pas l'idle : il tourne DEJA en dessous (AmbientAnimService, priorite
-		-- `Idle`). Le relancer en ferait deux, et deux pistes de meme priorite donnent leur MOYENNE.
+		-- ON ARRETE LA MARCHE, PUIS on s'assure qu'un idle tourne. L'ordre compte : arreter en premier laisse la
+		-- place, et `ensureIdle` ne fait rien si l'idle d'ambiance est deja la -- ce qui est le cas normal.
 		if track then
 			(track :: AnimationTrack):Stop()
 		end
+		ensureIdle(model)
 		walking = false
 	end)
 end

@@ -276,6 +276,13 @@ return {
 	-- Vitesse pour laquelle l'animation a ete faite. La piste est jouee au rapport des deux, donc changer la
 	-- vitesse ci-dessus ne fait pas patiner ses pieds -- et il n'y a aucune seconde valeur a garder d'accord.
 	OLDMAN_WALK_REFERENCE = 8,
+	-- SON IDLE, par CHEMIN et pas par ID : l'Animation existe deja dans ReplicatedStorage, il n'y a aucune raison
+	-- d'en recopier l'identifiant ici -- deux endroits a garder d'accord pour rien.
+	--
+	-- Il n'est joue QUE SI aucun idle ne tourne deja. `AmbientAnimService` en lance un au demarrage : le rejouer
+	-- en ferait DEUX a la meme priorite, et Roblox n'en choisit pas un -- il les MELANGE.
+	OLDMAN_IDLE_PATH = { "Player", "OldMan", "Idle" },
+
 	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend
 	-- entre les deux le ferait s'enfoncer ou leviter.
