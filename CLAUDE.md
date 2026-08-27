@@ -840,6 +840,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   garde son spatial. Corollaire d'ecriture : passer `nil` en hote ne dit pas POURQUOI, et le prochain qui passe
   le "corrige" en remettant la part -- une constante nommee (`SCENE_2D`) porte l'intention.
 
+- **Une image en `ScaleType = Fit` ne peut PAS etre deformee : elle ne sait que grossir et rapetisser.** `Fit`
+  conserve les proportions et borne l'image par le PLUS PETIT cote du cadre. Un etirement facon slime -- plus
+  haut ET plus fin -- fait donc l'inverse de ce qu'on veut : retrecir la largeur borne l'image par la largeur, et
+  la feuille ENTIERE rapetisse au lieu de s'etirer. Symptome trompeur : le code d'animation est juste, les
+  valeurs sont justes, et l'ecran montre un rapetissement -- on va donc relire les tailles au lieu de regarder le
+  mode d'affichage. Pour deformer, il faut `Stretch` ; le prix est que l'image prend les proportions de son
+  cadre. Corollaire : deux couches superposees doivent avoir le MEME ScaleType, sinon elles se deforment
+  differemment et celle du dessus deborde. Meme famille que le `UIScale` uniforme, qui ne peut pas ecraser non
+  plus : quand une deformation "ne marche pas", c'est presque toujours l'outil qui ne sait pas la faire.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

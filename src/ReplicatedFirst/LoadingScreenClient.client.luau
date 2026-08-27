@@ -580,7 +580,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		leaf.BackgroundTransparency = 1
 		leaf.Image = LEAF_ID
 		leaf.ImageColor3 = LEAF_TINT
-		leaf.ScaleType = Enum.ScaleType.Fit
+		-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions de l'image et la borne par le PLUS PETIT
+		-- cote : retrecir la largeur retrecit alors l'image ENTIERE au lieu de la deformer. Une feuille en `Fit`
+		-- ne peut pas s'etirer, par construction -- elle ne sait que grossir et rapetisser.
+		--
+		-- En contrepartie, la feuille prend les proportions de son cadre : sur un ecran tres large ou tres carre,
+		-- elle sera un peu plus fine ou un peu plus large qu'a l'origine. C'est le prix de la deformation, et il
+		-- est invisible sur les formats courants.
+		leaf.ScaleType = Enum.ScaleType.Stretch
 		-- Ancree EN BAS AU MILIEU : leurs pieds sont alignes sur la meme ligne quelle que soit leur taille. C'est
 		-- ce qui les fait lire comme une rangee posee, et pas comme six images centrees cote a cote.
 		leaf.AnchorPoint = Vector2.new(0.5, 1)
@@ -599,7 +606,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		fill.BackgroundTransparency = 1
 		fill.Image = LEAF_ID
 		fill.ImageColor3 = LEAF_GREEN
-		fill.ScaleType = Enum.ScaleType.Fit
+		-- MEME REGLAGE que la silhouette, obligatoirement : deux modes differents les feraient se deformer
+		-- differemment pendant le sursaut, et le vert deborderait du noir.
+		fill.ScaleType = Enum.ScaleType.Stretch
 		fill.AnchorPoint = Vector2.new(0.5, 0.5)
 		fill.Position = UDim2.fromScale(0.5, 0.5)
 		fill.Size = UDim2.fromScale(1, 1)

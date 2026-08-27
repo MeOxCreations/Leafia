@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.551 — La feuille s'ETIRE vraiment : `Fit` l'en empechait
+
+Elle RAPETISSAIT au lieu de s'etirer. Le code d'animation etait juste, les valeurs etaient justes -- c'est le
+mode d'affichage de l'image qui interdisait la deformation.
+
+### `Fit` ne peut pas deformer
+
+Il conserve les proportions de l'image et la borne par le PLUS PETIT cote du cadre. Un etirement facon slime --
+plus haut ET plus fin -- fait donc exactement l'inverse : retrecir la largeur borne l'image par la largeur, et la
+feuille entiere rapetisse.
+
+Une image en `Fit` ne sait que grossir et rapetisser. Pour la deformer il faut `Stretch`.
+
+### Le prix, et pourquoi il est acceptable
+
+En `Stretch`, la feuille prend les proportions de son cadre : sur un ecran tres large ou tres carre, elle sera un
+peu plus fine ou un peu plus large qu'a l'origine. Sur les formats courants, chaque case de la jauge est presque
+carree -- l'ecart ne se voit pas.
+
+### Les deux couches ont le MEME mode
+
+Obligatoirement. Deux modes differents les deformeraient differemment pendant le sursaut, et le vert deborderait
+du noir.
+
+### Le symptome etait trompeur
+
+L'ecran montrait un rapetissement, donc on relit les TAILLES -- alors que le probleme etait dans une propriete
+qui n'a rien a voir avec elles. Meme famille que le `UIScale` uniforme, qui ne peut pas ecraser non plus : quand
+une deformation "ne marche pas", c'est presque toujours l'outil qui ne sait pas la faire.
+
 ## 0.0.550 — Le sursaut de la feuille est adouci
 
 Il claquait. Trois changements, tous sur la courbe et pas sur l'amplitude -- l'etirement reste le meme.
