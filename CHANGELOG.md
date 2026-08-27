@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.524 — Le nez se leve pour tourner, et le joueur se penche dans le virage
+
+Deux effets qui racontent la meme chose : tourner DEMANDE un effort.
+
+### Le nez se leve
+
+C'est le geste reel : on appuie sur le guidon, les roues avant decollent, et la machine pivote sur ses roues
+arriere. Sans ca elles frottent, et le virage glisse comme sur de la glace.
+
+`TURN_LIFT = 7` degres a fond de braquage.
+
+Il s'AJOUTE au cabrage du demarrage a la corde : meme pivot, meme calcul, les deux angles se somment. Deux
+`pitch` separes se seraient disputes la soudure, et le dernier ecrit aurait gagne -- tirer la corde en braquant
+aurait annule l'un des deux, au hasard.
+
+Sur l'INTENTION de braquage et pas sur la rotation obtenue : on souleve le nez POUR tourner, le geste vient avant
+le virage.
+
+### Le joueur se penche
+
+Il ne se contente plus de pivoter, il s'INCLINE du cote ou il tourne -- comme quelqu'un qui pousse une charge
+lourde. Le corps raconte l'effort que le cap tout seul ne raconte pas.
+
+`TURN_LEAN = 8` degres, `TURN_LEAN_INVERT` s'il penche du mauvais cote.
+
+Sur l'intention aussi, et pas sur `dirSign` : en marche arriere le CORPS de la machine part de l'autre cote, mais
+l'effort du joueur reste du cote qu'il demande.
+
+### Deux details qui evitent des bugs plus tard
+
+Le CFrame du joueur s'ecrit maintenant a CHAQUE image, plus seulement quand il tourne : l'inclinaison doit pouvoir
+REVENIR a zero, et une ecriture reservee au virage la figerait a sa derniere valeur des qu'on relache.
+
+Le roulis vient APRES le cap. Pose ainsi il tourne autour de l'axe avant/arriere du personnage -- c'est un
+roulis. Pose avant, il inclinerait un axe du MONDE et le cap partirait avec.
+
+Et on remet le joueur d'aplomb en reposant la machine : une inclinaison laissee en place resterait pour le reste
+de la partie, et personne ne ferait le lien avec une tondeuse reposee dix minutes plus tot.
+
 ## 0.0.523 — Le personnage se redresse plus vite qu'il ne se penche
 
 L'animation "embarque" se rejouait a l'envers a la MEME vitesse qu'a l'endroit. Se relever prenait donc autant de

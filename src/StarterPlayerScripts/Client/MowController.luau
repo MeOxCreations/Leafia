@@ -113,6 +113,9 @@ local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : don
 -- Revelation tenue ? Lue par le calcul du recul de camera, qui additionne ses deux raisons.
 local revealOn = false
 local steering = false
+-- Inclinaison courante du joueur dans le virage, en radians. Lissee, et RENDUE a zero quand on lache : sans ca il
+-- resterait penche pour le reste de la partie.
+local leanNow = 0
 local autoRotateWas = true
 -- UN ANGLE PAR ROUE, jamais un compteur partage. Avec une seule variable, la premiere roue de la boucle
 -- avancait l'angle et la seconde repartait de la : l'angle progressait DEUX fois par image (les roues
@@ -919,6 +922,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		-- ON REND LE SENS NORMAL. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour
 		-- le reste de la partie, longtemps apres avoir repose la tondeuse -- et personne ne ferait le lien.
 		reverseLegs(humanoid, false)
+		leanNow = 0
 		return
 	end
 	-- `GetMoveVector` rend un vecteur RELATIF A LA CAMERA : X = cote, Z = arriere. C'est POUR CA que
@@ -1060,9 +1064,27 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- pas, toute seule. Une tondeuse a l'arret ne pivote pas sur elle-meme.
 	if turning then
 		yaw -= lateralAmount * steerSign * dirSign * math.rad(turnRate) * dt
-		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
+
+	-- IL SE PENCHE DANS LE VIRAGE, comme quelqu'un qui pousse une charge lourde en tournant. Le corps raconte
+	-- l'effort que le cap tout seul ne raconte pas.
+	--
+	-- Sur l'INTENTION et pas sur `dirSign` : on se penche du cote ou l'on POUSSE. En marche arriere le corps de la
+	-- machine part de l'autre cote, mais l'effort du joueur, lui, reste du cote demande.
+	local leanSign = if MowConfigs.TURN_LEAN_INVERT then -1 else 1
+	local leanWant = -lateralAmount * steerSign * leanSign * math.rad(MowConfigs.TURN_LEAN)
+	leanNow += (leanWant - leanNow) * math.min(1, MowConfigs.TURN_LEAN_SPEED * dt)
+	if math.abs(leanWant - leanNow) < 0.0005 then
+		leanNow = leanWant
+	end
+
+	-- ON ECRIT LE CFrame A CHAQUE IMAGE, plus seulement quand on tourne. L'inclinaison doit pouvoir REVENIR a zero,
+	-- et une ecriture reservee au virage la figerait a sa derniere valeur des qu'on relache.
+	--
+	-- Le roulis vient APRES le cap : pose ainsi, il tourne autour de l'axe avant/arriere du personnage -- c'est un
+	-- roulis. Pose avant, il inclinerait un axe du monde et le cap partirait avec.
+	hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0) * CFrame.Angles(0, 0, leanNow)
 
 	-- LE MARQUEUR, pose ICI et pas plus haut : c'est le premier endroit ou le braquage est connu avec son reglage.
 	--
@@ -1436,6 +1458,17 @@ local function update(dt: number)
 		if humanoid then
 			humanoid.AutoRotate = autoRotateWas
 			reverseLegs(humanoid, false)
+			-- ON LE REMET D'APLOMB. Une inclinaison laissee en place resterait pour le reste de la partie, et
+			-- personne ne ferait le lien avec la tondeuse reposee dix minutes plus tot.
+			leanNow = 0
+			local root = humanoid.RootPart
+			if root then
+				local look = root.CFrame.LookVector
+				local flat = Vector3.new(look.X, 0, look.Z)
+				if flat.Magnitude > 1e-3 then
+					root.CFrame = CFrame.lookAt(root.Position, root.Position + flat.Unit)
+				end
+			end
 		end
 	end
 
