@@ -268,7 +268,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- marque l'instant ou elle est pleine, sans rien ajouter a l'ecran.
 	--
 	-- Hauteur atteinte, en multiple de sa taille normale.
-	local LEAF_POP_SCALE = 1.32
+	local LEAF_POP_SCALE = 1.7
+	-- LARGEUR pendant l'etirement, en multiple de sa largeur normale. SOUS 1 : elle s'AFFINE en montant.
+	--
+	-- C'est ce qui fait la matiere molle, plus que la hauteur. Une forme qui grandit sans s'affiner ne s'etire
+	-- pas, elle GROSSIT -- et grossir n'evoque rien de souple. En conservant a peu pres son volume, elle se lit
+	-- comme une goutte qu'on tire.
+	local LEAF_POP_X = 0.74
 	-- Montee SECHE, retour ELASTIQUE. L'ecart entre les deux fait tout : monter aussi lentement qu'on redescend
 	-- donne un gonflement, pas un sursaut.
 	local LEAF_POP_UP = 0.08
@@ -628,7 +634,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		local up = TweenService:Create(
 			leaf,
 			TweenInfo.new(LEAF_POP_UP, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{ Size = UDim2.fromScale(leafW, LEAF_POP_SCALE) }
+			{ Size = UDim2.fromScale(leafW * LEAF_POP_X, LEAF_POP_SCALE) }
 		)
 		up.Completed:Connect(function()
 			if leaf.Parent then

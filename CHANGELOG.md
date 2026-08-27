@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.549 — Le sursaut s'etire plus haut, et s'affine en montant
+
+- `LEAF_POP_SCALE` 1.32 -> 1.7
+- `LEAF_POP_X = 0.74` : elle RETRECIT en largeur pendant qu'elle monte.
+
+### C'est l'affinement qui fait la matiere molle, plus que la hauteur
+
+Une forme qui grandit sans s'affiner ne s'etire pas, elle GROSSIT -- et grossir n'evoque rien de souple. En
+conservant a peu pres son volume, elle se lit comme une goutte qu'on tire.
+
+Monter davantage SANS retrecir aurait donc rendu l'effet plus gros, pas plus mou : les deux valeurs vont
+ensemble.
+
+Le retour elastique ramene les deux dimensions d'un seul tween, donc rien a garder d'accord.
+
 ## 0.0.548 — Une feuille pleine SURSAUTE vers le haut
 
 Quand le vert atteint le sommet, la feuille s'etire vers le haut puis revient en ballottant. Ca marque l'instant
