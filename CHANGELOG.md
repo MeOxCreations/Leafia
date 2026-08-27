@@ -2204,6 +2204,44 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.543 — Un bandeau d'objectif, pose pour etre VU
+
+`Modules/UI/Task/TaskBannerHandler`. Il s'affiche a la fin de la scene d'introduction -- le moment ou le joueur
+reprend la main et ou, sans lui, il sait que c'est fini mais pas ce qu'on attend de lui.
+
+### LA BARRE NE BOUGE PAS
+
+Personne ne compte l'herbe coupee : `GrassService` ne contient qu'un `init`, et la tonte est visuelle et cote
+client. Le bandeau est la pour etre juge a l'ecran, pas pour fonctionner.
+
+Le compteur de progression est un autre chantier, et c'est LUI le vrai travail -- c'est aussi lui qui debloquera
+"le chantier est fini, voila ton cheque".
+
+### Pas de systeme de taches derriere
+
+Une seule tache s'affiche, et c'est l'appelant qui dit laquelle. Une liste generique -- plusieurs taches,
+conditions, priorites -- se construira quand il y en aura une deuxieme et une troisieme REELLEMENT differentes :
+c'est la qu'on saura ce qu'elles ont en commun. Le deviner maintenant donne une usine qui ne sert qu'un cas.
+
+### Le texte est en ANGLAIS
+
+`MOW THE LAWN`, pas la maquette. Le traducteur de Roblox part de l'anglais : un texte ecrit en francais n'est
+traduit nulle part, et le jeu devient illisible pour la quasi-totalite de la plateforme.
+
+### Construit en code, pour l'instant
+
+Contrairement aux autres interfaces du projet, qui vivent dans Studio. Tant que la maquette bouge, chaque essai
+part sur GitHub, se relit dans le diff, et ne demande a personne de refaire les memes reglages a la main dans une
+seconde place. Le jour ou la forme est figee, il pourra passer dans Studio comme les autres.
+
+L'icone est un LOSANGE dessine, pas l'hexagone de la maquette -- un hexagone ne se dessine pas avec des
+rectangles. `ICON_IMAGE` prend un `rbxassetid://` et le remplace sans toucher au reste.
+
+### Un bug attrape avant de pousser
+
+Le code appelait `Instance:AddChild`, qui n'existe pas dans l'API Roblox. `selene` ne dit rien d'un appel a une
+methode inexistante : ca n'aurait casse qu'au lancement.
+
 ## 0.0.542 — Le grand-pere GLISSE jusqu'a la porte, il ne "marche" plus
 
     "OldmanOriginal" n'a pas atteint "OldManWalkTo" : chemin barre ?

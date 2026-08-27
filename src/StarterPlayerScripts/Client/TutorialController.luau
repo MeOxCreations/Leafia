@@ -22,6 +22,7 @@ local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
@@ -335,6 +336,13 @@ local function endScene()
 	if done then
 		done:FireServer()
 	end
+
+	-- L'OBJECTIF S'AFFICHE. C'est le moment ou le joueur reprend la main : sans bandeau, il sait que la scene est
+	-- finie mais pas ce qu'on attend de lui -- et c'est la premiere minute, celle ou l'on perd un joueur.
+	--
+	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
+	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
+	TaskBannerHandler.show(TutorialConfigs.TASK_TITLE, TutorialConfigs.TASK_REWARD, 0)
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.

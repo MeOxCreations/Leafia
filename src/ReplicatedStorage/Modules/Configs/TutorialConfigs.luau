@@ -249,6 +249,15 @@ return {
 	-- ne se DEDUIT pas, ca se voit a l'ecran.
 	DOOR_OPEN_INVERT = false,
 
+	-- ===== L'OBJECTIF =====
+	-- EN ANGLAIS, comme tout texte vu par le joueur. Le traducteur de Roblox part de l'anglais : un texte ecrit en
+	-- francais n'est traduit NULLE PART, et le jeu devient illisible pour la quasi-totalite de la plateforme.
+	TASK_TITLE = "MOW THE LAWN",
+	-- La recompense est ECRITE, pas calculee : rien ne la verse encore. Le jour ou elle le sera, elle viendra de
+	-- la source qui paie -- une valeur affichee qui ne correspond pas a ce qu'on recoit est pire que pas de
+	-- valeur du tout.
+	TASK_REWARD = "+ 50 XP",
+
 	-- ===== LE GRAND-PERE SORT DE CHEZ LUI =====
 	-- La scene finie, il ne reste pas plante dans l'embrasure : il marche jusque devant sa porte.
 	--
