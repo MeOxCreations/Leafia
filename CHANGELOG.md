@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.559 — La porte du camion a un son par sens
+
+`CloseDoorTruckSound` a la fermeture, `OpenDoorTruckSound` a l'ouverture. Ouvrir et refermer ne font pas le meme
+bruit, et le meme son dans les deux sens s'entend comme un enregistrement rejoue.
+
+Le choix se lit APRES la bascule : `truck.open` porte deja l'etat VOULU, donc il dit quel son jouer sans qu'on
+ait a retenir le precedent.
+
+Le commentaire qui disait "il n'y en a qu'un" est corrige avec : un commentaire faux coute plus cher que pas de
+commentaire.
+
 ## 0.0.558 — Le son d'arrivee est retire
 
 Ajoute a la version precedente, retire a celle-ci. Le rideau se termine en silence.

@@ -132,7 +132,11 @@ local function setup(model: Model)
 		truck.open = not truck.open
 		-- LE SON PART A L'APPUI, pas a la fin du mouvement : c'est le geste du joueur qu'il accompagne. Attendre
 		-- que la porte soit ouverte le decalerait d'une seconde et il ne repondrait plus a rien.
-		SoundUtils.play(TruckConfigs.DOOR_SOUND, door :: BasePart)
+		--
+		-- Lu APRES la bascule : `truck.open` porte deja l'etat VOULU, donc il dit quel son jouer sans qu'on ait a
+		-- retenir le precedent.
+		local path = if truck.open then TruckConfigs.DOOR_OPEN_SOUND else TruckConfigs.DOOR_CLOSE_SOUND
+		SoundUtils.play(path, door :: BasePart)
 	end)
 
 	table.insert(trucks, truck)
