@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.522 — Retour en arriere : le braquage en marche arriere s'inverse bien
+
+`STEER_REVERSE_INVERT` revient a `true`. La version precedente l'avait retourne du mauvais cote.
+
+S + Q (reculer + gauche) fait pivoter l'AVANT de la machine vers la DROITE. C'est ce qu'on veut, et c'est
+physiquement juste : en marche arriere, braquer d'un cote envoie le nez de l'autre.
+
+### Pourquoi je m'etais trompe
+
+La fleche de direction et le corps de la machine partent de cotes OPPOSES en marche arriere. Ca ressemble a une
+incoherence, et j'ai "corrige" le corps pour le faire coller a la fleche.
+
+Les deux etaient justes. Elle montre le TRAJET -- ou l'on va, donc a gauche sur S + Q. Le braquage fait tourner
+le CORPS, qui part a droite. Vouloir les accorder casse forcement l'un des deux.
+
+Le reglage n'est pas perdu pour autant : il rend explicite ce qui etait code en dur, et le passer a `false` donne
+le comportement "brouette qu'on tire a reculons".
+
+### Ce que ca dit
+
+Deux choses qui ont l'air de se contredire a l'ecran ne repondent pas forcement a la meme question. Avant de les
+mettre d'accord, verifier qu'elles parlent bien de la meme -- ici l'une parlait du trajet, l'autre du corps.
+
 ## 0.0.521 — Le braquage en marche arriere ne s'inverse plus
 
 Reculer en braquant pivotait du mauvais cote.

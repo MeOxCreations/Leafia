@@ -353,16 +353,18 @@ return {
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,
-	-- INVERSER LE BRAQUAGE EN MARCHE ARRIERE ? Etait code en dur a `true` : on se deplace le long de -cap, donc
-	-- tourner le cap a droite envoie la machine a GAUCHE, et l'inversion redonnait au joueur le cote qu'il
-	-- demande. C'est le raisonnement d'une VOITURE qui recule.
+	-- INVERSER LE BRAQUAGE EN MARCHE ARRIERE ? Oui -- comme une voiture qui recule.
 	--
-	-- L'ecran a tranche autrement : ca se ressent a l'envers. On pousse une tondeuse en marchant, on ne la
-	-- conduit pas -- en reculant on tourne du cote ou l'on pousse, comme a pied. Le raisonnement etait juste, il
-	-- ne decrivait simplement pas ce geste-la.
+	-- S + Q (reculer + gauche) fait pivoter l'AVANT de la machine vers la DROITE. C'est ce qu'on veut, et c'est
+	-- physiquement juste : en marche arriere, braquer d'un cote envoie le nez de l'autre.
 	--
-	-- Repasser a `true` pour retrouver le comportement voiture. Ca se voit a l'ecran, ca ne se deduit pas.
-	STEER_REVERSE_INVERT = false,
+	-- CA N'A RIEN A VOIR AVEC LA FLECHE, meme si les deux ont l'air opposes. Elle montre le TRAJET -- ou l'on va,
+	-- donc a gauche sur S + Q -- alors que ceci fait tourner le CORPS de la machine, qui part a droite. Les deux
+	-- sont justes en meme temps, et vouloir les accorder casse forcement l'un des deux : c'est ce qui est arrive
+	-- en 0.0.521, ou ce reglage a ete mis a `false` pour "coller" a la fleche.
+	--
+	-- Le passer a `false` fait tourner le corps du cote demande, comme quand on tire une brouette a reculons.
+	STEER_REVERSE_INVERT = true,
 	-- En dessous de cette poussee avant / arriere, on considere que le joueur est A L'ARRET. Le corps ne tourne
 	-- alors PLUS : c'est la MACHINE qui se braque, et les bras de l'animation racontent l'effort.
 	-- On ne fait pas pivoter une tondeuse sur un point sans rouler -- on l'oriente, et le corps reste face au travail.
