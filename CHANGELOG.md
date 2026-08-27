@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.537 — La tondeuse ROULE ENCORE un peu quand on lache
+
+En relachant l'avance, la machine s'arretait NET. Une tondeuse lancee ne s'arrete pas net, et c'est ce coup de
+frein qui rendait la conduite seche.
+
+L'avance est maintenant lissee, comme le braquage de 0.0.535.
+
+### Mais avec DEUX vitesses
+
+- `DRIVE_PRESS = 12` -- on appuie, la machine repond tout de suite. Une commande d'avance molle ne se ressent pas
+  comme du poids, elle se ressent comme un retard d'affichage.
+- `DRIVE_RELEASE = 2` -- on lache, elle continue de rouler et s'eteint doucement.
+
+Un seul reglage aurait force a choisir entre une commande vive et un arret mou. Ce sont deux moments differents :
+ils n'ont aucune raison de partager un chiffre.
+
+### La comparaison porte sur la valeur ABSOLUE
+
+S'eloigner de zero est un appui, s'en rapprocher est un relachement. Comparer les valeurs signees aurait pris une
+marche arriere pour un relachement, et la machine aurait mis deux secondes a partir en arriere.
+
+### Cle a la cible
+
+Un lerp exponentiel n'atteint jamais sa cible : sans le snap, la machine avancerait d'un cheveu POUR TOUJOURS --
+assez pour tondre toute seule, et pour qu'on ne comprenne pas pourquoi.
+
+C'est aussi cette valeur lissee que lisent la camera et le sens des jambes : le recul de camera s'eteint donc au
+meme rythme que la machine, sans un reglage de plus.
+
 ## 0.0.536 — L'herbe coupee ne SAUTE plus a la fin de la coupe
 
 Il restait une remontee, plus discrete que celle de 0.0.513 et a un tout autre endroit.

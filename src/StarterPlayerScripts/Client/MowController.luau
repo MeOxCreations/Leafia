@@ -65,6 +65,9 @@ local camLag = 0
 -- Braquage LISSE, -1 a 1. C'est lui que tout le monde lit : le cap, le ballant envoye au serveur, la fleche et la
 -- camera. L'entree brute ne sert plus qu'a lui donner sa cible.
 local steerNow = 0
+-- Avance LISSEE, -1 a 1. Comme le braquage, c'est elle que tout le monde lit -- le deplacement, la camera, le sens
+-- des jambes. L'entree brute ne sert plus qu'a lui donner sa cible.
+local driveSmoothed = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -937,6 +940,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		clearMarker()
 		-- Moteur coupe : la camera se recentre. Un ecart laisse en place tiendrait le cadre de travers a l'arret.
 		steerNow = 0
+		driveSmoothed = 0
 		camLag = 0
 		CameraEffects.SetLag(Vector3.zero)
 		-- ON REND LE SENS NORMAL. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour
@@ -965,7 +969,22 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	if biggest > 1e-3 then
 		mv *= mv.Magnitude / biggest
 	end
-	local forwardAmount = math.clamp(-mv.Z, -1, 1)
+	-- L'AVANCE A UNE COURSE, elle aussi -- mais avec DEUX vitesses. On appuie et la machine repond tout de suite ;
+	-- on lache et elle ROULE ENCORE un peu, au lieu de s'arreter net.
+	--
+	-- La comparaison porte sur la VALEUR ABSOLUE : s'eloigner de zero est un appui, s'en rapprocher est un
+	-- relachement. Comparer les valeurs signees aurait pris une marche arriere pour un relachement.
+	local forwardWant = math.clamp(-mv.Z, -1, 1)
+	local driveRate = if math.abs(forwardWant) >= math.abs(driveSmoothed)
+		then MowConfigs.DRIVE_PRESS
+		else MowConfigs.DRIVE_RELEASE
+	driveSmoothed += (forwardWant - driveSmoothed) * math.min(1, driveRate * dt)
+	-- Cle a la cible : un lerp exponentiel ne l'atteint jamais, et la machine avancerait d'un cheveu POUR
+	-- TOUJOURS -- assez pour tondre toute seule, et pour qu'on ne comprenne pas pourquoi.
+	if math.abs(forwardWant - driveSmoothed) < 0.01 then
+		driveSmoothed = forwardWant
+	end
+	local forwardAmount = driveSmoothed
 	-- "EST-CE QU'ON RECULE" : une question, une reponse. Deux lecteurs s'en servent -- le sens des jambes et le
 	-- sens du braquage -- et les laisser la recalculer chacun de son cote finirait par les faire diverger.
 	local reversing = forwardAmount < -MowConfigs.STEER_MOVE_EPSILON
@@ -1494,6 +1513,7 @@ local function update(dt: number)
 		-- ON REND LE CADRE. Un ecart laisse en place suivrait le joueur pour le reste de la partie, longtemps
 		-- apres la tondeuse reposee -- et personne ne ferait le lien.
 		steerNow = 0
+		driveSmoothed = 0
 		camLag = 0
 		CameraEffects.SetLag(Vector3.zero)
 		if humanoid then

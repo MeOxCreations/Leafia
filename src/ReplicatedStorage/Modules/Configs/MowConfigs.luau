@@ -367,6 +367,17 @@ return {
 	-- On lisse donc A LA SOURCE : tout ce qui lit le braquage en profite d'un coup, sans reglage a dedoubler.
 	-- Haut = commande vive et nerveuse, bas = machine lourde qui prend son temps.
 	STEER_SMOOTH = 5,
+	-- COURSE DE L'AVANCE, en fraction par seconde. DEUX vitesses, et c'est tout l'interet :
+	--
+	--   `DRIVE_PRESS`   : on appuie -> la machine repond tout de suite. Une commande d'avance molle se ressent
+	--                     comme un retard d'affichage, jamais comme du poids.
+	--   `DRIVE_RELEASE` : on lache -> elle ROULE ENCORE un peu. Une tondeuse lancee ne s'arrete pas net, et
+	--                     s'arreter net est justement ce qui rendait la conduite seche.
+	--
+	-- Un seul reglage pour les deux aurait force a choisir entre une commande vive et un arret mou. Ce sont deux
+	-- moments differents : ils n'ont aucune raison de partager un chiffre.
+	DRIVE_PRESS = 12,
+	DRIVE_RELEASE = 2,
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,
