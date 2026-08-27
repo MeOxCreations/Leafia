@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.521 — Le braquage en marche arriere ne s'inverse plus
+
+Reculer en braquant pivotait du mauvais cote.
+
+### C'etait code en dur, et le raisonnement etait celui d'une VOITURE
+
+On se deplace le long de -cap, donc tourner le cap a droite envoie la machine a GAUCHE : l'inversion redonnait
+au conducteur le cote qu'il demande. Vrai pour une voiture qui recule.
+
+Mais on POUSSE une tondeuse en marchant, on ne la conduit pas. En reculant, on tourne du cote ou l'on pousse,
+comme a pied. Le raisonnement etait juste -- il ne decrivait simplement pas ce geste-la.
+
+`STEER_REVERSE_INVERT = false` est desormais un reglage, comme `STEER_INVERT` et `WHEEL_DIRECTION` : le sens
+d'un braquage se voit a l'ecran, il ne se deduit pas. Le repasser a `true` retrouve le comportement voiture.
+
+### Une question, une reponse
+
+"Est-ce qu'on recule" etait calcule a deux endroits -- le sens des jambes et le sens du braquage. Hoiste en une
+seule valeur : deux copies de la meme condition finissent toujours par diverger, et celle-ci vient de gagner un
+second lecteur en une version.
+
 ## 0.0.520 — En marche arriere, les jambes tournent a l'envers
 
 L'animation de marche de Roblox joue TOUJOURS vers l'avant, quel que soit le sens du deplacement : en reculant,

@@ -353,6 +353,16 @@ return {
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,
+	-- INVERSER LE BRAQUAGE EN MARCHE ARRIERE ? Etait code en dur a `true` : on se deplace le long de -cap, donc
+	-- tourner le cap a droite envoie la machine a GAUCHE, et l'inversion redonnait au joueur le cote qu'il
+	-- demande. C'est le raisonnement d'une VOITURE qui recule.
+	--
+	-- L'ecran a tranche autrement : ca se ressent a l'envers. On pousse une tondeuse en marchant, on ne la
+	-- conduit pas -- en reculant on tourne du cote ou l'on pousse, comme a pied. Le raisonnement etait juste, il
+	-- ne decrivait simplement pas ce geste-la.
+	--
+	-- Repasser a `true` pour retrouver le comportement voiture. Ca se voit a l'ecran, ca ne se deduit pas.
+	STEER_REVERSE_INVERT = false,
 	-- En dessous de cette poussee avant / arriere, on considere que le joueur est A L'ARRET. Le corps ne tourne
 	-- alors PLUS : c'est la MACHINE qui se braque, et les bras de l'animation racontent l'effort.
 	-- On ne fait pas pivoter une tondeuse sur un point sans rouler -- on l'oriente, et le corps reste face au travail.

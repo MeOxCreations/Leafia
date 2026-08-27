@@ -943,6 +943,9 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		mv *= mv.Magnitude / biggest
 	end
 	local forwardAmount = math.clamp(-mv.Z, -1, 1)
+	-- "EST-CE QU'ON RECULE" : une question, une reponse. Deux lecteurs s'en servent -- le sens des jambes et le
+	-- sens du braquage -- et les laisser la recalculer chacun de son cote finirait par les faire diverger.
+	local reversing = forwardAmount < -MowConfigs.STEER_MOVE_EPSILON
 	local lateralAmount = math.clamp(mv.X, -1, 1)
 
 	-- DIAGNOSTIC A L'ECRAN. Voir MowConfigs.STEER_DEBUG_INPUT.
@@ -1041,11 +1044,15 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	local rolling = math.abs(drive) * humanoid.WalkSpeed
 	local radius = math.max(MowConfigs.STEER_RADIUS, 0.5)
 	local turnRate = math.deg(rolling / radius)
-	-- EN MARCHE ARRIERE, ON INVERSE. On se deplace le long de -cap : tourner le cap a droite envoie donc la
-	-- machine a GAUCHE. Sans cette inversion, reculer en braquant part du cote oppose a ce que le joueur
-	-- demande -- et c'est justement en marche arriere qu'on a le moins de reperes pour s'en remettre.
-	-- Le braquage de MANOEUVRE (sans avance) garde le sens normal : on ne recule pas, on repositionne.
-	local dirSign = if forwardAmount < -MowConfigs.STEER_MOVE_EPSILON then -1 else 1
+	-- EN MARCHE ARRIERE, ON INVERSE -- OU PAS, selon `STEER_REVERSE_INVERT`.
+	--
+	-- L'inversion est le raisonnement d'une VOITURE : on se deplace le long de -cap, donc tourner le cap a droite
+	-- envoie la machine a gauche. Mais on POUSSE une tondeuse en marchant, on ne la conduit pas : en reculant on
+	-- tourne du cote ou l'on pousse, comme a pied. Le raisonnement etait juste, il ne decrivait pas ce geste-la.
+	--
+	-- Le braquage de MANOEUVRE (sans avance) garde le sens normal dans les deux cas : on ne recule pas, on
+	-- repositionne.
+	local dirSign = if reversing and MowConfigs.STEER_REVERSE_INVERT then -1 else 1
 	-- Le corps ne tourne QUE s'il roule vraiment : soit le joueur avance, soit l'avance de manoeuvre le fait
 	-- rouler. A STEER_CRAWL = 0 on retrouve donc le comportement d'avant (corps fige, machine qui pivote),
 	-- comme la config le promet.
@@ -1072,7 +1079,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- LES JAMBES SUIVENT LE SENS REEL. On lit `forwardAmount` -- l'intention -- et pas la vitesse : pousser contre
 	-- un mur en marche arriere doit quand meme montrer des jambes qui reculent, sinon le personnage marcherait en
 	-- avant sans avancer.
-	reverseLegs(humanoid, forwardAmount < -MowConfigs.STEER_MOVE_EPSILON)
+	reverseLegs(humanoid, reversing)
 
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.
