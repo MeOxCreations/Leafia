@@ -60,10 +60,24 @@ local function findByName(name: string): Instance?
 end
 
 -- Vrai tant que le grand-pere marche : la scene peut se terminer plusieurs fois (rejouee, ou un second joueur),
--- et deux marches en parallele se disputeraient le meme Humanoid.
+-- et deux marches en parallele se disputeraient le meme modele.
 local walking = false
 
--- LE GRAND-PERE SORT DE CHEZ LUI. Il marche jusqu'a la part posee dans Studio, puis se repose sur son idle.
+-- Hauteur du sol sous un point, ou nil si on ne trouve rien.
+local function groundAt(position: Vector3, ignore: { Instance }): number?
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = ignore
+	local hit = Workspace:Raycast(position, Vector3.new(0, -TutorialConfigs.OLDMAN_WALK_GROUND_RAY, 0), params)
+	return if hit then hit.Position.Y else nil
+end
+
+-- LE GRAND-PERE SORT DE CHEZ LUI. Il glisse jusqu'a la part posee dans Studio, puis se repose sur son idle.
+--
+-- ON LE DEPLACE PAR LE CODE, pas par `Humanoid:MoveTo`. Son rig doit rester ANCRE, et Roblox REFUSE de deplacer
+-- une part ancree : `MoveTo` partait, ne bougeait rien, et rendait "chemin barre" au bout de son delai. Ce n'est
+-- pas un contournement -- pour un personnage de scene qui suit un trajet decide a l'avance, un glissement est
+-- plus SUR qu'un pathfinding : il ne peut ni s'accrocher a un meuble ni tomber d'un bord.
 local function walkOldMan()
 	if walking then
 		return
@@ -82,33 +96,41 @@ local function walkOldMan()
 		)
 		return
 	end
-
-	-- LES TROIS CONDITIONS POUR QU'UN PERSONNAGE MARCHE, verifiees une par une et nommees separement : elles se
-	-- ressemblent a l'ecran -- il ne bouge pas -- et se corrigent a trois endroits differents.
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		warn(`[Tutorial] "{model.Name}" n'a pas de Humanoid : il ne peut pas marcher.`)
-		return
-	end
-	-- Roblox cherche ce nom EXACT pour deplacer un personnage. Une RootPart nommee autrement laisse le Humanoid
-	-- sans prise : l'animation joue, `MoveTo` ne fait rien, et rien dans la console ne l'explique.
+	-- On se cale sur une PART REELLE et pas sur `GetPivot` : sans PrimaryPart, le pivot d'un Model suit sa BOITE
+	-- ENGLOBANTE, qu'un simple accessoire ajoute dans Studio suffit a decaler.
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if not (root and root:IsA("BasePart")) then
 		warn(`[Tutorial] "{model.Name}" n'a pas de part nommee "HumanoidRootPart" : renomme sa RootPart ainsi.`)
 		return
 	end
-	if (root :: BasePart).Anchored then
-		warn(`[Tutorial] La HumanoidRootPart de "{model.Name}" est ANCREE : il ne peut pas se deplacer.`)
-		return
+	local rootPart = root :: BasePart
+	local targetPart = target :: BasePart
+
+	local from = rootPart.CFrame
+	local flat = Vector3.new(targetPart.Position.X - from.Position.X, 0, targetPart.Position.Z - from.Position.Z)
+	if flat.Magnitude < 0.1 then
+		return -- deja arrive : on ne fabrique pas un trajet pour rien
 	end
 
-	walking = true
-	humanoid.WalkSpeed = TutorialConfigs.OLDMAN_WALK_SPEED
+	-- SA HAUTEUR AU-DESSUS DU SOL, mesuree et rendue a l'arrivee. Il est ancre, donc rien ne le repose : un sol
+	-- qui monte ou descend entre les deux le ferait s'enfoncer ou leviter.
+	local ignore = { model }
+	local startGround = groundAt(from.Position, ignore)
+	local endGround = groundAt(Vector3.new(targetPart.Position.X, from.Position.Y, targetPart.Position.Z), ignore)
+	local endY = if startGround and endGround then from.Position.Y + (endGround - startGround) else from.Position.Y
+	local to = CFrame.lookAt(
+		Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z),
+		Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z) + flat.Unit
+	)
 
-	-- L'ANIMATION EST FACULTATIVE : sans elle il glisse, mais il arrive quand meme. On ne bloque pas la scene
-	-- pour un asset manquant.
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+
+	walking = true
+
+	-- L'ANIMATION EST FACULTATIVE : sans elle il glisse sans bouger les jambes, mais il arrive. On ne bloque pas
+	-- une scene pour un asset manquant.
 	local track: AnimationTrack? = nil
-	local animator = humanoid:FindFirstChildOfClass("Animator")
 	if animator then
 		local anim = Instance.new("Animation")
 		anim.AnimationId = TutorialConfigs.OLDMAN_WALK_ANIM
@@ -119,41 +141,46 @@ local function walkOldMan()
 			local t = result :: AnimationTrack
 			t.Looped = true
 			t.Priority = TutorialConfigs.OLDMAN_WALK_PRIORITY
+			t:Play()
 			-- Jouee au RAPPORT des deux vitesses : changer sa vitesse de marche ne fait pas patiner ses pieds, et
 			-- il n'y a aucune seconde valeur a garder d'accord avec la premiere.
-			t:Play()
 			t:AdjustSpeed(TutorialConfigs.OLDMAN_WALK_SPEED / TutorialConfigs.OLDMAN_WALK_REFERENCE)
 			track = t
 		end
 	else
-		warn(`[Tutorial] Pas d'Animator sous le Humanoid de "{model.Name}" : il marchera sans animation.`)
+		warn(`[Tutorial] Pas d'Animator sous "{model.Name}" : il marchera sans animation.`)
 	end
 
+	-- LA DUREE VIENT DE LA DISTANCE, jamais d'un chiffre pose a la main : deplacer la part dans Studio suffit
+	-- alors a rallonger le trajet, et ses pieds restent d'accord avec son deplacement quoi qu'on change.
+	local seconds = flat.Magnitude / math.max(TutorialConfigs.OLDMAN_WALK_SPEED, 0.1)
+
 	task.spawn(function()
-		humanoid:MoveTo(target.Position)
-		-- `MoveToFinished` rend `false` quand il n'arrive pas -- chemin barre, ou timeout de Roblox. Dans les deux
-		-- cas on s'arrete la : mieux vaut un grand-pere pose en chemin qu'un grand-pere qui pietine contre un mur.
-		local reached = humanoid.MoveToFinished:Wait()
-		if not reached then
-			warn(`[Tutorial] "{model.Name}" n'a pas atteint "{TutorialConfigs.OLDMAN_WALK_TARGET}" : chemin barre ?`)
+		local t0 = os.clock()
+		while true do
+			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
+			if not model.Parent then
+				break -- detruit en chemin (changement de place, rechargement) : plus rien a deplacer
+			end
+			-- ON APPLIQUE UN ECART MONDE, pas un pivot : `PivotTo` passe par `GetPivot`, decale des qu'on ajoute
+			-- un enfant au modele. En composant l'ecart de la RACINE, on ne depend d'aucun pivot.
+			--
+			-- LINEAIRE, sans adoucissement : une marche a vitesse constante est ce qu'on attend d'un personnage
+			-- qui traverse une piece. Une courbe le ferait accelerer puis ralentir, et ses pieds patineraient aux
+			-- deux bouts -- l'animation, elle, tourne a vitesse fixe.
+			local now = from:Lerp(to, e)
+			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
+			if e >= 1 then
+				break
+			end
+			task.wait()
 		end
 		-- ON ARRETE LA MARCHE, on ne rejoue pas l'idle : il tourne DEJA en dessous (AmbientAnimService, priorite
-		-- `Idle`). Le relancer ici en ferait deux, et deux pistes de meme priorite donnent leur MOYENNE.
+		-- `Idle`). Le relancer en ferait deux, et deux pistes de meme priorite donnent leur MOYENNE.
 		if track then
 			(track :: AnimationTrack):Stop()
 		end
 		walking = false
-	end)
-
-	-- FILET. `MoveToFinished` peut ne jamais tirer si le Humanoid meurt ou si le modele est detruit en chemin :
-	-- sans ce garde-fou, `walking` resterait vrai et la marche ne pourrait plus jamais repartir.
-	task.delay(TutorialConfigs.OLDMAN_WALK_TIMEOUT, function()
-		if walking then
-			walking = false
-			if track then
-				(track :: AnimationTrack):Stop()
-			end
-		end
 	end)
 end
 

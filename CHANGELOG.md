@@ -2204,6 +2204,47 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.542 — Le grand-pere GLISSE jusqu'a la porte, il ne "marche" plus
+
+    "OldmanOriginal" n'a pas atteint "OldManWalkTo" : chemin barre ?
+
+Le chemin n'etait pas barre : son rig doit rester ANCRE, et Roblox REFUSE de deplacer une part ancree.
+`Humanoid:MoveTo` partait, ne bougeait rien, et rendait son echec au bout du delai.
+
+Il est desormais deplace PAR LE CODE, comme la porte.
+
+### Ce n'est pas un contournement
+
+Pour un personnage de scene qui suit un trajet decide a l'avance, un glissement est plus SUR qu'un pathfinding :
+il ne peut ni s'accrocher a un meuble, ni tomber d'un bord, ni "ne pas arriver". Et il n'a besoin ni de
+`Humanoid`, ni de part desancree, ni de collisions propres.
+
+Le `Humanoid` ne sert plus qu'a porter l'`Animator`.
+
+### La duree vient de la DISTANCE
+
+Jamais d'un chiffre pose a la main. Deplacer la part dans Studio rallonge donc le trajet tout seul, et ses pieds
+restent d'accord avec son deplacement quoi qu'on change.
+
+Le deplacement est LINEAIRE, sans adoucissement : l'animation de marche tourne a vitesse fixe, donc une courbe le
+ferait accelerer puis ralentir et ses pieds patineraient aux deux bouts.
+
+### Il garde sa hauteur au-dessus du SOL
+
+Mesuree au depart, rendue a l'arrivee. Ancre, rien ne le repose : un sol qui monte ou descend entre les deux
+l'aurait fait s'enfoncer ou leviter.
+
+### Un ECART MONDE, pas un pivot
+
+`PivotTo` passe par `GetPivot`, qui suit la BOITE ENGLOBANTE quand le modele n'a pas de PrimaryPart -- qu'un
+simple accessoire ajoute dans Studio suffit a decaler. En composant l'ecart de la RACINE, on ne depend d'aucun
+pivot. Meme correction que la repose de la tondeuse.
+
+### Ce qui disparait
+
+Le timeout de secours et le message "chemin barre" : sans pathfinding, il n'y a plus d'echec possible. La boucle
+sort d'elle-meme si le modele est detruit en route.
+
 ## 0.0.541 — La sonde d'animation reconnait les SKINNED MESH
 
     "Scene1_oldman_OpenDoor" tourne mais n'a RIEN bouge sur "OldmanOriginal"

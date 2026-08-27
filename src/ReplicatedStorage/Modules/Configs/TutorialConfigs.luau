@@ -267,9 +267,10 @@ return {
 	-- Vitesse pour laquelle l'animation a ete faite. La piste est jouee au rapport des deux, donc changer la
 	-- vitesse ci-dessus ne fait pas patiner ses pieds -- et il n'y a aucune seconde valeur a garder d'accord.
 	OLDMAN_WALK_REFERENCE = 8,
-	-- Il ne doit pas rester bloque pour toujours si le chemin est barre : au-dela, on arrete la marche et il se
-	-- repose sur son idle la ou il est.
-	OLDMAN_WALK_TIMEOUT = 12,
+	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
+	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend
+	-- entre les deux le ferait s'enfoncer ou leviter.
+	OLDMAN_WALK_GROUND_RAY = 30,
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,
