@@ -60,6 +60,9 @@ local lastSteerSent = 0
 local lastDriveSent = 0
 -- Avance DEMANDEE a l'instant, -1 a 1. Lue par le rapprochement de camera, qui tourne dans une autre fonction.
 local driveNow = 0
+-- Dernier ballant LU sur la machine. On travaille sur son ECART d'une image a l'autre : c'est ce qui permet
+-- d'absorber son retour a zero dans le cap du joueur sans jamais recopier sa formule.
+local lastSwing = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -1081,6 +1084,31 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- de la machine et ne touche a aucun repere de la vue.
 	if turning then
 		yaw -= lateralAmount * steerSign * dirSign * math.rad(turnRate) * dt
+	end
+
+	-- EFFET SERPENT. Le ballant a mis la machine en travers ; en relachant, elle GARDE son angle et c'est le
+	-- JOUEUR qui vient s'aligner sur elle. Enchaine gauche-droite, le couple decrit un S.
+	--
+	-- On absorbe l'ECART du ballant, pas sa valeur : l'orientation de la machine dans le monde vaut cap + ballant,
+	-- donc rendre au cap ce que le ballant perd la laisse rigoureusement en place. Aucune seconde courbe a
+	-- inventer -- celle du ballant fait tout, y compris sa fin posee.
+	--
+	-- SEULEMENT QUAND ON NE BRAQUE PLUS : pendant le virage, la machine DOIT partir en travers, c'est ce qui la
+	-- met en travers.
+	local swingNow = mower:GetAttribute(MowConfigs.SWING_ATTRIBUTE)
+	local swing = if typeof(swingNow) == "number" then swingNow else 0
+	local snaked = false
+	if MowConfigs.SNAKE_ENABLED and not turning then
+		local sign = if MowConfigs.SNAKE_INVERT then -1 else 1
+		local delta = (swing - lastSwing) * MowConfigs.SNAKE_AMOUNT * sign
+		if math.abs(delta) > 1e-5 then
+			yaw -= delta
+			snaked = true
+		end
+	end
+	lastSwing = swing
+
+	if turning or snaked then
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end
@@ -1453,6 +1481,9 @@ local function update(dt: number)
 			RunService:UnbindFromRenderStep(STEER_BIND)
 		end)
 		driveNow = 0
+		-- On repart de zero a la prochaine prise : un ballant garde d'une machine reposee ferait pivoter le joueur
+		-- d'un coup a la reprise, pour un ecart qui n'a plus rien a voir avec elle.
+		lastSwing = 0
 		clearTrail()
 		clearMarker()
 		if humanoid then

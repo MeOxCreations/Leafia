@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.529 — EFFET SERPENT : le joueur vient s'aligner sur la machine
+
+En relachant le braquage, la tondeuse GARDE son angle et c'est le JOUEUR qui pivote pour se mettre dans son axe.
+Enchaine gauche-droite, le couple decrit un S.
+
+### La moitie existait deja
+
+Le ballant met la machine A L'OPPOSE du braquage depuis toujours (`target = -steerInput * ...`). Tourner a droite
+l'envoie a gauche : c'etait deja la premiere moitie de l'effet, personne ne l'avait nommee.
+
+Il ne manquait que le retour.
+
+### On absorbe l'ECART, pas la valeur
+
+L'orientation de la machine dans le monde vaut cap du joueur + ballant. Rendre au cap ce que le ballant perd la
+laisse donc RIGOUREUSEMENT en place -- pas approximativement : par construction.
+
+Et il n'y a aucune seconde courbe a inventer. Celle du ballant fait tout, y compris sa fin posee
+(`SWING_RETURN` et son plancher `SWING_SETTLE`) : vif au debut, calme a la fin.
+
+### UNE SEULE source de verite
+
+Le serveur PUBLIE son ballant dans un attribut ; le client le LIT. Il aurait ete plus simple de recalculer la
+meme formule cote client -- les deux partent du meme input -- et c'etait le piege : deux copies d'un meme calcul
+finissent toujours par diverger, et ici la moindre difference ferait tourner la tondeuse au lieu de la laisser en
+place.
+
+L'attribut n'est ecrit que sur un VRAI changement : un attribut se replique a chaque ecriture, et le reecrire a
+l'identique enverrait un message par image pour rien.
+
+### Trois reglages
+
+- `SNAKE_ENABLED` pour couper l'effet net.
+- `SNAKE_INVERT` s'il pivote du mauvais cote -- ca se voit a l'ecran.
+- `SNAKE_AMOUNT` (0 a 1) : a 1 la machine ne bouge pas d'un degre, en dessous elle se redresse un peu pendant que
+  le joueur tourne, ce qui adoucit l'effet.
+
+Le ballant est efface a la repose, et le client repart de zero : sans ca, un ecart garde d'une machine reposee
+ferait pivoter le joueur d'un coup a la reprise.
+
 ## 0.0.528 — La tondeuse se pose au sol d'un coup, au lieu de tomber
 
 En la lachant, on se contentait de defaire la soudure : elle TOMBAIT, puis se balancait le temps que la physique

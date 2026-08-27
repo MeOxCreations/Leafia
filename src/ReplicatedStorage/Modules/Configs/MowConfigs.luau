@@ -611,6 +611,27 @@ return {
 	-- decide a leur place et les regler ne change plus rien.
 	SWING_MAX = 40,
 
+	-- ===== EFFET SERPENT =====
+	-- La machine part DEJA a l'oppose du braquage : c'est le ballant ci-dessus, `-steerInput`. Ce qui manquait,
+	-- c'est la seconde moitie : quand on RELACHE, la tondeuse GARDE son angle et c'est le JOUEUR qui vient
+	-- s'aligner sur elle. Enchaine gauche-droite, le couple decrit un S.
+	--
+	-- Le joueur absorbe le ballant a mesure qu'il revient a zero : la machine ne bouge donc pas d'un degre dans le
+	-- monde pendant ce temps -- ce qui tourne, c'est le porteur autour d'elle.
+	--
+	-- LA COURBE VIENT DU BALLANT LUI-MEME (`SWING_RETURN` et son plancher `SWING_SETTLE`) : vif au debut, pose a
+	-- la fin. Rien a lisser en plus, et surtout aucune seconde courbe a garder d'accord avec la premiere.
+	SNAKE_ENABLED = true,
+	-- Le joueur pivote du mauvais cote ? Mettre true. Ca se voit a l'ecran, ca ne se deduit pas.
+	SNAKE_INVERT = false,
+	-- Part de l'angle reellement transmise, de 0 a 1. A 1 la machine ne bouge pas du tout dans le monde ; en
+	-- dessous elle se redresse un peu pendant que le joueur tourne, ce qui adoucit l'effet.
+	SNAKE_AMOUNT = 1,
+	-- Ou le serveur publie son ballant pour que le client puisse l'absorber. UNE SEULE source de verite : le
+	-- client ne recalcule pas la formule de son cote, il LIT celle qui fait bouger la machine. Deux copies d'un
+	-- meme calcul finissent toujours par diverger, et ici la moindre difference ferait tourner la tondeuse.
+	SWING_ATTRIBUTE = "LeafiaMowSwing",
+
 	-- ===== COUPE =====
 	-- Rayon de coupe utilise SI la part CutZone est absente (elle donne sinon le sien, moitie de sa largeur).
 	FALLBACK_RADIUS = 2.2,

@@ -861,6 +861,7 @@ local function release(model: Model)
 	releaseLauncher(model, state) -- filet : repose (ou mort) en plein tirage
 	carried[model] = nil
 	model:SetAttribute("LeafiaCarriedBy", nil)
+	model:SetAttribute(MowConfigs.SWING_ATTRIBUTE, nil)
 	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, nil)
 	CarryUtils.release(state.owner, "Mower")
 end
@@ -1050,6 +1051,17 @@ local function grab(player: Player, model: Model)
 		-- travers POUR TOUJOURS -- avec les bras decentres avec elle, puisqu'ils lisent la meme valeur.
 		if math.abs(target - state.swing) < SWING_SNAP then
 			state.swing = target
+		end
+
+		-- ON PUBLIE LE BALLANT. Le client en a besoin pour l'ABSORBER dans le cap du joueur (effet serpent), et il
+		-- ne doit surtout pas le recalculer de son cote : deux copies d'un meme calcul finissent par diverger, et
+		-- la moindre difference ferait tourner la tondeuse au lieu de la laisser en place.
+		--
+		-- Seulement sur un VRAI changement : un attribut se replique a chaque ecriture, et le reecrire a
+		-- l'identique enverrait un message par image pour rien.
+		local published = model:GetAttribute(MowConfigs.SWING_ATTRIBUTE)
+		if typeof(published) ~= "number" or math.abs(published - state.swing) > 1e-4 then
+			model:SetAttribute(MowConfigs.SWING_ATTRIBUTE, state.swing)
 		end
 
 		-- REGARD ARRIERE. On mesure le recul REEL (vitesse projetee sur le cap), pas l'intention : une bosse ou un
