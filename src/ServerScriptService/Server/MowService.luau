@@ -859,7 +859,13 @@ type Wheel = {
 	angle: number,
 }
 
-type WheelSet = { root: BasePart, wheels: { Wheel }, lastPos: Vector3 }
+type WheelSet = {
+	root: BasePart,
+	wheels: { Wheel },
+	lastPos: Vector3,
+	-- Les memes parts, en ensemble : le portage doit pouvoir les RECONNAITRE pour ne pas y toucher.
+	isWheel: { [BasePart]: boolean },
+}
 
 local wheelSets: { [Model]: WheelSet } = {}
 local wheelConn: RBXScriptConnection? = nil
@@ -908,6 +914,12 @@ local function stepWheels()
 			end
 			if wheel.radius > 1e-3 and math.abs(distance) > 1e-5 then
 				wheel.angle = (wheel.angle + MowConfigs.WHEEL_DIRECTION * distance / wheel.radius) % (math.pi * 2)
+			end
+			-- ON RE-AFFIRME L'ANCRAGE. Une roue desancree n'a plus RIEN qui la retient -- on lui a justement
+			-- enleve ses welds -- donc la physique l'emporte et elle part toute seule. Ca ne coute qu'un test, et
+			-- ca protege de tout code qui toucherait aux parts de la machine sans connaitre les roues.
+			if not wheel.part.Anchored then
+				wheel.part.Anchored = true
 			end
 			-- La rotation vient APRES `rest` : posee ainsi, elle tourne autour de l'axe de la ROUE. Posee avant,
 			-- elle ferait tourner tout le decalage et la roue partirait en orbite autour de la machine.
@@ -961,7 +973,11 @@ local function setupWheels(model: Model)
 	if #wheels == 0 then
 		return
 	end
-	wheelSets[model] = { root = root, wheels = wheels, lastPos = root.Position }
+	local isWheel: { [BasePart]: boolean } = {}
+	for _, w in wheels do
+		isWheel[w.part] = true
+	end
+	wheelSets[model] = { root = root, wheels = wheels, lastPos = root.Position, isWheel = isWheel }
 	if not wheelConn then
 		wheelConn = RunService.Heartbeat:Connect(stepWheels)
 	end
@@ -1064,8 +1080,15 @@ local function grab(player: Player, model: Model)
 		jumpPower = if humanoid then humanoid.JumpPower else 50,
 	}
 	blockJump(state)
+	-- LES ROUES SONT HORS DU PORTAGE. Elles sont ANCREES et pilotees par leur CFrame : les desancrer avec le
+	-- reste les rendrait libres -- on leur a enleve leurs welds, donc plus rien ne les retient -- et la physique
+	-- les emporterait. C'est exactement ce qui se voyait : des roues qui se decollent de la machine.
+	--
+	-- Elles ne sont pas non plus enregistrees dans `state.parts` : sinon la repose leur rendrait leur ancrage
+	-- d'AVANT, qui est faux depuis qu'on les pilote.
+	local set = wheelSets[model]
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") then
+		if d:IsA("BasePart") and not (set and set.isWheel[d]) then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }
 			d.Anchored = false
 			-- LA BOITE DE COLLISION GARDE SES COLLISIONS, tout le reste les perd.

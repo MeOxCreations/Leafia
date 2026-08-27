@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.570 — Les roues ne se decollent plus de la tondeuse
+
+Elles partaient toutes seules, comme si elles ne faisaient pas partie de la machine.
+
+### Le portage les DESANCRAIT
+
+A la prise, toutes les parts du modele sont desancrees pour etre soudees au porteur. Les roues passaient dans
+cette boucle comme les autres -- sauf qu'on venait justement de leur retirer leurs `WeldConstraint`. Desancrees
+ET sans weld, plus RIEN ne les retenait : la physique les emportait.
+
+Une correction en avait donc casse une autre : enlever les welds etait necessaire pour qu'elles tournent, et
+c'est ce qui les a rendues libres.
+
+### Elles sont hors du portage
+
+Elles gardent leur ancrage et leur pose vient de leur CFrame, ecrit depuis la racine. Elles ne sont pas non plus
+enregistrees dans les parts sauvegardees : sinon la repose leur rendrait leur ancrage d'AVANT, qui est faux
+depuis qu'on les pilote.
+
+### Et l'ancrage est RE-AFFIRME a chaque image
+
+Un test par roue et par frame. Ca protege de tout code qui toucherait aux parts de la machine sans connaitre les
+roues -- et il y en aura, puisqu'il y en avait deja un.
+
 ## 0.0.569 — Les roues tournent dans le bon sens
 
 `WHEEL_DIRECTION` 1 -> -1. Elles tournaient a l'envers en marche avant.
