@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.534 — La camera RECULE quand on pousse, au lieu de se rapprocher
+
+`DRIVE_ZOOM` -2.5 -> +5.
+
+Les deux sens ont ete essayes a l'ecran. Se rapprocher resserre le cadre et donne la vitesse, mais on perd de vue
+ou l'on va -- et sur une machine qu'on pousse DEVANT soi, voir arriver le terrain compte plus que la sensation de
+vitesse.
+
+L'allure reste vive (`DRIVE_ZOOM_SPEED = 11`) : c'est une reaction a l'appui, pas un mouvement de camera.
+
+Marche avant seulement, comme avant : reculer n'est pas une acceleration, et on veut alors un cadre stable pour
+viser ou l'on se remet.
+
 ## 0.0.533 — Le geste de tirage de corde est plus vif
 
 `START_SPEED = 1.6`, en multiple du rythme de l'editeur. Tirer une corde de lanceur est un coup SEC, pas un

@@ -456,18 +456,15 @@ return {
 	-- revelation (voir applyCameraRig), sinon les deux s'ecraseraient a tour de role.
 	PULL_CAM_FOV = 12,
 
-	-- LA CAMERA SE RAPPROCHE QUAND LA MACHINE PREND DE LA VITESSE, en studs a plein regime.
+	-- LA CAMERA RECULE QUAND ON POUSSE, en studs.
 	--
-	-- NEGATIF = elle se rapproche, positif = elle recule. Elle etait a +4, donc elle S'ELOIGNAIT en accelerant --
-	-- l'inverse de ce qu'on veut : se rapprocher resserre le cadre et donne la sensation de vitesse, s'eloigner
-	-- la calme.
-	--
-	-- PETIT. C'est un accent, pas un changement de plan : trop pres, la machine remplit l'ecran et on ne voit plus
-	-- ou l'on va.
+	-- POSITIF = elle recule, negatif = elle se rapproche. Les deux ont ete essayes : se rapprocher resserre le
+	-- cadre mais on perd de vue ou l'on va, alors que reculer OUVRE le champ -- et sur une machine qu'on pousse
+	-- devant soi, voir arriver le terrain compte plus que la sensation de vitesse.
 	--
 	-- ET CA NE PEUT PAS BOUCLER, contrairement a l'inclinaison du joueur essayee puis retiree : changer la
 	-- DISTANCE de la camera ne change pas sa DIRECTION, et c'est la direction que lit `GetMoveVector`.
-	DRIVE_ZOOM = -2.5,
+	DRIVE_ZOOM = 5,
 	-- Vitesse d'installation, en fraction par seconde. VIF : la camera doit repondre a l'appui, pas raconter la
 	-- montee en regime. L'allure par defaut de CameraEffects (1.1) est faite pour des effets de fond, elle
 	-- mettrait plus d'une seconde.

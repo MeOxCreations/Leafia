@@ -175,8 +175,8 @@ local function applyCameraRig(carrying: boolean)
 		-- touche, et aucune allure de lissage n'aurait pu la rattraper -- c'est la CIBLE qui etait lente, pas le
 		-- trajet.
 		--
-		-- Marche avant seulement : reculer n'est pas une acceleration, et resserrer le cadre quand on recule
-		-- enleve justement le peu de visibilite qu'on a.
+		-- Marche avant seulement : reculer n'est pas une acceleration, et on veut alors garder le cadre stable pour
+		-- viser ou l'on se remet.
 		total += math.clamp(driveNow, 0, 1) * MowConfigs.DRIVE_ZOOM
 		zoomSpeed = MowConfigs.DRIVE_ZOOM_SPEED
 	end
