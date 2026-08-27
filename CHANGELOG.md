@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.564 — Le marqueur etait a l'ORIGINE DE LA MAP, pas sur la porte
+
+Il etait cree une trentaine de lignes AVANT le calcul de sa cible, dans la meme fonction par-frame. La variable
+valait donc encore son zero de depart : le marqueur naissait a (0, 0, 0).
+
+Et comme on lui passe un POINT et non la porte elle-meme -- un instantane, pas une reference -- il n'en bougeait
+plus jamais.
+
+### Le symptome ne ressemblait pas a sa cause
+
+Il s'affichait, il flottait, il sursautait : TOUT fonctionnait. A cinquante studs de ce qu'il designe. Rien ne
+ressemble moins a un bug de position qu'un objet qui marche parfaitement.
+
+### La correction
+
+Sa creation descend APRES `anchorPos`. Trois lignes deplacees.
+
+Le point vise reste le CENTRE de la porte et pas sa `PrimaryPart` -- celle-ci est la charniere, posee sur le
+cote : s'y caler ferait sortir le marqueur a cote de la porte. C'est le meme choix que le prompt.
+
 ## 0.0.563 — Le marqueur retrecit, et son " ! " sursaute de temps en temps
 
 `SIZE` 96 -> 46. Et toutes les deux secondes et demie environ, la barre s'etire vers le haut puis revient.

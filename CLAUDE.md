@@ -859,6 +859,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   differemment et celle du dessus deborde. Meme famille que le `UIScale` uniforme, qui ne peut pas ecraser non
   plus : quand une deformation "ne marche pas", c'est presque toujours l'outil qui ne sait pas la faire.
 
+- **Un objet POSE A UN POINT (et non attache a une reference) naît la ou la variable en etait A CET INSTANT.**
+  Vecu sur le marqueur d'exclamation : il etait cree une trentaine de lignes AVANT le calcul de sa cible, dans
+  la meme fonction par-frame. La variable valait encore son zero de depart -- le marqueur naissait donc a
+  l'ORIGINE DE LA MAP, et comme on lui passait un POINT et non l'objet lui-meme (un instantane, pas une
+  reference), il n'en bougeait plus jamais. Symptome trompeur au possible : il s'affiche, il bouge, il s'anime,
+  TOUT fonctionne -- a cinquante studs de ce qu'il designe. Rien ne ressemble moins a un bug de position qu'un
+  objet qui marche parfaitement. Regle : dans une fonction par-frame, la creation d'un objet qui LIT une valeur
+  doit venir APRES son calcul -- et quand la cible peut bouger, passer la REFERENCE plutot que le point, sinon
+  la valeur d'une seule image est figee pour toujours. Meme famille que le cache resolu une seule fois qui se
+  fige a `nil`.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

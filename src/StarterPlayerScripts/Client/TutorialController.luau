@@ -870,19 +870,6 @@ local function step(dt: number)
 		end
 	end
 
-	-- ===== LE MARQUEUR =====
-	-- Le halo dit "cet objet compte" quand on le voit deja. Le marqueur, lui, se voit de LOIN : c'est lui qui dit
-	-- OU ALLER, et il disparait des qu'on a toque.
-	--
-	-- Pose ICI et pas dans `setDoorHint` : l'ancre de la porte arrive par le streaming, souvent bien apres. Le
-	-- marqueur se poserait alors sur une cible qui n'existe pas encore -- et jamais ensuite.
-	if doorHint and not doorMarker then
-		doorMarker = WorldMarker.show(anchorPos, Vector3.new(0, TutorialConfigs.DOOR_MARKER_UP, 0))
-	elseif not doorHint and doorMarker then
-		WorldMarker.remove(doorMarker)
-		doorMarker = nil
-	end
-
 	-- ===== LE HALO =====
 	local halo = highlight
 	if halo and halo.Parent then
@@ -911,6 +898,26 @@ local function step(dt: number)
 	-- poignee de parts ne coute rien, et la valeur est IDENTIQUE tant que la porte ne bouge pas -- donc le
 	-- prompt n'est pas re-affiche pour rien.
 	anchorPos = (door :: Model):GetBoundingBox().Position
+
+	-- ===== LE MARQUEUR =====
+	-- Le halo dit "cet objet compte" quand on le voit deja. Le marqueur, lui, se voit de LOIN : c'est lui qui dit
+	-- OU ALLER, et il disparait des qu'on a toque.
+	--
+	-- POSE APRES `anchorPos`, ET C'EST TOUT LE POINT. Il etait cree une trentaine de lignes plus haut, quand
+	-- l'ancre valait encore son zero de depart : le marqueur naissait donc a l'ORIGINE DE LA MAP. Et comme on lui
+	-- passe un POINT et non la porte elle-meme -- un instantane, pas une reference -- il n'en bougeait plus
+	-- jamais.
+	--
+	-- Symptome trompeur : le marqueur s'affiche, il bouge, il sursaute, tout marche... a des dizaines de studs de
+	-- ce qu'il designe. Rien ne ressemble moins a un bug de position qu'un objet qui fonctionne parfaitement.
+	--
+	-- Le point vise est le CENTRE de la porte, pas sa PrimaryPart : celle-ci est la charniere, posee sur le cote.
+	if doorHint and not doorMarker then
+		doorMarker = WorldMarker.show(anchorPos, Vector3.new(0, TutorialConfigs.DOOR_MARKER_UP, 0))
+	elseif not doorHint and doorMarker then
+		WorldMarker.remove(doorMarker)
+		doorMarker = nil
+	end
 
 	local root = getRoot()
 
