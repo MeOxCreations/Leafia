@@ -1122,6 +1122,35 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- de la machine et ne touche a aucun repere de la vue.
 	if turning then
 		yaw -= lateralAmount * steerSign * dirSign * math.rad(turnRate) * dt
+	end
+
+	-- LA CAMERA REVIENT DERRIERE LE JOUEUR -- en tournant le JOUEUR, pas la camera.
+	--
+	-- La faire suivre demanderait de la prendre en main, donc de reecrire la souris, le zoom, le tactile et le
+	-- decollement des murs. On fait l'inverse pour rien : le personnage se tourne doucement vers elle, et Roblox
+	-- garde tout ce qu'il sait deja faire.
+	--
+	-- SEULEMENT EN LIGNE DROITE ET EN MARCHE AVANT. Pendant un virage ce serait la camera qui conduirait ; en
+	-- marche arriere on manoeuvre, et se faire tirer vers la souris est exactement ce qu'on ne veut pas.
+	local recentred = false
+	if not turning and forwardAmount > MowConfigs.STEER_MOVE_EPSILON then
+		local cam = Workspace.CurrentCamera
+		local camLook = if cam then cam.CFrame.LookVector else nil
+		local camFlat = if camLook then Vector3.new(camLook.X, 0, camLook.Z) else nil
+		if camFlat and camFlat.Magnitude > 1e-3 then
+			camFlat = camFlat.Unit
+			local camYaw = math.atan2(-camFlat.X, -camFlat.Z)
+			-- ECART LE PLUS COURT, ramene dans [-pi, pi]. Sans ca, un ecart de 350 degres se corrigerait en
+			-- faisant presque un tour complet du mauvais cote.
+			local diff = (camYaw - yaw + math.pi) % (2 * math.pi) - math.pi
+			if math.abs(diff) > math.rad(MowConfigs.RECENTER_DEADZONE) then
+				yaw += diff * math.min(1, MowConfigs.RECENTER_SPEED * dt)
+				recentred = true
+			end
+		end
+	end
+
+	if turning or recentred then
 		hrp.CFrame = CFrame.new(hrp.Position) * CFrame.Angles(0, yaw, 0)
 		facing = Vector3.new(-math.sin(yaw), 0, -math.cos(yaw))
 	end

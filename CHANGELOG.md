@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.538 — La camera revient derriere le joueur (en tournant le JOUEUR)
+
+On braque avec Q/D, mais la camera de Roblox obeit a la souris, pas au cap. Apres quelques virages elle regardait
+le joueur de PROFIL, et on conduisait sans voir devant.
+
+### On ne prend PAS la camera en main
+
+La faire suivre demanderait de reecrire la souris, le zoom, le tactile et surtout le decollement des murs -- sans
+quoi elle traverse les clotures et les haies. Beaucoup de travail, et beaucoup a casser.
+
+On fait l'inverse pour rien : le personnage se tourne DOUCEMENT vers la camera quand il roule droit. L'ecart se
+resorbe tout seul, et Roblox garde tout ce qu'il sait deja faire.
+
+`RECENTER_SPEED = 1.2` -- bas expres : ca doit passer inapercu. Haut, le joueur sent la machine tirer vers la
+souris et il se bat avec.
+
+### Seulement en ligne droite et en marche avant
+
+Pendant un virage, ce serait la camera qui conduirait. En marche arriere on manoeuvre, et se faire tirer vers la
+souris est exactement ce qu'on ne veut pas.
+
+### Une zone morte de 10 degres
+
+Sans elle, la machine tirerait sans arret d'un demi-degre vers la souris -- imperceptible a l'oeil, mais suffisant
+pour qu'une ligne droite n'en soit pas une.
+
+### L'ecart le plus court
+
+Ramene dans [-pi, pi]. Sans ca, un ecart de 350 degres se corrigerait en faisant presque un tour complet du
+mauvais cote.
+
 ## 0.0.537 — La tondeuse ROULE ENCORE un peu quand on lache
 
 En relachant l'avance, la machine s'arretait NET. Une tondeuse lancee ne s'arrete pas net, et c'est ce coup de

@@ -378,6 +378,22 @@ return {
 	-- moments differents : ils n'ont aucune raison de partager un chiffre.
 	DRIVE_PRESS = 12,
 	DRIVE_RELEASE = 2,
+
+	-- ===== LA CAMERA REVIENT DERRIERE LE JOUEUR =====
+	-- On braque avec Q/D, mais la camera de Roblox, elle, ne suit pas le cap : elle obeit a la souris. Apres
+	-- quelques virages elle regarde donc le joueur de PROFIL, et on conduit sans voir devant.
+	--
+	-- ON NE PREND PAS LA CAMERA EN MAIN. La faire suivre demanderait de reecrire la souris, le zoom, le tactile
+	-- et surtout le decollement des murs -- sans quoi elle traverse les clotures et les haies. On fait l'inverse,
+	-- pour rien : le personnage se tourne DOUCEMENT vers la camera quand il roule droit. L'ecart se resorbe tout
+	-- seul, et Roblox garde tout ce qu'il sait deja faire.
+	--
+	-- Vitesse de resorption, en fraction par seconde. BASSE : ca doit passer inapercu. Haute, le joueur sent la
+	-- machine tirer vers la souris et il se bat avec.
+	RECENTER_SPEED = 1.2,
+	-- Ecart en dessous duquel on ne corrige pas, en degres. Sans lui, la machine tirerait sans arret d'un demi-
+	-- degre vers la souris -- imperceptible a l'oeil, mais suffisant pour qu'une ligne droite n'en soit pas une.
+	RECENTER_DEADZONE = 10,
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,
