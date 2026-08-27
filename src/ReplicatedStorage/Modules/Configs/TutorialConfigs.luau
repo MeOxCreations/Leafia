@@ -64,12 +64,19 @@ return {
 	-- du Model est son devant -- et rien ne le garantit, ca vient du rig et pas du bon sens.
 	-- Studs derriere le joueur. A ne pas confondre avec KNOCK_KICK, qui est un recul PONCTUEL a chaque coup :
 	-- celui-ci est le CADRAGE, il ne bouge pas de toute la scene.
-	SCENE_CAM_BACK = 8.5,
+	--
+	-- RECULEE : le plan de depart montre le joueur ET la maison, avant que la camera ne se resserre pendant le
+	-- geste de poignee (TRY_PUSH). Trop pres au depart, ce resserrement n'a plus de place pour se voir -- c'est
+	-- la DISTANCE PARCOURUE qui fait l'effet, pas la distance finale.
+	SCENE_CAM_BACK = 12,
 	-- Studs au-dessus du joueur. Le repere est sa RootPart, deja a hauteur de torse : plus on monte, plus la
 	-- camera plonge sur lui, ce qui ecrase le decor et rapetisse le personnage. A 0.7 on est juste sous la
 	-- hauteur d'yeux -- l'oeil arrive donc sur la porte de face, pas d'en haut.
 	SCENE_CAM_UP = 0.7,
-	SCENE_CAM_SIDE = 2, -- decalage lateral : un cadrage parfaitement centre est plat
+	-- Decalage lateral : un cadrage parfaitement centre est plat. NEGATIF = la camera passe a GAUCHE du joueur.
+	-- Le cote se voit a l'ecran, il ne se deduit pas : il depend du sens dans lequel la porte s'ouvre et de ce
+	-- qu'il y a autour d'elle.
+	SCENE_CAM_SIDE = -2,
 
 	-- ===== ON SE PLACE DEVANT LA PORTE =====
 	-- Le joueur peut declencher la scene DE PROFIL : la detection est radiale, elle accepte n'importe quel angle.

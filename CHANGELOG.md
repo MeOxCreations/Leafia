@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.540 — La camera de la scene passe a GAUCHE, et le plan de depart est plus large
+
+- `SCENE_CAM_SIDE` 2 -> -2 : elle passe de l'autre cote du joueur.
+- `SCENE_CAM_BACK` 8.5 -> 12 : le plan de depart montre le joueur ET la maison.
+
+### Le recul sert le resserrement qui suit
+
+La camera se rapproche pendant que le grand-pere se bat avec la poignee (`TRY_PUSH`). Trop pres au depart, ce
+resserrement n'avait plus de place pour se voir : c'est la DISTANCE PARCOURUE qui fait l'effet, pas la distance
+finale.
+
+Reculer le plan de depart rend donc le mouvement plus lisible sans toucher au mouvement lui-meme.
+
+### Le cote se voit a l'ecran
+
+Il depend du sens dans lequel la porte s'ouvre et de ce qu'il y a autour d'elle : rien qui se deduise du code.
+Note dans la config, comme les autres reglages de sens du projet.
+
 ## 0.0.539 — Le grand-pere sort de chez lui a la fin de la scene
 
 La scene finie, il ne reste plus plante dans l'embrasure : il marche jusque devant sa porte, puis se repose sur
