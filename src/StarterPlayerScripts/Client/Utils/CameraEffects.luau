@@ -51,6 +51,8 @@ local fovOffsetTarget = 0
 -- moities du MEME geste. A vitesses differentes on verrait l'un arriver avant l'autre, et le mouvement
 -- se lirait comme deux effets colles au lieu d'un seul.
 local ZOOM_LERP_SPEED = 1.1
+-- Distance minimale gardee, en studs. Sous un demi-stud Roblox bascule en vue subjective.
+local MIN_ZOOM = 1.5
 local zoomBoost = 0
 local zoomBoostTarget = 0
 local zoomBase: number? = nil -- distance du joueur AU MOMENT ou le recul commence
@@ -131,7 +133,11 @@ function CameraEffects.SetFovOffset(amount: number, speed: number?)
 	fovOffsetSpeed = speed or FOV_OFFSET_LERP_SPEED
 end
 
--- RECUL de camera TENU, en studs. 0 = la camera revient a la distance qu'avait choisie le joueur.
+-- DECALAGE de distance TENU, en studs. 0 = la camera revient a la distance qu'avait choisie le joueur.
+--
+-- POSITIF elle RECULE, NEGATIF elle SE RAPPROCHE. Le negatif n'etait pas supporte : la distance de depart n'etait
+-- capturee que pour une valeur positive, donc une valeur negative ne faisait simplement rien -- sans erreur.
+--
 -- Meme regle : c'est l'appelant qui l'eteint.
 function CameraEffects.SetZoomBoost(studs: number)
 	zoomBoostTarget = studs
@@ -227,7 +233,7 @@ function CameraEffects.init()
 			-- La VRAIE distance est camera -> Focus, jamais camera -> personnage : c'est elle, le zoom.
 			-- Les bornes du joueur sont mises de cote a la PREMIERE raison qui se presente, et rendues quand plus
 			-- aucune ne tient. Une capture par raison finirait par memoriser une borne qu'on avait deja modifiee.
-			if (firstPerson or zoomBoostTarget > 0) and not zoomSaved then
+			if (firstPerson or zoomBoostTarget ~= 0) and not zoomSaved then
 				zoomSaved = true
 				zoomMinWas = player.CameraMinZoomDistance
 				zoomMaxWas = player.CameraMaxZoomDistance
@@ -261,17 +267,20 @@ function CameraEffects.init()
 			else
 				fpBase = nil
 				zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, ZOOM_LERP_SPEED * dt)
-				if zoomBoostTarget > 0 and not zoomBase then
+				if zoomBoostTarget ~= 0 and not zoomBase then
 					zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
 				end
 				if zoomBase then
-					if zoomBoostTarget <= 0 and zoomBoost < 0.05 then
+					if zoomBoostTarget == 0 and math.abs(zoomBoost) < 0.05 then
 						zoomBoost = 0
 						zoomBase = nil
 					else
 						-- Min ET max sur la MEME valeur : la camera Custom s'y cale, et comme la valeur glisse,
 						-- elle glisse.
-						local d = (zoomBase :: number) + zoomBoost
+						-- PLANCHER. En dessous d'un demi-stud Roblox bascule en vue subjective : un rapprochement un
+						-- peu fort -- ou un joueur deja zoome au maximum -- ferait passer la camera DANS la tete,
+						-- et on chercherait la cause du cote de la vue subjective.
+						local d = math.max((zoomBase :: number) + zoomBoost, MIN_ZOOM)
 						player.CameraMinZoomDistance = d
 						player.CameraMaxZoomDistance = d
 					end

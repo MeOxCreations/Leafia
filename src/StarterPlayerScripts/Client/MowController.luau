@@ -162,7 +162,9 @@ end
 -- joueur voit, et ca marche meme si un autre systeme le ralentit.
 local function applyCameraRig(hrp: BasePart?, carrying: boolean)
 	local total = if revealOn then MowConfigs.HIGHLIGHT_ZOOM else 0
-	if carrying and hrp and MowConfigs.DRIVE_ZOOM > 0 and MowConfigs.SPEED_MAX > 0 then
+	-- `~= 0` et non `> 0` : une valeur NEGATIVE rapproche la camera, et c'est le cas normal. La garde d'origine
+	-- refusait justement ce sens-la, donc regler DRIVE_ZOOM en negatif ne faisait rien du tout.
+	if carrying and hrp and MowConfigs.DRIVE_ZOOM ~= 0 and MowConfigs.SPEED_MAX > 0 then
 		local v = hrp.AssemblyLinearVelocity
 		local speed = math.sqrt(v.X * v.X + v.Z * v.Z)
 		total += math.clamp(speed / MowConfigs.SPEED_MAX, 0, 1) * MowConfigs.DRIVE_ZOOM

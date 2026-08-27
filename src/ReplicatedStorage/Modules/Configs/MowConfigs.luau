@@ -449,7 +449,17 @@ return {
 	-- revelation (voir applyCameraRig), sinon les deux s'ecraseraient a tour de role.
 	PULL_CAM_FOV = 12,
 
-	DRIVE_ZOOM = 4,
+	-- LA CAMERA SE RAPPROCHE QUAND LA MACHINE PREND DE LA VITESSE, en studs a plein regime.
+	--
+	-- NEGATIF = elle se rapproche, positif = elle recule. Elle etait a +4, donc elle S'ELOIGNAIT en accelerant --
+	-- l'inverse de ce qu'on veut : se rapprocher resserre le cadre et donne la sensation de vitesse, s'eloigner
+	-- la calme.
+	--
+	-- Elle suit la vitesse REELLE, donc elle revient toute seule a l'arret : rien a eteindre.
+	--
+	-- ET CA NE PEUT PAS BOUCLER, contrairement a l'inclinaison du joueur essayee puis retiree : changer la
+	-- DISTANCE de la camera ne change pas sa DIRECTION, et c'est la direction que lit `GetMoveVector`.
+	DRIVE_ZOOM = -5,
 
 	-- RALENTISSEMENT EN VIRAGE. Fraction de vitesse PERDUE a fond de braquage. 0 = aucun ralentissement, 0.5 =
 	-- moitie moins vite.

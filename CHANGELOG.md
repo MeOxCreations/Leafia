@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.526 — La camera se RAPPROCHE quand la tondeuse prend de la vitesse
+
+L'effet existait deja -- `DRIVE_ZOOM` -- et il poussait dans le mauvais sens.
+
+### Elle s'ELOIGNAIT en accelerant
+
+`d = zoomBase + zoomBoost` : une valeur positive AUGMENTE la distance. A +4, la camera reculait quand la machine
+prenait de la vitesse. C'est l'inverse de ce qu'on veut -- se rapprocher resserre le cadre et donne la sensation
+de vitesse, s'eloigner la calme.
+
+Le reglage n'avait aucun commentaire, ce qui explique qu'on l'ait perdu de vue.
+
+### Le negatif n'etait pas supporte
+
+Trois gardes le refusaient, en silence :
+
+- les bornes de zoom n'etaient mises de cote que si la valeur etait `> 0` ;
+- la distance de depart n'etait capturee que si la valeur etait `> 0` -- donc rien ne se passait ;
+- la sortie se declenchait sur `<= 0`, ce qui remettait tout a zero a la premiere image.
+
+Une valeur negative ne faisait donc RIEN, sans la moindre erreur. Les trois lisent maintenant "different de
+zero", et `SetZoomBoost` documente les deux sens.
+
+### Un plancher de distance
+
+Sous un demi-stud, Roblox bascule en vue subjective. Un rapprochement un peu fort -- ou un joueur deja zoome au
+maximum -- aurait fait passer la camera DANS la tete, et on aurait cherche la cause du cote de la vue subjective.
+
+### Pourquoi celui-ci ne peut pas boucler
+
+Contrairement a l'inclinaison retiree en 0.0.525 : changer la DISTANCE de la camera ne change pas sa DIRECTION,
+et c'est la direction que lit `GetMoveVector`. L'effet ne peut donc rien renvoyer dans l'entree qui le produit.
+
 ## 0.0.525 — L'inclinaison du joueur est retiree : elle se battait avec la camera
 
 Elle se ressentait bien -- et elle etait ingerable.
