@@ -2204,6 +2204,10 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.558 — Le son d'arrivee est retire
+
+Ajoute a la version precedente, retire a celle-ci. Le rideau se termine en silence.
+
 ## 0.0.557 — Un son d'arrivee quand le rideau se retire
 
 `ConnectedSound`, joue au moment ou le volet repart et ou le jeu apparait.
