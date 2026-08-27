@@ -578,9 +578,9 @@ return {
 	-- travers -- c'est ce qui donne le poids et l'inertie ; a l'arret elle ne fait que s'orienter.
 	-- Un reglage par etat, jamais une fraction de l'autre : sinon regler l'un force a compenser l'autre.
 	-- Angle a fond de braquage EN ROULANT, en degres.
-	SWING_ANGLE_DRIVE = 26,
+	SWING_ANGLE_DRIVE = 48,
 	-- Angle a fond de braquage EN MANOEUVRE (a l'arret ou presque), en degres.
-	SWING_ANGLE = 10,
+	SWING_ANGLE = 34,
 	-- DEUX VITESSES, et l'ecart entre elles est tout l'effet.
 	-- SE METTRE EN TRAVERS est rapide : la machine repond au braquage.
 	SWING_RECOVER = 6,
@@ -609,7 +609,7 @@ return {
 	SWING_SETTLE = 180,
 	-- Plafond absolu, en degres. Filet : les deux angles ci-dessus doivent rester EN DESSOUS, sinon c'est lui qui
 	-- decide a leur place et les regler ne change plus rien.
-	SWING_MAX = 40,
+	SWING_MAX = 65,
 
 	-- ===== EFFET SERPENT =====
 	-- La machine part DEJA a l'oppose du braquage : c'est le ballant ci-dessus, `-steerInput`. Ce qui manquait,

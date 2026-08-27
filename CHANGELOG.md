@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.530 — La tondeuse part VRAIMENT en travers quand on braque
+
+Le mecanisme etait bon, l'amplitude ne se voyait pas.
+
+- `SWING_ANGLE_DRIVE` 26 -> 48 (en roulant)
+- `SWING_ANGLE` 10 -> 34 (braquage a l'arret, en manoeuvre)
+- `SWING_MAX` 40 -> 65 -- sans lui, les deux au-dessus auraient ete rabotes a 40 et rien n'aurait change.
+
+Le braquage a l'arret etait le plus discret des deux : c'est justement la qu'on regarde la machine, puisqu'on ne
+va nulle part.
+
+### Rien de neuf dans le code
+
+Il ne fallait pas ajouter une rotation : `weld.C0 = CFrame.Angles(0, swing, 0) * baseC0` fait deja pivoter le
+modele autour du porteur, a l'oppose du braquage. Trois nombres.
+
+Un plafond pose au-dessus des valeurs qu'il borne ne se remarque jamais -- jusqu'au jour ou on monte les valeurs
+et ou plus rien ne bouge.
+
 ## 0.0.529 — EFFET SERPENT : le joueur vient s'aligner sur la machine
 
 En relachant le braquage, la tondeuse GARDE son angle et c'est le JOUEUR qui pivote pour se mettre dans son axe.
