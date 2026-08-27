@@ -2204,6 +2204,57 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.539 — Le grand-pere sort de chez lui a la fin de la scene
+
+La scene finie, il ne reste plus plante dans l'embrasure : il marche jusque devant sa porte, puis se repose sur
+son idle.
+
+### C'est le SERVEUR qui le fait marcher
+
+La scene est purement locale -- camera, barres, fondu. Mais un PNJ qui se deplace est un objet du MONDE : il doit
+bouger pour tout le monde. Le client se contente donc de dire "la scene est finie" par un nouveau remote
+(`TutorialSceneDone`), et `TutorialService` fait le reste.
+
+Aucun argument a valider : le pire qu'un client puisse faire est de le declencher trop tot, ce qui fait sortir le
+grand-pere. Pas de quoi tricher.
+
+### Trois conditions, trois messages separes
+
+Un personnage qui ne marche pas se lit toujours pareil -- il ne bouge pas -- mais ca se corrige a trois endroits
+differents. Chacune est donc nommee a part :
+
+- pas de `Humanoid` ;
+- pas de part nommee EXACTEMENT `HumanoidRootPart` -- Roblox cherche ce nom pour deplacer un personnage, et une
+  RootPart nommee autrement laisse le Humanoid sans prise : l'animation joue, `MoveTo` ne fait rien, et rien dans
+  la console ne l'explique ;
+- RootPart ANCREE.
+
+Ces trois pieges viennent de `NpcWanderService`, qui les avait deja payes.
+
+### On ARRETE la marche, on ne rejoue pas l'idle
+
+Son idle tourne DEJA en dessous (`AmbientAnimService`, priorite `Idle`). La marche est en `Movement`, donc elle
+le couvre ; l'arreter suffit a l'y ramener. Le relancer en ferait deux, et deux pistes de meme priorite donnent
+leur MOYENNE au lieu de se choisir.
+
+### Deux garde-fous
+
+`MoveToFinished` rend `false` quand il n'arrive pas -- chemin barre, ou timeout de Roblox. On s'arrete alors la :
+mieux vaut un grand-pere pose en chemin qu'un grand-pere qui pietine contre un mur.
+
+Et un timeout separe, parce que `MoveToFinished` peut ne JAMAIS tirer si le Humanoid meurt ou si le modele est
+detruit en route -- sans lui, la marche ne pourrait plus jamais repartir.
+
+L'animation est facultative : sans elle il glisse, mais il arrive. On ne bloque pas une scene pour un asset
+manquant.
+
+### A FAIRE DANS STUDIO
+
+Poser une part nommee `OldManWalkTo` devant la porte : c'est la qu'il s'arrete. Le pas exact ou se pose un
+personnage dans une scene se decide a l'oeil, pas par une formule -- et la deplacer ne demande aucun code.
+
+Rojo ne synchronise pas le Workspace : elle doit exister dans la place du tuto.
+
 ## 0.0.538 — La camera revient derriere le joueur (en tournant le JOUEUR)
 
 On braque avec Q/D, mais la camera de Roblox obeit a la souris, pas au cap. Apres quelques virages elle regardait

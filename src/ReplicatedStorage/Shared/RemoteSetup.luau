@@ -132,6 +132,14 @@ local REMOTES: { { any } } = {
 	-- a rien a valider et rien a falsifier. Il ignore le message si la tondeuse est deja lancee.
 	{ "PullMowStarter", E, "Mow" },
 
+	-- [ TUTORIAL ] --
+	-- FIN DE LA SCENE D'INTRODUCTION. Aucun argument : le serveur n'a rien a valider, il ne fait que declencher
+	-- la suite -- le grand-pere qui sort de chez lui.
+	--
+	-- La scene est CLIENT (camera, barres, fondu) mais le grand-pere qui marche est un objet du MONDE : il doit
+	-- bouger pour tout le monde, donc c'est le serveur qui le deplace. Ce remote est la couture entre les deux.
+	{ "TutorialSceneDone", E, "Tutorial" },
+
 	-- [ BIN ] --
 	-- PRISE / REPOSE du SEAU. Deux arguments : le seau (Instance) et une PHASE.
 	--   "grab"       : la main s'est refermee, on soude.

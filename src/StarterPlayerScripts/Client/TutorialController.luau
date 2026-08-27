@@ -21,6 +21,7 @@ local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
 local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
+local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
@@ -57,6 +58,10 @@ local sceneEnded = false
 local grandpaTrack: AnimationTrack? = nil
 -- Angle courant de la porte, en degres (0 = fermee). Une seule valeur : la sequence n'est qu'un enchainement de
 -- cibles, et repartir en plein mouvement ne demande donc aucun cas particulier.
+-- Resolu EN TACHE DE FOND au demarrage : `getRemote` cache un `WaitForChild`, et l'appeler en ligne droite dans
+-- un `init` gele tout le boot le temps de son timeout. Le piege est note dans le journal du projet.
+local sceneDoneRemote: RemoteEvent? = nil
+
 local doorAngle = 0
 -- Sa pose FERMEE, relevee UNE FOIS a l'ouverture. On ne peut pas la relire ensuite : le gond fait partie du
 -- modele, donc il tourne avec lui -- relire le pivot ferait tourner la porte a partir d'une base deja tournee, et
@@ -323,6 +328,13 @@ local function endScene()
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 	CameraEffects.SetFovOffset(0)
 	fadePlayer(0)
+
+	-- LE GRAND-PERE SORT DE CHEZ LUI. C'est le SERVEUR qui le fait marcher : un PNJ qui se deplace est un objet
+	-- du monde, il doit bouger pour tout le monde. La scene, elle, est purement locale -- camera, barres, fondu.
+	local done = sceneDoneRemote
+	if done then
+		done:FireServer()
+	end
 end
 
 -- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
@@ -899,6 +911,14 @@ function TutorialController.init()
 		return
 	end
 	startedAt = os.clock()
+
+	-- LE REMOTE SE RESOUT EN TACHE DE FOND. `getRemote` cache un `WaitForChild` : appele en ligne droite ici, il
+	-- gele TOUT le boot le temps de son timeout quand la replication tarde -- un trou de dix secondes sans la
+	-- moindre erreur, juste un vide dans les horodatages. Le piege a deja ete paye dans ce projet.
+	task.spawn(function()
+		sceneDoneRemote = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
+	end)
+
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres
 	-- noires, et AUCUN moyen d'en sortir : la scene attend une fin qui ne viendra jamais.
 	player.CharacterRemoving:Connect(function()

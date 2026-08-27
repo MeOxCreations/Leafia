@@ -242,6 +242,28 @@ return {
 	-- ne se DEDUIT pas, ca se voit a l'ecran.
 	DOOR_OPEN_INVERT = false,
 
+	-- ===== LE GRAND-PERE SORT DE CHEZ LUI =====
+	-- La scene finie, il ne reste pas plante dans l'embrasure : il marche jusque devant sa porte.
+	--
+	-- L'ID vit ICI, en code, et pas dans une Instance Animation : Rojo synchronise le code dans TOUTES les places,
+	-- les Instances non (`Animations` est en `$ignoreUnknownInstances`, il se recopie a la main place par place).
+	OLDMAN_WALK_ANIM = "rbxassetid://109013940658757",
+	-- AU-DESSUS de son idle, qui tourne en permanence (AmbientAnimService, priorite `Idle`). En dessous ou a
+	-- EGALITE, Roblox melangerait les deux poses au lieu de choisir : on obtiendrait une marche "presque bonne".
+	-- Et comme l'idle continue dessous, il suffit d'ARRETER la marche pour qu'il revienne s'y poser.
+	OLDMAN_WALK_PRIORITY = Enum.AnimationPriority.Movement,
+	-- OU IL VA : une part posee dans Studio. Pas un point calcule -- le pas exact ou s'arrete un personnage dans
+	-- une scene se decide a l'oeil, pas par une formule, et le deplacer ne doit demander aucun code.
+	OLDMAN_WALK_TARGET = "OldManWalkTo",
+	-- Sa vitesse de marche, en studs/s.
+	OLDMAN_WALK_SPEED = 6,
+	-- Vitesse pour laquelle l'animation a ete faite. La piste est jouee au rapport des deux, donc changer la
+	-- vitesse ci-dessus ne fait pas patiner ses pieds -- et il n'y a aucune seconde valeur a garder d'accord.
+	OLDMAN_WALK_REFERENCE = 8,
+	-- Il ne doit pas rester bloque pour toujours si le chemin est barre : au-dela, on arrete la marche et il se
+	-- repose sur son idle la ou il est.
+	OLDMAN_WALK_TIMEOUT = 12,
+
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,
 	-- TRACE DE MISE AU POINT. Dit ce que la detection VOIT reellement : porte trouvee ou non, distance reelle,
