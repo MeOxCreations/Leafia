@@ -2204,6 +2204,58 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.519 — La scene se joue depuis la PORTE, plus depuis le joueur
+
+Toquer DE PROFIL cassait toute la scene. La detection est radiale : elle accepte n'importe quel angle, et rien
+ne redressait ensuite.
+
+### Une seule cause, trois symptomes
+
+Le joueur toquait dans la direction ou il regardait en appuyant -- sur le mur de cote, dans le vide de dos. Et le
+cadrage partait de `root.CFrame.LookVector`, donc la camera se posait sur le cote et la porte, le grand-pere,
+toute la mise en scene se jouaient hors champ.
+
+On aurait pu corriger les trois separement. Ils viennent du meme endroit : la scene demandait au JOUEUR ou etait
+le devant de la porte.
+
+### Le devant de la porte se DEDUIT
+
+Une porte est un panneau plat : son cote le plus mince est sa normale -- exactement le raisonnement des roues de
+la tondeuse. Le SENS vient du joueur, qui est forcement dehors.
+
+Rien a orienter dans Studio, et ca survit a un retournement de la porte.
+
+Le cadrage part maintenant de la : camera devant la porte, puis decalee. Une part nommee `SceneCam1` posee dans
+Studio continue de tout remplacer, comme avant.
+
+### Le joueur GLISSE devant la porte
+
+Face a elle, a `SCENE_PLACE_DIST`. Le trajet est court et se joue pendant que les barres descendent -- personne
+ne le regarde -- mais un saut instantane se remarque toujours.
+
+Un `CFrame:Lerp` interpole la position ET l'orientation d'un seul geste : il pivote en avancant, il ne fait pas
+les deux l'un apres l'autre.
+
+## La camera s'approche, puis SURSAUTE en arriere
+
+Pendant que le grand-pere se bat avec la poignee, elle se rapproche LENTEMENT (2.6 s) : l'image se resserre sans
+qu'on s'en rende compte, et la tension monte sans qu'aucun evenement ne la signale.
+
+Puis elle RECULE d'un coup a l'ouverture (0.32 s), comme si elle avait eu peur.
+
+C'est le CONTRAIRE de ce qu'elle faisait -- elle avancait sur le grand-pere. Mais apres une scene entiere passee
+a se rapprocher, continuer d'avancer PROLONGE la montee au lieu de la resoudre. Le sursaut arriere la casse net,
+et c'est ce qui fait l'evenement.
+
+Le recul est plus grand que l'approche : revenir pile au point de depart se lirait comme une annulation.
+
+### Chaque mouvement part du plan de DEPART
+
+Jamais de la vue courante. Sinon ils s'additionnent, et un recul apres une approche finit plus loin ou plus pres
+selon l'ordre dans lequel ils se sont enchaines. Chaque etape dit ou elle veut etre, en absolu.
+
+`REVEAL_PUSH`, `REVEAL_MOVE_TIME` et `REVEAL_LOOK_UP` partent : plus personne ne les lit.
+
 ## 0.0.518 — L'axe d'une roue est celui de sa SYMETRIE, pas son cote le plus mince
 
     taille roue 3.15/1.09/1.14 | axe roue Y | rayon 1.58

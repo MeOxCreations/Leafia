@@ -70,6 +70,32 @@ return {
 	-- hauteur d'yeux -- l'oeil arrive donc sur la porte de face, pas d'en haut.
 	SCENE_CAM_UP = 0.7,
 	SCENE_CAM_SIDE = 2, -- decalage lateral : un cadrage parfaitement centre est plat
+
+	-- ===== ON SE PLACE DEVANT LA PORTE =====
+	-- Le joueur peut declencher la scene DE PROFIL : la detection est radiale, elle accepte n'importe quel angle.
+	-- Sans replacement, il toquait alors sur le mur ou dans le vide, et la camera -- calee sur SON regard -- se
+	-- retrouvait de cote. Une seule cause, trois symptomes qu'on aurait corriges separement.
+	--
+	-- Distance a laquelle on le pose devant la porte, en studs.
+	SCENE_PLACE_DIST = 4.5,
+	-- Duree du replacement. COURT : il se joue pendant que les barres descendent, donc on ne le regarde pas. Trop
+	-- long, il devient un deplacement qu'on subit ; a zero, c'est une teleportation qui saute aux yeux.
+	SCENE_PLACE_TIME = 0.35,
+
+	-- ===== LA CAMERA S'APPROCHE, PUIS RECULE =====
+	-- Pendant que le grand-pere se bat avec la poignee, on se rapproche LENTEMENT : l'image se resserre sans
+	-- qu'on s'en rende compte, et la tension monte toute seule.
+	TRY_PUSH = 2.2,
+	-- Aussi long que le geste de poignee. Un mouvement qui finit avant lui laisserait la camera immobile pendant
+	-- la moitie de la scene, ce qui casse justement l'effet de resserrement continu.
+	TRY_PUSH_TIME = 2.6,
+	-- Puis elle RECULE d'un coup quand la porte s'ouvre, comme si elle avait eu peur. Le recul est plus GRAND que
+	-- l'approche : sinon on revient au point de depart et le mouvement se lit comme une annulation, pas comme un
+	-- sursaut.
+	SCARE_BACK = 3.6,
+	-- VIF. C'est un reflexe, pas un mouvement de camera : au-dela d'une demi-seconde il ne se lit plus comme une
+	-- reaction mais comme un travelling arriere.
+	SCARE_TIME = 0.32,
 	-- Ce que la camera VISE, en studs au-dessus du centre de la porte. A zero elle vise le milieu exact.
 	SCENE_LOOK_UP = 0.5,
 
@@ -94,21 +120,9 @@ return {
 	-- precedent : l'image se resserre une premiere fois sur la porte qui bouge, puis une seconde sur lui.
 	-- Volontairement petit -- c'est un accent, pas un gros plan.
 	REVEAL_ZOOM = 7,
-	-- ===== LA CAMERA SE RAPPROCHE QUAND LA PORTE S'OUVRE =====
-	-- Le resserrement du champ de vision ne DEPLACE rien : l'image se serre, mais la camera reste au meme
-	-- endroit. Ca se voit -- le moment le plus fort de la scene se jouait sans que le cadre bouge.
-	--
-	-- Studs dont elle avance vers le grand-pere. Elle ne fait qu'AVANCER sur son axe : elle ne change pas de
-	-- place, donc le raccord ne se voit pas.
-	REVEAL_PUSH = 3.5,
-	-- Distance MINIMALE gardee avec lui, quoi qu'il arrive. Sans cette borne, un grand-pere pose plus pres que
-	-- prevu ferait traverser la camera au travers de lui.
+	-- Distance MINIMALE gardee avec le sujet, quoi qu'il arrive. Elle borne l'approche du geste de poignee :
+	-- sans elle, une valeur un peu forte ferait passer la camera AU TRAVERS de la porte.
 	REVEAL_MIN_DIST = 5,
-	-- Duree du rapprochement. LENT : un mouvement lent se lit comme de l'attention, un mouvement rapide comme
-	-- une alerte -- et ici on decouvre quelqu'un, on ne le fuit pas.
-	REVEAL_MOVE_TIME = 1.4,
-	-- Hauteur VISEE sur lui, en studs au-dessus de son point de reference. On regarde un visage, pas un torse.
-	REVEAL_LOOK_UP = 1.5,
 	-- Cadence de CE resserrement-la. L'allure par defaut de CameraEffects (1.1) est faite pour des effets de
 	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
 	REVEAL_ZOOM_SPEED = 6,

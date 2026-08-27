@@ -149,25 +149,118 @@ end
 -- CADRAGE DE LA SCENE. Une part posee dans Studio a le dernier mot ; sinon on cadre depuis le JOUEUR, qui fait
 -- deja face a la porte. Se placer "devant la porte" supposerait de savoir quel axe du Model est son devant --
 -- rien ne le garantit, ca vient du rig.
+-- DEVANT DE LA PORTE, a l'horizontale. Deduit de sa GEOMETRIE : une porte est un panneau plat, donc son cote le
+-- plus mince est sa normale -- exactement le raisonnement des roues de la tondeuse.
+--
+-- Le SENS vient du joueur : il est forcement dehors, donc la moitie qui pointe vers lui est le dehors. Ca evite
+-- d'avoir a orienter le modele d'une facon precise dans Studio, et ca survit a un retournement de la porte.
+local function doorOutward(): Vector3?
+	local model = door
+	local root = getRoot()
+	if not (model and root) then
+		return nil
+	end
+	local cf, size = model:GetBoundingBox()
+	-- On IGNORE la verticale : une porte est haute, Y ne sera jamais le plus mince, et un axe vertical ne serait
+	-- de toute facon pas une direction ou se placer.
+	local normal = if size.X <= size.Z then cf.RightVector else cf.LookVector
+	local flat = Vector3.new(normal.X, 0, normal.Z)
+	if flat.Magnitude < 1e-3 then
+		return nil
+	end
+	flat = flat.Unit
+	-- Vers le joueur : c'est lui qui dit de quel cote est le dehors.
+	local toPlayer = (root.Position - anchorPos) * Vector3.new(1, 0, 1)
+	if toPlayer:Dot(flat) < 0 then
+		flat = -flat
+	end
+	return flat
+end
+
+-- LE CADRAGE VIENT DE LA PORTE, PAS DU JOUEUR.
+--
+-- Il partait de `root.CFrame.LookVector` : declencher la scene DE PROFIL posait donc la camera sur le cote, et
+-- toute la mise en scene -- le plan, la porte, le grand-pere -- se jouait hors champ. Le joueur peut declencher
+-- sous n'importe quel angle, la detection etant radiale : le cadrage ne doit donc rien lui devoir.
 local function sceneCFrame(): CFrame?
 	local placed = Workspace:FindFirstChild(TutorialConfigs.SCENE_CAM_NAME, true)
 	if placed and placed:IsA("BasePart") then
 		return placed.CFrame
 	end
-	local root = getRoot()
-	if not root then
+	local outward = doorOutward()
+	if not outward then
 		return nil
 	end
-	local cf = root.CFrame
-	local look = cf.LookVector
-	local flat = Vector3.new(look.X, 0, look.Z)
-	flat = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
-	local side = flat:Cross(Vector3.new(0, 1, 0))
-	local pos = root.Position
-		- flat * TutorialConfigs.SCENE_CAM_BACK
+	local side = outward:Cross(Vector3.new(0, 1, 0))
+	local pos = anchorPos
+		+ outward * TutorialConfigs.SCENE_CAM_BACK
 		+ Vector3.new(0, TutorialConfigs.SCENE_CAM_UP, 0)
 		+ side * TutorialConfigs.SCENE_CAM_SIDE
 	return CFrame.lookAt(pos, anchorPos + Vector3.new(0, TutorialConfigs.SCENE_LOOK_UP, 0))
+end
+
+-- FAIT AVANCER OU RECULER LA CAMERA DE SCENE le long de son propre axe, depuis le plan de depart.
+--
+-- Toujours depuis `sceneCF` et jamais depuis la vue courante : les mouvements s'ADDITIONNERAIENT sinon, et un
+-- recul apres une approche finirait plus loin ou plus pres selon l'ordre dans lequel ils se sont enchaines.
+-- Ici chaque etape dit ou elle veut etre, en absolu.
+local function pushScene(distance: number, seconds: number)
+	local base = sceneCF
+	if not base then
+		return
+	end
+	-- Le point vise ne bouge PAS : on avance sur l'axe, donc le cadrage se resserre sans changer de sujet. Un
+	-- deplacement qui change aussi la cible se lirait comme un autre plan.
+	local target = anchorPos + Vector3.new(0, TutorialConfigs.SCENE_LOOK_UP, 0)
+	local toward = target - base.Position
+	local dist = toward.Magnitude
+	if dist < 1e-3 then
+		return
+	end
+	-- ON NE TRAVERSE JAMAIS LE SUJET. Sans cette borne, une approche trop forte -- ou un grand-pere pose plus pres
+	-- que prevu -- ferait passer la camera au travers de lui.
+	local step = math.clamp(distance, -math.huge, math.max(dist - TutorialConfigs.REVEAL_MIN_DIST, 0))
+	SceneCamera.moveTo(CFrame.lookAt(base.Position + toward.Unit * step, target), seconds)
+end
+
+-- REPLACE LE JOUEUR DEVANT LA PORTE, face a elle.
+--
+-- Sans ca il toque dans la direction ou il regardait en appuyant : de profil, sur le mur ; de dos, dans le vide.
+-- On GLISSE au lieu de teleporter -- le trajet est court et il se joue pendant que les barres descendent, donc
+-- personne ne le regarde, mais un saut instantane se remarque toujours.
+local function placeAtDoor()
+	local outward = doorOutward()
+	local root = getRoot()
+	if not (outward and root) then
+		return
+	end
+	local target = anchorPos + outward * TutorialConfigs.SCENE_PLACE_DIST
+	-- On garde SA hauteur : le sol devant la porte n'est pas forcement au niveau du centre de la porte, et poser
+	-- le joueur a la hauteur de l'ancre l'enfoncerait ou le ferait flotter.
+	local to = CFrame.lookAt(Vector3.new(target.X, root.Position.Y, target.Z), Vector3.new(anchorPos.X, root.Position.Y, anchorPos.Z))
+	local from = root.CFrame
+	local seconds = TutorialConfigs.SCENE_PLACE_TIME
+	if seconds <= 0 then
+		root.CFrame = to
+		return
+	end
+	task.spawn(function()
+		local t0 = os.clock()
+		while true do
+			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
+			local live = getRoot()
+			if not live then
+				return -- mort ou respawn : ce trajet ne concerne plus personne
+			end
+			-- `Lerp` sur une CFrame interpole la position ET l'orientation d'un seul geste, par le chemin le plus
+			-- court : le joueur pivote en avancant, il ne fait pas les deux l'un apres l'autre.
+			live.CFrame = from:Lerp(to, e * e * (3 - 2 * e))
+			if e >= 1 then
+				return
+			end
+			RunService.Heartbeat:Wait()
+		end
+	end)
 end
 
 -- LE JOUEUR S'EFFACE PENDANT LA SCENE. On regarde le grand-pere, pas son propre dos.
@@ -383,35 +476,14 @@ local function openDoor()
 	-- un GRAND avatar masque le grand-pere au moment precis ou l'on doit le voir.
 	fadePlayerTo(TutorialConfigs.REVEAL_PLAYER_FADE, TutorialConfigs.REVEAL_FADE_TIME)
 
-	-- LA CAMERA AVANCE VERS LUI. Le resserrement du champ ne deplace rien : l'image se serre, mais le cadre reste
-	-- ou il est. Le moment le plus fort de la scene se jouait donc sans que la camera bouge.
+	-- ELLE RECULE, D'UN COUP. Comme si elle avait eu peur.
 	--
-	-- Elle AVANCE SUR SON AXE, elle ne change pas de place : le raccord ne se voit pas, contrairement a un saut
-	-- vers un autre point de vue.
-	local base = sceneCF
-	if base then
-		-- On vise le GRAND-PERE s'il est trouvable, sinon le centre de la porte -- c'est par la qu'il arrive de
-		-- toute facon, donc le cadrage reste juste meme sans lui.
-		local look = anchorPos + Vector3.new(0, TutorialConfigs.REVEAL_LOOK_UP, 0)
-		local model = findModel(TutorialConfigs.GRANDPA_NAME)
-		if model then
-			local part = model.PrimaryPart
-				or model:FindFirstChild("Head")
-				or model:FindFirstChildWhichIsA("BasePart", true)
-			if part and part:IsA("BasePart") then
-				look = part.Position + Vector3.new(0, TutorialConfigs.REVEAL_LOOK_UP, 0)
-			end
-		end
-		local toward = look - base.Position
-		local dist = toward.Magnitude
-		if dist > 1e-3 then
-			-- ON NE DEPASSE JAMAIS LA DISTANCE MINIMALE. Sans cette borne, un grand-pere pose plus pres que
-			-- prevu ferait traverser la camera au travers de lui -- et on ne verrait plus que l'interieur de sa
-			-- tete.
-			local push = math.clamp(TutorialConfigs.REVEAL_PUSH, 0, math.max(dist - TutorialConfigs.REVEAL_MIN_DIST, 0))
-			SceneCamera.moveTo(CFrame.lookAt(base.Position + toward.Unit * push, look), TutorialConfigs.REVEAL_MOVE_TIME)
-		end
-	end
+	-- C'est le contraire de ce qu'elle faisait ici -- elle avancait sur le grand-pere. Mais on vient de passer
+	-- toute la scene a se rapprocher pendant qu'il se bat avec la poignee : continuer d'avancer prolonge la
+	-- montee au lieu de la RESOUDRE. Le sursaut arriere, lui, la casse net, et c'est ce qui fait l'evenement.
+	--
+	-- Le recul est plus GRAND que l'approche : revenir pile au point de depart se lirait comme une annulation.
+	pushScene(-TutorialConfigs.SCARE_BACK, TutorialConfigs.SCARE_TIME)
 	-- Le grincement part AVEC le mouvement, pas au marqueur de mi-course : c'est l'ouverture elle-meme qu'il
 	-- accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en retard.
 	SoundUtils.play(TutorialConfigs.OPEN_SOUND, anchor)
@@ -496,6 +568,9 @@ local function playTryOpen()
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = false
 	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, anchor)
+	-- ON SE RAPPROCHE, LENTEMENT, pendant qu'il se bat avec la poignee. L'image se resserre sans qu'on s'en rende
+	-- compte : la tension monte toute seule, sans qu'aucun evenement ne la signale.
+	pushScene(TutorialConfigs.TRY_PUSH, TutorialConfigs.TRY_PUSH_TIME)
 	checkAnimMoved(model :: Model, TutorialConfigs.TRY_OPEN_ANIM)
 
 	local chained = false
@@ -678,6 +753,9 @@ function TutorialController.startMission()
 	-- reste ouverte pendant qu'on toque parle par-dessus le geste. Elle reviendra quand la SCENE la demandera.
 	Dialogue.hide()
 	fadePlayer(TutorialConfigs.SCENE_PLAYER_FADE)
+	-- AVANT le cadrage : les deux partent de la meme direction, mais le joueur doit etre en route pendant que la
+	-- camera arrive, pas apres.
+	placeAtDoor()
 	local cf = sceneCFrame()
 	if not cf then
 		-- Pas de cadrage possible (pas de personnage) : on ne prend pas la camera pour rien.
