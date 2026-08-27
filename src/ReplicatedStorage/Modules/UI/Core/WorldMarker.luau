@@ -11,6 +11,7 @@
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local WorldAnchor = require(script.Parent.WorldAnchor)
 
@@ -24,7 +25,7 @@ local CIRCLE_IMAGE = "rbxassetid://124707156951795"
 local MARK_IMAGE = "rbxassetid://126407419808567"
 
 -- Taille a la distance de reference, en pixels. Le reste suit la distance via WorldAnchor.
-local SIZE = 96
+local SIZE = 46
 -- Distance a laquelle il fait exactement SIZE, et ses bornes. Sans bornes il deviendrait minuscule de loin et
 -- enorme colle dessus -- un marqueur doit rester lisible, pas simuler la perspective.
 local SCALE: WorldAnchor.Scale = { ref = 40, min = 0.55, max = 1.3 }
@@ -44,10 +45,27 @@ local PULSE_SPEED = 4.4
 -- APPARITION. Il arrive en grossissant depuis rien : pose a sa taille, on ne remarque pas qu'il vient d'arriver.
 local POP_TIME = 0.32
 
+-- ===== LE SURSAUT DU " ! " =====
+-- De temps en temps, la barre s'etire vers le HAUT puis revient. Le cercle, lui, ne bouge pas : c'est le contraste
+-- entre les deux qui fait le sursaut. Tout etirer d'un bloc donnerait un simple grossissement.
+--
+-- Ecart entre deux sursauts, en secondes, plus un peu de hasard. Le hasard evite que deux marqueurs poses en meme
+-- temps sursautent ENSEMBLE -- ce qui se lirait comme une interface qui clignote, pas comme deux objets vivants.
+local MARK_EVERY = 2.6
+local MARK_JITTER = 0.9
+-- Hauteur atteinte, et largeur pendant l'etirement. La largeur passe SOUS 1 : il s'affine en montant, et c'est
+-- ca qui fait la matiere molle -- grandir sans s'affiner ne s'etire pas, ca GROSSIT.
+local MARK_SCALE_Y = 1.45
+local MARK_SCALE_X = 0.78
+-- Montee douce, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose. `Elastic` oscillerait
+-- plusieurs fois, ce qui se lit comme un tremblement.
+local MARK_UP = 0.14
+local MARK_BACK = 0.38
+
 local player = Players.LocalPlayer
 
 local gui: ScreenGui? = nil
-local markers: { [Frame]: { born: number, phase: number } } = {}
+local markers: { [Frame]: { born: number, phase: number, mark: ImageLabel, nextPop: number } } = {}
 local stepConn: RBXScriptConnection? = nil
 
 local function getGui(): ScreenGui
@@ -69,6 +87,28 @@ local function getGui(): ScreenGui
 	return created
 end
 
+-- LE " ! " S'ETIRE VERS LE HAUT, puis revient. Sur la MARQUE seule : le cercle ne bouge pas, et c'est le
+-- contraste entre les deux qui fait le sursaut.
+local function popMark(mark: ImageLabel)
+	if not mark.Parent then
+		return
+	end
+	local normal = UDim2.fromScale(1, 1)
+	local up = TweenService:Create(
+		mark,
+		TweenInfo.new(MARK_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+		{ Size = UDim2.fromScale(MARK_SCALE_X, MARK_SCALE_Y) }
+	)
+	up.Completed:Connect(function()
+		if mark.Parent then
+			TweenService:Create(mark, TweenInfo.new(MARK_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = normal,
+			}):Play()
+		end
+	end)
+	up:Play()
+end
+
 local function step()
 	local now = os.clock()
 	for frame, state in markers do
@@ -88,6 +128,13 @@ local function step()
 		-- des qu'on incline la vue.
 		local rise = (math.sin(now * BOB_SPEED + state.phase) * 0.5 + 0.5) * BOB_HEIGHT
 		WorldAnchor.setOffset(frame, Vector3.new(0, rise, 0))
+
+		-- DE TEMPS EN TEMPS. L'ecart est retire au hasard A CHAQUE fois, pas une seule : deux marqueurs partis
+		-- decales finiraient sinon par se rattraper et sursauter ensemble.
+		if now >= state.nextPop then
+			state.nextPop = now + MARK_EVERY + math.random() * MARK_JITTER
+			popMark(state.mark)
+		end
 	end
 end
 
@@ -107,7 +154,12 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 	circle.BackgroundTransparency = 1
 	circle.Size = UDim2.fromScale(1, 1)
 	circle.Image = CIRCLE_IMAGE
-	circle.ScaleType = Enum.ScaleType.Fit
+	-- `Stretch` sur les DEUX couches, et pas `Fit`. `Fit` conserve les proportions de l'image et la borne par le
+	-- plus PETIT cote du cadre : une image en `Fit` ne sait que grossir et rapetisser, elle ne peut pas s'etirer.
+	-- Le sursaut du " ! " le RETRECIRAIT au lieu de l'allonger. Piege deja paye sur les feuilles du chargement.
+	--
+	-- Le cadre est CARRE (SIZE x SIZE) et les deux images le sont aussi : `Stretch` ne deforme donc rien au repos.
+	circle.ScaleType = Enum.ScaleType.Stretch
 	circle.Parent = frame
 
 	local mark = Instance.new("ImageLabel")
@@ -115,7 +167,12 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 	mark.BackgroundTransparency = 1
 	mark.Size = UDim2.fromScale(1, 1)
 	mark.Image = MARK_IMAGE
-	mark.ScaleType = Enum.ScaleType.Fit
+	mark.ScaleType = Enum.ScaleType.Stretch
+	-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND LE SURSAUT POSSIBLE. Avec une ancre au coin, un " ! " qu'on
+	-- etire pousse vers le bas autant que vers le haut et sort du cercle. Ancre par le bas, son pied ne bouge pas
+	-- et il s'allonge VERS LE HAUT -- exactement comme les feuilles du chargement.
+	mark.AnchorPoint = Vector2.new(0.5, 1)
+	mark.Position = UDim2.fromScale(0.5, 1)
 	-- ENFANT DU CERCLE, pas pose a cote : il herite de sa taille et de sa place, donc les deux ne peuvent pas se
 	-- decaler. Deux images placees separement finissent toujours par diverger d'un reglage.
 	mark.ZIndex = 2
@@ -123,7 +180,14 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 
 	-- LE BALANCEMENT PART A UNE PHASE AU HASARD. Deux marqueurs poses en meme temps monteraient et descendraient
 	-- ensemble, ce qui se lit comme une interface qui clignote au lieu de deux objets vivants.
-	markers[frame] = { born = os.clock(), phase = math.random() * math.pi * 2 }
+	markers[frame] = {
+		born = os.clock(),
+		phase = math.random() * math.pi * 2,
+		mark = mark,
+		-- Le PREMIER sursaut est deja decale au hasard : sinon tous les marqueurs poses au meme instant
+		-- sursauteraient ensemble, et seuls les suivants se decaleraient.
+		nextPop = os.clock() + POP_TIME + math.random() * MARK_JITTER,
+	}
 
 	WorldAnchor.attach(frame, target, offset or Vector3.zero, MAX_DISTANCE, SCALE)
 

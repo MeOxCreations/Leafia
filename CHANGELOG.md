@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.563 — Le marqueur retrecit, et son " ! " sursaute de temps en temps
+
+`SIZE` 96 -> 46. Et toutes les deux secondes et demie environ, la barre s'etire vers le haut puis revient.
+
+### Le cercle NE BOUGE PAS
+
+Seule la marque s'etire. C'est le contraste entre les deux qui fait le sursaut : tout etirer d'un bloc donnerait
+un simple grossissement, qui ne dit rien.
+
+### Ancree EN BAS AU MILIEU
+
+C'est ce qui rend le sursaut possible. Avec une ancre au coin, un " ! " qu'on etire pousse vers le bas autant que
+vers le haut et sort du cercle. Ancre par le bas, son pied ne bouge pas et il s'allonge VERS LE HAUT --
+exactement comme les feuilles du chargement.
+
+### `Stretch` et surtout pas `Fit`
+
+`Fit` conserve les proportions et borne l'image par le plus PETIT cote du cadre : une image en `Fit` ne sait que
+grossir et rapetisser. Le sursaut aurait RETRECI le " ! " au lieu de l'allonger -- le piege paye il y a une heure
+sur les feuilles, applique d'avance ici.
+
+Les deux couches passent en `Stretch` : deux modes differents les deformeraient differemment. Le cadre est carre
+et les deux images le sont aussi, donc rien n'est deforme au repos.
+
+### Il s'affine en montant
+
+`MARK_SCALE_X = 0.78` contre `MARK_SCALE_Y = 1.45`. Grandir sans s'affiner ne s'etire pas, ca GROSSIT.
+
+### Le hasard est retire A CHAQUE fois
+
+Pas une seule, au depart. Deux marqueurs partis decales finiraient sinon par se rattraper et sursauter ensemble
+-- ce qui se lit comme une interface qui clignote, pas comme deux objets vivants.
+
 ## 0.0.562 — Un marqueur d'attention dans le monde, et il flotte sur la porte du tuto
 
 `Modules/UI/Core/WorldMarker` : un point d'exclamation pose sur un objet du monde. Il dit "ici, maintenant" sans
