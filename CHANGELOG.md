@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.520 — En marche arriere, les jambes tournent a l'envers
+
+L'animation de marche de Roblox joue TOUJOURS vers l'avant, quel que soit le sens du deplacement : en reculant,
+le personnage glisse en arriere en marchant en avant. Avec une tondeuse devant soi ca saute aux yeux -- on
+regarde justement ses pieds et la machine.
+
+### On n'ajoute pas d'animation, on inverse la VITESSE
+
+La meme piste, jouee a l'envers. Les pieds restent donc poses au bon endroit, et ca marche avec N'IMPORTE QUELLE
+animation de marche -- y compris celles que le joueur a achetees, qu'on ne peut pas connaitre a l'avance.
+
+Une animation "marche arriere" a nous aurait demande de la faire, de la charger, et de la garder d'accord avec la
+marche normale.
+
+### A chaque image, et seulement sur le SIGNE
+
+Le script `Animate` de Roblox repose la vitesse des que l'allure change. On ne se bat pas contre lui : on ecrit
+apres lui, et c'est la derniere valeur de l'image qui est rendue.
+
+On ne touche QUE si le signe est faux. Reecrire la meme valeur a chaque image ecraserait au passage l'allure que
+`Animate` vient de poser -- elle est juste, seul son sens ne l'est pas.
+
+Seulement la priorite `Movement` : c'est celle de la marche et de la course. `Core` porte l'idle, qu'inverser ne
+servirait a rien, et `Action` porte la pose de maintien du guidon, qu'inverser casserait.
+
+### On rend le sens normal en reposant la machine
+
+Aux deux sorties. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour le reste de la
+partie, longtemps apres avoir repose la tondeuse -- et personne ne ferait le lien.
+
 ## 0.0.519 — La scene se joue depuis la PORTE, plus depuis le joueur
 
 Toquer DE PROFIL cassait toute la scene. La detection est radiale : elle accepte n'importe quel angle, et rien

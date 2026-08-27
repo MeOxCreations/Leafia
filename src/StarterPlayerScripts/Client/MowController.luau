@@ -569,6 +569,40 @@ local function setEmitters(model: Model, names: { string }, on: boolean)
 	end
 end
 
+-- LES JAMBES TOURNENT A L'ENVERS QUAND ON RECULE.
+--
+-- L'animation de marche de Roblox joue TOUJOURS vers l'avant, quel que soit le sens du deplacement : en marche
+-- arriere, le personnage glisse en arriere en marchant en avant. Avec une tondeuse devant soi ca saute aux yeux,
+-- parce qu'on regarde justement ses pieds et la machine.
+--
+-- On ne remplace pas l'animation, on inverse sa VITESSE : c'est la meme piste, jouee a l'envers, donc les pieds
+-- restent poses au bon endroit et n'importe quelle animation de marche marche -- y compris celles que le joueur
+-- a achetees.
+--
+-- A CHAQUE IMAGE, et pas une fois : le script `Animate` de Roblox repose la vitesse des que l'allure change. On
+-- ne se bat pas contre lui, on ecrit apres lui -- c'est la derniere valeur de l'image qui est rendue.
+--
+-- SEULEMENT la priorite `Movement`. C'est celle de la marche et de la course ; `Core` porte l'idle, qu'inverser
+-- ne servirait a rien, et `Action` porte la pose de maintien du guidon, qu'inverser casserait.
+local function reverseLegs(humanoid: Humanoid, backward: boolean)
+	local animator = humanoid:FindFirstChildOfClass("Animator")
+	if not animator then
+		return
+	end
+	for _, track in ipairs(animator:GetPlayingAnimationTracks()) do
+		if track.Priority == Enum.AnimationPriority.Movement then
+			local speed = track.Speed
+			-- On ne touche QUE si le SIGNE est faux. Reecrire la meme valeur a chaque image relancerait le calcul
+			-- interne de la piste pour rien -- et on ecraserait au passage l'allure que `Animate` vient de poser,
+			-- qui elle est juste : seul son sens ne l'est pas.
+			local wrongWay = if backward then speed > 0 else speed < 0
+			if wrongWay then
+				track:AdjustSpeed(-speed)
+			end
+		end
+	end
+end
+
 -- Vrai des qu'une rotation a ete REELLEMENT ecrite. Sans ca, "aucune roue trouvee" et "trouvees mais jamais
 -- appelees" se lisent pareil : une tondeuse qui glisse.
 local wheelSpun = false
@@ -882,6 +916,9 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		humanoid:Move(Vector3.zero, false)
 		clearTrail()
 		clearMarker()
+		-- ON REND LE SENS NORMAL. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour
+		-- le reste de la partie, longtemps apres avoir repose la tondeuse -- et personne ne ferait le lien.
+		reverseLegs(humanoid, false)
 		return
 	end
 	-- `GetMoveVector` rend un vecteur RELATIF A LA CAMERA : X = cote, Z = arriere. C'est POUR CA que
@@ -1031,6 +1068,11 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- braquant a gauche doit poser la fleche a gauche. L'appliquer aux deux mettait la fleche du cote oppose des
 	-- qu'on reculait.
 	updateMarker(mower, lateralAmount * steerSign, dt)
+
+	-- LES JAMBES SUIVENT LE SENS REEL. On lit `forwardAmount` -- l'intention -- et pas la vitesse : pousser contre
+	-- un mur en marche arriere doit quand meme montrer des jambes qui reculent, sinon le personnage marcherait en
+	-- avant sans avancer.
+	reverseLegs(humanoid, forwardAmount < -MowConfigs.STEER_MOVE_EPSILON)
 
 	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
 	-- l'avant de la machine, donc elle est negative elle aussi.
@@ -1386,6 +1428,7 @@ local function update(dt: number)
 		clearMarker()
 		if humanoid then
 			humanoid.AutoRotate = autoRotateWas
+			reverseLegs(humanoid, false)
 		end
 	end
 
