@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.565 — La camera ne conduit plus : le recentrage doux est retire
+
+Bouger la camera faisait tourner la machine. C'etait le recentrage de 0.0.538 -- le personnage se tournait
+lentement vers la camera en ligne droite, pour qu'elle finisse derriere lui apres quelques virages.
+
+Il faisait exactement ce qu'on lui demandait. Et a l'usage ca se ressent comme une machine qui TIRE vers la
+souris : on se bat avec elle au lieu de la conduire.
+
+Le cap ne change donc QUE sur un braquage. La camera reste ou le joueur l'a mise.
+
+### Le probleme d'origine revient
+
+Apres plusieurs virages, la camera regarde le joueur de PROFIL -- c'est ce qu'on cherchait a corriger. Les trois
+options restent celles de 0.0.538 : ne rien faire, un recentrage (essaye, refuse), ou prendre la camera en main
+pendant la conduite -- ce qui demande de reecrire la souris, le zoom, le tactile et le decollement des murs.
+
+Rien n'est garde en commentaire : le code retire est dans l'historique, a une commande pres.
+
 ## 0.0.564 — Le marqueur etait a l'ORIGINE DE LA MAP, pas sur la porte
 
 Il etait cree une trentaine de lignes AVANT le calcul de sa cible, dans la meme fonction par-frame. La variable
