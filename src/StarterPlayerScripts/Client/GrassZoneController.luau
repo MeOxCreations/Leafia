@@ -287,10 +287,18 @@ local function apply(
 	--
 	-- Le plafond ne vaut QUE pendant la transition. Le garder ensuite figerait la pelouse tondue : un pas ne
 	-- pourrait plus la coucher, et elle ne se releverait jamais.
+	--
+	-- ET IL SE RELACHE PROGRESSIVEMENT, pas d'un coup a la fin. Le relacher net faisait SAUTER la touffe vers le
+	-- haut : la lame l'ecrase souvent PLUS BAS que sa hauteur tondue, le plafond gardait cette hauteur, et a
+	-- l'instant precis ou la coupe se terminait elle remontait d'un bloc jusqu'a sa taille de repos.
+	--
+	-- En melangeant le plafond et la hauteur naturelle sur la meme courbe que la coupe, la touffe arrive a sa
+	-- hauteur tondue sans discontinuite -- et elle y arrive en RETARD, ce qui est exactement l'effet voulu.
 	local height = squash * shrinkY
 	if clump.cutStarted and clump.cutT < 1 then
 		clump.cutHold = math.min(clump.cutHold, height)
-		height = clump.cutHold
+		local e = clump.cutT
+		height = clump.cutHold + (height - clump.cutHold) * (e * e * (3 - 2 * e))
 		-- On repartage la hauteur plafonnee entre les deux facteurs : `shrinkY` porte la taille verticale, et
 		-- `squash` sert au reste du calcul (enfoncement, inclinaison). Diviser garde les deux d'accord.
 		shrinkY = if squash > 1e-3 then height / squash else height

@@ -64,7 +64,7 @@ local GrassZoneConfigs = {
 	--
 	-- ON APPROCHE DE LA LIMITE. Au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber loin
 	-- DERRIERE elle -- ca cesse de se lire comme une coupe et ca ressemble a un retard d'affichage.
-	CUT_RISE_DELAY = 0.35,
+	CUT_RISE_DELAY = 0.5,
 	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
 	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
 	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.

@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.536 — L'herbe coupee ne SAUTE plus a la fin de la coupe
+
+Il restait une remontee, plus discrete que celle de 0.0.513 et a un tout autre endroit.
+
+### Le plafond etait relache D'UN COUP
+
+La lame ecrase souvent la touffe PLUS BAS que sa hauteur tondue. Le plafond de 0.0.494 gardait cette hauteur
+basse pendant toute la transition -- puis le lachait net a l'instant ou la coupe se terminait. La touffe remontait
+alors d'un bloc jusqu'a sa taille de repos.
+
+Un plafond qui disparait est une discontinuite, meme quand chaque valeur prise separement est juste.
+
+Il se relache maintenant sur la MEME courbe que la coupe : la touffe arrive a sa hauteur tondue sans saut, et
+elle y arrive en retard -- l'effet voulu.
+
+### Et le temps mort passe a 0.5 s
+
+`CUT_RISE_DELAY` 0.35 -> 0.5. La touffe tient sa pose ecrasee un peu plus longtemps avant de se reduire.
+
+C'est la borne haute utilisable : au-dela, on voit la machine passer et l'herbe tomber loin DERRIERE elle, ce qui
+cesse de se lire comme une coupe pour ressembler a un retard d'affichage.
+
 ## 0.0.535 — Le braquage a une COURSE : plus de coup sec en changeant de cote
 
 Enchainer Q puis D en avancant claquait. Le braquage lisait l'entree BRUTE : le taux de rotation passait de -1 a
