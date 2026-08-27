@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.531 — RETOUR EN ARRIERE : l'effet serpent est annule
+
+0.0.529 et 0.0.530 sont defaits. La conduite retrouve exactement l'etat qu'elle avait apres le cabrage de virage
+(0.0.524).
+
+Ce qui part :
+
+- l'absorption du ballant dans le cap du joueur (`SNAKE_*`, `SWING_ATTRIBUTE`, la publication cote serveur) ;
+- l'amplitude du ballant, revenue a 26 / 10 / 40.
+
+### Pourquoi
+
+Ca ne rendait rien de bon a l'ecran. Et ce n'est pas un detail de reglage : faire pivoter le JOUEUR en reaction a
+la machine touche au repere qui sert de base a toute la conduite, donc chaque autre effet -- le cap, la fleche,
+le cabrage, la camera -- se retrouvait a reagir a un cap qui bougeait tout seul.
+
+Meme famille que l'inclinaison retiree en 0.0.525 : un effet qui modifie la pose du joueur se propage a tout ce
+qui la LIT, et la tondeuse en a beaucoup.
+
+### Ce qui RESTE en place
+
+Rien d'autre n'est touche -- ces changements repondaient a des demandes separees et n'ont pas ete remis en cause :
+
+- le cabrage du nez dans les virages (`TURN_LIFT`) ;
+- le rapprochement de camera sur l'appui (`DRIVE_ZOOM`, `DRIVE_ZOOM_SPEED`) ;
+- la repose au sol immediate (`DROP_RAY`) ;
+- le retour plus vif de la pose "embarque" (`PUSH_RETURN_SPEED`) ;
+- l'inversion du braquage en marche arriere (`STEER_REVERSE_INVERT`) ;
+- les jambes inversees en reculant.
+
+Les entrees 0.0.529 et 0.0.530 restent dans ce fichier : il est append-only, et une entree effacee est une
+information perdue -- y compris celle d'avoir essaye quelque chose qui ne marchait pas.
+
 ## 0.0.530 — La tondeuse part VRAIMENT en travers quand on braque
 
 Le mecanisme etait bon, l'amplitude ne se voyait pas.
