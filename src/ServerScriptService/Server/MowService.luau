@@ -837,6 +837,136 @@ local function settleOnGround(model: Model, state: CarryState)
 	model:PivotTo(levelled * root.CFrame:Inverse() * model:GetPivot())
 end
 
+-- ===== LES ROUES =====
+-- ON TOURNE LA PART, PAS UN JOINT.
+--
+-- Les roues portaient des `WeldConstraint` : un WeldConstraint VERROUILLE rigidement deux parts, il ne peut pas
+-- tourner. Il n'y avait donc jamais rien a faire tourner -- et chercher un Motor6D ne pouvait que rendre "aucun
+-- joint trouve".
+--
+-- On aurait pu creer les Motor6D nous-memes. C'est plus complique pour rien : un joint impose un repere (`C0` et
+-- `C1` ne coincident pas), une priorite face aux animations, et un proprietaire reseau. Ecrire directement le
+-- CFrame de la roue supprime les trois d'un coup.
+--
+-- SERVEUR et pas client : une roue est un objet du MONDE, elle doit tourner pour tout le monde. C'est aussi ce
+-- qui reglait le dernier point noir -- le client ecrivait dans un modele que le serveur possede.
+
+type Wheel = {
+	part: BasePart,
+	rest: CFrame, -- sa place RELATIVE a la racine, relevee UNE FOIS. Tout part de la, jamais de sa pose courante.
+	axis: Vector3, -- son axe de symetrie, dans SON repere
+	radius: number,
+	angle: number,
+}
+
+type WheelSet = { root: BasePart, wheels: { Wheel }, lastPos: Vector3 }
+
+local wheelSets: { [Model]: WheelSet } = {}
+local wheelConn: RBXScriptConnection? = nil
+
+-- L'AXE D'UNE ROUE EST CELUI DE SA SYMETRIE : celui dont les deux perpendiculaires sont EGALES. Ni le plus long
+-- ni le plus court -- `WheelBack` est une PAIRE montee sur un essieu (3.15 x 1.09 x 1.14), donc le long cote EST
+-- l'axe. Prendre le plus mince faisait tourner l'ensemble a plat.
+local function wheelAxis(size: Vector3): (Vector3, number)
+	local dX = math.abs(size.Y - size.Z) / math.max(size.Y, size.Z, 1e-4)
+	local dY = math.abs(size.X - size.Z) / math.max(size.X, size.Z, 1e-4)
+	local dZ = math.abs(size.X - size.Y) / math.max(size.X, size.Y, 1e-4)
+	-- Le RAYON se mesure PERPENDICULAIREMENT a l'axe, jamais sur la plus grande dimension : sur une paire montee
+	-- sur essieu, la plus grande EST l'essieu -- on lirait 1.58 au lieu de 0.57, et les roues tourneraient trois
+	-- fois trop lentement.
+	if dX <= dY and dX <= dZ then
+		return Vector3.new(1, 0, 0), math.max(size.Y, size.Z) * 0.5
+	elseif dY <= dZ then
+		return Vector3.new(0, 1, 0), math.max(size.X, size.Z) * 0.5
+	end
+	return Vector3.new(0, 0, 1), math.max(size.X, size.Y) * 0.5
+end
+
+-- Aucun `dt` : la rotation vient de la DISTANCE parcourue, pas du temps. C'est ce qui fait qu'une roue ne patine
+-- jamais, quelle que soit l'allure -- et qu'elle s'arrete d'elle-meme quand la machine s'arrete.
+local function stepWheels()
+	for model, set in wheelSets do
+		if not (model.Parent and set.root.Parent) then
+			wheelSets[model] = nil
+			continue
+		end
+		local root = set.root
+		local pos = root.Position
+		-- DISTANCE PARCOURUE, projetee sur l'AVANT de la machine et a l'horizontale. Signee : reculer fait tourner
+		-- les roues a l'envers tout seul. Monter une pente ne doit pas les accelerer, sauter ne doit rien faire.
+		local moved = pos - set.lastPos
+		set.lastPos = pos
+		local look = root.CFrame.LookVector
+		local flat = Vector3.new(look.X, 0, look.Z)
+		local distance = if flat.Magnitude > 1e-4
+			then Vector3.new(moved.X, 0, moved.Z):Dot(flat.Unit)
+			else 0
+
+		for _, wheel in set.wheels do
+			if not wheel.part.Parent then
+				continue
+			end
+			if wheel.radius > 1e-3 and math.abs(distance) > 1e-5 then
+				wheel.angle = (wheel.angle + MowConfigs.WHEEL_DIRECTION * distance / wheel.radius) % (math.pi * 2)
+			end
+			-- La rotation vient APRES `rest` : posee ainsi, elle tourne autour de l'axe de la ROUE. Posee avant,
+			-- elle ferait tourner tout le decalage et la roue partirait en orbite autour de la machine.
+			wheel.part.CFrame = root.CFrame * wheel.rest * CFrame.fromAxisAngle(wheel.axis, wheel.angle)
+		end
+	end
+end
+
+-- Prepare les roues d'une tondeuse. Une seule fois par modele.
+local function setupWheels(model: Model)
+	if wheelSets[model] then
+		return
+	end
+	local root = rootOf(model)
+	if not root then
+		return
+	end
+
+	local wheels: { Wheel } = {}
+	for _, name in MowConfigs.WHEEL_PARTS do
+		local part = model:FindFirstChild(name, true)
+		if not (part and part:IsA("BasePart")) then
+			warn(`[MowService] Aucune roue nommee "{name}" dans "{model.Name}". Elle ne tournera pas.`)
+			continue
+		end
+		local wheel = part :: BasePart
+
+		-- ON ENLEVE CE QUI L'EMPECHE DE TOURNER. Un `WeldConstraint` verrouille la roue sur une autre part : tant
+		-- qu'il est la, aucune ecriture de CFrame ne tient. C'etait ca, le blocage.
+		for _, d in wheel:GetDescendants() do
+			if d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D") then
+				d:Destroy()
+			end
+		end
+		-- ANCREE : on possede son CFrame entierement, la physique ne se bat plus avec nous. Elle suit quand meme
+		-- la machine, puisqu'on la repose depuis la racine a chaque image.
+		wheel.Anchored = true
+
+		local axis, radius = wheelAxis(wheel.Size)
+		table.insert(wheels, {
+			part = wheel,
+			-- RELEVE UNE FOIS. Recalculer ce decalage a chaque image le prendrait sur une roue DEJA tournee, et
+			-- l'erreur s'accumulerait -- la roue finirait par deriver de sa place. Meme piege que l'echelle.
+			rest = root.CFrame:Inverse() * wheel.CFrame,
+			axis = axis,
+			radius = if radius > 1e-3 then radius else MowConfigs.WHEEL_RADIUS_FALLBACK,
+			angle = 0,
+		})
+	end
+
+	if #wheels == 0 then
+		return
+	end
+	wheelSets[model] = { root = root, wheels = wheels, lastPos = root.Position }
+	if not wheelConn then
+		wheelConn = RunService.Heartbeat:Connect(stepWheels)
+	end
+end
+
 local function release(model: Model)
 	local state = carried[model]
 	if not state then
@@ -889,6 +1019,10 @@ local function grab(player: Player, model: Model)
 	if (root.Position - hrp.Position).Magnitude > MowConfigs.MAX_GRAB_DIST then
 		return
 	end
+
+	-- LES ROUES, une seule fois. Elles tournent ensuite pour toujours -- portee ou posee : leur rotation vient de
+	-- la DISTANCE parcourue, donc une machine immobile ne les fait pas bouger, sans avoir a le dire.
+	setupWheels(model)
 
 	-- MESURE AVANT DE TOUCHER A QUOI QUE CE SOIT : des qu'on desancre, la physique peut deja avoir fait bouger
 	-- la tondeuse d'un poil, et l'offset serait calcule sur une pose qui n'existe plus.

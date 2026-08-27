@@ -652,35 +652,26 @@ return {
 	FALLBACK_FORWARD = 1.6,
 
 	-- ===== ROUES =====
-	-- Les roues tournent EN CODE, pas par animation : une animation joue a vitesse fixe, donc la roue patinerait
-	-- des que le joueur change d'allure. Ici l'angle vient de la distance REELLEMENT parcourue, elle colle au sol.
-	-- Corollaire : ces joints ne doivent etre cles dans AUCUNE animation, sinon deux ecrivains sur le meme joint.
-	-- NOMS DES ROUES -- les PARTS, pas les joints.
+	-- ON TOURNE LA PART, PAS UN JOINT. Le serveur ecrit le CFrame de chaque roue a chaque image, depuis la racine.
 	--
-	-- On cherchait le Motor6D par SON nom (`WheelFrontMotor6D`...). Mauvaise idee : le nom d'un joint est
-	-- arbitraire et INVISIBLE dans l'Explorer tant qu'on ne deplie pas la roue, alors que le nom de la roue se lit
-	-- d'un coup d'oeil. Le moindre re-export ou renommage cassait la rotation en silence.
+	-- Toutes les tentatives precedentes passaient par un Motor6D : chercher le joint par SON nom (invisible dans
+	-- l'Explorer), puis par le nom de sa Part1, puis convertir l'axe de son repere a celui du joint... Elles ont
+	-- toutes echoue pour la meme raison, jamais vue : les roues ne portaient pas de Motor6D mais des
+	-- `WeldConstraint`, qui VERROUILLENT rigidement. Il n'y avait rien a faire tourner.
 	--
-	-- On prend donc le joint dont la PART1 porte ce nom : c'est ce que Roblox fait deja pour les animations, qui
-	-- retrouvent leurs cibles par le nom de la Part1 et jamais par celui du Motor6D.
+	-- Ecrire le CFrame supprime la question. Pas de joint a trouver, pas de repere a convertir, pas de priorite
+	-- d'animation, pas de proprietaire reseau. Le service enleve les WeldConstraint et ancre les roues : plus
+	-- personne ne se dispute leur pose.
+	--
+	-- L'angle vient de la DISTANCE parcourue, pas du temps : la roue colle au sol quelle que soit l'allure, et
+	-- elle s'arrete pile quand la machine s'arrete. Une animation, elle, patinerait.
+	--
+	-- NOMS DES ROUES -- ceux des PARTS, ceux qu'on lit d'un coup d'oeil dans l'Explorer.
 	WHEEL_PARTS = { "WheelBack", "WheelFront" },
 	-- Sens de rotation. Si les roues tournent a l'envers, mettre -1. Se voit a l'ecran, ne se deduit pas.
 	WHEEL_DIRECTION = 1,
-	-- AXE de rotation. "AUTO", ou "X" / "Y" / "Z" pour l'imposer.
-	--
-	-- EN AUTO, IL SE DEDUIT DE LA GEOMETRIE, et c'est fiable : une roue est LARGE x LARGE x MINCE. Son axe de
-	-- rotation est donc forcement le cote le plus MINCE -- c'est ce qui fait d'elle une roue et pas un disque
-	-- qu'on ferait tourner a plat.
-	--
-	-- Ca evite de tatonner entre trois valeurs a l'ecran, et surtout ca survit a un re-export du modele : si le rig
-	-- change d'orientation dans Blender, la deduction suit toute seule.
-	-- Passer a "X", "Y" ou "Z" seulement si la roue n'a pas des proportions de roue (un cube, par exemple).
-	--
-	-- "AUTO" prend l'axe de SYMETRIE : celui dont les deux perpendiculaires se ressemblent le plus. C'est ce qui
-	-- definit une roue, et ca marche aussi bien pour un disque fin que pour une PAIRE montee sur un essieu -- le
-	-- cas de cette tondeuse, ou `WheelBack` mesure 3.15 x 1.09 x 1.14 : l'essieu est le LONG cote, pas le mince.
-	WHEEL_AXIS = "AUTO",
-	-- Rayon de roue de secours (studs) si on n'arrive pas a le lire sur la part. Sinon il est MESURE sur la roue.
+	-- Rayon de secours (studs) si la part n'a pas de taille lisible. Sinon il est MESURE sur elle,
+	-- perpendiculairement a son axe.
 	WHEEL_RADIUS_FALLBACK = 0.6,
 
 	-- ===== PARTICULES =====

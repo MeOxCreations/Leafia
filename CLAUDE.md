@@ -870,6 +870,20 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   la valeur d'une seule image est figee pour toujours. Meme famille que le cache resolu une seule fois qui se
   fige a `nil`.
 
+- **UN `WeldConstraint` VERROUILLE : une part qui en porte un ne peut PAS tourner, quoi qu'on ecrive.** Les roues
+  de la tondeuse en portaient un chacune. Quatre diagnostics de suite ont cherche un Motor6D -- par le nom du
+  joint, puis par le nom de sa Part1, puis en convertissant l'axe d'un repere a l'autre, puis en corrigeant la
+  deduction de l'axe -- et chacun a "corrige" quelque chose de reel. Aucun ne pouvait marcher : il n'y avait
+  aucun joint a piloter. Le message "aucun Motor6D ne pilote cette roue" etait EXACT depuis le debut, et je l'ai
+  lu comme "il faut en trouver un" au lieu de "regarde ce qu'il y a a la place". Regle : quand une part refuse de
+  bouger, REGARDER SES ENFANTS dans l'Explorer avant de chercher le mecanisme qui devrait la bouger -- un
+  WeldConstraint, un Weld ou un ancrage se voient en une seconde et expliquent tout. Et la solution la plus
+  simple etait la bonne depuis le debut : ecrire le CFrame de la part (offset releve UNE FOIS depuis la racine,
+  rotation appliquee APRES cet offset donc dans le repere de la roue). Pas de joint a trouver, pas de repere a
+  convertir, pas de priorite d'animation, pas de proprietaire reseau -- quatre problemes supprimes au lieu d'un
+  resolu. Le joueur l'avait propose ("tu fais juste tourner avec un CFrame ?"), j'etais parti sur le mecanisme
+  "propre" sans verifier qu'il etait applicable.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

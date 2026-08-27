@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.566 — LES ROUES TOURNENT : elles portaient un WeldConstraint, pas un Motor6D
+
+Un `WeldConstraint` VERROUILLE rigidement deux parts. Il n'y a jamais rien eu a faire tourner.
+
+Quatre diagnostics de suite ont cherche un Motor6D -- par le nom du joint, puis par le nom de sa Part1, puis en
+convertissant l'axe d'un repere a l'autre, puis en corrigeant la deduction de l'axe. Chacun corrigeait quelque
+chose de REEL, et aucun ne pouvait marcher.
+
+Le message "aucun Motor6D ne pilote cette roue" etait EXACT depuis le debut. Il a ete lu comme "il faut en
+trouver un" au lieu de "regarde ce qu'il y a a la place".
+
+### On ecrit le CFrame de la part
+
+Le serveur enleve les WeldConstraint, ancre les roues, et pose leur CFrame a chaque image depuis la racine.
+
+C'est la solution que le joueur proposait, et elle supprime QUATRE problemes au lieu d'en resoudre un : plus de
+joint a trouver, plus de repere a convertir (`C0` et `C1` ne coincidaient pas), plus de priorite d'animation,
+plus de proprietaire reseau -- ce dernier etant justement le point noir non resolu de la veille, ou le client
+ecrivait dans un modele que le serveur possede.
+
+### Le decalage est releve UNE FOIS
+
+Tout part de la, jamais de la pose courante. Le recalculer a chaque image le prendrait sur une roue DEJA tournee
+et l'erreur s'accumulerait -- la roue finirait par deriver de sa place. Meme piege que l'echelle portee.
+
+La rotation est appliquee APRES ce decalage : elle tourne donc dans le repere de la ROUE. Avant, elle ferait
+tourner le decalage entier et la roue partirait en orbite autour de la machine.
+
+### Ce qui est garde des tentatives precedentes
+
+L'axe de SYMETRIE (celui dont les deux perpendiculaires sont egales, pas le cote le plus mince -- `WheelBack` est
+une paire sur essieu) et le rayon mesure PERPENDICULAIREMENT a cet axe. Ces deux deductions etaient justes, elles
+etaient juste appliquees a un mecanisme qui n'existait pas.
+
+### Cote client, tout part
+
+`wheelMotorsOf`, `spinWheels`, la table d'angles, les constantes d'axes et `WHEEL_AXIS` : **183 lignes**. La
+rotation est desormais serveur, donc tout le monde voit les memes roues.
+
 ## 0.0.565 — La camera ne conduit plus : le recentrage doux est retire
 
 Bouger la camera faisait tourner la machine. C'etait le recentrage de 0.0.538 -- le personnage se tournait

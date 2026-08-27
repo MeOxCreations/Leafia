@@ -2,7 +2,7 @@
 -- LA TONDEUSE, cote client. Trois choses, et rien d'autre :
 --   1. le prompt "[E] TAKE" quand on s'approche (detection RADIALE, aucun angle mort)
 --   2. l'appel de la COUPE, chaque image, sous la part CutZone
---   3. la rotation des ROUES, calculee sur la distance reellement parcourue
+--   3. la conduite : braquage, allure, camera, poses du porteur
 --
 -- Le PORTAGE lui-meme appartient au serveur (MowService) : c'est lui qui soude la tondeuse au porteur, donc tout
 -- le monde la voit au meme endroit. Ici on ne fait que demander, afficher et couper.
@@ -124,11 +124,6 @@ local lastCutPos: Vector3? = nil -- position de coupe a l'image precedente : don
 local revealOn = false
 local steering = false
 local autoRotateWas = true
--- UN ANGLE PAR ROUE, jamais un compteur partage. Avec une seule variable, la premiere roue de la boucle
--- avancait l'angle et la seconde repartait de la : l'angle progressait DEUX fois par image (les roues
--- tournaient deux fois trop vite) et les deux n'etaient jamais au meme endroit.
--- Cle par le Motor6D lui-meme : deux tondeuses posees dans la map ne se marchent pas dessus non plus.
-local wheelAngles: { [Motor6D]: number } = {}
 local connection: RBXScriptConnection? = nil
 
 -- ===== CAMERA DU DEMARRAGE =====
@@ -432,76 +427,6 @@ local function cutPointOf(model: Model): (Vector3?, number)
 	return (root.CFrame * CFrame.new(0, 0, -MowConfigs.FALLBACK_FORWARD)).Position, MowConfigs.FALLBACK_RADIUS
 end
 
--- ROUES. L'angle vient de la DISTANCE parcourue, pas du temps : la roue colle donc au sol quelle que soit
--- l'allure du joueur, et elle s'arrete pile quand il s'arrete. Une animation, elle, patinerait.
--- Les Motor6D des roues, cherches DANS TOUT LE MODELE et memorises.
---
--- La version d'avant les cherchait sous la seule RootPart, avec des noms qui n'etaient pas les bons. Elle ne
--- trouvait donc RIEN, sans un mot : les roues ne tournaient jamais et rien ne disait pourquoi. C'est exactement
--- le genre d'echec silencieux qui coute des heures -- d'ou l'avertissement plus bas.
---
--- MEMOIRE A UNE ENTREE : on ne porte qu'une machine a la fois, donc une seule suffit, et elle ne garde qu'une
--- reference -- rien a nettoyer. Parcourir les descendants a chaque image, en revanche, se paierait.
-local wheelMotorsModel: Model? = nil
-local wheelMotorsList: { Motor6D } = {}
-
-local function wheelMotorsOf(model: Model): { Motor6D }
-	if wheelMotorsModel == model then
-		return wheelMotorsList
-	end
-	local found: { Motor6D } = {}
-	-- ON CHERCHE PAR LA ROUE, pas par le joint : `Part1` est la piece que le joint fait bouger. Meme regle que les
-	-- animations Roblox, qui retrouvent leurs cibles par le nom de la Part1 et jamais par celui du Motor6D.
-	local driven: { [string]: boolean } = {}
-	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("Motor6D") and d.Part1 then
-			for _, name in ipairs(MowConfigs.WHEEL_PARTS) do
-				if (d.Part1 :: BasePart).Name == name then
-					found[#found + 1] = d
-					driven[name] = true
-					break
-				end
-			end
-		end
-	end
-	wheelMotorsModel = model
-	wheelMotorsList = found
-
-	-- ON DIT CE QU'ON A TROUVE, pas seulement ce qui manque. "Les roues ne tournent pas" couvre plusieurs causes
-	-- qui se ressemblent a l'ecran, et la moitie ne sont pas des absences : un joint present mais branche a
-	-- l'envers, ou une roue ANCREE, se corrigent ailleurs que dans la config.
-	for _, motor in ipairs(found) do
-		local p0 = motor.Part0
-		local p1 = motor.Part1
-		print(
-			`[Mow] Roue : joint "{motor.Name}" Part0={p0 and p0.Name or "?"} Part1={p1 and p1.Name or "?"}`
-		)
-		-- UNE PART ANCREE IGNORE SON MOTOR6D, quoi qu'on ecrive dedans. Gratuit a verifier, et ca elimine d'un coup
-		-- la cause la plus silencieuse : tout est bon dans le code, la roue ne bouge pas.
-		if p1 and p1.Anchored then
-			warn(`[Mow] "{p1.Name}" est ANCREE : elle ignorera son Motor6D. La decocher dans Studio.`)
-		end
-	end
-
-	-- ON NOMME CE QUI MANQUE, ROUE PAR ROUE, et on separe les deux causes : une roue ABSENTE se corrige en
-	-- renommant la config, une roue SANS JOINT se corrige en creant le Motor6D dans Studio. Un compteur global
-	-- ("0 roue trouvee") ne dirait ni laquelle ni pourquoi -- et avec une seule roue motrice sur deux, il ne
-	-- dirait meme rien du tout.
-	for _, name in ipairs(MowConfigs.WHEEL_PARTS) do
-		if not driven[name] then
-			local part = model:FindFirstChild(name, true)
-			if part then
-				warn(
-					`[Mow] "{name}" existe dans "{model.Name}" mais AUCUN Motor6D ne la pilote `
-						.. "(il faut un Motor6D dont Part1 est cette roue). Elle ne tournera pas."
-				)
-			else
-				warn(`[Mow] Aucune roue nommee "{name}" dans "{model.Name}". Elle ne tournera pas.`)
-			end
-		end
-	end
-	return found
-end
 
 -- ===== PARTICULES =====
 -- Les emetteurs d'un modele, cherches UNE fois et memorises. Meme memoire a une entree que les roues : on ne
@@ -622,101 +547,6 @@ local function reverseLegs(humanoid: Humanoid, backward: boolean)
 	end
 end
 
--- Vrai des qu'une rotation a ete REELLEMENT ecrite. Sans ca, "aucune roue trouvee" et "trouvees mais jamais
--- appelees" se lisent pareil : une tondeuse qui glisse.
-local wheelSpun = false
-
--- Axes en constantes : `Vector3.xAxis` et ses jumeaux ne sont pas reconnus par selene, qui les prend pour autre
--- chose qu'un Vector3. Faux positif, mais un rouge de trop finit par masquer les vraies erreurs.
-local AXIS_X = Vector3.new(1, 0, 0)
-local AXIS_Y = Vector3.new(0, 1, 0)
-local AXIS_Z = Vector3.new(0, 0, 1)
-
-local function spinWheels(model: Model, distance: number)
-	-- `== 0` et non `<= 0` : une distance NEGATIVE est une marche arriere, et les roues doivent tourner a
-	-- l'envers. La rejeter les figeait des qu'on recule.
-	if distance == 0 then
-		return
-	end
-	for _, motor in ipairs(wheelMotorsOf(model)) do
-		local wheel = motor.Part1
-
-		-- L'AXE EST CELUI DE LA SYMETRIE, pas le cote le plus mince.
-		--
-		-- On cherchait le plus MINCE, en supposant un disque : LARGE x LARGE x FIN. Ca rate le cas reel de cette
-		-- tondeuse, ou `WheelBack` est une PAIRE de roues montees sur un essieu -- 3.15 x 1.09 x 1.14. Le long
-		-- cote est l'essieu, et c'est LUI l'axe ; le plus mince (Y) faisait tourner l'ensemble a plat.
-		--
-		-- Ce qui fait un axe de roue, ce n'est ni "long" ni "court" : c'est que les DEUX AUTRES cotes sont EGAUX.
-		-- Une roue tourne autour de son axe de symetrie. On prend donc l'axe dont les deux perpendiculaires se
-		-- ressemblent le plus -- vrai pour un disque fin comme pour une paire sur essieu, sans les distinguer.
-		local axis = MowConfigs.WHEEL_AXIS
-		if axis == "AUTO" and wheel then
-			local w = wheel.Size
-			local dX = math.abs(w.Y - w.Z) / math.max(w.Y, w.Z, 1e-4)
-			local dY = math.abs(w.X - w.Z) / math.max(w.X, w.Z, 1e-4)
-			local dZ = math.abs(w.X - w.Y) / math.max(w.X, w.Y, 1e-4)
-			if dX <= dY and dX <= dZ then
-				axis = "X"
-			elseif dY <= dZ then
-				axis = "Y"
-			else
-				axis = "Z"
-			end
-		end
-
-		-- LE RAYON SE MESURE PERPENDICULAIREMENT A L'AXE, jamais sur la plus grande dimension : sur une paire
-		-- montee sur essieu, la plus grande EST l'essieu -- on obtenait 1.58 au lieu de 0.57, donc des roues qui
-		-- tournent trois fois trop lentement pour la distance parcourue. Elles patineraient sur le sol.
-		local radius = MowConfigs.WHEEL_RADIUS_FALLBACK
-		if wheel then
-			local w = wheel.Size
-			radius = if axis == "X"
-				then math.max(w.Y, w.Z) * 0.5
-				elseif axis == "Y" then math.max(w.X, w.Z) * 0.5
-				else math.max(w.X, w.Y) * 0.5
-		end
-
-		if radius > 1e-3 then
-			-- Distance SIGNEE : negative en marche arriere, donc les roues tournent a l'envers toutes seules.
-			local delta = MowConfigs.WHEEL_DIRECTION * distance / radius
-			local angle = ((wheelAngles[motor] or 0) + delta) % (math.pi * 2)
-			wheelAngles[motor] = angle
-			local spinLocal = if axis == "Y" then AXIS_Y elseif axis == "Z" then AXIS_Z else AXIS_X
-
-			-- ON CHANGE DE REPERE, ET C'ETAIT LE BUG.
-			--
-			-- La taille se mesure dans le repere de la ROUE. Mais `C0` s'ecrit dans le repere du JOINT, et les deux
-			-- ne coincident QUE si `C1` est l'identite -- ce qui n'arrive presque jamais sur un rig sorti de
-			-- Blender. On deduisait donc le bon axe... et on le posait sur les axes d'une autre piece.
-			--
-			-- `Part0.CFrame * C0 = Part1.CFrame * C1`, donc passer du repere de la roue a celui du joint, c'est
-			-- appliquer la rotation de `C1:Inverse()`. Avec C1 = identite on retombe sur l'ancien calcul : le cas
-			-- simple continue de marcher.
-			local spinAxis = motor.C1:Inverse():VectorToWorldSpace(spinLocal)
-			local spin = if spinAxis.Magnitude > 1e-4
-				then CFrame.fromAxisAngle(spinAxis.Unit, angle)
-				else CFrame.Angles(angle, 0, 0)
-			-- On ecrit C0, PAS Transform : Transform appartient a l'Animator. Corollaire, ces joints ne doivent
-			-- etre cles dans AUCUNE animation, sinon deux ecrivains se disputent le meme joint.
-			local base = motor:GetAttribute("LeafiaBaseC0")
-			if typeof(base) ~= "CFrame" then
-				base = motor.C0
-				motor:SetAttribute("LeafiaBaseC0", base)
-			end
-			motor.C0 = (base :: CFrame) * spin
-			if not wheelSpun then
-				wheelSpun = true
-				local w = if wheel then wheel.Size else Vector3.zero
-				print(
-					`[Mow] Rotation sur "{motor.Name}" | taille roue {string.format("%.2f/%.2f/%.2f", w.X, w.Y, w.Z)}`
-						.. ` | axe roue {axis} -> axe joint {string.format("%.2f/%.2f/%.2f", spinAxis.X, spinAxis.Y, spinAxis.Z)}`
-						.. ` | rayon {string.format("%.2f", radius)}`
-				)
-			end
-		end
-	end
-end
 
 -- ===== MARQUEUR DE DIRECTION =====
 -- Un mesh pose sur la machine, qui la suit tant qu'on la pousse.
@@ -1162,8 +992,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- avant sans avancer.
 	reverseLegs(humanoid, reversing)
 
-	-- AVANCE le long du cap. Une valeur NEGATIVE recule, et les roues suivent : leur distance est projetee sur
-	-- l'avant de la machine, donc elle est negative elle aussi.
+	-- AVANCE le long du cap. Une valeur NEGATIVE recule.
 	-- ON RALENTIT POUR TOURNER, comme avec n'importe quelle machine. Braquer a fond en pleine avance donnait un
 	-- mouvement trop vif : le joueur filait ET pivotait, ce qui ne ressemble a rien de reel.
 	-- Ne s'applique qu'a l'avance REELLE : la manoeuvre est deja lente, la ralentir encore la figerait.
@@ -1565,10 +1394,9 @@ local function update(dt: number)
 		return
 	end
 
-	-- DISTANCE PARCOURUE, a l'horizontale : monter une pente ne doit pas faire tourner les roues plus vite, et
-	-- sauter ne doit pas les faire tourner du tout.
-	-- SIGNEE : on projette le deplacement sur l'AVANT de la machine. Une distance toujours positive ferait
-	-- tourner les roues a l'endroit meme en marche arriere, et l'oeil le voit tout de suite.
+	-- DISTANCE PARCOURUE, a l'horizontale : elle dit si la machine AVANCE vraiment, et c'est elle qui allume le
+	-- vent. Sauter ne doit donc rien souffler.
+	-- SIGNEE : on projette le deplacement sur l'AVANT de la machine, ce qui distingue avancer de reculer.
 	local distance = 0
 	if lastCutPos then
 		local d = point - lastCutPos
@@ -1578,7 +1406,6 @@ local function update(dt: number)
 	end
 	lastCutPos = point
 
-	spinWheels(mine, distance)
 
 	-- LE VENT SOUFFLE QUAND CA AVANCE, moteur en marche. Une machine a l'arret ne souffle pas, et une machine
 	-- eteinte encore moins.
