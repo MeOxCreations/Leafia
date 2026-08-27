@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.556 — Le son des feuilles du chargement est retire
+
+Six fois par cycle, en boucle, pendant tout un chargement : ca fatigue.
+
+Un son qui accompagne une action ponctuelle est un retour ; le meme son sur un indicateur qui TOURNE devient un
+metronome, et l'oreille n'a aucun moyen de s'en detacher. La regle est la duree, pas le son lui-meme -- c'est
+d'ailleurs deja la deuxieme fois qu'un son par feuille est ajoute puis retire.
+
+Le son de la porte du camion, lui, reste : il repond a un appui.
+
 ## 0.0.555 — Deux sons : la porte du camion, et chaque feuille du chargement
 
 ### La porte du camion
