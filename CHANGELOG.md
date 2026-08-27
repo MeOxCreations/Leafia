@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.567 — L'herbe coupee ne fait plus de BOSSE au milieu de sa descente
+
+Troisieme passage sur cette transition, et cette fois la courbe a ete TABULEE au lieu d'etre jugee a l'oeil.
+
+Pour une touffe ecrasee a 0.30 devant finir a 0.25 :
+
+    cutT   0.0    0.3    0.5    0.7    1.0
+    avant  0.300  0.403  0.463  0.437  0.250
+
+Elle montait a 0.46 -- plus de 50 % au-dessus de son point de depart -- avant de redescendre. C'est ca qu'on
+voyait.
+
+### Interpoler vers une valeur qui BOUGE ENCORE
+
+Le melange visait la hauteur "naturelle" de l'instant. Mais au DEBUT de la descente, celle-ci vaut encore presque
+le maximum : la touffe partait donc VERS elle avant de revenir.
+
+Il vise maintenant la hauteur FINALE, calculee. Le trajet ne peut plus faire de detour -- par construction, pas
+par reglage :
+
+    apres  0.300  0.289  0.275  0.261  0.250
+
+### La lecon, notee au journal
+
+Le second terme d'une interpolation doit etre la valeur FINALE, jamais la valeur courante d'une grandeur qui
+converge elle aussi. Chaque valeur prise separement etait juste ; seule leur composition ne l'etait pas.
+
+Et trois diagnostics a l'oeil n'avaient pas trouve la bosse. Dix lignes qui impriment la courbe l'ont montree
+tout de suite.
+
 ## 0.0.566 — LES ROUES TOURNENT : elles portaient un WeldConstraint, pas un Motor6D
 
 Un `WeldConstraint` VERROUILLE rigidement deux parts. Il n'y a jamais rien eu a faire tourner.

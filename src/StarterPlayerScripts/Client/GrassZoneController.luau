@@ -288,17 +288,22 @@ local function apply(
 	-- Le plafond ne vaut QUE pendant la transition. Le garder ensuite figerait la pelouse tondue : un pas ne
 	-- pourrait plus la coucher, et elle ne se releverait jamais.
 	--
-	-- ET IL SE RELACHE PROGRESSIVEMENT, pas d'un coup a la fin. Le relacher net faisait SAUTER la touffe vers le
-	-- haut : la lame l'ecrase souvent PLUS BAS que sa hauteur tondue, le plafond gardait cette hauteur, et a
-	-- l'instant precis ou la coupe se terminait elle remontait d'un bloc jusqu'a sa taille de repos.
+	-- ET IL SE RELACHE VERS LA HAUTEUR FINALE, jamais vers la hauteur courante.
 	--
-	-- En melangeant le plafond et la hauteur naturelle sur la meme courbe que la coupe, la touffe arrive a sa
-	-- hauteur tondue sans discontinuite -- et elle y arrive en RETARD, ce qui est exactement l'effet voulu.
+	-- C'ETAIT LA BOSSE. Le melange visait la hauteur "naturelle" de l'instant -- mais au DEBUT de la descente,
+	-- celle-ci vaut encore presque le maximum : la touffe montait donc VERS elle avant de redescendre. Mesure sur
+	-- une touffe ecrasee a 0.30 pour une hauteur tondue de 0.25 : elle passait par 0.46 au milieu du trajet, soit
+	-- plus de 50 % au-dessus de son point de depart. Ca se voit, et ca ne ressemble a rien.
+	--
+	-- En visant la hauteur FINALE, le trajet va de l'ecrasement a la tonte sans detour : il ne peut plus faire de
+	-- detour, par construction. C'est la meme lecon que le plafond relache d'un coup, un cran plus loin --
+	-- interpoler vers une valeur qui BOUGE encore n'est pas interpoler vers sa destination.
 	local height = squash * shrinkY
 	if clump.cutStarted and clump.cutT < 1 then
 		clump.cutHold = math.min(clump.cutHold, height)
 		local e = clump.cutT
-		height = clump.cutHold + (height - clump.cutHold) * (e * e * (3 - 2 * e))
+		local final = squash * shrink * GrassZoneConfigs.MOWN_SCALE_Y
+		height = clump.cutHold + (final - clump.cutHold) * (e * e * (3 - 2 * e))
 		-- On repartage la hauteur plafonnee entre les deux facteurs : `shrinkY` porte la taille verticale, et
 		-- `squash` sert au reste du calcul (enfoncement, inclinaison). Diviser garde les deux d'accord.
 		shrinkY = if squash > 1e-3 then height / squash else height

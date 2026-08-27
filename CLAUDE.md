@@ -884,6 +884,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   resolu. Le joueur l'avait propose ("tu fais juste tourner avec un CFrame ?"), j'etais parti sur le mecanisme
   "propre" sans verifier qu'il etait applicable.
 
+- **Interpoler vers une valeur qui BOUGE ENCORE n'est pas interpoler vers sa destination.** Vecu trois fois de
+  suite sur la meme herbe. Un melange `depart + (courant - depart) * avancement` semble juste, mais si `courant`
+  est encore loin de sa valeur finale au DEBUT du trajet, le resultat part DANS SA DIRECTION avant de revenir :
+  une bosse en plein milieu. Mesure ici : une touffe ecrasee a 0.30 devant finir a 0.25 passait par 0.46 -- plus
+  de 50 % au-dessus de son point de depart. Chaque valeur prise separement etait juste, seule leur composition
+  ne l'etait pas. Regle : le second terme d'une interpolation doit etre la valeur FINALE, calculee, jamais la
+  valeur courante d'une grandeur qui converge elle aussi. Le trajet devient alors monotone PAR CONSTRUCTION, et
+  il n'y a plus rien a regler. Corollaire de methode : trois diagnostics a l'oeil n'avaient pas trouve la bosse ;
+  imprimer la courbe valeur par valeur l'a montree en dix lignes. Quand un mouvement "fait un truc bizarre",
+  tabuler la grandeur avant de relire le code.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
