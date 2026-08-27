@@ -35,6 +35,13 @@ local TruckConfigs = {
 	-- forcerait a choisir entre une ouverture qui claque et une fermeture qui traine.
 	DOOR_OPEN_SPEED = 1,
 	DOOR_CLOSE_SPEED = 1.6,
+	-- Le son de la porte, sous SoundService. Joue A L'APPUI, dans les deux sens : il n'y en a qu'un, et une porte
+	-- qui se referme sans bruit apres s'etre ouverte avec un son se remarque plus qu'on ne croit.
+	--
+	-- SPATIAL, pose sur la porte -- contrairement aux sons de la scene du tuto, qui sont mixes en 2D. Ici on n'est
+	-- pas dans un plan de cinema : c'est un objet du monde, il doit s'entendre depuis la ou il est, et moins fort
+	-- quand on s'en eloigne.
+	DOOR_SOUND = { "Sounds", "Game", "GlobalSounds", "OpenDoorTruckSound" },
 
 	-- ===== RECHERCHE =====
 	-- Avec StreamingEnabled le camion peut arriver bien apres le demarrage. On le re-cherche jusqu'a le trouver,

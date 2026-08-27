@@ -257,6 +257,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local LEAF_FILL_TIME = 0.32
 	-- Temps mort avant que la suivante parte. COURT : c'est ce qui les enchaine sans qu'on les compte une par une.
 	local LEAF_FILL_GAP = 0.06
+	-- SON A CHAQUE FEUILLE QUI SE REMPLIT.
+	--
+	-- RESOLU UNE FOIS PUIS GARDE : le rideau tourne depuis `ReplicatedFirst`, donc AVANT que SoundService soit
+	-- replique. Le chercher a chaque feuille echouerait sur les premieres et reussirait sur les suivantes -- un
+	-- indicateur a moitie muet, et une cause introuvable. On le cherche en boucle jusqu'a l'avoir, une seule fois.
+	local LEAF_APPEAR_SOUND = { "Sounds", "UI", "AppearSound_1" }
+	local LEAF_APPEAR_VOLUME = 0.35 -- a regler a l'oreille
+	local LEAF_APPEAR_WAIT = 8 -- combien de temps on re-cherche avant d'abandonner
 	-- Blanc apres la sixieme, avant que tout reparte a zero. Sans lui, la derniere et la premiere s'enchainent et
 	-- le cycle n'a plus de debut visible.
 	local LEAF_CYCLE_GAP = 0.45
@@ -701,6 +709,21 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		setFill(i, 0)
 	end
 
+	-- Le Sound source, une fois trouve. `nil` tant qu'il ne l'est pas -- les toutes premieres feuilles peuvent donc
+	-- etre muettes, et c'est mieux qu'un rideau qui attendrait un son pour commencer a tourner.
+	local appearSound: Sound? = nil
+	task.spawn(function()
+		local deadline = os.clock() + LEAF_APPEAR_WAIT
+		while os.clock() < deadline and sg.Parent do
+			local found = findAnySound(LEAF_APPEAR_SOUND)
+			if found then
+				appearSound = found
+				return
+			end
+			task.wait(0.25)
+		end
+	end)
+
 	task.spawn(function()
 		-- INDICATEUR QUI TOURNE, pas une jauge de progression. Il ne dit pas combien il reste -- personne ne le
 		-- sait -- il dit que ca travaille. Une jauge calee sur une duree devinee finit toujours par mentir.
@@ -727,6 +750,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 				-- qu'il finit. Les attendre l'un apres l'autre ajouterait un temps mort a chaque cran et la
 				-- rangee se lirait au ralenti.
 				popLeaf(i)
+				local src = appearSound
+				if src then
+					playSound(src, LEAF_APPEAR_VOLUME)
+				end
 				task.wait(LEAF_FILL_GAP)
 			end
 			task.wait(LEAF_CYCLE_GAP)

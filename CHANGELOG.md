@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.555 — Deux sons : la porte du camion, et chaque feuille du chargement
+
+### La porte du camion
+
+`OpenDoorTruckSound`, joue A L'APPUI et dans les deux sens. Il n'y en a qu'un, et une porte qui se referme sans
+bruit apres s'etre ouverte avec un son se remarque plus qu'on ne croit.
+
+A l'appui et pas a la fin du mouvement : c'est le geste du joueur qu'il accompagne. Attendre que la porte soit
+ouverte le decalerait d'une seconde et il ne repondrait plus a rien.
+
+SPATIAL, pose sur la porte -- contrairement aux sons de la scene du tuto, mixes en 2D. Ici on n'est pas dans un
+plan de cinema : c'est un objet du monde, il doit s'entendre depuis la ou il est.
+
+### Chaque feuille du rideau
+
+`AppearSound_1`, a chaque feuille qui finit de se remplir.
+
+RESOLU UNE FOIS PUIS GARDE, et c'est le point qui compte : le rideau tourne depuis `ReplicatedFirst`, donc AVANT
+que SoundService soit replique. Le chercher a chaque feuille echouerait sur les premieres et reussirait sur les
+suivantes -- un indicateur a moitie muet, et une cause introuvable.
+
+On le cherche donc en boucle jusqu'a l'avoir, dans une tache de fond. Les toutes premieres feuilles peuvent etre
+muettes, et c'est mieux qu'un rideau qui attendrait un son pour commencer a tourner.
+
 ## 0.0.554 — Le camion s'ouvre : prompt E a l'arriere
 
 Un appui sur E derriere le camion ouvre sa porte, un second la referme. `TruckService`, `TruckController`,

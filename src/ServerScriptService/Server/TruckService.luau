@@ -13,6 +13,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
 local TruckService = {}
@@ -129,6 +130,9 @@ local function setup(model: Model)
 		-- UNE BASCULE, et rien de plus : le meme appui ouvre et referme. Aucun etat a valider -- le pire qu'un
 		-- joueur puisse faire est d'ouvrir une porte de camion.
 		truck.open = not truck.open
+		-- LE SON PART A L'APPUI, pas a la fin du mouvement : c'est le geste du joueur qu'il accompagne. Attendre
+		-- que la porte soit ouverte le decalerait d'une seconde et il ne repondrait plus a rien.
+		SoundUtils.play(TruckConfigs.DOOR_SOUND, door :: BasePart)
 	end)
 
 	table.insert(trucks, truck)
