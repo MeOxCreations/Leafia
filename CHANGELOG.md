@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.546 — Les feuilles se remplissent de vert, du bas vers le haut
+
+Une couche VERTE par-dessus la silhouette noire, avec un degrade de transparence : pleine en bas, effacee en
+montant, laissant reapparaitre le noir du dessous.
+
+### Deux couches, pas une seule teintee
+
+Une couche unique ne peut pas etre a la fois noire et verte. Et un degrade de COULEUR ferait passer par des verts
+sombres au lieu de laisser voir la silhouette : ce sont deux images differentes qu'on veut voir, pas une couleur
+qui change.
+
+La couche verte est ENFANT de la silhouette, pas une seconde feuille posee a cote : elle herite de sa position,
+de sa taille et de son inclinaison. Deux images placees separement finiraient par se decaler des qu'on touche a
+l'une des trois.
+
+### Deux pieges de UIGradient, connus du projet
+
+**Le sens ne se DEDUIT pas.** Il depend de la convention de Roblox et de l'orientation de l'image : c'est l'ecran
+qui tranche. D'ou `LEAF_FILL_INVERT`, plutot que de tirer a pile ou face et de faire tester une valeur au hasard.
+
+**Les deux bouts d'une `NumberSequence` doivent etre 0 et 1**, dans cet ordre. Roblox rejette la sequence ENTIERE
+si ce n'est pas le cas, sans un mot : on obtient une feuille pleinement verte et on cherche pourquoi le degrade
+"ne marche pas".
+
 ## 0.0.545 — L'indicateur du chargement : six feuilles NOIRES, sans animation
 
 On repart de zero sur l'indicateur du rideau secondaire. Six silhouettes posees, et rien d'autre.

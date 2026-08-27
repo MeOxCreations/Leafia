@@ -240,10 +240,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Le degrade pose sur la feuille ne touche QUE sa transparence (c'est lui qui la remplit) : sa couleur reste
 	-- neutre, donc ce vert s'affiche tel quel.
-	-- NOIRES. On repart de zero sur l'indicateur : six silhouettes posees, sans mouvement, le temps de voir ce que
-	-- ca donne. L'animation d'apparition et la teinte verte sont retirees -- pas mises de cote "au cas ou" : du
-	-- code garde sans appelant devient du code qu'on n'ose plus supprimer.
+	-- LA SILHOUETTE, dessous. Elle donne la forme et le creux ; le vert vient par-dessus.
 	local LEAF_TINT = Color3.fromRGB(0, 0, 0)
+	-- LE VERT, par-dessus, avec un degrade de transparence du BAS vers le HAUT : la feuille est pleine en bas et
+	-- s'efface en montant, laissant reapparaitre la silhouette noire.
+	--
+	-- Deux couches et pas une seule teintee : une couche unique ne peut pas etre a la fois noire et verte, et un
+	-- degrade de COULEUR ferait passer par des verts sombres au lieu de laisser voir le noir du dessous.
+	local LEAF_GREEN = Color3.fromRGB(142, 255, 93)
+	-- Rotation du degrade. 90 = il court a la verticale. Le SENS ne se DEDUIT pas -- il depend de la convention de
+	-- Roblox et de l'orientation de l'image : c'est l'ecran qui tranche, d'ou le bouton juste en dessous.
+	local LEAF_FILL_ROTATION = 90
+	-- Le vert est en haut au lieu d'etre en bas ? Mettre true.
+	local LEAF_FILL_INVERT = false
 	local LEAF_COUNT = 6
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
@@ -554,6 +563,36 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		leaf.Rotation = LEAF_ANGLE
 		leaf.ZIndex = 4
 		leaf.Parent = gauge
+
+		-- LA COUCHE VERTE, exactement par-dessus. Elle remplit tout le cadre de la silhouette : c'est le degrade
+		-- qui decide de ce qu'on en voit, pas sa taille.
+		local fill = Instance.new("ImageLabel")
+		fill.Name = `LeafFill{i}`
+		fill.BackgroundTransparency = 1
+		fill.Image = LEAF_ID
+		fill.ImageColor3 = LEAF_GREEN
+		fill.ScaleType = Enum.ScaleType.Fit
+		fill.AnchorPoint = Vector2.new(0.5, 0.5)
+		fill.Position = UDim2.fromScale(0.5, 0.5)
+		fill.Size = UDim2.fromScale(1, 1)
+		fill.ZIndex = 5
+		-- ENFANT DE LA SILHOUETTE, et pas une seconde feuille posee a cote : elle herite ainsi de sa position, de
+		-- sa taille et de son inclinaison. Deux images placees separement finiraient par se decaler des qu'on
+		-- touche a l'une des trois.
+		fill.Parent = leaf
+
+		local grad = Instance.new("UIGradient")
+		grad.Rotation = LEAF_FILL_ROTATION
+		-- LES DEUX BOUTS D'UNE NumberSequence DOIVENT ETRE 0 ET 1, dans cet ordre : Roblox rejette la sequence
+		-- entiere si ce n'est pas le cas, en silence -- on obtient alors une feuille pleinement verte sans
+		-- comprendre pourquoi le degrade "ne marche pas".
+		local low = if LEAF_FILL_INVERT then 0 else 1
+		local high = if LEAF_FILL_INVERT then 1 else 0
+		grad.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, low),
+			NumberSequenceKeypoint.new(1, high),
+		})
+		grad.Parent = fill
 	end
 
 	-- ===== BANDEAU DU BAS =====
