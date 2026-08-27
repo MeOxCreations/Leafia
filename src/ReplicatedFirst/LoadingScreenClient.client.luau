@@ -264,6 +264,15 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- fait la nettete. Deux points de degrade ne peuvent pas etre AU MEME endroit -- Roblox rejette la sequence
 	-- entiere -- donc on ne peut pas descendre a zero, seulement s'en approcher.
 	local LEAF_EDGE = 0.01
+	-- LE SURSAUT, quand une feuille finit de se remplir. Elle S'ETIRE VERS LE HAUT puis revient -- c'est ce qui
+	-- marque l'instant ou elle est pleine, sans rien ajouter a l'ecran.
+	--
+	-- Hauteur atteinte, en multiple de sa taille normale.
+	local LEAF_POP_SCALE = 1.32
+	-- Montee SECHE, retour ELASTIQUE. L'ecart entre les deux fait tout : monter aussi lentement qu'on redescend
+	-- donne un gonflement, pas un sursaut.
+	local LEAF_POP_UP = 0.08
+	local LEAF_POP_BACK = 0.45
 	local LEAF_COUNT = 6
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
@@ -558,6 +567,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- qui reviendra reviendra par-dessus.
 	local leafW = LEAF_FILL / LEAF_COUNT
 	local fills: { UIGradient } = {}
+	local leaves: { ImageLabel } = {}
 	for i = 1, LEAF_COUNT do
 		local leaf = Instance.new("ImageLabel")
 		leaf.Name = `Leaf{i}`
@@ -597,6 +607,41 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		grad.Rotation = LEAF_FILL_ROTATION
 		grad.Parent = fill
 		fills[i] = grad
+		leaves[i] = leaf
+	end
+
+	-- LE SURSAUT DE FIN. La feuille s'etire vers le HAUT puis revient.
+	--
+	-- Elle grandit par le haut TOUTE SEULE : son ancre est en bas au milieu, donc son pied ne bouge pas. C'est le
+	-- meme point d'ancrage qui aligne la rangee -- une propriete, deux usages, rien a synchroniser.
+	--
+	-- On anime la TAILLE et pas un UIScale : un UIScale est UNIFORME, il grossirait la feuille dans les deux sens
+	-- au lieu de l'etirer.
+	--
+	-- La couche verte suit sans qu'on la touche : elle est ENFANT de la feuille et occupe tout son cadre.
+	local function popLeaf(i: number)
+		local leaf = leaves[i]
+		if not (leaf and leaf.Parent) then
+			return
+		end
+		local normal = UDim2.fromScale(leafW, 1)
+		local up = TweenService:Create(
+			leaf,
+			TweenInfo.new(LEAF_POP_UP, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{ Size = UDim2.fromScale(leafW, LEAF_POP_SCALE) }
+		)
+		up.Completed:Connect(function()
+			if leaf.Parent then
+				-- `Elastic` en sortie DEPASSE puis oscille autour de la taille de repos : c'est ce ballottement
+				-- qui donne la matiere molle. Sans lui, elle se contenterait de redescendre.
+				TweenService
+					:Create(leaf, TweenInfo.new(LEAF_POP_BACK, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+						Size = normal,
+					})
+					:Play()
+			end
+		end)
+		up:Play()
 	end
 
 	-- REMPLIT UNE FEUILLE, de 0 (vide) a 1 (pleine).
@@ -660,6 +705,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 					end
 					task.wait()
 				end
+				-- LE SURSAUT PART ICI, sans qu'on l'attende : la feuille suivante commence a se remplir pendant
+				-- qu'il finit. Les attendre l'un apres l'autre ajouterait un temps mort a chaque cran et la
+				-- rangee se lirait au ralenti.
+				popLeaf(i)
 				task.wait(LEAF_FILL_GAP)
 			end
 			task.wait(LEAF_CYCLE_GAP)
@@ -667,6 +716,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			-- inverse, et on ne saurait plus ou commence le cycle.
 			for i = 1, LEAF_COUNT do
 				setFill(i, 0)
+				-- ON REND AUSSI LA TAILLE. Le sursaut de la derniere feuille peut encore tourner : sans ca, elle
+				-- repartirait etiree et son tween finirait par la rendre a sa taille en plein cycle suivant.
+				local leaf = leaves[i]
+				if leaf and leaf.Parent then
+					leaf.Size = UDim2.fromScale(leafW, 1)
+				end
 			end
 		end
 	end)

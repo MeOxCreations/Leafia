@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.548 — Une feuille pleine SURSAUTE vers le haut
+
+Quand le vert atteint le sommet, la feuille s'etire vers le haut puis revient en ballottant. Ca marque l'instant
+ou elle est pleine, sans rien ajouter a l'ecran.
+
+### Elle grandit par le haut TOUTE SEULE
+
+Son ancre est en bas au milieu, donc son pied ne bouge pas. C'est le meme point d'ancrage qui aligne la rangee :
+une propriete, deux usages, rien a garder d'accord.
+
+Et la couche verte suit sans qu'on la touche -- elle est ENFANT de la feuille et occupe tout son cadre. C'est ce
+que le parentage de 0.0.546 a achete.
+
+### On anime la TAILLE, pas un UIScale
+
+Un `UIScale` est UNIFORME : il grossirait la feuille dans les deux sens au lieu de l'etirer. Le piege est note
+dans le journal du projet.
+
+### Montee SECHE, retour ELASTIQUE
+
+`LEAF_POP_UP = 0.08` contre `LEAF_POP_BACK = 0.45`. C'est l'ecart entre les deux qui fait tout : monter aussi
+lentement qu'on redescend donne un gonflement, pas un sursaut.
+
+`Elastic` en sortie DEPASSE puis oscille autour de la taille de repos -- c'est ce ballottement qui donne la
+matiere molle.
+
+### Le sursaut ne bloque pas la suite
+
+La feuille suivante commence a se remplir pendant qu'il finit. Les enchainer ajouterait un temps mort a chaque
+cran et la rangee se lirait au ralenti.
+
+En contrepartie, la remise a zero du cycle rend aussi la TAILLE : le sursaut de la derniere peut encore tourner,
+et sans ca elle repartirait etiree.
+
 ## 0.0.547 — Les feuilles se remplissent UNE PAR UNE, d'une arete NETTE
 
 Le vert monte dans chaque feuille, l'une apres l'autre, puis tout repart a zero.
