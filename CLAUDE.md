@@ -870,6 +870,11 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   la valeur d'une seule image est figee pour toujours. Meme famille que le cache resolu une seule fois qui se
   fige a `nil`.
 
+- **UN JOINT SE CHERCHE PAR SES EXTREMITES, JAMAIS PAR SA PLACE DANS L'ARBRE.** Un `WeldConstraint` peut etre
+  range n'importe ou : celui des roues de la tondeuse vivait sous la RootPart, pas sous la roue. En ne cherchant
+  que sous la roue, on n'en trouvait aucun -- elle restait donc soudee, et toutes les ecritures de pose se
+  battaient contre le weld ("les roues font n'importe quoi"). Balayer le MODELE et tester `Part0`/`Part1` est la
+  seule facon fiable. Meme famille que "chercher un objet par son NOM et pas par son rangement".
 - **UN `WeldConstraint` VERROUILLE : une part qui en porte un ne peut PAS tourner, quoi qu'on ecrive.** Les roues
   de la tondeuse en portaient un chacune. Quatre diagnostics de suite ont cherche un Motor6D -- par le nom du
   joint, puis par le nom de sa Part1, puis en convertissant l'axe d'un repere a l'autre, puis en corrigeant la
@@ -878,11 +883,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   lu comme "il faut en trouver un" au lieu de "regarde ce qu'il y a a la place". Regle : quand une part refuse de
   bouger, REGARDER SES ENFANTS dans l'Explorer avant de chercher le mecanisme qui devrait la bouger -- un
   WeldConstraint, un Weld ou un ancrage se voient en une seconde et expliquent tout. Et la solution la plus
-  simple etait la bonne depuis le debut : ecrire le CFrame de la part (offset releve UNE FOIS depuis la racine,
-  rotation appliquee APRES cet offset donc dans le repere de la roue). Pas de joint a trouver, pas de repere a
-  convertir, pas de priorite d'animation, pas de proprietaire reseau -- quatre problemes supprimes au lieu d'un
-  resolu. Le joueur l'avait propose ("tu fais juste tourner avec un CFrame ?"), j'etais parti sur le mecanisme
-  "propre" sans verifier qu'il etait applicable.
+  simple etait la bonne : CREER le joint manquant. SUITE -- ecrire directement le CFrame de la part a ete essaye
+  entre-temps et retire : ca marche tant que RIEN d'autre ne touche a la part, mais le portage desancre toutes
+  les parts du modele, et une part desancree sans weld part toute seule. Un `Motor6D` cree par le code fait les
+  DEUX travaux d'un coup -- il attache la roue a l'assemblage (elle suit gratuitement) et il la fait tourner ;
+  on n'ecrit alors que la rotation. En posant `C1` a l'identite, le repere du joint EST celui de la part, donc
+  l'axe deduit de sa taille s'applique sans conversion. Regle generale : quand on veut qu'une piece SUIVE et
+  BOUGE, un joint bat une pose ecrite a la main -- la pose oblige a re-gagner l'attache a chaque fois qu'un
+  autre systeme touche a la part.
 
 - **Interpoler vers une valeur qui BOUGE ENCORE n'est pas interpoler vers sa destination.** Vecu trois fois de
   suite sur la meme herbe. Un melange `depart + (courant - depart) * avancement` semble juste, mais si `courant`

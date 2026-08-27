@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.571 — Les roues ont un Motor6D, cree par le code
+
+Elles se decollaient encore. Deux causes, et la premiere explique tout.
+
+### Le WeldConstraint etait sous la ROOTPART, pas sous la roue
+
+On ne cherchait les welds qu'A L'INTERIEUR de la roue. Celui de cette tondeuse est range sous la `RootPart` : on
+n'en trouvait donc AUCUN. La roue restait soudee, et les ecritures de pose se battaient contre le weld.
+
+Un joint se lit par ses deux extremites (`Part0`, `Part1`), jamais par sa place dans l'arbre. On balaye desormais
+tout le modele et on teste ce qu'il RELIE.
+
+### Et on cree le joint qui manquait
+
+Ecrire le CFrame de la part a ete essaye et retire. Ca marche tant que RIEN d'autre ne touche a la roue -- mais
+le portage desancre toutes les parts du modele, et une roue desancree sans weld part toute seule. Il fallait
+alors l'exclure du portage, re-affirmer son ancrage chaque image... un cas particulier par systeme voisin.
+
+Un `Motor6D` fait les DEUX travaux d'un coup : il ATTACHE la roue a l'assemblage -- elle suit la machine
+gratuitement, portee ou posee -- et il la fait TOURNER. On n'ecrit plus que la rotation.
+
+Le cas particulier du portage disparait : les roues y repassent comme les autres parts, et les desancrer est
+meme NECESSAIRE -- un joint n'agit que sur une part desancree.
+
+### `C1` a l'identite
+
+Le repere du joint est alors celui de la ROUE, donc l'axe deduit de sa taille s'applique sans conversion. C'est
+ce qui supprime le `C1:Inverse()` d'une version precedente, et la classe de bug qui allait avec.
+
 ## 0.0.570 — Les roues ne se decollent plus de la tondeuse
 
 Elles partaient toutes seules, comme si elles ne faisaient pas partie de la machine.

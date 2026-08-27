@@ -838,34 +838,34 @@ local function settleOnGround(model: Model, state: CarryState)
 end
 
 -- ===== LES ROUES =====
--- ON TOURNE LA PART, PAS UN JOINT.
+-- ON CREE LE MOTOR6D NOUS-MEMES. Il fait DEUX choses a la fois : il attache la roue a la machine, et il la fait
+-- tourner. C'est ce qui manquait a toutes les tentatives precedentes.
 --
--- Les roues portaient des `WeldConstraint` : un WeldConstraint VERROUILLE rigidement deux parts, il ne peut pas
--- tourner. Il n'y avait donc jamais rien a faire tourner -- et chercher un Motor6D ne pouvait que rendre "aucun
--- joint trouve".
+-- Les roues portaient un `WeldConstraint`, qui VERROUILLE rigidement : il n'y avait jamais rien a faire tourner,
+-- et chercher un Motor6D ne pouvait que rendre "aucun joint trouve". Le message etait exact ; c'est sa lecture
+-- qui etait fausse -- "il faut en trouver un" au lieu de "regarde ce qu'il y a a la place".
 --
--- On aurait pu creer les Motor6D nous-memes. C'est plus complique pour rien : un joint impose un repere (`C0` et
--- `C1` ne coincident pas), une priorite face aux animations, et un proprietaire reseau. Ecrire directement le
--- CFrame de la roue supprime les trois d'un coup.
+-- ECRIRE LE CFrame DE LA PART A ETE ESSAYE, ET RETIRE. Ca marche tant que rien d'autre ne touche a la roue --
+-- mais le portage desancre toutes les parts du modele, et une roue desancree sans weld part toute seule. Le
+-- joint, lui, la garde dans l'assemblage : elle suit la machine GRATUITEMENT, et on n'ecrit que sa rotation.
+--
+-- ET LES WELDS SE CHERCHENT DANS TOUT LE MODELE, pas dans la roue. Un WeldConstraint peut etre range n'importe
+-- ou -- celui-ci vivait sous la RootPart. En ne cherchant que sous la roue, on n'en trouvait aucun : elle
+-- restait soudee, et nos ecritures se battaient contre le weld.
 --
 -- SERVEUR et pas client : une roue est un objet du MONDE, elle doit tourner pour tout le monde. C'est aussi ce
--- qui reglait le dernier point noir -- le client ecrivait dans un modele que le serveur possede.
+-- qui regle le dernier point noir de la version cliente -- elle ecrivait dans un modele que le serveur possede.
 
 type Wheel = {
 	part: BasePart,
-	rest: CFrame, -- sa place RELATIVE a la racine, relevee UNE FOIS. Tout part de la, jamais de sa pose courante.
+	motor: Motor6D, -- cree par nous : c'est lui qui ATTACHE la roue ET la fait tourner
+	base: CFrame, -- sa place au repos dans le repere de la racine. Relevee UNE FOIS.
 	axis: Vector3, -- son axe de symetrie, dans SON repere
 	radius: number,
 	angle: number,
 }
 
-type WheelSet = {
-	root: BasePart,
-	wheels: { Wheel },
-	lastPos: Vector3,
-	-- Les memes parts, en ensemble : le portage doit pouvoir les RECONNAITRE pour ne pas y toucher.
-	isWheel: { [BasePart]: boolean },
-}
+type WheelSet = { root: BasePart, wheels: { Wheel }, lastPos: Vector3 }
 
 local wheelSets: { [Model]: WheelSet } = {}
 local wheelConn: RBXScriptConnection? = nil
@@ -909,21 +909,21 @@ local function stepWheels()
 			else 0
 
 		for _, wheel in set.wheels do
-			if not wheel.part.Parent then
+			if not wheel.motor.Parent then
 				continue
 			end
 			if wheel.radius > 1e-3 and math.abs(distance) > 1e-5 then
 				wheel.angle = (wheel.angle + MowConfigs.WHEEL_DIRECTION * distance / wheel.radius) % (math.pi * 2)
 			end
-			-- ON RE-AFFIRME L'ANCRAGE. Une roue desancree n'a plus RIEN qui la retient -- on lui a justement
-			-- enleve ses welds -- donc la physique l'emporte et elle part toute seule. Ca ne coute qu'un test, et
-			-- ca protege de tout code qui toucherait aux parts de la machine sans connaitre les roues.
-			if not wheel.part.Anchored then
-				wheel.part.Anchored = true
-			end
-			-- La rotation vient APRES `rest` : posee ainsi, elle tourne autour de l'axe de la ROUE. Posee avant,
+			-- ON N'ECRIT QUE LA ROTATION. La POSITION vient du joint, qui tient la roue dans l'assemblage : elle
+			-- suit la machine sans qu'on s'en occupe, portee ou posee.
+			--
+			-- La rotation vient APRES `base` : posee ainsi, elle tourne autour de l'axe de la ROUE. Posee avant,
 			-- elle ferait tourner tout le decalage et la roue partirait en orbite autour de la machine.
-			wheel.part.CFrame = root.CFrame * wheel.rest * CFrame.fromAxisAngle(wheel.axis, wheel.angle)
+			--
+			-- `C1` est laissee a l'identite a la creation, donc le repere du joint EST celui de la roue : l'axe
+			-- deduit de sa taille s'applique tel quel, sans conversion.
+			wheel.motor.C0 = wheel.base * CFrame.fromAxisAngle(wheel.axis, wheel.angle)
 		end
 	end
 end
@@ -938,32 +938,66 @@ local function setupWheels(model: Model)
 		return
 	end
 
-	local wheels: { Wheel } = {}
+	-- LES ROUES D'ABORD, pour savoir quels welds enlever ensuite.
+	local parts: { [string]: BasePart } = {}
 	for _, name in MowConfigs.WHEEL_PARTS do
 		local part = model:FindFirstChild(name, true)
-		if not (part and part:IsA("BasePart")) then
+		if part and part:IsA("BasePart") then
+			parts[name] = part
+		else
 			warn(`[MowService] Aucune roue nommee "{name}" dans "{model.Name}". Elle ne tournera pas.`)
-			continue
 		end
-		local wheel = part :: BasePart
+	end
 
-		-- ON ENLEVE CE QUI L'EMPECHE DE TOURNER. Un `WeldConstraint` verrouille la roue sur une autre part : tant
-		-- qu'il est la, aucune ecriture de CFrame ne tient. C'etait ca, le blocage.
-		for _, d in wheel:GetDescendants() do
-			if d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D") then
-				d:Destroy()
+	-- ON ENLEVE CE QUI LES EMPECHE DE TOURNER, EN CHERCHANT DANS TOUT LE MODELE.
+	--
+	-- Un `WeldConstraint` verrouille rigidement deux parts : tant qu'il est la, la roue ne peut pas tourner. Mais
+	-- il peut etre range N'IMPORTE OU -- celui de cette tondeuse vit sous la RootPart, pas sous la roue. En ne
+	-- cherchant que sous la roue on n'en trouvait aucun, et elle restait soudee.
+	--
+	-- C'est ce qu'un joint DESIGNE : il se lit par ses deux extremites, jamais par sa place dans l'arbre.
+	local function touchesWheel(joint: Instance): boolean
+		local a = (joint :: any).Part0
+		local b = (joint :: any).Part1
+		for _, wheel in parts do
+			if a == wheel or b == wheel then
+				return true
 			end
 		end
-		-- ANCREE : on possede son CFrame entierement, la physique ne se bat plus avec nous. Elle suit quand meme
-		-- la machine, puisqu'on la repose depuis la racine a chaque image.
-		wheel.Anchored = true
+		return false
+	end
+	for _, d in model:GetDescendants() do
+		if (d:IsA("WeldConstraint") or d:IsA("Weld") or d:IsA("Motor6D")) and touchesWheel(d) then
+			d:Destroy()
+		end
+	end
+
+	local wheels: { Wheel } = {}
+	for _, wheel in parts do
+		-- DESANCREE : un joint n'a AUCUN effet sur une part ancree, elle reste figee dans le monde quoi qu'on
+		-- ecrive dedans. C'est le piege deja note dans le journal.
+		wheel.Anchored = false
+
+		-- LE JOINT QU'ON N'A JAMAIS TROUVE, on le cree. `C0` le place exactement ou la roue est deja : elle ne
+		-- bouge donc pas d'un poil a l'installation.
+		local motor = Instance.new("Motor6D")
+		motor.Name = `{wheel.Name}Spin`
+		motor.Part0 = root
+		motor.Part1 = wheel
+		-- RELEVE UNE FOIS. Recalculer ce decalage a chaque image le prendrait sur une roue DEJA tournee, et
+		-- l'erreur s'accumulerait -- la roue finirait par deriver de sa place. Meme piege que l'echelle portee.
+		local base = root.CFrame:Inverse() * wheel.CFrame
+		motor.C0 = base
+		-- `C1` a l'identite : le repere du joint est alors CELUI DE LA ROUE, donc l'axe deduit de sa taille
+		-- s'applique sans conversion. C'est ce qui evite le `C1:Inverse()` de la version precedente.
+		motor.C1 = CFrame.identity
+		motor.Parent = root
 
 		local axis, radius = wheelAxis(wheel.Size)
 		table.insert(wheels, {
 			part = wheel,
-			-- RELEVE UNE FOIS. Recalculer ce decalage a chaque image le prendrait sur une roue DEJA tournee, et
-			-- l'erreur s'accumulerait -- la roue finirait par deriver de sa place. Meme piege que l'echelle.
-			rest = root.CFrame:Inverse() * wheel.CFrame,
+			motor = motor,
+			base = base,
 			axis = axis,
 			radius = if radius > 1e-3 then radius else MowConfigs.WHEEL_RADIUS_FALLBACK,
 			angle = 0,
@@ -973,11 +1007,7 @@ local function setupWheels(model: Model)
 	if #wheels == 0 then
 		return
 	end
-	local isWheel: { [BasePart]: boolean } = {}
-	for _, w in wheels do
-		isWheel[w.part] = true
-	end
-	wheelSets[model] = { root = root, wheels = wheels, lastPos = root.Position, isWheel = isWheel }
+	wheelSets[model] = { root = root, wheels = wheels, lastPos = root.Position }
 	if not wheelConn then
 		wheelConn = RunService.Heartbeat:Connect(stepWheels)
 	end
@@ -1080,15 +1110,13 @@ local function grab(player: Player, model: Model)
 		jumpPower = if humanoid then humanoid.JumpPower else 50,
 	}
 	blockJump(state)
-	-- LES ROUES SONT HORS DU PORTAGE. Elles sont ANCREES et pilotees par leur CFrame : les desancrer avec le
-	-- reste les rendrait libres -- on leur a enleve leurs welds, donc plus rien ne les retient -- et la physique
-	-- les emporterait. C'est exactement ce qui se voyait : des roues qui se decollent de la machine.
+	-- LES ROUES PASSENT ICI COMME LES AUTRES. Elles sont tenues par leur Motor6D, donc les desancrer ne les
+	-- detache de rien -- au contraire, un joint n'agit QUE sur une part desancree.
 	--
-	-- Elles ne sont pas non plus enregistrees dans `state.parts` : sinon la repose leur rendrait leur ancrage
-	-- d'AVANT, qui est faux depuis qu'on les pilote.
-	local set = wheelSets[model]
+	-- La version precedente devait les exclure : elles etaient ancrees et posees a la main, et le portage les
+	-- rendait libres sans rien pour les retenir. Le joint supprime ce cas particulier.
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") and not (set and set.isWheel[d]) then
+		if d:IsA("BasePart") then
 			state.parts[d] = { anchored = d.Anchored, canCollide = d.CanCollide }
 			d.Anchored = false
 			-- LA BOITE DE COLLISION GARDE SES COLLISIONS, tout le reste les perd.
