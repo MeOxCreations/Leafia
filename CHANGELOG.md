@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.545 — L'indicateur du chargement : six feuilles NOIRES, sans animation
+
+On repart de zero sur l'indicateur du rideau secondaire. Six silhouettes posees, et rien d'autre.
+
+Ce qui part :
+
+- la teinte verte ;
+- l'apparition des feuilles ;
+- l'enchainement d'une a l'autre et la pause entre deux tours ;
+- la boucle de fond qui les rallumait a l'infini.
+
+**102 lignes remplacees par 25.**
+
+### Rien n'est garde "au cas ou"
+
+Ni les reglages de duree, ni la boucle mise en commentaire. Du code garde sans appelant devient du code qu'on
+n'ose plus supprimer -- et il est de toute facon dans l'historique, a une commande pres.
+
+`LEAF_STEP` part avec le reste : il servait au DELAI entre deux feuilles, alors que leur espacement vient de
+`LEAF_COUNT`. Un reglage dont le nom evoque encore une chose qu'il ne fait plus est un piege pose pour plus tard.
+
+### Ce qui reste en place
+
+La position et la taille de la rangee, l'inclinaison des feuilles, et le calcul de la largeur du texte de
+conseils -- qui se cale sur la rangee pour ne pas lui passer dessus.
+
+Les feuilles sont ancrees EN BAS AU MILIEU : leurs pieds sont alignes sur la meme ligne, ce qui les fait lire
+comme une rangee posee et pas comme six images centrees cote a cote. Et elles restent placees a la main plutot
+qu'avec un `UIListLayout`, qui reprendrait la main sur toute animation qu'on voudrait leur redonner.
+
 ## 0.0.544 — Les sons de la scene passent en 2D
 
 Les coups a la porte, le geste de poignee et l'ouverture etaient poses SUR la porte, donc spatialises. On ne les

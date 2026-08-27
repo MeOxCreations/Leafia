@@ -240,7 +240,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Le degrade pose sur la feuille ne touche QUE sa transparence (c'est lui qui la remplit) : sa couleur reste
 	-- neutre, donc ce vert s'affiche tel quel.
-	local LEAF_TINT = Color3.fromRGB(142, 255, 93)
+	-- NOIRES. On repart de zero sur l'indicateur : six silhouettes posees, sans mouvement, le temps de voir ce que
+	-- ca donne. L'animation d'apparition et la teinte verte sont retirees -- pas mises de cote "au cas ou" : du
+	-- code garde sans appelant devient du code qu'on n'ose plus supprimer.
+	local LEAF_TINT = Color3.fromRGB(0, 0, 0)
 	local LEAF_COUNT = 6
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
@@ -269,25 +272,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- LA DEFORMATION SE FAIT SUR LA TAILLE, pas sur un UIScale : une echelle est UNIFORME, donc elle ne peut ni
 	-- etirer ni ecraser. Elle ne sait que grossir.
 	--
-	-- UN SEUL MOUVEMENT : la feuille GROSSIT a sa place, et elle y reste.
-	--
-	-- Elle sautait et rebondissait avant. Le rebond est parti : sur SIX feuilles qui s'allument coup sur coup, il
-	-- fait six gestes qui se recouvrent, et l'oeil ne suit plus la vague -- il voit une agitation. Un indicateur
-	-- de chargement doit se lire d'un coup d'oeil, pas se regarder.
-	local LEAF_GROW_TIME = 0.3
-	-- Ecart entre deux crans : c'est lui qui fait la VAGUE. Court, les six partent presque ensemble ; long, on
-	-- les compte un par un.
-	local LEAF_STEP = 0.12
-	-- Duree TOTALE du geste d'un cran. Calculee, jamais ecrite : elle sert a savoir quand la derniere feuille a
-	-- fini, et un nombre pose a la main deviendrait faux des qu'on touche a la duree ci-dessus.
-	local LEAF_SEQUENCE = LEAF_GROW_TIME
-	-- Blanc entre deux tours, une fois la derniere feuille posee. Sans lui, le sixieme et le premier s'enchainent
-	-- et le cycle n'a plus de debut visible.
-	local LEAF_CYCLE_GAP = 0.25
-	-- Temps mort reel : il laisse la DERNIERE feuille finir son geste, sinon elle est coupee en pleine apparition.
-	-- Elle part LEAF_STEP avant la fin de la boucle, d'ou la soustraction.
-	local LEAF_CYCLE_PAUSE = math.max(LEAF_SEQUENCE - LEAF_STEP, 0) + LEAF_CYCLE_GAP
-
 	-- CONSEILS. En ANGLAIS : le traducteur de Roblox part de l'anglais, un texte francais n'est traduit nulle part.
 	local TIPS_LABEL = "TIPS"
 	-- BLANC PUR, et c'est indispensable : le degrade pose plus bas MULTIPLIE cette couleur. Sur une teinte grise,
@@ -547,88 +531,30 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	gauge.ZIndex = 4
 	gauge.Parent = curtain
 
-	-- UNE SEULE COUCHE. Il y avait une feuille SOMBRE sous chaque cran, pour montrer combien il en restait --
-	-- ca avait un sens tant que c'etait une jauge de progression. Depuis que le cycle tourne en boucle, elle ne
-	-- dit plus rien : six formes noires posees en permanence qui n'informent de rien et alourdissent le coin de
-	-- l'ecran. Un decor qui a perdu sa fonction ne devient pas neutre, il devient du bruit.
-	local lits: { ImageLabel } = {}
+	-- SIX SILHOUETTES, POSEES. Aucune animation : ni apparition, ni cycle, ni boucle de fond.
+	--
+	-- L'indicateur qui tournait a ete retire en entier -- l'apparition des feuilles, l'enchainement d'une a
+	-- l'autre, la pause entre deux tours. On repart de la forme la plus simple pour voir ce qu'elle donne, et ce
+	-- qui reviendra reviendra par-dessus.
 	local leafW = LEAF_FILL / LEAF_COUNT
 	for i = 1, LEAF_COUNT do
-		local function slot(name: string, tint: Color3, z: number): ImageLabel
-			local leaf = Instance.new("ImageLabel")
-			leaf.Name = name
-			leaf.BackgroundTransparency = 1
-			leaf.Image = LEAF_ID
-			leaf.ImageColor3 = tint
-			leaf.ScaleType = Enum.ScaleType.Fit
-			-- ANCREE EN BAS AU MILIEU, et c'est CE QUI REND LE REBOND POSSIBLE. Avec une ancre au centre, une
-			-- feuille qu'on ecrase s'enfonce dans le sol autant qu'elle s'etale ; ancree par le bas, elle
-			-- s'ecrase SUR le sol, comme une vraie balle molle. Le point d'ancrage EST le point de contact.
-			leaf.AnchorPoint = Vector2.new(0.5, 1)
-			-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image,
-			-- donc il ecraserait la deformation qu'on leur donne. Les X poses une fois sont a nous.
-			leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 1)
-			leaf.Size = UDim2.fromScale(leafW, 1)
-			leaf.Rotation = LEAF_ANGLE
-			leaf.ZIndex = z
-			leaf.Parent = gauge
-			return leaf
-		end
-		local lit = slot(`Leaf{i}`, LEAF_TINT, 4)
-		-- Eteinte = INVISIBLE, pas de taille nulle. Une taille nulle ne peut pas etre etiree : il faudrait la
-		-- rendre a sa taille avant de commencer, et ce saut se verrait.
-		lit.ImageTransparency = 1
-		lits[i] = lit
+		local leaf = Instance.new("ImageLabel")
+		leaf.Name = `Leaf{i}`
+		leaf.BackgroundTransparency = 1
+		leaf.Image = LEAF_ID
+		leaf.ImageColor3 = LEAF_TINT
+		leaf.ScaleType = Enum.ScaleType.Fit
+		-- Ancree EN BAS AU MILIEU : leurs pieds sont alignes sur la meme ligne quelle que soit leur taille. C'est
+		-- ce qui les fait lire comme une rangee posee, et pas comme six images centrees cote a cote.
+		leaf.AnchorPoint = Vector2.new(0.5, 1)
+		-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image, donc il
+		-- reprendrait la main sur toute animation qu'on voudrait leur donner plus tard.
+		leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 1)
+		leaf.Size = UDim2.fromScale(leafW, 1)
+		leaf.Rotation = LEAF_ANGLE
+		leaf.ZIndex = 4
+		leaf.Parent = gauge
 	end
-
-	-- ALLUME UN CRAN : la feuille grossit a sa place, depuis rien. Elle ne vient de nulle part et elle ne bouge
-	-- pas -- elle apparait la ou elle restera.
-	local function lightLeaf(i: number)
-		local leaf = lits[i]
-		if not leaf.Parent then
-			return
-		end
-		leaf.Position = UDim2.fromScale(leaf.Position.X.Scale, 1)
-		leaf.Size = UDim2.fromScale(0, 0)
-		leaf.ImageTransparency = 0
-		TweenService
-			:Create(
-				leaf,
-				-- `Sine InOut`, la courbe la plus DOUCE des deux cotes : elle demarre sans a-coup et s'arrete sans
-				-- a-coup. `Quad Out` partait encore a pleine vitesse, et un depart sec sur une apparition se
-				-- ressent comme un tic meme quand la fin est douce.
-				--
-				-- Surtout PAS `Back` : il DEPASSE la taille de repos avant d'y revenir, et ce sursaut redonnerait
-				-- exactement le rebond qu'on vient d'enlever.
-				TweenInfo.new(LEAF_GROW_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-				{ Size = UDim2.fromScale(leafW, 1) }
-			)
-			:Play()
-	end
-
-	task.spawn(function()
-		-- INDICATEUR QUI TOURNE, plus une jauge de progression. Les six s'allumaient une fois puis s'arretaient
-		-- -- un ecran fige, alors que le chargement, lui, continue. Un mouvement qui tourne dit "ca travaille"
-		-- sans mentir sur le temps qu'il reste, ce qu'une jauge calee sur une duree devinee finissait par faire.
-		--
-		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
-		-- instance detruite.
-		while sg.Parent do
-			for i = 1, LEAF_COUNT do
-				if not sg.Parent then
-					return
-				end
-				lightLeaf(i)
-				task.wait(LEAF_STEP)
-			end
-			task.wait(LEAF_CYCLE_PAUSE)
-			-- Elles s'eteignent TOUTES A LA FOIS avant le tour suivant : les eteindre une par une lirait comme un
-			-- second passage, en sens inverse, et on ne saurait plus ou commence le cycle.
-			for i = 1, LEAF_COUNT do
-				lits[i].ImageTransparency = 1
-			end
-		end
-	end)
 
 	-- ===== BANDEAU DU BAS =====
 	local banner = Instance.new("ImageLabel")
