@@ -150,6 +150,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   une incoherence qui n'a aucun rapport avec le code.
 - **Un `rokit.toml` par projet.** Sans lui la version vient de `~/rokit.toml`, et une mise a jour touche TOUS
   les projets d'un coup sans prevenir.
+- **PLUSIEURS `rojo serve` EN MEME TEMPS : le plugin en choisit UN, et ce n'est pas forcement celui qui voit tes
+  fichiers.** Vecu avec QUATRE `rojo.exe` en vie : un fichier cree a 19h50 arrivait dans Studio, un autre cree a
+  20h10 dans le MEME dossier n'arrivait jamais -- et le require plantait, ce qui tuait TOUT le bootstrap client
+  apres cette ligne. Symptome trompeur : "X is not a valid member of Folder", donc on va verifier le chemin, le
+  mappage du projet et le sourcemap... qui sont tous justes. Reflexe : `tasklist | findstr rojo` AVANT de
+  chercher dans le code. Il ne doit y en avoir QU'UN. `taskkill /F /IM rojo.exe`, puis un seul `rojo serve
+  <projet>.project.json` (ici il n'y a pas de `default.project.json` : sans le nom, la commande ne sert rien).
+  Meme famille que la regle Rokit juste au-dessus : un process qui traine ne se signale jamais tout seul.
 - **Rojo : le CLI et le plugin Studio doivent avoir la MEME version.** `rojo plugin install` installe le plugin
   correspondant au CLI courant. Un ecart donne une erreur de protocole illisible.
 - **Une notification affichee n'est pas une erreur qui vient de se produire.** Les notifications du plugin Rojo
