@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.560 — Le son de fermeture arrive une demi-seconde plus tard
+
+Il partait a l'appui, donc AVANT que la porte se soit refermee -- on entendait claquer une porte encore grande
+ouverte. Le bruit d'une porte se fait quand elle TOUCHE, pas quand on la pousse.
+
+`DOOR_CLOSE_SOUND_DELAY = 0.5`.
+
+### Un retard sur la fermeture SEULE
+
+Le son d'ouverture n'en a pas : il accompagne le geste, qui commence tout de suite. Deux moments differents, deux
+reglages -- un seul aurait force a decaler les deux.
+
+### On revalide avant de jouer
+
+Un second appui pendant l'attente rouvre la porte, et le claquement partirait alors sur une porte qui s'ouvre. Le
+drapeau est relu au moment de jouer : il dit l'etat COURANT, pas celui d'il y a une demi-seconde.
+
+Meme garde que la pause de la porte du tuto -- un `task.delay` pose maintenant s'execute dans un monde qui a pu
+changer.
+
 ## 0.0.559 — La porte du camion a un son par sens
 
 `CloseDoorTruckSound` a la fermeture, `OpenDoorTruckSound` a l'ouverture. Ouvrir et refermer ne font pas le meme

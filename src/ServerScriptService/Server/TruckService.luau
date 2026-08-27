@@ -135,8 +135,20 @@ local function setup(model: Model)
 		--
 		-- Lu APRES la bascule : `truck.open` porte deja l'etat VOULU, donc il dit quel son jouer sans qu'on ait a
 		-- retenir le precedent.
-		local path = if truck.open then TruckConfigs.DOOR_OPEN_SOUND else TruckConfigs.DOOR_CLOSE_SOUND
-		SoundUtils.play(path, door :: BasePart)
+		if truck.open then
+			SoundUtils.play(TruckConfigs.DOOR_OPEN_SOUND, door :: BasePart)
+		else
+			-- LA FERMETURE ARRIVE EN RETARD. Le bruit d'une porte qui claque se fait quand elle TOUCHE, pas quand
+			-- on la pousse : joue a l'appui, il precedait l'image de la porte encore grande ouverte.
+			task.delay(TruckConfigs.DOOR_CLOSE_SOUND_DELAY, function()
+				-- ON REVALIDE AVANT DE JOUER. Un second appui pendant l'attente rouvre la porte, et le claquement
+				-- partirait alors sur une porte qui s'ouvre. Le drapeau dit l'etat COURANT, pas celui d'il y a une
+				-- demi-seconde.
+				if not truck.open and (door :: BasePart).Parent then
+					SoundUtils.play(TruckConfigs.DOOR_CLOSE_SOUND, door :: BasePart)
+				end
+			end)
+		end
 	end)
 
 	table.insert(trucks, truck)

@@ -45,6 +45,12 @@ local TruckConfigs = {
 	-- moins fort quand on s'en eloigne.
 	DOOR_OPEN_SOUND = { "Sounds", "Game", "GlobalSounds", "OpenDoorTruckSound" },
 	DOOR_CLOSE_SOUND = { "Sounds", "Game", "GlobalSounds", "CloseDoorTruckSound" },
+	-- RETARD DU SON DE FERMETURE, en secondes. Le bruit d'une porte qui claque arrive quand elle TOUCHE, pas quand
+	-- on la pousse : joue a l'appui, il precedait l'image de la porte encore grande ouverte.
+	--
+	-- Le son d'ouverture, lui, n'a PAS de retard : il accompagne le geste, qui commence tout de suite. Deux
+	-- moments differents, deux reglages -- un seul aurait force a decaler les deux.
+	DOOR_CLOSE_SOUND_DELAY = 0.5,
 
 	-- ===== RECHERCHE =====
 	-- Avec StreamingEnabled le camion peut arriver bien apres le demarrage. On le re-cherche jusqu'a le trouver,
