@@ -378,14 +378,38 @@ local function checkAnimMoved(model: Model, animName: string)
 		if not model.Parent then
 			return
 		end
+		-- ON REGARDE LES DEUX SORTES DE RIG. `Motor6D` pour un modele fait de morceaux assembles, `Bone` pour un
+		-- SKINNED MESH -- et le grand-pere est le second. La sonde ne connaissait que les Motor6D : elle criait
+		-- donc au faux probleme sur un rig qui marchait parfaitement, et envoyait chercher une cible d'animation
+		-- qui etait la bonne.
+		--
+		-- Les deux portent un `Transform` que l'animation ecrit, mais ils n'ont aucune classe commune (`Bone`
+		-- descend d'`Attachment`, pas de `BasePart`) : d'ou la lecture non typee, qui evite d'ecrire deux fois la
+		-- meme comparaison.
+		local hasJoint = false
 		for _, d in ipairs(model:GetDescendants()) do
-			if d:IsA("Motor6D") and d.Transform ~= CFrame.identity then
-				return -- au moins un joint a bouge : l'animation s'applique bien
+			if d:IsA("Motor6D") or d:IsA("Bone") then
+				hasJoint = true
+				local moved = (d :: any).Transform
+				if typeof(moved) == "CFrame" and moved ~= CFrame.identity then
+					return -- au moins un joint a bouge : l'animation s'applique bien
+				end
 			end
+		end
+
+		-- DEUX CAUSES SEPAREES. Un rig sans aucun joint ne peut RIEN jouer, quelle que soit l'animation ; un rig
+		-- qui en a mais dont rien ne bouge a recu une animation faite pour un autre modele. Le premier se corrige
+		-- dans Studio, le second dans la config.
+		if not hasJoint then
+			warn(
+				`[Tutorial] "{model.Name}" n'a ni Motor6D ni Bone : aucune animation ne peut le faire bouger. `
+					.. "Ce n'est pas un rig anime."
+			)
+			return
 		end
 		warn(
 			`[Tutorial] "{animName}" tourne mais n'a RIEN bouge sur "{model.Name}" : aucune de ses pistes ne porte `
-				.. "le nom d'une part de ce rig. Elle anime probablement un AUTRE model -- verifie la cible dans "
+				.. "le nom d'un joint de ce rig. Elle anime probablement un AUTRE model -- verifie la cible dans "
 				.. "TutorialConfigs (le nom de l'animation ne dit pas sur quoi elle joue)."
 		)
 	end)

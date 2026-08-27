@@ -822,6 +822,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   il se lit lui-meme. Un effet pose sur la SOUDURE de l'objet (le cabrage du nez) n'a pas ce probleme : rien dans
   le repere de la vue n'en depend.
 
+- **Une sonde ecrite pour un rig a MORCEAUX crie au faux probleme sur un SKINNED MESH.** Un modele assemble est
+  pilote par des `Motor6D`, un skinned mesh par des `Bone` -- et les deux n'ont AUCUNE classe commune (`Bone`
+  descend d'`Attachment`, pas de `BasePart`). Une verification qui ne balaye que les Motor6D ne trouve donc
+  rien sur un skinned rig et conclut que l'animation ne s'applique pas, alors qu'elle marche parfaitement. Vecu
+  sur le grand-pere remodele : le message envoyait verifier la CIBLE de l'animation, qui etait la bonne. Les
+  deux portent un `Transform` que l'animation ecrit : c'est LUI qu'il faut lire, sur les deux classes. Lecon
+  generale : une sonde qui ne connait qu'une forme du probleme est pire qu'aucune sonde le jour ou l'autre forme
+  se presente -- elle designe un coupable avec autorite.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

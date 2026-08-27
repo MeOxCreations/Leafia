@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.541 — La sonde d'animation reconnait les SKINNED MESH
+
+    "Scene1_oldman_OpenDoor" tourne mais n'a RIEN bouge sur "OldmanOriginal"
+
+Faux. L'animation marchait ; c'est la sonde qui ne savait pas regarder.
+
+### Deux sortes de rig, aucune classe commune
+
+Un modele fait de morceaux assembles est pilote par des `Motor6D`. Un SKINNED MESH -- ce qu'est le grand-pere
+remodele -- est pilote par des `Bone`, qui descendent d'`Attachment` et pas de `BasePart`.
+
+La sonde ne balayait que les Motor6D. Elle n'en trouvait aucun, concluait que rien n'avait bouge, et envoyait
+verifier la CIBLE de l'animation -- qui etait la bonne depuis le debut.
+
+Les deux portent un `Transform` que l'animation ecrit : c'est lui qu'on lit maintenant, sur les deux classes.
+
+### Et deux causes desormais separees
+
+Un rig SANS aucun joint ne peut rien jouer, quelle que soit l'animation ; un rig qui en a mais dont rien ne bouge
+a recu une animation faite pour un autre modele. Le premier se corrige dans Studio, le second dans la config --
+ils n'avaient aucune raison de partager un message.
+
+### La lecon
+
+Une sonde qui ne connait qu'une forme du probleme est PIRE qu'aucune sonde le jour ou l'autre forme se presente :
+elle designe un coupable avec autorite. Meme famille que la sonde du seau, qui mesurait juste et accusait faux.
+
 ## 0.0.540 — La camera de la scene passe a GAUCHE, et le plan de depart est plus large
 
 - `SCENE_CAM_SIDE` 2 -> -2 : elle passe de l'autre cote du joueur.
