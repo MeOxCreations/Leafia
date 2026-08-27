@@ -14,6 +14,10 @@ local RunService = game:GetService("RunService")
 
 local WorldAnchor = require(script.Parent.WorldAnchor)
 
+-- SI CE MODULE "N'EXISTE PAS" DANS STUDIO alors qu'il est bien sur le disque : c'est STUDIO qui l'a perdu, pas le
+-- code. Un `CTRL+Z` dans l'editeur annule ce que Rojo vient de poser, et Rojo ne le repousse pas -- pour lui,
+-- le fichier est deja synchronise, il n'a plus rien a envoyer. Reconnecter le plugin refait une synchro complete.
+
 local WorldMarker = {}
 
 local CIRCLE_IMAGE = "rbxassetid://124707156951795"
