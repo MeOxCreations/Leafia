@@ -431,11 +431,16 @@ local GrassZoneConfigs = {
 	-- fait lire le poids. Deux boutons separes expres, un reglage partage forcerait a compenser dans l'autre.
 	CRUSH_SPEED = 18,
 	-- Vitesse a laquelle l'APLATISSEMENT s'installe, separee de celle de l'inclinaison ci-dessus.
-	-- Beaucoup plus basse EXPRES : l'herbe penche d'abord, elle se tasse ensuite. Les deux effets arrivent decales,
-	-- donc on les lit l'un APRES l'autre au lieu de les recevoir en bloc -- l'inclinaison a le temps d'exister.
+	--
+	-- ELLE ETAIT BASSE POUR RIEN. Le decalage existait pour qu'on lise l'inclinaison AVANT le tassement -- deux
+	-- effets l'un apres l'autre plutot qu'en bloc. Mais `CRUSH_TILT_ANGLE` est a 0 : il n'y a plus d'inclinaison
+	-- a laisser exister, donc le retard ne separait plus rien. Il ne restait qu'une herbe lente a se coucher.
+	--
+	-- Remise pres de CRUSH_SPEED : l'herbe se tasse maintenant a peu pres aussi vite qu'elle recoit le passage.
+	-- Si l'inclinaison revient un jour, c'est CE reglage qu'il faudra rebaisser pour la laisser se voir.
+	--
 	-- La montee, elle, reste commune (RECOVER_SPEED) : rien ne gagne a ce que la touffe se redresse en deux temps.
-	-- Monter cette valeur vers CRUSH_SPEED efface le decalage ; la baisser retarde encore le tassement.
-	SQUASH_SPEED = 8,
+	SQUASH_SPEED = 16,
 	-- Vitesse a laquelle la COULEUR redescend une fois le joueur parti. Plus vive que celle du tassement, mais elle
 	-- vise la MEME cible : la couleur retombe donc rapidement au niveau de la TRAINEE, puis s'efface avec elle.
 	-- Resultat : un point clair sous le pied, un chemin plus discret derriere, et une pelouse qui redevient uniforme

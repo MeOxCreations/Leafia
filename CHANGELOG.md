@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.568 — L'herbe intacte se couche deux fois plus vite
+
+`SQUASH_SPEED` 8 -> 16.
+
+### Elle etait lente POUR RIEN
+
+Le retard existait pour qu'on lise l'inclinaison AVANT le tassement : deux effets l'un apres l'autre plutot qu'en
+bloc, l'inclinaison ayant le temps d'exister.
+
+Mais `CRUSH_TILT_ANGLE` est a **0** -- l'inclinaison est coupee. Le decalage ne separait donc plus rien : il ne
+restait qu'une herbe lente a se coucher, pour une raison qui n'existait plus.
+
+Le commentaire, lui, decrivait toujours l'intention d'origine. C'est le genre de reglage qui survit a sa raison
+d'etre : on le lit, on comprend pourquoi il est bas, et on n'ouvre pas celui d'a cote pour verifier que la
+condition tient encore.
+
+Si l'inclinaison revient un jour, c'est ce reglage qu'il faudra rebaisser -- et c'est ecrit a cote, maintenant.
+
 ## 0.0.567 — L'herbe coupee ne fait plus de BOSSE au milieu de sa descente
 
 Troisieme passage sur cette transition, et cette fois la courbe a ete TABULEE au lieu d'etre jugee a l'oeil.
