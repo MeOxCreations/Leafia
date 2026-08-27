@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.528 — La tondeuse se pose au sol d'un coup, au lieu de tomber
+
+En la lachant, on se contentait de defaire la soudure : elle TOMBAIT, puis se balancait le temps que la physique
+la stabilise. Ca se ressent comme un flottement, alors que reposer une tondeuse est un geste net.
+
+Elle est maintenant posee directement au sol, a plat, avant qu'on rende la main a la physique. Il ne reste plus
+rien a stabiliser, donc plus rien a attendre.
+
+### On ne garde que le CAP
+
+Le tangage et le roulis du portage -- le cabrage du virage, le ballant -- n'ont aucune raison de survivre a la
+repose, et ce sont eux qui faisaient ensuite basculer la machine.
+
+### Un ECART MONDE, pas un pivot
+
+`Model:PivotTo` passe par `GetPivot`, qui suit la BOUNDING BOX quand le modele n'a pas de PrimaryPart -- et celle
+de la tondeuse est decalee par la CutZone et la Hitbox. En composant l'ecart de la RACINE, on ne depend d'aucun
+pivot. Le projet a deja paye ce piege sur l'echelle.
+
+La hauteur vient de `measure`, la meme mesure que la prise : pas une valeur devinee qu'il faudrait regler a
+nouveau si le modele change de taille.
+
+### Trois cas ecartes
+
+- Le porteur est exclu du rayon : sans ca il tombe sur ses pieds et la tondeuse se pose a hauteur de cheville.
+- Rien sous la machine (lachee au-dessus du vide) : on laisse la physique faire, elle fait mieux que nous.
+- La pose se fait APRES la soudure et AVANT que les vitesses soient rendues. Ensuite, elle repartirait avec
+  l'elan qu'on vient d'annuler ; avant, la soudure la ramenerait aussitot dans les mains.
+
 ## 0.0.527 — Le rapprochement repond a la TOUCHE, et il est plus discret
 
 Il etait mou, et aucune allure de lissage n'aurait pu le rattraper.

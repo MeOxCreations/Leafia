@@ -466,6 +466,18 @@ return {
 	-- mettrait plus d'une seconde.
 	DRIVE_ZOOM_SPEED = 11,
 
+	-- ===== ELLE SE POSE AU SOL, D'UN COUP =====
+	-- En lachant la machine on se contentait de defaire la soudure : elle TOMBAIT, puis se balancait le temps que
+	-- la physique la stabilise. Ca se ressent comme un flottement, alors que reposer une tondeuse est un geste
+	-- net.
+	--
+	-- On la pose donc directement au sol, a plat, avant de rendre la main a la physique. Il ne reste plus rien a
+	-- stabiliser, donc plus rien a attendre.
+	--
+	-- Distance de recherche du sol sous la machine, en studs. Au-dela on laisse la physique faire : on la lache
+	-- au-dessus du vide, et la faire "tomber d'un coup" n'aurait aucun sens.
+	DROP_RAY = 24,
+
 	-- RALENTISSEMENT EN VIRAGE. Fraction de vitesse PERDUE a fond de braquage. 0 = aucun ralentissement, 0.5 =
 	-- moitie moins vite.
 	--

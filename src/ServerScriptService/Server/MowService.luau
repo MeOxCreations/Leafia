@@ -793,6 +793,48 @@ end
 
 -- REPOSE : on retire la soudure et on rend a chaque part son etat d'origine. Celui qui a modifie est celui qui
 -- restaure, et il restaure TOUT : un nettoyage reparti finit toujours par oublier un champ.
+-- POSE LA MACHINE AU SOL, A PLAT, avant de rendre la main a la physique.
+--
+-- Sans ca, lacher la soudure la faisait TOMBER puis se balancer le temps que la physique la stabilise -- un
+-- flottement, alors que reposer une tondeuse est un geste net. En la posant deja au sol et deja droite, il ne
+-- reste rien a stabiliser.
+--
+-- On ne garde que le CAP : le tangage et le roulis du portage (cabrage, ballant) n'ont aucune raison de survivre
+-- a la repose, et ce sont eux qui font ensuite basculer la machine.
+local function settleOnGround(model: Model, state: CarryState)
+	local root = rootOf(model)
+	if not root then
+		return
+	end
+	local look = root.CFrame.LookVector
+	local flat = Vector3.new(look.X, 0, look.Z)
+	if flat.Magnitude < 1e-3 then
+		return -- machine parfaitement verticale : aucun cap a garder, on laisse la physique faire
+	end
+	flat = flat.Unit
+
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	-- LA MACHINE ET SON PORTEUR SONT EXCLUS. Sans le porteur, le rayon tombe sur ses pieds et la tondeuse se
+	-- poserait a hauteur de cheville.
+	params.FilterDescendantsInstances = { model, state.owner.Character }
+	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -MowConfigs.DROP_RAY, 0), params)
+	if not hit then
+		return -- rien dessous : lachee au-dessus du vide, la physique fait mieux que nous
+	end
+
+	-- De combien la racine surplombe le bas de la machine -- la meme mesure que la prise, pas une valeur devinee.
+	local low = measure(model, root)
+	local aboveBottom = if low then root.Position.Y - low else 0
+	local landed = Vector3.new(root.Position.X, hit.Position.Y + aboveBottom, root.Position.Z)
+	local levelled = CFrame.lookAt(landed, landed + flat)
+
+	-- ON APPLIQUE UN ECART MONDE, pas un pivot. `Model:PivotTo` passe par `GetPivot`, qui suit la BOUNDING BOX
+	-- quand le modele n'a pas de PrimaryPart -- et celle de la tondeuse est decalee par la CutZone et la Hitbox.
+	-- En composant l'ecart de la RACINE, on ne depend d'aucun pivot.
+	model:PivotTo(levelled * root.CFrame:Inverse() * model:GetPivot())
+end
+
 local function release(model: Model)
 	local state = carried[model]
 	if not state then
@@ -802,6 +844,9 @@ local function release(model: Model)
 		state.weld:Destroy()
 		state.weld = nil
 	end
+	-- APRES la soudure, AVANT de rendre les vitesses : posee ensuite, elle repartirait avec l'elan qu'on vient
+	-- d'annuler ; posee avant, la soudure la ramenerait aussitot dans les mains.
+	settleOnGround(model, state)
 	for part, saved in pairs(state.parts) do
 		if part.Parent then
 			part.Anchored = saved.anchored
