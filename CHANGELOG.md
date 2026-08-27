@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.547 — Les feuilles se remplissent UNE PAR UNE, d'une arete NETTE
+
+Le vert monte dans chaque feuille, l'une apres l'autre, puis tout repart a zero.
+
+### Une ARETE, pas un fondu
+
+Le degrade ne prend que DEUX valeurs -- visible et cache -- separees par une frontiere qu'on DEPLACE. C'est le
+bord net qui monte, pas la couleur qui apparait.
+
+`LEAF_EDGE = 0.01` est l'epaisseur de cette frontiere, et elle est aussi petite que possible : deux points de
+degrade ne peuvent pas etre AU MEME endroit -- Roblox rejette la sequence entiere -- donc on ne peut pas
+descendre a zero, seulement s'en approcher.
+
+### Les extremes ont leur propre cas
+
+A 0 et a 1, la frontiere sortirait du cadre et les points se marcheraient dessus. Une `NumberSequence` doit
+commencer a 0, finir a 1, et ses points doivent etre STRICTEMENT croissants : Roblox rejette la sequence ENTIERE
+si ce n'est pas le cas, sans un mot -- on verrait une feuille pleine ou vide et on chercherait dans l'animation.
+
+### Le remplissage est LINEAIRE
+
+Sans adoucissement. Une arete qui accelere puis ralentit se lit comme une hesitation ; on veut une montee
+reguliere, comme un niveau qui se remplit.
+
+### Trois reglages
+
+`LEAF_FILL_TIME` (0.32) par feuille, `LEAF_FILL_GAP` (0.06) entre deux, `LEAF_CYCLE_GAP` (0.45) avant que tout
+reparte. Le dernier evite que la sixieme et la premiere s'enchainent : sans lui, le cycle n'a plus de debut
+visible.
+
+Elles se vident TOUTES A LA FOIS : les vider une par une lirait comme un second passage en sens inverse.
+
 ## 0.0.546 — Les feuilles se remplissent de vert, du bas vers le haut
 
 Une couche VERTE par-dessus la silhouette noire, avec un degrade de transparence : pleine en bas, effacee en

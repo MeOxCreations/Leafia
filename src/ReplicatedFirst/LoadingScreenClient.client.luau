@@ -251,8 +251,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Rotation du degrade. 90 = il court a la verticale. Le SENS ne se DEDUIT pas -- il depend de la convention de
 	-- Roblox et de l'orientation de l'image : c'est l'ecran qui tranche, d'ou le bouton juste en dessous.
 	local LEAF_FILL_ROTATION = 90
-	-- Le vert est en haut au lieu d'etre en bas ? Mettre true.
+	-- Le vert monte du mauvais cote ? Mettre true.
 	local LEAF_FILL_INVERT = false
+	-- Temps de remplissage d'UNE feuille, en secondes.
+	local LEAF_FILL_TIME = 0.32
+	-- Temps mort avant que la suivante parte. COURT : c'est ce qui les enchaine sans qu'on les compte une par une.
+	local LEAF_FILL_GAP = 0.06
+	-- Blanc apres la sixieme, avant que tout reparte a zero. Sans lui, la derniere et la premiere s'enchainent et
+	-- le cycle n'a plus de debut visible.
+	local LEAF_CYCLE_GAP = 0.45
+	-- Epaisseur de la frontiere du degrade, en fraction de la feuille. AUSSI PETITE QUE POSSIBLE : c'est elle qui
+	-- fait la nettete. Deux points de degrade ne peuvent pas etre AU MEME endroit -- Roblox rejette la sequence
+	-- entiere -- donc on ne peut pas descendre a zero, seulement s'en approcher.
+	local LEAF_EDGE = 0.01
 	local LEAF_COUNT = 6
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
@@ -546,6 +557,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- l'autre, la pause entre deux tours. On repart de la forme la plus simple pour voir ce qu'elle donne, et ce
 	-- qui reviendra reviendra par-dessus.
 	local leafW = LEAF_FILL / LEAF_COUNT
+	local fills: { UIGradient } = {}
 	for i = 1, LEAF_COUNT do
 		local leaf = Instance.new("ImageLabel")
 		leaf.Name = `Leaf{i}`
@@ -583,17 +595,81 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 		local grad = Instance.new("UIGradient")
 		grad.Rotation = LEAF_FILL_ROTATION
-		-- LES DEUX BOUTS D'UNE NumberSequence DOIVENT ETRE 0 ET 1, dans cet ordre : Roblox rejette la sequence
-		-- entiere si ce n'est pas le cas, en silence -- on obtient alors une feuille pleinement verte sans
-		-- comprendre pourquoi le degrade "ne marche pas".
-		local low = if LEAF_FILL_INVERT then 0 else 1
-		local high = if LEAF_FILL_INVERT then 1 else 0
-		grad.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, low),
-			NumberSequenceKeypoint.new(1, high),
-		})
 		grad.Parent = fill
+		fills[i] = grad
 	end
+
+	-- REMPLIT UNE FEUILLE, de 0 (vide) a 1 (pleine).
+	--
+	-- UNE ARETE, PAS UN FONDU. Le degrade ne prend que deux valeurs -- visible et cache -- separees par une
+	-- frontiere qu'on DEPLACE. C'est le bord net qui monte, pas la couleur qui apparait.
+	--
+	-- LES DEUX BOUTS D'UNE NumberSequence DOIVENT ETRE 0 ET 1, et les points STRICTEMENT croissants : Roblox
+	-- rejette la sequence ENTIERE si ce n'est pas le cas, sans un mot. C'est pour ca que les extremes ont leur
+	-- propre cas -- a 0 et a 1, la frontiere sortirait du cadre et les points se marcheraient dessus.
+	local function setFill(i: number, amount: number)
+		local grad = fills[i]
+		if not (grad and grad.Parent) then
+			return
+		end
+		local shown, hidden = 0, 1
+		if amount <= 0 then
+			grad.Transparency = NumberSequence.new(hidden)
+			return
+		elseif amount >= 1 then
+			grad.Transparency = NumberSequence.new(shown)
+			return
+		end
+		-- La frontiere avance du bout PLEIN vers le bout VIDE. Le sens depend de la convention de Roblox et de
+		-- l'orientation de l'image : il se voit a l'ecran, d'ou LEAF_FILL_INVERT.
+		local edge = if LEAF_FILL_INVERT then amount else 1 - amount
+		edge = math.clamp(edge, LEAF_EDGE, 1 - 2 * LEAF_EDGE)
+		local before = if LEAF_FILL_INVERT then shown else hidden
+		local after = if LEAF_FILL_INVERT then hidden else shown
+		grad.Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, before),
+			NumberSequenceKeypoint.new(edge, before),
+			NumberSequenceKeypoint.new(edge + LEAF_EDGE, after),
+			NumberSequenceKeypoint.new(1, after),
+		})
+	end
+
+	for i = 1, LEAF_COUNT do
+		setFill(i, 0)
+	end
+
+	task.spawn(function()
+		-- INDICATEUR QUI TOURNE, pas une jauge de progression. Il ne dit pas combien il reste -- personne ne le
+		-- sait -- il dit que ca travaille. Une jauge calee sur une duree devinee finit toujours par mentir.
+		--
+		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
+		-- instance detruite.
+		while sg.Parent do
+			for i = 1, LEAF_COUNT do
+				if not sg.Parent then
+					return
+				end
+				-- LINEAIRE, sans adoucissement. Une arete qui accelere puis ralentit se lit comme une hesitation ;
+				-- on veut une montee reguliere, comme un niveau qui se remplit.
+				local t0 = os.clock()
+				while true do
+					local e = math.clamp((os.clock() - t0) / LEAF_FILL_TIME, 0, 1)
+					setFill(i, e)
+					if e >= 1 or not sg.Parent then
+						break
+					end
+					task.wait()
+				end
+				task.wait(LEAF_FILL_GAP)
+			end
+			task.wait(LEAF_CYCLE_GAP)
+			-- Elles se vident TOUTES A LA FOIS : les vider une par une lirait comme un second passage en sens
+			-- inverse, et on ne saurait plus ou commence le cycle.
+			for i = 1, LEAF_COUNT do
+				setFill(i, 0)
+			end
+		end
+	end)
 
 	-- ===== BANDEAU DU BAS =====
 	local banner = Instance.new("ImageLabel")
