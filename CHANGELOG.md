@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.550 — Le sursaut de la feuille est adouci
+
+Il claquait. Trois changements, tous sur la courbe et pas sur l'amplitude -- l'etirement reste le meme.
+
+### `Back` a la place d'`Elastic`
+
+Les deux depassent la taille de repos, mais `Elastic` OSCILLE ensuite : plusieurs allers-retours qui se lisent
+comme un tremblement, pas comme de la souplesse. `Back` depasse UNE fois et se pose. Meme ressort, en plus calme.
+
+### `Sine` a la place de `Quad` a la montee
+
+`Quad Out` part a PLEINE vitesse. Un depart sec sur un etirement se ressent comme un tic, meme quand la fin est
+douce -- c'est exactement la correction deja faite sur l'apparition des feuilles.
+
+### Les durees se rapprochent
+
+`LEAF_POP_UP` 0.08 -> 0.16, `LEAF_POP_BACK` 0.45 -> 0.42. Le retour reste plus lent que la montee -- c'est cet
+ecart qui fait un sursaut plutot qu'un gonflement -- mais les deux sont maintenant assez longs pour qu'aucun ne
+claque.
+
 ## 0.0.549 — Le sursaut s'etire plus haut, et s'affine en montant
 
 - `LEAF_POP_SCALE` 1.32 -> 1.7

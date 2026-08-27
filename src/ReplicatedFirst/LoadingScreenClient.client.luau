@@ -275,10 +275,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- pas, elle GROSSIT -- et grossir n'evoque rien de souple. En conservant a peu pres son volume, elle se lit
 	-- comme une goutte qu'on tire.
 	local LEAF_POP_X = 0.74
-	-- Montee SECHE, retour ELASTIQUE. L'ecart entre les deux fait tout : monter aussi lentement qu'on redescend
-	-- donne un gonflement, pas un sursaut.
-	local LEAF_POP_UP = 0.08
-	local LEAF_POP_BACK = 0.45
+	-- Montee douce, retour un peu plus long. Le retour reste PLUS LENT que la montee : c'est cet ecart qui fait
+	-- le sursaut plutot qu'un gonflement. Mais les deux sont assez longs pour qu'aucun ne claque.
+	local LEAF_POP_UP = 0.16
+	local LEAF_POP_BACK = 0.42
 	local LEAF_COUNT = 6
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
@@ -633,15 +633,18 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		local normal = UDim2.fromScale(leafW, 1)
 		local up = TweenService:Create(
 			leaf,
-			TweenInfo.new(LEAF_POP_UP, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			-- `Sine` en sortie : la courbe la plus douce des deux cotes. `Quad Out` partait a pleine vitesse, et un
+			-- depart sec sur un etirement se ressent comme un tic meme quand la fin est douce.
+			TweenInfo.new(LEAF_POP_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
 			{ Size = UDim2.fromScale(leafW * LEAF_POP_X, LEAF_POP_SCALE) }
 		)
 		up.Completed:Connect(function()
 			if leaf.Parent then
-				-- `Elastic` en sortie DEPASSE puis oscille autour de la taille de repos : c'est ce ballottement
-				-- qui donne la matiere molle. Sans lui, elle se contenterait de redescendre.
+				-- `Back` et pas `Elastic`. Les deux depassent la taille de repos, mais `Elastic` OSCILLE ensuite --
+				-- plusieurs allers-retours qui se lisent comme un tremblement, pas comme de la souplesse. `Back`
+				-- depasse UNE fois et se pose : c'est le meme ressort, en plus calme.
 				TweenService
-					:Create(leaf, TweenInfo.new(LEAF_POP_BACK, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
+					:Create(leaf, TweenInfo.new(LEAF_POP_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 						Size = normal,
 					})
 					:Play()
