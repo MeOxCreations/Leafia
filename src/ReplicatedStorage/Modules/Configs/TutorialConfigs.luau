@@ -249,6 +249,13 @@ return {
 	-- ne se DEDUIT pas, ca se voit a l'ecran.
 	DOOR_OPEN_INVERT = false,
 
+	-- ===== LE MARQUEUR SUR LA PORTE =====
+	-- Un point d'exclamation flottant au-dessus de la porte, tant qu'on n'a pas toque. Le halo dit "cet objet
+	-- compte" quand on le voit deja ; le marqueur, lui, se voit de LOIN et dit ou aller.
+	--
+	-- Hauteur au-dessus du centre de la porte, en studs.
+	DOOR_MARKER_UP = 3.5,
+
 	-- ===== L'OBJECTIF =====
 	-- EN ANGLAIS, comme tout texte vu par le joueur. Le traducteur de Roblox part de l'anglais : un texte ecrit en
 	-- francais n'est traduit NULLE PART, et le jeu devient illisible pour la quasi-totalite de la plateforme.

@@ -23,6 +23,7 @@ local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
+local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
@@ -54,6 +55,8 @@ local warnedNoDoor = false
 local warnedNoHighlight = false
 local elapsed = 0
 local doorHint = true
+-- Le point d'exclamation au-dessus de la porte. `nil` = pas affiche.
+local doorMarker: Frame? = nil
 local missionStarted = false
 local sceneEnded = false
 local grandpaTrack: AnimationTrack? = nil
@@ -867,6 +870,19 @@ local function step(dt: number)
 		end
 	end
 
+	-- ===== LE MARQUEUR =====
+	-- Le halo dit "cet objet compte" quand on le voit deja. Le marqueur, lui, se voit de LOIN : c'est lui qui dit
+	-- OU ALLER, et il disparait des qu'on a toque.
+	--
+	-- Pose ICI et pas dans `setDoorHint` : l'ancre de la porte arrive par le streaming, souvent bien apres. Le
+	-- marqueur se poserait alors sur une cible qui n'existe pas encore -- et jamais ensuite.
+	if doorHint and not doorMarker then
+		doorMarker = WorldMarker.show(anchorPos, Vector3.new(0, TutorialConfigs.DOOR_MARKER_UP, 0))
+	elseif not doorHint and doorMarker then
+		WorldMarker.remove(doorMarker)
+		doorMarker = nil
+	end
+
 	-- ===== LE HALO =====
 	local halo = highlight
 	if halo and halo.Parent then
@@ -1005,6 +1021,10 @@ function TutorialController.stop()
 	stopTrack(knockTrack)
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
+	if doorMarker then
+		WorldMarker.remove(doorMarker)
+		doorMarker = nil
+	end
 	-- LA PORTE SE REFERME AVEC LA SCENE. On annule le mouvement en cours puis on la repose fermee : sans ca elle
 	-- resterait grande ouverte pour toujours, et rejouer la scene partirait d'une porte deja ouverte.
 	doorSwingToken += 1

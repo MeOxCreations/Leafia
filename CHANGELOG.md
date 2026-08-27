@@ -2204,6 +2204,50 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.562 — Un marqueur d'attention dans le monde, et il flotte sur la porte du tuto
+
+`Modules/UI/Core/WorldMarker` : un point d'exclamation pose sur un objet du monde. Il dit "ici, maintenant" sans
+un mot.
+
+Premier usage : au-dessus de la porte du grand-pere, tant qu'on n'a pas toque.
+
+### PAS un BillboardGui
+
+Un Billboard vit dans le monde : il subit l'eclairage, il passe DERRIERE les objets, et sa taille depend de la
+distance. Celui-ci est un ScreenGui projete -- pixels constants, couleurs exactes, toujours au-dessus.
+
+La primitive qui fait ca existe deja (`WorldAnchor`, celle du prompt d'interaction) : on ne refait pas sa boucle.
+
+### Plusieurs marqueurs A LA FOIS
+
+Contrairement au prompt d'interaction, qui est un singleton. Deux choses peuvent etre importantes en meme temps,
+et se les disputer donnerait exactement le bug des prompts qui se volaient la pilule -- celui qui perdait ne
+revenait plus. Chaque appel rend SON marqueur.
+
+### Deux mouvements, a des rythmes differents
+
+Il monte et descend (2.2 rad/s) et il respire (4.4). Le battement est plus RAPIDE que le balancement : deux
+rythmes proches se synchronisent a l'oeil et l'ensemble se lirait comme un seul mouvement mou.
+
+Et la phase est TIREE AU HASARD a la creation : deux marqueurs poses ensemble monteraient et descendraient en
+meme temps, ce qui se lit comme une interface qui clignote au lieu de deux objets vivants.
+
+### Le balancement passe par l'offset MONDE
+
+Pas par la position a l'ecran : il monte donc verticalement DANS LA SCENE, quelle que soit l'orientation de la
+camera. Un decalage en pixels partirait de travers des qu'on incline la vue.
+
+### Il disparait de loin
+
+`MAX_DISTANCE = 160`. Un marqueur visible a l'autre bout de la map n'attire pas l'attention, il l'epuise. Sa
+taille est bornee dans les deux sens : un marqueur doit rester lisible, pas simuler la perspective.
+
+### Pose dans la boucle, pas a l'allumage de l'indice
+
+L'ancre de la porte arrive par le streaming, souvent bien apres le demarrage. Le poser au moment ou l'indice
+s'allume viserait une cible qui n'existe pas encore -- et plus jamais ensuite. Meme piege que le prompt de la
+porte, deja paye.
+
 ## 0.0.561 — Le grand-pere se remet sur son idle en arrivant
 
 Arrive devant sa porte, il arrete de marcher -- et on s'assure qu'un idle tourne.
