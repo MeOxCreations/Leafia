@@ -455,11 +455,16 @@ return {
 	-- l'inverse de ce qu'on veut : se rapprocher resserre le cadre et donne la sensation de vitesse, s'eloigner
 	-- la calme.
 	--
-	-- Elle suit la vitesse REELLE, donc elle revient toute seule a l'arret : rien a eteindre.
+	-- PETIT. C'est un accent, pas un changement de plan : trop pres, la machine remplit l'ecran et on ne voit plus
+	-- ou l'on va.
 	--
 	-- ET CA NE PEUT PAS BOUCLER, contrairement a l'inclinaison du joueur essayee puis retiree : changer la
 	-- DISTANCE de la camera ne change pas sa DIRECTION, et c'est la direction que lit `GetMoveVector`.
-	DRIVE_ZOOM = -5,
+	DRIVE_ZOOM = -2.5,
+	-- Vitesse d'installation, en fraction par seconde. VIF : la camera doit repondre a l'appui, pas raconter la
+	-- montee en regime. L'allure par defaut de CameraEffects (1.1) est faite pour des effets de fond, elle
+	-- mettrait plus d'une seconde.
+	DRIVE_ZOOM_SPEED = 11,
 
 	-- RALENTISSEMENT EN VIRAGE. Fraction de vitesse PERDUE a fond de braquage. 0 = aucun ralentissement, 0.5 =
 	-- moitie moins vite.

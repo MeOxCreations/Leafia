@@ -58,6 +58,8 @@ local pullBound = false
 -- le reseau d'un message par image pour une valeur qui ne bouge pas.
 local lastSteerSent = 0
 local lastDriveSent = 0
+-- Avance DEMANDEE a l'instant, -1 a 1. Lue par le rapprochement de camera, qui tourne dans une autre fonction.
+local driveNow = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -160,16 +162,23 @@ end
 -- appelants ecrivant chacun la sienne, le dernier de l'image ecraserait l'autre, et le recul clignoterait.
 -- La vitesse se MESURE sur le deplacement reel plutot que de recopier la valeur du serveur : c'est ce que le
 -- joueur voit, et ca marche meme si un autre systeme le ralentit.
-local function applyCameraRig(hrp: BasePart?, carrying: boolean)
+local function applyCameraRig(carrying: boolean)
 	local total = if revealOn then MowConfigs.HIGHLIGHT_ZOOM else 0
+	local zoomSpeed: number? = nil
 	-- `~= 0` et non `> 0` : une valeur NEGATIVE rapproche la camera, et c'est le cas normal. La garde d'origine
 	-- refusait justement ce sens-la, donc regler DRIVE_ZOOM en negatif ne faisait rien du tout.
-	if carrying and hrp and MowConfigs.DRIVE_ZOOM ~= 0 and MowConfigs.SPEED_MAX > 0 then
-		local v = hrp.AssemblyLinearVelocity
-		local speed = math.sqrt(v.X * v.X + v.Z * v.Z)
-		total += math.clamp(speed / MowConfigs.SPEED_MAX, 0, 1) * MowConfigs.DRIVE_ZOOM
+	if carrying and MowConfigs.DRIVE_ZOOM ~= 0 then
+		-- SUR L'APPUI, PAS SUR LA VITESSE MESUREE. La vitesse met pres de trois secondes a monter
+		-- (`SPEED_RAMP_UP`) : calee dessus, la camera racontait la montee en regime au lieu de repondre a la
+		-- touche, et aucune allure de lissage n'aurait pu la rattraper -- c'est la CIBLE qui etait lente, pas le
+		-- trajet.
+		--
+		-- Marche avant seulement : reculer n'est pas une acceleration, et resserrer le cadre quand on recule
+		-- enleve justement le peu de visibilite qu'on a.
+		total += math.clamp(driveNow, 0, 1) * MowConfigs.DRIVE_ZOOM
+		zoomSpeed = MowConfigs.DRIVE_ZOOM_SPEED
 	end
-	CameraEffects.SetZoomBoost(total)
+	CameraEffects.SetZoomBoost(total, zoomSpeed)
 	-- LE CHAMP DE VISION, MEME REGLE : deux raisons, une seule ecriture. Elles s'ADDITIONNENT plutot que de se
 	-- choisir -- reveler pendant qu'on tire la corde est possible, et le recul doit alors valoir les deux.
 	local fov = if revealOn then MowConfigs.HIGHLIGHT_FOV else 0
@@ -916,6 +925,9 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		-- On ECRIT zero, on ne se contente pas de sortir : ce bind passe APRES le module de controle de Roblox,
 		-- donc ne rien faire laisserait SA demande de deplacement s'appliquer.
 		humanoid:Move(Vector3.zero, false)
+		-- Moteur coupe : plus aucune avance demandee. Sans ca la camera resterait rapprochee, figee sur la
+		-- derniere valeur ecrite avant l'arret.
+		driveNow = 0
 		clearTrail()
 		clearMarker()
 		-- ON REND LE SENS NORMAL. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour
@@ -948,6 +960,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- "EST-CE QU'ON RECULE" : une question, une reponse. Deux lecteurs s'en servent -- le sens des jambes et le
 	-- sens du braquage -- et les laisser la recalculer chacun de son cote finirait par les faire diverger.
 	local reversing = forwardAmount < -MowConfigs.STEER_MOVE_EPSILON
+	driveNow = forwardAmount
 	local lateralAmount = math.clamp(mv.X, -1, 1)
 
 	-- DIAGNOSTIC A L'ECRAN. Voir MowConfigs.STEER_DEBUG_INPUT.
@@ -1439,6 +1452,7 @@ local function update(dt: number)
 		pcall(function()
 			RunService:UnbindFromRenderStep(STEER_BIND)
 		end)
+		driveNow = 0
 		clearTrail()
 		clearMarker()
 		if humanoid then
@@ -1464,7 +1478,7 @@ local function update(dt: number)
 	else
 		MoveThumb.hide()
 	end
-	applyCameraRig(hrp :: BasePart, mine ~= nil)
+	applyCameraRig(mine ~= nil)
 
 	if not mine then
 		setPullBound(false)

@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.527 — Le rapprochement repond a la TOUCHE, et il est plus discret
+
+Il etait mou, et aucune allure de lissage n'aurait pu le rattraper.
+
+### C'etait la CIBLE qui etait lente, pas le trajet
+
+Le rapprochement suivait la vitesse MESUREE. Elle met pres de trois secondes a monter (`SPEED_RAMP_UP`) : la
+camera racontait donc la montee en regime au lieu de repondre a l'appui.
+
+Elle suit maintenant l'avance DEMANDEE. Marche avant seulement -- reculer n'est pas une acceleration, et
+resserrer le cadre en reculant enleve justement le peu de visibilite qu'on a.
+
+### Une allure PAR APPEL
+
+`SetZoomBoost` prend desormais une vitesse, comme `SetFovOffset`. L'allure par defaut (1.1) est faite pour les
+effets de fond, ou un changement de distance ne doit pas se remarquer ; la conduite passe `DRIVE_ZOOM_SPEED = 11`.
+
+Une seule constante partagee aurait force a choisir entre les deux -- ou a degrader l'effet de fond pour rendre
+celui-ci vif.
+
+### Plus discret
+
+`DRIVE_ZOOM` -5 -> -2.5. C'est un accent, pas un changement de plan : trop pres, la machine remplit l'ecran et on
+ne voit plus ou l'on va.
+
+### Il se rend a l'arret
+
+`driveNow` retombe a zero quand le moteur s'arrete et quand on repose la machine. Sans ca la camera resterait
+rapprochee, figee sur la derniere valeur ecrite avant l'arret.
+
 ## 0.0.526 — La camera se RAPPROCHE quand la tondeuse prend de la vitesse
 
 L'effet existait deja -- `DRIVE_ZOOM` -- et il poussait dans le mauvais sens.

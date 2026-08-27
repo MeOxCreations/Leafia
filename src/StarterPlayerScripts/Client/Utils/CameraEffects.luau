@@ -50,11 +50,14 @@ local fovOffsetTarget = 0
 -- MEME allure que FOV_OFFSET_LERP_SPEED, et ce n'est pas un hasard : recul et resserrement sont les deux
 -- moities du MEME geste. A vitesses differentes on verrait l'un arriver avant l'autre, et le mouvement
 -- se lirait comme deux effets colles au lieu d'un seul.
+-- Allure PAR DEFAUT. Lente expres : elle sert aux effets de fond, ou un changement de distance ne doit pas se
+-- remarquer. Un appelant qui veut une reaction VIVE la passe en argument -- meme mecanique que SetFovOffset.
 local ZOOM_LERP_SPEED = 1.1
 -- Distance minimale gardee, en studs. Sous un demi-stud Roblox bascule en vue subjective.
 local MIN_ZOOM = 1.5
 local zoomBoost = 0
 local zoomBoostTarget = 0
+local zoomBoostSpeed = ZOOM_LERP_SPEED
 local zoomBase: number? = nil -- distance du joueur AU MOMENT ou le recul commence
 local zoomMinWas, zoomMaxWas = 0, 0
 local zoomSaved = false -- les bornes du joueur sont-elles mises de cote ?
@@ -139,8 +142,11 @@ end
 -- capturee que pour une valeur positive, donc une valeur negative ne faisait simplement rien -- sans erreur.
 --
 -- Meme regle : c'est l'appelant qui l'eteint.
-function CameraEffects.SetZoomBoost(studs: number)
+function CameraEffects.SetZoomBoost(studs: number, speed: number?)
 	zoomBoostTarget = studs
+	-- L'allure appartient a l'APPEL, pas au module : le meme decalage doit pouvoir s'installer lentement pour un
+	-- effet de fond et d'un coup pour une reaction. Une seule constante partagee forcerait a choisir.
+	zoomBoostSpeed = speed or ZOOM_LERP_SPEED
 end
 
 --- VUE SUBJECTIVE. Colle les bornes de zoom a zero tant que c'est vrai, et rend au joueur les siennes en sortant.
@@ -266,7 +272,7 @@ function CameraEffects.init()
 				player.CameraMaxZoomDistance = d
 			else
 				fpBase = nil
-				zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, ZOOM_LERP_SPEED * dt)
+				zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, zoomBoostSpeed * dt)
 				if zoomBoostTarget ~= 0 and not zoomBase then
 					zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
 				end
