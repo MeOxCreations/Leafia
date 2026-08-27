@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.569 — Les roues tournent dans le bon sens
+
+`WHEEL_DIRECTION` 1 -> -1. Elles tournaient a l'envers en marche avant.
+
+Le sens depend de l'orientation du mesh dans Blender : il ne se deduit pas, il se voit -- d'ou le reglage, pose
+d'avance pour ce moment precis.
+
 ## 0.0.568 — L'herbe intacte se couche deux fois plus vite
 
 `SQUASH_SPEED` 8 -> 16.

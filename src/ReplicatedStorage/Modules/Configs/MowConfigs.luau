@@ -668,8 +668,9 @@ return {
 	--
 	-- NOMS DES ROUES -- ceux des PARTS, ceux qu'on lit d'un coup d'oeil dans l'Explorer.
 	WHEEL_PARTS = { "WheelBack", "WheelFront" },
-	-- Sens de rotation. Si les roues tournent a l'envers, mettre -1. Se voit a l'ecran, ne se deduit pas.
-	WHEEL_DIRECTION = 1,
+	-- Sens de rotation. Il depend de l'orientation du mesh dans Blender : ca se voit a l'ecran, ca ne se deduit
+	-- pas. A -1 depuis qu'on l'a regarde tourner.
+	WHEEL_DIRECTION = -1,
 	-- Rayon de secours (studs) si la part n'a pas de taille lisible. Sinon il est MESURE sur elle,
 	-- perpendiculairement a son axe.
 	WHEEL_RADIUS_FALLBACK = 0.6,
