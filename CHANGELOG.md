@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.525 — L'inclinaison du joueur est retiree : elle se battait avec la camera
+
+Elle se ressentait bien -- et elle etait ingerable.
+
+### Une boucle, pas un reglage
+
+Incliner le personnage incline la CAMERA. Et l'entree de conduite est RELATIVE A LA CAMERA : `GetMoveVector`
+rend X = cote et Z = arriere DE LA CAMERA, pas du monde.
+
+L'effet modifiait donc l'entree qui le produit. Un braquage inclinait la vue, la vue changeait la valeur du
+braquage, qui changeait l'inclinaison. Aucune valeur ne peut rendre ca propre : ce n'est pas une question de
+dosage, c'est un circuit ferme.
+
+Une boucle pareille ne se regle pas, elle s'enleve.
+
+### Ce qui reste
+
+Le cabrage du nez (`TURN_LIFT`) est GARDE. Il vit sur la soudure de la machine et ne touche a aucun repere de la
+vue : il ne peut rien influencer en retour.
+
+Le CFrame du joueur redevient ecrit SEULEMENT quand il tourne -- l'ecriture par frame n'existait que pour laisser
+l'inclinaison revenir a zero.
+
+### Le motif a retenir
+
+Avant d'ajouter un effet qui bouge le personnage, se demander ce qui LIT sa pose. Ici la camera la lisait, et
+l'entree lisait la camera. Meme famille que "une propriete, un seul ecrivain", mais en pire : ici il n'y avait
+qu'un ecrivain, et il se lisait lui-meme.
+
 ## 0.0.524 — Le nez se leve pour tourner, et le joueur se penche dans le virage
 
 Deux effets qui racontent la meme chose : tourner DEMANDE un effort.

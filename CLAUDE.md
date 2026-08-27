@@ -813,6 +813,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   permet pas de voir que l'hypothese de depart est fausse. Regle : quand un calcul choisit entre plusieurs
   possibilites, la sonde montre ses ENTREES, pas son verdict.
 
+- **Un effet qui BOUGE LE PERSONNAGE se boucle sur lui-meme des que l'entree est relative a la camera.** Incliner
+  le joueur dans les virages de la tondeuse se ressentait bien, mais incliner le personnage incline la CAMERA, et
+  `GetMoveVector` rend un vecteur RELATIF A LA CAMERA (X = cote, Z = arriere) : l'effet modifiait donc l'entree
+  qui le produit. Aucune valeur ne rend ca propre -- ce n'est pas un probleme de dosage mais un circuit ferme, et
+  ca s'enleve au lieu de se regler. Reflexe : avant d'ajouter un effet sur la pose du personnage, se demander QUI
+  LIT cette pose. Meme famille que "une propriete, un seul ecrivain", en pire -- ici il n'y a qu'un ecrivain, et
+  il se lit lui-meme. Un effet pose sur la SOUDURE de l'objet (le cabrage du nez) n'a pas ce probleme : rien dans
+  le repere de la vue n'en depend.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

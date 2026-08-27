@@ -517,17 +517,6 @@ return {
 	-- Vitesse d'installation, en fraction par seconde. Le nez se leve AVEC le braquage et retombe avec lui.
 	TURN_LIFT_SPEED = 7,
 
-	-- ===== LE JOUEUR SE PENCHE DANS LE VIRAGE =====
-	-- Il ne se contente pas de pivoter : il s'INCLINE du cote ou il tourne, comme quelqu'un qui pousse une
-	-- charge lourde en tournant. Le corps raconte l'effort que le cap tout seul ne raconte pas.
-	--
-	-- Angle a fond de braquage, en degres. PETIT : au-dela d'une dizaine, le personnage a l'air de tomber plutot
-	-- que de forcer.
-	TURN_LEAN = 8,
-	TURN_LEAN_SPEED = 9,
-	-- Il se penche du mauvais cote ? Mettre true. Le sens depend de la convention d'angle de Roblox : ca se voit a
-	-- l'ecran, ca ne se deduit pas.
-	TURN_LEAN_INVERT = false,
 	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
 	PUSH_PRIORITY = Enum.AnimationPriority.Action2,
