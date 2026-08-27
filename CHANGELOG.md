@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.533 — Le geste de tirage de corde est plus vif
+
+`START_SPEED = 1.6`, en multiple du rythme de l'editeur. Tirer une corde de lanceur est un coup SEC, pas un
+mouvement qu'on accompagne.
+
+### Rien d'autre a regler
+
+Tout ce qui se voit et s'entend pendant le geste -- le cabrage de la machine, la toux du moteur, le son de la
+corde -- part du MARQUEUR pose dans l'animation. Il arrive simplement plus tot, et tout ce qui en depend suit.
+
+C'est la difference entre un geste qui se declenche par MARQUEUR et un geste cadence par des delais : ici,
+changer la vitesse ne demande de retoucher aucune autre duree.
+
 ## 0.0.532 — La camera TRAINE dans les virages, et le cabrage part
 
 Deux changements opposes dans le meme commit : un effet ajoute, un autre retire.

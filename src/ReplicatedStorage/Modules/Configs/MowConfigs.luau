@@ -171,6 +171,13 @@ return {
 	START_ANIM_ID = "rbxassetid://88566815924193",
 	-- MEME priorite que la pose du guidon : elles ne jouent jamais en meme temps, l'une remplace l'autre.
 	START_PRIORITY = Enum.AnimationPriority.Action,
+	-- VITESSE DU GESTE DE TIRAGE, en multiple du rythme de l'editeur. Le geste etait mou : tirer une corde de
+	-- lanceur est un coup SEC, pas un mouvement qu'on accompagne.
+	--
+	-- Ne touche a RIEN d'autre : tout ce qui se voit et s'entend (le cabrage, la toux du moteur, le son de la
+	-- corde) part du MARQUEUR pose dans l'animation, qui arrive simplement plus tot. Aucune duree a garder
+	-- d'accord avec celle-ci.
+	START_SPEED = 1.6,
 	-- Fondu d'entree. La sortie est geree par le fondu de la pose qui prend le relais.
 	START_FADE = 0.1,
 	-- La piste est FIGEE a sa premiere image des la prise : le personnage tient la corde, pret a tirer. C'est le

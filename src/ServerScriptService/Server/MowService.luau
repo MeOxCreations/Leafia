@@ -397,7 +397,10 @@ local function pullStarter(state: CarryState)
 	end
 	-- ON NE FAIT QUE RELANCER LA PISTE. Tout ce qui se voit et s'entend (la machine qui se cabre, la toux du
 	-- moteur, le son de la corde) part du MARQUEUR pose dans l'animation, pas d'ici -- voir yankStarter.
-	track:AdjustSpeed(1)
+	--
+	-- Plus vite que le rythme de l'editeur : tirer une corde de lanceur est un coup SEC. Le marqueur arrive donc
+	-- plus tot, et tout ce qui en depend suit sans qu'on ait a le regler.
+	track:AdjustSpeed(MowConfigs.START_SPEED)
 end
 
 -- POSE DE MAINTIEN : le joueur attrape le guidon, et TIENT la pose tant qu'il pousse.
