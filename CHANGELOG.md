@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.523 — Le personnage se redresse plus vite qu'il ne se penche
+
+L'animation "embarque" se rejouait a l'envers a la MEME vitesse qu'a l'endroit. Se relever prenait donc autant de
+temps que se pencher, ce qui se lit comme un ralenti.
+
+Se laisser embarquer est PROGRESSIF -- la machine prend son elan. Se redresser est un REFLEXE.
+
+`PUSH_RETURN_SPEED = 2.4` a cote de `PUSH_PLAY_SPEED = 1`.
+
+### Un knob par sens, pas un facteur applique a l'autre
+
+Deux moments differents n'ont aucune raison de rester d'accord. Le jour ou l'on retouche l'aller, on ne veut pas
+voir le retour bouger avec -- et c'est exactement ce motif qui a deja coute plusieurs allers-retours sur la
+vitesse de coupe, la hauteur de l'herbe et les durees de camera.
+
 ## 0.0.522 — Retour en arriere : le braquage en marche arriere s'inverse bien
 
 `STEER_REVERSE_INVERT` revient a `true`. La version precedente l'avait retourne du mauvais cote.

@@ -1043,7 +1043,11 @@ local function grab(player: Player, model: Model)
 			--
 			-- On s'arrete a Length - epsilon : sur la derniere image PILE, une piste bouclee est deja repartie a
 			-- zero, et la pose claquerait au repos juste au moment ou elle est la plus marquee.
-			local step = dt * MowConfigs.PUSH_PLAY_SPEED * (if pushing then 1 else -1)
+			-- UNE VITESSE PAR SENS. L'aller se joue au rythme de l'editeur, le retour plus vif : se laisser
+			-- embarquer est progressif, se redresser est un reflexe.
+			local step = if pushing
+				then dt * MowConfigs.PUSH_PLAY_SPEED
+				else -dt * MowConfigs.PUSH_RETURN_SPEED
 			state.pushTime = math.clamp(state.pushTime + step, 0, push.Length - HOLD_EPSILON)
 			push.TimePosition = state.pushTime
 		end

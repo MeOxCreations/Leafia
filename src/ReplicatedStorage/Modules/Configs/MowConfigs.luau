@@ -499,6 +499,13 @@ return {
 	-- d'un bloc -- "trop sec" -- et les poses intermediaires passaient trop vite pour se voir. Une valeur
 	-- interpolee ne peut PAS restituer un timing anime : seule une lecture lineaire le peut.
 	PUSH_PLAY_SPEED = 1,
+	-- VITESSE DU RETOUR, quand on lache. Plus rapide que l'aller : se laisser embarquer est PROGRESSIF -- la
+	-- machine prend son elan -- alors que se redresser est un REFLEXE. A la meme vitesse, le personnage met
+	-- autant de temps a se relever qu'a se pencher, et ca se lit comme un ralenti.
+	--
+	-- Un knob par sens, et pas un facteur applique a l'autre : deux moments differents n'ont aucune raison de
+	-- rester d'accord, et le jour ou l'on retouche l'aller on ne veut pas voir le retour bouger avec.
+	PUSH_RETURN_SPEED = 2.4,
 	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
 	PUSH_PRIORITY = Enum.AnimationPriority.Action2,
