@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.552 — Le camion respire a l'arret
+
+Une ligne dans `AmbientAnimConfigs` : `AmbientAnimService` anime deja tout modele declare par son NOM, et il
+balaye tout le Workspace. Aucun code a ecrire, aucun rangement impose.
+
+Un vehicule parfaitement immobile a cote d'arbres qui bougent se lit comme un decor colle, pas comme un objet
+pose la.
+
+### Le nom du MODELE est ce qui compte
+
+Pas celui du dossier. La cle de la config est le nom du modele dans le Workspace : le renommer dans Studio sans
+le changer ici coupe son animation EN SILENCE -- plus rien ne le trouve, et rien ne le signale.
+
+Le dossier, lui, est libre : aucun systeme du projet n'impose ou ranger un objet. C'est deliberé -- obliger a
+ranger au bon endroit pour qu'une chose fonctionne est un piege qui a deja coute plusieurs diagnostics ici.
+
 ## 0.0.551 — La feuille s'ETIRE vraiment : `Fit` l'en empechait
 
 Elle RAPETISSAIT au lieu de s'etirer. Le code d'animation etait juste, les valeurs etaient justes -- c'est le

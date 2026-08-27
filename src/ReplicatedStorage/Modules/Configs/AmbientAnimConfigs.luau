@@ -28,6 +28,9 @@ local ANIMATIONS: { [string]: string } = {
 	-- LA CLE EST LE NOM DU MODELE DANS LE WORKSPACE, pas une etiquette libre. Le renommer dans Studio sans le
 	-- changer ici coupe son animation EN SILENCE : plus rien ne le trouve, et rien ne le signale.
 	OldmanOriginal = "rbxassetid://102639960685891",
+	-- Le camion respire a l'arret : suspension qui travaille, carrosserie qui bouge d'un rien. Un vehicule
+	-- parfaitement immobile a cote d'arbres qui bougent se lit comme un decor colle, pas comme un objet pose la.
+	Truck = "rbxassetid://123591212100898",
 }
 
 local AmbientAnimConfigs = {
