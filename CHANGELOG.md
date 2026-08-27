@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.532 — La camera TRAINE dans les virages, et le cabrage part
+
+Deux changements opposes dans le meme commit : un effet ajoute, un autre retire.
+
+### La camera reste un peu en arriere
+
+Elle ne suit plus le virage tout de suite : le joueur GLISSE dans le cadre avant qu'elle le rattrape. C'est ce
+retard qui donne du poids -- une camera collee au personnage donne l'impression que la machine ne pese rien.
+
+`TURN_CAM_LAG = 3` studs, `TURN_CAM_LAG_SPEED = 3` (bas expres : c'est le retard qu'on veut sentir).
+
+### ON DECALE SA POSITION, ON NE TOURNE PAS SA VISEE
+
+C'est toute la difference avec l'inclinaison du joueur essayee puis retiree en 0.0.525.
+
+`GetMoveVector` rend un vecteur RELATIF A LA CAMERA. Tourner la camera modifierait donc l'entree de conduite qui
+produit l'effet -- un circuit ferme. La DEPLACER ne touche a rien : la camera de jeu garde son orientation, celle
+de la souris.
+
+Passe par `CameraEffects.SetLag`, qui est declare seul ecrivain de `CameraOffset`. Ecrire directement l'aurait
+mis en concurrence avec la secousse, le bob et la plongee d'atterrissage.
+
+### Le cabrage de virage part
+
+`TURN_LIFT` etait ajoute en 0.0.524 -- lever le nez pour que les roues avant ne frottent pas. A l'usage, ca ne
+donne rien de bon. Retire, avec son etat serveur et la somme des deux cabrages ; celui du demarrage a la corde
+retrouve son calcul d'origine.
+
+### Le cadre est rendu a l'arret
+
+A la coupure du moteur ET a la repose. Un ecart laisse en place suivrait le joueur pour le reste de la partie,
+longtemps apres la tondeuse reposee -- et personne ne ferait le lien.
+
 ## 0.0.531 — RETOUR EN ARRIERE : l'effet serpent est annule
 
 0.0.529 et 0.0.530 sont defaits. La conduite retrouve exactement l'etat qu'elle avait apres le cabrage de virage

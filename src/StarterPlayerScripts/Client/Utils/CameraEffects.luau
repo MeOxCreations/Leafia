@@ -91,6 +91,7 @@ local bobFrequency = 0
 local bobPhase = 0
 local BOB_LERP_SPEED = 6
 
+local lagOffset = Vector3.zero
 -- Dernier decalage compose, garde pour les cameras SCRIPTEES. Humanoid.CameraOffset n'est applique que par
 -- les scripts de camera par defaut de Roblox : des qu'une feature passe la camera en Scriptable, il est
 -- ignore. Une camera scriptee doit donc venir chercher cette valeur et l'appliquer elle-meme, sinon secousses
@@ -175,6 +176,20 @@ end
 
 -- Bob : oscillation verticale continue. amplitude a 0 l'eteint (en douceur). frequency en oscillations par
 -- seconde, grossierement la cadence des pas.
+-- DECALAGE TENU de la camera, en repere PERSONNAGE (X = sa droite, Y = haut, Z = son arriere).
+--
+-- Sert a faire TRAINER la camera : pendant un virage elle reste un peu en arriere, et le personnage glisse dans
+-- le cadre au lieu d'y rester colle.
+--
+-- ON DECALE, ON NE TOURNE PAS. C'est ce qui rend l'effet sans danger : la camera de jeu garde son orientation --
+-- celle de la souris -- et `GetMoveVector`, qui rend un vecteur RELATIF A LA CAMERA, n'est donc pas touche. Un
+-- effet qui ferait TOURNER la camera modifierait l'entree de conduite qui le produit (essaye, et retire).
+--
+-- Tenu : c'est l'appelant qui le rend a zero.
+function CameraEffects.SetLag(offset: Vector3)
+	lagOffset = offset
+end
+
 function CameraEffects.SetBob(amplitude: number, frequency: number)
 	bobTarget = amplitude
 	if frequency > 0 then
@@ -313,8 +328,8 @@ function CameraEffects.init()
 		dipVel += dipForce * dt
 		dipPos += dipVel * dt
 
-		-- L'ECRITURE UNIQUE : secousse, bob et plongee reunis ici, nulle part ailleurs.
-		composedOffset = shakeOffset + Vector3.new(0, bobY + dipPos, 0)
+		-- L'ECRITURE UNIQUE : secousse, bob, plongee et trainee reunis ici, nulle part ailleurs.
+		composedOffset = shakeOffset + lagOffset + Vector3.new(0, bobY + dipPos, 0)
 
 		local humanoid = getHumanoid()
 		if humanoid then

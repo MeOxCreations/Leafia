@@ -60,6 +60,8 @@ local lastSteerSent = 0
 local lastDriveSent = 0
 -- Avance DEMANDEE a l'instant, -1 a 1. Lue par le rapprochement de camera, qui tourne dans une autre fonction.
 local driveNow = 0
+-- Ecart lateral courant de la camera, en studs. Lisse, et RENDU a zero quand on repose la machine.
+local camLag = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -930,6 +932,9 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		driveNow = 0
 		clearTrail()
 		clearMarker()
+		-- Moteur coupe : la camera se recentre. Un ecart laisse en place tiendrait le cadre de travers a l'arret.
+		camLag = 0
+		CameraEffects.SetLag(Vector3.zero)
 		-- ON REND LE SENS NORMAL. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour
 		-- le reste de la partie, longtemps apres avoir repose la tondeuse -- et personne ne ferait le lien.
 		reverseLegs(humanoid, false)
@@ -1096,6 +1101,20 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- braquant a gauche doit poser la fleche a gauche. L'appliquer aux deux mettait la fleche du cote oppose des
 	-- qu'on reculait.
 	updateMarker(mower, lateralAmount * steerSign, dt)
+
+	-- LA CAMERA TRAINE. Elle reste un peu en arriere du virage, et le joueur glisse dans le cadre avant qu'elle le
+	-- rattrape.
+	--
+	-- Sur le braquage DEMANDE : le retard doit commencer avec le geste, pas une fois la machine deja tournee.
+	-- `dirSign` n'entre pas ici -- la camera accompagne ce que le joueur demande, et une demande ne s'inverse pas.
+	local lagSign = if MowConfigs.TURN_CAM_LAG_INVERT then -1 else 1
+	local lagWant = lateralAmount * steerSign * lagSign * MowConfigs.TURN_CAM_LAG
+	camLag += (lagWant - camLag) * math.min(1, MowConfigs.TURN_CAM_LAG_SPEED * dt)
+	if math.abs(lagWant - camLag) < 0.01 then
+		camLag = lagWant
+	end
+	-- X = la DROITE du personnage : un decalage lateral pur, aucune rotation.
+	CameraEffects.SetLag(Vector3.new(camLag, 0, 0))
 
 	-- LES JAMBES SUIVENT LE SENS REEL. On lit `forwardAmount` -- l'intention -- et pas la vitesse : pousser contre
 	-- un mur en marche arriere doit quand meme montrer des jambes qui reculent, sinon le personnage marcherait en
@@ -1455,6 +1474,10 @@ local function update(dt: number)
 		driveNow = 0
 		clearTrail()
 		clearMarker()
+		-- ON REND LE CADRE. Un ecart laisse en place suivrait le joueur pour le reste de la partie, longtemps
+		-- apres la tondeuse reposee -- et personne ne ferait le lien.
+		camLag = 0
+		CameraEffects.SetLag(Vector3.zero)
 		if humanoid then
 			humanoid.AutoRotate = autoRotateWas
 			reverseLegs(humanoid, false)

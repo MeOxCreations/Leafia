@@ -53,7 +53,6 @@ type CarryState = {
 	steerInput: number, -- braquage demande par le client, borne a [-1, 1]. Sert A L'ARRET uniquement.
 	pushTime: number, -- ou l'on en est dans l'anime "embarque", en secondes. Avance quand on pousse, recule sinon.
 	driveInput: number, -- avance demandee par le client, bornee a [-1, 1]. L'INTENTION, pas la vitesse mesuree.
-	turnLift: number, -- cabrage DU VIRAGE, en radians. S'ajoute a `lift` (le cabrage du demarrage) sur le meme pivot.
 	humanoid: Humanoid?, -- porteur, garde pour rendre le saut a la repose
 	jumpWasEnabled: boolean, -- etat du saut AVANT la prise : on restaure, on ne force pas a true
 	jumpHeight: number, -- valeurs REELLES d'avant, pas les defauts Roblox : un autre systeme a pu les changer
@@ -922,7 +921,6 @@ local function grab(player: Player, model: Model)
 		steerInput = 0,
 		pushTime = 0,
 		driveInput = 0,
-		turnLift = 0,
 		humanoid = humanoid,
 		jumpWasEnabled = if humanoid then humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping) else true,
 		jumpHeight = if humanoid then humanoid.JumpHeight else 7.2,
@@ -1099,19 +1097,6 @@ local function grab(player: Player, model: Model)
 			push.TimePosition = state.pushTime
 		end
 
-		-- LE NEZ SE LEVE POUR TOURNER. On appuie sur le guidon, les roues avant decollent, et la machine pivote sur
-		-- ses roues arriere. Sans ca elles frottent, et le virage glisse comme sur de la glace.
-		--
-		-- Sur l'INTENTION de braquage, pas sur la rotation obtenue : on souleve le nez POUR tourner, donc le geste
-		-- vient avant le virage, pas apres.
-		local liftWant = math.abs(state.steerInput) * math.rad(MowConfigs.TURN_LIFT)
-		state.turnLift += (liftWant - state.turnLift) * math.min(1, MowConfigs.TURN_LIFT_SPEED * dt)
-		-- Cle a la cible : un lerp exponentiel n'y arrive jamais, et la machine garderait une fraction de degre de
-		-- nez en l'air pour toujours -- assez pour que les roues ne touchent plus tout a fait le sol.
-		if math.abs(liftWant - state.turnLift) < SWING_SNAP then
-			state.turnLift = liftWant
-		end
-
 		local weld = state.weld
 		if weld then
 			-- La rotation passe A GAUCHE de l'offset : la machine pivote AUTOUR DU JOUEUR (le guidon reste dans
@@ -1119,13 +1104,10 @@ local function grab(player: Player, model: Model)
 			-- CABRAGE, pivote autour de l'ARRIERE : les roues restent au sol et le nez se leve. Autour de la racine
 			-- (a l'avant-bas du carter) c'est l'arriere qui se serait souleve.
 			-- Apres baseC0 on est dans le repere ALIGNE : l'avant sur -Z, donc l'arriere sur +Z, le lateral sur X.
-			-- LES DEUX CABRAGES SE SOMMENT : celui du demarrage a la corde et celui du virage. Meme pivot, meme
-			-- calcul -- deux `pitch` separes se disputeraient la soudure, et le dernier ecrit gagnerait.
 			local pitch = CFrame.identity
-			local liftTotal = state.lift + state.turnLift
-			if math.abs(liftTotal) > 1e-4 then
+			if math.abs(state.lift) > 1e-4 then
 				local d = state.backDist
-				pitch = CFrame.new(0, 0, d) * CFrame.Angles(liftTotal, 0, 0) * CFrame.new(0, 0, -d)
+				pitch = CFrame.new(0, 0, d) * CFrame.Angles(state.lift, 0, 0) * CFrame.new(0, 0, -d)
 			end
 			weld.C0 = CFrame.Angles(0, state.swing, 0) * state.baseC0 * pitch
 		end

@@ -466,6 +466,23 @@ return {
 	-- mettrait plus d'une seconde.
 	DRIVE_ZOOM_SPEED = 11,
 
+	-- ===== LA CAMERA TRAINE DANS LES VIRAGES =====
+	-- Elle ne suit pas le virage tout de suite : elle reste un peu en arriere, et le joueur GLISSE dans le cadre
+	-- avant qu'elle le rattrape. C'est ce retard qui donne du poids -- une camera collee au personnage donne
+	-- l'impression que la machine ne pese rien.
+	--
+	-- ON DECALE SA POSITION, ON NE TOURNE PAS SA VISEE. C'est la difference entre cet effet et l'inclinaison du
+	-- joueur essayee puis retiree : `GetMoveVector` rend un vecteur RELATIF A LA CAMERA, donc tourner la camera
+	-- modifierait l'entree de conduite qui produit l'effet. La deplacer ne touche a rien.
+	--
+	-- Ecart lateral a fond de braquage, en studs.
+	TURN_CAM_LAG = 3,
+	-- Vitesse a laquelle elle rattrape, en fraction par seconde. BASSE : c'est le retard qu'on veut faire sentir.
+	-- Haute, la camera colle au virage et l'effet disparait.
+	TURN_CAM_LAG_SPEED = 3,
+	-- Elle traine du mauvais cote ? Mettre true. Ca se voit a l'ecran, ca ne se deduit pas.
+	TURN_CAM_LAG_INVERT = false,
+
 	-- ===== ELLE SE POSE AU SOL, D'UN COUP =====
 	-- En lachant la machine on se contentait de defaire la soudure : elle TOMBAIT, puis se balancait le temps que
 	-- la physique la stabilise. Ca se ressent comme un flottement, alors que reposer une tondeuse est un geste
@@ -534,15 +551,6 @@ return {
 	-- rester d'accord, et le jour ou l'on retouche l'aller on ne veut pas voir le retour bouger avec.
 	PUSH_RETURN_SPEED = 2.4,
 
-	-- ===== ON LEVE LE NEZ POUR TOURNER =====
-	-- C'est le geste reel : on appuie sur le guidon, les roues avant decollent, et la machine pivote sur ses
-	-- roues arriere. Sans ca elles FROTTENT, et une tondeuse qui tourne a plat glisse comme sur de la glace.
-	--
-	-- Angle a fond de braquage, en degres. Il s'ajoute au cabrage du demarrage a la corde -- meme pivot, meme
-	-- calcul : les deux se somment au lieu de se disputer la soudure.
-	TURN_LIFT = 7,
-	-- Vitesse d'installation, en fraction par seconde. Le nez se leve AVEC le braquage et retombe avec lui.
-	TURN_LIFT_SPEED = 7,
 
 	-- AU-DESSUS de la pose du guidon (Action), sinon les deux clent les memes bras a priorite EGALE et Roblox en
 	-- fait une MOYENNE au lieu de choisir -- on obtient une pose "presque bonne" qu'on croit mal animee.
