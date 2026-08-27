@@ -357,6 +357,16 @@ return {
 	-- En dessous de cette intensite d'input, on considere que le joueur ne demande rien : le cap ne bouge plus.
 	-- Sans ce seuil, le bruit d'un joystick ferait tourner la tondeuse a l'arret.
 	STEER_INPUT_EPSILON = 0.05,
+	-- COURSE DU BRAQUAGE, en fraction par seconde. C'est le temps que met la commande a passer d'une butee a
+	-- l'autre -- comme un volant, qu'on ne fait pas claquer de gauche a droite.
+	--
+	-- Le braquage lisait l'entree BRUTE : enchainer Q puis D faisait passer le taux de rotation de -1 a +1 EN UNE
+	-- IMAGE. Sec et stressant, et aucun lissage pose en aval ne pouvait le rattraper -- le ballant, la fleche et
+	-- la camera lissent deja chacun leur reponse, mais ils repondaient tous a une commande qui, elle, claquait.
+	--
+	-- On lisse donc A LA SOURCE : tout ce qui lit le braquage en profite d'un coup, sans reglage a dedoubler.
+	-- Haut = commande vive et nerveuse, bas = machine lourde qui prend son temps.
+	STEER_SMOOTH = 5,
 	-- Braquage inverse ? Mettre true. Le sens depend de la convention d'angle de Roblox : il ne se DEDUIT pas,
 	-- il se voit. Si appuyer a droite fait tourner a gauche, c'est ce reglage et rien d'autre.
 	STEER_INVERT = false,

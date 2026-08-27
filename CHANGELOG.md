@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.535 — Le braquage a une COURSE : plus de coup sec en changeant de cote
+
+Enchainer Q puis D en avancant claquait. Le braquage lisait l'entree BRUTE : le taux de rotation passait de -1 a
++1 EN UNE IMAGE.
+
+`STEER_SMOOTH = 5` : la commande met desormais un temps a passer d'une butee a l'autre, comme un volant qu'on ne
+fait pas claquer.
+
+### On lisse A LA SOURCE, pas en aval
+
+C'est ce qui rend la correction petite. Le ballant, la fleche de direction et la trainee de camera lissent DEJA
+chacun leur reponse -- mais ils repondaient tous a une commande qui, elle, claquait. Aucun lissage pose en aval
+ne pouvait rattraper ca.
+
+Lisser l'entree les sert tous les trois d'un coup, et il n'y a qu'un seul reglage a tourner au lieu de trois qu'il
+aurait fallu garder d'accord.
+
+C'est aussi la valeur ENVOYEE au serveur, donc le ballant de la machine en profite sans une ligne de plus.
+
+### Cle a la cible
+
+Un lerp exponentiel n'atteint jamais sa cible : sans le snap, la machine garderait un reste de braquage en ligne
+droite et tirerait doucement d'un cote pour toujours. Meme piege que le ballant qui faisait rouler la tondeuse en
+crabe.
+
+Le braquage repart de zero a la coupure du moteur et a la repose.
+
 ## 0.0.534 — La camera RECULE quand on pousse, au lieu de se rapprocher
 
 `DRIVE_ZOOM` -2.5 -> +5.

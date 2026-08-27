@@ -62,6 +62,9 @@ local lastDriveSent = 0
 local driveNow = 0
 -- Ecart lateral courant de la camera, en studs. Lisse, et RENDU a zero quand on repose la machine.
 local camLag = 0
+-- Braquage LISSE, -1 a 1. C'est lui que tout le monde lit : le cap, le ballant envoye au serveur, la fleche et la
+-- camera. L'entree brute ne sert plus qu'a lui donner sa cible.
+local steerNow = 0
 local mowers: { Model } = {}
 local lastScanAt = 0
 local lastPromptAt = 0
@@ -933,6 +936,7 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 		clearTrail()
 		clearMarker()
 		-- Moteur coupe : la camera se recentre. Un ecart laisse en place tiendrait le cadre de travers a l'arret.
+		steerNow = 0
 		camLag = 0
 		CameraEffects.SetLag(Vector3.zero)
 		-- ON REND LE SENS NORMAL. Une piste laissee en vitesse negative ferait marcher le joueur a reculons pour
@@ -966,7 +970,20 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- sens du braquage -- et les laisser la recalculer chacun de son cote finirait par les faire diverger.
 	local reversing = forwardAmount < -MowConfigs.STEER_MOVE_EPSILON
 	driveNow = forwardAmount
-	local lateralAmount = math.clamp(mv.X, -1, 1)
+	-- LE BRAQUAGE A UNE COURSE, comme un volant. Lu brut, enchainer Q puis D faisait passer le taux de rotation de
+	-- -1 a +1 en UNE image : sec et stressant.
+	--
+	-- On lisse A LA SOURCE et pas en aval. Le ballant, la fleche et la camera lissent deja chacun leur reponse,
+	-- mais ils repondaient tous a une commande qui claquait -- lisser ici les sert tous les trois d'un coup, et
+	-- il n'y a qu'un reglage a tourner.
+	local lateralWant = math.clamp(mv.X, -1, 1)
+	steerNow += (lateralWant - steerNow) * math.min(1, MowConfigs.STEER_SMOOTH * dt)
+	-- Cle a la cible : un lerp exponentiel ne l'atteint jamais, et la machine garderait un reste de braquage en
+	-- ligne droite -- elle tirerait doucement d'un cote pour toujours.
+	if math.abs(lateralWant - steerNow) < 0.01 then
+		steerNow = lateralWant
+	end
+	local lateralAmount = steerNow
 
 	-- DIAGNOSTIC A L'ECRAN. Voir MowConfigs.STEER_DEBUG_INPUT.
 	--
@@ -1476,6 +1493,7 @@ local function update(dt: number)
 		clearMarker()
 		-- ON REND LE CADRE. Un ecart laisse en place suivrait le joueur pour le reste de la partie, longtemps
 		-- apres la tondeuse reposee -- et personne ne ferait le lien.
+		steerNow = 0
 		camLag = 0
 		CameraEffects.SetLag(Vector3.zero)
 		if humanoid then
