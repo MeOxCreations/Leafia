@@ -831,6 +831,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   generale : une sonde qui ne connait qu'une forme du probleme est pire qu'aucune sonde le jour ou l'autre forme
   se presente -- elle designe un coupable avec autorite.
 
+- **Dans une scene cinematique, le son se MIXE, il ne se simule pas.** Les trois sons de la scene du tuto (les
+  coups, la poignee, la porte) etaient poses SUR la porte, donc spatialises. Deux problemes : l'auditeur de
+  Roblox est la CAMERA, et pendant un plan large elle est a une dizaine de studs -- les coups s'entendaient de
+  loin alors qu'ils sont le sujet du plan ; et surtout, on venait de BAISSER tout le reste du jeu pour tourner
+  l'oreille vers la scene, donc y laisser une attenuation de distance defaisait ce qu'on venait de faire.
+  Regle : pendant une scene scriptee, les sons qui RACONTENT vont en 2D (pas de part hote) ; le monde autour
+  garde son spatial. Corollaire d'ecriture : passer `nil` en hote ne dit pas POURQUOI, et le prochain qui passe
+  le "corrige" en remettant la part -- une constante nommee (`SCENE_2D`) porte l'intention.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

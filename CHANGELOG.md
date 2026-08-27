@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.544 — Les sons de la scene passent en 2D
+
+Les coups a la porte, le geste de poignee et l'ouverture etaient poses SUR la porte, donc spatialises. On ne les
+entendait presque pas.
+
+### Deux raisons, et la seconde compte plus
+
+L'auditeur de Roblox est la CAMERA. Pendant la scene elle est a douze studs en arriere : les coups s'entendaient
+donc de loin, alors qu'ils sont le SUJET du plan.
+
+Et surtout : dans une scene cinematique, le son se MIXE, il ne se simule pas. On venait justement de baisser tout
+le reste du jeu pour tourner l'oreille vers la scene -- y laisser une attenuation de distance defaisait ce qu'on
+venait de faire.
+
+### Une constante nommee, pas un `nil` nu
+
+`play(son, nil)` ne dit pas POURQUOI il n'y a pas d'hote, et le prochain qui passe le "corrigerait" en remettant
+la porte. `SCENE_2D` porte l'intention.
+
+Le monde autour garde son spatial : c'est la scene qui est mixee, pas le jeu.
+
 ## 0.0.543 — Un bandeau d'objectif, pose pour etre VU
 
 `Modules/UI/Task/TaskBannerHandler`. Il s'affiche a la fin de la scene d'introduction -- le moment ou le joueur

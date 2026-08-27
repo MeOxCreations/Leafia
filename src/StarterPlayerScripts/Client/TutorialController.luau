@@ -63,6 +63,20 @@ local grandpaTrack: AnimationTrack? = nil
 -- un `init` gele tout le boot le temps de son timeout. Le piege est note dans le journal du projet.
 local sceneDoneRemote: RemoteEvent? = nil
 
+-- LES SONS DE LA SCENE SONT JOUES EN 2D, pas dans le monde. `nil` en hote = pas de part, donc pas de distance,
+-- pas d'attenuation : le son arrive a plein volume quoi qu'il arrive.
+--
+-- Ils etaient poses SUR LA PORTE. Deux raisons de ne pas le faire, et la seconde compte plus que la premiere :
+--   1. l'auditeur de Roblox est la CAMERA, et pendant la scene elle est a douze studs en arriere -- les coups
+--      s'entendaient donc de loin, alors qu'ils sont le sujet du plan ;
+--   2. dans une scene cinematique, le son se MIXE, il ne se simule pas. On vient justement de baisser tout le
+--      reste du jeu pour tourner l'oreille vers la scene : y laisser une attenuation de distance revient a
+--      defaire ce qu'on vient de faire.
+--
+-- Une constante nommee plutot qu'un `nil` nu aux trois appels : `play(son, nil)` ne dit pas POURQUOI il n'y a pas
+-- d'hote, et le prochain qui passe le "corrigerait" en remettant la porte.
+local SCENE_2D: BasePart? = nil
+
 local doorAngle = 0
 -- Sa pose FERMEE, relevee UNE FOIS a l'ouverture. On ne peut pas la relire ensuite : le gond fait partie du
 -- modele, donc il tourne avec lui -- relire le pivot ferait tourner la porte a partir d'une base deja tournee, et
@@ -530,7 +544,7 @@ local function openDoor()
 	pushScene(-TutorialConfigs.SCARE_BACK, TutorialConfigs.SCARE_TIME)
 	-- Le grincement part AVEC le mouvement, pas au marqueur de mi-course : c'est l'ouverture elle-meme qu'il
 	-- accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en retard.
-	SoundUtils.play(TutorialConfigs.OPEN_SOUND, anchor)
+	SoundUtils.play(TutorialConfigs.OPEN_SOUND, SCENE_2D)
 
 	-- LES DEUX ANIMATIONS DE LA PORTE S'ARRETENT ICI : le tremblement des coups et le geste de poignee. Elles
 	-- ecrivent sur les memes parts que nous ; laissees en route, elles se battraient avec l'angle qu'on pose et la
@@ -611,7 +625,7 @@ local function playTryOpen()
 	tryTrack = track
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = false
-	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, anchor)
+	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, SCENE_2D)
 	-- ON SE RAPPROCHE, LENTEMENT, pendant qu'il se bat avec la poignee. L'image se resserre sans qu'on s'en rende
 	-- compte : la tension monte toute seule, sans qu'aucun evenement ne la signale.
 	pushScene(TutorialConfigs.TRY_PUSH, TutorialConfigs.TRY_PUSH_TIME)
@@ -704,7 +718,7 @@ local function knockOnce()
 	if not model then
 		return -- porte pas encore repliquee : la boucle de resolution la reprendra, rien a signaler ici
 	end
-	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, anchor)
+	SoundUtils.play(TutorialConfigs.KNOCK_SOUND, SCENE_2D)
 	SceneCamera.kick(TutorialConfigs.KNOCK_KICK)
 
 	-- L'IMPACT. Une bouffee ponctuelle, pas un effet qu'on allume : `Emit` est fini a la seconde ou il part, donc
