@@ -47,6 +47,11 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- RATEAU : il ramasse les tas que la taille laisse au sol. Present dans le tuto AUSSI, parce que c'est ici
 	-- qu'on apprend la taille, donc ici que les premiers tas apparaissent. APRES HedgeStockService, qui les pose.
 	require(script.RakeService).init()
+	-- CAMION : un prompt E a l'arriere ouvre sa porte. TUTO UNIQUEMENT tant que le camion n'existe que dans cette
+	-- map -- le declarer ailleurs ferait crier un avertissement pour un objet absent A RAISON, et un warn sur un
+	-- cas normal finit par etre ignore.
+	-- Necessite le model "Truck" et sa part "DoorBack" dans la MAP (Rojo ne synchronise pas le Workspace).
+	require(script.TruckService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end

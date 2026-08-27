@@ -2204,6 +2204,55 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.554 — Le camion s'ouvre : prompt E a l'arriere
+
+Un appui sur E derriere le camion ouvre sa porte, un second la referme. `TruckService`, `TruckController`,
+`TruckConfigs`.
+
+### AUCUN remote
+
+C'est le seul motif du projet qui n'en a pas besoin, et c'est celui de la boite aux lettres. Roblox se charge de
+la proximite, de la touche E et du tap mobile via `ProximityPrompt` ; son `Triggered` arrive DEJA cote serveur,
+avec le joueur en argument. Un remote maison referait tout ca moins bien, et il faudrait valider la distance a la
+main.
+
+Le style du prompt est `Custom` : Roblox garde la detection et l'input mais n'affiche rien -- la pilule est
+dessinee cote client, comme pour la boite.
+
+### Le prompt est sur la PORTE, pas sur le camion
+
+Une part precise plutot que le modele entier : sinon l'invite s'affiche des qu'on longe la carrosserie, y compris
+a l'avant ou l'action n'a aucun sens. C'est aussi ce qui evite les conflits avec les autres prompts.
+
+### La fermeture est GRATUITE
+
+La piste n'est pas jouee : on ecrit sa position. Refermer, c'est la meme animation lue a l'envers -- pas une
+seconde animation a faire, pas deux pistes qui se marchent dessus.
+
+`Looped = true` MALGRE la vitesse zero : une piste non bouclee se RELACHE a sa derniere image, et la porte se
+refermerait toute seule au moment precis ou elle finit de s'ouvrir.
+
+Deux vitesses (`DOOR_OPEN_SPEED`, `DOOR_CLOSE_SPEED`) : ouvrir est un geste qu'on regarde, refermer est une
+formalite.
+
+### Trois absences gerees, chacune nommee
+
+- pas de part `DoorBack` -> pas de prompt, et on le dit ;
+- pas d'`Animator` -> le prompt marche quand meme, la porte ne bouge pas. On ne prive pas le joueur d'une
+  interaction pour un asset manquant ;
+- camion absent au demarrage -> on le re-cherche pendant une minute. Avec StreamingEnabled, "absent au
+  demarrage" est un etat NORMAL ; "absent pour toujours" ne l'est pas, et c'est celui-la qu'on signale.
+
+### TUTO uniquement
+
+Le camion n'existe que dans cette map. Le declarer ailleurs ferait crier un avertissement pour un objet absent A
+RAISON -- et un warn sur un cas normal finit par etre ignore.
+
+### A FAIRE DANS STUDIO
+
+Rien : `Truck` et `DoorBack` existent deja. L'animation est trouvee par son chemin
+(`Animations/General/TruckOpenDoorAnimation`).
+
 ## 0.0.553 — Les chemins d'animations suivent le rangement de Studio
 
 `Animations/Player/Tools` et `Animations/Player/General` ont ete remontes d'un niveau dans Studio. TREIZE

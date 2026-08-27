@@ -74,6 +74,10 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- visuel, ne depend de rien. TUTO UNIQUEMENT : il n'y a pas de porte a montrer dans le hub.
 	-- Necessite un Highlight pose A LA MAIN sous le Model "Door" (Rojo ne synchronise pas le Workspace).
 	require(script.TutorialController).init()
+	-- CAMION : dessine la pilule du prompt a la place de l'interface Roblox. Toute la detection reste au serveur.
+	-- Sans cette ligne le prompt EXISTE et la touche E marche, mais rien ne s'affiche : le joueur ne peut pas
+	-- deviner qu'il y a quelque chose a faire.
+	require(script.TruckController).init()
 
 	-- Musique de fond du TUTO : MusicBuild4 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
 	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.

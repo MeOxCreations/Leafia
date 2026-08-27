@@ -1,0 +1,47 @@
+--!strict
+-- LE CAMION. Reglages du prompt d'ouverture et de sa porte arriere.
+
+local TruckConfigs = {
+	-- LE NOM DU MODELE DANS LE WORKSPACE, pas une etiquette libre. Le renommer dans Studio sans le changer ici
+	-- coupe le prompt EN SILENCE : plus rien ne le trouve. C'est aussi la cle de son animation d'ambiance, dans
+	-- AmbientAnimConfigs -- deux endroits a changer ensemble.
+	MODEL_NAME = "Truck",
+	-- La part qui porte le prompt. UNE PART PRECISE et pas le modele entier : sinon l'invite s'affiche des qu'on
+	-- longe la carrosserie, y compris a l'avant ou l'action n'a aucun sens.
+	DOOR_PART = "DoorBack",
+
+	-- ===== LE PROMPT =====
+	-- Le client le reconnait par ce nom pour dessiner notre pilule a la place de l'interface Roblox par defaut.
+	PROMPT_NAME = "TruckPrompt",
+	-- EN ANGLAIS, comme tout texte vu par le joueur : le traducteur de Roblox part de l'anglais.
+	PROMPT_ACTION = "OPEN",
+	PROMPT_OBJECT = "TRUCK",
+	-- Distance d'activation, en studs. Genereuse : on s'approche du camion avec une tondeuse devant soi.
+	PROMPT_DISTANCE = 12,
+	-- Hauteur de la pilule au-dessus de la porte, et son decalage lateral. Le decalage evite qu'elle tombe SUR le
+	-- personnage quand on est pile derriere le camion.
+	PROMPT_HEIGHT = 3,
+	PROMPT_SIDE = 2.5,
+
+	-- ===== LA PORTE =====
+	-- Chemin de l'animation sous ReplicatedStorage.Animations.
+	DOOR_ANIM_PATH = { "General", "TruckOpenDoorAnimation" },
+	-- Elle n'a rien a partager : le camion ne joue que son idle d'ambiance, en priorite `Idle`. `Action` passe
+	-- au-dessus sans discussion.
+	DOOR_PRIORITY = Enum.AnimationPriority.Action,
+	-- Vitesses d'ouverture et de fermeture, en multiple du rythme de l'editeur.
+	--
+	-- DEUX VALEURS et pas une : ouvrir est un geste qu'on regarde, refermer est une formalite. Un seul reglage
+	-- forcerait a choisir entre une ouverture qui claque et une fermeture qui traine.
+	DOOR_OPEN_SPEED = 1,
+	DOOR_CLOSE_SPEED = 1.6,
+
+	-- ===== RECHERCHE =====
+	-- Avec StreamingEnabled le camion peut arriver bien apres le demarrage. On le re-cherche jusqu'a le trouver,
+	-- puis on abandonne en le disant : "absent au demarrage" est un etat NORMAL, "absent pour toujours" ne l'est
+	-- pas.
+	FIND_INTERVAL = 2,
+	FIND_TIMEOUT = 60,
+}
+
+return TruckConfigs
