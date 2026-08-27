@@ -794,7 +794,7 @@ end
 -- (folder nil) tout retombe sur le secours.
 local function resolvePosePath(folder: string?, animName: string, fallback: { string }): { string }
 	if folder then
-		local toolPath = { "Animations", "Player", "Tools", folder, animName }
+		local toolPath = { "Animations", "Tools", folder, animName }
 		if findAnim(toolPath) then
 			return toolPath
 		end

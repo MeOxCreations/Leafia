@@ -153,7 +153,7 @@ local function warmUpAnimations(player: Player, character: Model)
 
 	local tracks: { [string]: AnimationTrack } = {}
 	for _, config in pairs(ToolConfigs) do
-		local folder = findIn("Animations", { "Player", "Tools", config.animationFolder })
+		local folder = findIn("Animations", { "Tools", config.animationFolder })
 		if folder then
 			for _, anim in ipairs(folder:GetChildren()) do
 				-- On precharge TOUT le dossier, pas seulement holdAnimation : les autres animations reviendront
@@ -197,7 +197,7 @@ local function getTrack(player: Player, animationFolder: string, animName: strin
 		warn(`[ToolService] Animator absent sur {player.Name}`)
 		return nil
 	end
-	local anim = findIn("Animations", { "Player", "Tools", animationFolder, animName })
+	local anim = findIn("Animations", { "Tools", animationFolder, animName })
 	if not (anim and anim:IsA("Animation")) then
 		warn(`[ToolService] Animation introuvable : {animationFolder}/{animName}`)
 		return nil
@@ -499,7 +499,7 @@ function ToolService.equip(player: Player, toolName: string): boolean
 	local toolAnimator = getAnimator(tool)
 	if toolAnimator then
 		for _, name in ipairs(config.toolRunAnimations) do
-			local anim = findIn("Animations", { "Player", "Tools", config.animationFolder, name })
+			local anim = findIn("Animations", { "Tools", config.animationFolder, name })
 			if anim and anim:IsA("Animation") then
 				local ok, track = pcall(function()
 					return toolAnimator:LoadAnimation(anim)

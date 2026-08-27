@@ -44,7 +44,7 @@ local PROMPT_OFFSET = Vector3.new(0, 5, 0) -- hauteur d'AFFICHAGE du prompt au-d
 local DETECT_RADIUS = 8 -- distance HORIZONTALE (studs) sous laquelle le prompt PRENDRE apparait. LE knob "detecter plus loin"
 local PROMPT_INTERVAL = 0.2
 -- Les deux anims sont dans un sous-dossier ModelAnimate (echelle + joueur).
-local ANIM_FOLDER = { "Animations", "Player", "Tools", "Ladder", "ModelAnimate" }
+local ANIM_FOLDER = { "Animations", "Tools", "Ladder", "ModelAnimate" }
 local PLAYER_ANIM = "MoveForwardLadderAnimation" -- geste de PRISE (une fois) : le joueur attrape l'echelle
 local PLAYER_CARRY_ANIM = "IsReadyForMoveLadderAnimation" -- pose de PORTAGE, en boucle : jouee A LA FIN de la prise
 local PLAYER_ROTATE_ANIM = "RotateLadderAnimation" -- geste de MAIN a la rotation (R), joue une fois par-dessus le portage

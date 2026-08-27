@@ -97,7 +97,7 @@ return {
 	-- l'echelle, la tondeuse, ou sortir un outil. Une seule reponse pour tout le monde, dans Modules/Utils/CarryUtils.
 
 	-- ===== ANIMATIONS =====
-	ANIM_FOLDER = { "Animations", "Player", "Tools", "Bin" },
+	ANIM_FOLDER = { "Animations", "Tools", "Bin" },
 	-- Geste de PRISE, joue une fois. Il cle les jambes, ce qui est acceptable pour un geste ponctuel : le
 	-- joueur se fige un court instant.
 	TAKE_ANIM = "TakeAnimation",

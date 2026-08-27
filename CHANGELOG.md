@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.553 — Les chemins d'animations suivent le rangement de Studio
+
+`Animations/Player/Tools` et `Animations/Player/General` ont ete remontes d'un niveau dans Studio. TREIZE
+references pointaient encore sur l'ancien chemin, dans SEPT fichiers.
+
+Consequence : le seau, le taille-haie, l'echelle, la cisaille et le rateau ne trouvaient plus AUCUNE de leurs
+animations.
+
+### Pourquoi ca ne se voit pas tout de suite
+
+Chaque systeme previent quand il ne trouve pas son dossier -- mais seulement AU MOMENT de s'en servir. Tant qu'on
+ne prend pas l'outil, la console reste muette et le jeu a l'air normal. Un deplacement de dossier dans Studio
+casse donc en silence, et le lien avec la cause se perd en quelques heures.
+
+### Le chemin reste la bonne methode
+
+On pourrait chercher chaque animation par son NOM, dans tout `Animations` -- plus rien ne casserait en deplacant
+un dossier. Ce serait pire : `IdleAnimation` existe dans le dossier de la cisaille ET dans celui du taille-haie,
+et le projet a deja paye cette collision (une pose qui figeait le personnage, apparue en ajoutant un troisieme
+outil). Le chemin est ce qui les distingue.
+
+### A VERIFIER dans Studio
+
+`GrassService` cherche `Animations/Props/Environnement/GrassAnimation`. Le dossier `Props` ne semble plus
+contenir que `Mailbox` : si `Environnement` a bouge lui aussi, l'herbe ne s'anime plus.
+
 ## 0.0.552 — Le camion respire a l'arret
 
 Une ligne dans `AmbientAnimConfigs` : `AmbientAnimService` anime deja tout modele declare par son NOM, et il

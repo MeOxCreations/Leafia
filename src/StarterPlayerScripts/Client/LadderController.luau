@@ -35,7 +35,7 @@ local player = Players.LocalPlayer
 -- prefixe est une echelle (ex : Escabaut_1a_rig, Escabaut_2a_rig, une copie...).
 local LADDER_PREFIX = "Escabaut"
 local ZONE_NAMES = { "box_detecte_A", "box_detecte_B" }
-local ANIM_FOLDER = { "Animations", "Player", "Tools", "Ladder" }
+local ANIM_FOLDER = { "Animations", "Tools", "Ladder" }
 local IDLE_ANIM = "IdleDownAnimation" -- pose prete, au sol
 local CLIMB_ANIM = "UpDownAnimation" -- grimpe (corps / jambes), pilotee W/S
 local GRIP_ANIM = "UpDownHandGripAnimation" -- main qui agrippe l'echelle, jouee EN SYNC avec la grimpe
@@ -57,7 +57,7 @@ local TOP_LEGS_ENABLED = true
 -- Coupe gauche-droite du DESSUS (bras), jouee AU SOMMET par-dessus IdleUpLadder. TRIM_FOLDER = SECOURS (taille-haie) :
 -- ensureTrimTrack prend d'abord le dossier de l'OUTIL equipe (ex la cisaille a sa propre RightLeftAnimation) et ne
 -- retombe ici que si l'outil n'a pas cette pose.
-local TRIM_FOLDER = { "Animations", "Player", "Tools", "HedgeTrimmer" }
+local TRIM_FOLDER = { "Animations", "Tools", "HedgeTrimmer" }
 local TRIM_ANIM = "RightLeftAnimation"
 -- VISEE DU DESSUS, UNE SEULE REGLE : la souris PAR RAPPORT AU JOUEUR a l'ecran pilote la lame. Souris pile DEVANT le
 -- joueur -> milieu de l'anim ; a gauche -> debut, a droite -> fin. Repere = le corps (pas le centre de l'ecran), donc
@@ -350,7 +350,7 @@ local function ensureTrimTrack()
 	end
 	local folderPath = TRIM_FOLDER
 	if folder then
-		local toolFolder = { "Animations", "Player", "Tools", folder }
+		local toolFolder = { "Animations", "Tools", folder }
 		-- Existence de la pose dans le dossier de l'outil : sinon on retombe sur le taille-haie (evite un warn).
 		local node: Instance? = ReplicatedStorage
 		for _, name in ipairs(toolFolder) do

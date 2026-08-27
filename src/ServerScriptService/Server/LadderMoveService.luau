@@ -19,7 +19,7 @@ local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local LADDER_PREFIX = "Escabaut"
 local MAX_DIST = 30 -- distance MAX joueur <-> echelle a la prise (anti-triche)
 -- Anim de l'echelle : une seule piste, deux temps balises par deux marqueurs. Meme chemin que le client.
-local ANIM_FOLDER = { "Animations", "Player", "Tools", "Ladder", "ModelAnimate" }
+local ANIM_FOLDER = { "Animations", "Tools", "Ladder", "ModelAnimate" }
 local MODEL_ANIM = "ActionLadderAnimation"
 local CLOSE_EVENT = "FermerEvenement" -- echelle REPLIEE : on fige la
 local OPEN_EVENT = "LadderOpenEndEvent" -- echelle DEPLIEE (fin) : on stoppe

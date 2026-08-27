@@ -211,7 +211,7 @@ local HedgeConfigs = {
 	-- regroupe ici expres, et cote client tout passe par setSlide : il n'y a qu'un bloc a enlever.
 	--
 	-- Devant une haie le joueur ne marche pas, il se deplace en pas chasses. Chemin sous ReplicatedStorage.
-	SLIDE_ANIMATION = { "Animations", "Player", "General", "PasChasserAnimation" },
+	SLIDE_ANIMATION = { "Animations", "General", "PasChasserAnimation" },
 	-- Action, et NON Movement. La marche de Roblox est en Movement : a egalite de priorite les deux se
 	-- melangeraient et les jambes hesiteraient entre les deux. Action passe devant.
 	-- La piste ne cle QUE les jambes. La pose de maintien de l'outil est elle aussi en Action mais ne cle que
@@ -269,13 +269,13 @@ local HedgeConfigs = {
 	-- image = coupe haute. On ne la joue jamais, on s'en sert comme d'une regle graduee.
 	--
 	-- Deux images suffisent donc a couvrir toutes les hauteurs : c'est la visee qui fait l'interpolation.
-	UPDOWN_ANIMATION = { "Animations", "Player", "Tools", "HedgeTrimmer", "UpDownAnimation" },
+	UPDOWN_ANIMATION = { "Animations", "Tools", "HedgeTrimmer", "UpDownAnimation" },
 	-- Pose pour le DESSUS de la haie. Meme principe : figee, parcourue a la main. Premiere image = bord proche,
 	-- derniere = bord oppose.
 	--
 	-- Une piste par ORIENTATION de surface, et non une seule qu'on tordrait : tailler un mur vertical et une
 	-- table horizontale ne sont pas le meme geste, et le corps ne se place pas pareil.
-	RIGHTLEFT_ANIMATION = { "Animations", "Player", "Tools", "HedgeTrimmer", "RightLeftAnimation" },
+	RIGHTLEFT_ANIMATION = { "Animations", "Tools", "HedgeTrimmer", "RightLeftAnimation" },
 	-- Inclinaison minimale de la surface visee pour basculer sur la pose du DESSUS. 1 = pile a l'horizontale.
 	--
 	-- 0.6 vaut environ 53 degres : bien au-dessus de ce qu'une face verticale peut donner, meme sur une haie
