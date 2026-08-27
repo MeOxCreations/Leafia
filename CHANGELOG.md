@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.557 — Un son d'arrivee quand le rideau se retire
+
+`ConnectedSound`, joue au moment ou le volet repart et ou le jeu apparait.
+
+### Il part AVEC le volet, pas apres
+
+Il annonce l'arrivee. Le jouer une fois le jeu deja visible en ferait un commentaire sur quelque chose de deja
+fait.
+
+### Pourquoi celui-ci reste alors que l'autre est parti
+
+Il est PONCTUEL : il marque un evenement unique au lieu d'accompagner une boucle. C'est la duree qui fatiguait
+dans le son par feuille, pas le son lui-meme.
+
+### Une seule recherche, sans reessai
+
+A cet instant le rideau tourne depuis plusieurs secondes : SoundService est replique depuis longtemps. Le
+reessai n'est necessaire qu'au TOUT DEBUT du rideau, quand il demarre depuis `ReplicatedFirst`.
+
 ## 0.0.556 — Le son des feuilles du chargement est retire
 
 Six fois par cycle, en boucle, pendant tout un chargement : ca fatigue.

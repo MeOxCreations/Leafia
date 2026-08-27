@@ -396,6 +396,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Plus lent que l'arrivee, et c'est voulu : on COUVRE pour cacher (autant que ce soit vite fait), on DECOUVRE
 	-- pour montrer le jeu (autant que ca se savoure). Les deux n'ont pas le meme role, ils n'ont pas la meme duree.
 	local WIPE_REVEAL_TIME = 0.85
+	-- SON D'ARRIVEE, joue quand le volet se retire et que le jeu apparait.
+	--
+	-- Celui-ci est PONCTUEL, contrairement au son par feuille essaye puis retire deux fois : il marque un
+	-- evenement unique au lieu d'accompagner une boucle. C'est la duree qui fatiguait, pas le son.
+	local CONNECTED_SOUND = { "Sounds", "UI", "ConnectedSound" }
+	local CONNECTED_VOLUME = 0.5 -- a regler a l'oreille
 	local WIPE_SOFT = 0.18 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
 	-- SENS DU BALAYAGE, en degres. 0 = de gauche a droite, 180 = l'inverse.
 	-- Il ne se DEDUIT pas -- deja au journal. Mais ici il n'y a AUCUN risque a se tromper : le volet est detruit a
@@ -1268,6 +1274,16 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	task.wait(WIPE_HOLD)
 
 	-- ET LE JEU APPARAIT. Le meme bord repart en arriere : le volet se retire par ou il est venu.
+	--
+	-- LE SON PART AVEC LE VOLET, pas apres. Il annonce l'arrivee ; le jouer une fois le jeu deja visible en
+	-- ferait un commentaire sur quelque chose de deja fait.
+	--
+	-- Une seule recherche, sans reessai : a cet instant le rideau tourne depuis plusieurs secondes, donc
+	-- SoundService est replique depuis longtemps. Le reessai n'est necessaire qu'au TOUT DEBUT du rideau.
+	local connected = findAnySound(CONNECTED_SOUND)
+	if connected then
+		playSound(connected, CONNECTED_VOLUME)
+	end
 	sweep(1, 0, WIPE_REVEAL_TIME)
 	-- DETRUIT QUOI QU'IL ARRIVE. C'est la garantie qui rend ce volet sans danger : meme si le balayage partait du
 	-- mauvais cote, ou si une sequence etait refusee, on ne peut pas se retrouver avec un aplat blanc collé sur
