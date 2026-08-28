@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.574 — Deux objets a portee ne se volent plus la pilule (le POPOPOPOP)
+
+Poser deux objets interactifs cote a cote (un seau et un camion, une tondeuse et une echelle) faisait clignoter
+l'invite a la frequence de l'ecran, avec son son de pop rejoue a chaque image.
+
+Ce n'etait pas un reglage : c'etait un **dernier arrive gagne**. Chaque feature regardait `currentTarget()`, voyait
+que la pilule n'etait plus la sienne, et la reprenait -- toutes les images, chacune a son tour. La priorite ne
+tranchait rien : elle refusait sur `want < activePriority`, donc a priorite EGALE (0 par defaut partout) tout le
+monde passait. Et `show` rejouait le pop **et le son** a chaque appel.
+
+L'arbitrage remonte dans le module. Chaque feature **declare une demande** (`show`) et la **retire** quand
+l'action n'a plus lieu d'etre (`release`). `InteractionPrompt` choisit, une fois par image :
+
+1. la priorite la plus haute ;
+2. sinon le **plus proche du joueur** -- ce qu'attend le joueur, et ce que personne ne pouvait decider seul ;
+3. sinon le premier arrive.
+
+Celui qui occupe la place garde une marge de 2 studs (`SWITCH_MARGIN`) : sans elle, deux objets a egale distance
+se la reprendraient image apres image, et on aurait remplace un clignotement par un autre.
+
+Le pop et le son ne repartent QUE si la cible change. Une feature qui redemande sa place a chaque image -- elles le
+font toutes -- ne fait plus rien clignoter.
+
+Effet de bord gratuit : une feature qui perd la place la **recupere toute seule** quand l'autre relache, sans
+avoir a re-detecter quoi que ce soit. C'est ce qui manquait aux features branchees sur un evenement (le camion, la
+boite aux lettres) : leur `PromptShown` ne tire qu'UNE fois, un refus etait donc definitif.
+
+### `InteractionPrompt.hide()` est supprime
+
+Il n'avait plus aucun appelant, et le laisser public rouvrait le piege : cacher "le prompt" jette les demandes des
+AUTRES, et celles encore a portee ne reviennent jamais. L'API est maintenant `show` / `release` / `setOffset` /
+`currentTarget`. Le jour ou une scene devra vraiment vider l'ecran, ce sera une fonction a elle, qui met les
+demandes en pause et les REND ensuite.
+
+Les sept appelants (seau, tondeuse, echelle x2, boite aux lettres, camion, tuto) passent a `release`.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.573 — La sonde des parts ancrees accusait la seule part qui avait raison
 
 Le camion sortait `"Truck" : 1 part(s) ANCREE(S) hors RootPart` alors que TOUT etait bien range : ses dix-sept

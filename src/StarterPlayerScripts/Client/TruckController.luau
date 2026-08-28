@@ -70,12 +70,9 @@ function TruckController.init()
 		if prompt.Name ~= TruckConfigs.PROMPT_NAME then
 			return
 		end
-		-- ON NE CACHE QUE SI C'EST LA NOTRE. Le prompt est un SINGLETON partage par six features : une autre a pu
-		-- prendre la main entre-temps, et la cacher aveuglement volerait la sienne -- elle ne reviendrait alors
-		-- plus jamais, sans que rien ne le signale. Le piege est note dans le journal du projet.
-		if InteractionPrompt.currentTarget() == activeAnchor then
-			InteractionPrompt.hide()
-		end
+		-- ON RETIRE NOTRE DEMANDE, on ne cache pas la pilule. Le prompt est un SINGLETON partage par six
+		-- features : `hide()` jetterait aussi les leurs, et celles encore a portee ne reviendraient jamais.
+		InteractionPrompt.release(activeAnchor)
 		activeAnchor = nil
 	end)
 end

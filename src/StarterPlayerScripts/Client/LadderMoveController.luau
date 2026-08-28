@@ -854,16 +854,18 @@ local function updatePrompt()
 			-- dont le prompt n'etait plus affiche : "PRENDRE" ne revenait JAMAIS, alors que F, lui, marchait
 			-- toujours (il refait sa propre detection). C'est ce decalage qu'on voyait a l'ecran.
 			if model ~= currentPromptLadder or InteractionPrompt.currentTarget() ~= target then
-				-- Refuse si la MONTEE occupe la place (priorite plus haute) : on redemandera au prochain tick.
-				local ok = InteractionPrompt.show(target, PROMPT_KEY, PROMPT_LABEL, PROMPT_OFFSET, function()
+				-- La MONTEE est prioritaire : notre demande peut ne pas etre servie tout de suite. Elle reste
+				-- enregistree, et le module nous rend la place des qu'elle se libere.
+				InteractionPrompt.show(target, PROMPT_KEY, PROMPT_LABEL, PROMPT_OFFSET, function()
 					if os.clock() - lastActionAt < PICKUP_DEBOUNCE then
 						return
 					end
 					lastActionAt = os.clock()
 					pickUp(model)
 				end, PROMPT_TITLE, nil, PROMPT_PRIORITY)
-				currentPromptLadder = if ok then model else nil
-				promptAnchor = if ok then target else nil
+				-- ON RETIENT LA CIBLE QUOI QU'IL ARRIVE : c'est elle qu'on devra relacher en s'eloignant.
+				currentPromptLadder = model
+				promptAnchor = target
 			end
 			return
 		end
@@ -874,12 +876,11 @@ local function updatePrompt()
 	currentPromptLadder = nil
 	local mine = promptAnchor
 	promptAnchor = nil
-	if mine and InteractionPrompt.currentTarget() == mine then
-		InteractionPrompt.hide()
-	end
+	-- On retire NOTRE demande, jamais la pilule entiere : `hide()` jetterait aussi celle du seau ou du camion.
+	InteractionPrompt.release(mine)
 end
 
--- Declencheurs CENTRAUX des 3 actions, chacun anti-spammé. Clavier (UserInputService) ET tactile (ContextActionService,
+-- Declencheurs CENTRAUX des 3 actions, chacun anti-spamme. Clavier (UserInputService) ET tactile (ContextActionService,
 -- mobile) tapent ces memes fonctions : appeler deux fois dans la meme frame est sans risque, le debounce absorbe le 2e.
 local function tryPickup()
 	if carriedLadder or os.clock() - lastActionAt < PICKUP_DEBOUNCE then
@@ -1031,9 +1032,7 @@ function LadderMoveController.init()
 		local mine = promptAnchor
 		currentPromptLadder = nil
 		promptAnchor = nil
-		if mine and InteractionPrompt.currentTarget() == mine then
-			InteractionPrompt.hide()
-		end
+		InteractionPrompt.release(mine)
 	end)
 
 	-- Cache des echelles : invalide des qu'une echelle apparait / disparait (filtre par nom : les carreaux de

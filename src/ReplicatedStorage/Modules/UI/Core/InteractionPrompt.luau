@@ -17,6 +17,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local WorldAnchor = require(ReplicatedStorage.Modules.UI.Core.WorldAnchor)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
@@ -61,17 +62,38 @@ local titleLabel: TextLabel? = nil -- titre de l'objet, au-dessus de la pilule (
 local scale: UIScale? = nil
 local onActivateFn: (() -> ())? = nil
 local shown = false
--- CIBLE affichee en ce moment. Le prompt est un SINGLETON : n'importe quelle feature peut prendre sa place.
--- Sans ce temoin, une feature qui ne re-montre son prompt qu'au CHANGEMENT de cible ne le recupere JAMAIS
--- apres s'etre fait doubler (par un dialogue, une echelle, une boite aux lettres) : son prompt disparait pour
--- de bon alors que rien n'a change de son point de vue.
-local activeTarget: WorldAnchor.Target? = nil
--- PRIORITE du prompt affiche. Le temoin ci-dessus dit QUI occupe la place ; celle-ci dit qui a le DROIT de la
--- prendre. Sans elle, deux features qui se recouvrent (l'echelle au sol : PRENDRE a 8 studs, MONTER dans la zone
--- laterale, entierement incluse dedans) se doublent a tour de role : le joueur voit une pilule qui change de
--- touche, avec le pop et son son a chaque bascule. Une priorite tranche UNE fois, sans que les deux features
--- aient a se connaitre -- meme raison que CarryUtils pour les mains : une seule question, une seule reponse.
-local activePriority = 0
+
+-- ===== UN REGISTRE DE DEMANDES, PAS UNE COURSE =====
+-- Le prompt est un SINGLETON, mais l'arbitrage ne peut PAS vivre chez les appelants.
+--
+-- L'ancienne version etait un "dernier arrive gagne" : chaque feature regardait `currentTarget()`, voyait que la
+-- pilule n'etait plus la sienne, et la reprenait. Avec DEUX objets a portee en meme temps (un seau et un camion,
+-- une tondeuse et une echelle), les deux boucles se la reprenaient A CHAQUE IMAGE -- et comme `show` rejouait le
+-- pop et son SON a chaque appel, ca donnait un "POPOPOPOP" a la frequence de l'ecran. La priorite ne tranchait
+-- rien : a priorite EGALE (0 par defaut partout) le test `want < activePriority` laissait tout le monde passer.
+--
+-- Maintenant chaque feature DECLARE une demande et la retire quand elle n'a plus lieu d'etre ; c'est le module qui
+-- choisit, une fois par image. Une seule question, une seule reponse -- meme raison que CarryUtils pour les mains.
+type Claim = {
+	target: WorldAnchor.Target,
+	key: string,
+	label: string,
+	offset: Vector3?,
+	onActivate: (() -> ())?,
+	title: string?,
+	cameraRelative: boolean?,
+	priority: number,
+}
+
+-- Tableau et pas table indexee par la cible : une cible peut etre un Vector3, dont l'identite en tant que CLE n'est
+-- pas garantie. L'ordre d'arrivee sert aussi a departager deux demandes rigoureusement equivalentes.
+local claims: { Claim } = {}
+local displayed: Claim? = nil
+local resolveConn: RBXScriptConnection? = nil
+
+-- Ecart de distance (studs) a partir duquel un pretendant PLUS PROCHE prend la place. Sans cette marge, deux objets
+-- a distance quasi egale se la reprendraient a chaque image : on aurait remplace un clignotement par un autre.
+local SWITCH_MARGIN = 2
 -- Echelle CIBLE (proportionnelle a l'ecran) : c'est vers elle que le pop d'apparition tend, pas vers 1. Sinon un
 -- gros / petit ecran perdrait sa mise a l'echelle des la 1re apparition.
 local baseScale = 1
@@ -236,78 +258,57 @@ local function build()
 	end
 end
 
--- Montre le prompt sur `target` (BasePart suivie, ou Vector3 fixe). `key` = la touche affichee (ex "E"), `label`
--- = l'action (ex "TAKE"). `offset` decale le point vise dans le monde (studs), pour flotter au-dessus. Sur
--- mobile, le badge de touche est cache ; `onActivate` est appele au tap (et au clic, partout, en bonus).
---
--- `priority` (0 par defaut) tranche quand deux features veulent la place EN MEME TEMPS : une demande de priorite
--- INFERIEURE a celle qui occupe l'ecran est refusee. Rend true si le prompt est bien a nous. L'appelant peut
--- redemander a chaque tick sans rien casser : un refus ne touche pas l'affichage, donc pas de clignotement.
-function InteractionPrompt.show(
-	target: WorldAnchor.Target,
-	key: string,
-	label: string,
-	offset: Vector3?,
-	onActivate: (() -> ())?,
-	title: string?,
-	cameraRelative: boolean?,
-	priority: number?
-): boolean
-	local want = priority or 0
-	-- On ne se refuse pas a soi-meme : re-montrer SA propre cible reste permis (rafraichir un libelle).
-	if shown and activeTarget ~= target and want < activePriority then
-		return false
-	end
-	build()
-	local box, kl, al, bdg, ttl, s = container, keyLabel, actionLabel, badge, titleLabel, scale
-	if not (box and kl and al and bdg and ttl and s) then
-		return false
-	end
-	kl.Text = key
-	al.Text = label
-	bdg.Visible = not IS_TOUCH -- pas de touche a montrer sur mobile
-	ttl.Text = title or ""
-	ttl.Visible = title ~= nil and title ~= "" -- pas de ligne vide si aucun titre (ex l'echelle)
-	onActivateFn = onActivate
-	WorldAnchor.attach(box, target, offset, nil, nil, cameraRelative)
-	shown = true
-	activeTarget = target
-	activePriority = want
+-- ===== LE CHOIX =====
 
-	-- APPARITION "slime" : on repart de 0 et on rebondit jusqu'a l'echelle cible (Elastic), + le son de pop.
-	if popTween then
-		popTween:Cancel()
+local function findClaim(target: WorldAnchor.Target): number?
+	for index, claim in claims do
+		if claim.target == target then
+			return index
+		end
 	end
-	s.Scale = 0
-	popTween = TweenService:Create(s, POP_IN, { Scale = baseScale })
-	popTween:Play()
-	SoundUtils.play(POP_SOUND)
+	return nil
+end
+
+local function targetPosition(target: WorldAnchor.Target): Vector3?
+	if typeof(target) == "Vector3" then
+		return target
+	end
+	if typeof(target) == "Instance" and target:IsA("BasePart") then
+		return target.Position
+	end
+	return nil
+end
+
+-- Une cible detruite (streaming, objet ramasse, build) laisse une demande orpheline. Sans ce menage, la pilule
+-- reapparaitrait sur un objet qui n'existe plus.
+local function claimAlive(claim: Claim): boolean
+	local target = claim.target
+	if typeof(target) == "Instance" then
+		return target.Parent ~= nil
+	end
 	return true
 end
 
--- Deplace le prompt EN COURS d'affichage (le meme repere que le offset passe a show : monde, ou camera si
--- cameraRelative). L'appelant anime l'offset lui-meme (ex : glisser d'un cote a l'autre). Sans effet si rien n'est
--- affiche.
-function InteractionPrompt.setOffset(offset: Vector3)
-	local box = container
-	if box then
-		WorldAnchor.setOffset(box, offset)
+local function playerPosition(): Vector3?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root.Position else nil
+end
+
+local function distanceTo(claim: Claim, from: Vector3?): number
+	local pos = targetPosition(claim.target)
+	if not (pos and from) then
+		return math.huge
 	end
+	return (pos - from).Magnitude
 end
 
--- La cible AFFICHEE en ce moment, ou nil si le prompt est cache. A tester avant de conclure que "mon prompt
--- est deja a l'ecran" : le singleton a pu passer a quelqu'un d'autre entre-temps.
-function InteractionPrompt.currentTarget(): WorldAnchor.Target?
-	return if shown then activeTarget else nil
-end
-
-function InteractionPrompt.hide()
+local function hideVisual()
 	if not shown then
 		return
 	end
 	shown = false
-	activeTarget = nil
-	activePriority = 0
+	displayed = nil
 	onActivateFn = nil
 	local box, s = container, scale
 	if not box then
@@ -331,6 +332,177 @@ function InteractionPrompt.hide()
 		WorldAnchor.detach(box)
 		box.Visible = false
 	end
+end
+
+-- Met la pilule sur une demande. LE POP ET SON SON NE REPARTENT QUE SI LA CIBLE CHANGE : toutes les features
+-- redemandent leur place a chaque image, et rejouer l'apparition a chaque appel etait exactement le "POPOPOPOP".
+local function applyClaim(claim: Claim?)
+	if not claim then
+		hideVisual()
+		return
+	end
+	build()
+	local box, kl, al, bdg, ttl, sc = container, keyLabel, actionLabel, badge, titleLabel, scale
+	if not (box and kl and al and bdg and ttl and sc) then
+		return
+	end
+	local previous = displayed
+	local isNew = not shown or previous == nil or previous.target ~= claim.target
+
+	kl.Text = claim.key
+	al.Text = claim.label
+	bdg.Visible = not IS_TOUCH -- pas de touche a montrer sur mobile
+	ttl.Text = claim.title or ""
+	ttl.Visible = claim.title ~= nil and claim.title ~= "" -- pas de ligne vide si aucun titre (ex l'echelle)
+	onActivateFn = claim.onActivate
+	displayed = claim
+	shown = true
+
+	if isNew then
+		box.Visible = true
+		WorldAnchor.attach(box, claim.target, claim.offset, nil, nil, claim.cameraRelative)
+		-- APPARITION "slime" : on repart de 0 et on rebondit jusqu'a l'echelle cible (Elastic), + le son de pop.
+		if popTween then
+			popTween:Cancel()
+		end
+		sc.Scale = 0
+		popTween = TweenService:Create(sc, POP_IN, { Scale = baseScale })
+		popTween:Play()
+		SoundUtils.play(POP_SOUND)
+	else
+		-- Meme cible : on rafraichit seulement ce qui a pu bouger (le libelle, l'offset). Aucun effet visuel.
+		WorldAnchor.setOffset(box, claim.offset or Vector3.zero)
+	end
+end
+
+-- Choisit qui occupe la pilule : priorite la plus haute, puis le PLUS PROCHE du joueur, puis le premier arrive.
+-- Celui qui est deja affiche garde une marge (SWITCH_MARGIN) : c'est ce qui empeche deux objets a egale distance
+-- de se la disputer image apres image.
+local function resolve()
+	for index = #claims, 1, -1 do
+		if not claimAlive(claims[index]) then
+			table.remove(claims, index)
+		end
+	end
+
+	local from = playerPosition()
+	local best: Claim? = nil
+	local bestDistance = math.huge
+	for _, claim in claims do
+		local distance = distanceTo(claim, from)
+		local leader = best
+		if
+			leader == nil
+			or claim.priority > leader.priority
+			or (claim.priority == leader.priority and distance < bestDistance)
+		then
+			best, bestDistance = claim, distance
+		end
+	end
+
+	-- HYSTERESIS : on ne prend la place a celui qui l'occupe que si on est FRANCHEMENT mieux place.
+	local current = displayed
+	if current and best and best ~= current and findClaim(current.target) then
+		if best.priority == current.priority and distanceTo(current, from) - bestDistance < SWITCH_MARGIN then
+			best = current
+		end
+	end
+
+	applyClaim(best)
+
+	-- La boucle meurt avec la derniere demande : rien a arbitrer, rien a faire tourner.
+	if #claims == 0 and resolveConn then
+		resolveConn:Disconnect()
+		resolveConn = nil
+	end
+end
+
+-- Declare une demande d'affichage sur `target` (BasePart suivie, ou Vector3 fixe). `key` = la touche affichee
+-- (ex "E"), `label` = l'action (ex "TAKE"). `offset` decale le point vise dans le monde (studs), pour flotter
+-- au-dessus. Sur mobile, le badge de touche est cache ; `onActivate` est appele au tap (et au clic, en bonus).
+--
+-- `priority` (0 par defaut) passe devant la distance quand deux demandes se recouvrent.
+--
+-- LA DEMANDE RESTE ENREGISTREE tant qu'on n'appelle pas `release`. C'est ce qui rend l'appel repetable sans rien
+-- casser : redemander a chaque image ne fait que rafraichir, et une feature qui perd la place la RETROUVE toute
+-- seule des que l'autre relache -- sans avoir a re-detecter quoi que ce soit.
+--
+-- Rend true si la pilule est A NOUS a cet instant, false si quelqu'un d'autre l'occupe. Un false n'est PAS un
+-- echec : la demande est enregistree, et elle sera servie des que la place se libere.
+function InteractionPrompt.show(
+	target: WorldAnchor.Target,
+	key: string,
+	label: string,
+	offset: Vector3?,
+	onActivate: (() -> ())?,
+	title: string?,
+	cameraRelative: boolean?,
+	priority: number?
+): boolean
+	local claim: Claim = {
+		target = target,
+		key = key,
+		label = label,
+		offset = offset,
+		onActivate = onActivate,
+		title = title,
+		cameraRelative = cameraRelative,
+		priority = priority or 0,
+	}
+	local index = findClaim(target)
+	if index then
+		-- ON REECRIT LA DEMANDE EN PLACE : garder son rang d'arrivee evite qu'une feature qui redemande a chaque
+		-- image passe sans arret devant les autres au depart de la file.
+		claims[index] = claim
+	else
+		table.insert(claims, claim)
+	end
+
+	if not resolveConn then
+		resolveConn = RunService.RenderStepped:Connect(resolve)
+	end
+	resolve()
+	return displayed == claim
+end
+
+-- Retire la demande de `target`. A appeler des que l'action n'a plus lieu d'etre (on s'est eloigne, l'objet est
+-- pris, les mains sont occupees). C'est le pendant OBLIGATOIRE de `show` : une demande jamais retiree ferait
+-- reapparaitre la pilule sur un objet qu'on a quitte.
+--
+-- IL N'Y A VOLONTAIREMENT PAS DE `hide()` GLOBAL. Il existait, et c'etait le piege : une feature qui cache "le
+-- prompt" jette les demandes des autres, et celles encore a portee ne reviennent jamais. Le jour ou une scene
+-- devra vraiment vider l'ecran, ce sera une fonction A ELLE, qui met les demandes en pause et les REND ensuite.
+function InteractionPrompt.release(target: WorldAnchor.Target?)
+	if not target then
+		return
+	end
+	local index = findClaim(target)
+	if not index then
+		return
+	end
+	table.remove(claims, index)
+	resolve()
+end
+
+-- Deplace le prompt EN COURS d'affichage (le meme repere que le offset passe a show : monde, ou camera si
+-- cameraRelative). L'appelant anime l'offset lui-meme (ex : glisser d'un cote a l'autre). Sans effet si rien n'est
+-- affiche. L'offset est aussi ecrit dans la demande, sinon le rafraichissement de l'image suivante l'annulerait.
+function InteractionPrompt.setOffset(offset: Vector3)
+	local box = container
+	local current = displayed
+	if current then
+		current.offset = offset
+	end
+	if box then
+		WorldAnchor.setOffset(box, offset)
+	end
+end
+
+-- La cible AFFICHEE en ce moment, ou nil si le prompt est cache. A tester avant de conclure que "mon prompt
+-- est deja a l'ecran" : le singleton a pu passer a quelqu'un d'autre entre-temps.
+function InteractionPrompt.currentTarget(): WorldAnchor.Target?
+	local current = displayed
+	return if shown and current then current.target else nil
 end
 
 return InteractionPrompt

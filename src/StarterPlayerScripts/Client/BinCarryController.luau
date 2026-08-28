@@ -231,7 +231,7 @@ end
 -- le geste est en Action3, elle en Action2, donc il la masque entierement tant qu'il dure.
 --
 -- C'EST CE QUI SUPPRIME LE SOUBRESAUT ENTRE LES DEUX ANIMATIONS. Avant, elle etait chargee et lancee a
--- l'instant precis de la bascule -- un instant ou le geste s'effaçait deja. Il suffisait d'une milliseconde de
+-- l'instant precis de la bascule -- un instant ou le geste s'effacait deja. Il suffisait d'une milliseconde de
 -- retard (chargement de l'asset, signal differe d'une image) pour que le corps repasse par la position neutre.
 -- Rien ne pouvait combler ce trou, puisqu'il n'y avait aucune pose EN DESSOUS.
 --
@@ -558,13 +558,11 @@ local function setActionBound(active: boolean)
 	end
 end
 
--- Le prompt est un SINGLETON partage (echelle, tondeuse, boite aux lettres, dialogues). On ne cache donc QUE le
--- notre : appeler hide() sans regarder ferait disparaitre celui d'une autre feature en plein milieu.
+-- ON RETIRE NOTRE DEMANDE, on ne cache pas la pilule. `hide()` jette les demandes de TOUT LE MONDE : une
+-- feature voisine encore a portee ne reviendrait jamais. `release` ne touche que la notre, et le module
+-- redonne aussitot la place au meilleur candidat restant.
 local function hideOurs()
-	local anchor = promptAnchor
-	if anchor and InteractionPrompt.currentTarget() == anchor then
-		InteractionPrompt.hide()
-	end
+	InteractionPrompt.release(promptAnchor)
 	promptTarget = nil
 	promptAnchor = nil
 end

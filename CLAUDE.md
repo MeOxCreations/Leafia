@@ -913,6 +913,22 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   compteur ne dit pas ou regarder. Meme famille que "un diagnostic qui designe le mauvais coupable coute PLUS cher
   que pas de diagnostic du tout" et que "une sonde doit afficher la MESURE, pas la conclusion".
 
+- **Quand N features se partagent une ressource unique, "je la reprends si elle n'est plus a moi" est une BOUCLE,
+  pas un arbitrage.** Le prompt d'interaction en avait six ; chacune testait `currentTarget()` et reprenait la
+  place. Avec UN seul objet a portee, ca marche et ca dort pendant tout le prototypage. Avec DEUX, les boucles se
+  la reprennent A CHAQUE IMAGE : "POPOPOPOP" a la frequence de l'ecran, son de pop compris. La priorite existante
+  ne servait a rien parce qu'elle refusait sur `<` : a priorite EGALE (le defaut de tout le monde) elle laissait
+  passer -- un departage qui ne departage pas le cas le plus frequent n'est pas un departage. La sortie n'est pas
+  de mieux regler les priorites, c'est de RENVERSER le sens : les features DECLARENT une demande et la RETIRENT,
+  le module choisit. Trois consequences qu'on n'avait pas en cherchant : le critere naturel apparait (le plus
+  PROCHE gagne, ce que personne ne pouvait decider seul) ; une feature qui perd la place la RECUPERE quand l'autre
+  relache, ce qui repare aussi les features branchees sur un EVENEMENT qui ne tire qu'une fois (leur refus etait
+  definitif) ; et un effet visuel ne se rejoue que si la cible CHANGE, alors qu'avant chaque appel le relancait.
+  Deux regles de forme : tout arbitrage entre pairs a besoin d'HYSTERESIS (ici 2 studs, sinon deux objets a egale
+  distance recreent le clignotement), et une fois l'arbitrage centralise, SUPPRIMER le "tout cacher" global --
+  le laisser public rouvre exactement le piege qu'on vient de fermer. Meme famille que CarryUtils pour les mains
+  et que "une propriete, un seul ecrivain".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

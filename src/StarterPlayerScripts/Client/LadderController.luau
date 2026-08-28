@@ -586,9 +586,8 @@ end
 local function hideMountPrompt()
 	local mine = mountPromptAnchor
 	mountPromptAnchor = nil
-	if mine and InteractionPrompt.currentTarget() == mine then
-		InteractionPrompt.hide()
-	end
+	-- On retire NOTRE demande, jamais la pilule entiere : `hide()` jetterait aussi celle du seau ou du camion.
+	InteractionPrompt.release(mine)
 end
 
 -- Monte sur l'echelle. Appele par la touche E (PC, via init) ET par le tap du prompt sur mobile (onActivate). Garde et
@@ -645,7 +644,7 @@ local function update(dt: number)
 			-- dialogue. Un simple booleen "deja affiche" restait alors ferme sur un prompt qui n'etait plus la, et
 			-- "MONTER" ne revenait jamais.
 			if mountPromptAnchor ~= zone or InteractionPrompt.currentTarget() ~= zone then
-				local ok = InteractionPrompt.show(
+				InteractionPrompt.show(
 					zone,
 					MOUNT_PROMPT_KEY,
 					MOUNT_PROMPT_LABEL,
@@ -655,7 +654,10 @@ local function update(dt: number)
 					nil,
 					MOUNT_PROMPT_PRIORITY
 				)
-				mountPromptAnchor = if ok then zone else nil
+				-- ON RETIENT LA CIBLE QUOI QU'IL ARRIVE, meme si la pilule affiche autre chose : c'est elle qu'on
+				-- devra relacher en sortant. L'oublier laissait une demande orpheline, et la pilule revenait sur une
+				-- zone qu'on avait quittee.
+				mountPromptAnchor = zone
 			end
 		else
 			-- Hors zone de grimpe (ou raccrochage encore bloque) : on cache le prompt et on oublie la cible.

@@ -128,11 +128,12 @@ local function findDoor(): (Model?, BasePart?)
 	return nil, nil
 end
 
--- Le prompt est un SINGLETON partage (echelle, tondeuse, seau, boite aux lettres). On ne cache donc QUE le
--- notre : appeler hide() sans regarder ferait disparaitre celui d'une autre feature en plein milieu.
+-- ON RETIRE NOTRE DEMANDE, on ne cache pas la pilule. `hide()` jette les demandes de TOUT LE MONDE : une
+-- feature voisine encore a portee ne reviendrait jamais. `release` ne touche que la notre, et le module
+-- redonne aussitot la place au meilleur candidat restant.
 local function hideOurs()
-	if promptShown and InteractionPrompt.currentTarget() == anchorPos then
-		InteractionPrompt.hide()
+	if promptShown then
+		InteractionPrompt.release(anchorPos)
 	end
 	promptShown = false
 end

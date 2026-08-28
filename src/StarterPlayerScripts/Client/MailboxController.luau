@@ -131,12 +131,14 @@ function MailboxController.init()
 		if prompt.Parent ~= activeAnchor then
 			return
 		end
+		local mine = activeAnchor
 		activeAnchor = nil
 		if stepConn then
 			stepConn:Disconnect()
 			stepConn = nil
 		end
-		InteractionPrompt.hide()
+		-- On retire NOTRE demande, jamais la pilule entiere : `hide()` jetterait aussi celle des voisins.
+		InteractionPrompt.release(mine)
 	end)
 end
 

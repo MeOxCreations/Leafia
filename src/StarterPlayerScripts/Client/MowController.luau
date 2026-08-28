@@ -1247,13 +1247,11 @@ local function setActionBound(active: boolean)
 	end
 end
 
--- Le prompt est un SINGLETON partage (dialogue de Papi, echelle, boite aux lettres...). On ne cache donc QUE
--- le notre : appeler hide() sans regarder ferait disparaitre celui d'un autre en plein milieu.
+-- ON RETIRE NOTRE DEMANDE, on ne cache pas la pilule. `hide()` jette les demandes de TOUT LE MONDE : une
+-- feature voisine encore a portee ne reviendrait jamais. `release` ne touche que la notre, et le module
+-- redonne aussitot la place au meilleur candidat restant.
 local function hideOurs()
-	local anchor = promptAnchor
-	if anchor and InteractionPrompt.currentTarget() == anchor then
-		InteractionPrompt.hide()
-	end
+	InteractionPrompt.release(promptAnchor)
 	promptTarget = nil
 	promptAnchor = nil
 end
