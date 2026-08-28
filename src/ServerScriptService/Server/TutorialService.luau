@@ -82,9 +82,20 @@ end
 -- A l'ecran ca ne ressemble pas du tout a un conflit de services : ca ressemble a une animation mal faite. La
 -- canne revient au centre parce qu'elle n'est pas clee dans CELLE qui joue, et on part regler l'animation.
 --
--- Pendant la scene, le grand-pere appartient au tuto : on COUPE les autres idles avant de poser le notre. A
+-- Pendant la scene, le grand-pere appartient au tuto : on coupe les autres idles avant de poser le notre. A
 -- priorite EGALE Roblox ne choisit pas, il MELANGE : en laisser une donnerait la moyenne des deux, ce qui se lit
 -- encore comme "l'animation ne joue pas completement". Une seule piste, un seul ecrivain.
+--
+-- MAIS ON CHARGE AVANT DE COUPER, et l'ordre inverse a coute une regression complete : couper d'abord puis
+-- echouer a charger laissait le grand-pere SANS AUCUNE animation, fige debout. `LoadAnimation` ne DEMARRE rien,
+-- il prepare la piste -- il n'y avait donc jamais de risque de melange a charger en premier, seulement un risque
+-- de tout perdre a couper en premier. Regle : ne jamais detruire l'etat courant avant d'avoir en main de quoi le
+-- remplacer.
+--
+-- ET ON VERIFIE LE RESULTAT. Une piste peut se charger, se jouer, et n'ecrire STRICTEMENT RIEN : asset jamais
+-- telecharge (sa longueur reste a zero), ou noms de poses qui ne correspondent a aucune part du rig. Dans les
+-- deux cas rien ne remonte, et on va chercher le bug du cote de l'animation. On repose donc l'idle d'ambiance
+-- plutot que de laisser une statue.
 --
 -- On NOMME ce qu'on coupe et ce qu'on pose, avec les IDs : quand les deux se revelent identiques, c'est que
 -- l'Instance de ReplicatedStorage pointe encore sur l'ancienne animation -- et ca, aucune sonde qui compte des
@@ -109,31 +120,58 @@ local function restoreIdle(model: Model)
 	end
 	local idle = node :: Animation
 
-	-- ON COUPE D'ABORD. Charger notre piste avant laisserait les deux jouer une image, donc un melange visible.
-	local stopped: { string } = {}
-	for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
-		if playing.Priority == Enum.AnimationPriority.Idle then
-			local source = playing.Animation
-			table.insert(stopped, if source then source.AnimationId else playing.Name)
-			playing:Stop()
-		end
-	end
-
+	-- 1) CHARGER. Rien ne joue encore, donc rien a melanger. Si ca rate, on sort SANS avoir touche a l'existant :
+	-- le grand-pere garde l'idle d'ambiance, ce qui est moche mais vivant.
 	local ok, result = pcall(function()
 		return (animator :: Animator):LoadAnimation(idle)
 	end)
 	if not (ok and typeof(result) == "Instance") then
-		warn(`[Tutorial] Idle du grand-pere non chargeable ({idle.AnimationId}).`)
+		warn(
+			`[Tutorial] Idle du grand-pere non chargeable ({idle.AnimationId}). `
+				.. "Il garde l'idle d'ambiance. Verifie que cette Animation existe et t'appartient."
+		)
 		return
 	end
 	local track = result :: AnimationTrack
+
+	-- 2) COUPER, en gardant les pistes sous la main : c'est ce qui permet de les REMETTRE si la notre ne donne rien.
+	local stopped: { AnimationTrack } = {}
+	local stoppedIds: { string } = {}
+	for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
+		if playing.Priority == Enum.AnimationPriority.Idle and playing ~= track then
+			local source = playing.Animation
+			table.insert(stoppedIds, if source then source.AnimationId else playing.Name)
+			table.insert(stopped, playing)
+			playing:Stop()
+		end
+	end
+
+	-- 3) POSER LA NOTRE.
 	track.Looped = true
 	track.Priority = Enum.AnimationPriority.Idle
 	track:Play()
 
+	-- 4) VERIFIER QUE CA A SERVI A QUELQUE CHOSE. Une longueur qui reste a zero = l'asset n'est jamais arrive
+	-- (mauvais ID, animation qui ne t'appartient pas). On rend alors la place a l'ambiance : un grand-pere qui
+	-- respire mal vaut mieux qu'une statue.
+	task.delay(TutorialConfigs.OLDMAN_IDLE_CHECK, function()
+		if not model.Parent or track.Length > 0 then
+			return
+		end
+		warn(
+			`[Tutorial] L'idle {idle.AnimationId} n'a jamais charge apres `
+				.. `{TutorialConfigs.OLDMAN_IDLE_CHECK} s : on remet l'idle d'ambiance. `
+				.. "Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
+		)
+		track:Stop()
+		for _, previous in stopped do
+			previous:Play()
+		end
+	end)
+
 	print(
 		`[Tutorial] Idle du grand-pere : {idle.AnimationId} `
-			.. `(remplace {#stopped} : {if #stopped > 0 then table.concat(stopped, ", ") else "aucune"})`
+			.. `(remplace {#stoppedIds} : {if #stoppedIds > 0 then table.concat(stoppedIds, ", ") else "aucune"})`
 	)
 end
 

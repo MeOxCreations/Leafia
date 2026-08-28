@@ -943,6 +943,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   places. Corollaire de sonde : afficher les IDs de ce qu'on coupe ET de ce qu'on pose repond en une ligne a une
   question qu'aucun comptage de pistes ne peut trancher. Meme famille que "une propriete, un seul ecrivain".
 
+- **NE JAMAIS DETRUIRE L'ETAT COURANT AVANT D'AVOIR EN MAIN DE QUOI LE REMPLACER.** En reparant l'idle du
+  grand-pere, j'ai coupe les pistes en cours PUIS charge la nouvelle -- et quand le chargement ratait, il ne
+  restait plus rien : statue debout, aucune erreur. J'avais remplace une animation qui jouait MAL par AUCUNE
+  animation, ce qui est strictement pire, et le joueur l'a vu dans la minute. Le comble : le risque que je
+  croyais eviter n'existait pas. `LoadAnimation` ne DEMARRE rien, il prepare la piste -- charger en premier ne
+  pouvait donc rien melanger. J'ai interverti deux etapes pour me proteger d'un danger imaginaire et j'en ai
+  fabrique un reel. Regle generale : acquerir, puis basculer, puis liberer -- dans cet ordre, toujours. Et quand
+  on ecrit un commentaire qui JUSTIFIE un ordre ("on coupe d'abord parce que sinon ca melange"), verifier que la
+  raison invoquee est vraie avant de la graver. Corollaire : tout remplacement doit avoir un RETOUR EN ARRIERE --
+  garder les objets remplaces sous la main et les remettre si le nouveau ne donne rien mesurable (ici : une piste
+  dont la longueur reste a zero n'a jamais ete telechargee). Meme famille que "un systeme qui peut echouer EN
+  SILENCE a besoin d'un controle qui mesure le RESULTAT".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

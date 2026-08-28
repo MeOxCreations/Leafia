@@ -4,6 +4,13 @@
 -- Le didacticiel a deux moities : TutorialService (serveur) place le joueur, TutorialController (client) le
 -- GUIDE. Cette config sert aux deux.
 
+-- LE RECUL DE FRAYEUR SE CALCULE, il ne se regle pas a la main. Il DOIT etre plus grand que l'approche, sinon la
+-- camera revient pile a son point de depart et le mouvement se lit comme une annulation, pas comme un sursaut.
+-- Deux nombres tenus d'accord a la main finissent toujours par se contredire : le vrai reglage, c'est de combien
+-- la camera saute AU-DELA de son point de depart. Baisse SCARE_EXTRA pour un sursaut plus discret.
+local TRY_PUSH = 2.2
+local SCARE_EXTRA = 0.6
+
 return {
 	-- ===== LE HALO DE LA PORTE =====
 	-- Premiere chose que le joueur doit comprendre en arrivant : ou aller. On le lui MONTRE au lieu de le lui
@@ -92,14 +99,13 @@ return {
 	-- ===== LA CAMERA S'APPROCHE, PUIS RECULE =====
 	-- Pendant que le grand-pere se bat avec la poignee, on se rapproche LENTEMENT : l'image se resserre sans
 	-- qu'on s'en rende compte, et la tension monte toute seule.
-	TRY_PUSH = 2.2,
+	TRY_PUSH = TRY_PUSH,
 	-- Aussi long que le geste de poignee. Un mouvement qui finit avant lui laisserait la camera immobile pendant
 	-- la moitie de la scene, ce qui casse justement l'effet de resserrement continu.
 	TRY_PUSH_TIME = 2.6,
-	-- Puis elle RECULE d'un coup quand la porte s'ouvre, comme si elle avait eu peur. Le recul est plus GRAND que
-	-- l'approche : sinon on revient au point de depart et le mouvement se lit comme une annulation, pas comme un
-	-- sursaut.
-	SCARE_BACK = 3.6,
+	-- Puis elle RECULE d'un coup quand la porte s'ouvre, comme si elle avait eu peur. Calcule depuis l'approche
+	-- (voir en tete de fichier) : il ne peut donc plus passer sous elle, quoi qu'on change.
+	SCARE_BACK = TRY_PUSH + SCARE_EXTRA,
 	-- VIF. C'est un reflexe, pas un mouvement de camera : au-dela d'une demi-seconde il ne se lit plus comme une
 	-- reaction mais comme un travelling arriere.
 	SCARE_TIME = 0.32,
@@ -289,6 +295,11 @@ return {
 	-- Il n'est joue QUE SI aucun idle ne tourne deja. `AmbientAnimService` en lance un au demarrage : le rejouer
 	-- en ferait DEUX a la meme priorite, et Roblox n'en choisit pas un -- il les MELANGE.
 	OLDMAN_IDLE_PATH = { "Player", "OldMan", "Idle" },
+
+	-- Delai avant de VERIFIER que l'idle qu'on vient de poser joue vraiment. Une piste dont l'asset n'arrive
+	-- jamais garde une longueur de zero pour toujours : le grand-pere resterait fige, sans la moindre erreur.
+	-- Assez long pour laisser le telechargement finir, assez court pour que le joueur ne voie pas la statue.
+	OLDMAN_IDLE_CHECK = 3,
 
 	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend

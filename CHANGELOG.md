@@ -2204,6 +2204,49 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.576 — Le grand-pere restait FIGE en arrivant, et la camera recule moins a l'ouverture
+
+Deux choses, dont une regression du 0.0.575.
+
+### La statue
+
+En arrivant a `OldManWalkTo`, le grand-pere n'avait plus AUCUNE animation. Avant le 0.0.575 il en avait une
+mauvaise ; depuis, il n'en avait plus du tout. C'est pire, et c'est ma faute.
+
+`restoreIdle` coupait les autres idles **avant** de charger le sien. Quand le chargement echouait ensuite, il
+avait deja tout coupe : plus rien ne jouait.
+
+Or `LoadAnimation` ne DEMARRE rien, il prepare la piste. Charger en premier ne pouvait donc jamais melanger quoi
+que ce soit -- c'etait couper en premier qui pouvait tout perdre. L'ordre est inverse.
+
+Et il y a maintenant un **filet de securite** : `OLDMAN_IDLE_CHECK` secondes apres, on regarde si la piste posee
+a une longueur reelle. Une longueur qui reste a zero veut dire que l'asset n'est jamais arrive (ID faux,
+animation qui n'appartient pas au proprietaire du jeu). Dans ce cas on **repose l'idle d'ambiance** : un
+grand-pere qui respire mal vaut mieux qu'une statue. Et le message le dit, avec l'ID en cause.
+
+### La camera recule moins quand la porte s'ouvre
+
+`SCARE_BACK` passe de **3.6 a 2.8**. Le sursaut restait lisible mais le mouvement etait trop grand.
+
+Surtout, il ne se regle plus a la main : il se **calcule** depuis l'approche (`TRY_PUSH + SCARE_EXTRA`). Le recul
+DOIT rester plus grand que l'approche, sinon la camera revient pile a son point de depart et le mouvement se lit
+comme une annulation au lieu d'un sursaut. Deux nombres tenus d'accord a la main finissent toujours par se
+contredire.
+
+Le knob qui reste est `SCARE_EXTRA` : de combien la camera saute AU-DELA de son point de depart. Baisse-le pour
+un sursaut plus discret, il ne peut plus inverser l'effet.
+
+### A faire dans Studio
+
+Rien. Mais regarde la console quand le grand-pere arrive :
+
+```
+[Tutorial] Idle du grand-pere : rbxassetid://XXX (remplace 1 : rbxassetid://YYY)
+```
+
+Si un warning parle d'un idle qui n'a jamais charge, l'ID de `ReplicatedStorage.Animations.Player.OldMan.Idle`
+est faux ou l'animation n'appartient pas au proprietaire du jeu.
+
 ## 0.0.575 — Le grand-pere jouait l'idle de l'AMBIANCE, pas le sien (la canne au centre)
 
 En arrivant a `OldManWalkTo`, sa canne revenait au milieu de lui, comme si elle n'etait pas animee. Ca ressemblait
