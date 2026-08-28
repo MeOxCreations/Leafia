@@ -2204,6 +2204,43 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.575 — Le grand-pere jouait l'idle de l'AMBIANCE, pas le sien (la canne au centre)
+
+En arrivant a `OldManWalkTo`, sa canne revenait au milieu de lui, comme si elle n'etait pas animee. Ca ressemblait
+a deux animations melangees, ou a une animation mal faite.
+
+Ni l'un ni l'autre : c'est **l'idle du tuto qui ne jouait jamais**.
+
+Deux services declarent l'idle du grand-pere, et ils ont diverge :
+
+- `AmbientAnimService` en lance un au demarrage -- un ID ecrit dans sa config, sous la cle `OldmanOriginal` ;
+- `TutorialService` en a un second -- une Instance `Animation` rangee dans `ReplicatedStorage.Animations`.
+
+L'ancien `ensureIdle` s'effacait devant tout idle deja en cours. Ce garde-fou existait pour eviter un MELANGE (a
+priorite egale, Roblox ne choisit pas, il moyenne). Sauf que l'ambiance demarre au boot, donc elle etait toujours
+la la premiere : le garde-fou **garantissait** que le tuto perde, a chaque fois. La canne n'est pas clee dans
+l'animation d'ambiance, d'ou la canne au centre.
+
+Le grand-pere appartient maintenant au tuto pendant la scene : `restoreIdle` **coupe** les autres idles avant de
+poser le sien. Une seule piste, un seul ecrivain.
+
+Et il **nomme** ce qu'il coupe et ce qu'il pose, avec les IDs :
+
+```
+[Tutorial] Idle du grand-pere : rbxassetid://XXX (remplace 1 : rbxassetid://YYY)
+```
+
+Si les deux IDs sont IDENTIQUES, c'est que l'Instance de `ReplicatedStorage` pointe encore sur l'ancienne
+animation -- et aucune sonde qui compte des pistes ne pouvait le dire.
+
+### A faire dans Studio
+
+Regarder cette ligne dans la console au moment ou il arrive. Les deux IDs doivent etre DIFFERENTS, et le premier
+doit etre celui de l'idle avec la canne.
+
+S'ils sont identiques : `ReplicatedStorage.Animations.Player.OldMan.Idle` porte encore l'ancien ID. Rojo ne
+synchronise pas cette Instance (`$ignoreUnknownInstances`), elle se corrige a la main, place par place.
+
 ## 0.0.574 — Deux objets a portee ne se volent plus la pilule (le POPOPOPOP)
 
 Poser deux objets interactifs cote a cote (un seau et un camion, une tondeuse et une echelle) faisait clignoter

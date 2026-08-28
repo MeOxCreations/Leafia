@@ -72,25 +72,28 @@ local function groundAt(position: Vector3, ignore: { Instance }): number?
 	return if hit then hit.Position.Y else nil
 end
 
--- REMET LE GRAND-PERE SUR SON IDLE, une fois arrive.
+-- REMET LE GRAND-PERE SUR SON IDLE, une fois arrive -- et c'est LE TUTO qui decide, pas l'ambiance.
 --
--- ON DEMANDE A L'ANIMATOR ce qui joue REELLEMENT, au lieu de supposer. `AmbientAnimService` lance deja un idle au
--- demarrage, et en theorie il ressort tout seul des qu'on arrete la marche -- mais une piste a pu etre coupee
--- ailleurs (la scene, un respawn, un rechargement), et rien ne le dirait : le grand-pere resterait simplement
--- fige, ce qui ressemble a une animation qui ne joue pas.
+-- DEUX SERVICES DECLARENT SON IDLE, et ils ont fini par diverger. `AmbientAnimService` en lance un au demarrage
+-- (un ID ecrit dans sa config, sous la cle du NOM du modele) ; ici on en a un second, une Instance Animation
+-- rangee dans ReplicatedStorage. L'ancienne version s'effacait devant celui qui jouait deja -- donc l'ambiance
+-- gagnait TOUJOURS, et l'idle du tuto ne jouait JAMAIS.
 --
--- Le fait bat l'hypothese : `GetPlayingAnimationTracks` dit ce qui tourne, une liste tenue a la main dit ce qu'on
--- croit avoir.
-local function ensureIdle(model: Model)
+-- A l'ecran ca ne ressemble pas du tout a un conflit de services : ca ressemble a une animation mal faite. La
+-- canne revient au centre parce qu'elle n'est pas clee dans CELLE qui joue, et on part regler l'animation.
+--
+-- Pendant la scene, le grand-pere appartient au tuto : on COUPE les autres idles avant de poser le notre. A
+-- priorite EGALE Roblox ne choisit pas, il MELANGE : en laisser une donnerait la moyenne des deux, ce qui se lit
+-- encore comme "l'animation ne joue pas completement". Une seule piste, un seul ecrivain.
+--
+-- On NOMME ce qu'on coupe et ce qu'on pose, avec les IDs : quand les deux se revelent identiques, c'est que
+-- l'Instance de ReplicatedStorage pointe encore sur l'ancienne animation -- et ca, aucune sonde qui compte des
+-- pistes ne peut le dire.
+local function restoreIdle(model: Model)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
 	if not animator then
 		return
-	end
-	for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
-		if playing.Priority == Enum.AnimationPriority.Idle then
-			return -- un idle tourne deja : en lancer un second les ferait MELANGER, pas se remplacer
-		end
 	end
 
 	local node: Instance? = ReplicatedStorage:FindFirstChild("Animations")
@@ -100,19 +103,38 @@ local function ensureIdle(model: Model)
 	if not (node and node:IsA("Animation")) then
 		warn(
 			`[Tutorial] Idle introuvable : ReplicatedStorage.Animations.`
-				.. `{table.concat(TutorialConfigs.OLDMAN_IDLE_PATH, ".")}. Le grand-pere restera fige.`
+				.. `{table.concat(TutorialConfigs.OLDMAN_IDLE_PATH, ".")}. Le grand-pere gardera l'idle d'ambiance.`
 		)
 		return
 	end
-	local ok, result = pcall(function()
-		return (animator :: Animator):LoadAnimation(node :: Animation)
-	end)
-	if ok and typeof(result) == "Instance" then
-		local t = result :: AnimationTrack
-		t.Looped = true
-		t.Priority = Enum.AnimationPriority.Idle
-		t:Play()
+	local idle = node :: Animation
+
+	-- ON COUPE D'ABORD. Charger notre piste avant laisserait les deux jouer une image, donc un melange visible.
+	local stopped: { string } = {}
+	for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
+		if playing.Priority == Enum.AnimationPriority.Idle then
+			local source = playing.Animation
+			table.insert(stopped, if source then source.AnimationId else playing.Name)
+			playing:Stop()
+		end
 	end
+
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(idle)
+	end)
+	if not (ok and typeof(result) == "Instance") then
+		warn(`[Tutorial] Idle du grand-pere non chargeable ({idle.AnimationId}).`)
+		return
+	end
+	local track = result :: AnimationTrack
+	track.Looped = true
+	track.Priority = Enum.AnimationPriority.Idle
+	track:Play()
+
+	print(
+		`[Tutorial] Idle du grand-pere : {idle.AnimationId} `
+			.. `(remplace {#stopped} : {if #stopped > 0 then table.concat(stopped, ", ") else "aucune"})`
+	)
 end
 
 -- LE GRAND-PERE SORT DE CHEZ LUI. Il glisse jusqu'a la part posee dans Studio, puis se repose sur son idle.
@@ -218,12 +240,12 @@ local function walkOldMan()
 			end
 			task.wait()
 		end
-		-- ON ARRETE LA MARCHE, PUIS on s'assure qu'un idle tourne. L'ordre compte : arreter en premier laisse la
-		-- place, et `ensureIdle` ne fait rien si l'idle d'ambiance est deja la -- ce qui est le cas normal.
+		-- ON ARRETE LA MARCHE, PUIS on pose l'idle. L'ordre compte : la marche est en priorite Movement, donc plus
+		-- forte que l'idle -- la laisser tourner masquerait completement la pose qu'on vient de mettre.
 		if track then
 			(track :: AnimationTrack):Stop()
 		end
-		ensureIdle(model)
+		restoreIdle(model)
 		walking = false
 	end)
 end

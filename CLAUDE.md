@@ -929,6 +929,20 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   le laisser public rouvre exactement le piege qu'on vient de fermer. Meme famille que CarryUtils pour les mains
   et que "une propriete, un seul ecrivain".
 
+- **Un garde "je ne fais rien si quelqu'un joue deja" GARANTIT que l'autre gagne toujours -- il ne partage pas, il
+  abdique.** L'idle du grand-pere etait declare a DEUX endroits : un ID dans `AmbientAnimConfigs` (cle = nom du
+  modele) et une Instance `Animation` dans ReplicatedStorage lue par le tuto. `ensureIdle` s'effacait devant tout
+  idle en cours -- garde-fou ecrit pour eviter un MELANGE, ce qui est un vrai risque (a priorite egale Roblox
+  moyenne). Sauf que l'ambiance demarre AU BOOT : elle etait donc toujours la premiere, et le tuto perdait a tous
+  les coups. Le garde ne prevenait pas le conflit, il le tranchait en silence, toujours du meme cote. Symptome
+  trompeur au possible : ca ne ressemble pas a un conflit de services mais a une ANIMATION MAL FAITE (la canne
+  revient au centre parce qu'elle n'est pas clee dans celle qui joue) -- on part regler le rig ou l'animation.
+  Deux regles : (1) quand deux systemes peuvent ecrire la meme chose, ce n'est pas un garde qu'il faut, c'est un
+  PROPRIETAIRE -- celui qui agit coupe l'autre et pose la sienne ; (2) une meme donnee declaree a deux endroits
+  (un ID en config ET une Instance Studio) FINIRA par diverger, et l'Instance ne se synchronise meme pas entre les
+  places. Corollaire de sonde : afficher les IDs de ce qu'on coupe ET de ce qu'on pose repond en une ligne a une
+  question qu'aucun comptage de pistes ne peut trancher. Meme famille que "une propriete, un seul ecrivain".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
