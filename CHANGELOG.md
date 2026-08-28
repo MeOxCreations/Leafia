@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.572 — Les cypres du jardin bougent
+
+`PlantsCypresHigh` entre dans `AmbientAnimConfigs.ANIMATIONS`. Une ligne, et tous les modeles portant ce nom
+s'animent -- ceux poses aujourd'hui, et ceux qu'on posera demain.
+
+Rien d'autre a brancher : `AmbientAnimService` balaye tout le Workspace, cree l'Animator s'il manque, decale
+chaque plante d'un peu de vitesse et d'un depart au hasard pour qu'elles n'ondulent pas toutes ensemble.
+
+### A faire dans Studio
+
+Le nom du Model dans le Workspace EST la cle. `PlantsCypresHigh` renomme = animation coupee, en silence.
+
+Ses parts ne doivent PAS etre ancrees, SAUF la RootPart : une part ancree ignore son joint, donc l'animation
+joue et rien ne bouge. Le serveur previent au demarrage si c'est le cas.
+
+Les sept `PlantsPacksCypresb` posees a cote ne sont PAS branchees : nom different, donc entree differente.
+
 ## 0.0.571 — Les roues ont un Motor6D, cree par le code
 
 Elles se decollaient encore. Deux causes, et la premiere explique tout.

@@ -31,6 +31,9 @@ local ANIMATIONS: { [string]: string } = {
 	-- Le camion respire a l'arret : suspension qui travaille, carrosserie qui bouge d'un rien. Un vehicule
 	-- parfaitement immobile a cote d'arbres qui bougent se lit comme un decor colle, pas comme un objet pose la.
 	Truck = "rbxassetid://123591212100898",
+	-- LES CYPRES du jardin. Meme mecanique que les buissons : ils respirent sur place. Un jardin dont SEULE l'herbe
+	-- bouge se lit comme un decor peint -- c'est le feuillage qui dit qu'il y a du vent.
+	PlantsCypresHigh = "rbxassetid://136596943185579",
 }
 
 local AmbientAnimConfigs = {
@@ -39,7 +42,7 @@ local AmbientAnimConfigs = {
 	-- Ou chercher, sous Workspace. VIDE = tout le Workspace, et c'est VOULU : les plantes sont dans Assets.Foliages,
 	-- les PNJ sont poses directement dans la map ou a la racine, et la prochaine chose sera encore ailleurs. Obliger a
 	-- ranger un modele au bon endroit pour qu'il s'anime est un piege qui a deja coute deux diagnostics.
-	-- Le cout est nul : tout ce qui naît dans le Workspace (des milliers de carreaux de haie, les debris de coupe) est
+	-- Le cout est nul : tout ce qui nait dans le Workspace (des milliers de carreaux de haie, les debris de coupe) est
 	-- ecarte par un `IsA("Model")` avant meme le test de nom, et un Model porte toujours un nom a comparer.
 	-- Remettre un chemin ici (ex { "Worlds", "Maps" }) si un jour il faut restreindre.
 	ROOT = {},
