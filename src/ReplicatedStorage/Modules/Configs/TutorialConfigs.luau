@@ -300,6 +300,9 @@ return {
 	-- jamais garde une longueur de zero pour toujours : le grand-pere resterait fige, sans la moindre erreur.
 	-- Assez long pour laisser le telechargement finir, assez court pour que le joueur ne voie pas la statue.
 	OLDMAN_IDLE_CHECK = 3,
+	-- Ecart entre les deux releves de pose du controle. Assez long pour qu'une animation lente ait bouge, assez
+	-- court pour ne pas laisser une statue a l'ecran si le verdict est mauvais.
+	OLDMAN_IDLE_SAMPLE = 0.35,
 
 	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend

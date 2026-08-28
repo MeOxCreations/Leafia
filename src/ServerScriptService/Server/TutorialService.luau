@@ -72,6 +72,43 @@ local function groundAt(position: Vector3, ignore: { Instance }): number?
 	return if hit then hit.Position.Y else nil
 end
 
+-- ===== EST-CE QUE L'ANIMATION BOUGE VRAIMENT LE RIG ? =====
+--
+-- Une piste peut se charger, se jouer, afficher une longueur correcte, et n'ecrire STRICTEMENT RIEN. C'est ce
+-- qui arrive quand ses poses portent des noms qui ne correspondent a aucune partie du rig : Roblox joue avec un
+-- poids de 1 et ne trouve personne a qui parler. Aucune erreur, aucun warning, un personnage fige.
+--
+-- On ne peut donc pas se fier a "la piste joue" : il faut regarder le RESULTAT. Les animations ecrivent dans
+-- `Transform`, jamais dans `C0` -- et les deux familles de rig en ont un : `Motor6D` pour un modele assemble,
+-- `Bone` pour un skinned mesh. Ne balayer qu'une des deux fait crier au faux probleme sur l'autre.
+local function jointPose(model: Model): { CFrame }
+	local pose: { CFrame } = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") or d:IsA("Bone") then
+			table.insert(pose, d.Transform)
+		end
+	end
+	return pose
+end
+
+-- Deux poses different-elles ? On compare la position ET l'orientation : une articulation peut tourner sur place
+-- sans que son origine bouge d'un poil, et on conclurait a tort qu'elle est morte.
+local function poseMoved(before: { CFrame }, after: { CFrame }): boolean
+	if #before == 0 or #before ~= #after then
+		return false
+	end
+	for index, one in before do
+		local other = after[index]
+		if (one.Position - other.Position).Magnitude > 1e-3 then
+			return true
+		end
+		if one.RightVector:Dot(other.RightVector) < 0.9999 or one.UpVector:Dot(other.UpVector) < 0.9999 then
+			return true
+		end
+	end
+	return false
+end
+
 -- REMET LE GRAND-PERE SUR SON IDLE, une fois arrive -- et c'est LE TUTO qui decide, pas l'ambiance.
 --
 -- DEUX SERVICES DECLARENT SON IDLE, et ils ont fini par diverger. `AmbientAnimService` en lance un au demarrage
@@ -120,6 +157,22 @@ local function restoreIdle(model: Model)
 	end
 	local idle = node :: Animation
 
+	-- 0) EST-CE QUE C'EST DEJA LA BONNE ? Les deux services peuvent tres bien designer la MEME animation : ici
+	-- l'Instance de ReplicatedStorage et l'ID d'AmbientAnimConfigs pointaient sur le meme asset. Couper la piste
+	-- pour recharger le meme fichier ne peut rien ameliorer, et ca ne peut que casser -- c'est exactement ce qui a
+	-- fige le grand-pere. On ne remplace jamais quelque chose par lui-meme.
+	for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
+		local source = playing.Animation
+		if
+			playing.Priority == Enum.AnimationPriority.Idle
+			and source
+			and source.AnimationId == idle.AnimationId
+		then
+			print(`[Tutorial] Idle du grand-pere : {idle.AnimationId} joue deja, rien a faire.`)
+			return
+		end
+	end
+
 	-- 1) CHARGER. Rien ne joue encore, donc rien a melanger. Si ca rate, on sort SANS avoir touche a l'existant :
 	-- le grand-pere garde l'idle d'ambiance, ce qui est moche mais vivant.
 	local ok, result = pcall(function()
@@ -151,18 +204,40 @@ local function restoreIdle(model: Model)
 	track.Priority = Enum.AnimationPriority.Idle
 	track:Play()
 
-	-- 4) VERIFIER QUE CA A SERVI A QUELQUE CHOSE. Une longueur qui reste a zero = l'asset n'est jamais arrive
-	-- (mauvais ID, animation qui ne t'appartient pas). On rend alors la place a l'ambiance : un grand-pere qui
-	-- respire mal vaut mieux qu'une statue.
+	-- 4) MESURER LE RESULTAT, pas l'intention. On regarde si les articulations BOUGENT vraiment, en relevant leur
+	-- pose deux fois a un court intervalle. Deux causes tombent d'un coup : l'asset jamais telecharge (longueur a
+	-- zero) ET l'animation qui joue dans le vide (noms de poses etrangers au rig). Dans les deux cas on repose
+	-- l'idle d'ambiance : un grand-pere qui respire mal vaut mieux qu'une statue.
 	task.delay(TutorialConfigs.OLDMAN_IDLE_CHECK, function()
-		if not model.Parent or track.Length > 0 then
+		if not model.Parent then
 			return
 		end
-		warn(
-			`[Tutorial] L'idle {idle.AnimationId} n'a jamais charge apres `
-				.. `{TutorialConfigs.OLDMAN_IDLE_CHECK} s : on remet l'idle d'ambiance. `
-				.. "Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
-		)
+		-- Deux releves A L'INSTANT DU CONTROLE, pas un avant / un apres : sur une boucle, la pose de depart peut
+		-- revenir a l'identique et faire croire a tort que rien ne bouge.
+		local before = jointPose(model)
+		task.wait(TutorialConfigs.OLDMAN_IDLE_SAMPLE)
+		if not model.Parent then
+			return
+		end
+		local joints = #before
+		if track.Length > 0 and poseMoved(before, jointPose(model)) then
+			return -- ca joue ET ca bouge : rien a dire
+		end
+
+		if track.Length <= 0 then
+			warn(
+				`[Tutorial] L'idle {idle.AnimationId} n'a jamais charge apres `
+					.. `{TutorialConfigs.OLDMAN_IDLE_CHECK} s : on remet l'idle d'ambiance. `
+					.. "Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
+			)
+		else
+			-- LE DIAGNOSTIC PRECIS, celui qui a coute des heures sur le grand-pere la premiere fois.
+			warn(
+				`[Tutorial] L'idle {idle.AnimationId} JOUE (longueur {string.format("%.2f", track.Length)} s) mais `
+					.. `n'ecrit RIEN sur les {joints} articulations de "{model.Name}". Ses poses portent des noms que `
+					.. "ce rig n'a pas. Compare-les avec scripts/studio/ComparerAnimEtRig.lua. On remet l'ambiance."
+			)
+		end
 		track:Stop()
 		for _, previous in stopped do
 			previous:Play()

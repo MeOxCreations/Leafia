@@ -956,6 +956,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   dont la longueur reste a zero n'a jamais ete telechargee). Meme famille que "un systeme qui peut echouer EN
   SILENCE a besoin d'un controle qui mesure le RESULTAT".
 
+- **Avant de faire gagner un systeme contre un autre, VERIFIER QU'ILS SONT DIFFERENTS.** J'ai passe trois
+  versions a organiser un duel entre "l'idle du tuto" et "l'idle d'ambiance" du grand-pere -- proprietaire,
+  ordre de coupe, filet de securite -- alors que les deux pointaient sur le MEME `rbxassetid`. Il n'y avait pas
+  de conflit : il y avait une seule animation, jouee une fois, correctement. Chaque correctif a donc empire les
+  choses, jusqu'a couper la piste pour recharger le meme fichier et laisser une statue. La verification coutait
+  UNE ligne (comparer les deux AnimationId) et elle etait disponible des la premiere minute -- c'est le joueur
+  qui a fini par ouvrir les proprietes de l'Instance et me montrer l'ID. Regle : quand on diagnostique un
+  conflit entre deux sources, la premiere mesure n'est pas "laquelle gagne" mais "sont-elles vraiment deux ?".
+  Corollaire de code : tout remplacement doit commencer par un test d'identite -- on ne remplace jamais quelque
+  chose par lui-meme, et ce garde-fou rend la classe entiere de bug impossible. Meme famille que `lastHedge` /
+  `workHedge` (deux references vers la meme chose) mais en miroir : la, deux variables designaient des objets
+  differents ; ici, deux systemes designaient le meme objet.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

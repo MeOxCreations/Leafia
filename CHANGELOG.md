@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.577 — Le tuto coupait l'idle du grand-pere pour recharger LA MEME animation
+
+Le grand-pere restait toujours fige en arrivant, malgre le 0.0.576.
+
+La cause est bete et elle etait sous les yeux depuis le debut : les deux "idles" sont **la meme animation**.
+
+- `AmbientAnimConfigs.OldmanOriginal` = `rbxassetid://102639960685891`
+- `ReplicatedStorage.Animations.Player.OldMan.Idle` = `rbxassetid://102639960685891`
+
+Le 0.0.575 partait de l'idee que le tuto avait un idle DIFFERENT que l'ambiance empechait de jouer. Faux. Il n'y
+en a qu'un. Couper la piste en cours pour recharger le meme fichier ne pouvait rien ameliorer -- seulement casser.
+
+`restoreIdle` verifie maintenant EN PREMIER si l'animation demandee joue deja, par son `AnimationId`. Si oui, il
+ne fait rien du tout. **On ne remplace jamais quelque chose par lui-meme.**
+
+### Le controle mesure maintenant les ARTICULATIONS
+
+Le filet du 0.0.576 ne detectait qu'un cas : l'asset jamais telecharge (longueur a zero). Il en manquait un
+deuxieme, plus vicieux : une piste qui charge, joue, affiche une longueur correcte, et n'ecrit STRICTEMENT RIEN
+parce que ses poses portent des noms que le rig n'a pas.
+
+On releve donc la pose des articulations deux fois a `OLDMAN_IDLE_SAMPLE` d'intervalle, et on regarde si elle a
+bouge. `Motor6D` ET `Bone` sont balayes : un rig assemble et un skinned mesh n'ont aucune classe commune, et ne
+regarder qu'une des deux familles fait crier au faux probleme sur l'autre.
+
+Si rien ne bouge, on repose l'idle d'ambiance et le message dit LAQUELLE des deux causes c'est.
+
+### Reste a faire
+
+La canne. Elle est animee pendant la MARCHE mais pas pendant l'IDLE. Comme les deux services jouent bien la meme
+animation, ce n'est pas un conflit de code : c'est `102639960685891` qui ne cle pas la canne, ou qui la cle sous
+un nom que le rig actuel n'a pas. `scripts/studio/ComparerAnimEtRig.lua` tranche en une passe.
+
 ## 0.0.576 — Le grand-pere restait FIGE en arrivant, et la camera recule moins a l'ouverture
 
 Deux choses, dont une regression du 0.0.575.
