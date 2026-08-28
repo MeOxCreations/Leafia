@@ -67,21 +67,34 @@ local function findAnimator(model: Model): Animator
 	return animator
 end
 
--- UNE PART ANCREE IGNORE SON MOTOR6D : l'animation joue, les os bougent, et rien ne se deplace a l'ecran, sans la
--- moindre erreur. C'est LE piege de cette feature, et il ne se voit qu'a l'oeil -- donc on le dit.
--- La RootPart, elle, DOIT rester ancree : c'est ce qui empeche l'objet de deriver. On ne compte donc pas celle-la.
+-- UNE PART ANCREE IGNORE SON MOTOR6D : l'animation joue, les joints bougent, et rien ne se deplace a l'ecran, sans
+-- la moindre erreur. C'est LE piege de cette feature, et il ne se voit qu'a l'oeil -- donc on le dit.
+--
+-- ON NE COMPTE QUE CE QU'ON PEUT PROUVER : les parts qu'un Motor6D est CENSE bouger (ses `Part1`) et qui sont
+-- ancrees. Celles-la sont vraiment bloquees. Une part ancree que rien ne pilote -- la racine du rig, un accessoire
+-- pose a cote -- ne regarde pas l'animation, et la nommer envoie chercher un probleme qui n'existe pas.
+--
+-- L'ANCIENNE VERSION COMPARAIT A `model.PrimaryPart`, et c'etait faux. Un modele sorti du 3D Importer n'a
+-- normalement PAS de PrimaryPart : la comparaison tombait sur `nil`, donc la RootPart -- ancree EXPRES, a juste
+-- titre -- etait comptee comme fautive. La sonde accusait la seule part qui avait raison.
+--
+-- Rien pour les SKINNED MESH : ils sont pilotes par des `Bone`, qui deforment le maillage sans passer par la
+-- physique. Une part ancree s'y anime tres bien, donc il n'y a rien a signaler.
 local function warnIfAnchored(model: Model)
-	local root = model.PrimaryPart
-	local anchored = 0
+	local blocked: { string } = {}
+	-- PAR LES EXTREMITES DU JOINT, jamais par son rangement dans l'arbre : un Motor6D peut vivre n'importe ou.
 	for _, d in ipairs(model:GetDescendants()) do
-		if d:IsA("BasePart") and d.Anchored and d ~= root then
-			anchored += 1
+		if d:IsA("Motor6D") then
+			local driven = d.Part1
+			if driven and driven.Anchored then
+				table.insert(blocked, driven.Name)
+			end
 		end
 	end
-	if anchored > 0 then
+	if #blocked > 0 then
 		warn(
-			`[AmbientAnim] "{model.Name}" : {anchored} part(s) ANCREE(S) hors RootPart. Une part ancree ignore son `
-				.. `Motor6D : l'animation va jouer sans que rien ne bouge. N'ancrer QUE la RootPart.`
+			`[AmbientAnim] "{model.Name}" : {table.concat(blocked, ", ")} ANCREE(S) alors qu'un Motor6D doit les `
+				.. `bouger. L'animation va jouer sans que rien ne bouge. Les desancrer -- la racine, elle, reste ancree.`
 		)
 	end
 end

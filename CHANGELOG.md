@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.573 — La sonde des parts ancrees accusait la seule part qui avait raison
+
+Le camion sortait `"Truck" : 1 part(s) ANCREE(S) hors RootPart` alors que TOUT etait bien range : ses dix-sept
+MeshParts desancrees, sa RootPart ancree.
+
+La sonde comparait a `model.PrimaryPart`. Un modele sorti du 3D Importer n'en a normalement PAS : la comparaison
+tombait sur `nil`, donc la RootPart -- ancree EXPRES -- comptait comme fautive. Le message envoyait chercher une
+part ancree qui n'existait pas.
+
+Elle mesure maintenant ce qu'elle affirme : elle ne compte que les parts qu'un **Motor6D est cense bouger** (ses
+`Part1`) et qui sont ancrees. Celles-la sont vraiment bloquees. Et elle les **nomme**, au lieu d'en donner le
+nombre -- un compteur ne dit pas ou regarder.
+
+Les joints sont cherches par leurs EXTREMITES, pas par leur rangement dans l'arbre : un Motor6D peut vivre
+n'importe ou (deja paye sur les roues de la tondeuse).
+
+Rien n'est signale sur un skinned mesh : il est pilote par des `Bone`, qui deforment le maillage sans passer par
+la physique. Une part ancree s'y anime tres bien.
+
+### A faire dans Studio
+
+Rien. Le camion etait deja correct.
+
 ## 0.0.572 — Les cypres du jardin bougent
 
 `PlantsCypresHigh` entre dans `AmbientAnimConfigs.ANIMATIONS`. Une ligne, et tous les modeles portant ce nom

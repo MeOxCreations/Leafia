@@ -903,6 +903,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   imprimer la courbe valeur par valeur l'a montree en dix lignes. Quand un mouvement "fait un truc bizarre",
   tabuler la grandeur avant de relire le code.
 
+- **Une sonde dont le POINT DE REPERE est une propriete FACULTATIVE accuse tout le monde le jour ou elle est vide.**
+  Le controle des parts ancrees comparait a `model.PrimaryPart` pour epargner la racine du rig. Or un modele sorti
+  du 3D Importer n'a normalement PAS de PrimaryPart : la comparaison tombait sur `nil`, et la RootPart -- ancree
+  EXPRES, a juste titre -- etait denoncee. Symptome trompeur au possible : le message est precis, chiffre, il a
+  l'air d'un fait, et il envoie fouiller une map qui est deja correcte. Regle : une sonde ne compte que ce qu'elle
+  peut PROUVER -- ici les parts qu'un Motor6D est cense bouger (ses `Part1`) et qui sont ancrees, ce qui ne suppose
+  aucun rangement ni aucune propriete optionnelle. Et elle NOMME les coupables au lieu d'en donner le nombre : un
+  compteur ne dit pas ou regarder. Meme famille que "un diagnostic qui designe le mauvais coupable coute PLUS cher
+  que pas de diagnostic du tout" et que "une sonde doit afficher la MESURE, pas la conclusion".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
