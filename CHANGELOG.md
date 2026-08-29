@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.579 — On ne marche plus pendant la scene, et la porte s'entrebaille plus
+
+### Le joueur est bloque pendant la cinematique
+
+On pouvait continuer a marcher sous une camera qui ne suit plus : le personnage sortait du cadre et se promenait
+dans le decor pendant que la scene jouait. Il etait deja rendu transparent, mais transparent ne veut pas dire
+immobile.
+
+`startMission` coupe maintenant le **ControlModule**, `endScene` le rend.
+
+On ne touche PAS a `WalkSpeed` : `CharacterService` en est le seul proprietaire, et y ecrire d'ici les ferait se
+battre. Couper les controles s'attaque a l'ENTREE (clavier, manette, joystick tactile) plutot qu'a la
+consequence, donc aucun autre systeme n'a besoin d'etre au courant. Le saut part avec, ce qu'un `WalkSpeed` a
+zero ne bloque pas.
+
+Le ControlModule est resolu **paresseusement**, au declenchement de la scene et jamais au boot :
+`require(PlayerModule)` peut yield 10 a 20 s dans une place secondaire comme le tuto.
+
+Et les controles reviennent **avant** le retour de camera, pas apres : sinon le joueur appuie dans le vide
+pendant toute la transition, et une commande qui ne repond pas se lit comme un lag.
+
+### La porte s'entrebaille plus
+
+`DOOR_HALF_ANGLE` : **30 -> 45 degres**. Le premier mouvement, celui qui surprend, se voyait a peine.
+
+`DOOR_FULL_ANGLE` (100) et les durees ne bougent pas.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.578 — L'outil qui dit POURQUOI la canne ne bouge pas
 
 `scripts/studio/ComparerAnimEtRig.lua` visait encore l'ANCIEN grand-pere (`OldManIdle`) et ses anciens IDs

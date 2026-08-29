@@ -59,6 +59,7 @@ local doorHint = true
 local doorMarker: Frame? = nil
 local missionStarted = false
 local sceneEnded = false
+local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
 local grandpaTrack: AnimationTrack? = nil
 -- Angle courant de la porte, en degres (0 = fermee). Une seule valeur : la sequence n'est qu'un enchainement de
 -- cibles, et repartir en plein mouvement ne demande donc aucun cas particulier.
@@ -334,6 +335,51 @@ local function fadePlayerTo(amount: number, seconds: number)
 	end)
 end
 
+-- ===== LE JOUEUR NE BOUGE PAS PENDANT LA SCENE =====
+--
+-- Sans ca il continue de marcher sous une camera qui ne le suit plus : il sort du cadre, se retrouve dans le
+-- decor, et une cinematique se transforme en bug. Le personnage est deja rendu transparent, mais transparent ne
+-- veut pas dire immobile.
+--
+-- ON COUPE LE ControlModule, on ne touche PAS a `WalkSpeed`. C'est CharacterService qui en est le seul
+-- proprietaire : y ecrire ici les ferait se battre, et le premier qui repasse gagne. Couper les controles
+-- s'attaque a l'ENTREE (clavier, manette, joystick tactile) au lieu de la consequence, donc rien d'autre n'a
+-- besoin d'etre au courant. Bonus : le saut part avec, ce qu'un WalkSpeed a zero ne bloque pas.
+--
+-- Resolu PARESSEUSEMENT, jamais au boot : `require(PlayerModule)` peut yield 10 a 20 s dans une place secondaire
+-- comme le tuto. Ici on n'appelle qu'au moment ou le joueur declenche la scene -- PlayerModule est pret depuis
+-- longtemps, et `FindFirstChild` rend la main tout de suite.
+local function getControls(): any
+	if controls then
+		return controls
+	end
+	local scripts = player:FindFirstChild("PlayerScripts")
+	local playerModule = scripts and scripts:FindFirstChild("PlayerModule")
+	if playerModule then
+		local ok, result = pcall(function()
+			return require(playerModule):GetControls()
+		end)
+		if ok then
+			controls = result
+		end
+	end
+	return controls
+end
+
+local function freezePlayer()
+	local ctrls = getControls()
+	if ctrls then
+		ctrls:Disable()
+	end
+end
+
+local function unfreezePlayer()
+	local ctrls = getControls()
+	if ctrls then
+		ctrls:Enable()
+	end
+end
+
 -- Rend la main au joueur : la camera glisse vers la vue de jeu pendant que les barres repartent dans les bords.
 -- Idempotent : la fin normale (l'animation du grand-pere s'acheve) et le filet de secours peuvent tirer tous les
 -- deux, et le second ne doit pas relancer une sortie deja en cours.
@@ -342,6 +388,9 @@ local function endScene()
 		return
 	end
 	sceneEnded = true
+	-- LES JAMBES D'ABORD. La camera met SCENE_CAM_OUT a revenir ; si on rendait les controles seulement apres, le
+	-- joueur appuierait dans le vide pendant ce temps -- et une commande qui ne repond pas se lit comme un lag.
+	unfreezePlayer()
 	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
@@ -804,6 +853,9 @@ function TutorialController.startMission()
 	TutorialController.setDoorHint(false)
 	hideOurs()
 	setActionBound(false)
+	-- AVANT TOUT LE RESTE : le joueur a appuye sur E, il tient peut-etre encore une touche de deplacement. Couper
+	-- ici l'arrete net, avant que la camera ne parte et ne le laisse marcher hors champ.
+	freezePlayer()
 
 	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
 	-- n'attend pas que le noir soit en place.

@@ -242,7 +242,7 @@ return {
 	-- de reexporter, de recharger -- et de refaire ca a chaque essai.
 
 	-- ELLE S'ENTREBAILLE D'UN COUP. Mouvement sec : c'est la surprise, la ralentir l'enleverait.
-	DOOR_HALF_ANGLE = 30,
+	DOOR_HALF_ANGLE = 45,
 	DOOR_HALF_TIME = 0.35,
 	-- Puis elle se FIGE, le temps que le grand-pere se montre.
 	DOOR_PAUSE = 1.5,
