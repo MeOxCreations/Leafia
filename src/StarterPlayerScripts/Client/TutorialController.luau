@@ -502,8 +502,7 @@ end
 -- et la respiration de la camera reste intacte.
 local function exitShotCFrame(): CFrame?
 	local root = getRoot()
-	local outward = doorOutward()
-	if not (root and outward) then
+	if not root then
 		return nil
 	end
 	local walkTo = findByName(TutorialConfigs.OLDMAN_WALK_TARGET)
@@ -511,13 +510,34 @@ local function exitShotCFrame(): CFrame?
 	-- existe -- mieux qu'une camera qui rend la main d'un coup parce qu'une part manque.
 	local endPos = if walkTo and walkTo:IsA("BasePart") then walkTo.Position else anchorPos
 	local mid = (root.Position + endPos) * 0.5
+
+	-- L'AXE DU TRAJET, a plat. C'est la ligne que le grand-pere va parcourir, et c'est elle qui donne le cadre.
+	local axis = (endPos - root.Position) * Vector3.new(1, 0, 1)
+	if axis.Magnitude < 1e-3 then
+		-- Les deux points confondus (point d'arrivee manquant, ou colle au joueur) : on se rabat sur l'axe de la
+		-- porte, qui existe toujours.
+		local outward = doorOutward()
+		if not outward then
+			return nil
+		end
+		axis = outward
+	end
+	axis = axis.Unit
+
+	-- PERPENDICULAIREMENT : on regarde EN TRAVERS du trajet, pas dans son axe. Dans l'axe de la porte, la camera
+	-- reculait droit dans le mur de la maison.
+	local across = axis:Cross(Vector3.new(0, 1, 0))
+	if TutorialConfigs.EXIT_SHOT_INVERT then
+		across = -across
+	end
+
 	local spread = (root.Position - endPos).Magnitude
 	local back = math.max(TutorialConfigs.EXIT_SHOT_MIN_BACK, spread * TutorialConfigs.EXIT_SHOT_SPREAD)
-	local side = outward:Cross(Vector3.new(0, 1, 0))
 	local pos = mid
-		+ outward * back
+		+ across * back
 		+ Vector3.new(0, TutorialConfigs.EXIT_SHOT_UP, 0)
-		+ side * TutorialConfigs.EXIT_SHOT_SIDE
+		-- Le long du trajet : decale le cadre vers l'arrivee pour laisser de la place devant le marcheur.
+		+ axis * TutorialConfigs.EXIT_SHOT_SIDE
 	return CFrame.lookAt(pos, mid + Vector3.new(0, TutorialConfigs.EXIT_SHOT_LOOK_UP, 0))
 end
 
@@ -734,8 +754,9 @@ local function openDoor()
 	-- propriete et sa boucle tourne meme pendant la scene. Ecrire dessus en parallele donnerait un champ de
 	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
 	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
-	-- ET C'EST ICI QUE LE JOUEUR S'EFFACE, pas avant. Pendant qu'il toquait c'est LUI qu'on regardait ; a partir
-	-- de maintenant c'est le grand-pere, et un GRAND avatar le masquerait au moment precis ou l'on doit le voir.
+	-- LE NIVEAU DE FONDU DU JOUEUR pour la suite de la scene. A zero dans la config : il reste visible tout du
+	-- long, parce qu'il est un personnage du plan et pas un obstacle. Le chemin reste branche -- c'est le knob si
+	-- une scene doit un jour l'effacer.
 	fadePlayerTo(TutorialConfigs.REVEAL_PLAYER_FADE, TutorialConfigs.REVEAL_FADE_TIME)
 
 	-- ELLE RECULE, D'UN COUP. Comme si elle avait eu peur.

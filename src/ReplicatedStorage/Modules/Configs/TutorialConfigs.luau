@@ -124,18 +124,31 @@ return {
 	-- marche : trop court, la camera rend la main pendant que le grand-pere est encore en route.
 	EXIT_SHOT_IN = 0.8,
 	EXIT_SHOT_HOLD = 3,
+	-- DE COTE, PERPENDICULAIREMENT AU TRAJET. Premiere version : dans l'axe de la porte -- la camera se retrouvait
+	-- DANS LE MUR de la maison, et on ne voyait rien. Normal : cet axe pointe vers la maison, et reculer dessus
+	-- rentre dedans.
+	--
+	-- Un plan pris de COTE regarde en travers du trajet. La maison reste sur un bord, le jardin sur l'autre, et
+	-- les deux personnages se detachent au lieu de se cacher l'un l'autre quand ils s'alignent. C'est aussi le
+	-- plan a deux le plus courant au cinema, et ce n'est pas un hasard.
+	--
 	-- Recul MINIMUM, et part de l'ecartement entre les deux personnages. Le second fait que le plan s'ouvre tout
 	-- seul si on eloigne le point d'arrivee dans Studio -- rien a re-regler.
 	EXIT_SHOT_MIN_BACK = 10,
 	EXIT_SHOT_SPREAD = 1.1,
+	-- DE QUEL COTE ? Ca ne se DEDUIT pas : ca depend de l'orientation de la maison dans Studio, et seul l'ecran
+	-- tranche. Si la camera se retrouve dans un mur ou de l'autre cote de la maison, inverser ce drapeau.
+	EXIT_SHOT_INVERT = false,
 	-- "Un peu du dessus" : assez pour voir les deux corps en entier et le sol entre eux, pas assez pour que ca
 	-- devienne une vue de dessus (au-dela de ~12 on perd les visages).
 	EXIT_SHOT_UP = 7,
 	-- Ce qu'on vise, au-dessus du point milieu. Vers le torse : viser le sol met l'horizon tout en haut du cadre.
 	EXIT_SHOT_LOOK_UP = 1.5,
-	-- Decalage lateral, pour ne pas etre pile dans l'axe. Un plan legerement de biais se lit mieux qu'un plan
-	-- frontal, ou les deux personnages se cachent des qu'ils s'alignent.
-	EXIT_SHOT_SIDE = -3,
+	-- Decalage le long du TRAJET, pour ne pas etre pile au milieu. Zero = plan symetrique ; positif = decale vers
+	-- le point d'arrivee, ce qui laisse plus de place devant le grand-pere qui marche.
+	-- Remis a ZERO en changeant de repere : le -3 d'avant etait cale sur un decalage LATERAL, il ne veut plus
+	-- rien dire le long du trajet. Un reglage garde apres un changement de sens est un reglage faux.
+	EXIT_SHOT_SIDE = 0,
 
 	-- ===== LE SON BAISSE PENDANT LA SCENE =====
 	-- Volume du reste du jeu pendant la cinematique, en fraction. 0.25 = un quart. Pas ZERO : un silence total
@@ -171,14 +184,19 @@ return {
 	-- 1) IL TOQUE. C'est LUI qu'on regarde : c'est son geste, c'est lui qui declenche l'histoire. L'effacer ici
 	--    enleverait l'acteur du plan. Donc ZERO : entierement visible.
 	SCENE_PLAYER_FADE = 0,
-	-- 2) LA PORTE S'OUVRE. Le grand-pere devient le sujet, et un avatar plante devant la porte -- surtout un
-	--    GRAND -- le masque au moment precis ou l'on doit le voir. Le joueur ne porte plus aucune information a
-	--    cet instant. Il disparait completement.
+	-- 2) LA PORTE S'OUVRE. On a essaye de l'effacer ici, parce qu'un GRAND avatar masque le grand-pere. Retire :
+	--    le joueur est un PERSONNAGE de la scene, pas un obstacle -- c'est lui qui a toque, c'est lui qui se
+	--    pousse, et le dernier plan les montre TOUS LES DEUX. Le faire disparaitre en plein milieu de son propre
+	--    role est plus etrange qu'un cadre encombre. Le probleme de l'avatar qui masque se regle par le CADRAGE
+	--    (le plan de sortie est pris de cote, justement), pas en supprimant l'acteur.
+	--
+	--    ZERO des deux cotes : le fondu ne fait donc plus rien. On garde le chemin -- c'est le knob si un jour
+	--    une scene a vraiment besoin d'effacer le joueur.
 	--
 	-- Passe par CharacterFade, donc par LocalTransparencyModifier : ca ne se replique pas. En co-op, les autres
 	-- continuent de voir un personnage normal. Couvre le corps, les decalques (le visage) et les accessoires
 	-- (cheveux, chapeaux) ; un outil tenu en main reste visible, ce qui est voulu ailleurs dans le jeu.
-	REVEAL_PLAYER_FADE = 1,
+	REVEAL_PLAYER_FADE = 0,
 	-- EN FONDU, jamais d'un coup : une silhouette qui disparait d'un claquement attire justement l'oeil sur elle,
 	-- au moment ou l'on veut qu'il parte vers la porte.
 	REVEAL_FADE_TIME = 0.45,

@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.594 — Le plan de sortie est pris DE COTE, et le joueur ne disparait plus
+
+### La camera etait dans le mur
+
+Le plan reculait le long de l'axe de la PORTE. Cet axe pointe vers la maison : reculer dessus rentre dedans. On
+ne voyait rien.
+
+Il est maintenant pris **perpendiculairement au trajet** -- on regarde EN TRAVERS de la ligne que le grand-pere
+parcourt. La maison reste sur un bord, le jardin sur l'autre, et les deux personnages se detachent au lieu de se
+cacher des qu'ils s'alignent. C'est le plan a deux le plus courant au cinema, et ce n'est pas un hasard.
+
+`EXIT_SHOT_INVERT` choisit de quel cote. Ca ne se DEDUIT pas -- ca depend de l'orientation de la maison dans
+Studio, et seul l'ecran tranche.
+
+`EXIT_SHOT_SIDE` change de sens : il decale desormais le cadre LE LONG du trajet (positif = vers l'arrivee, ce
+qui laisse de la place devant le marcheur). Il repasse a **0**, parce que le -3 d'avant etait cale sur un
+decalage lateral et ne veut plus rien dire. Un reglage garde apres un changement de sens est un reglage faux.
+
+### Le joueur reste visible
+
+`REVEAL_PLAYER_FADE` : **1 -> 0**. Il ne disparait plus a l'ouverture de la porte.
+
+On l'effacait parce qu'un GRAND avatar masque le grand-pere. Mauvaise reponse : le joueur est un PERSONNAGE de
+la scene, pas un obstacle -- c'est lui qui a toque, c'est lui qui se pousse, et le dernier plan les montre TOUS
+LES DEUX. Le faire disparaitre en plein milieu de son propre role est plus etrange qu'un cadre encombre.
+
+Le probleme de l'avatar qui masque se regle par le CADRAGE, et c'est exactement ce que fait le plan de cote.
+
+Les deux niveaux de fondu sont a zero : le chemin reste branche, comme knob, si une scene doit un jour vraiment
+effacer le joueur.
+
+### A faire dans Studio
+
+Si la camera se retrouve encore du mauvais cote (dans un mur, ou derriere la maison), basculer
+`EXIT_SHOT_INVERT` a `true`. C'est le seul reglage qui ne peut pas se deduire.
+
 ## 0.0.593 — Un dernier plan sur le joueur ET le grand-pere, et une marche plus lente
 
 ### Le plan de sortie
