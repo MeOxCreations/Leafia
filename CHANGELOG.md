@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.587 — La sonde du ControlModule dit ce qu'elle a trouve A LA PLACE
+
+`[Tutorial] ControlModule indisponible (PlayerScripts.PlayerModule absent)` laissait trois causes ouvertes, et
+elles se corrigent a trois endroits differents :
+
+1. pas encore replique au moment de l'appel ;
+2. present mais sous un AUTRE NOM (le projet a un PlayerModule custom pose dans Studio) ;
+3. reellement absent de cette place -- le tuto est une place SECONDAIRE, et elle n'herite pas des reglages
+   StarterPlayer de la place principale.
+
+Le message liste maintenant les enfants de `PlayerScripts`. Vide = replication. Un autre nom = renommage. Une
+liste normale sans PlayerModule = il manque a cette place.
+
+### Pourquoi ca compte au-dela du tuto
+
+`MowController`, `HedgeController`, `LadderController`, `BuildController` et `PlotSelectController` cherchent tous
+ce meme `PlayerScripts.PlayerModule`. S'il manque dans la place du tuto, ce n'est pas seulement le verrou de la
+scene qui tombe : c'est aussi la lecture des deplacements de toutes ces features.
+
+Le blocage du joueur, lui, tient de toute facon : le verrou ContextActionService du 0.0.580 ne depend d'aucun
+module.
+
+### A faire dans Studio
+
+Relancer le tuto et lire la nouvelle ligne. C'est elle qui dira laquelle des trois causes c'est.
+
 ## 0.0.586 — Camera d'orbite pour la tondeuse : elle se tient derriere, avec une butee elastique
 
 Nouveau module `Client/Utils/DriveCamera.luau`. Il ne connait ni la tondeuse ni MowConfigs : on lui donne un

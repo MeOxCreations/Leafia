@@ -413,7 +413,15 @@ local function getControls(): (any, string?)
 	end
 	local playerModule = scripts:FindFirstChild("PlayerModule")
 	if not playerModule then
-		return nil, "PlayerScripts.PlayerModule absent"
+		-- ON NOMME CE QU'ON A TROUVE A LA PLACE. "PlayerModule absent" laisse trois causes ouvertes -- pas encore
+		-- replique, renomme, ou absent de cette place -- et elles se corrigent a trois endroits differents. La
+		-- liste des enfants tranche en une ligne : vide = replication, un autre nom = renommage.
+		local names: { string } = {}
+		for _, child in scripts:GetChildren() do
+			table.insert(names, child.Name)
+		end
+		return nil,
+			`PlayerScripts.PlayerModule absent (PlayerScripts contient : {if #names > 0 then table.concat(names, ", ") else "rien"})`
 	end
 	local ok, result = pcall(function()
 		return require(playerModule):GetControls()
