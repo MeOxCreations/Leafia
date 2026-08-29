@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.588 — La porte s'entrebaille encore plus
+
+`DOOR_HALF_ANGLE` : **45 -> 60 degres**. Le premier mouvement, celui qui surprend, prend enfin de la place.
+
+On approche de la limite utile : l'ouverture COMPLETE est a `DOOR_FULL_ANGLE = 100`. Plus l'entrebaillement s'en
+rapproche, moins les deux moments se distinguent -- et c'est leur ECART qui raconte quelque chose (une porte qui
+s'entrouvre, une pause, puis qui s'ouvre en grand). Au-dela de ~70, il faudra monter `DOOR_FULL_ANGLE` avec.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.587 — La sonde du ControlModule dit ce qu'elle a trouve A LA PLACE
 
 `[Tutorial] ControlModule indisponible (PlayerScripts.PlayerModule absent)` laissait trois causes ouvertes, et
