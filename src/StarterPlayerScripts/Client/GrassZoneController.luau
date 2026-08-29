@@ -1103,7 +1103,23 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- Eclaircissement de la rafale. Zero hors du vent : une touffe lointaine ou immobile ne doit rien payer,
 		-- et rien ne reste eclairci quand le vent s'eteint (la valeur decroit avec windScale jusqu'a zero).
 		local lighten = 0
-		if windScale > 0 then
+
+		-- DEJA TONDUE ET POSEE : plus aucun vent, et surtout PLUS AUCUN CALCUL.
+		--
+		-- MOW_WIND ramenait deja son balancement a zero, mais le bruit de Perlin, les deux projections sur les axes
+		-- du vent et le teintage de rafale etaient calcules quand meme -- par touffe, par image, pour un resultat
+		-- invisible. Sur une pelouse FINIE, c'est-a-dire le moment ou le joueur admire son travail, c'est la
+		-- totalite du champ qui paye pour rien.
+		--
+		-- Un reglage qui annule un EFFET n'annule pas son COUT : il faut sortir avant le calcul, pas apres.
+		--
+		-- On exige les DEUX conditions. `mown` atteint 1 en 0.125 s, mais l'emergence (`cutT`) dure plus longtemps :
+		-- couper le vent sur le seul `mown` figerait la touffe en plein milieu de sa transition. Et `cutStarted`
+		-- ecarte les fleurs, qui ne se tondent pas et doivent continuer d'onduler.
+		local stillCut = clump.cutStarted and clump.cutT >= 1 and clump.mown >= 1
+		local windHere = if stillCut then 0 else windScale
+
+		if windHere > 0 then
 			-- RAFALE. Champ de bruit de Perlin qui DERIVE dans la direction du vent : des zones fortes et des zones
 			-- calmes roulent sur le champ. Sans lui, toutes les touffes recoivent exactement le meme souffle et ca se
 			-- lit comme un ventilateur, pas comme du vent.
@@ -1134,11 +1150,11 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- Une touffe TONDUE ne doit presque plus onduler : un gazon ras qui vague comme de l'herbe haute efface
 			-- l'avant/apres qu'on vient tout juste de produire, et c'est lui le coeur du geste.
 			local mowWind = 1 - clump.mown * (1 - GrassZoneConfigs.MOW_WIND)
-			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * gustStrength * (1 - crushed) * windScale * mowWind
+			wind = (WIND_ANGLE + WIND_GUST * math.sin(phase)) * gustStrength * (1 - crushed) * windHere * mowWind
 
 			-- La rafale TASSE l'herbe au passage, puis la laisse remonter. Seule la partie FORTE de la rafale ecrase
 			-- (math.max(gust, 0)) : une zone calme ne doit pas tasser l'herbe en permanence.
-			gustSquash = 1 - GrassZoneConfigs.GUST_SQUASH * math.max(gust, 0) * (1 - crushed) * windScale
+			gustSquash = 1 - GrassZoneConfigs.GUST_SQUASH * math.max(gust, 0) * (1 - crushed) * windHere
 			-- MEME champ que le tassement, donc la vague qu'on VOIT est exactement celle qui couche l'herbe.
 			-- Une touffe deja couchee (pied) ou tondue ne scintille pas : elle ne bouge plus, elle n'a pas a briller.
 			-- On ne garde que la moitie POSITIVE du bruit : le creux d'une vague ne doit rien teinter.
@@ -1149,7 +1165,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			-- ras ne vague pas, donc il ne change pas de couleur -- et surtout, ce teintage passait PAR-DESSUS la
 			-- bande de tonte et la brouillait. Le BALANCEMENT, lui, garde sa part (mowWind) : un reste de
 			-- fremissement est joli, un reste de couleur efface le travail du joueur.
-			lighten = GrassZoneConfigs.GUST_TINT * crest * (1 - crushed) * windScale * (1 - clump.mown)
+			lighten = GrassZoneConfigs.GUST_TINT * crest * (1 - crushed) * windHere * (1 - clump.mown)
 		end
 
 		-- Tant que le vent souffle sur ce pave on ecrit TOUJOURS (il bouge en permanence). Une fois le vent eteint,
@@ -1160,8 +1176,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		-- `fading` et non un booleen "allume ou non" : le fondu passe par des valeurs INTERMEDIAIRES, et une
 		-- comparaison binaire ne les voit pas. Avec elle, l'allumage passait par accident (l'etat changeait) mais
 		-- l'EXTINCTION ne redessinait rien : l'herbe hors du vent restait bleue pour toujours.
+		-- `windHere` et non `windScale` : c'est LUI qui fait le gain. Une touffe tondue au milieu d'un pave venteux
+		-- n'est plus reecrite tant que son ecrasement ne bouge pas -- elle est finie, elle n'a plus rien a dire.
 		if
-			windScale > 0
+			windHere > 0
 			or fading
 			or clump.crush ~= clump.lastCrush
 			or clump.squashCrush ~= clump.lastSquashCrush

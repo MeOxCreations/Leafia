@@ -577,7 +577,15 @@ local GrassZoneConfigs = {
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.
 	-- 0 = la touffe tondue ne bouge plus du tout, 1 = elle bouge comme avant.
-	MOW_WIND = 0.15,
+	-- ZERO : une touffe tondue ne bouge PLUS DU TOUT.
+	--
+	-- Ce n'est pas qu'une question de gout. Une fois a zero, la touffe n'a plus rien a recalculer : le controller
+	-- saute alors le bruit de Perlin et les projections pour elle, ce qui sur une pelouse FINIE represente la
+	-- totalite du champ. C'est le seul reglage du fichier dont la valeur change le COUT, pas seulement l'image.
+	--
+	-- Le remonter (0.1 - 0.2) rend un leger fremissement au gazon ras, et rend son cout avec. A garder comme
+	-- option de qualite le jour ou il y aura un menu de reglages.
+	MOW_WIND = 0,
 
 	-- L'HERBE TONDUE NE SE COLORE PRESQUE PLUS QUAND ON MARCHE DESSUS. Fraction de l'effet d'ecrasement RETIREE a
 	-- une touffe entierement coupee.

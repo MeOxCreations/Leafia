@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.585 — L'herbe tondue ne bouge plus, et surtout elle ne coute plus rien
+
+`MOW_WIND` : **0.15 -> 0**. Une touffe tondue ne fremit plus du tout.
+
+Mais le vrai gain n'est pas la. Ce reglage ne faisait qu'annuler le RESULTAT : le bruit de Perlin, les deux
+projections sur les axes du vent et le teintage de rafale etaient calcules quand meme, **par touffe et par
+image**, pour un mouvement invisible.
+
+`GrassZoneController` saute maintenant tout ce bloc pour les touffes deja tondues et posees, et cesse de les
+reecrire tant que leur ecrasement ne bouge pas.
+
+Le moment ou ca compte est exactement celui ou le joueur admire son travail : sur une pelouse FINIE, c'est la
+totalite du champ qui payait pour rien.
+
+Deux conditions exigees, pas une :
+
+- `cutT >= 1` -- `mown` atteint 1 en 0.125 s alors que l'emergence dure plus longtemps. Couper le vent sur le
+  seul `mown` figerait la touffe en plein milieu de sa transition.
+- `cutStarted` -- ecarte les fleurs, qui ne se tondent pas et doivent continuer d'onduler.
+
+**Lecon retenue** : un reglage qui annule un EFFET n'annule pas son COUT. Pour gagner des images il faut sortir
+AVANT le calcul, pas multiplier son resultat par zero.
+
+### Pour le remettre plus tard
+
+`MOW_WIND` entre 0.1 et 0.2 rend un leger fremissement au gazon ras -- et rend son cout avec. C'est un bon
+candidat pour une option de qualite graphique le jour ou il y aura un menu de reglages.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.584 — La fleche de direction pointait vers le MONDE, pas vers l'avant de la tondeuse
 
 La fleche partait de travers -- souvent vers la gauche -- alors que la machine allait tout droit.
