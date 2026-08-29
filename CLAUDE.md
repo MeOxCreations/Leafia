@@ -969,6 +969,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   `workHedge` (deux references vers la meme chose) mais en miroir : la, deux variables designaient des objets
   differents ; ici, deux systemes designaient le meme objet.
 
+- **Ecrire une propriete que Roblox reecrit lui-meme demande DEUX choses : repeter a chaque image, ET passer
+  APRES lui.** Le personnage du tuto restait visible malgre une transparence a 1. Le PlayerModule repose
+  `LocalTransparencyModifier` sur toutes les parts en continu : une valeur posee une fois tient une frame. Mais
+  repeter ne suffit pas -- `RenderStepped:Connect` ne garantit aucun ordre, donc notre ecriture pouvait tomber
+  AVANT la sienne et se faire ecraser quand meme, image apres image, sans que rien ne bouge a l'ecran.
+  `BindToRenderStep` a `Enum.RenderPriority.Camera.Value + 1` place explicitement apres. Symptome trompeur : le
+  reglage est bon, la valeur est bonne, le code s'execute -- et rien ne change ; on va donc verifier la valeur au
+  lieu de l'ORDRE. Le projet connaissait deja la reponse (FirstPersonController se bat contre le meme adversaire,
+  avec la meme priorite, et le commentaire de `CharacterFade` decrit le piege en toutes lettres) : la relire avant
+  d'ecrire le code voisin aurait economise deux versions. Meme famille que "une propriete, un seul ecrivain",
+  auquel il faut ajouter : quand l'autre ecrivain est le moteur, on ne gagne pas en criant plus fort, on gagne en
+  parlant en DERNIER.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

@@ -2204,6 +2204,49 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.581 — Le joueur restait VISIBLE : Roblox reposait sa transparence par-dessus la notre
+
+Le 0.0.580 mettait `SCENE_PLAYER_FADE` a 1 et le personnage restait quand meme la.
+
+La cause etait ecrite dans `CharacterFade` depuis le debut :
+
+> *le controleur de transparence de Roblox repose la sienne sans arret. Sans `force`, notre valeur est posee une
+> fois puis plus jamais rafraichie, et Roblox reprend la main des l'image suivante.*
+
+On appelait `CharacterFade.apply` **une seule fois**, sans `force`. Le PlayerModule reecrit
+`LocalTransparencyModifier` sur toutes les parts du personnage a chaque image : notre invisibilite tenait une
+frame.
+
+### Deux corrections, et la seconde est celle qui compte
+
+**1. On repose la valeur a chaque image, en `force`.** Une boucle unique la tient tant que le fondu est actif, et
+s'arrete d'elle-meme quand il retombe a zero.
+
+**2. On passe APRES Roblox.** `RenderStepped:Connect` ne garantit AUCUN ordre : notre ecriture pouvait tomber
+avant celle du controleur, qui l'ecrasait aussitot -- on aurait repose la valeur a chaque image pour rien.
+`BindToRenderStep` a `Enum.RenderPriority.Camera.Value + 1` nous place explicitement apres lui.
+
+C'est exactement le reglage de `FirstPersonController`, qui se bat contre le meme adversaire. La reponse etait
+deja dans le projet.
+
+**Un seul ecrivain** : cette boucle est desormais la seule a appeler `CharacterFade`. `fadePlayer` et
+`fadePlayerTo` ne font plus que poser la valeur cible.
+
+### Le warning du ControlModule dit maintenant POURQUOI
+
+`[Tutorial] ControlModule introuvable` envoyait chercher a l'aveugle. Il y a quatre facons d'echouer la, et elles
+se corrigent a quatre endroits differents. Le message nomme celle qui s'est produite :
+
+```
+[Tutorial] ControlModule indisponible (PlayerScripts.PlayerModule absent) : seul ContextActionService retient le joueur.
+```
+
+Le blocage tient de toute facon grace au verrou ContextActionService du 0.0.580 -- mais on veut savoir.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.580 — Le joueur est VRAIMENT bloque, et il disparait completement
 
 ### Le verrou du 0.0.579 ne suffisait pas

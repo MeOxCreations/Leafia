@@ -60,6 +60,7 @@ local doorMarker: Frame? = nil
 local missionStarted = false
 local sceneEnded = false
 local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
+local fadeBound = false -- la boucle qui repose la transparence a chaque image tourne-t-elle ?
 local grandpaTrack: AnimationTrack? = nil
 -- Angle courant de la porte, en degres (0 = fermee). Une seule valeur : la sequence n'est qu'un enchainement de
 -- cibles, et repartir en plein mouvement ne demande donc aucun cas particulier.
@@ -296,15 +297,66 @@ end
 local fadeToken = 0
 local fadeNow = 0
 
+-- ON REPOSE LA TRANSPARENCE A CHAQUE IMAGE, ET C'EST OBLIGATOIRE.
+--
+-- Le controleur de transparence du PlayerModule ecrit `LocalTransparencyModifier` sur toutes les parts du
+-- personnage EN CONTINU. Une valeur posee une seule fois est donc ecrasee des l'image suivante : on demandait
+-- l'invisibilite, elle tenait une frame, et le joueur restait visible sans qu'aucune erreur ne le dise.
+--
+-- `force` est indispensable ici : sans lui, le garde-fou "meme valeur qu'avant" de CharacterFade nous ferait
+-- sauter l'ecriture -- c'est-a-dire exactement celle qui reprend la main sur Roblox.
+--
+-- UN SEUL ECRIVAIN : cette boucle est la seule a appeler CharacterFade. `fadePlayer` et `fadePlayerTo` ne font
+-- que poser `fadeNow`. Deux ecrivains sur la meme propriete finissent toujours par se contredire.
+-- APRES ROBLOX, ET C'EST TOUT L'INTERET. `RenderStepped:Connect` ne garantit AUCUN ordre : notre ecriture peut
+-- tomber avant celle du controleur de transparence, qui l'ecrase aussitot -- on reposerait la valeur a chaque
+-- image pour rien. `BindToRenderStep` a `Camera + 1` nous place explicitement APRES lui.
+-- (Meme reglage que FirstPersonController, qui se bat contre le meme adversaire.)
+local FADE_BIND = "LeafiaTutorialFade"
+
+local function stopFadeHold()
+	if not fadeBound then
+		return
+	end
+	fadeBound = false
+	RunService:UnbindFromRenderStep(FADE_BIND)
+end
+
+local function holdFade()
+	if fadeBound then
+		return
+	end
+	fadeBound = true
+	RunService:BindToRenderStep(FADE_BIND, Enum.RenderPriority.Camera.Value + 1, function()
+		local character = player.Character
+		if not character then
+			return -- mort ou respawn : le prochain fondu rebranchera sur le nouveau personnage
+		end
+		if fadeNow <= 0.001 then
+			-- ARRIVE A ZERO : on rend la main a Roblox et on arrete de tourner. Laisser la boucle vivre couterait
+			-- une ecriture par image sur une vingtaine de parts pour rien.
+			CharacterFade.apply(character, 0, 0, true)
+			stopFadeHold()
+			return
+		end
+		CharacterFade.apply(character, fadeNow, fadeNow, true)
+	end)
+end
+
 local function fadePlayer(amount: number)
 	-- Toute nouvelle demande annule la precedente : deux fondus en cours ecriraient sur les memes parts a chaque
 	-- image, et la valeur finale serait celle du dernier a FINIR, pas du dernier demande.
 	fadeToken += 1
 	fadeNow = amount
-	local character = player.Character
-	if character then
-		CharacterFade.apply(character, amount, amount)
+	if amount <= 0.001 then
+		local character = player.Character
+		if character then
+			CharacterFade.apply(character, 0, 0, true)
+		end
+		stopFadeHold()
+		return
 	end
+	holdFade()
 end
 
 -- Meme chose, mais EN FONDU. Passer d'une silhouette a l'invisible d'un coup se voit : une forme qui disparait
@@ -317,16 +369,16 @@ local function fadePlayerTo(amount: number, seconds: number)
 		fadePlayer(amount)
 		return
 	end
+	holdFade()
 	task.spawn(function()
 		local t0 = os.clock()
 		while fadeToken == token do
 			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
-			local character = player.Character
-			if not character then
+			if not player.Character then
 				return -- mort ou respawn : le personnage a change, ce fondu ne le concerne plus
 			end
+			-- ON NE FAIT QUE BOUGER LA VALEUR. C'est `holdFade` qui l'ecrit, a chaque image et en force.
 			fadeNow = from + (amount - from) * e
-			CharacterFade.apply(character, fadeNow, fadeNow)
 			if e >= 1 then
 				return
 			end
@@ -349,21 +401,31 @@ end
 -- Resolu PARESSEUSEMENT, jamais au boot : `require(PlayerModule)` peut yield 10 a 20 s dans une place secondaire
 -- comme le tuto. Ici on n'appelle qu'au moment ou le joueur declenche la scene -- PlayerModule est pret depuis
 -- longtemps, et `FindFirstChild` rend la main tout de suite.
-local function getControls(): any
+-- Rend le ControlModule, ou nil AVEC LA RAISON. Un "introuvable" sec envoie chercher a l'aveugle : il y a quatre
+-- facons d'echouer ici et elles se corrigent a quatre endroits differents.
+local function getControls(): (any, string?)
 	if controls then
-		return controls
+		return controls, nil
 	end
 	local scripts = player:FindFirstChild("PlayerScripts")
-	local playerModule = scripts and scripts:FindFirstChild("PlayerModule")
-	if playerModule then
-		local ok, result = pcall(function()
-			return require(playerModule):GetControls()
-		end)
-		if ok then
-			controls = result
-		end
+	if not scripts then
+		return nil, "PlayerScripts absent"
 	end
-	return controls
+	local playerModule = scripts:FindFirstChild("PlayerModule")
+	if not playerModule then
+		return nil, "PlayerScripts.PlayerModule absent"
+	end
+	local ok, result = pcall(function()
+		return require(playerModule):GetControls()
+	end)
+	if not ok then
+		return nil, `require/GetControls a echoue : {tostring(result)}`
+	end
+	if not result then
+		return nil, "GetControls a rendu nil"
+	end
+	controls = result
+	return controls, nil
 end
 
 -- DEUXIEME VERROU, et il ne depend de RIEN. Couper le ControlModule suppose que le PlayerModule se comporte comme
@@ -395,13 +457,14 @@ local function freezePlayer()
 		Enum.PlayerActions.CharacterJump
 	)
 
-	local ctrls = getControls()
+	local ctrls, why = getControls()
 	if ctrls then
 		ctrls:Disable()
 	else
-		-- ANORMAL ET ACTIONNABLE : le blocage tient encore grace au verrou ci-dessus, mais on veut le savoir.
-		-- Un verrou a moitie pose qui ne dit rien, c'est comment on se retrouve a bouger pendant une scene.
-		warn("[Tutorial] ControlModule introuvable : seul le verrou ContextActionService retient le joueur.")
+		-- ANORMAL ET ACTIONNABLE : le blocage tient encore grace au verrou ci-dessus, mais on veut le savoir --
+		-- et savoir POURQUOI. Un verrou a moitie pose qui ne dit rien, c'est comment on se retrouve a bouger
+		-- pendant une scene.
+		warn(`[Tutorial] ControlModule indisponible ({why}) : seul ContextActionService retient le joueur.`)
 	end
 end
 
