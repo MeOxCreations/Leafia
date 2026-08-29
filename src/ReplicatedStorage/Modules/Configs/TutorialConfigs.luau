@@ -307,6 +307,13 @@ return {
 	-- ne choisit pas, il MELANGE. Ce fondu est donc une transition VOULUE et courte -- au-dela on lirait une pose
 	-- moyenne entre les deux, ce qui ne ressemble a rien.
 	KNOCK_ASIDE_FADE = 0.2,
+	-- DELAI APRES LE DEPART DU GRAND-PERE. Le pas de cote n'a de sens qu'une fois qu'il MARCHE : se decaler
+	-- pendant qu'il se bat encore avec sa poignee, c'est se pousser devant une porte fermee.
+	--
+	-- Le compte part de l'ordre envoye au serveur, pas d'un instant devine dans la scene : c'est le seul moment
+	-- qui reste juste si on rallonge la cinematique. Il reste ce petit delai a regler parce que l'ordre doit
+	-- encore faire l'aller-retour et que le grand-pere met une fraction de seconde a demarrer pour de bon.
+	KNOCK_ASIDE_DELAY = 0.35,
 
 	-- A quelle distance de la FIN on fige l'animation de coups, en secondes. Le gel doit tomber JUSTE AVANT la
 	-- derniere image : trop tot on coupe le dernier geste, trop tard on rate la fenetre et la piste reboucle.

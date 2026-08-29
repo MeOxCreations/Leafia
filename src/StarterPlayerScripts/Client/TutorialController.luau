@@ -91,7 +91,11 @@ local doorBasePivot: CFrame? = nil
 -- modele a chaque image, et la pose finale serait celle de la derniere a FINIR, pas de la derniere demandee.
 local doorSwingToken = 0
 local knockTrack: AnimationTrack? = nil
-local knockAsideTrack: AnimationTrack? = nil -- le pas de cote, enchaine a la fin des coups
+local knockAsideTrack: AnimationTrack? = nil -- le pas de cote, joue quand le grand-pere se met en marche
+-- REMPLIE PLUS BAS. `endScene` est defini AVANT les fonctions d'animation, et c'est pourtant lui qui declenche
+-- le pas de cote : c'est le seul endroit qui sait quand le grand-pere part. Une variable de fonction evite de
+-- deplacer tout un bloc pour un seul appel, et l'appel reste garde par un test.
+local playAside: (() -> ())? = nil
 local holdConns: { RBXScriptConnection } = {} -- surveillent la fin des pistes tenues, pour les figer
 local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
@@ -496,6 +500,13 @@ local function endScene()
 		done:FireServer()
 	end
 
+	-- LE JOUEUR SE POUSSE, maintenant que le grand-pere se met en marche. Pas a la fin des coups : a ce
+	-- moment-la la porte etait encore fermee, et se decaler devant une porte fermee ne veut rien dire.
+	local aside = playAside
+	if aside then
+		task.delay(TutorialConfigs.KNOCK_ASIDE_DELAY, aside)
+	end
+
 	-- L'OBJECTIF S'AFFICHE. C'est le moment ou le joueur reprend la main : sans bandeau, il sait que la scene est
 	-- finie mais pas ce qu'on attend de lui -- et c'est la premiere minute, celle ou l'on perd un joueur.
 	--
@@ -582,9 +593,11 @@ local function checkAnimMoved(model: Model, animName: string)
 	end)
 end
 
-local function stopTrack(track: AnimationTrack?)
+-- `fade` optionnel : zero par defaut (coupure nette, ce que veut un nettoyage), une duree quand on ENCHAINE sur
+-- une autre pose et qu'un saut se verrait.
+local function stopTrack(track: AnimationTrack?, fade: number?)
 	if track then
-		track:Stop(0)
+		track:Stop(fade or 0)
 	end
 end
 
@@ -951,6 +964,30 @@ local function playHolding(track: AnimationTrack, onHeld: () -> ())
 	track:Play()
 end
 
+-- LE PAS DE COTE. On ACQUIERT AVANT DE LACHER : la nouvelle piste demarre d'abord, celle des coups se retire
+-- ensuite en fondu. L'ordre inverse laisserait une image sans aucune pose tenue, et le personnage sauterait en
+-- position de repos pile entre les deux.
+--
+-- Le fondu est court ET voulu : les deux pistes sont en priorite Action, et a priorite EGALE Roblox ne choisit
+-- pas, il MELANGE. Long, on lirait une pose moyenne entre les deux.
+--
+-- Idempotent : la scene peut se terminer deux fois (fin normale et filet de secours), le pas de cote non.
+playAside = function()
+	if knockAsideTrack then
+		return
+	end
+	local animator = playerAnimator()
+	local aside = if animator then loadSceneTrack(animator, TutorialConfigs.KNOCK_ASIDE_ANIM) else nil
+	if not aside then
+		return
+	end
+	aside.Priority = Enum.AnimationPriority.Action
+	knockAsideTrack = aside
+	-- Elle tient sa derniere image : il reste sur le cote au lieu de revenir en pose de repos.
+	playHolding(aside, function() end)
+	stopTrack(knockTrack, TutorialConfigs.KNOCK_ASIDE_FADE)
+end
+
 -- LE JOUEUR TOQUE, et c'est ce qui OUVRE la scene. Chaque marqueur de son animation donne un coup ; quand elle
 -- s'acheve, le grand-pere prend la suite.
 local function playScene()
@@ -976,22 +1013,10 @@ local function playScene()
 		playTryOpen()
 	end
 
-	playHolding(track, function()
-		-- LE JOUEUR SE POUSSE. On ACQUIERT avant de lacher : la nouvelle piste demarre d'abord, l'ancienne se
-		-- retire ensuite en fondu. L'ordre inverse laisserait une image sans aucune pose tenue, et le personnage
-		-- sauterait en position de repos pile entre les deux.
-		local aside = if animator then loadSceneTrack(animator, TutorialConfigs.KNOCK_ASIDE_ANIM) else nil
-		if aside then
-			aside.Priority = Enum.AnimationPriority.Action
-			knockAsideTrack = aside
-			-- Elle tient sa derniere image comme la premiere : il reste sur le cote tant que la scene dure.
-			playHolding(aside, function() end)
-			track:Stop(TutorialConfigs.KNOCK_ASIDE_FADE)
-		end
-		-- LE GRAND-PERE PART EN MEME TEMPS que le pas de cote, pas apres : il se bat avec sa poignee pendant que
-		-- le joueur se decale. Les faire se suivre creerait un temps mort ou personne ne fait rien.
-		chain()
-	end)
+	-- LA POSE DE FIN DES COUPS EST TENUE, et elle le reste pendant toute la scene : le joueur garde la main
+	-- levee vers la porte pendant que le grand-pere se bat avec sa poignee. Le pas de cote viendra plus tard,
+	-- quand il se mettra vraiment en marche (voir `playAside`).
+	playHolding(track, chain)
 
 	-- LA PISTE COUPEE DE L'EXTERIEUR enchaine quand meme (fin de scene, respawn). Le drapeau evite le double
 	-- depart quand le gel a deja fait le travail.

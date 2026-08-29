@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.592 — Le pas de cote attend que le grand-pere se mette en marche
+
+Le 0.0.591 enchainait le pas de cote juste apres les coups. Trop tot : a cet instant la porte est encore FERMEE
+et le grand-pere se bat avec sa poignee. Le joueur se poussait devant une porte close.
+
+Il part maintenant **au depart du grand-pere**, dans `endScene` -- la ou l'ordre de marche est envoye au serveur.
+
+### Pourquoi la, et pas une duree posee dans la scene
+
+C'est le seul moment qui reste JUSTE si on rallonge la cinematique. Un delai compte depuis les coups deviendrait
+faux des qu'on change `SCENE_HOLD`, la duree de la poignee ou celle de la porte -- et personne ne ferait le lien.
+Meme famille que le plancher du rideau de chargement, qui comptait depuis le mauvais evenement.
+
+Il reste `KNOCK_ASIDE_DELAY` (0.35 s) parce que l'ordre doit encore faire l'aller-retour serveur et que le
+grand-pere met une fraction de seconde a demarrer pour de bon. C'est le bouton a tourner si le decalage tombe
+trop tot ou trop tard.
+
+### Entre les deux, la pose des coups est TENUE
+
+Le joueur garde la main levee vers la porte pendant toute la scene, au lieu de retomber en pose de repos. C'est
+le maintien du 0.0.590, qui dure simplement plus longtemps.
+
+Et le pas de cote ACQUIERT AVANT DE LACHER : il demarre d'abord, la piste des coups se retire ensuite en fondu.
+`stopTrack` prend maintenant une duree de fondu pour ca -- zero par defaut, ce que veut un nettoyage.
+
+Idempotent : la scene peut se terminer deux fois (fin normale et filet de secours), le pas de cote non.
+
+### A faire dans Studio
+
+Rien de plus que le 0.0.591 : `Scene1_TocToc2_Animation` dans `ReplicatedStorage.Animations.Scenes.Scenes1`.
+
 ## 0.0.591 — Apres avoir toque, le joueur SE POUSSE pour laisser passer le grand-pere
 
 `Scene1_TocToc2_Animation` s'enchaine a la fin des coups. Le joueur se decale sur le cote, et il y RESTE : cette
