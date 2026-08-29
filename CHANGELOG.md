@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.578 — L'outil qui dit POURQUOI la canne ne bouge pas
+
+`scripts/studio/ComparerAnimEtRig.lua` visait encore l'ANCIEN grand-pere (`OldManIdle`) et ses anciens IDs
+d'animation. Il ne pouvait donc rien dire sur le rig actuel.
+
+Trois corrections :
+
+**Il vise le bon modele.** `OldmanOriginal`, avec les IDs reellement joues : `102639960685891` (idle) et
+`109013940658757` (marche).
+
+**Il balaye les DEUX familles de rig.** Il ne lisait que les `Motor6D`. Un skinned mesh est pilote par des `Bone`,
+qui descendent d'`Attachment` et n'ont aucune classe commune avec un Motor6D : sur ce rig-la, l'ancien outil ne
+trouvait rien et concluait avec autorite. Il affiche maintenant combien il a trouve de chaque, donc un verdict
+fonde sur du vide est impossible.
+
+**Il compare dans les DEUX SENS**, et c'est ca le vrai ajout :
+
+1. les noms de l'ANIMATION absents du RIG -> ces poses tombent dans le vide ;
+2. les membres du RIG que l'animation ne cle PAS -> **ceux-la restent figes**.
+
+Le sens 2 est celui qu'on oublie, et c'est exactement la question de la canne : elle bouge pendant la marche et
+pas pendant l'idle. Si `Canne` (ou le nom qu'elle porte dans le rig) apparait dans la liste "que l'idle ne cle
+PAS", la reponse est la, sans interpretation.
+
+### A faire dans Studio
+
+Ouvrir `scripts/studio/ComparerAnimEtRig.lua`, tout copier, coller dans la barre de commandes, Entree. Le
+grand-pere doit exister dans le Workspace de la place ouverte.
+
 ## 0.0.577 — Le tuto coupait l'idle du grand-pere pour recharger LA MEME animation
 
 Le grand-pere restait toujours fige en arrivant, malgre le 0.0.576.
