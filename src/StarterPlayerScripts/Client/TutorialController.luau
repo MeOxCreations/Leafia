@@ -91,7 +91,8 @@ local doorBasePivot: CFrame? = nil
 -- modele a chaque image, et la pose finale serait celle de la derniere a FINIR, pas de la derniere demandee.
 local doorSwingToken = 0
 local knockTrack: AnimationTrack? = nil
-local knockHoldConn: RBXScriptConnection? = nil -- surveille la fin de l'animation de coups pour la figer
+local knockAsideTrack: AnimationTrack? = nil -- le pas de cote, enchaine a la fin des coups
+local holdConns: { RBXScriptConnection } = {} -- surveillent la fin des pistes tenues, pour les figer
 local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
@@ -901,6 +902,55 @@ local function knockOnce()
 	end
 end
 
+-- JOUE UNE PISTE UNE FOIS ET TIENT SA DERNIERE IMAGE.
+--
+-- BOUCLEE, ET C'EST VOLONTAIRE. Une piste NON bouclee se RELACHE a sa derniere image : la pose n'est plus tenue
+-- par personne et le personnage retombe en position de repos. Bouclee, elle ne relache jamais -- il ne reste
+-- qu'a l'empecher de repartir au debut.
+--
+-- ON LA LAISSE JOUER A VITESSE NORMALE, puis on la fige. La recette habituelle du projet (vitesse 0 des le
+-- depart + `TimePosition` avancee a la main) ne convient PAS : les marqueurs ne tirent que pendant une lecture
+-- REELLE, et piloter le temps a la main tuerait les sons de coups et les impacts.
+--
+-- DEUX DECLENCHEURS, parce qu'un seul suffit a rater son coup :
+--   - le seuil par image, qui attrape le cas normal ;
+--   - `DidLoop`, filet pour une image sautee a bas framerate -- sans lui la piste repartirait du debut et le
+--     geste se rejouerait en boucle pendant tout le reste de la scene.
+local function playHolding(track: AnimationTrack, onHeld: () -> ())
+	track.Looped = true
+	local held = false
+	local conn: RBXScriptConnection? = nil
+
+	local function freeze()
+		if held then
+			return
+		end
+		held = true
+		if conn then
+			conn:Disconnect()
+			conn = nil
+		end
+		track:AdjustSpeed(0)
+		if track.Length > 0 then
+			-- Pas EXACTEMENT Length : a la derniere image pile, la lecture peut basculer de l'autre cote et
+			-- reboucler. On se pose un cheveu avant.
+			track.TimePosition = math.max(0, track.Length - 0.001)
+		end
+		onHeld()
+	end
+
+	conn = RunService.RenderStepped:Connect(function()
+		-- `Length` vaut zero tant que l'asset n'est pas telecharge : sans cette garde on gelerait la piste avant
+		-- meme qu'elle ait commence.
+		if track.Length > 0 and track.TimePosition >= track.Length - TutorialConfigs.KNOCK_HOLD_MARGIN then
+			freeze()
+		end
+	end)
+	table.insert(holdConns, conn :: RBXScriptConnection)
+	track.DidLoop:Connect(freeze)
+	track:Play()
+end
+
 -- LE JOUEUR TOQUE, et c'est ce qui OUVRE la scene. Chaque marqueur de son animation donne un coup ; quand elle
 -- s'acheve, le grand-pere prend la suite.
 local function playScene()
@@ -913,25 +963,10 @@ local function playScene()
 	end
 	knockTrack = track
 	track.Priority = Enum.AnimationPriority.Action
-	-- BOUCLEE, ET C'EST VOLONTAIRE. Une piste NON bouclee se RELACHE a sa derniere image : le joueur retomberait
-	-- en pose de repos pile au moment ou la porte s'ouvre, et on verrait son bras redescendre tout seul. Bouclee,
-	-- elle ne relache jamais -- il ne reste plus qu'a l'empecher de repartir au debut, juste en dessous.
-	track.Looped = true
 	for _, eventName in ipairs(TutorialConfigs.KNOCK_EVENTS) do
 		track:GetMarkerReachedSignal(eventName):Connect(knockOnce)
 	end
 
-	-- ON LA LAISSE JOUER A VITESSE NORMALE, PUIS ON LA FIGE.
-	--
-	-- La recette habituelle du projet pour tenir une derniere image (vitesse 0 + `TimePosition` avance a la main)
-	-- ne convient PAS ici : les marqueurs ne tirent que pendant une lecture reelle. Piloter le temps a la main
-	-- tuerait donc les sons de coups et les impacts, c'est-a-dire toute la scene.
-	--
-	-- On surveille donc la lecture et on gele juste avant la fin. Deux declencheurs, parce qu'un seul suffit a
-	-- rater son coup :
-	--   - le seuil par image, qui attrape le cas normal ;
-	--   - `DidLoop`, filet pour une image sautee a bas framerate -- sans lui l'animation repartirait du debut et
-	--     le joueur toquerait en boucle pendant tout le reste de la scene.
 	local chained = false
 	local function chain()
 		if chained then
@@ -941,33 +976,26 @@ local function playScene()
 		playTryOpen()
 	end
 
-	local function freeze()
-		if knockHoldConn then
-			knockHoldConn:Disconnect()
-			knockHoldConn = nil
+	playHolding(track, function()
+		-- LE JOUEUR SE POUSSE. On ACQUIERT avant de lacher : la nouvelle piste demarre d'abord, l'ancienne se
+		-- retire ensuite en fondu. L'ordre inverse laisserait une image sans aucune pose tenue, et le personnage
+		-- sauterait en position de repos pile entre les deux.
+		local aside = if animator then loadSceneTrack(animator, TutorialConfigs.KNOCK_ASIDE_ANIM) else nil
+		if aside then
+			aside.Priority = Enum.AnimationPriority.Action
+			knockAsideTrack = aside
+			-- Elle tient sa derniere image comme la premiere : il reste sur le cote tant que la scene dure.
+			playHolding(aside, function() end)
+			track:Stop(TutorialConfigs.KNOCK_ASIDE_FADE)
 		end
-		track:AdjustSpeed(0)
-		if track.Length > 0 then
-			-- Pas EXACTEMENT Length : a la derniere image pile, la lecture peut basculer de l'autre cote et
-			-- reboucler. On se pose un cheveu avant.
-			track.TimePosition = math.max(0, track.Length - 0.001)
-		end
+		-- LE GRAND-PERE PART EN MEME TEMPS que le pas de cote, pas apres : il se bat avec sa poignee pendant que
+		-- le joueur se decale. Les faire se suivre creerait un temps mort ou personne ne fait rien.
 		chain()
-	end
-
-	knockHoldConn = RunService.RenderStepped:Connect(function()
-		-- `Length` vaut zero tant que l'asset n'est pas telecharge : sans cette garde on gelerait l'animation
-		-- avant meme qu'elle ait commence.
-		if track.Length > 0 and track.TimePosition >= track.Length - TutorialConfigs.KNOCK_HOLD_MARGIN then
-			freeze()
-		end
 	end)
-	track.DidLoop:Connect(freeze)
 
 	-- LA PISTE COUPEE DE L'EXTERIEUR enchaine quand meme (fin de scene, respawn). Le drapeau evite le double
 	-- depart quand le gel a deja fait le travail.
 	track.Stopped:Connect(chain)
-	track:Play()
 end
 
 --- Le joueur a toque : la mission commence. Le guidage s'eteint DEFINITIVEMENT -- halo, prompt et touche --
@@ -1209,13 +1237,14 @@ function TutorialController.stop()
 	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
 	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.
 	stopTrack(grandpaTrack)
-	-- LA SURVEILLANCE MEURT AVEC LA PISTE. Une connexion RenderStepped laissee derriere tournerait pour le reste
-	-- de la partie, sur une piste qui n'existe plus.
-	if knockHoldConn then
-		knockHoldConn:Disconnect()
-		knockHoldConn = nil
+	-- LES SURVEILLANCES MEURENT AVEC LES PISTES. Une connexion RenderStepped laissee derriere tournerait pour le
+	-- reste de la partie, sur des pistes qui n'existent plus.
+	for _, conn in holdConns do
+		conn:Disconnect()
 	end
+	table.clear(holdConns)
 	stopTrack(knockTrack)
+	stopTrack(knockAsideTrack)
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
 	if doorMarker then

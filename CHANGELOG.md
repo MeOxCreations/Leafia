@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.591 — Apres avoir toque, le joueur SE POUSSE pour laisser passer le grand-pere
+
+`Scene1_TocToc2_Animation` s'enchaine a la fin des coups. Le joueur se decale sur le cote, et il y RESTE : cette
+piste tient sa derniere image comme la premiere.
+
+### Ce qui a bouge dans le code
+
+Le maintien de pose devient un helper, `playHolding(track, onHeld)`, au lieu d'etre ecrit dans playScene. Deux
+pistes en ont besoin maintenant, et la meme logique a deux endroits finit toujours par diverger sur l'une des
+deux.
+
+**ON ACQUIERT AVANT DE LACHER.** La nouvelle piste demarre d'abord, l'ancienne se retire ensuite en fondu
+(`KNOCK_ASIDE_FADE`). L'ordre inverse laisserait une image sans aucune pose tenue, et le personnage sauterait en
+position de repos pile entre les deux. Lecon deja payee sur l'idle du grand-pere.
+
+Le fondu est court ET voulu : les deux pistes sont en priorite `Action`, et a priorite EGALE Roblox ne choisit
+pas, il MELANGE. Long, on lirait une pose moyenne entre les deux, ce qui ne ressemble a rien.
+
+**Le grand-pere part EN MEME TEMPS que le pas de cote**, pas apres : il se bat avec sa poignee pendant que le
+joueur se decale. Les faire se suivre creerait un temps mort ou personne ne fait rien.
+
+Les deux surveillances de fin de piste sont coupees ensemble a la fin de la scene.
+
+### A faire dans Studio
+
+L'animation doit s'appeler exactement `Scene1_TocToc2_Animation` et vivre dans
+`ReplicatedStorage.Animations.Scenes.Scenes1`, a cote des autres. Rojo ne synchronise pas ces Instances : elles
+se recopient a la main, place par place.
+
 ## 0.0.590 — L'animation de coups TIENT sa derniere image
 
 Le joueur toquait, puis son bras retombait tout seul en pose de repos, pile au moment ou la porte s'ouvre.

@@ -300,6 +300,14 @@ return {
 	-- Delai avant de VERIFIER que l'idle qu'on vient de poser joue vraiment. Une piste dont l'asset n'arrive
 	-- jamais garde une longueur de zero pour toujours : le grand-pere resterait fige, sans la moindre erreur.
 	-- Assez long pour laisser le telechargement finir, assez court pour que le joueur ne voie pas la statue.
+	-- LE JOUEUR SE POUSSE, une fois qu'il a fini de toquer : il libere le passage pour le grand-pere. Enchainee a
+	-- la fin de KNOCK_ANIM, elle tient sa derniere image comme elle -- il reste sur le cote tant que la scene dure.
+	KNOCK_ASIDE_ANIM = "Scene1_TocToc2_Animation",
+	-- Fondu entre les coups et le pas de cote. Les deux pistes sont en priorite Action : a priorite EGALE Roblox
+	-- ne choisit pas, il MELANGE. Ce fondu est donc une transition VOULUE et courte -- au-dela on lirait une pose
+	-- moyenne entre les deux, ce qui ne ressemble a rien.
+	KNOCK_ASIDE_FADE = 0.2,
+
 	-- A quelle distance de la FIN on fige l'animation de coups, en secondes. Le gel doit tomber JUSTE AVANT la
 	-- derniere image : trop tot on coupe le dernier geste, trop tard on rate la fenetre et la piste reboucle.
 	-- 0.05 s vaut une a trois images -- la pose de fin, sans le risque.
