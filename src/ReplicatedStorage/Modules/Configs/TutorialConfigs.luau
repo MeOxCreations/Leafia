@@ -140,25 +140,22 @@ return {
 	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
 	REVEAL_ZOOM_SPEED = 6,
 
-	-- ===== LE JOUEUR S'EFFACE PENDANT LA SCENE =====
-	-- INVISIBLE DES LE DEBUT, et pas une silhouette. On a essaye 0.7 en se disant que garder une trace du
-	-- personnage aidait a savoir ou l'on est : faux. Pendant que le grand-pere se bat avec sa poignee, un avatar
-	-- plante devant la porte -- surtout un GRAND -- masque exactement ce qu'on demande au joueur de regarder.
+	-- ===== LE JOUEUR S'EFFACE, MAIS PAS TOUT DE SUITE =====
+	-- LA SCENE A DEUX TEMPS, et le personnage n'a pas le meme role dans les deux.
 	--
-	-- Le personnage ne porte AUCUNE information a cet instant. On sait ou l'on est, la camera le dit. Autant
-	-- liberer le cadre entierement.
+	-- 1) IL TOQUE. C'est LUI qu'on regarde : c'est son geste, c'est lui qui declenche l'histoire. L'effacer ici
+	--    enleverait l'acteur du plan. Donc ZERO : entierement visible.
+	SCENE_PLAYER_FADE = 0,
+	-- 2) LA PORTE S'OUVRE. Le grand-pere devient le sujet, et un avatar plante devant la porte -- surtout un
+	--    GRAND -- le masque au moment precis ou l'on doit le voir. Le joueur ne porte plus aucune information a
+	--    cet instant. Il disparait completement.
 	--
 	-- Passe par CharacterFade, donc par LocalTransparencyModifier : ca ne se replique pas. En co-op, les autres
 	-- continuent de voir un personnage normal. Couvre le corps, les decalques (le visage) et les accessoires
 	-- (cheveux, chapeaux) ; un outil tenu en main reste visible, ce qui est voulu ailleurs dans le jeu.
-	SCENE_PLAYER_FADE = 1,
-	-- Le niveau vise a l'ouverture de la porte. Il valait 1 quand la scene tournait a 0.7 : les deux sont
-	-- desormais EGAUX, donc ce fondu n'a plus rien a faire et ne se voit pas.
-	--
-	-- On le garde parce que c'est le knob qui reglera le retour de la silhouette si on la reveut un jour. Le
-	-- descendre sous SCENE_PLAYER_FADE fait REAPPARAITRE le personnage quand la porte s'ouvre.
 	REVEAL_PLAYER_FADE = 1,
-	-- Duree du fondu vers REVEAL_PLAYER_FADE. Sans effet tant que les deux niveaux sont egaux.
+	-- EN FONDU, jamais d'un coup : une silhouette qui disparait d'un claquement attire justement l'oeil sur elle,
+	-- au moment ou l'on veut qu'il parte vers la porte.
 	REVEAL_FADE_TIME = 0.45,
 
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau

@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.582 — On revoit le joueur toquer : il ne s'efface qu'a l'ouverture de la porte
+
+Le 0.0.580 rendait le personnage invisible **des le debut de la scene**. On perdait donc l'acteur : le joueur
+toquait a la porte sans qu'on le voie.
+
+`SCENE_PLAYER_FADE` : **1 -> 0**.
+
+La scene a deux temps, et le personnage n'a pas le meme role dans les deux :
+
+1. **Il toque.** C'est LUI qu'on regarde -- c'est son geste, c'est lui qui declenche l'histoire. Entierement
+   visible.
+2. **La porte s'ouvre.** Le grand-pere devient le sujet, et un GRAND avatar plante devant la porte le masque au
+   moment precis ou l'on doit le voir. Le joueur disparait completement, en fondu (`REVEAL_FADE_TIME`).
+
+Rien a brancher : le fondu de revelation etait deja pose au bon endroit, sur le depart de la porte, en meme temps
+que le resserrement du champ de vision. C'est le niveau de la premiere phase qui etait faux.
+
+L'invisibilite du 0.0.581 (valeur reposee a chaque image, apres celle de Roblox) reste : elle s'applique
+maintenant au bon moment.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.581 — Le joueur restait VISIBLE : Roblox reposait sa transparence par-dessus la notre
 
 Le 0.0.580 mettait `SCENE_PLAYER_FADE` a 1 et le personnage restait quand meme la.

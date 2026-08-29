@@ -679,8 +679,8 @@ local function openDoor()
 	-- propriete et sa boucle tourne meme pendant la scene. Ecrire dessus en parallele donnerait un champ de
 	-- vision qui vibre entre deux valeurs, et on chercherait la cause dans le zoom.
 	CameraEffects.SetFovOffset(-TutorialConfigs.SCENE_ZOOM)
-	-- LE JOUEUR S'EFFACE POUR DE BON. Une silhouette a 0.7 suffisait tant qu'on regardait une porte fermee ;
-	-- un GRAND avatar masque le grand-pere au moment precis ou l'on doit le voir.
+	-- ET C'EST ICI QUE LE JOUEUR S'EFFACE, pas avant. Pendant qu'il toquait c'est LUI qu'on regardait ; a partir
+	-- de maintenant c'est le grand-pere, et un GRAND avatar le masquerait au moment precis ou l'on doit le voir.
 	fadePlayerTo(TutorialConfigs.REVEAL_PLAYER_FADE, TutorialConfigs.REVEAL_FADE_TIME)
 
 	-- ELLE RECULE, D'UN COUP. Comme si elle avait eu peur.
