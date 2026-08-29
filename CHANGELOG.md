@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.583 — Cinq feuilles au chargement au lieu de six
+
+`LEAF_COUNT` : **6 -> 5**. Tout le reste s'en deduit (largeur d'une case, position de chaque feuille, boucles de
+remplissage), il n'y avait qu'une valeur a toucher.
+
+Une seconde, quand meme : `LEAF_GAUGE_SIZE.X` passe de **0.2 a 0.167**.
+
+Les feuilles sont en `ScaleType = Fit`, donc bornees par la HAUTEUR de leur case : la largeur de la jauge ne
+regle pas leur taille, elle regle **l'ecart entre elles**. En retirant une feuille sans toucher a la largeur, les
+cinq restantes se seraient ECARTEES pour occuper la meme place -- ce qui n'est pas "enlever une feuille", c'est
+"etaler la jauge". On retire donc une case de large en meme temps.
+
+Le bloc est ancre a droite : le bord droit ne bouge pas, la jauge se raccourcit vers la gauche. Le texte des
+conseils, qui s'arrete juste avant elle, gagne la place au passage -- sa largeur est calculee depuis celle de la
+jauge, donc il n'y a rien d'autre a regler.
+
+Pour les ecarter au lieu de raccourcir la jauge : remettre `LEAF_GAUGE_SIZE.X` a 0.2.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.582 — On revoit le joueur toquer : il ne s'efface qu'a l'ouverture de la porte
 
 Le 0.0.580 rendait le personnage invisible **des le debut de la scene**. On perdait donc l'acteur : le joueur

@@ -226,7 +226,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local DEST_POS = UDim2.fromScale(0.955, 0.075)
 	local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 
-	-- JAUGE DE FEUILLES, en bas a droite. SIX feuilles qui s'allument une par une.
+	-- JAUGE DE FEUILLES, en bas a droite. CINQ feuilles qui s'allument une par une.
 	--
 	-- Elle remplace la grande feuille du milieu, qui se remplissait en continu. Une jauge CONTINUE dit "ca
 	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur compte au lieu d'estimer, et chaque cran
@@ -279,7 +279,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- le sursaut plutot qu'un gonflement. Mais les deux sont assez longs pour qu'aucun ne claque.
 	local LEAF_POP_UP = 0.16
 	local LEAF_POP_BACK = 0.42
-	local LEAF_COUNT = 6
+	local LEAF_COUNT = 5
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
 	local LEAF_GAUGE_POS = UDim2.fromScale(0.965, 0.906)
@@ -291,7 +291,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- C'est aussi elle qui borne le texte des conseils, qui s'arrete juste avant : la retrecir donne donc plus de
 	-- place au texte, sans rien avoir a regler d'autre.
-	local LEAF_GAUGE_SIZE = UDim2.fromScale(0.2, 0.055)
+	--
+	-- ELLE SUIT LE NOMBRE DE FEUILLES. En passant de six a cinq sans la toucher, les cinq restantes s'ECARTENT
+	-- pour occuper la meme largeur -- ce qui n'est pas "enlever une feuille", c'est "etaler la jauge". On retire
+	-- donc une case de large en meme temps qu'on retire la feuille : l'ecart entre deux feuilles ne bouge pas, et
+	-- le bord droit non plus (le bloc est ancre a droite).
+	local LEAF_GAUGE_SIZE = UDim2.fromScale(0.167, 0.055)
 	-- Part de la case occupee par la feuille. Proche de 1 : la case ne sert presque plus de marge, et c'est la
 	-- largeur de la jauge ci-dessus qui fait l'espacement. Baisser cette valeur remet de la marge PARTOUT, y
 	-- compris aux deux bouts.
@@ -1215,7 +1220,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- d'une NumberSequence, eux, sont deterministes : 0 est le debut du degrade, 1 sa fin. En posant les points
 	-- soi-meme, on sait exactement ce qu'on fabrique.
 	--
-	-- `edge` va de 0 a 1 et decrit jusqu'ou le blanc s'etend. Le meme constructeur sert aux deux moitiés du
+	-- `edge` va de 0 a 1 et decrit jusqu'ou le blanc s'etend. Le meme constructeur sert aux deux moities du
 	-- mouvement : on le fait monter pour couvrir, puis redescendre pour decouvrir -- et cette descente EST le
 	-- balayage inverse, sans une ligne de plus.
 	local function wipeAt(edge: number)
@@ -1270,7 +1275,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- ET LE JEU APPARAIT. Le meme bord repart en arriere : le volet se retire par ou il est venu.
 	sweep(1, 0, WIPE_REVEAL_TIME)
 	-- DETRUIT QUOI QU'IL ARRIVE. C'est la garantie qui rend ce volet sans danger : meme si le balayage partait du
-	-- mauvais cote, ou si une sequence etait refusee, on ne peut pas se retrouver avec un aplat blanc collé sur
+	-- mauvais cote, ou si une sequence etait refusee, on ne peut pas se retrouver avec un aplat blanc colle sur
 	-- le jeu pour toute la session.
 	wipeGui:Destroy()
 	player:SetAttribute("LeafiaLoadingDone", true) -- meme signal que l'ecran principal (l'UI sait que le rideau est parti)
