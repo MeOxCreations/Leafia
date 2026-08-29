@@ -300,6 +300,11 @@ return {
 	-- Delai avant de VERIFIER que l'idle qu'on vient de poser joue vraiment. Une piste dont l'asset n'arrive
 	-- jamais garde une longueur de zero pour toujours : le grand-pere resterait fige, sans la moindre erreur.
 	-- Assez long pour laisser le telechargement finir, assez court pour que le joueur ne voie pas la statue.
+	-- A quelle distance de la FIN on fige l'animation de coups, en secondes. Le gel doit tomber JUSTE AVANT la
+	-- derniere image : trop tot on coupe le dernier geste, trop tard on rate la fenetre et la piste reboucle.
+	-- 0.05 s vaut une a trois images -- la pose de fin, sans le risque.
+	KNOCK_HOLD_MARGIN = 0.05,
+
 	OLDMAN_IDLE_CHECK = 3,
 	-- Ecart entre les deux releves de pose du controle. Assez long pour qu'une animation lente ait bouge, assez
 	-- court pour ne pas laisser une statue a l'ecran si le verdict est mauvais.

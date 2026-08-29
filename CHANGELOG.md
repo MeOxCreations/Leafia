@@ -2204,6 +2204,57 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.590 — L'animation de coups TIENT sa derniere image
+
+Le joueur toquait, puis son bras retombait tout seul en pose de repos, pile au moment ou la porte s'ouvre.
+
+Une piste NON bouclee se RELACHE a sa derniere image : la pose n'est plus tenue par personne. On la passe donc en
+`Looped = true` -- elle ne relache jamais -- et on l'empeche de repartir au debut en la FIGEANT juste avant la
+fin (`AdjustSpeed(0)` + `TimePosition` calee un cheveu avant `Length`).
+
+### Pourquoi pas la recette habituelle du projet
+
+Le journal donne une methode pour tenir une derniere image : vitesse 0 des le depart, et `TimePosition` avancee a
+la main chaque image. **Elle ne convient pas ici.** Les marqueurs d'animation ne tirent que pendant une lecture
+REELLE : piloter le temps a la main aurait tue les sons de coups et les impacts, c'est-a-dire toute la scene.
+
+L'animation joue donc a vitesse normale -- les marqueurs font leur travail -- et on la gele au dernier moment.
+
+### Deux declencheurs, parce qu'un seul rate
+
+- **Le seuil par image** (`KNOCK_HOLD_MARGIN`, 0.05 s avant la fin) : le cas normal.
+- **`DidLoop`** : filet pour une image sautee a bas framerate. Sans lui, l'animation repartirait du debut et le
+  joueur toquerait en boucle pendant tout le reste de la scene.
+
+L'enchainement vers le grand-pere part du gel, plus de `Stopped` -- qui ne tire plus, puisque la piste ne
+s'arrete plus. `Stopped` reste branche comme secours (fin de scene, respawn), avec un drapeau contre le double
+depart.
+
+La surveillance est coupee avec la piste : une connexion RenderStepped laissee derriere tournerait pour le reste
+de la partie.
+
+### A faire dans Studio
+
+Rien.
+
+## 0.0.589 — L'alerte du ControlModule est retiree : elle criait pour un cas normal
+
+`[Tutorial] ControlModule indisponible...` sortait alors que RIEN n'etait casse.
+
+En mode edition, Roblox n'a pas encore pose `PlayerModule` : il arrive au lancement. La sonde tombait donc
+parfois sur son absence, et annoncait un probleme qui n'existe pas.
+
+Et meme absent pour de bon, il ne manque a personne :
+
+- **le blocage du joueur** tient sur `ContextActionService`, qui ne depend d'aucun module ;
+- **la lecture des deplacements** a trois secours dans `MoveInput` -- notre joystick, `humanoid.MoveDirection`
+  (que Roblox remplit quel que soit le controleur), puis WASD lu en direct.
+
+Couper le ControlModule reste fait quand il existe, en bonus. Son absence ne se signale plus.
+
+**La regle du projet** : ne prevenir que sur ce qui est A LA FOIS anormal ET actionnable. Ce warning n'etait ni
+l'un ni l'autre, et un warning qui crie pour rien emmene les vrais avec lui.
+
 ## 0.0.588 — La porte s'entrebaille encore plus
 
 `DOOR_HALF_ANGLE` : **45 -> 60 degres**. Le premier mouvement, celui qui surprend, prend enfin de la place.

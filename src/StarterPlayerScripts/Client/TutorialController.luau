@@ -91,6 +91,7 @@ local doorBasePivot: CFrame? = nil
 -- modele a chaque image, et la pose finale serait celle de la derniere a FINIR, pas de la derniere demandee.
 local doorSwingToken = 0
 local knockTrack: AnimationTrack? = nil
+local knockHoldConn: RBXScriptConnection? = nil -- surveille la fin de l'animation de coups pour la figer
 local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
@@ -401,39 +402,29 @@ end
 -- Resolu PARESSEUSEMENT, jamais au boot : `require(PlayerModule)` peut yield 10 a 20 s dans une place secondaire
 -- comme le tuto. Ici on n'appelle qu'au moment ou le joueur declenche la scene -- PlayerModule est pret depuis
 -- longtemps, et `FindFirstChild` rend la main tout de suite.
--- Rend le ControlModule, ou nil AVEC LA RAISON. Un "introuvable" sec envoie chercher a l'aveugle : il y a quatre
--- facons d'echouer ici et elles se corrigent a quatre endroits differents.
-local function getControls(): (any, string?)
+-- Le ControlModule, s'il existe. FACULTATIF, et c'est important : le blocage repose sur ContextActionService,
+-- qui ne depend d'aucun module. Couper le ControlModule en plus ne sert qu'a arreter net une touche deja tenue.
+--
+-- ON NE PREVIENT PAS QUAND IL MANQUE. Il manque pour de bon dans certaines places (aucun PlayerModule dans
+-- StarterPlayerScripts), et ca ne casse rien : le verrou tient, et  a ses propres secours pour la
+-- lecture des deplacements (joystick maison, , puis WASD en direct). Un warning sur un
+-- cas NORMAL et sans action possible finit par etre ignore, et il emmene les vrais avec lui.
+local function getControls(): any
 	if controls then
-		return controls, nil
+		return controls
 	end
 	local scripts = player:FindFirstChild("PlayerScripts")
-	if not scripts then
-		return nil, "PlayerScripts absent"
-	end
-	local playerModule = scripts:FindFirstChild("PlayerModule")
+	local playerModule = scripts and scripts:FindFirstChild("PlayerModule")
 	if not playerModule then
-		-- ON NOMME CE QU'ON A TROUVE A LA PLACE. "PlayerModule absent" laisse trois causes ouvertes -- pas encore
-		-- replique, renomme, ou absent de cette place -- et elles se corrigent a trois endroits differents. La
-		-- liste des enfants tranche en une ligne : vide = replication, un autre nom = renommage.
-		local names: { string } = {}
-		for _, child in scripts:GetChildren() do
-			table.insert(names, child.Name)
-		end
-		return nil,
-			`PlayerScripts.PlayerModule absent (PlayerScripts contient : {if #names > 0 then table.concat(names, ", ") else "rien"})`
+		return nil
 	end
 	local ok, result = pcall(function()
 		return require(playerModule):GetControls()
 	end)
-	if not ok then
-		return nil, `require/GetControls a echoue : {tostring(result)}`
+	if ok then
+		controls = result
 	end
-	if not result then
-		return nil, "GetControls a rendu nil"
-	end
-	controls = result
-	return controls, nil
+	return controls
 end
 
 -- DEUXIEME VERROU, et il ne depend de RIEN. Couper le ControlModule suppose que le PlayerModule se comporte comme
@@ -465,14 +456,10 @@ local function freezePlayer()
 		Enum.PlayerActions.CharacterJump
 	)
 
-	local ctrls, why = getControls()
+	-- EN PLUS, quand il existe. Le blocage ne repose pas dessus : voir getControls.
+	local ctrls = getControls()
 	if ctrls then
 		ctrls:Disable()
-	else
-		-- ANORMAL ET ACTIONNABLE : le blocage tient encore grace au verrou ci-dessus, mais on veut le savoir --
-		-- et savoir POURQUOI. Un verrou a moitie pose qui ne dit rien, c'est comment on se retrouve a bouger
-		-- pendant une scene.
-		warn(`[Tutorial] ControlModule indisponible ({why}) : seul ContextActionService retient le joueur.`)
 	end
 end
 
@@ -926,20 +913,60 @@ local function playScene()
 	end
 	knockTrack = track
 	track.Priority = Enum.AnimationPriority.Action
-	track.Looped = false
+	-- BOUCLEE, ET C'EST VOLONTAIRE. Une piste NON bouclee se RELACHE a sa derniere image : le joueur retomberait
+	-- en pose de repos pile au moment ou la porte s'ouvre, et on verrait son bras redescendre tout seul. Bouclee,
+	-- elle ne relache jamais -- il ne reste plus qu'a l'empecher de repartir au debut, juste en dessous.
+	track.Looped = true
 	for _, eventName in ipairs(TutorialConfigs.KNOCK_EVENTS) do
 		track:GetMarkerReachedSignal(eventName):Connect(knockOnce)
 	end
-	-- La fin des coups enchaine sur le grand-pere. Un drapeau garantit UN seul enchainement : `Stopped` peut
-	-- aussi tirer si la piste est coupee, et la scene partirait deux fois.
+
+	-- ON LA LAISSE JOUER A VITESSE NORMALE, PUIS ON LA FIGE.
+	--
+	-- La recette habituelle du projet pour tenir une derniere image (vitesse 0 + `TimePosition` avance a la main)
+	-- ne convient PAS ici : les marqueurs ne tirent que pendant une lecture reelle. Piloter le temps a la main
+	-- tuerait donc les sons de coups et les impacts, c'est-a-dire toute la scene.
+	--
+	-- On surveille donc la lecture et on gele juste avant la fin. Deux declencheurs, parce qu'un seul suffit a
+	-- rater son coup :
+	--   - le seuil par image, qui attrape le cas normal ;
+	--   - `DidLoop`, filet pour une image sautee a bas framerate -- sans lui l'animation repartirait du debut et
+	--     le joueur toquerait en boucle pendant tout le reste de la scene.
 	local chained = false
-	track.Stopped:Connect(function()
+	local function chain()
 		if chained then
 			return
 		end
 		chained = true
 		playTryOpen()
+	end
+
+	local function freeze()
+		if knockHoldConn then
+			knockHoldConn:Disconnect()
+			knockHoldConn = nil
+		end
+		track:AdjustSpeed(0)
+		if track.Length > 0 then
+			-- Pas EXACTEMENT Length : a la derniere image pile, la lecture peut basculer de l'autre cote et
+			-- reboucler. On se pose un cheveu avant.
+			track.TimePosition = math.max(0, track.Length - 0.001)
+		end
+		chain()
+	end
+
+	knockHoldConn = RunService.RenderStepped:Connect(function()
+		-- `Length` vaut zero tant que l'asset n'est pas telecharge : sans cette garde on gelerait l'animation
+		-- avant meme qu'elle ait commence.
+		if track.Length > 0 and track.TimePosition >= track.Length - TutorialConfigs.KNOCK_HOLD_MARGIN then
+			freeze()
+		end
 	end)
+	track.DidLoop:Connect(freeze)
+
+	-- LA PISTE COUPEE DE L'EXTERIEUR enchaine quand meme (fin de scene, respawn). Le drapeau evite le double
+	-- depart quand le gel a deja fait le travail.
+	track.Stopped:Connect(chain)
 	track:Play()
 end
 
@@ -1182,6 +1209,12 @@ function TutorialController.stop()
 	-- piste absente et la boucle ne tourne pas du tout -- les autres resteraient en place. Piege deja paye sur
 	-- l'animation de recul de la tondeuse, qui ne s'arretait jamais.
 	stopTrack(grandpaTrack)
+	-- LA SURVEILLANCE MEURT AVEC LA PISTE. Une connexion RenderStepped laissee derriere tournerait pour le reste
+	-- de la partie, sur une piste qui n'existe plus.
+	if knockHoldConn then
+		knockHoldConn:Disconnect()
+		knockHoldConn = nil
+	end
 	stopTrack(knockTrack)
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
