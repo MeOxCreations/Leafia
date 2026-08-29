@@ -2204,6 +2204,57 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.586 — Camera d'orbite pour la tondeuse : elle se tient derriere, avec une butee elastique
+
+Nouveau module `Client/Utils/DriveCamera.luau`. Il ne connait ni la tondeuse ni MowConfigs : on lui donne un
+sujet, un CAP et une avance. Le tracteur branchera le meme.
+
+### Ce qu'elle fait
+
+- **Elle se tient derriere la machine**, un peu au-dessus, et son cap **RATTRAPE** celui de la machine au lieu de
+  lui coller. C'est ce retard qui fait glisser le joueur dans le cadre pendant un virage -- le meme effet que la
+  trainee laterale d'avant, mais obtenu par le cap. Reglage : `DRIVE_CAM_FOLLOW`.
+- **Butee elastique a 70 degres de chaque cote.** Au-dela, une marge de 12 degres resiste de plus en plus, puis
+  un mur dur. Au relachement, un ressort SOUS-AMORTI ramene a la butee avec un rebond. Meme recette que l'orbite
+  de la haie, et pour la meme raison : un mur sec se ressent comme un bug, un rebond comme une intention.
+- **Orbite a la souris** (clic droit maintenu) **et au doigt**.
+
+### Les deux choses que prendre la camera coute, et comment elles sont rendues
+
+Passer en Scriptable casse deux mecaniques qui appartiennent a la camera Custom. Il fallait les rendre a la main,
+sinon on perdait exactement le mouvement qu'on voulait garder :
+
+**1. Les effets.** `Humanoid.CameraOffset` n'est plus applique. Or `CameraEffects` compose LA TRAINEE DE VIRAGE,
+les secousses, le bob et la plongee d'atterrissage dedans. L'orbite va donc chercher `CameraEffects.GetOffset()`
+et l'applique elle-meme, apres le placement et en repere local -- comme la haie. **La trainee de virage
+(`TURN_CAM_LAG`) continue donc de fonctionner et s'AJOUTE au retard de cap.**
+
+**2. Le recul.** `SetZoomBoost` deplace les BORNES DE ZOOM DU JOUEUR : sous une camera scriptee, ca ne se voit
+pas, et ca lui rend une vue decalee quand il repose la machine. Le recul est donc porte sur le rayon de l'orbite
+(`DRIVE_CAM_ZOOM`), et l'ancien chemin est coupe tant que l'orbite tient la vue.
+
+### Ce qui n'a PAS bouge
+
+On ne lisse jamais la POSITION : lisser une position qui tourne sur un arc coupe la corde du cercle, la camera
+plonge vers l'interieur puis ressort. On place au degre pres et on ne lisse que les PARAMETRES (cap, distance).
+Seule exception : l'arrivee, qui glisse une fois depuis la vue de jeu.
+
+Le braquage reste totalement independant de la camera -- il lit les composantes brutes de l'input. Aucune boucle
+possible entre le rebond et la conduite.
+
+### Le filet
+
+`DRIVE_CAM_ORBIT = false` remet EXACTEMENT la camera d'avant. Aucun reglage precedent n'a ete touche : ni
+`TURN_CAM_LAG`, ni `DRIVE_ZOOM`, ni leurs vitesses. Un seul booleen.
+
+### A faire dans Studio
+
+Rien. Mais ca se juge A L'ECRAN et nulle part ailleurs. Les trois reglages a tourner en premier :
+
+- `DRIVE_CAM_FOLLOW` (2.5) -- le ressenti du virage. Bas = ca traine, haut = ca colle.
+- `DRIVE_CAM_HEIGHT` (6) -- la plongee. Au-dela de ~8 on passe en vue de dessus et on perd le sol devant.
+- `DRIVE_CAM_YAW_LIMIT` (70) -- de combien on peut regarder sur le cote.
+
 ## 0.0.585 — L'herbe tondue ne bouge plus, et surtout elle ne coute plus rien
 
 `MOW_WIND` : **0.15 -> 0**. Une touffe tondue ne fremit plus du tout.

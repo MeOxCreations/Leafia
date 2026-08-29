@@ -502,6 +502,48 @@ return {
 	-- modifierait l'entree de conduite qui produit l'effet. La deplacer ne touche a rien.
 	--
 	-- Ecart lateral a fond de braquage, en studs.
+	-- ===== CAMERA D'ORBITE DE CONDUITE =====
+	-- Une camera SCRIPTEE qui se tient derriere la machine, avec une butee elastique sur les cotes.
+	--
+	-- LE DRAPEAU EST UN FILET, pas un chantier a moitie fini. A `false`, on retrouve EXACTEMENT la camera d'avant
+	-- (celle de Roblox + les effets) : aucun reglage ci-dessous n'est lu, et aucun reglage d'avant n'a bouge. Si
+	-- l'orbite ne plait pas, un seul booleen la remet.
+	DRIVE_CAM_ORBIT = true,
+	-- Rayon de l'orbite au repos, et hauteur au-dessus du point vise. "Un peu du dessus, pas trop" : la hauteur
+	-- fait le plongee, et au-dela de ~8 on passe en vue de dessus et on perd le sol devant la machine.
+	DRIVE_CAM_DISTANCE = 15,
+	DRIVE_CAM_HEIGHT = 6,
+	-- Hauteur du point VISE sur le joueur. Vers le torse : viser les pieds colle l'horizon en haut du cadre.
+	DRIVE_CAM_LOOK_HEIGHT = 2.5,
+	-- VITESSE A LAQUELLE LE CAP DE LA CAMERA RATTRAPE CELUI DE LA MACHINE. C'est LE reglage du ressenti : bas, la
+	-- camera traine et le joueur glisse dans le cadre pendant le virage ; haut, elle colle et le virage devient
+	-- sec. C'est le meme effet que l'ancien TURN_CAM_LAG, mais obtenu par le cap au lieu d'un decalage lateral.
+	DRIVE_CAM_FOLLOW = 2.5,
+	-- Recul supplementaire a pleine avance. PORTE ICI parce que `SetZoomBoost` deplace les bornes de zoom du
+	-- JOUEUR, une mecanique de la camera Custom : sous une camera scriptee elle ne fait plus rien.
+	DRIVE_CAM_ZOOM = 5,
+	DRIVE_CAM_ZOOM_SPEED = 11,
+	-- Butee de chaque cote, en degres. Sans elle on tourne jusqu'a se retrouver face a la machine, et on conduit
+	-- a l'aveugle.
+	DRIVE_CAM_YAW_LIMIT = 70,
+	-- Marge ELASTIQUE au-dela de la butee : on peut pousser encore un peu, avec une resistance croissante. Un mur
+	-- sec se ressent comme un bug ; une marge qui resiste se ressent comme une intention.
+	DRIVE_CAM_YAW_MARGIN = 12,
+	-- Ressort de retour a la butee au relachement. L'amortissement SOUS 2*sqrt(raideur) (ici 2*sqrt(220) ~ 29.7)
+	-- laisse un DEPASSEMENT, et c'est lui le rebond. A 29.7 il reviendrait juste, sans caractere.
+	DRIVE_CAM_YAW_STIFFNESS = 220,
+	DRIVE_CAM_YAW_DAMPING = 16,
+	-- Degres par pixel. Le doigt parcourt plus de pixels que la souris, donc plus bas.
+	DRIVE_CAM_SENSITIVITY = 0.35,
+	DRIVE_CAM_TOUCH_SENSITIVITY = 0.22,
+	-- ARRIVEE : on glisse une fois depuis la vue de jeu jusqu'a l'orbite, puis on place au degre pres. Lisser en
+	-- permanence une position qui tourne sur un arc couperait la corde du cercle.
+	DRIVE_CAM_ENTER_SPEED = 6,
+	DRIVE_CAM_SETTLE_DIST = 1.5,
+
+	-- ===== ANCIENNE TRAINEE LATERALE (camera de Roblox) =====
+	-- Toujours lue, et toujours utile : elle passe par CameraEffects, dont l'orbite va chercher l'offset a la
+	-- main. Elle s'AJOUTE donc au retard de cap au lieu de le remplacer.
 	TURN_CAM_LAG = 3,
 	-- Vitesse a laquelle elle rattrape, en fraction par seconde. BASSE : c'est le retard qu'on veut faire sentir.
 	-- Haute, la camera colle au virage et l'effet disparait.

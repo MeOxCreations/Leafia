@@ -28,6 +28,7 @@ local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
 local MoveInput = require(script.Parent.Utils.MoveInput)
+local DriveCamera = require(script.Parent.Utils.DriveCamera)
 
 local MowController = {}
 
@@ -165,12 +166,36 @@ end
 -- appelants ecrivant chacun la sienne, le dernier de l'image ecraserait l'autre, et le recul clignoterait.
 -- La vitesse se MESURE sur le deplacement reel plutot que de recopier la valeur du serveur : c'est ce que le
 -- joueur voit, et ca marche meme si un autre systeme le ralentit.
+-- Les reglages de l'orbite, rassembles ici : le module ne connait pas MowConfigs, c'est ce qui le rendra
+-- reutilisable par le tracteur le jour venu.
+local function driveCamSettings(): DriveCamera.Settings
+	return {
+		distance = MowConfigs.DRIVE_CAM_DISTANCE,
+		height = MowConfigs.DRIVE_CAM_HEIGHT,
+		lookHeight = MowConfigs.DRIVE_CAM_LOOK_HEIGHT,
+		follow = MowConfigs.DRIVE_CAM_FOLLOW,
+		zoom = MowConfigs.DRIVE_CAM_ZOOM,
+		zoomSpeed = MowConfigs.DRIVE_CAM_ZOOM_SPEED,
+		yawLimit = MowConfigs.DRIVE_CAM_YAW_LIMIT,
+		yawMargin = MowConfigs.DRIVE_CAM_YAW_MARGIN,
+		stiffness = MowConfigs.DRIVE_CAM_YAW_STIFFNESS,
+		damping = MowConfigs.DRIVE_CAM_YAW_DAMPING,
+		sensitivity = MowConfigs.DRIVE_CAM_SENSITIVITY,
+		touchSensitivity = MowConfigs.DRIVE_CAM_TOUCH_SENSITIVITY,
+		enterSpeed = MowConfigs.DRIVE_CAM_ENTER_SPEED,
+		settleDist = MowConfigs.DRIVE_CAM_SETTLE_DIST,
+	}
+end
+
 local function applyCameraRig(carrying: boolean)
 	local total = if revealOn then MowConfigs.HIGHLIGHT_ZOOM else 0
 	local zoomSpeed: number? = nil
 	-- `~= 0` et non `> 0` : une valeur NEGATIVE rapproche la camera, et c'est le cas normal. La garde d'origine
 	-- refusait justement ce sens-la, donc regler DRIVE_ZOOM en negatif ne faisait rien du tout.
-	if carrying and MowConfigs.DRIVE_ZOOM ~= 0 then
+	-- SOUS L'ORBITE, ON NE TOUCHE PLUS AUX BORNES DE ZOOM. Elles n'appartiennent qu'a la camera Custom : les
+	-- deplacer pendant qu'une camera scriptee tient la vue ne se voit pas, et les rend au joueur decalees quand il
+	-- repose la machine. Le recul est porte par le rayon de l'orbite (DRIVE_CAM_ZOOM).
+	if carrying and MowConfigs.DRIVE_ZOOM ~= 0 and not DriveCamera.isActive() then
 		-- SUR L'APPUI, PAS SUR LA VITESSE MESUREE. La vitesse met pres de trois secondes a monter
 		-- (`SPEED_RAMP_UP`) : calee dessus, la camera racontait la montee en regime au lieu de repondre a la
 		-- touche, et aucune allure de lissage n'aurait pu la rattraper -- c'est la CIBLE qui etait lente, pas le
@@ -991,6 +1016,11 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- qu'on reculait.
 	updateMarker(mower, lateralAmount * steerSign, dt)
 
+	-- L'ORBITE, POSEE ICI : c'est le premier endroit ou le cap de l'image est definitif. Plus haut elle suivrait
+	-- le cap de l'image PRECEDENTE et trainerait d'une frame en permanence -- invisible au reglage, sensible a
+	-- l'ecran. On lui donne l'avance DEMANDEE et pas la vitesse mesuree : le recul doit repondre a la touche.
+	DriveCamera.step(dt, yaw, forwardAmount)
+
 	-- LA CAMERA TRAINE. Elle reste un peu en arriere du virage, et le joueur glisse dans le cadre avant qu'elle le
 	-- rattrape.
 	--
@@ -1341,6 +1371,12 @@ local function update(dt: number)
 			steering = true
 			autoRotateWas = humanoid.AutoRotate
 			humanoid.AutoRotate = false
+			-- ON PART DEJA ALIGNE sur le cap de la machine : demarrer a zero ferait pivoter toute l'orbite au
+			-- premier instant, alors qu'on veut seulement glisser depuis la vue de jeu.
+			if MowConfigs.DRIVE_CAM_ORBIT and hrp then
+				local look = (hrp :: BasePart).CFrame.LookVector
+				DriveCamera.enter((hrp :: BasePart), math.atan2(-look.X, -look.Z), driveCamSettings())
+			end
 			-- APRES le personnage dans la MEME image : on ecrase la demande du module de controle avant que la
 			-- physique ne la lise. Sur Heartbeat on arrivait apres elle, une image trop tard.
 			RunService:BindToRenderStep(STEER_BIND, Enum.RenderPriority.Character.Value + 1, function(step: number)
@@ -1354,6 +1390,9 @@ local function update(dt: number)
 		end
 	elseif steering then
 		steering = false
+		-- ON REND LA CAMERA EN PREMIER. C'est le chemin normal du depot : la laisser scriptee une image de plus
+		-- garderait la vue plantee derriere une machine qu'on ne tient plus.
+		DriveCamera.exit()
 		pcall(function()
 			RunService:UnbindFromRenderStep(STEER_BIND)
 		end)
@@ -1460,6 +1499,7 @@ function MowController.init()
 		setPullBound(false)
 		lastCutPos = nil
 		steering = false -- nouveau perso : il arrive avec son AutoRotate, notre etat ne le concerne plus
+		DriveCamera.exit()
 		setReveal(false)
 		setActionBound(false)
 	end)
@@ -1480,6 +1520,7 @@ function MowController.stop()
 	CameraEffects.SetZoomBoost(0)
 	if steering then
 		steering = false
+		DriveCamera.exit()
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		if humanoid then
