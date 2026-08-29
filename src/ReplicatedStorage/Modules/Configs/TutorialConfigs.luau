@@ -112,6 +112,31 @@ return {
 	-- Ce que la camera VISE, en studs au-dessus du centre de la porte. A zero elle vise le milieu exact.
 	SCENE_LOOK_UP = 0.5,
 
+	-- ===== LE PLAN DE SORTIE : le joueur ET le grand-pere, vus d'un peu au-dessus =====
+	-- La camera ne rend pas la main tout de suite quand la porte est ouverte. Elle prend un dernier plan, large,
+	-- ou l'on voit le joueur se pousser et le grand-pere sortir de chez lui.
+	--
+	-- ON CADRE L'ESPACE QUE L'ACTION VA TRAVERSER, pas le grand-pere lui-meme. Une camera qui SUIT un sujet qui
+	-- marche doit bouger a chaque image, donc se battre avec la respiration du plan ; un cadre pose sur le trajet
+	-- ENTIER n'a rien a suivre et laisse l'action entrer dedans. C'est aussi ce qu'on fait au cinema.
+	--
+	-- Duree du glissement vers ce plan, puis duree pendant laquelle on le tient. Le maintien doit couvrir la
+	-- marche : trop court, la camera rend la main pendant que le grand-pere est encore en route.
+	EXIT_SHOT_IN = 0.8,
+	EXIT_SHOT_HOLD = 3,
+	-- Recul MINIMUM, et part de l'ecartement entre les deux personnages. Le second fait que le plan s'ouvre tout
+	-- seul si on eloigne le point d'arrivee dans Studio -- rien a re-regler.
+	EXIT_SHOT_MIN_BACK = 10,
+	EXIT_SHOT_SPREAD = 1.1,
+	-- "Un peu du dessus" : assez pour voir les deux corps en entier et le sol entre eux, pas assez pour que ca
+	-- devienne une vue de dessus (au-dela de ~12 on perd les visages).
+	EXIT_SHOT_UP = 7,
+	-- Ce qu'on vise, au-dessus du point milieu. Vers le torse : viser le sol met l'horizon tout en haut du cadre.
+	EXIT_SHOT_LOOK_UP = 1.5,
+	-- Decalage lateral, pour ne pas etre pile dans l'axe. Un plan legerement de biais se lit mieux qu'un plan
+	-- frontal, ou les deux personnages se cachent des qu'ils s'alignent.
+	EXIT_SHOT_SIDE = -3,
+
 	-- ===== LE SON BAISSE PENDANT LA SCENE =====
 	-- Volume du reste du jeu pendant la cinematique, en fraction. 0.25 = un quart. Pas ZERO : un silence total
 	-- s'entend comme une coupure, et le monde a l'air de s'eteindre. On veut que l'oreille se tourne vers la
@@ -286,7 +311,10 @@ return {
 	-- une scene se decide a l'oeil, pas par une formule, et le deplacer ne doit demander aucun code.
 	OLDMAN_WALK_TARGET = "OldManWalkTo",
 	-- Sa vitesse de marche, en studs/s.
-	OLDMAN_WALK_SPEED = 6,
+	-- LENT, et c'est le sujet du plan. C'est un vieux monsieur avec une canne qui sort de chez lui : le voir
+	-- traverser prend du temps, et ce temps EST ce qu'on raconte. L'animation suit cette vitesse toute seule
+	-- (rapport avec OLDMAN_WALK_REFERENCE), donc baisser ce chiffre ralentit le pas ET le pied ne patine pas.
+	OLDMAN_WALK_SPEED = 4,
 	-- Vitesse pour laquelle l'animation a ete faite. La piste est jouee au rapport des deux, donc changer la
 	-- vitesse ci-dessus ne fait pas patiner ses pieds -- et il n'y a aucune seconde valeur a garder d'accord.
 	OLDMAN_WALK_REFERENCE = 8,

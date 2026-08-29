@@ -479,11 +479,51 @@ end
 -- Rend la main au joueur : la camera glisse vers la vue de jeu pendant que les barres repartent dans les bords.
 -- Idempotent : la fin normale (l'animation du grand-pere s'acheve) et le filet de secours peuvent tirer tous les
 -- deux, et le second ne doit pas relancer une sortie deja en cours.
-local function endScene()
-	if sceneEnded then
-		return
+-- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
+-- Comme findModel, mais SANS CONDITION DE CLASSE. Un conteneur d'effets peut etre un Folder, un Model ou une
+-- PART -- rien ne l'impose, et c'est ce qui vient de casser : on n'acceptait que Model ou Folder, et
+-- `KnockEffect1` est une part. Le filtre etait plus strict que la realite, donc il ne trouvait rien.
+--
+-- Regle : quand on cherche un objet POSE PAR QUELQU'UN dans Studio, on cherche par son NOM. Sa classe est un
+-- detail de rangement, pas une garantie.
+local function findByName(name: string): Instance?
+	for _, d in ipairs(Workspace:GetDescendants()) do
+		if d.Name == name then
+			return d
+		end
 	end
-	sceneEnded = true
+	return nil
+end
+
+-- LE DERNIER PLAN : le joueur ET le grand-pere, vus d'un peu au-dessus.
+--
+-- On cadre le TRAJET, pas le marcheur : on vise le milieu entre le joueur et le point d'arrivee du grand-pere,
+-- et on recule d'autant qu'ils sont ecartes. Le plan n'a donc rien a suivre -- l'action entre dedans toute seule
+-- et la respiration de la camera reste intacte.
+local function exitShotCFrame(): CFrame?
+	local root = getRoot()
+	local outward = doorOutward()
+	if not (root and outward) then
+		return nil
+	end
+	local walkTo = findByName(TutorialConfigs.OLDMAN_WALK_TARGET)
+	-- Pas de point d'arrivee pose dans Studio : on se rabat sur la porte. Le plan est alors plus serre, mais il
+	-- existe -- mieux qu'une camera qui rend la main d'un coup parce qu'une part manque.
+	local endPos = if walkTo and walkTo:IsA("BasePart") then walkTo.Position else anchorPos
+	local mid = (root.Position + endPos) * 0.5
+	local spread = (root.Position - endPos).Magnitude
+	local back = math.max(TutorialConfigs.EXIT_SHOT_MIN_BACK, spread * TutorialConfigs.EXIT_SHOT_SPREAD)
+	local side = outward:Cross(Vector3.new(0, 1, 0))
+	local pos = mid
+		+ outward * back
+		+ Vector3.new(0, TutorialConfigs.EXIT_SHOT_UP, 0)
+		+ side * TutorialConfigs.EXIT_SHOT_SIDE
+	return CFrame.lookAt(pos, mid + Vector3.new(0, TutorialConfigs.EXIT_SHOT_LOOK_UP, 0))
+end
+
+-- RENDRE LA MAIN, pour de bon. Separe de `endScene` parce que le plan de sortie s'intercale entre les deux : le
+-- joueur reste bloque et les barres restent en place tant qu'on est encore au cinema.
+local function releaseScene()
 	-- LES JAMBES D'ABORD. La camera met SCENE_CAM_OUT a revenir ; si on rendait les controles seulement apres, le
 	-- joueur appuierait dans le vide pendant ce temps -- et une commande qui ne repond pas se lit comme un lag.
 	unfreezePlayer()
@@ -491,6 +531,23 @@ local function endScene()
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 	CameraEffects.SetFovOffset(0)
+
+	-- L'OBJECTIF S'AFFICHE. C'est le moment ou le joueur reprend la main : sans bandeau, il sait que la scene est
+	-- finie mais pas ce qu'on attend de lui -- et c'est la premiere minute, celle ou l'on perd un joueur.
+	--
+	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
+	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
+	TaskBannerHandler.show(TutorialConfigs.TASK_TITLE, TutorialConfigs.TASK_REWARD, 0)
+end
+
+local function endScene()
+	if sceneEnded then
+		return
+	end
+	sceneEnded = true
+
+	-- LE JOUEUR REDEVIENT VISIBLE TOUT DE SUITE : c'est un plan a DEUX, il faut le voir dedans. Il etait efface
+	-- parce qu'il masquait la porte ; maintenant qu'on recule, il redevient un des deux sujets.
 	fadePlayer(0)
 
 	-- LE GRAND-PERE SORT DE CHEZ LUI. C'est le SERVEUR qui le fait marcher : un PNJ qui se deplace est un objet
@@ -507,28 +564,17 @@ local function endScene()
 		task.delay(TutorialConfigs.KNOCK_ASIDE_DELAY, aside)
 	end
 
-	-- L'OBJECTIF S'AFFICHE. C'est le moment ou le joueur reprend la main : sans bandeau, il sait que la scene est
-	-- finie mais pas ce qu'on attend de lui -- et c'est la premiere minute, celle ou l'on perd un joueur.
-	--
-	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
-	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
-	TaskBannerHandler.show(TutorialConfigs.TASK_TITLE, TutorialConfigs.TASK_REWARD, 0)
-end
-
--- Cherche un Model par son NOM, comme la porte : on ne suppose aucun rangement.
--- Comme findModel, mais SANS CONDITION DE CLASSE. Un conteneur d'effets peut etre un Folder, un Model ou une
--- PART -- rien ne l'impose, et c'est ce qui vient de casser : on n'acceptait que Model ou Folder, et
--- `KnockEffect1` est une part. Le filtre etait plus strict que la realite, donc il ne trouvait rien.
---
--- Regle : quand on cherche un objet POSE PAR QUELQU'UN dans Studio, on cherche par son NOM. Sa classe est un
--- detail de rangement, pas une garantie.
-local function findByName(name: string): Instance?
-	for _, d in ipairs(Workspace:GetDescendants()) do
-		if d.Name == name then
-			return d
-		end
+	-- LE PLAN DE SORTIE. On garde les barres et le blocage pendant qu'il dure : c'est encore du cinema, et rendre
+	-- les commandes au milieu ferait marcher le joueur dans son propre plan.
+	local shot = exitShotCFrame()
+	if shot then
+		SceneCamera.moveTo(shot, TutorialConfigs.EXIT_SHOT_IN, function()
+			task.delay(TutorialConfigs.EXIT_SHOT_HOLD, releaseScene)
+		end)
+	else
+		-- Pas de cadrage possible (pas de personnage, pas de porte) : on ne retient pas le joueur pour rien.
+		releaseScene()
 	end
-	return nil
 end
 
 local function findModel(name: string): Model?

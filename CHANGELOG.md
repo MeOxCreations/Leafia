@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.593 — Un dernier plan sur le joueur ET le grand-pere, et une marche plus lente
+
+### Le plan de sortie
+
+La camera ne rend plus la main des que la porte est ouverte. Elle prend un dernier plan, large, vu d'un peu
+au-dessus, ou l'on voit le joueur se pousser et le grand-pere sortir de chez lui. Puis elle rend la main.
+
+**On cadre l'ESPACE QUE L'ACTION VA TRAVERSER, pas le marcheur.** Le plan vise le milieu entre le joueur et le
+POINT D'ARRIVEE du grand-pere, et recule d'autant qu'ils sont ecartes. Il n'a donc rien a suivre : l'action entre
+dedans toute seule, et la respiration de la camera reste intacte. Une camera qui suit un sujet qui marche devrait
+bouger a chaque image et se battre avec ce flottement.
+
+Le recul se DEDUIT de l'ecartement (), avec un minimum. Eloigner  dans Studio
+ouvre donc le plan tout seul -- rien a re-regler.
+
+ se coupe en deux : elle lance le plan, et  rend vraiment la main apres. Les barres et le
+blocage du joueur TIENNENT pendant le plan -- c'est encore du cinema, et rendre les commandes au milieu ferait
+marcher le joueur dans son propre plan.
+
+Le joueur redevient visible AU DEBUT du plan, pas a la fin : c'est un plan a deux, il faut le voir dedans.
+
+### La marche du grand-pere
+
+ : **6 -> 4**. C'est un vieux monsieur avec une canne qui sort de chez lui ; le voir traverser
+prend du temps, et ce temps EST ce qu'on raconte.
+
+L'animation suit cette vitesse toute seule (rapport avec ), donc le pied ne patine pas et
+la duree du trajet se recalcule depuis la distance. Un seul chiffre a tourner.
+
+### A faire dans Studio
+
+Rien. Si le plan rend la main avant que le grand-pere soit arrive, monter  (3 s) -- il doit
+couvrir la marche, qui vient de rallonger.
+
 ## 0.0.592 — Le pas de cote attend que le grand-pere se mette en marche
 
 Le 0.0.591 enchainait le pas de cote juste apres les coups. Trop tot : a cet instant la porte est encore FERMEE
