@@ -141,20 +141,24 @@ return {
 	REVEAL_ZOOM_SPEED = 6,
 
 	-- ===== LE JOUEUR S'EFFACE PENDANT LA SCENE =====
-	-- On regarde le grand-pere, pas son propre dos. A 0.7 le personnage reste LISIBLE -- on sait qu'on est la --
-	-- sans manger le cadre.
+	-- INVISIBLE DES LE DEBUT, et pas une silhouette. On a essaye 0.7 en se disant que garder une trace du
+	-- personnage aidait a savoir ou l'on est : faux. Pendant que le grand-pere se bat avec sa poignee, un avatar
+	-- plante devant la porte -- surtout un GRAND -- masque exactement ce qu'on demande au joueur de regarder.
+	--
+	-- Le personnage ne porte AUCUNE information a cet instant. On sait ou l'on est, la camera le dit. Autant
+	-- liberer le cadre entierement.
 	--
 	-- Passe par CharacterFade, donc par LocalTransparencyModifier : ca ne se replique pas. En co-op, les autres
-	-- continuent de voir un personnage normal.
-	SCENE_PLAYER_FADE = 0.7,
-	-- ET IL DISPARAIT COMPLETEMENT quand la porte s'ouvre. A 0.7 il reste une silhouette -- suffisant tant qu'on
-	-- regarde une porte fermee, mais un GRAND avatar masque le grand-pere au moment precis ou l'on doit le voir.
+	-- continuent de voir un personnage normal. Couvre le corps, les decalques (le visage) et les accessoires
+	-- (cheveux, chapeaux) ; un outil tenu en main reste visible, ce qui est voulu ailleurs dans le jeu.
+	SCENE_PLAYER_FADE = 1,
+	-- Le niveau vise a l'ouverture de la porte. Il valait 1 quand la scene tournait a 0.7 : les deux sont
+	-- desormais EGAUX, donc ce fondu n'a plus rien a faire et ne se voit pas.
 	--
-	-- Le personnage ne porte plus aucune information a cet instant : on sait ou l'on est, c'est lui qu'on
-	-- regarde. Autant liberer le cadre.
+	-- On le garde parce que c'est le knob qui reglera le retour de la silhouette si on la reveut un jour. Le
+	-- descendre sous SCENE_PLAYER_FADE fait REAPPARAITRE le personnage quand la porte s'ouvre.
 	REVEAL_PLAYER_FADE = 1,
-	-- Duree du fondu vers l'invisible. Passer de 0.7 a 1 d'un coup se voit -- une silhouette qui disparait d'un
-	-- claquement attire justement l'oeil sur elle.
+	-- Duree du fondu vers REVEAL_PLAYER_FADE. Sans effet tant que les deux niveaux sont egaux.
 	REVEAL_FADE_TIME = 0.45,
 
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau

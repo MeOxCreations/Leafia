@@ -2204,6 +2204,47 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.580 — Le joueur est VRAIMENT bloque, et il disparait completement
+
+### Le verrou du 0.0.579 ne suffisait pas
+
+Couper le `ControlModule` suppose que le PlayerModule se comporte comme celui de Roblox. Le notre est un module
+**custom pose dans Studio**, dont on sait deja qu'il rend du vide dans certains contextes (c'est pour ca que
+`HedgeController` a un secours clavier). Un verrou qui repose dessus peut echouer **en silence**.
+
+Deuxieme verrou, independant : `ContextActionService` avale (`Sink`) les actions de deplacement --
+`CharacterForward`, `Backward`, `Left`, `Right` et `Jump` -- **avant** qu'elles n'atteignent le moindre module de
+controle. Clavier, manette et joystick tactile passent tous par la, quel que soit le PlayerModule installe.
+
+Lie a **priorite HAUTE** : ces actions sont deja liees par le PlayerModule lui-meme, et a priorite egale c'est le
+dernier lie qui gagne -- donc l'ordre de chargement, donc le hasard.
+
+Et si le ControlModule reste introuvable, ca se **dit** maintenant :
+
+```
+[Tutorial] ControlModule introuvable : seul le verrou ContextActionService retient le joueur.
+```
+
+Un verrou a moitie pose qui ne signale rien, c'est exactement comment on se retrouve a marcher pendant une scene.
+
+### Le personnage disparait completement
+
+`SCENE_PLAYER_FADE` : **0.7 -> 1**.
+
+On avait garde une silhouette en se disant que ca aidait le joueur a savoir ou il est. Faux : pendant que le
+grand-pere se bat avec sa poignee, un avatar plante devant la porte -- surtout un GRAND -- masque exactement ce
+qu'on demande au joueur de regarder. Et la camera dit deja ou l'on est.
+
+`CharacterFade` couvre le corps, les decalques (le visage) et les accessoires (cheveux, chapeaux). Un outil tenu
+en main reste visible, ce qui est voulu ailleurs dans le jeu.
+
+`REVEAL_PLAYER_FADE` valait deja 1 : les deux niveaux sont donc EGAUX et ce fondu n'a plus rien a faire. On le
+garde comme knob -- le descendre sous `SCENE_PLAYER_FADE` fait reapparaitre le personnage a l'ouverture.
+
+### A faire dans Studio
+
+Rien. Mais `git pull --rebase origin main` AVANT de reconnecter Rojo, sinon c'est l'ancien code qui tourne.
+
 ## 0.0.579 — On ne marche plus pendant la scene, et la porte s'entrebaille plus
 
 ### Le joueur est bloque pendant la cinematique

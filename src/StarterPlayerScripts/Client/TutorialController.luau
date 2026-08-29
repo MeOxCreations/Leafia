@@ -366,14 +366,47 @@ local function getControls(): any
 	return controls
 end
 
+-- DEUXIEME VERROU, et il ne depend de RIEN. Couper le ControlModule suppose que le PlayerModule se comporte comme
+-- celui de Roblox -- or le notre est un module CUSTOM pose dans Studio, dont on sait deja qu'il rend du vide dans
+-- certains contextes (voir le secours clavier de HedgeController). Un verrou qui repose sur lui peut donc echouer
+-- en silence, et c'est exactement ce qui est arrive.
+--
+-- ContextActionService intercepte les actions de deplacement AVANT qu'elles n'atteignent le moindre module de
+-- controle. On les avale (`Sink`) : clavier, manette et joystick tactile passent tous par la, quel que soit le
+-- PlayerModule installe. Le saut est dans le lot.
+local FREEZE_ACTION = "LeafiaTutorialFreeze"
+
+local function sinkMovement(): Enum.ContextActionResult
+	return Enum.ContextActionResult.Sink
+end
+
 local function freezePlayer()
+	-- PRIORITE HAUTE : les actions de deplacement sont liees par le PlayerModule lui-meme. A priorite egale c'est
+	-- le dernier lie qui gagne, ce qui dependrait de l'ordre de chargement -- donc du hasard.
+	ContextActionService:BindActionAtPriority(
+		FREEZE_ACTION,
+		sinkMovement,
+		false, -- pas de bouton tactile : on BLOQUE une action, on n'en propose pas une
+		Enum.ContextActionPriority.High.Value,
+		Enum.PlayerActions.CharacterForward,
+		Enum.PlayerActions.CharacterBackward,
+		Enum.PlayerActions.CharacterLeft,
+		Enum.PlayerActions.CharacterRight,
+		Enum.PlayerActions.CharacterJump
+	)
+
 	local ctrls = getControls()
 	if ctrls then
 		ctrls:Disable()
+	else
+		-- ANORMAL ET ACTIONNABLE : le blocage tient encore grace au verrou ci-dessus, mais on veut le savoir.
+		-- Un verrou a moitie pose qui ne dit rien, c'est comment on se retrouve a bouger pendant une scene.
+		warn("[Tutorial] ControlModule introuvable : seul le verrou ContextActionService retient le joueur.")
 	end
 end
 
 local function unfreezePlayer()
+	ContextActionService:UnbindAction(FREEZE_ACTION)
 	local ctrls = getControls()
 	if ctrls then
 		ctrls:Enable()
