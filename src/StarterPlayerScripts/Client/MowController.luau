@@ -632,9 +632,27 @@ local function updateMarker(model: Model, turnIntent: number, dt: number)
 		-- marqueur le poserait devant la machine et sous elle. On prend donc le centre de la boite englobante,
 		-- ramene en repere machine -- une seule fois, tant que le modele ne change pas.
 		local center = model:GetBoundingBox()
+		-- UNE TRANSLATION PURE, SANS LA MOINDRE ROTATION. C'est tout le piege.
+		--
+		-- L'ancienne version composait `rootPart.CFrame:Inverse() * CFrame.new(center.Position)`. Or
+		-- `CFrame.new(position)` n'a PAS de rotation : elle est alignee sur les axes du MONDE. Le produit gardait
+		-- donc l'inverse de l'orientation de la machine A L'INSTANT DE LA PRISE, fige dedans pour toujours.
+		--
+		-- A l'image suivante, `rootPart.CFrame * offset` rendait `Rot(maintenant) * Rot(prise)^-1` : l'identite
+		-- tant que la machine n'avait pas tourne, c'est-a-dire les axes du MONDE. La fleche partait donc vers le
+		-- -Z du monde au lieu de l'avant de la tondeuse, et ne suivait ensuite que les ECARTS d'orientation.
+		--
+		-- Ca ressemble a un bug d'orientation du mesh (on va regler MARKER_YAW), alors que c'est le REPERE qui
+		-- est faux. Et ca a l'air juste quand on prend la machine tournee vers -Z -- une seule direction sur
+		-- toutes celles possibles, ce qui suffit a le faire passer pendant tout le prototypage.
+		--
+		-- `PointToObjectSpace` rend un Vector3 : l'emballer dans une CFrame donne une translation nue, sans
+		-- rotation a trainer. `rootPart.CFrame * offset` est alors un repere pose au centre de la machine ET
+		-- ORIENTE COMME ELLE, ce qu'on voulait depuis le debut.
+		local localCenter = rootPart.CFrame:PointToObjectSpace(center.Position)
 		-- SEULEMENT LE CENTRE DE L'ORBITE. L'orientation du mesh et l'angle du virage sont poses PAR IMAGE, plus
 		-- bas : les figer ici reviendrait a garder une fleche immobile.
-		markerOffset = rootPart.CFrame:Inverse() * CFrame.new(center.Position) * CFrame.new(MowConfigs.MARKER_OFFSET)
+		markerOffset = CFrame.new(localCenter + MowConfigs.MARKER_OFFSET)
 	end
 	local offset = markerOffset
 	if not (m and offset) then

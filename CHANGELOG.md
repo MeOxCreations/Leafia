@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.584 — La fleche de direction pointait vers le MONDE, pas vers l'avant de la tondeuse
+
+La fleche partait de travers -- souvent vers la gauche -- alors que la machine allait tout droit.
+
+Ce n'etait ni le mesh, ni `MARKER_YAW`, ni le lissage du virage. C'etait le REPERE.
+
+```lua
+markerOffset = rootPart.CFrame:Inverse() * CFrame.new(center.Position) * CFrame.new(MARKER_OFFSET)
+```
+
+`CFrame.new(position)` n'a **pas de rotation** : elle est alignee sur les axes du MONDE. Le produit conservait
+donc l'inverse de l'orientation de la machine **a l'instant de la prise**, fige dedans.
+
+A l'image suivante, `rootPart.CFrame * offset` valait `Rot(maintenant) * Rot(prise)^-1` -- soit l'identite tant
+que la machine n'avait pas tourne, c'est-a-dire **les axes du monde**. La fleche partait vers le -Z du monde au
+lieu de l'avant de la tondeuse, et ne suivait ensuite que les ECARTS d'orientation.
+
+D'ou le symptome exact decrit : on repose la tondeuse dans une direction, on la reprend, et la fleche part
+ailleurs. Elle avait l'air juste dans un seul cas -- prendre la machine tournee vers -Z -- ce qui suffit a passer
+inapercu pendant tout le prototypage.
+
+L'offset est maintenant une **translation nue**, via `PointToObjectSpace`. `rootPart.CFrame * offset` rend un
+repere pose au centre de la machine ET oriente comme elle, ce qu'on voulait depuis le debut.
+
+Effet de bord voulu : `MARKER_OFFSET` (0, -3.5, 0) s'applique desormais en repere MACHINE et non plus en repere
+monde. Sur un decalage purement vertical et une machine a plat, la valeur ne change rien a l'ecran.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.583 — Cinq feuilles au chargement au lieu de six
 
 `LEAF_COUNT` : **6 -> 5**. Tout le reste s'en deduit (largeur d'une case, position de chaque feuille, boucles de

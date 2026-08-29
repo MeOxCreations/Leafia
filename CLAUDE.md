@@ -982,6 +982,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   auquel il faut ajouter : quand l'autre ecrivain est le moteur, on ne gagne pas en criant plus fort, on gagne en
   parlant en DERNIER.
 
+- **`CFrame.new(position)` N'EST PAS "la position de cet objet" : c'est une pose alignee sur les axes du MONDE.**
+  La composer avec l'inverse d'un repere fige l'orientation de ce repere A CET INSTANT dans le resultat. Vecu sur
+  la fleche de direction de la tondeuse : `rootPart.CFrame:Inverse() * CFrame.new(centre)` gardait l'inverse de
+  l'orientation de la machine au moment de la prise, donc `rootPart.CFrame * offset` rendait l'IDENTITE tant
+  qu'elle n'avait pas tourne -- la fleche partait vers le -Z du MONDE au lieu de l'avant de la machine, et ne
+  suivait plus que les ecarts. Pour un decalage en repere local, il faut une translation NUE :
+  `CFrame.new(cf:PointToObjectSpace(point))`. Symptome trompeur au possible : ca ressemble a un mesh mal oriente
+  (on va tourner le knob de yaw) alors que le calcul de position est le coupable, et surtout **ca marche dans UNE
+  direction** -- celle ou l'objet se trouve aligne sur le monde au moment de la capture. Un bug qui marche dans un
+  cas sur mille dort pendant tout le prototypage. Meme famille que le geste centre-corps mappe sur le centre de
+  l'ECRAN, et que "un axe deduit dans le repere d'une PART doit etre converti avant d'etre applique dans celui
+  d'un JOINT".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
