@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.599 — La camera se penche sur l'entrebaillement, et recule sur la grande ouverture
+
+Elle reculait des le premier mouvement du battant. Elle avance maintenant, et ne recule qu'a la grande
+ouverture.
+
+    poignee              elle se rapproche lentement   (2.2 studs sur 2.6 s)
+    entrebaillement      elle SE PENCHE                (0.8 stud sur 0.4 s)
+    grande ouverture     elle RECULE d'un coup         (3.6 studs sur 0.32 s)
+
+Au premier mouvement du battant, l'envie n'est pas de fuir : c'est de VOIR qui est derriere. Reculer a cet
+instant repondait a une question que le joueur ne se posait pas encore. La camera se penche, comme quelqu'un qui
+veut voir -- et le sursaut arriere n'en est que plus net d'avoir ete precede d'une avancee.
+
+### Le recul suit tout seul
+
+`SCARE_BACK` se calculait deja depuis l'approche, pour ne jamais revenir pile au point de depart -- un recul
+qui annule exactement l'avancee se lit comme une annulation, pas comme un sursaut.
+
+Il compte desormais les DEUX approches : `TRY_PUSH + PRE_OPEN_PUSH + SCARE_EXTRA`, soit 3.6 studs. Ajouter
+l'avancee de curiosite sans l'inscrire dans ce calcul aurait ramene la camera exactement d'ou elle venait, et
+on aurait cherche la cause dans la duree du recul plutot que dans son amplitude.
+
+Le seul reglage qui reste a la main est `SCARE_EXTRA` : de combien elle saute AU-DELA de son point de depart.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `PRE_OPEN_PUSH` | De combien elle se penche sur l'entrebaillement (0.8 stud) |
+| `PRE_OPEN_PUSH_TIME` | En combien de temps (0.4 s), cale sur le mouvement du battant |
+| `SCARE_EXTRA` | Ce qui reste a regler : le depassement du sursaut arriere (0.6) |
 ## 0.0.598 — La porte s'entrebaille sur un marqueur, s'ouvre en grand sur un autre
 
 L'entrebaillement revient, et il n'est plus tenu par un chronometre.

@@ -9,6 +9,7 @@
 -- Deux nombres tenus d'accord a la main finissent toujours par se contredire : le vrai reglage, c'est de combien
 -- la camera saute AU-DELA de son point de depart. Baisse SCARE_EXTRA pour un sursaut plus discret.
 local TRY_PUSH = 2.2
+local PRE_OPEN_PUSH = 0.8
 local SCARE_EXTRA = 0.6
 
 return {
@@ -103,9 +104,17 @@ return {
 	-- Aussi long que le geste de poignee. Un mouvement qui finit avant lui laisserait la camera immobile pendant
 	-- la moitie de la scene, ce qui casse justement l'effet de resserrement continu.
 	TRY_PUSH_TIME = 2.6,
-	-- Puis elle RECULE d'un coup quand la porte s'ouvre, comme si elle avait eu peur. Calcule depuis l'approche
-	-- (voir en tete de fichier) : il ne peut donc plus passer sous elle, quoi qu'on change.
-	SCARE_BACK = TRY_PUSH + SCARE_EXTRA,
+	-- ELLE AVANCE ENCORE UN PEU quand la porte s'entrebaille. On a passe la scene a se rapprocher : au premier
+	-- mouvement du battant on ne recule pas encore, on SE PENCHE -- comme quelqu'un qui veut voir qui est
+	-- derriere. Court et discret : c'est un mouvement de curiosite, pas un nouveau plan.
+	PRE_OPEN_PUSH = PRE_OPEN_PUSH,
+	-- Vif, cale sur l'entrebaillement lui-meme : la camera se penche PENDANT que le battant bouge, pas apres.
+	PRE_OPEN_PUSH_TIME = 0.4,
+	-- Puis elle RECULE d'un coup quand la porte s'ouvre EN GRAND, comme si elle avait eu peur. Calcule depuis les
+	-- DEUX approches (voir en tete de fichier) : il ne peut donc plus passer sous elles, quoi qu'on change. C'est
+	-- pour ca que l'avancee de curiosite entre dans le calcul -- l'ajouter sans la compter ici ferait revenir la
+	-- camera pile a son point de depart, et le sursaut se lirait comme une annulation.
+	SCARE_BACK = TRY_PUSH + PRE_OPEN_PUSH + SCARE_EXTRA,
 	-- VIF. C'est un reflexe, pas un mouvement de camera : au-dela d'une demi-seconde il ne se lit plus comme une
 	-- reaction mais comme un travelling arriere.
 	SCARE_TIME = 0.32,

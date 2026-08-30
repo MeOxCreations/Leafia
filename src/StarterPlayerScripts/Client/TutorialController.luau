@@ -806,14 +806,6 @@ local function prepDoor(): boolean
 	-- une scene doit un jour l'effacer.
 	fadePlayerTo(TutorialConfigs.REVEAL_PLAYER_FADE, TutorialConfigs.REVEAL_FADE_TIME)
 
-	-- ELLE RECULE, D'UN COUP. Comme si elle avait eu peur.
-	--
-	-- C'est le contraire de ce qu'elle faisait ici -- elle avancait sur le grand-pere. Mais on vient de passer
-	-- toute la scene a se rapprocher pendant qu'il se bat avec la poignee : continuer d'avancer prolonge la
-	-- montee au lieu de la RESOUDRE. Le sursaut arriere, lui, la casse net, et c'est ce qui fait l'evenement.
-	--
-	-- Le recul est plus GRAND que l'approche : revenir pile au point de depart se lirait comme une annulation.
-	pushScene(-TutorialConfigs.SCARE_BACK, TutorialConfigs.SCARE_TIME)
 	-- Le grincement part AVEC le mouvement, pas au marqueur de mi-course : c'est l'ouverture elle-meme qu'il
 	-- accompagne, et un bruit qui arrive une fois la porte deja entrebaillee sonne en retard.
 	SoundUtils.play(TutorialConfigs.OPEN_SOUND, SCENE_2D)
@@ -832,6 +824,10 @@ local function preOpenDoor()
 	if not prepDoor() then
 		return
 	end
+	-- ELLE SE PENCHE. On ne recule pas encore : au premier mouvement du battant, l'envie est de VOIR qui est
+	-- derriere, pas de fuir. Le sursaut arriere viendra a la grande ouverture, et il n'en sera que plus net
+	-- d'avoir ete precede d'une avancee.
+	pushScene(TutorialConfigs.PRE_OPEN_PUSH, TutorialConfigs.PRE_OPEN_PUSH_TIME)
 	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME)
 end
 
@@ -841,6 +837,15 @@ local function openDoor()
 	if not prepDoor() then
 		return
 	end
+	-- ELLE RECULE, D'UN COUP. Comme si elle avait eu peur.
+	--
+	-- On vient de passer toute la scene a se rapprocher -- pendant qu'il se bat avec la poignee, puis en se
+	-- penchant sur l'entrebaillement. Continuer d'avancer prolongerait la montee au lieu de la RESOUDRE. Le
+	-- sursaut arriere, lui, la casse net, et c'est ce qui fait l'evenement.
+	--
+	-- Le recul est plus GRAND que les deux approches reunies : revenir pile au point de depart se lirait comme
+	-- une annulation. Le calcul est dans la config, il n'y a pas deux nombres a tenir d'accord ici.
+	pushScene(-TutorialConfigs.SCARE_BACK, TutorialConfigs.SCARE_TIME)
 	swingDoor(TutorialConfigs.DOOR_FULL_ANGLE, TutorialConfigs.DOOR_FULL_TIME, function()
 		-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee -- l'allure par
 		-- defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
