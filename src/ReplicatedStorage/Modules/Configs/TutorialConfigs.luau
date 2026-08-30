@@ -271,6 +271,13 @@ return {
 	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte. Il va JUSQU'AU BOUT, meme si le geste se
 	-- termine avant : un bruit coupe net s'entend comme un bug, alors qu'il deborde ici sans deranger personne.
 	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
+	-- IL S'Y REPREND. Une seule secousse se lit comme une porte un peu dure ; deux, comme une porte qui RESISTE
+	-- et un vieux qui s'acharne -- ce qui est l'histoire qu'on raconte. C'est du rythme, donc ca se juge a
+	-- l'ecran : le nombre est ici pour se regler sans toucher au code.
+	TRY_OPEN_TIMES = 2,
+	-- Le temps de souffle entre deux secousses. A zero elles s'enchainent sans respirer et on dirait une
+	-- animation qui begaie, pas quelqu'un qui reessaie.
+	TRY_OPEN_GAP = 0.25,
 	-- Secondes apres le lancement avant de verifier qu'une animation a REELLEMENT bouge quelque chose. Assez
 	-- tard pour qu'elle ait eu le temps d'ecrire, assez tot pour que le message serve encore.
 	ANIM_CHECK_DELAY = 0.4,

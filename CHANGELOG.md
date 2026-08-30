@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.596 — Le grand-pere s'y reprend a deux fois sur la poignee
+
+Une seule secousse se lisait comme une porte un peu dure. Deux, ca raconte une porte qui **resiste** et un vieux
+qui s'acharne -- ce qui est justement l'histoire de la scene.
+
+L'animation se relance sur SA PROPRE FIN, pas sur un delai pose a cote : une secousse dure ce que dure
+l'animation, et ca reste vrai si on la retouche dans l'editeur. Le bruit de poignee repart avec chaque geste,
+les clones se superposant proprement -- celui d'avant finit de s'eteindre pendant que le nouveau demarre.
+
+Un garde protege la reprise : `openDoor` remet `tryTrack` a nil en coupant les pistes de la porte. Sans ce test,
+une secousse repartirait pendant l'ouverture, sur des parts dont l'angle est desormais ecrit par le code.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `TRY_OPEN_TIMES` | Nombre de secousses (2) |
+| `TRY_OPEN_GAP` | Souffle entre deux (0.25 s). A zero, l'animation begaie au lieu de reessayer |
+
+### A faire dans Studio
+
+Rien. L'animation et le son existent deja.
 ## 0.0.595 — Le grand-pere parle quand il ouvre la porte
 
 Jusqu'ici il ouvrait, se montrait, et repartait sans un mot. Il a maintenant une voix.

@@ -867,9 +867,28 @@ local function playTryOpen()
 	pushScene(TutorialConfigs.TRY_PUSH, TutorialConfigs.TRY_PUSH_TIME)
 	checkAnimMoved(model :: Model, TutorialConfigs.TRY_OPEN_ANIM)
 
+	-- IL S'ACHARNE PLUSIEURS FOIS. La piste se relance sur sa propre fin plutot que sur des delais poses cote a
+	-- cote : une secousse dure ce que dure l'animation, et ca reste vrai si on la retouche dans l'editeur.
+	local attempts = 0
 	local chained = false
 	track.Stopped:Connect(function()
 		if chained then
+			return
+		end
+		attempts += 1
+		if attempts < TutorialConfigs.TRY_OPEN_TIMES then
+			task.delay(TutorialConfigs.TRY_OPEN_GAP, function()
+				-- LA SCENE A PU AVANCER PENDANT LE SOUFFLE. `openDoor` remet `tryTrack` a nil en coupant les
+				-- pistes de la porte : sans ce test, une secousse repartirait pendant l'ouverture, sur des parts
+				-- dont l'angle est desormais ecrit par le code.
+				if tryTrack ~= track then
+					return
+				end
+				-- Le bruit de poignee repart avec le geste. Les clones se superposent proprement : celui d'avant
+				-- finit de s'eteindre pendant que le nouveau demarre, ce qui s'entend comme un vieux qui insiste.
+				trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, SCENE_2D)
+				track:Play()
+			end)
 			return
 		end
 		chained = true
