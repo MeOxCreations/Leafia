@@ -791,6 +791,17 @@ local function openDoor()
 					-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
 					TutorialConfigs.REVEAL_ZOOM_SPEED
 				)
+
+				-- IL PARLE. Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui
+				-- protege le mouvement de la porte, et sans ce test la replique partirait meme si la scene a ete
+				-- coupee entre-temps -- une voix seule, sur un plan qui n'existe plus.
+				local speechToken = doorSwingToken
+				task.delay(TutorialConfigs.SPEECH_DELAY, function()
+					if doorSwingToken ~= speechToken then
+						return
+					end
+					SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
+				end)
 			end)
 		end)
 	end)

@@ -178,6 +178,17 @@ return {
 	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
 	REVEAL_ZOOM_SPEED = 6,
 
+	-- IL PARLE. Sa replique part quand la porte a FINI de s'ouvrir et que la camera s'est posee sur lui : parler
+	-- pendant que le battant bouge encore le ferait repondre a quelqu'un qu'il n'a pas encore vu.
+	--
+	-- 2D comme les autres sons de la scene (voir SCENE_2D dans le controller) : une replique RACONTE, elle ne
+	-- vient pas d'un point de la carte. Spatialisee, elle baisserait avec la distance de la camera pendant le plan
+	-- large -- alors qu'on vient justement de tourner l'oreille vers lui.
+	SPEECH_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_1" },
+	-- Respiration avant qu'il parle. A zero il enchaine sans avoir eu le temps de regarder qui est la ; trop haut,
+	-- le silence devient un blanc.
+	SPEECH_DELAY = 0.45,
+
 	-- ===== LE JOUEUR S'EFFACE, MAIS PAS TOUT DE SUITE =====
 	-- LA SCENE A DEUX TEMPS, et le personnage n'a pas le meme role dans les deux.
 	--

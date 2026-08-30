@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.595 — Le grand-pere parle quand il ouvre la porte
+
+Jusqu'ici il ouvrait, se montrait, et repartait sans un mot. Il a maintenant une voix.
+
+Sa replique part **quand la porte a fini de s'ouvrir**, pas pendant : parler pendant que le battant bouge encore
+le ferait repondre a quelqu'un qu'il n'a pas encore vu. Elle arrive juste apres le resserrement de camera sur
+lui, avec une respiration reglable (`SPEECH_DELAY`, 0.45 s) pour qu'il ait le temps de regarder qui est la.
+
+Le son est joue en **2D**, comme les autres sons de la scene. Une replique RACONTE : spatialisee, elle baisserait
+avec la distance de la camera pendant le plan large, alors qu'on vient justement de tourner l'oreille vers lui.
+
+Si la scene est coupee pendant l'attente, la replique ne part pas. `task.delay` ne connait pas le jeton qui
+protege le mouvement de la porte : sans ce test, on entendrait une voix seule sur un plan qui n'existe plus.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `SPEECH_SOUND` | Chemin du son sous SoundService |
+| `SPEECH_DELAY` | Respiration avant qu'il parle (0.45 s) |
+
+### A faire dans Studio
+
+**Le son ne voyage PAS avec le code.** Il vit dans `SoundService`, que Rojo ne synchronise pas.
+
+Il faut donc, de chaque cote :
+
+    SoundService > Sounds > Scenes > Scene1 > Voices > Oldman_scene_speech_1
+
+Sans lui, la scene se joue normalement mais en silence, et la console affiche un avertissement de `SoundUtils`.
+
+Limite connue : le clone est nettoye au bout de 5 secondes (`Debris`, dans `SoundUtils.play`). Une replique plus
+longue serait coupee -- il faudra alors allonger ce delai plutot que decouper la phrase.
 ## 0.0.594 — Le plan de sortie est pris DE COTE, et le joueur ne disparait plus
 
 ### La camera etait dans le mur
