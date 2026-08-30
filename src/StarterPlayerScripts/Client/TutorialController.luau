@@ -96,6 +96,9 @@ local knockAsideTrack: AnimationTrack? = nil -- le pas de cote, joue quand le gr
 -- le pas de cote : c'est le seul endroit qui sait quand le grand-pere part. Une variable de fonction evite de
 -- deplacer tout un bloc pour un seul appel, et l'appel reste garde par un test.
 local playAside: (() -> ())? = nil
+-- MEME MOTIF QUE `playAside` : la fermeture a besoin de `swingDoor`, defini bien plus bas, alors que c'est
+-- `endScene` -- plus haut -- qui sait quand le grand-pere se met en marche.
+local closeDoorBehind: (() -> ())? = nil
 local holdConns: { RBXScriptConnection } = {} -- surveillent la fin des pistes tenues, pour les figer
 local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
@@ -584,6 +587,13 @@ local function endScene()
 		task.delay(TutorialConfigs.KNOCK_ASIDE_DELAY, aside)
 	end
 
+	-- LA PORTE SE REFERME DERRIERE LUI. Lancee ici parce que c'est l'instant ou il se met en marche : avant, il
+	-- est encore sur le pas de la porte et la surveillance tournerait pour rien.
+	local closeDoor = closeDoorBehind
+	if closeDoor then
+		closeDoor()
+	end
+
 	-- LE PLAN DE SORTIE. On garde les barres et le blocage pendant qu'il dure : c'est encore du cinema, et rendre
 	-- les commandes au milieu ferait marcher le joueur dans son propre plan.
 	local shot = exitShotCFrame()
@@ -730,6 +740,34 @@ local function swingDoor(target: number, seconds: number, onDone: (() -> ())?)
 	end)
 end
 
+-- ELLE SE REFERME DERRIERE LUI. On surveille sa distance au point d'arrivee plutot que d'attendre un signal de
+-- fin de marche : la marche est jouee par le SERVEUR, et lui demander de prevenir le client demanderait un
+-- remote pour un detail de decor. La position, elle, se replique toute seule.
+--
+-- Distance HORIZONTALE : le grand-pere descend peut-etre une marche en chemin, et une difference de hauteur ne
+-- doit pas retarder la fermeture.
+closeDoorBehind = function()
+	local model = findModel(TutorialConfigs.GRANDPA_NAME)
+	local root = if model then model:FindFirstChild("HumanoidRootPart") else nil
+	local target = findByName(TutorialConfigs.OLDMAN_WALK_TARGET)
+	if not (root and root:IsA("BasePart")) or not (target and target:IsA("BasePart")) then
+		return -- pas de quoi mesurer : la porte reste ouverte, la scene continue
+	end
+	local rootPart = root :: BasePart
+	local targetPart = target :: BasePart
+	local deadline = os.clock() + TutorialConfigs.DOOR_CLOSE_TIMEOUT
+	task.spawn(function()
+		while os.clock() < deadline do
+			local gap = rootPart.Position - targetPart.Position
+			if Vector3.new(gap.X, 0, gap.Z).Magnitude <= TutorialConfigs.DOOR_CLOSE_DISTANCE then
+				swingDoor(0, TutorialConfigs.DOOR_CLOSE_TIME)
+				return
+			end
+			RunService.Heartbeat:Wait()
+		end
+	end)
+end
+
 local function openDoor()
 	local model = door
 	if not model then
@@ -778,31 +816,25 @@ local function openDoor()
 	stopTrack(tryTrack)
 	shakeTrack, tryTrack = nil, nil
 
-	-- L'OUVERTURE, EN DEUX TEMPS. Chaque temps s'enchaine sur la FIN du precedent, jamais sur des delais poses
-	-- cote a cote : des delais deriveraient des que le jeu rame, et la grande ouverture partirait pendant que la
-	-- porte s'entrebaille encore.
-	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME, function()
-		task.delay(TutorialConfigs.DOOR_PAUSE, function()
-			swingDoor(TutorialConfigs.DOOR_FULL_ANGLE, TutorialConfigs.DOOR_FULL_TIME, function()
-				-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee --
-				-- l'allure par defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le
-				-- moment qu'il souligne.
-				CameraEffects.SetFovOffset(
-					-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
-					TutorialConfigs.REVEAL_ZOOM_SPEED
-				)
+	-- L'OUVERTURE, D'UN SEUL MOUVEMENT. Le marqueur tombe sur le geste de bras du grand-pere : c'est sa main qui
+	-- pousse le battant, donc le battant part avec elle et ne s'arrete plus en route.
+	swingDoor(TutorialConfigs.DOOR_FULL_ANGLE, TutorialConfigs.DOOR_FULL_TIME, function()
+		-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee -- l'allure par
+		-- defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
+		CameraEffects.SetFovOffset(
+			-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
+			TutorialConfigs.REVEAL_ZOOM_SPEED
+		)
 
-				-- IL PARLE. Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui
-				-- protege le mouvement de la porte, et sans ce test la replique partirait meme si la scene a ete
-				-- coupee entre-temps -- une voix seule, sur un plan qui n'existe plus.
-				local speechToken = doorSwingToken
-				task.delay(TutorialConfigs.SPEECH_DELAY, function()
-					if doorSwingToken ~= speechToken then
-						return
-					end
-					SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
-				end)
-			end)
+		-- IL PARLE. Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui protege le
+		-- mouvement de la porte, et sans ce test la replique partirait meme si la scene a ete coupee entre-temps
+		-- -- une voix seule, sur un plan qui n'existe plus.
+		local speechToken = doorSwingToken
+		task.delay(TutorialConfigs.SPEECH_DELAY, function()
+			if doorSwingToken ~= speechToken then
+				return
+			end
+			SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
 		end)
 	end)
 end

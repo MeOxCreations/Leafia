@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.597 — La porte s'ouvre sur son geste, et se referme derriere lui
+
+### L'ouverture suit enfin sa main
+
+Le marqueur `OuvertureDoorEvent` a ete deplace dans l'animation : il tombe maintenant sur le GESTE DE BRAS du
+grand-pere, celui qui pousse le battant. La porte s'ouvre donc **d'un seul mouvement**, avec sa main.
+
+Elle s'ouvrait jusqu'ici en deux temps -- un entrebaillement sec, une pause d'une seconde et demie, puis la
+grande ouverture. C'etait juste tant que le marqueur tombait au DEBUT de l'animation : il restait du temps
+devant pour raconter quelque chose. Derriere un marqueur pose sur le geste lui-meme, ces deux temps
+redevenaient ce qu'on cherchait a eviter partout ailleurs dans cette scene : un enchainement au chronometre,
+qui se decale des qu'on retouche l'animation.
+
+`DOOR_HALF_ANGLE`, `DOOR_HALF_TIME` et `DOOR_PAUSE` disparaissent. Un geste, un mouvement.
+
+### Elle se referme derriere lui
+
+Une porte laissee grande ouverte, ca ne ressemble a personne -- et surtout pas a un vieux chez lui.
+
+Elle se referme quand il **APPROCHE** de son point d'arrivee, pas quand il y est : arrivee et fermeture au meme
+instant se lisent comme un declic scripte, alors qu'un battant qui retombe pendant qu'il marche encore passe
+inapercu. C'est exactement ce qu'on veut d'un detail de decor.
+
+Le client surveille la distance plutot que d'attendre un signal du serveur. La marche est jouee cote serveur,
+mais sa position se replique toute seule : demander un remote pour un detail de decor serait payer cher un
+evenement qu'on peut simplement observer. La mesure est HORIZONTALE, pour qu'une marche a descendre en chemin
+ne retarde pas la fermeture.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `DOOR_CLOSE_DISTANCE` | Distance en studs du point d'arrivee qui declenche la fermeture (6) |
+| `DOOR_CLOSE_TIME` | Duree de la fermeture (1.2 s). Plus rapide que l'ouverture : l'ouverture etait l'evenement, la fermeture n'est que du rangement |
+| `DOOR_CLOSE_TIMEOUT` | Filet : au-dela, on renonce (30 s). Sans lui, une boucle par image tournerait pour toujours si le grand-pere restait bloque |
+
+### A faire dans Studio
+
+Le marqueur `OuvertureDoorEvent` doit etre pose sur le geste de bras dans `Scene1_oldman_OpenDoor`. La part
+`OldManWalkTo` doit exister dans le Workspace -- elle servait deja a la marche.
 ## 0.0.596 — Le grand-pere s'y reprend a deux fois sur la poignee
 
 Une seule secousse se lisait comme une porte un peu dure. Deux, ca raconte une porte qui **resiste** et un vieux

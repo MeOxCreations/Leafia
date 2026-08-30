@@ -303,19 +303,34 @@ return {
 	-- Et chaque temps se regle ici, a la seconde. Le meme reglage dans une animation demande de rouvrir Blender,
 	-- de reexporter, de recharger -- et de refaire ca a chaque essai.
 
-	-- ELLE S'ENTREBAILLE D'UN COUP. Mouvement sec : c'est la surprise, la ralentir l'enleverait.
-	DOOR_HALF_ANGLE = 60,
-	DOOR_HALF_TIME = 0.35,
-	-- Puis elle se FIGE, le temps que le grand-pere se montre.
-	DOOR_PAUSE = 1.5,
-	-- ET ELLE S'OUVRE EN GRAND, LENTEMENT. C'est le moment ou l'on decouvre le grand-pere : a vitesse pleine il
-	-- etait fini avant qu'on ait le temps de regarder. Deux moments differents, deux allures -- et desormais deux
-	-- reglages separes, au lieu d'un facteur de vitesse applique a un segment.
+	-- ELLE S'OUVRE EN GRAND, D'UN SEUL MOUVEMENT, sur le marqueur : c'est SA MAIN qui la pousse. La scene s'est
+	-- ouverte en deux temps (un entrebaillement, une pause, puis la grande ouverture) tant que le marqueur tombait
+	-- au debut de l'animation. Il a ete deplace sur le geste de bras, et deux temps derriere un seul marqueur
+	-- redevenaient ce qu'on cherchait a eviter : un enchainement au chronometre, qui se decale des qu'on retouche
+	-- l'animation. Un geste, un mouvement.
+	--
+	-- LENTEMENT : c'est le moment ou l'on decouvre le grand-pere. A vitesse pleine il etait fini avant qu'on ait
+	-- eu le temps de regarder.
 	DOOR_FULL_ANGLE = 100,
 	DOOR_FULL_TIME = 2.2,
 	-- La porte s'ouvre du mauvais cote ? Mettre true. Le sens depend de l'orientation du modele dans Studio : ca
 	-- ne se DEDUIT pas, ca se voit a l'ecran.
 	DOOR_OPEN_INVERT = false,
+
+	-- ===== ELLE SE REFERME DERRIERE LUI =====
+	-- Une porte qu'on laisse grande ouverte en partant, ca ne ressemble a personne -- et surtout pas a un vieux
+	-- chez lui. Elle se referme quand il APPROCHE de son point d'arrivee, pas quand il y est : arrivee et
+	-- fermeture au meme instant se lisent comme un declic scripte, alors qu'un battant qui retombe pendant qu'il
+	-- marche encore passe inapercu -- et c'est exactement ce qu'on veut d'un detail de decor.
+	--
+	-- Distance en studs a `OLDMAN_WALK_TARGET` sous laquelle elle part. La monter la referme plus tot.
+	DOOR_CLOSE_DISTANCE = 6,
+	-- Elle retombe plus vite qu'elle ne s'est ouverte : l'ouverture etait l'evenement, la fermeture n'est que du
+	-- rangement. Lui donner la meme lenteur en ferait un second evenement, qui volerait l'attention au depart.
+	DOOR_CLOSE_TIME = 1.2,
+	-- Filet : au-dela, on renonce. Sans lui, une boucle par image tournerait pour toujours le jour ou le
+	-- grand-pere reste bloque en chemin.
+	DOOR_CLOSE_TIMEOUT = 30,
 
 	-- ===== LE MARQUEUR SUR LA PORTE =====
 	-- Un point d'exclamation flottant au-dessus de la porte, tant qu'on n'a pas toque. Le halo dit "cet objet
