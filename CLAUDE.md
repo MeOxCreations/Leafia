@@ -995,6 +995,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   l'ECRAN, et que "un axe deduit dans le repere d'une PART doit etre converti avant d'etre applique dans celui
   d'un JOINT".
 
+- **Le TABLEAU CIRCULAIRE : recycler N cases au lieu de creer et detruire en boucle.** Propose par Wesem le
+  30/08/2026, PAS ENCORE applique ni mesure chez nous -- note ici comme outil disponible, pas comme probleme
+  resolu. Le principe tient en trois nombres : DEBUT (ou commence la file), QUANTITE (combien de cases sont
+  occupees) et MAX (la taille du tableau). Arrive a la derniere case on repart a la premiere, d'ou le nom. On
+  cree ses N objets UNE FOIS au demarrage et on les reutilise a l'infini : plus aucun `Instance.new` ni
+  `:Destroy()` pendant le jeu, donc plus de pics du ramasse-miettes. Le bon cas d'usage est un flux CONTINU
+  d'objets de meme nature et de duree de vie courte (particules d'herbe coupee, traces de tondeuse, historique
+  de positions) -- pas un decor pose une fois pour toutes, ou le pool ne sert a rien. Piege a eviter : c'est une
+  optimisation, donc elle ne se justifie qu'apres une MESURE. La derniere en date (4.71 ms a vide, 6.92 ms avec
+  le systeme de taille) laisse trois fois de marge sous le seuil ; sans un ralentissement constate, on ajouterait
+  de la complexite pour un gain qu'on ne saurait meme pas voir. Meme famille que "un drop de FPS vu DANS Studio
+  n'est pas forcement un bug du jeu" : mesurer AVANT de corriger.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
