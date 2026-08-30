@@ -768,11 +768,20 @@ closeDoorBehind = function()
 	end)
 end
 
-local function openDoor()
+-- CE QUI ACCOMPAGNE LE PREMIER MOUVEMENT DU BATTANT, quel qu'il soit. Ecrit une seule fois et appele par les
+-- DEUX marqueurs : si `PreOpenEvent` manque -- il n'existe que dans l'animation, que Rojo ne synchronise pas --
+-- la grande ouverture le fait elle-meme. Sans ce filet, une animation sans le marqueur laisserait `doorBasePivot`
+-- vide et la porte ne bougerait pas du tout, en silence.
+local doorPrepped = false
+local function prepDoor(): boolean
+	if doorPrepped then
+		return true
+	end
 	local model = door
 	if not model then
-		return
+		return false
 	end
+	doorPrepped = true
 	-- LA POSE FERMEE, RELEVEE MAINTENANT. Le gond fait partie du modele : une fois la porte tournee, son pivot a
 	-- tourne avec elle. Relire la base a chaque etape ferait donc repartir la rotation d'une base deja tournee.
 	doorBasePivot = model:GetPivot()
@@ -815,9 +824,23 @@ local function openDoor()
 	stopTrack(shakeTrack)
 	stopTrack(tryTrack)
 	shakeTrack, tryTrack = nil, nil
+	return true
+end
 
-	-- L'OUVERTURE, D'UN SEUL MOUVEMENT. Le marqueur tombe sur le geste de bras du grand-pere : c'est sa main qui
-	-- pousse le battant, donc le battant part avec elle et ne s'arrete plus en route.
+-- IL DEVERROUILLE : LA PORTE S'ENTREBAILLE. Premier des deux marqueurs.
+local function preOpenDoor()
+	if not prepDoor() then
+		return
+	end
+	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME)
+end
+
+-- SA MAIN POUSSE LE BATTANT : LA PORTE S'OUVRE EN GRAND. Second marqueur. Aucune attente entre les deux n'est
+-- codee ici : elle dure ce que le grand-pere met entre ses deux gestes.
+local function openDoor()
+	if not prepDoor() then
+		return
+	end
 	swingDoor(TutorialConfigs.DOOR_FULL_ANGLE, TutorialConfigs.DOOR_FULL_TIME, function()
 		-- LE GRAND-PERE APPARAIT : l'image se resserre une seconde fois, sur LUI. Cadence imposee -- l'allure par
 		-- defaut de CameraEffects mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
@@ -860,6 +883,10 @@ local function playGrandpa()
 	grandpaTrack = track
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = false
+	-- LES DEUX MOMENTS DE LA PORTE, tenus par l'animation. `GetMarkerReachedSignal` est une lecture LOCALE de la
+	-- piste en cours : contrairement a `GetKeyframeSequenceAsync`, il ne part pas sur le reseau et ne peut donc
+	-- pas rater son coup pour toute une session.
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_PRE_EVENT):Connect(preOpenDoor)
 	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_START_EVENT):Connect(openDoor)
 	-- C'EST LA FIN DE L'ANIMATION QUI TERMINE LA SCENE. Une duree en dur et une animation finissent toujours par
 	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.

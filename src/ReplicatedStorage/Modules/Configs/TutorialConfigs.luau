@@ -285,6 +285,10 @@ return {
 	-- ELLE MENE LA SCENE. C'est elle qui declenche la porte, et c'est SA FIN qui termine la scene.
 	GRANDPA_ANIM = "Scene1_oldman_OpenDoor",
 	-- Marqueur DANS l'animation du grand-pere : l'instant ou sa main pousse la porte.
+	-- DEUX MARQUEURS, DEUX MOUVEMENTS. Le premier tombe quand il deverrouille : la porte s'entrebaille. Le second
+	-- tombe sur son geste de bras : elle s'ouvre en grand. Aucun chronometre entre les deux -- c'est l'animation
+	-- qui tient le rythme, et elle reste juste quoi qu'on retouche dans l'editeur.
+	DOOR_PRE_EVENT = "PreOpenEvent",
 	DOOR_START_EVENT = "OuvertureDoorEvent",
 
 	-- Le grincement de la porte qui s'ouvre. Joue au DEBUT du mouvement, avec lui : un bruit qui arrive une fois
@@ -303,14 +307,13 @@ return {
 	-- Et chaque temps se regle ici, a la seconde. Le meme reglage dans une animation demande de rouvrir Blender,
 	-- de reexporter, de recharger -- et de refaire ca a chaque essai.
 
-	-- ELLE S'OUVRE EN GRAND, D'UN SEUL MOUVEMENT, sur le marqueur : c'est SA MAIN qui la pousse. La scene s'est
-	-- ouverte en deux temps (un entrebaillement, une pause, puis la grande ouverture) tant que le marqueur tombait
-	-- au debut de l'animation. Il a ete deplace sur le geste de bras, et deux temps derriere un seul marqueur
-	-- redevenaient ce qu'on cherchait a eviter : un enchainement au chronometre, qui se decale des qu'on retouche
-	-- l'animation. Un geste, un mouvement.
-	--
-	-- LENTEMENT : c'est le moment ou l'on decouvre le grand-pere. A vitesse pleine il etait fini avant qu'on ait
-	-- eu le temps de regarder.
+	-- ELLE S'ENTREBAILLE, sur `DOOR_PRE_EVENT`. Mouvement sec : c'est la surprise, la ralentir l'enleverait. Puis
+	-- elle attend -- et cette attente n'est plus un reglage : elle dure le temps que le grand-pere met entre ses
+	-- deux gestes dans l'animation.
+	DOOR_HALF_ANGLE = 32,
+	DOOR_HALF_TIME = 0.35,
+	-- ELLE S'OUVRE EN GRAND, sur `DOOR_START_EVENT`, quand sa main pousse le battant. LENTEMENT : c'est le moment
+	-- ou l'on decouvre le grand-pere, et a vitesse pleine il etait fini avant qu'on ait eu le temps de regarder.
 	DOOR_FULL_ANGLE = 100,
 	DOOR_FULL_TIME = 2.2,
 	-- La porte s'ouvre du mauvais cote ? Mettre true. Le sens depend de l'orientation du modele dans Studio : ca

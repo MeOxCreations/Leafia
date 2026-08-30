@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.598 — La porte s'entrebaille sur un marqueur, s'ouvre en grand sur un autre
+
+L'entrebaillement revient, et il n'est plus tenu par un chronometre.
+
+    PreOpenEvent        il deverrouille   ->  elle s'entrebaille (32 deg, sec)
+    (l'animation)       il se redresse    ->  elle attend
+    OuvertureDoorEvent  sa main pousse    ->  elle s'ouvre en grand (100 deg, lent)
+
+L'attente entre les deux n'est plus un reglage : elle dure exactement ce que le grand-pere met entre ses deux
+gestes. Retoucher l'animation dans l'editeur suffit desormais a regler le rythme de la porte, sans rouvrir un
+fichier de config ni relancer pour verifier.
+
+C'est le meme principe que partout ailleurs dans cette scene : c'est l'animation qui dit QUAND, pas un minuteur
+pose a cote qui finit toujours par se decaler d'elle.
+
+### Le filet
+
+Tout ce qui accompagne le PREMIER mouvement du battant -- relever sa pose fermee, resserrer l'image, le recul de
+surprise, le grincement, l'arret des pistes de la porte -- est ecrit une seule fois et appele par les DEUX
+marqueurs.
+
+Raison : les marqueurs vivent dans l'ANIMATION, que Rojo ne synchronise pas. Sur une place ou `PreOpenEvent`
+n'existe pas encore, la grande ouverture prepare la porte elle-meme. Sans ce filet, la pose fermee ne serait
+jamais relevee et **la porte ne bougerait pas du tout, en silence** -- le pire des symptomes, celui ou l'on
+cherche un bug dans le calcul d'angle alors que rien n'a jamais ete initialise.
+
+### A faire dans Studio
+
+Deux marqueurs dans `Scene1_oldman_OpenDoor` :
+
+- `PreOpenEvent` sur le deverrouillage
+- `OuvertureDoorEvent` sur le geste de bras qui pousse
+
+Sans le premier, la scene marche encore mais la porte s'ouvre en un seul mouvement.
 ## 0.0.597 — La porte s'ouvre sur son geste, et se referme derriere lui
 
 ### L'ouverture suit enfin sa main
