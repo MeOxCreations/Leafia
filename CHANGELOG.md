@@ -2222,14 +2222,20 @@ l'autre. Le module est desormais le point unique du PAS : ce qu'on en entend, et
 qui lui arrive. Pousse par autre chose, il fumerait sans avoir fait un pas. Avec un seuil et non zero, sinon
 l'emetteur clignote a chaque arret (MoveDirection garde des miettes une image ou deux apres le relachement).
 
-### Deux pieges evites
+### Ou elle vit, et pourquoi ancree
 
-La part est **ancree** : non ancree, elle tomberait sous la carte et emettrait la-bas. L'effet "ne marcherait
-pas" alors qu'il jouerait parfaitement, ailleurs -- deja vecu sur l'impact des coups a la porte.
+Elle est rangee dans le **HumanoidRootPart** : elle disparait donc avec le personnage, sans rien a nettoyer a la
+main au respawn.
 
-Elle vit dans le **Workspace**, pas dans le personnage : rangee dedans, elle en decalerait la boite englobante,
-donc son `GetPivot`, et tout ce qui calcule un placement dessus partirait de travers sans que rien ne le
-signale. En contrepartie rien ne la nettoie toute seule, d'ou la coupe explicite a `CharacterRemoving`.
+Et elle est **ancree**, parce qu'etre enfant d'une part ne veut PAS dire etre soude a elle. Sans ancre ni joint,
+elle tomberait sous la carte et emettrait la-bas -- l'effet aurait l'air de ne pas marcher alors qu'il jouerait
+parfaitement, ailleurs. Deja vecu sur l'impact des coups a la porte.
+
+Ancree, elle vit en coordonnees MONDE et ne suit pas le HRP toute seule : c'est la boucle qui la pose a chaque
+image. C'est justement ce qu'on veut -- elle reste au SOL pendant qu'il saute.
+
+La connexion Heartbeat, elle, ne part pas avec le personnage : coupee explicitement a `CharacterRemoving`, sinon
+elle tournerait sur une part detruite et s'empilerait a chaque respawn.
 
 ### A faire dans Studio
 

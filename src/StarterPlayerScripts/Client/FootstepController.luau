@@ -59,9 +59,12 @@ local function stopDust()
 		dustConn:Disconnect()
 		dustConn = nil
 	end
-	if dustPart then
-		dustPart:Destroy()
+	local part = dustPart
+	if part then
 		dustPart = nil
+		if part.Parent then
+			part:Destroy()
+		end
 	end
 end
 
@@ -84,11 +87,14 @@ local function startDust(char: Model)
 		return
 	end
 
-	-- ANCREE, ET DANS LE WORKSPACE. Deux pieges evites d'un coup :
-	--   1. non ancree, elle tomberait sous la carte et emettrait la-bas -- l'effet "ne marcherait pas" alors
-	--      qu'il jouerait parfaitement, ailleurs ;
-	--   2. rangee dans le personnage, elle en decalerait la BOITE ENGLOBANTE, donc son `GetPivot` -- et tout ce
-	--      qui calcule un placement dessus partirait de travers, sans que rien ne le signale.
+	-- RANGEE DANS LE HRP, ET ANCREE. Les deux comptent, et pour des raisons opposees :
+	--   * dans le HRP, elle disparait avec le personnage -- rien a nettoyer a la main au respawn ;
+	--   * ANCREE, parce qu'etre enfant d'une part ne veut PAS dire etre soude a elle. Non ancree et sans joint,
+	--     elle tomberait sous la carte et emettrait la-bas : l'effet aurait l'air de ne pas marcher alors qu'il
+	--     jouerait parfaitement, ailleurs.
+	--
+	-- Ancree, elle vit en coordonnees MONDE et ne suit donc pas le HRP toute seule : c'est la boucle plus bas qui
+	-- la pose a chaque image, ce qui est justement ce qu'on veut -- elle reste au SOL pendant qu'il saute.
 	local part = Instance.new("Part")
 	part.Name = "BackRootPart"
 	part.Size = DUST_SIZE
@@ -98,7 +104,7 @@ local function startDust(char: Model)
 	part.CanTouch = false
 	part.Transparency = 1
 	part.CastShadow = false
-	part.Parent = workspace
+	part.Parent = hrp
 
 	template:Clone().Parent = part
 	dustPart = part
@@ -142,7 +148,8 @@ function FootstepController.init()
 		onCharacter(player.Character)
 	end
 	player.CharacterAdded:Connect(onCharacter)
-	-- La part vit dans le Workspace, donc rien ne la nettoie toute seule quand le personnage disparait.
+	-- La part part avec le personnage, mais PAS la connexion Heartbeat : elle continuerait de tourner sur une
+	-- part detruite a chaque mort, et s'empilerait a chaque respawn.
 	player.CharacterRemoving:Connect(stopDust)
 end
 
