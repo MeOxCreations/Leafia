@@ -92,6 +92,13 @@ local fillConn: RBXScriptConnection? = nil
 --- ferait deduire a luau-lsp un type de tableau depuis le premier enfant, qui refuserait tous les suivants.
 local function make(class: string, props: { [string]: any }, parent: Instance?): Instance
 	local inst = Instance.new(class)
+	-- LE LISERE PAR DEFAUT SAUTE ICI, UNE FOIS POUR TOUTES. Roblox pose `BorderSizePixel = 1` sur tout GuiObject :
+	-- un trait d'un pixel autour de chaque element, qu'on ne remarque pas un par un mais qui salit l'ensemble --
+	-- et qu'on oublie sur exactement celui ou ca se voit. Pose AVANT les proprietes demandees, donc un appelant
+	-- qui en veut un peut toujours le redemander.
+	if inst:IsA("GuiObject") then
+		(inst :: GuiObject).BorderSizePixel = 0
+	end
 	for key, value in pairs(props) do
 		(inst :: any)[key] = value
 	end
