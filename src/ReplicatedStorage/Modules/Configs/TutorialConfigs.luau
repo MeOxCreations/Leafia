@@ -403,15 +403,6 @@ return {
 	--
 	-- Vide ("") pour le couper : il passe alors directement a son idle.
 	OLDMAN_ARRIVE_ANIM = "rbxassetid://101362993241676",
-	-- OU IL FINIT, en bas des marches. Une part posee dans le Workspace, comme `OLDMAN_WALK_TARGET`.
-	--
-	-- POURQUOI IL EN FAUT UNE : une animation Roblox ne DEPLACE pas le personnage, elle bouge ses membres autour
-	-- d'un point d'ancrage qui, lui, ne bouge pas. Sans ce glissement en parallele, le grand-pere aurait l'air de
-	-- descendre puis REMONTERAIT d'un coup a la fin de l'animation, revenu a sa vraie position. C'est deja pour
-	-- cette raison que la marche deplace le modele elle-meme au lieu de compter sur l'animation.
-	--
-	-- Absente, le geste se joue sur place : il descend visuellement puis remonte. Le service le DIT alors.
-	OLDMAN_STAIRS_TARGET = "OldManWalkTo2",
 	-- LE MARQUEUR DE FIN DE DESCENTE, pose dans l'animation. A cet instant le corps est visuellement EN BAS des
 	-- marches, alors que son point d'ancrage est reste en haut : c'est le seul moment ou l'on peut poser l'ancrage
 	-- en bas sans que rien ne saute a l'ecran. Une image plus tot le corps n'y est pas encore, une image plus tard

@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.612 — La descente du grand-pere se MESURE, elle ne se cale plus a la main
+
+Trois versions ont essaye de faire coincider sa descente avec un point pose dans Studio : le faire glisser
+pendant l'animation (il traversait le sol), puis le faire marcher jusqu'a une seconde part (il fallait la placer
+au stud pres), puis y teleporter son ancrage.
+
+Toutes demandaient de DEVINER la distance que l'animation parcourt -- et de la re-deviner a chaque retouche du
+geste. C'etait la mauvaise question.
+
+### Le code sait la mesurer
+
+Au marqueur `EndEventIsDown`, l'ecart entre la ou le corps est VRAIMENT et la ou il serait SANS animation, c'est
+exactement ce que le geste a parcouru :
+
+    repos  = RootPart.CFrame * C0 * C1:Inverse()
+    ecart  = corps.Position - repos.Position
+
+Deplacer le modele de cet ecart laisse le corps immobile a l'ecran et fait rattraper son ancrage. Quelle que
+soit la distance descendue, sans aucun reglage.
+
+`OldManWalkTo2` ne sert plus a rien : la part peut etre supprimee du Workspace.
+
+### Le joint se cherche par ses extremites
+
+Pas par son nom, pas par sa place dans l'arbre : un rig sorti de Blender ne nomme pas ses Motor6D comme un rig
+Roblox. Celui qui porte le corps est simplement celui dont la `Part0` est la racine.
+
+L'animation ecrit dans `Transform`, jamais dans `C0` -- c'est pour ca que la pose de repos reste lisible pendant
+que le geste joue, et donc que l'ecart est mesurable.
 ## 0.0.611 — Le grand-pere descend, souffle, puis repart
 
 Il s'enfoncait dans le sol. La version precedente le faisait GLISSER pendant sa descente, alors que l'animation

@@ -301,15 +301,48 @@ local function playArrival(model: Model)
 	local landed = false
 	t:GetMarkerReachedSignal(TutorialConfigs.OLDMAN_ARRIVE_END_EVENT):Connect(function()
 		landed = true
-		local target = findByName(TutorialConfigs.OLDMAN_STAIRS_TARGET)
+		-- ON MESURE CE QUE L'ANIMATION A DEPLACE, on ne le devine pas.
+		--
+		-- L'ecart entre la ou le torse est VRAIMENT et la ou il serait SANS animation, c'est exactement ce que le
+		-- geste a parcouru. Deplacer le modele de cet ecart laisse le corps immobile a l'ecran et fait rattraper
+		-- son ancrage -- quelle que soit la distance descendue, et sans aucune part a caler a la main.
+		--
+		-- Une part posee dans Studio aurait demande de deviner cette distance, puis de la re-deviner a chaque
+		-- retouche de l'animation.
 		local root = model:FindFirstChild("HumanoidRootPart")
-		if not (target and target:IsA("BasePart") and root and root:IsA("BasePart")) then
+		if not (root and root:IsA("BasePart")) then
 			return
 		end
 		local rootPart = root :: BasePart
-		-- ON GARDE SON ORIENTATION : la part ne dit QUE l'endroit. Reprendre aussi sa rotation le ferait pivoter
-		-- d'un coup selon la facon dont elle a ete posee dans Studio.
-		local to = CFrame.new((target :: BasePart).Position) * (rootPart.CFrame - rootPart.CFrame.Position)
+
+		-- LE JOINT SE CHERCHE PAR SES EXTREMITES, jamais par son nom ni sa place dans l'arbre : un rig sorti de
+		-- Blender ne nomme pas ses Motor6D comme un rig Roblox, et celui qui porte le corps est simplement celui
+		-- dont la Part0 est la racine.
+		local rootJoint: Motor6D? = nil
+		for _, d in ipairs(model:GetDescendants()) do
+			if d:IsA("Motor6D") and d.Part0 == rootPart then
+				rootJoint = d
+				break
+			end
+		end
+		local joint = rootJoint
+		local body = if joint then joint.Part1 else nil
+		if not (joint and body) then
+			warn(
+				`[Tutorial] Aucun Motor6D partant de la RootPart de "{model.Name}" : impossible de mesurer sa `
+					.. "descente, il remontera a la fin du geste."
+			)
+			return
+		end
+
+		-- La ou le corps SERAIT sans animation : `Part0.CFrame * C0 * C1:Inverse()`. L'animation ecrit dans
+		-- `Transform`, jamais dans `C0` -- c'est donc l'ecart entre cette pose de repos et la position reelle qui
+		-- porte tout le deplacement du geste.
+		local atRest = rootPart.CFrame * joint.C0 * joint.C1:Inverse()
+		local moved = (body :: BasePart).CFrame.Position - atRest.Position
+
+		-- HORIZONTAL ET VERTICAL tous les deux : il descend des marches, la hauteur fait partie du trajet.
+		local to = rootPart.CFrame + moved
 		model:PivotTo(to * rootPart.CFrame:Inverse() * model:GetPivot())
 	end)
 
