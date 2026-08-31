@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.603 — Un reflet traverse le titre de chapitre
+
+Une fois le titre pose, une vague le traverse de gauche a droite : chaque lettre s'estompe et revient, decalee
+sur sa voisine.
+
+**On ne peut pas ECLAIRCIR du blanc sur du noir** -- il n'y a rien au-dessus du blanc. Le reflet se fait donc
+par la transparence : la lettre recule jusqu'a 0.7, puis revient. L'oeil lit un passage de lumiere.
+
+Le titre est aussi pose plus a droite (marge 3 % -> 1.2 %) et un peu plus petit.
+
+### Une seule boucle, encore
+
+Le reflet aurait pu etre une seconde boucle lancee apres l'arrivee. Il est dans la MEME, et ce n'est pas de
+l'economie : deux boucles successives cesseraient de replacer les lettres entre elles, et une police arrivee en
+retard pendant le reflet les laisserait mal espacees. C'est exactement le bug que ce module existe pour eviter.
+
+`math.sin` fait l'aller-retour tout seul et vaut exactement zero aux deux bouts : aucun residu de transparence
+ne peut survivre au passage de la vague. Les lettres sont quand meme clees a zero en sortie de boucle, au cas ou
+elle s'arreterait en pleine vague -- une lettre a moitie transparente resterait ainsi pour toute la duree de
+lecture.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `SHINE_DELAY` | Attente apres la pose de la derniere lettre (0.2 s) |
+| `SHINE_STAGGER` | Retard entre deux lettres : c'est lui qui fait GLISSER le reflet (0.04 s) |
+| `SHINE_TIME` | Aller-retour d'une lettre (0.3 s) |
+| `SHINE_PEAK` | Transparence au sommet (0.7) |
 ## 0.0.602 — La scene s'ouvre sur un carton de chapitre
 
 `CHAPTER 1 : THE GRANDFATHER` s'ecrit dans la bande noire du bas, lettre par lettre, en vague. Il tient deux

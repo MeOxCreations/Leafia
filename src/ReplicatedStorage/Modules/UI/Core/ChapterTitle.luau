@@ -34,7 +34,16 @@ local ROW_HEIGHT = 0.044 -- hauteur de la ligne, en part d'ecran : c'est elle qu
 -- centre de l'image libre -- c'est la place d'un cartouche de film, pas d'un titre de menu.
 local ROW_ALIGN = 1
 -- Marge gardee au bord, en part de la largeur de la ligne. Colle au bord, le texte a l'air d'avoir ete coupe.
-local ROW_MARGIN = 0.03
+local ROW_MARGIN = 0.012
+
+-- ===== LE REFLET =====
+-- Une vague qui traverse le mot une fois qu'il est pose : chaque lettre s'estompe et revient, decalee sur sa
+-- voisine. On ne peut pas ECLAIRCIR du blanc sur du noir -- il n'y a rien au-dessus du blanc -- donc le reflet
+-- se fait par la transparence : la lettre recule, puis revient. L'oeil lit un passage de lumiere.
+local SHINE_DELAY = 0.2 -- apres la pose de la derniere lettre
+local SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
+local SHINE_TIME = 0.3 -- aller-retour d'UNE lettre
+local SHINE_PEAK = 0.7 -- transparence au sommet de la vague
 
 -- Retard entre deux lettres. C'est LUI qui fait la vague : a zero elles arrivent ensemble et il ne reste qu'un
 -- fondu. Trop grand, on lit le mot plus vite qu'il ne s'affiche.
@@ -126,6 +135,11 @@ function ChapterTitle.show(text: string)
 
 		local t0 = os.clock()
 		local total = (#letters - 1) * LETTER_STAGGER + LETTER_TIME
+		-- LE REFLET EST DANS LA MEME BOUCLE que l'arrivee, pas dans une seconde lancee apres. Deux boucles
+		-- successives cesseraient de replacer les lettres entre elles, et une police arrivee en retard pendant le
+		-- reflet les laisserait mal espacees -- exactement le bug qu'on evite ici.
+		local shineStart = total + SHINE_DELAY
+		local shineEnd = shineStart + (#letters - 1) * SHINE_STAGGER + SHINE_TIME
 
 		-- UNE SEULE BOUCLE ECRIT LA POSITION, et elle RE-MESURE a chaque image.
 		--
@@ -154,11 +168,16 @@ function ChapterTitle.show(text: string)
 				local eased = 1 - (1 - e) * (1 - e)
 				label.Position = UDim2.new(0, math.round(x), 0.5, math.round((1 - eased) * size * LETTER_RISE))
 				label.AnchorPoint = Vector2.new(0, 0.5)
-				label.TextTransparency = 1 - eased
+
+				-- L'ARRIVEE PUIS LE REFLET, jamais les deux en meme temps : la lettre n'est rendue au reflet
+				-- qu'une fois posee. `sin` fait l'aller-retour tout seul et vaut exactement zero aux deux bouts,
+				-- donc aucun residu de transparence ne peut rester une fois la vague passee.
+				local shine = math.clamp((now - shineStart - (i - 1) * SHINE_STAGGER) / SHINE_TIME, 0, 1)
+				label.TextTransparency = math.max(1 - eased, math.sin(shine * math.pi) * SHINE_PEAK)
 				x += label.AbsoluteSize.X
 			end
 
-			if now >= total then
+			if now >= shineEnd then
 				break
 			end
 			RunService.RenderStepped:Wait()
@@ -166,6 +185,12 @@ function ChapterTitle.show(text: string)
 
 		if token ~= mine or not frame.Parent then
 			return
+		end
+
+		-- CLE A ZERO. La boucle peut sortir en pleine vague (fenetre redimensionnee, sortie anticipee) et laisser
+		-- une lettre a moitie transparente pour toute la duree de lecture.
+		for _, label in ipairs(letters) do
+			label.TextTransparency = 0
 		end
 
 		task.wait(HOLD)
