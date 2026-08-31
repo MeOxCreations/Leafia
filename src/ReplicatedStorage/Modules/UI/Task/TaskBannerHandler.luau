@@ -77,6 +77,21 @@ local function resolve(): boolean
 	local gui = player and player:FindFirstChildOfClass("PlayerGui")
 	local sg = gui and gui:FindFirstChild(GUI_NAME)
 	if not (sg and sg:IsA("ScreenGui")) then
+		-- ON LE DIT, ET ON NOMME CE QU'ON A TROUVE A LA PLACE. Cette sortie etait muette : le bandeau ne
+		-- s'affichait pas, aucune erreur, et rien ne distinguait "interface absente" de "code jamais appele".
+		-- Lister le contenu du PlayerGui repond en une ligne -- Rojo ne synchronise PAS StarterGui, donc une
+		-- interface presente dans une place manque tres bien dans l'autre.
+		local names = {}
+		if gui then
+			for _, child in ipairs(gui:GetChildren()) do
+				names[#names + 1] = child.Name
+			end
+		end
+		warn(
+			`[TaskBanner] "{GUI_NAME}" absente du PlayerGui : aucun objectif ne s'affichera. `
+				.. `Presentes : {if #names > 0 then table.concat(names, ", ") else "aucune"}. `
+				.. "Rojo ne synchronise pas StarterGui : l'interface doit exister dans CETTE place."
+		)
 		return false
 	end
 	local model = sg:FindFirstChild(TEMPLATE_NAME)
