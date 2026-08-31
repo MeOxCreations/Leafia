@@ -178,7 +178,7 @@ local function buildRow(parent: Instance): Frame
 		BackgroundTransparency = 1,
 		Position = UDim2.fromScale(0.08, 0.413),
 		Size = UDim2.fromScale(0.118, 1.169),
-		Image = TaskConfigs.ICON_SHAPE,
+		Image = TaskConfigs.ICON_OUTLINE,
 		ImageColor3 = WHITE,
 		ZIndex = 1,
 	}, row)
@@ -189,7 +189,7 @@ local function buildRow(parent: Instance): Frame
 		BackgroundTransparency = 1,
 		Position = UDim2.fromScale(0.079, 0.419),
 		Size = UDim2.fromScale(0.085, 0.862),
-		Image = TaskConfigs.ICON_SHAPE,
+		Image = TaskConfigs.ICON_FILL,
 		ZIndex = 2,
 	}, row)
 	make("UIGradient", { Color = TaskConfigs.TINTS.Green, Rotation = 32 }, iconColor)

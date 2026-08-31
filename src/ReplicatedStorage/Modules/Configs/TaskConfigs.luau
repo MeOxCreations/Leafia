@@ -38,8 +38,10 @@ TaskConfigs.ICONS = {
 	Settings = "rbxassetid://72145892854726",
 }
 
--- La pastille posee SOUS l'icone, celle qui porte la couleur de la tache.
-TaskConfigs.ICON_SHAPE = "rbxassetid://112410882732688"
+-- LA PASTILLE, EN DEUX IMAGES SUPERPOSEES. Le contour est dessine a part de son remplissage : c'est ce qui
+-- permet de teinter l'interieur sans toucher au trait, qui reste blanc quelle que soit la couleur de la tache.
+TaskConfigs.ICON_OUTLINE = "rbxassetid://112410882732688"
+TaskConfigs.ICON_FILL = "rbxassetid://80842701479373"
 
 -- LES TEINTES DE PASTILLE. Un degrade et non une couleur plate : c'est ce qui donne le relief, et une pastille
 -- unie a cote d'une barre degradee a l'air d'un element oublie.
