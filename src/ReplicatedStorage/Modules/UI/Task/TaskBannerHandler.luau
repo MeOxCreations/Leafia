@@ -158,11 +158,9 @@ local function buildRow(parent: Instance): Frame
 		Position = UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(1, 1),
 	}, rule)
-	make("UIGradient", {
-		Color = ColorSequence.new(Color3.fromHex("3e8b1b"), Color3.fromHex("94ff19")),
-		Rotation = 80,
-		Transparency = FADE_OUT_SEQ,
-	}, fontColor)
+	-- BLANC, et non un degrade de verts : ce UIGradient ne sert qu'au FONDU (sa transparence). Lui donner deux
+	-- couleurs teinterait le trait, alors que la couleur vient du fond du Frame.
+	make("UIGradient", { Color = ColorSequence.new(WHITE), Rotation = 80, Transparency = FADE_OUT_SEQ }, fontColor)
 
 	-- ===== LA PASTILLE ET SON ICONE =====
 	-- Trois couches empilees : le contour, la couleur de la tache, puis le dessin. Les ZIndex ne sont pas
@@ -174,7 +172,7 @@ local function buildRow(parent: Instance): Frame
 		Position = UDim2.fromScale(0.08, 0.413),
 		Size = UDim2.fromScale(0.118, 1.169),
 		Image = TaskConfigs.ICON_SHAPE,
-		ImageColor3 = Color3.fromRGB(0, 0, 0),
+		ImageColor3 = WHITE,
 		ZIndex = 1,
 	}, row)
 
