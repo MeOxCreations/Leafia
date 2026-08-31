@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.609 — Le grand-pere se tient le dos en arrivant
+
+Il traversait le jardin puis reprenait sa pose de repos, d'un coup. Il descend maintenant les marches en se
+tenant le dos.
+
+C'est ce GESTE, et non une replique, qui dit son age et pourquoi il ne peut plus s'occuper de son jardin. La
+scene explique le contrat du jeu -- "je suis trop vieux, occupe-t'en" -- sans une ligne de texte a traduire.
+
+L'animation rend la main a l'idle quand elle s'acheve : c'est ELLE qui dit quand elle a fini, pas un delai pose
+a cote qui se decalerait a la premiere retouche dans l'editeur.
+
+### Chaque sortie retombe sur l'idle
+
+Pas d'animation configuree, pas d'Animator, chargement en echec : dans les trois cas le grand-pere revient a sa
+pose de repos. Le laisser fige sur sa derniere image de MARCHE serait pire que pas d'arrivee du tout -- il
+resterait le pied en l'air, et on chercherait un bug de deplacement.
+
+`Looped` est force a `false` cote code : le reglage de l'editeur n'est qu'une suggestion, et une piste bouclee
+par erreur reste a plein poids POUR TOUJOURS -- l'idle ne reviendrait jamais.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `OLDMAN_ARRIVE_ANIM` | L'animation d'arrivee. Vide (`""`) pour la couper : il passe alors directement a son idle |
 ## 0.0.608 — Le tuto n'a plus ni chat ni liste de joueurs
 
 Dans le didacticiel le joueur est SEUL. Une liste a un seul nom et une fenetre de chat vide n'apportent rien, et

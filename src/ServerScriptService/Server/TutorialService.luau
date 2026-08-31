@@ -256,6 +256,46 @@ end
 -- une part ancree : `MoveTo` partait, ne bougeait rien, et rendait "chemin barre" au bout de son delai. Ce n'est
 -- pas un contournement -- pour un personnage de scene qui suit un trajet decide a l'avance, un glissement est
 -- plus SUR qu'un pathfinding : il ne peut ni s'accrocher a un meuble ni tomber d'un bord.
+-- IL ARRIVE, ET IL SE TIENT LE DOS. Un geste ponctuel, joue une fois, qui rend la main a l'idle quand il
+-- s'acheve -- c'est LUI qui dit quand il a fini, pas un delai pose a cote qui se decalerait si on retouche
+-- l'animation.
+--
+-- Chaque sortie retombe sur `restoreIdle` : sans animation d'arrivee, sans Animator, ou si le chargement echoue,
+-- le grand-pere doit se retrouver dans sa pose de repos. Le laisser fige sur sa derniere image de marche serait
+-- pire que pas d'arrivee du tout.
+local function playArrival(model: Model)
+	local animId = TutorialConfigs.OLDMAN_ARRIVE_ANIM
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	if animId == "" or not animator then
+		restoreIdle(model)
+		return
+	end
+
+	local anim = Instance.new("Animation")
+	anim.AnimationId = animId
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(anim)
+	end)
+	if not ok or typeof(result) ~= "Instance" then
+		warn(`[Tutorial] Animation d'arrivee introuvable ({animId}) : il passe directement a son idle.`)
+		restoreIdle(model)
+		return
+	end
+
+	local t = result :: AnimationTrack
+	-- AU-DESSUS DE L'IDLE, sinon la pose de repos la melangerait : a priorite egale Roblox ne choisit pas, il
+	-- MOYENNE les deux.
+	t.Priority = Enum.AnimationPriority.Action
+	-- FORCE A FALSE cote code : le reglage de l'editeur n'est qu'une suggestion, et une piste bouclee par erreur
+	-- reste a plein poids POUR TOUJOURS -- l'idle ne reviendrait jamais.
+	t.Looped = false
+	t.Stopped:Connect(function()
+		restoreIdle(model)
+	end)
+	t:Play()
+end
+
 local function walkOldMan()
 	if walking then
 		return
@@ -353,15 +393,16 @@ local function walkOldMan()
 			end
 			task.wait()
 		end
-		-- ON ARRETE LA MARCHE, PUIS on pose l'idle. L'ordre compte : la marche est en priorite Movement, donc plus
-		-- forte que l'idle -- la laisser tourner masquerait completement la pose qu'on vient de mettre.
+		-- ON ARRETE LA MARCHE, PUIS on joue son arrivee. L'ordre compte : la marche est en priorite Movement, donc
+		-- plus forte que l'idle -- la laisser tourner masquerait completement la pose qu'on vient de mettre.
 		if track then
 			(track :: AnimationTrack):Stop()
 		end
-		restoreIdle(model)
+		playArrival(model)
 		walking = false
 	end)
 end
+
 
 local function onPlayerAdded(player: Player)
 	player.CharacterAdded:Connect(placeCharacter)
