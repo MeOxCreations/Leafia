@@ -58,6 +58,8 @@ local FILL_SNAP = 0.004
 local FILL_HEIGHT = 0.9
 
 local WHITE = Color3.fromRGB(255, 255, 255)
+-- Le vert de la tonte, pose sur le fond de chaque ligne.
+local ROW_TINT = Color3.fromRGB(98, 206, 59)
 
 -- Le degrade de la jauge, repris de la maquette.
 local FILL_GRADIENT = ColorSequence.new({
@@ -171,9 +173,13 @@ local function buildRow(parent: Instance): Frame
 		Size = UDim2.fromScale(1.049, 9.714),
 		ZIndex = 0, -- derriere tout le reste de la ligne : c'est un fond, pas un element
 	}, rule)
-	-- BLANC, et non un degrade de verts : ce UIGradient ne sert qu'au FONDU (sa transparence). Lui donner deux
-	-- couleurs teinterait le trait, alors que la couleur vient du fond du Frame.
-	make("UIGradient", { Color = ColorSequence.new(WHITE), Rotation = 80, Transparency = FADE_OUT_SEQ }, fontColor)
+	-- LE VERT DE LA TONTE. Il vient du gradient et non du fond du Frame : le fond reste blanc, donc le gradient
+	-- le teinte franchement au lieu de s'assombrir sur une couleur deja posee.
+	--
+	-- C'est une couleur de TACHE, pas une couleur du bandeau : le jour ou une tache de ramassage s'affiche a
+	-- cote, elle devra porter la sienne. La constante est donc le point unique a remplacer par une valeur venue
+	-- de la tache, comme la teinte de la pastille juste en dessous.
+	make("UIGradient", { Color = ColorSequence.new(ROW_TINT), Rotation = 80, Transparency = FADE_OUT_SEQ }, fontColor)
 
 	-- ===== LA PASTILLE ET SON ICONE =====
 	-- Trois couches empilees : le contour, la couleur de la tache, puis le dessin. Les ZIndex ne sont pas
