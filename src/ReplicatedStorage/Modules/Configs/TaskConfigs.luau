@@ -76,4 +76,16 @@ TaskConfigs.TINTS = {
 	}),
 }
 
+-- TROIS TACHES DE DEMONSTRATION, pour la commande admin `tasks`. Elles servent a JUGER l'animation : trois
+-- lignes montrent la cascade, ce qu'une seule ne peut pas faire, et trois icones differentes verifient d'un coup
+-- d'oeil que la pastille prend bien la teinte de sa tache.
+--
+-- Elles ne sont branchees sur aucune progression : c'est un banc d'essai visuel, pas un debut de systeme de
+-- quetes.
+TaskConfigs.DEMO_TASKS = {
+	{ icon = "Mower", tint = TaskConfigs.TINTS.Green, text = "MOW THE LAWN", reward = "+ 50", currency = TaskConfigs.CURRENCIES.Coins, progress = 0.35 },
+	{ icon = "Clippings", tint = TaskConfigs.TINTS.Brown, text = "RAKE THE CLIPPINGS", reward = "+ 30", currency = TaskConfigs.CURRENCIES.Coins, progress = 0.6 },
+	{ icon = "Shears", tint = TaskConfigs.TINTS.Blue, text = "TRIM THE HEDGES", reward = "+ 80", currency = TaskConfigs.CURRENCIES.Coins, progress = 0.9 },
+}
+
 return TaskConfigs

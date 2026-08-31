@@ -8,6 +8,8 @@ local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
+local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local AdminCommandConfigs = require(ReplicatedStorage.Modules.Configs.AdminCommandConfigs)
 
 local AdminCommandController = {}
@@ -162,6 +164,25 @@ local function execute()
 		return
 	end
 	clearPredictor()
+
+	-- LES COMMANDES PUREMENT VISUELLES NE VONT PAS AU SERVEUR. Rejouer une animation d'interface ne quitte pas
+	-- cet ecran : l'envoyer demanderait un remote et une reponse pour un effet que le serveur ne voit meme pas.
+	-- Traitees AVANT lui, sinon il repondrait "commande inconnue" a une commande qui a fait son travail.
+	local word = text:lower():match("^(%S+)")
+	if word == "tasks" then
+		if text:lower():match("%soff%s*$") then
+			TaskBannerHandler.hide()
+			out.Text = "Bandeau d'objectifs range."
+		else
+			TaskBannerHandler.show(TaskConfigs.DEMO_TASKS)
+			out.Text = `Bandeau rejoue : {#TaskConfigs.DEMO_TASKS} taches de demonstration.`
+		end
+		out.Visible = true
+		box.Text = ""
+		box:CaptureFocus()
+		return
+	end
+
 	local r = remote
 	if not r then
 		out.Text = "Remote admin indisponible."

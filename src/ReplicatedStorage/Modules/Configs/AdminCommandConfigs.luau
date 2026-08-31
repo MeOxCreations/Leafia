@@ -23,6 +23,9 @@ local COMMANDS: { Command } = {
 	{ name = "resetdata", usage = "resetdata [joueur]", description = "Remet a zero pieces, reputation, XP et save" },
 	{ name = "tuto", usage = "tuto [joueur]", description = "Teleporte vers le didacticiel (place Tutorial)" },
 	{ name = "hub", usage = "hub [joueur]", description = "Teleporte vers le hub principal (Leafia)" },
+	-- CLIENTE : traitee par AdminCommandController et jamais envoyee au serveur. Rejouer une animation
+	-- d'interface ne quitte pas cet ecran.
+	{ name = "tasks", usage = "tasks [off]", description = "Rejoue le bandeau d'objectifs (3 taches de demo)" },
 	{ name = "tutodone", usage = "tutodone [joueur]", description = "Marque le tuto fini sur la save active (START entre dans le jeu)" },
 }
 
