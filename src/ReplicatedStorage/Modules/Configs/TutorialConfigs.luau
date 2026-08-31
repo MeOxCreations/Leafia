@@ -374,7 +374,11 @@ return {
 	-- La recompense est ECRITE, pas calculee : rien ne la verse encore. Le jour ou elle le sera, elle viendra de
 	-- la source qui paie -- une valeur affichee qui ne correspond pas a ce qu'on recoit est pire que pas de
 	-- valeur du tout.
-	TASK_REWARD = "+ 50 XP",
+	-- SANS L'UNITE : l'image de la monnaie est affichee juste a cote et le dit deja. "+ 50 XP" a cote d'une piece
+	-- se lit comme une contradiction.
+	TASK_REWARD = "+ 50",
+	-- Une cle de `TaskConfigs.CURRENCIES`. Sans elle, aucune image ne s'affiche a cote du chiffre.
+	TASK_CURRENCY = "Coins",
 	-- L'ICONE ET LA TEINTE de cette tache. Cles de `TaskConfigs` et non ids en dur : l'image se change a un seul
 	-- endroit, et une cle fausse se signale au lieu d'afficher un carre vide.
 	TASK_ICON = "Mower",

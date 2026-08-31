@@ -1417,6 +1417,7 @@ function TutorialController.init()
 				tint = TaskConfigs.TINTS[TutorialConfigs.TASK_TINT],
 				text = TutorialConfigs.TASK_TITLE,
 				reward = TutorialConfigs.TASK_REWARD,
+				currency = TaskConfigs.CURRENCIES[TutorialConfigs.TASK_CURRENCY],
 				progress = 0,
 			},
 		})

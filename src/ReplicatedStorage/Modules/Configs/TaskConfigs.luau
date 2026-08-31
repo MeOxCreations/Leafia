@@ -43,6 +43,13 @@ TaskConfigs.ICONS = {
 TaskConfigs.ICON_OUTLINE = "rbxassetid://112410882732688"
 TaskConfigs.ICON_FILL = "rbxassetid://80842701479373"
 
+-- CE QUE LA TACHE PAIE, affiche a droite de la recompense. Le texte dit COMBIEN, l'image dit EN QUOI : ecrire
+-- "+ 50 XP" a cote d'une piece dirait deux fois la meme chose, et se contredirait le jour ou l'une des deux
+-- change.
+TaskConfigs.CURRENCIES = {
+	Coins = "rbxassetid://85340926781465",
+}
+
 -- LES TEINTES DE PASTILLE. Un degrade et non une couleur plate : c'est ce qui donne le relief, et une pastille
 -- unie a cote d'une barre degradee a l'air d'un element oublie.
 TaskConfigs.TINTS = {
