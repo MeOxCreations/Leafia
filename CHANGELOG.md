@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.601 — La console ne se noie plus sous les logs d'herbe
+
+Cinq zones donnaient quinze lignes au demarrage, avec des tailles, des positions et des listes d'objets. Une
+console qu'on ne lit plus ne sert personne -- c'est la meme raison qui interdit deja de warn sur un evenement
+normal.
+
+Les quatre `print` de `GrassZoneController` passent sous un interrupteur, `DEBUG_LOGS`, eteint par defaut.
+
+**Ils ne sont pas supprimes**, et c'est deliberé : chacun a ete ecrit apres un vrai probleme.
+
+- Le compte de touffes et le profil diagnostiquent une pelouse qui rame. Sans ce nombre, on regle la densite au
+  hasard.
+- La liste NOMMEE des objets qui masquent l'herbe a revele que c'etait le SOL lui-meme qui la mangeait. Un
+  compteur sans les noms n'aurait rien dit.
+- Les positions ont servi le jour ou un semis est reste en coordonnees monde pendant que sa zone bougeait.
+
+Les reecrire le jour ou l'herbe deraille couterait bien plus cher que ce `false`. Passer `DEBUG_LOGS` a `true`
+en haut du fichier les rallume tous.
+
+Les `warn` ne bougent pas : ils ne parlent que de choses anormales ET actionnables.
 ## 0.0.600 — La porte ne rentre plus dans le mur, et on l'entend se refermer
 
 ### Elle s'ouvrait trop loin

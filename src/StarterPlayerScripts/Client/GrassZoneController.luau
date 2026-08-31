@@ -27,6 +27,18 @@ local GrassZoneConfigs = require(ReplicatedStorage.Modules.Configs.GrassZoneConf
 --      le monde au boot, soit exactement le cas qu'on veut eviter.
 -- On n'ajoute PAS `and not KeyboardEnabled` : l'emulateur d'appareil de Studio garde le clavier du PC, donc ce
 -- combo rendrait le profil mobile intestable (deja au journal).
+-- ===== LES LOGS DE DIAGNOSTIC =====
+-- ETEINTS PAR DEFAUT : cinq zones donnaient quinze lignes au boot, et une console qu'on ne lit plus ne sert
+-- personne -- c'est la meme raison qui interdit ici de warn sur un evenement normal.
+--
+-- ILS NE SONT PAS SUPPRIMES POUR AUTANT. Chacun a ete ecrit apres un vrai probleme : le compte de touffes
+-- diagnostique une pelouse qui rame, la liste NOMMEE des objets qui masquent l'herbe a revele que c'etait le SOL
+-- lui-meme qui la mangeait, et les positions ont servi le jour ou un semis est reste en coordonnees monde
+-- pendant que sa zone bougeait. Les reecrire couterait plus cher que ce `false`.
+--
+-- Passer a true quand l'herbe fait n'importe quoi.
+local DEBUG_LOGS = false
+
 local MOBILE = UserInputService.TouchEnabled
 
 local DENSITY = if MOBILE then GrassZoneConfigs.MOBILE_DENSITY else GrassZoneConfigs.DENSITY
@@ -879,10 +891,12 @@ local function populate(zone: Zone)
 	-- ON DIT COMBIEN, ET SOUS QUEL PROFIL. Une pelouse qui rame se diagnostique avec un NOMBRE, pas avec une
 	-- impression : sans ce compte, on ne sait pas si le probleme vient de la densite, du rayon d'animation ou
 	-- d'autre chose entierement, et on regle des boutons au hasard.
-	print(
-		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffes, {flowersMade} fleur(s) `
-			.. `(profil {if MOBILE then "MOBILE" else "PC"}, densite {DENSITY}, rayon d'animation {WIND_VIEW}).`
-	)
+	if DEBUG_LOGS then
+		print(
+			`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffes, {flowersMade} fleur(s) `
+				.. `(profil {if MOBILE then "MOBILE" else "PC"}, densite {DENSITY}, rayon d'animation {WIND_VIEW}).`
+		)
+	end
 
 	if skipped > 0 then
 		-- On NOMME les objets, pas seulement leur nombre : le jour ou une pelouse se vide entierement, cette ligne dit
@@ -894,10 +908,12 @@ local function populate(zone: Zone)
 		if #blockers > 6 then
 			names[#names + 1] = `... +{#blockers - 6}`
 		end
-		print(
-			`[GrassZone] "{zone.part.Name}" : {skipped} touffe(s) retirees sous {#blockers} objet(s) `
-				.. `[{table.concat(names, ", ")}]`
-		)
+		if DEBUG_LOGS then
+			print(
+				`[GrassZone] "{zone.part.Name}" : {skipped} touffe(s) retirees sous {#blockers} objet(s) `
+					.. `[{table.concat(names, ", ")}]`
+			)
+		end
 	end
 
 	zone.folder = folder
@@ -933,10 +949,12 @@ end
 local function logZone(zone: Zone)
 	local first = zone.clumps[1]
 	local where = if first then tostring(first.part.Position) else "aucune"
-	print(
-		`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) en {#zone.buckets} pave(s) | zone {zone.part.Size} @ `
-			.. `{zone.part.Position} | 1re touffe @ {where}`
-	)
+	if DEBUG_LOGS then
+		print(
+			`[GrassZone] "{zone.part.Name}" : {#zone.clumps} touffe(s) en {#zone.buckets} pave(s) | zone {zone.part.Size} @ `
+				.. `{zone.part.Position} | 1re touffe @ {where}`
+		)
+	end
 end
 
 -- Refait le semis, EN DIFFERE et UNE SEULE FOIS. Un redimensionnement a la souris emet des dizaines de changements
@@ -1581,7 +1599,7 @@ function GrassZoneController.init()
 		-- brancher workspace.DescendantAdded ferait passer chaque part de personnage par le test pour rien.
 		connections[#connections + 1] = root.DescendantAdded:Connect(consider)
 
-		if #zones == 0 then
+		if #zones == 0 and DEBUG_LOGS then
 			print(`[GrassZone] Aucune zone "{prefix}..." au demarrage (elles peuvent arriver ensuite par le streaming).`)
 		end
 
