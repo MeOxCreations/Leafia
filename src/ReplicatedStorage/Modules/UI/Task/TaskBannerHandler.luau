@@ -339,18 +339,9 @@ local function buildHeader(parent: Instance)
 		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 2,
 	}, parent)
-	make("UIGradient", {
-		Name = "UIGradientTitle",
-		-- A 90, le degrade descend du HAUT vers le BAS des lettres : le mot s'assombrit vers sa base. A zero il
-		-- irait de gauche a droite et le premier caractere serait plus clair que le dernier.
-		Rotation = 90,
-		Color = ColorSequence.new({
-			ColorSequenceKeypoint.new(0, Color3.fromHex("ffffff")),
-			ColorSequenceKeypoint.new(0.635, Color3.fromHex("ffffff")),
-			ColorSequenceKeypoint.new(0.645, Color3.fromHex("e5e5e5")),
-			ColorSequenceKeypoint.new(1, Color3.fromHex("e2e2e2")),
-		}),
-	}, title)
+	-- PAS DE DEGRADE SUR LE TITRE. Il n'allait que du blanc a un gris tres clair : invisible a cette taille, et
+	-- il assombrissait le mot juste assez pour lui faire perdre du contraste sur le fond clair du jeu. L'ombre
+	-- portee juste en dessous fait deja tout le travail de relief.
 
 	-- L'OMBRE EST UN SECOND LABEL, legerement decale et SOUS le titre. Un contour (`TextStroke`) entourerait les
 	-- lettres de tous les cotes ; ici on veut une ombre PORTEE, donc un decalage.
