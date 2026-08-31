@@ -108,6 +108,7 @@ local function startDust(char: Model)
 
 	template:Clone().Parent = part
 	dustPart = part
+	print(`[Footstep] Poussiere au pas : part "{part.Name}" posee sous {hrp:GetFullName()}`)
 
 	local rayParams = RaycastParams.new()
 	rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -148,6 +149,9 @@ function FootstepController.init()
 		onCharacter(player.Character)
 	end
 	player.CharacterAdded:Connect(onCharacter)
+	-- ON DIT QU'ON EST LA, comme tous les autres controllers. Un module muet ne se distingue pas d'un module
+	-- qui n'est pas appele : le silence a coute un aller-retour de diagnostic complet.
+	print("[Footstep] Pret : son de marche coupe, poussiere branchee sur le personnage.")
 	-- La part part avec le personnage, mais PAS la connexion Heartbeat : elle continuerait de tourner sur une
 	-- part detruite a chaque mort, et s'empilerait a chaque respawn.
 	player.CharacterRemoving:Connect(stopDust)
