@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.600 — La porte ne rentre plus dans le mur, et on l'entend se refermer
+
+### Elle s'ouvrait trop loin
+
+`DOOR_FULL_ANGLE` passe de 100 a **85 degres**. A 100 le battant traversait le mur derriere lui : il n'a aucune
+collision, rien ne l'arrete que ce chiffre. 85 plutot que 90 parce qu'une porte s'arrete AVANT le mur, elle ne
+vient pas s'y coller.
+
+### On l'entend se refermer
+
+La fermeture etait muette. Le bruit part maintenant avec le battant, comme a l'ouverture.
+
+Une difference avec les autres sons de la scene : celui-ci est **spatialise sur la porte**, pas en 2D. La scene
+est finie a ce moment-la, la camera est rendue au joueur, et ce n'est plus un son qui RACONTE mais un bruit du
+monde -- il doit donc baisser quand le joueur s'eloigne.
+
+Faute de son dedie, c'est le grincement d'ouverture qui est reutilise (`CLOSE_SOUND`). Ce qui manque, c'est le
+"clac" du loquet. Le jour ou il existe dans SoundService, il suffit de changer ce chemin.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `DOOR_FULL_ANGLE` | 85 deg. A ajuster selon la place derriere ta porte |
+| `CLOSE_SOUND` | Le bruit du battant qui retombe |
 ## 0.0.599 — La camera se penche sur l'entrebaillement, et recule sur la grande ouverture
 
 Elle reculait des le premier mouvement du battant. Elle avance maintenant, et ne recule qu'a la grande

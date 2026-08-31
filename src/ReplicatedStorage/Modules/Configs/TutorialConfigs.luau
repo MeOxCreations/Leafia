@@ -323,7 +323,9 @@ return {
 	DOOR_HALF_TIME = 0.35,
 	-- ELLE S'OUVRE EN GRAND, sur `DOOR_START_EVENT`, quand sa main pousse le battant. LENTEMENT : c'est le moment
 	-- ou l'on decouvre le grand-pere, et a vitesse pleine il etait fini avant qu'on ait eu le temps de regarder.
-	DOOR_FULL_ANGLE = 100,
+	-- 85 et pas 90 : une porte s'arrete AVANT le mur, elle ne vient pas s'y coller. Au-dela elle passe dedans --
+	-- le battant n'a aucune collision, rien ne l'arrete que ce chiffre.
+	DOOR_FULL_ANGLE = 85,
 	DOOR_FULL_TIME = 2.2,
 	-- La porte s'ouvre du mauvais cote ? Mettre true. Le sens depend de l'orientation du modele dans Studio : ca
 	-- ne se DEDUIT pas, ca se voit a l'ecran.
@@ -337,6 +339,10 @@ return {
 	--
 	-- Distance en studs a `OLDMAN_WALK_TARGET` sous laquelle elle part. La monter la referme plus tot.
 	DOOR_CLOSE_DISTANCE = 6,
+	-- LE BRUIT DU BATTANT QUI RETOMBE. C'est le grincement de l'ouverture, faute de son dedié : une porte qui se
+	-- ferme fait le meme bois qui travaille. Le jour ou tu enregistres un vrai bruit de fermeture -- avec le
+	-- "clac" du loquet, qui est ce qui manque ici -- il suffit de changer ce chemin, rien d'autre.
+	CLOSE_SOUND = { "Sounds", "Scenes", "Scene1", "OpenDoorSound" },
 	-- Elle retombe plus vite qu'elle ne s'est ouverte : l'ouverture etait l'evenement, la fermeture n'est que du
 	-- rangement. Lui donner la meme lenteur en ferait un second evenement, qui volerait l'attention au depart.
 	DOOR_CLOSE_TIME = 1.2,

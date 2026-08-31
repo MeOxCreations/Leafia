@@ -746,6 +746,16 @@ end
 --
 -- Distance HORIZONTALE : le grand-pere descend peut-etre une marche en chemin, et une difference de hauteur ne
 -- doit pas retarder la fermeture.
+-- UNE PART DE LA PORTE POUR Y POSER LE SON. `nil` si on n'en trouve pas : SoundUtils retombe alors en 2D, ce
+-- qui s'entend mal mais s'entend -- mieux qu'un silence.
+local function doorSoundHost(): BasePart?
+	local model = door
+	if not model then
+		return nil
+	end
+	return model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+end
+
 closeDoorBehind = function()
 	local model = findModel(TutorialConfigs.GRANDPA_NAME)
 	local root = if model then model:FindFirstChild("HumanoidRootPart") else nil
@@ -760,6 +770,10 @@ closeDoorBehind = function()
 		while os.clock() < deadline do
 			local gap = rootPart.Position - targetPart.Position
 			if Vector3.new(gap.X, 0, gap.Z).Magnitude <= TutorialConfigs.DOOR_CLOSE_DISTANCE then
+				-- Le bruit part AVEC le battant, comme a l'ouverture. Spatialise sur la porte cette fois, et non en
+				-- 2D : la scene est finie, la camera est rendue au joueur, et ce n'est plus un son qui RACONTE
+				-- mais un bruit du monde -- il doit donc baisser quand le joueur s'eloigne.
+				SoundUtils.play(TutorialConfigs.CLOSE_SOUND, doorSoundHost())
 				swingDoor(0, TutorialConfigs.DOOR_CLOSE_TIME)
 				return
 			end
