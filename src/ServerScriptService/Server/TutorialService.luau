@@ -326,7 +326,15 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?)
 			t:Play()
 			-- Jouee au RAPPORT des deux vitesses : changer sa vitesse de marche ne fait pas patiner ses pieds, et
 			-- il n'y a aucune seconde valeur a garder d'accord avec la premiere.
-			t:AdjustSpeed(TutorialConfigs.OLDMAN_WALK_SPEED / TutorialConfigs.OLDMAN_WALK_REFERENCE)
+			--
+			-- Le BOOST se multiplie par-dessus : il accelere les jambes SANS toucher au trajet, qui est calcule
+			-- ailleurs sur la distance. Les deux restent donc reglables separement -- un seul chiffre pour les
+			-- deux aurait force a compenser l'un en tournant l'autre.
+			t:AdjustSpeed(
+				TutorialConfigs.OLDMAN_WALK_SPEED
+					/ TutorialConfigs.OLDMAN_WALK_REFERENCE
+					* TutorialConfigs.OLDMAN_WALK_ANIM_BOOST
+			)
 			track = t
 		end
 	else

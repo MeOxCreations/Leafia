@@ -405,6 +405,13 @@ return {
 	-- Vitesse pour laquelle l'animation a ete faite. La piste est jouee au rapport des deux, donc changer la
 	-- vitesse ci-dessus ne fait pas patiner ses pieds -- et il n'y a aucune seconde valeur a garder d'accord.
 	OLDMAN_WALK_REFERENCE = 8,
+	-- SES JAMBES SEULES, plus vite. Multiplie la vitesse de l'ANIMATION sans toucher au trajet : il met le meme
+	-- temps a traverser, mais il pietine au lieu de glisser.
+	--
+	-- C'EST UN DECOUPLAGE ASSUME, et il a un prix : au-dela de 1 ses pieds patinent, puisqu'ils avancent plus vite
+	-- que lui. C'est justement l'effet cherche ici -- un vieux qui fait beaucoup de petits pas pour avancer peu --
+	-- mais trop haut, ca se voit comme un bug. A 1, le rapport d'origine est retabli et rien ne patine.
+	OLDMAN_WALK_ANIM_BOOST = 1.6,
 	-- SON IDLE, par CHEMIN et pas par ID : l'Animation existe deja dans ReplicatedStorage, il n'y a aucune raison
 	-- d'en recopier l'identifiant ici -- deux endroits a garder d'accord pour rien.
 	--
