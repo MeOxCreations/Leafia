@@ -175,7 +175,10 @@ local function buildRow(parent: Instance): Frame
 		ZIndex = 2,
 	}, bar) :: Frame
 	make("UICorner", { CornerRadius = UDim.new(0, 20) }, fill)
-	make("UIGradient", { Color = FILL_GRADIENT }, fill)
+	-- A -90 le degrade va du HAUT vers le BAS de la jauge : elle s'eclaircit sur sa hauteur, ce qui lui donne du
+	-- relief. Sans rotation il irait de gauche a droite, donc la teinte changerait avec le REMPLISSAGE -- une
+	-- barre a moitie pleine n'aurait pas la meme couleur qu'une barre finie.
+	make("UIGradient", { Color = FILL_GRADIENT, Rotation = -90 }, fill)
 
 	-- ===== LE TRAIT SOUS LE TEXTE =====
 	local rule = make("Frame", {
