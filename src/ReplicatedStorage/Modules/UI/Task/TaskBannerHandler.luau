@@ -26,6 +26,13 @@ local TaskBannerHandler = {}
 -- Montserrat par sa FAMILLE et non par un Enum.Font : les enums de police sont en cours de depreciation
 -- (`Enum.Font.Montserrat` renvoie deja vers Gotham). `Heavy` est le nom Roblox du poids 900, dit Black.
 local FONT_BLACK = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy)
+-- LE TITRE A SA PROPRE POLICE. Denk One est une police d'AFFICHAGE : large, tres lisible en gros, moins a
+-- l'aise sur du texte courant -- d'ou son emploi ici seulement.
+--
+-- Elle n'existe qu'en UNE graisse chez Google Fonts. `Heavy` est demande quand meme : si Roblox n'a pas ce
+-- poids il prend le plus proche, et l'ecrire ne coute rien. Si le titre sort dans une police qui ne ressemble a
+-- rien, c'est le CHEMIN qui est faux -- Roblox retombe alors sur une police par defaut sans dire un mot.
+local FONT_TITLE = Font.new("rbxasset://fonts/families/DenkOne.json", Enum.FontWeight.Heavy)
 
 -- ===== PLACEMENT DES LIGNES =====
 local ROW_SIZE = UDim2.fromScale(0.331, 0.068)
@@ -257,7 +264,7 @@ local function buildHeader(parent: Instance)
 		BackgroundTransparency = 1,
 		Position = UDim2.fromScale(0.063, 0.15),
 		Size = UDim2.fromScale(0.115, 0.042),
-		FontFace = FONT_BLACK,
+		FontFace = FONT_TITLE,
 		Text = "TASKS",
 		TextColor3 = WHITE,
 		TextScaled = true,
@@ -265,6 +272,9 @@ local function buildHeader(parent: Instance)
 	}, parent)
 	make("UIGradient", {
 		Name = "UIGradientTitle",
+		-- A 90, le degrade descend du HAUT vers le BAS des lettres : le mot s'assombrit vers sa base. A zero il
+		-- irait de gauche a droite et le premier caractere serait plus clair que le dernier.
+		Rotation = 90,
 		Color = ColorSequence.new({
 			ColorSequenceKeypoint.new(0, Color3.fromHex("ffffff")),
 			ColorSequenceKeypoint.new(0.635, Color3.fromHex("ffffff")),
@@ -281,7 +291,8 @@ local function buildHeader(parent: Instance)
 		BackgroundTransparency = 1,
 		Position = UDim2.fromScale(0.52, 0.55),
 		Size = UDim2.fromScale(1.003, 1),
-		FontFace = FONT_BLACK,
+		-- MEME POLICE QUE LE TITRE, sinon l'ombre ne suit plus la forme des lettres et se lit comme un second mot.
+		FontFace = FONT_TITLE,
 		Text = "TASKS",
 		TextColor3 = Color3.fromRGB(0, 0, 0),
 		TextScaled = true,
