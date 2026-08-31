@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.604 — Une trainee de poussiere derriere ses pas
+
+Une part plate suit le joueur au sol, un peu DERRIERE lui, et porte l'emetteur `CloudsWalk`. Elle fume tant
+qu'il marche, elle se tait des qu'il s'arrete ou quitte le sol.
+
+Le recul se prend le long de SON regard, pas d'un axe du monde : la poussiere se leve la ou le pied vient de
+quitter le sol, quelle que soit son orientation.
+
+### Pourquoi c'est dans FootstepController
+
+Il posait deja la question "est-ce qu'il marche, au sol ?" pour couper le son de Roblox. Un module a part aurait
+refait cette detection -- et deux detections du meme etat finissent toujours par repondre autrement l'une que
+l'autre. Le module est desormais le point unique du PAS : ce qu'on en entend, et ce qu'on en voit.
+
+`MoveDirection` plutot que la vitesse : elle dit son INTENTION -- ce qu'il demande -- alors que la vitesse dit ce
+qui lui arrive. Pousse par autre chose, il fumerait sans avoir fait un pas. Avec un seuil et non zero, sinon
+l'emetteur clignote a chaque arret (MoveDirection garde des miettes une image ou deux apres le relachement).
+
+### Deux pieges evites
+
+La part est **ancree** : non ancree, elle tomberait sous la carte et emettrait la-bas. L'effet "ne marcherait
+pas" alors qu'il jouerait parfaitement, ailleurs -- deja vecu sur l'impact des coups a la porte.
+
+Elle vit dans le **Workspace**, pas dans le personnage : rangee dedans, elle en decalerait la boite englobante,
+donc son `GetPivot`, et tout ce qui calcule un placement dessus partirait de travers sans que rien ne le
+signale. En contrepartie rien ne la nettoie toute seule, d'ou la coupe explicite a `CharacterRemoving`.
+
+### A faire dans Studio
+
+L'emetteur `ReplicatedStorage.Assets.Effects.Particles.CloudsWalk` doit exister dans la place. Rojo ne
+synchronise pas les Assets : sur une place ou il manque, la console le dit une fois et le reste marche.
 ## 0.0.603 — Un reflet traverse le titre de chapitre
 
 Une fois le titre pose, une vague le traverse de gauche a droite : chaque lettre s'estompe et revient, decalee
