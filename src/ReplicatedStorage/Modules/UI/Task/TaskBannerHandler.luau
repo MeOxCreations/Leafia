@@ -18,6 +18,7 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 
 local TaskBannerHandler = {}
@@ -48,6 +49,14 @@ local SLIDE_IN = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection
 local SLIDE_OUT = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 -- Retard entre deux lignes : une liste qui se REMPLIT, pas un panneau qui apparait d'un coup.
 local ROW_STAGGER = 0.09
+
+-- UN SON PAR LIGNE, decale avec elle. Le meme "pop" que les prompts d'interaction : c'est le meme evenement pour
+-- le joueur -- quelque chose apparait a l'ecran -- et lui donner un son a lui ferait deux vocabulaires pour une
+-- seule idee.
+--
+-- Un son par ligne et non un seul pour le lot : c'est le MOUVEMENT qu'il accompagne, et trois lignes qui
+-- glissent l'une apres l'autre avec un seul son se lisent comme un bloc.
+local APPEAR_SOUND = { "Sounds", "UI", "AppearSound_1" }
 
 -- LE REBOND DE LA PIECE, quand sa ligne vient de se poser. Elle part decalee a DROITE et revient en tremblant :
 -- `Elastic Out` depasse sa cible puis oscille en s'amortissant, ce qui donne le mouvement mou d'une matiere qui
@@ -515,6 +524,7 @@ function TaskBannerHandler.show(tasks: { TaskConfigs.Task })
 			if not frame.Parent then
 				return
 			end
+			SoundUtils.play(APPEAR_SOUND, nil)
 			local slide = TweenService:Create(frame, SLIDE_IN, { Position = slideTo })
 			-- LE REBOND SUIT LA FIN DU GLISSEMENT, pas un delai calcule a cote : un delai se decalerait des
 			-- qu'on retouche la duree de l'arrivee, et la piece rebondirait pendant que la ligne bouge encore.
