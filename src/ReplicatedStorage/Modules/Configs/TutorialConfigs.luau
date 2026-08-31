@@ -297,6 +297,16 @@ return {
 	-- DEUX MARQUEURS, DEUX MOUVEMENTS. Le premier tombe quand il deverrouille : la porte s'entrebaille. Le second
 	-- tombe sur son geste de bras : elle s'ouvre en grand. Aucun chronometre entre les deux -- c'est l'animation
 	-- qui tient le rythme, et elle reste juste quoi qu'on retouche dans l'editeur.
+	-- ===== LE CARTON DE CHAPITRE =====
+	-- Les barres noires disent au joueur qu'il REGARDE ; ce titre lui dit CE qu'il regarde. Nommer un moment le
+	-- transforme en chapitre d'une histoire, au lieu d'une scene de plus.
+	--
+	-- EN ANGLAIS, comme tout ce que le joueur lit : le traducteur automatique de Roblox part de l'anglais, et un
+	-- texte ecrit en francais n'est traduit nulle part.
+	CHAPTER_TITLE = "CHAPTER 1 : THE GRANDFATHER",
+	-- Apres le debut de la scene. Le temps que les barres finissent de descendre : un titre qui s'ecrit sur une
+	-- bande encore en mouvement se fait couper par elle.
+	CHAPTER_DELAY = 0.8,
 	DOOR_PRE_EVENT = "PreOpenEvent",
 	DOOR_START_EVENT = "OuvertureDoorEvent",
 

@@ -17,6 +17,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local ChapterTitle = require(ReplicatedStorage.Modules.UI.Core.ChapterTitle)
 local Letterbox = require(ReplicatedStorage.Modules.UI.Core.Letterbox)
 local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
@@ -552,6 +553,9 @@ local function releaseScene()
 	unfreezePlayer()
 	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
+	-- LE TITRE S'EN VA AVEC LES BARRES. Il s'efface deja tout seul apres son temps de lecture, mais une scene
+	-- ecourtee le laisserait ecrit sur une image rendue au joueur.
+	ChapterTitle.hide()
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 	CameraEffects.SetFovOffset(0)
 
@@ -1219,6 +1223,11 @@ function TutorialController.startMission()
 	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
 	-- n'attend pas que le noir soit en place.
 	Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
+	-- LE TITRE S'ECRIT DANS LA BANDE DU BAS, une fois qu'elle est en place. Il n'attend pas la fin de la scene :
+	-- un chapitre s'annonce quand il commence.
+	task.delay(TutorialConfigs.CHAPTER_DELAY, function()
+		ChapterTitle.show(TutorialConfigs.CHAPTER_TITLE)
+	end)
 	-- LE JEU BAISSE, il ne se tait pas. Un silence total s'entend comme une coupure et le monde a l'air de
 	-- s'eteindre : on veut que l'oreille se tourne vers la scene, pas que le reste disparaisse.
 	SoundDuck.duck(TutorialConfigs.SCENE_DUCK, TutorialConfigs.SCENE_DUCK_TIME)

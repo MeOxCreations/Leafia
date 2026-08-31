@@ -2204,6 +2204,45 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.602 — La scene s'ouvre sur un carton de chapitre
+
+`CHAPTER 1 : THE GRANDFATHER` s'ecrit dans la bande noire du bas, lettre par lettre, en vague. Il tient deux
+secondes puis s'efface.
+
+Les barres noires disaient au joueur qu'il REGARDE. Le titre lui dit CE qu'il regarde -- et nommer un moment le
+transforme en chapitre d'une histoire, au lieu d'une scene de plus. Ca coute une ligne de texte et ca change ce
+que le joueur croit etre en train de vivre.
+
+### Un module, pas un bout de tutoriel
+
+`Modules/UI/Core/ChapterTitle` ne connait ni le grand-pere, ni la porte, ni le didacticiel. On lui donne un
+texte, il le joue. Le chapitre 2 passera par le meme module.
+
+Montserrat en poids **Heavy** -- le nom Roblox de ce qu'on appelle Black en typographie. Designe par sa FAMILLE
+et pas par un `Enum.Font` : les enums de police sont en cours de depreciation, `Enum.Font.Montserrat` renvoie
+deja vers Gotham.
+
+### Ce qui vient du loading screen
+
+Le meme piege y avait ete resolu, et la lecon est reprise telle quelle : **une police se charge
+PARESSEUSEMENT**. Le titre peut etre dessine avec une police de secours, puis redessine avec Montserrat. Roblox
+echange le rendu tout seul, mais pas les positions calculees a la main sur les largeurs de l'ancienne -- les
+lettres resteraient mal espacees.
+
+Aucune API ne dit quand la vraie police arrive. On ne devine donc pas : une seule boucle RE-MESURE et replace a
+chaque image. C'est aussi pourquoi il n'y a pas d'`UIListLayout` -- il reposerait ses enfants a chaque image et
+ecraserait le Y de la vague.
+
+### Reglages
+
+| Reglage | Ou | Role |
+|---|---|---|
+| `CHAPTER_TITLE` | TutorialConfigs | Le texte, **en anglais** |
+| `CHAPTER_DELAY` | TutorialConfigs | Attente apres le debut de la scene (0.8 s), le temps que les barres soient en place |
+| `LETTER_STAGGER` | ChapterTitle | Le retard entre deux lettres : c'est lui qui fait la vague |
+| `HOLD` | ChapterTitle | Temps de lecture avant l'effacement |
+
+Le titre est coupe si la scene est ecourtee : sans ca il resterait ecrit sur une image deja rendue au joueur.
 ## 0.0.601 — La console ne se noie plus sous les logs d'herbe
 
 Cinq zones donnaient quinze lignes au demarrage, avec des tailles, des positions et des listes d'objets. Une
