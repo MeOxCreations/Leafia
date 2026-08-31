@@ -157,13 +157,17 @@ local function buildRow(parent: Instance): Frame
 	make("UICorner", { CornerRadius = UDim.new(1, 0) }, rule)
 	make("UIGradient", { Color = ColorSequence.new(WHITE), Rotation = 89, Transparency = FADE_OUT_SEQ }, rule)
 
+	-- IL DEBORDE LARGEMENT DE `Rule`, ET C'EST VOULU. `Rule` est un trait tres fin ; `FontColor` mesure pres de
+	-- dix fois sa hauteur et descend sous lui. Ce n'est donc pas un second trait : c'est le FOND colore de la
+	-- ligne, ancre sur le trait plutot que sur la ligne entiere pour le suivre s'il bouge.
 	local fontColor = make("Frame", {
 		Name = "FontColor",
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		BackgroundColor3 = WHITE,
 		BackgroundTransparency = 0,
-		Position = UDim2.fromScale(0.5, 0.5),
-		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(0.5, 5.5),
+		Size = UDim2.fromScale(1.049, 9.714),
+		ZIndex = 0, -- derriere tout le reste de la ligne : c'est un fond, pas un element
 	}, rule)
 	-- BLANC, et non un degrade de verts : ce UIGradient ne sert qu'au FONDU (sa transparence). Lui donner deux
 	-- couleurs teinterait le trait, alors que la couleur vient du fond du Frame.
