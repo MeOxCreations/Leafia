@@ -29,7 +29,12 @@ local DISPLAY_ORDER = 101
 -- plutot que calcule depuis Letterbox, pour ne pas rendre ce module dependant d'elle -- il doit pouvoir servir
 -- sans barres.
 local ROW_CENTER_Y = 0.945
-local ROW_HEIGHT = 0.052 -- hauteur de la ligne, en part d'ecran : c'est elle qui donne la taille du texte
+local ROW_HEIGHT = 0.044 -- hauteur de la ligne, en part d'ecran : c'est elle qui donne la taille du texte
+-- OU LE TEXTE SE POSE DANS LA LIGNE : 0 a gauche, 0.5 au centre, 1 a droite. A droite, le titre laisse le
+-- centre de l'image libre -- c'est la place d'un cartouche de film, pas d'un titre de menu.
+local ROW_ALIGN = 1
+-- Marge gardee au bord, en part de la largeur de la ligne. Colle au bord, le texte a l'air d'avoir ete coupe.
+local ROW_MARGIN = 0.03
 
 -- Retard entre deux lettres. C'est LUI qui fait la vague : a zero elles arrivent ensemble et il ne reste qu'un
 -- fondu. Trop grand, on lit le mot plus vite qu'il ne s'affiche.
@@ -141,7 +146,8 @@ function ChapterTitle.show(text: string)
 				width += label.AbsoluteSize.X
 			end
 
-			local x = (frame.AbsoluteSize.X - width) * 0.5
+			local room = frame.AbsoluteSize.X * (1 - ROW_MARGIN)
+			local x = (room - width) * ROW_ALIGN
 			for i, label in ipairs(letters) do
 				local e = math.clamp((now - (i - 1) * LETTER_STAGGER) / LETTER_TIME, 0, 1)
 				-- `Quad Out` a la main : la lettre part franchement et se pose en douceur.
