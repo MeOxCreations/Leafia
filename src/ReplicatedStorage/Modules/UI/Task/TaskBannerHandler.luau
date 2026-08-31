@@ -227,7 +227,9 @@ local function buildRow(parent: Instance): Frame
 		AnchorPoint = Vector2.new(1, 0.5),
 		BackgroundTransparency = 1,
 		Position = UDim2.fromScale(0.915, 0.634),
-		Size = UDim2.fromScale(0.132, 0.427),
+		-- PLUS GRAND QUE LA MAQUETTE. Le texte est en `TextScaled` : c'est la taille du CADRE qui decide de celle
+		-- des lettres, pas un TextSize. Ancre a droite, il grandit vers la gauche et ne pousse donc pas la piece.
+		Size = UDim2.fromScale(0.17, 0.58),
 		FontFace = FONT_BLACK,
 		Text = "",
 		TextColor3 = WHITE,
