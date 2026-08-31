@@ -268,6 +268,9 @@ local function buildHeader(parent: Instance)
 		Text = "TASKS",
 		TextColor3 = WHITE,
 		TextScaled = true,
+		-- CALE A GAUCHE. Le titre coiffe une colonne de taches alignees a gauche : centre, il flotterait au-dessus
+		-- d'elles au lieu de les commencer.
+		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 2,
 	}, parent)
 	make("UIGradient", {
@@ -296,6 +299,9 @@ local function buildHeader(parent: Instance)
 		Text = "TASKS",
 		TextColor3 = Color3.fromRGB(0, 0, 0),
 		TextScaled = true,
+		-- MEME CALAGE QUE LE TITRE : centree alors qu'il est a gauche, l'ombre se decalerait d'autant que le mot
+		-- est plus court que son cadre.
+		TextXAlignment = Enum.TextXAlignment.Left,
 		ZIndex = 1,
 	}, title)
 	make("UIGradient", {
