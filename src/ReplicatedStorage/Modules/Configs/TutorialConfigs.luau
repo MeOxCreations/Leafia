@@ -412,6 +412,9 @@ return {
 	--
 	-- Absente, le geste se joue sur place : il descend visuellement puis remonte. Le service le DIT alors.
 	OLDMAN_STAIRS_TARGET = "OldManWalkTo2",
+	-- LE TEMPS QU'IL SOUFFLE, une fois en bas des marches, avant de repartir. Enchainer sans pause donnerait un
+	-- personnage qui se remet en marche a la seconde ou il finit de se plaindre, ce qui annule le geste.
+	OLDMAN_ARRIVE_PAUSE = 1,
 	-- Sa vitesse de marche, en studs/s.
 	-- LENT, et c'est le sujet du plan. C'est un vieux monsieur avec une canne qui sort de chez lui : le voir
 	-- traverser prend du temps, et ce temps EST ce qu'on raconte. L'animation suit cette vitesse toute seule

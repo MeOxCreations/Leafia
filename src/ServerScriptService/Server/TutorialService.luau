@@ -256,56 +256,6 @@ end
 -- une part ancree : `MoveTo` partait, ne bougeait rien, et rendait "chemin barre" au bout de son delai. Ce n'est
 -- pas un contournement -- pour un personnage de scene qui suit un trajet decide a l'avance, un glissement est
 -- plus SUR qu'un pathfinding : il ne peut ni s'accrocher a un meuble ni tomber d'un bord.
--- IL DESCEND VRAIMENT LES MARCHES. L'animation ne le deplace pas -- elle bouge ses membres autour d'un point
--- d'ancrage immobile -- donc c'est nous qui le faisons glisser pendant qu'elle joue. Sans ca il descendrait
--- visuellement puis REMONTERAIT d'un coup a la fin, revenu a sa vraie position.
---
--- Meme principe que la marche, et pour la meme raison.
-local function slideDuringArrival(model: Model, track: AnimationTrack)
-	local target = findByName(TutorialConfigs.OLDMAN_STAIRS_TARGET)
-	if not (target and target:IsA("BasePart")) then
-		-- ON LE DIT : sans cette part le geste se joue sur place, et le retour brutal a la fin ressemble a un bug
-		-- d'animation alors qu'il ne manque qu'un point dans le Workspace.
-		warn(
-			`[Tutorial] Aucune part "{TutorialConfigs.OLDMAN_STAIRS_TARGET}" : le grand-pere descendra sur place `
-				.. "et reviendra d'un coup a la fin. Rojo ne synchronise pas le Workspace."
-		)
-		return
-	end
-	local root = model:FindFirstChild("HumanoidRootPart")
-	if not (root and root:IsA("BasePart")) then
-		return
-	end
-	local rootPart = root :: BasePart
-	local targetPart = target :: BasePart
-
-	task.spawn(function()
-		-- LA DUREE VIENT DE L'ANIMATION, pas d'un chiffre pose a la main : elle n'est connue qu'une fois la piste
-		-- chargee, donc on l'attend. Retoucher l'animation dans l'editeur suffit alors a regler la descente.
-		local deadline = os.clock() + 3
-		while track.Length <= 0 and os.clock() < deadline do
-			task.wait()
-		end
-		local seconds = if track.Length > 0 then track.Length else 1
-
-		local from = rootPart.CFrame
-		local to = CFrame.new(targetPart.Position) * (from - from.Position)
-
-		local t0 = os.clock()
-		while model.Parent do
-			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
-			-- ON APPLIQUE UN ECART MONDE, pas un pivot : `GetPivot` suit la boite englobante des qu'on ajoute un
-			-- enfant au modele, et le placement partirait de travers sans que rien ne le signale.
-			local now = from:Lerp(to, e)
-			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
-			if e >= 1 then
-				break
-			end
-			task.wait()
-		end
-	end)
-end
-
 -- IL ARRIVE, ET IL SE TIENT LE DOS. Un geste ponctuel, joue une fois, qui rend la main a l'idle quand il
 -- s'acheve -- c'est LUI qui dit quand il a fini, pas un delai pose a cote qui se decalerait si on retouche
 -- l'animation.
@@ -313,6 +263,10 @@ end
 -- Chaque sortie retombe sur `restoreIdle` : sans animation d'arrivee, sans Animator, ou si le chargement echoue,
 -- le grand-pere doit se retrouver dans sa pose de repos. Le laisser fige sur sa derniere image de marche serait
 -- pire que pas d'arrivee du tout.
+-- REMPLIE PLUS BAS. `playArrival` a besoin de la marche, definie apres lui -- et la marche a besoin de
+-- `playArrival` a son arrivee. Une variable de fonction casse le cercle sans deplacer un bloc entier.
+local walkTo: ((string, ((Model) -> ())?) -> ())? = nil
+
 local function playArrival(model: Model)
 	local animId = TutorialConfigs.OLDMAN_ARRIVE_ANIM
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -334,7 +288,6 @@ local function playArrival(model: Model)
 	end
 
 	local t = result :: AnimationTrack
-	slideDuringArrival(model, t)
 	-- AU-DESSUS DE L'IDLE, sinon la pose de repos la melangerait : a priorite egale Roblox ne choisit pas, il
 	-- MOYENNE les deux.
 	t.Priority = Enum.AnimationPriority.Action
@@ -342,12 +295,24 @@ local function playArrival(model: Model)
 	-- reste a plein poids POUR TOUJOURS -- l'idle ne reviendrait jamais.
 	t.Looped = false
 	t.Stopped:Connect(function()
+		-- IL SOUFFLE, PUIS IL REPART. L'idle est pose tout de suite : sans lui, il resterait fige sur la derniere
+		-- image de sa descente pendant toute la pause.
 		restoreIdle(model)
+		task.delay(TutorialConfigs.OLDMAN_ARRIVE_PAUSE, function()
+			local walk = walkTo
+			if walk then
+				walk(TutorialConfigs.OLDMAN_STAIRS_TARGET, restoreIdle)
+			end
+		end)
 	end)
 	t:Play()
 end
 
-local function walkOldMan()
+--- Fait marcher le grand-pere jusqu'a la part `targetName`, puis appelle `onDone`.
+---
+--- La cible est un PARAMETRE et non une constante : le meme trajet sert deux fois -- sortir de chez lui, puis
+--- descendre du perron -- et deux copies de cette fonction finiraient par diverger.
+local function walkOldMan(targetName: string, onDone: ((Model) -> ())?)
 	if walking then
 		return
 	end
@@ -357,10 +322,10 @@ local function walkOldMan()
 		warn(`[Tutorial] "{TutorialConfigs.GRANDPA_NAME}" introuvable : il ne sortira pas de chez lui.`)
 		return
 	end
-	local target = findByName(TutorialConfigs.OLDMAN_WALK_TARGET)
+	local target = findByName(targetName)
 	if not (target and target:IsA("BasePart")) then
 		warn(
-			`[Tutorial] Aucune part "{TutorialConfigs.OLDMAN_WALK_TARGET}" dans le Workspace : le grand-pere n'a `
+			`[Tutorial] Aucune part "{targetName}" dans le Workspace : le grand-pere n'a `
 				.. "nulle part ou aller. Rojo ne synchronise pas le Workspace, elle doit exister dans CETTE place."
 		)
 		return
@@ -449,11 +414,16 @@ local function walkOldMan()
 		if track then
 			(track :: AnimationTrack):Stop()
 		end
-		playArrival(model)
+		-- WALKING RETOMBE AVANT LA SUITE : elle peut relancer une marche, et le garde la bloquerait.
 		walking = false
+		if onDone then
+			onDone(model)
+		end
 	end)
 end
 
+
+walkTo = walkOldMan
 
 local function onPlayerAdded(player: Player)
 	player.CharacterAdded:Connect(placeCharacter)
@@ -467,7 +437,7 @@ function TutorialService.init()
 	done.OnServerEvent:Connect(function()
 		-- Aucun argument a valider : le client ne fait que dire "la scene est finie". Le pire qu'il puisse faire
 		-- est de la declencher trop tot, ce qui fait sortir le grand-pere -- pas de quoi tricher.
-		walkOldMan()
+		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, playArrival)
 	end)
 
 	Players.PlayerAdded:Connect(onPlayerAdded)

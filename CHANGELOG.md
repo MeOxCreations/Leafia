@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.611 — Le grand-pere descend, souffle, puis repart
+
+Il s'enfoncait dans le sol. La version precedente le faisait GLISSER pendant sa descente, alors que l'animation
+le fait deja descendre visuellement : les deux s'ajoutaient, et il traversait le perron.
+
+Le geste se joue donc SUR PLACE, comme n'importe quelle animation. Une fois fini, il souffle une seconde, puis
+il MARCHE jusqu'a `OldManWalkTo2` -- avec son animation de marche, comme il l'a fait pour sortir de chez lui.
+
+    OldManWalkTo    il traverse le jardin
+                    il descend les marches en se tenant le dos (sur place)
+                    il souffle             (OLDMAN_ARRIVE_PAUSE)
+    OldManWalkTo2   il marche jusqu'en bas
+
+### La marche sert deux fois
+
+Elle prend maintenant sa cible en PARAMETRE au lieu de la lire dans la config. Le meme trajet sert aux deux
+deplacements, et deux copies de cette fonction auraient fini par diverger -- l'une corrigee, l'autre oubliee.
+
+Elle prend aussi une suite : sortir de chez lui enchaine sur la descente, descendre du perron enchaine sur
+l'idle. C'est l'appelant qui decide, pas la marche.
+
+Une variable de fonction casse le cercle entre les deux : la descente a besoin de la marche, definie apres elle,
+et la marche a besoin de la descente a son arrivee.
+
+### Reglages
+
+| Reglage | Role |
+|---|---|
+| `OLDMAN_ARRIVE_PAUSE` | Le temps qu'il souffle avant de repartir (1 s). A zero il se remet en marche a la seconde ou il finit de se plaindre, ce qui annule le geste |
 ## 0.0.610 — Le grand-pere descend vraiment les marches
 
 Il jouait sa descente SUR PLACE : il avait l'air de descendre, puis remontait d'un coup a la fin de l'animation.
