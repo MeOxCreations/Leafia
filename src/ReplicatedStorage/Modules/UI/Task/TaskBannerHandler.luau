@@ -1,21 +1,17 @@
 --!strict
 -- BANDEAU D'OBJECTIFS, en haut a gauche. Il dit CE QU'ON DOIT FAIRE, ou l'on en est, et ce que ca rapporte.
 --
--- IL NE CONSTRUIT PLUS RIEN. La version precedente dessinait toute l'interface en code, le temps que la maquette
--- bouge -- chaque essai partait sur GitHub et se relisait dans le diff. La forme est maintenant figee dans
--- Studio (`StarterGui.LeafiaTaskBanner`), donc ce module la PILOTE, comme tous les autres handlers du projet.
+-- CONSTRUIT EN CODE, et c'est une EXCEPTION ASSUMEE a "les ScreenGui se font dans Studio".
 --
--- Ce qu'il attend dans Studio, et rien d'autre :
+-- La raison est concrete et deja payee : Rojo ne synchronise PAS StarterGui. Une interface posee dans Studio
+-- n'existe que dans la place ou elle a ete faite -- il faut la recopier a la main dans chaque autre, et le jour
+-- ou l'on retouche un degrade, il faut recommencer partout. Une version construite ici part sur GitHub, se relit
+-- dans le diff, et arrive dans TOUTES les places d'un coup.
 --
---   LeafiaTaskBanner (ScreenGui)
---     Title, ThicknessTop, Background   -- le decor, on n'y touche pas
---     TemplateTask (Frame)              -- LE MODELE. Clone une fois par tache, jamais affiche tel quel.
---       Bar > Fill                      -- la jauge : c'est le Size.X de Fill qui avance
---       IconColor                       -- la pastille teintee (son UIGradient porte la couleur de la tache)
---       IconTaskDraw                    -- le dessin de la tache
---       DescriptionTask, RewardText     -- les textes
+-- Meme exception que Letterbox et ChapterTitle, pour exactement la meme raison.
 --
--- Un nom qui change dans Studio casse le pilotage : le module le DIT alors, plutot que d'echouer en silence.
+-- LES VALEURS VIENNENT DE LA MAQUETTE faite dans Studio : positions, tailles, degrades, tout est repris tel
+-- quel. Studio reste l'endroit ou l'on REGLE a l'oeil ; ce fichier est l'endroit ou le reglage se FIGE.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
@@ -26,36 +22,48 @@ local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 
 local TaskBannerHandler = {}
 
-local GUI_NAME = "LeafiaTaskBanner"
-local TEMPLATE_NAME = "TemplateTask"
+-- ===== POLICES =====
+-- Montserrat par sa FAMILLE et non par un Enum.Font : les enums de police sont en cours de depreciation
+-- (`Enum.Font.Montserrat` renvoie deja vers Gotham). `Heavy` est le nom Roblox du poids 900, dit Black.
+local FONT_BLACK = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy)
 
--- Le Y de la premiere ligne et l'ecart entre deux, en part d'ecran. Repris du template pose dans Studio : la
--- premiere garde sa place, les suivantes se rangent dessous.
+-- ===== PLACEMENT DES LIGNES =====
+local ROW_SIZE = UDim2.fromScale(0.331, 0.068)
 local FIRST_Y = 0.219
 local ROW_GAP = 0.078
 
--- D'OU ELLES ARRIVENT. Hors champ a gauche, en X : elles entrent par le bord, comme les notifications. Assez
--- loin pour qu'aucun bout ne depasse avant le depart, quelle que soit la largeur de l'ecran.
+-- D'OU ELLES ARRIVENT. Hors champ a gauche : elles entrent par le bord, comme les notifications.
 local HIDDEN_X = -0.6
 local SHOWN_X = 0
 
--- `Back Out` depasse legerement la cible avant de se poser : c'est ce qui donne le petit rebond. Repris tel quel
--- de la version precedente, le toucher etait bon.
 local SLIDE_IN = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SLIDE_OUT = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
--- Retard entre deux lignes : elles arrivent en cascade, pas en bloc. Un bloc se lit comme un panneau qui
--- apparait ; une cascade se lit comme une liste qui se REMPLIT.
+-- Retard entre deux lignes : une liste qui se REMPLIT, pas un panneau qui apparait d'un coup.
 local ROW_STAGGER = 0.09
 
--- Vitesse de remplissage de la jauge. Elle GLISSE vers sa valeur : c'est le mouvement qui se remarque, pas le
--- chiffre -- une barre qui saute a sa place ne se voit pas.
+-- ===== JAUGE =====
 local FILL_SPEED = 6
--- Largeur de la jauge pleine, en part de `Bar`. Un poil sous 1 : a 1 pile, les coins arrondis du remplissage
--- debordent de ceux de la barre.
+-- Un poil sous 1 : a 1 pile, les coins arrondis du remplissage debordent de ceux de la barre.
 local FILL_MAX = 0.98
--- En dessous de cet ecart, on CLE a la cible. Un lerp exponentiel n'atteint jamais sa valeur : sans ce clou, une
--- jauge "pleine" resterait a 99,7 % pour toujours.
+-- Un lerp exponentiel n'atteint jamais sa cible : sans ce clou, une jauge pleine resterait a 99,7 % pour
+-- toujours.
 local FILL_SNAP = 0.004
+local FILL_HEIGHT = 0.9
+
+local WHITE = Color3.fromRGB(255, 255, 255)
+
+-- Le degrade de la jauge, repris de la maquette.
+local FILL_GRADIENT = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromHex("5aff2c")),
+	ColorSequenceKeypoint.new(0.551, Color3.fromHex("5bfe2e")),
+	ColorSequenceKeypoint.new(0.571, Color3.fromHex("c1ff8e")),
+	ColorSequenceKeypoint.new(1, Color3.fromHex("c1ff8e")),
+})
+-- Un fondu du plein au transparent. Sert au trait de separation et au trait sous le titre.
+local FADE_OUT_SEQ = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 0),
+	NumberSequenceKeypoint.new(1, 1),
+})
 
 type Row = {
 	frame: Frame,
@@ -64,45 +72,261 @@ type Row = {
 	current: number,
 }
 
+local screen: ScreenGui? = nil
 local template: Frame? = nil
 local rows: { Row } = {}
 local fillConn: RBXScriptConnection? = nil
 
---- Retrouve l'interface posee dans Studio. Rend `nil` tant qu'elle n'est pas la.
-local function resolve(): boolean
-	if template and template.Parent then
+--- Cree une instance, lui pose ses proprietes, la parente.
+---
+--- Rend `Instance` et non la classe precise : aucun appelant n'a besoin du type exact, et le rendre precis
+--- ferait deduire a luau-lsp un type de tableau depuis le premier enfant, qui refuserait tous les suivants.
+local function make(class: string, props: { [string]: any }, parent: Instance?): Instance
+	local inst = Instance.new(class)
+	for key, value in pairs(props) do
+		(inst :: any)[key] = value
+	end
+	if parent then
+		inst.Parent = parent
+	end
+	return inst
+end
+
+--- Une ligne de tache, clonable a volonte. Reproduit la maquette a l'identique.
+local function buildRow(parent: Instance): Frame
+	local row = make("Frame", {
+		Name = "TemplateTask",
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundTransparency = 1,
+		Size = ROW_SIZE,
+		Visible = false, -- le modele ne s'affiche jamais : il ne sert qu'a etre clone
+	}, parent) :: Frame
+
+	-- ===== LA BARRE DE PROGRESSION =====
+	local bar = make("Frame", {
+		Name = "Bar",
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+		BackgroundTransparency = 0.35,
+		Position = UDim2.fromScale(0.145, 0.745),
+		Size = UDim2.fromScale(0.39, 0.21),
+		ZIndex = 1,
+	}, row)
+	-- Trois coins arrondis sur quatre : le coin haut-droit reste vif, c'est ce qui donne sa forme a la barre.
+	make("UICorner", {
+		BottomLeftRadius = UDim.new(0, 20),
+		BottomRightRadius = UDim.new(0, 20),
+		TopLeftRadius = UDim.new(0, 20),
+		TopRightRadius = UDim.new(0, 0),
+	}, bar)
+	make("UIStroke", {
+		Color = Color3.fromRGB(0, 0, 0),
+		Thickness = 1.4,
+		LineJoinMode = Enum.LineJoinMode.Round,
+	}, bar)
+
+	local fill = make("Frame", {
+		Name = "Fill",
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0,
+		Position = UDim2.fromScale(-0.001, 0.5),
+		-- Part de zero : posee directement a sa valeur, on ne verrait pas qu'elle avance.
+		Size = UDim2.fromScale(0, FILL_HEIGHT),
+		ZIndex = 2,
+	}, bar) :: Frame
+	make("UICorner", { CornerRadius = UDim.new(0, 20) }, fill)
+	make("UIGradient", { Color = FILL_GRADIENT }, fill)
+
+	-- ===== LE TRAIT SOUS LE TEXTE =====
+	local rule = make("Frame", {
+		Name = "Rule",
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0,
+		Position = UDim2.fromScale(0.112, 0.221),
+		Size = UDim2.fromScale(0.86, 0.067),
+	}, row)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, rule)
+	make("UIGradient", { Color = ColorSequence.new(WHITE), Rotation = 89, Transparency = FADE_OUT_SEQ }, rule)
+
+	local fontColor = make("Frame", {
+		Name = "FontColor",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0,
+		Position = UDim2.fromScale(0.5, 0.5),
+		Size = UDim2.fromScale(1, 1),
+	}, rule)
+	make("UIGradient", {
+		Color = ColorSequence.new(Color3.fromHex("3e8b1b"), Color3.fromHex("94ff19")),
+		Rotation = 80,
+		Transparency = FADE_OUT_SEQ,
+	}, fontColor)
+
+	-- ===== LA PASTILLE ET SON ICONE =====
+	-- Trois couches empilees : le contour, la couleur de la tache, puis le dessin. Les ZIndex ne sont pas
+	-- decoratifs -- sans eux le dessin passerait derriere sa propre pastille.
+	make("ImageLabel", {
+		Name = "FontIconOutline",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.08, 0.413),
+		Size = UDim2.fromScale(0.118, 1.169),
+		Image = TaskConfigs.ICON_SHAPE,
+		ImageColor3 = Color3.fromRGB(0, 0, 0),
+		ZIndex = 1,
+	}, row)
+
+	local iconColor = make("ImageLabel", {
+		Name = "IconColor",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.079, 0.419),
+		Size = UDim2.fromScale(0.085, 0.862),
+		Image = TaskConfigs.ICON_SHAPE,
+		ZIndex = 2,
+	}, row)
+	make("UIGradient", { Color = TaskConfigs.TINTS.Green, Rotation = 32 }, iconColor)
+
+	make("ImageLabel", {
+		Name = "IconTaskDraw",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.079, 0.36),
+		Size = UDim2.fromScale(0.095, 0.808),
+		ZIndex = 3,
+	}, row)
+
+	-- ===== LES TEXTES =====
+	make("TextLabel", {
+		Name = "DescriptionTask",
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.133, 0.42),
+		Size = UDim2.fromScale(0.6, 0.3),
+		FontFace = FONT_BLACK,
+		Text = "",
+		TextColor3 = WHITE,
+		TextScaled = true,
+		TextXAlignment = Enum.TextXAlignment.Left,
+		ZIndex = 3,
+	}, row)
+
+	make("TextLabel", {
+		Name = "RewardText",
+		AnchorPoint = Vector2.new(1, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.915, 0.634),
+		Size = UDim2.fromScale(0.132, 0.427),
+		FontFace = FONT_BLACK,
+		Text = "",
+		TextColor3 = WHITE,
+		TextScaled = true,
+		TextXAlignment = Enum.TextXAlignment.Right,
+		ZIndex = 3,
+	}, row)
+
+	make("ImageLabel", {
+		Name = "CurrencyImage",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.943, 0.63),
+		Size = UDim2.fromScale(0.055, 0.484),
+		Visible = false, -- allumee seulement si la tache donne une monnaie
+		ZIndex = 3,
+	}, row)
+
+	return row
+end
+
+--- Le decor : le titre, son ombre, et le trait sous lui. Construit une seule fois.
+local function buildHeader(parent: Instance)
+	local thickness = make("Frame", {
+		Name = "ThicknessTop",
+		AnchorPoint = Vector2.new(0, 0.5),
+		BackgroundColor3 = WHITE,
+		BackgroundTransparency = 0,
+		Position = UDim2.fromScale(0.003, 0.175),
+		Size = UDim2.fromScale(0.339, 0.006),
+	}, parent)
+	make("UICorner", { CornerRadius = UDim.new(1, 0) }, thickness)
+	make("UIGradient", { Color = ColorSequence.new(WHITE), Rotation = 87, Transparency = FADE_OUT_SEQ }, thickness)
+
+	local title = make("TextLabel", {
+		Name = "Title",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.063, 0.15),
+		Size = UDim2.fromScale(0.115, 0.042),
+		FontFace = FONT_BLACK,
+		Text = "TASKS",
+		TextColor3 = WHITE,
+		TextScaled = true,
+		ZIndex = 2,
+	}, parent)
+	make("UIGradient", {
+		Name = "UIGradientTitle",
+		Color = ColorSequence.new({
+			ColorSequenceKeypoint.new(0, Color3.fromHex("ffffff")),
+			ColorSequenceKeypoint.new(0.635, Color3.fromHex("ffffff")),
+			ColorSequenceKeypoint.new(0.645, Color3.fromHex("e5e5e5")),
+			ColorSequenceKeypoint.new(1, Color3.fromHex("e2e2e2")),
+		}),
+	}, title)
+
+	-- L'OMBRE EST UN SECOND LABEL, legerement decale et SOUS le titre. Un contour (`TextStroke`) entourerait les
+	-- lettres de tous les cotes ; ici on veut une ombre PORTEE, donc un decalage.
+	local shadow = make("TextLabel", {
+		Name = "Shadow",
+		AnchorPoint = Vector2.new(0.5, 0.5),
+		BackgroundTransparency = 1,
+		Position = UDim2.fromScale(0.52, 0.55),
+		Size = UDim2.fromScale(1.003, 1),
+		FontFace = FONT_BLACK,
+		Text = "TASKS",
+		TextColor3 = Color3.fromRGB(0, 0, 0),
+		TextScaled = true,
+		ZIndex = 1,
+	}, title)
+	make("UIGradient", {
+		Name = "UIGradientShadow",
+		Color = ColorSequence.new(WHITE),
+		Rotation = -95,
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.495, 0.0938),
+			NumberSequenceKeypoint.new(0.766, 0.363),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+	}, shadow)
+end
+
+--- Construit l'interface si elle n'existe pas encore. Rend `false` tant que le PlayerGui n'est pas la.
+local function build(): boolean
+	local existing = screen
+	if existing and existing.Parent and template then
 		return true
 	end
 	local player = Players.LocalPlayer
 	local gui = player and player:FindFirstChildOfClass("PlayerGui")
-	local sg = gui and gui:FindFirstChild(GUI_NAME)
-	if not (sg and sg:IsA("ScreenGui")) then
-		-- ON LE DIT, ET ON NOMME CE QU'ON A TROUVE A LA PLACE. Cette sortie etait muette : le bandeau ne
-		-- s'affichait pas, aucune erreur, et rien ne distinguait "interface absente" de "code jamais appele".
-		-- Lister le contenu du PlayerGui repond en une ligne -- Rojo ne synchronise PAS StarterGui, donc une
-		-- interface presente dans une place manque tres bien dans l'autre.
-		local names = {}
-		if gui then
-			for _, child in ipairs(gui:GetChildren()) do
-				names[#names + 1] = child.Name
-			end
-		end
-		warn(
-			`[TaskBanner] "{GUI_NAME}" absente du PlayerGui : aucun objectif ne s'affichera. `
-				.. `Presentes : {if #names > 0 then table.concat(names, ", ") else "aucune"}. `
-				.. "Rojo ne synchronise pas StarterGui : l'interface doit exister dans CETTE place."
-		)
+	if not gui then
 		return false
 	end
-	local model = sg:FindFirstChild(TEMPLATE_NAME)
-	if not (model and model:IsA("Frame")) then
-		warn(`[TaskBanner] "{GUI_NAME}" trouve mais pas de "{TEMPLATE_NAME}" dedans : rien ne s'affichera.`)
-		return false
-	end
-	-- LE MODELE NE S'AFFICHE JAMAIS. Il reste visible dans Studio pour se regler a l'oeil ; en jeu, il ne doit
-	-- servir qu'a etre clone.
-	model.Visible = false
-	template = model
+
+	local sg = make("ScreenGui", {
+		Name = "LeafiaTaskBanner",
+		-- SANS INSET : l'origine du GUI devient le coin ABSOLU de l'ecran. Avec l'inset par defaut, tout le
+		-- bandeau descendrait d'environ 36 px, la hauteur de la barre Roblox.
+		ScreenInsets = Enum.ScreenInsets.None,
+		-- Sinon il est recree a chaque mort, et les references gardees ici pointeraient sur du detruit.
+		ResetOnSpawn = false,
+		DisplayOrder = 5,
+	}, gui) :: ScreenGui
+
+	buildHeader(sg)
+	template = buildRow(sg)
+	screen = sg
 	return true
 end
 
@@ -113,8 +337,8 @@ local function stopFill()
 	end
 end
 
---- La boucle qui fait glisser les jauges. Une seule pour toutes les lignes : une par ligne ferait tourner trois
---- connexions pour trois barres qui bougent aux memes instants.
+--- Une seule boucle pour toutes les jauges : une par ligne ferait tourner trois connexions pour trois barres qui
+--- avancent aux memes instants. Elle se coupe quand plus rien ne bouge.
 local function startFill()
 	if fillConn then
 		return
@@ -133,10 +357,10 @@ local function startFill()
 				row.current += gap * math.min(dt * FILL_SPEED, 1)
 				moving = true
 			end
-			fill.Size = UDim2.new(row.current * FILL_MAX, 0, fill.Size.Y.Scale, fill.Size.Y.Offset)
+			fill.Size = UDim2.fromScale(row.current * FILL_MAX, FILL_HEIGHT)
 		end
 		if not moving then
-			stopFill() -- plus rien ne bouge : la boucle n'a plus de raison de tourner
+			stopFill()
 		end
 	end)
 end
@@ -149,7 +373,7 @@ local function clearRows()
 	stopFill()
 end
 
---- Remplit une ligne clonee avec une tache.
+--- Remplit une ligne avec une tache.
 ---
 --- Le parametre ne s'appelle PAS `task` : ce nom masquerait le service `task` de Roblox, et un `task.delay`
 --- ajoute ici un jour appellerait `.delay` sur la config au lieu du planificateur -- en silence.
@@ -175,8 +399,14 @@ local function dress(frame: Frame, entry: TaskConfigs.Task)
 		draw.Image = id or ""
 	end
 
-	-- LA TEINTE VA SUR LE GRADIENT DE LA PASTILLE, pas sur sa couleur : le degrade est ce qui lui donne son
-	-- relief, et ecrire ImageColor3 par-dessus l'aplatirait.
+	local currency = frame:FindFirstChild("CurrencyImage")
+	if currency and currency:IsA("ImageLabel") then
+		currency.Image = entry.currency or ""
+		currency.Visible = entry.currency ~= nil
+	end
+
+	-- LA TEINTE VA SUR LE GRADIENT de la pastille, pas sur sa couleur : le degrade lui donne son relief, et
+	-- ecrire ImageColor3 par-dessus l'aplatirait.
 	local tint = entry.tint
 	if tint then
 		local pastille = frame:FindFirstChild("IconColor")
@@ -189,7 +419,8 @@ end
 
 --- Affiche la liste des taches. Remplace ce qui etait a l'ecran.
 function TaskBannerHandler.show(tasks: { TaskConfigs.Task })
-	if not resolve() then
+	if not build() then
+		warn("[TaskBanner] Pas de PlayerGui : aucun objectif ne s'affichera.")
 		return
 	end
 	local model = template :: Frame
@@ -206,16 +437,10 @@ function TaskBannerHandler.show(tasks: { TaskConfigs.Task })
 		local bar = frame:FindFirstChild("Bar")
 		local fillFrame = bar and bar:FindFirstChild("Fill")
 		local fill = if fillFrame and fillFrame:IsA("Frame") then fillFrame else nil
-		if fill then
-			-- La jauge part de zero et se remplit ensuite. Posee directement a sa valeur, on ne verrait pas
-			-- qu'elle avance.
-			fill.Size = UDim2.new(0, 0, fill.Size.Y.Scale, fill.Size.Y.Offset)
-		end
 
 		table.insert(rows, { frame = frame, fill = fill, target = entry.progress or 0, current = 0 })
 
-		-- EN CASCADE. Chaque ligne part apres la precedente : une liste qui se remplit, pas un panneau qui
-		-- apparait d'un coup.
+		-- EN CASCADE : chaque ligne part apres la precedente.
 		local slideTo = UDim2.fromScale(SHOWN_X, frame.Position.Y.Scale)
 		task.delay((i - 1) * ROW_STAGGER, function()
 			if frame.Parent then
@@ -239,6 +464,7 @@ end
 
 --- Range tout, en cascade elle aussi.
 function TaskBannerHandler.hide()
+	local count = #rows
 	for i, row in ipairs(rows) do
 		local frame = row.frame
 		local out = UDim2.fromScale(HIDDEN_X, frame.Position.Y.Scale)
@@ -248,10 +474,9 @@ function TaskBannerHandler.hide()
 			end
 		end)
 	end
-	-- On attend que la derniere soit sortie avant de detruire : detruire pendant le tween ferait disparaitre les
-	-- lignes d'un coup au lieu de les faire glisser.
-	local wait = (#rows - 1) * ROW_STAGGER + SLIDE_OUT.Time
-	task.delay(wait, clearRows)
+	-- On attend la sortie de la derniere : detruire pendant le tween ferait disparaitre les lignes d'un coup au
+	-- lieu de les faire glisser.
+	task.delay(math.max(count - 1, 0) * ROW_STAGGER + SLIDE_OUT.Time, clearRows)
 end
 
 --- Tout ranger sans animation. La boucle de remplissage tourne sur RenderStepped : la laisser vivre apres la

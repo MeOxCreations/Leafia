@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.607 — Le bandeau d'objectifs se construit en code, dans toutes les places
+
+Il pilotait une interface posee dans Studio depuis la version precedente. Il la CONSTRUIT de nouveau, et cette
+fois la raison est mesuree plutot que supposee : l'interface a ete faite dans une place, le jeu lance dans
+l'autre, et le bandeau n'existait tout simplement pas -- `LeafiaTaskBanner absente du PlayerGui`.
+
+**Rojo ne synchronise pas StarterGui.** Une interface posee a la main n'existe que dans la place ou on l'a
+faite : il faut la recopier dans chaque autre, et recommencer a chaque retouche d'un degrade. C'est exactement
+ce que disait le commentaire d'origine de ce module, et le passage sur Studio l'avait ignore.
+
+Meme exception que `Letterbox` et `ChapterTitle`, pour exactement la meme raison.
+
+### Ce qui est repris de la maquette
+
+Tout : positions, tailles, ZIndex, degrades. La barre a ses trois coins arrondis et son quatrieme vif, la
+pastille garde ses trois couches empilees (contour, couleur de tache, dessin), le titre garde son ombre portee
+en second label decale.
+
+Studio reste l'endroit ou l'on REGLE a l'oeil. Ce fichier est l'endroit ou le reglage se FIGE, et d'ou il part
+vers toutes les places d'un coup.
+
+### Ce qui a ete corrige au passage
+
+`Thickness` du contour passe de 0.14 a 1.4 : la valeur de la maquette supposait `ScaledSize`, qui rapporte
+l'epaisseur a la taille de l'element. En pixels, 0.14 est invisible.
 ## 0.0.606 — Les objectifs s'affichent des l'arrivee, sans attendre la scene
 
 Le bandeau attendait la fin du scenario du grand-pere. Il s'affiche maintenant des que le joueur arrive.
