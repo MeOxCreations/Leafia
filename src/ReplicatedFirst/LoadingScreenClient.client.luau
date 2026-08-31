@@ -97,6 +97,8 @@ local TILE_SPEED = 15
 -- la place principale (tuto, chantiers : ils ne montrent JAMAIS l'ecran herbe, meme lances direct en Studio). Autonome :
 -- ReplicatedFirst ne peut pas require PlacesConfig, donc l'ID de Leafia est EN DUR ici (doit valoir PlacesConfig.MAIN). =====
 local MAIN_PLACE_ID = 84161484719535
+-- Meme regle : EN DUR, et doit valoir PlacesConfig.TUTORIAL. Sert a garder le tuto epure (voir plus bas).
+local TUTORIAL_PLACE_ID = 109440527457437
 if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_PLACE_ID then
 	-- ===== LE RIDEAU EST CONSTRUIT EN CODE =====
 	-- Il l'a ete un temps a partir d'une ScreenGui modele posee dans Studio. Abandonne : Rojo ne synchronise pas
@@ -1183,10 +1185,16 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		RunService.Heartbeat:Wait()
 	end
 
-	pcall(function()
-		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
-		StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
-	end)
+	-- LE TUTO RESTE EPURE. Ailleurs, chat et liste des joueurs reviennent normalement a la fin du chargement.
+	-- Dans le didacticiel le joueur est SEUL : une liste a un seul nom et une fenetre de chat vide n'apportent
+	-- rien et prennent les deux coins de l'ecran -- ceux-la memes ou s'affichent le bandeau d'objectifs et les
+	-- monnaies. La fenetre de chat moderne, elle, reste coupee par `hideCoreGuis` et n'est jamais rallumee ici.
+	if game.PlaceId ~= TUTORIAL_PLACE_ID then
+		pcall(function()
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.Chat, true)
+			StarterGui:SetCoreGuiEnabled(Enum.CoreGuiType.PlayerList, true)
+		end)
+	end
 
 	-- ===== VOLET DE SORTIE =====
 	local wipeGui = Instance.new("ScreenGui")

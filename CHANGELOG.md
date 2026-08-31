@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.608 — Le tuto n'a plus ni chat ni liste de joueurs
+
+Dans le didacticiel le joueur est SEUL. Une liste a un seul nom et une fenetre de chat vide n'apportent rien, et
+elles occupent les deux coins hauts de l'ecran -- ceux-la memes ou s'affichent le bandeau d'objectifs et les
+monnaies.
+
+### Ce n'etait pas la ou on l'aurait cherche
+
+Les couper au demarrage du client n'aurait servi a rien : c'est l'ECRAN DE CHARGEMENT qui les rallume, plusieurs
+secondes plus tard, une fois le personnage arrive. Il les coupe pendant le chargement puis les restaure -- et sa
+restauration serait passee APRES notre coupure.
+
+Le reglage est donc pose la ou la decision se prend, dans `LoadingScreenClient` : ailleurs elles reviennent
+normalement, dans le tuto elles ne reviennent pas. La fenetre de chat moderne
+(`TextChatService.ChatWindowConfiguration`), elle, etait deja coupee par le chargement et n'est jamais rallumee
+dans cette place.
+
+`TUTORIAL_PLACE_ID` est ecrit EN DUR a cote de `MAIN_PLACE_ID`, pour la meme raison que lui : ReplicatedFirst
+charge avant ReplicatedStorage et ne peut pas require `PlacesConfig`. Les deux doivent rester d'accord avec lui.
 ## 0.0.607 — Le bandeau d'objectifs se construit en code, dans toutes les places
 
 Il pilotait une interface posee dans Studio depuis la version precedente. Il la CONSTRUIT de nouveau, et cette
