@@ -165,7 +165,7 @@ local function buildRow(parent: Instance): Frame
 		AnchorPoint = Vector2.new(0.5, 0.5),
 		BackgroundColor3 = WHITE,
 		BackgroundTransparency = 0,
-		Position = UDim2.fromScale(0.5, 5.5),
+		Position = UDim2.fromScale(0.485, 5.5),
 		Size = UDim2.fromScale(1.049, 9.714),
 		ZIndex = 0, -- derriere tout le reste de la ligne : c'est un fond, pas un element
 	}, rule)
