@@ -114,7 +114,9 @@ local function buildRow(parent: Instance): Frame
 		Name = "Bar",
 		AnchorPoint = Vector2.new(0, 0.5),
 		BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-		BackgroundTransparency = 0.35,
+		-- OPAQUE. En semi-transparente, le fond de la ligne se lit a travers la jauge vide et l'on ne sait plus
+		-- ou elle s'arrete.
+		BackgroundTransparency = 0,
 		Position = UDim2.fromScale(0.145, 0.745),
 		Size = UDim2.fromScale(0.39, 0.21),
 		ZIndex = 1,
