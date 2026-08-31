@@ -263,10 +263,6 @@ end
 -- Chaque sortie retombe sur `restoreIdle` : sans animation d'arrivee, sans Animator, ou si le chargement echoue,
 -- le grand-pere doit se retrouver dans sa pose de repos. Le laisser fige sur sa derniere image de marche serait
 -- pire que pas d'arrivee du tout.
--- REMPLIE PLUS BAS. `playArrival` a besoin de la marche, definie apres lui -- et la marche a besoin de
--- `playArrival` a son arrivee. Une variable de fonction casse le cercle sans deplacer un bloc entier.
-local walkTo: ((string, ((Model) -> ())?) -> ())? = nil
-
 local function playArrival(model: Model)
 	local animId = TutorialConfigs.OLDMAN_ARRIVE_ANIM
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -294,16 +290,39 @@ local function playArrival(model: Model)
 	-- FORCE A FALSE cote code : le reglage de l'editeur n'est qu'une suggestion, et une piste bouclee par erreur
 	-- reste a plein poids POUR TOUJOURS -- l'idle ne reviendrait jamais.
 	t.Looped = false
+	-- IL ARRIVE EN BAS : ON Y POSE SON ANCRAGE.
+	--
+	-- L'animation deplace tout le corps mais pas son point d'ancrage, reste en haut des marches. Au marqueur, le
+	-- corps est visuellement en bas : poser l'ancrage la a cet instant precis ne se voit pas, puisque le corps y
+	-- est deja. Une image plus tard, l'animation se relache et il remonte -- c'etait le bug.
+	--
+	-- Le marqueur se lit sur la piste EN COURS : lecture locale, aucun appel reseau, contrairement a
+	-- `GetKeyframeSequenceAsync` qui peut rater son coup pour toute une session.
+	local landed = false
+	t:GetMarkerReachedSignal(TutorialConfigs.OLDMAN_ARRIVE_END_EVENT):Connect(function()
+		landed = true
+		local target = findByName(TutorialConfigs.OLDMAN_STAIRS_TARGET)
+		local root = model:FindFirstChild("HumanoidRootPart")
+		if not (target and target:IsA("BasePart") and root and root:IsA("BasePart")) then
+			return
+		end
+		local rootPart = root :: BasePart
+		-- ON GARDE SON ORIENTATION : la part ne dit QUE l'endroit. Reprendre aussi sa rotation le ferait pivoter
+		-- d'un coup selon la facon dont elle a ete posee dans Studio.
+		local to = CFrame.new((target :: BasePart).Position) * (rootPart.CFrame - rootPart.CFrame.Position)
+		model:PivotTo(to * rootPart.CFrame:Inverse() * model:GetPivot())
+	end)
+
 	t.Stopped:Connect(function()
-		-- IL SOUFFLE, PUIS IL REPART. L'idle est pose tout de suite : sans lui, il resterait fige sur la derniere
-		-- image de sa descente pendant toute la pause.
+		if not landed then
+			-- ON LE DIT. Sans le marqueur il vient de remonter en haut des marches, et ca ressemble a un bug de
+			-- deplacement alors qu'il ne manque qu'un evenement dans l'animation.
+			warn(
+				`[Tutorial] Marqueur "{TutorialConfigs.OLDMAN_ARRIVE_END_EVENT}" jamais atteint dans `
+					.. `"{TutorialConfigs.OLDMAN_ARRIVE_ANIM}" : le grand-pere est remonte en haut des marches.`
+			)
+		end
 		restoreIdle(model)
-		task.delay(TutorialConfigs.OLDMAN_ARRIVE_PAUSE, function()
-			local walk = walkTo
-			if walk then
-				walk(TutorialConfigs.OLDMAN_STAIRS_TARGET, restoreIdle)
-			end
-		end)
 	end)
 	t:Play()
 end
@@ -422,8 +441,6 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?)
 	end)
 end
 
-
-walkTo = walkOldMan
 
 local function onPlayerAdded(player: Player)
 	player.CharacterAdded:Connect(placeCharacter)

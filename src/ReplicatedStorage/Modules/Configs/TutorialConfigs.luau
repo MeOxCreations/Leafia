@@ -412,9 +412,13 @@ return {
 	--
 	-- Absente, le geste se joue sur place : il descend visuellement puis remonte. Le service le DIT alors.
 	OLDMAN_STAIRS_TARGET = "OldManWalkTo2",
-	-- LE TEMPS QU'IL SOUFFLE, une fois en bas des marches, avant de repartir. Enchainer sans pause donnerait un
-	-- personnage qui se remet en marche a la seconde ou il finit de se plaindre, ce qui annule le geste.
-	OLDMAN_ARRIVE_PAUSE = 1,
+	-- LE MARQUEUR DE FIN DE DESCENTE, pose dans l'animation. A cet instant le corps est visuellement EN BAS des
+	-- marches, alors que son point d'ancrage est reste en haut : c'est le seul moment ou l'on peut poser l'ancrage
+	-- en bas sans que rien ne saute a l'ecran. Une image plus tot le corps n'y est pas encore, une image plus tard
+	-- l'animation s'est relachee et il est deja remonte.
+	--
+	-- Absent, le grand-pere descend puis REMONTE d'un coup a la fin du geste. Le service le dit alors.
+	OLDMAN_ARRIVE_END_EVENT = "EndEventIsDown",
 	-- Sa vitesse de marche, en studs/s.
 	-- LENT, et c'est le sujet du plan. C'est un vieux monsieur avec une canne qui sort de chez lui : le voir
 	-- traverser prend du temps, et ce temps EST ce qu'on raconte. L'animation suit cette vitesse toute seule
