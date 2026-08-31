@@ -39,14 +39,23 @@ local ROW_SIZE = UDim2.fromScale(0.331, 0.068)
 local FIRST_Y = 0.219
 local ROW_GAP = 0.078
 
--- D'OU ELLES ARRIVENT. Hors champ a gauche : elles entrent par le bord, comme les notifications.
-local HIDDEN_X = -0.6
+-- D'OU ELLES ARRIVENT. Hors champ a gauche : elles entrent par le bord, comme les notifications. Largement au
+-- dela du bord pour qu'aucun bout ne depasse avant le depart, meme sur un ecran tres large.
+local HIDDEN_X = -1.5
 local SHOWN_X = 0
 
 local SLIDE_IN = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SLIDE_OUT = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 -- Retard entre deux lignes : une liste qui se REMPLIT, pas un panneau qui apparait d'un coup.
 local ROW_STAGGER = 0.09
+
+-- LE REBOND DE LA PIECE, quand sa ligne vient de se poser. Elle part decalee a DROITE et revient en tremblant :
+-- `Elastic Out` depasse sa cible puis oscille en s'amortissant, ce qui donne le mouvement mou d'une matiere qui
+-- se remet en place. Un `Back` ne depasserait qu'une fois, et ca se lirait comme un a-coup.
+--
+-- ON DEPLACE, ON NE REDIMENSIONNE PAS : la taille de la piece est reglee, et l'ecraser ferait perdre le reglage.
+local COIN_BOUNCE_X = 0.06
+local COIN_BOUNCE = TweenInfo.new(0.55, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out)
 
 -- ===== JAUGE =====
 local FILL_SPEED = 6
@@ -503,9 +512,22 @@ function TaskBannerHandler.show(tasks: { TaskConfigs.Task })
 		-- EN CASCADE : chaque ligne part apres la precedente.
 		local slideTo = UDim2.fromScale(SHOWN_X, frame.Position.Y.Scale)
 		task.delay((i - 1) * ROW_STAGGER, function()
-			if frame.Parent then
-				TweenService:Create(frame, SLIDE_IN, { Position = slideTo }):Play()
+			if not frame.Parent then
+				return
 			end
+			local slide = TweenService:Create(frame, SLIDE_IN, { Position = slideTo })
+			-- LE REBOND SUIT LA FIN DU GLISSEMENT, pas un delai calcule a cote : un delai se decalerait des
+			-- qu'on retouche la duree de l'arrivee, et la piece rebondirait pendant que la ligne bouge encore.
+			slide.Completed:Connect(function()
+				local coin = frame:FindFirstChild("CurrencyImage")
+				if not (coin and coin:IsA("ImageLabel") and coin.Visible) then
+					return
+				end
+				local home = coin.Position
+				coin.Position = home + UDim2.fromScale(COIN_BOUNCE_X, 0)
+				TweenService:Create(coin, COIN_BOUNCE, { Position = home }):Play()
+			end)
+			slide:Play()
 		end)
 	end
 
