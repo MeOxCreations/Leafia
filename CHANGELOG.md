@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.610 — Le grand-pere descend vraiment les marches
+
+Il jouait sa descente SUR PLACE : il avait l'air de descendre, puis remontait d'un coup a la fin de l'animation.
+
+**Une animation Roblox ne deplace pas le personnage.** Elle bouge ses membres autour d'un point d'ancrage qui,
+lui, ne bouge pas -- et quand elle s'acheve, tout le corps revient a sa vraie position. C'est deja pour cette
+raison que la marche deplace le modele elle-meme au lieu de compter sur l'animation ; la descente le fait
+desormais aussi.
+
+Il glisse donc vers `OldManWalkTo2` pendant que le geste joue, puis prend son idle une fois en bas.
+
+### La duree vient de l'animation
+
+Elle n'est connue qu'une fois la piste CHARGEE : on l'attend plutot que de la deviner. Retoucher l'animation
+dans l'editeur suffit alors a regler la descente, sans toucher au code -- et un chiffre pose a la main aurait
+fini par ne plus correspondre au geste.
+
+### Sans la part
+
+Le service le DIT. Le geste se joue alors sur place, et le retour brutal a la fin ressemble a un bug
+d'animation, alors qu'il ne manque qu'un point dans le Workspace -- que Rojo ne synchronise pas.
+
+### A faire dans Studio
+
+Une part `OldManWalkTo2` au bas des marches, a cote de `OldManWalkTo`.
 ## 0.0.609 — Le grand-pere se tient le dos en arrivant
 
 Il traversait le jardin puis reprenait sa pose de repos, d'un coup. Il descend maintenant les marches en se

@@ -256,6 +256,56 @@ end
 -- une part ancree : `MoveTo` partait, ne bougeait rien, et rendait "chemin barre" au bout de son delai. Ce n'est
 -- pas un contournement -- pour un personnage de scene qui suit un trajet decide a l'avance, un glissement est
 -- plus SUR qu'un pathfinding : il ne peut ni s'accrocher a un meuble ni tomber d'un bord.
+-- IL DESCEND VRAIMENT LES MARCHES. L'animation ne le deplace pas -- elle bouge ses membres autour d'un point
+-- d'ancrage immobile -- donc c'est nous qui le faisons glisser pendant qu'elle joue. Sans ca il descendrait
+-- visuellement puis REMONTERAIT d'un coup a la fin, revenu a sa vraie position.
+--
+-- Meme principe que la marche, et pour la meme raison.
+local function slideDuringArrival(model: Model, track: AnimationTrack)
+	local target = findByName(TutorialConfigs.OLDMAN_STAIRS_TARGET)
+	if not (target and target:IsA("BasePart")) then
+		-- ON LE DIT : sans cette part le geste se joue sur place, et le retour brutal a la fin ressemble a un bug
+		-- d'animation alors qu'il ne manque qu'un point dans le Workspace.
+		warn(
+			`[Tutorial] Aucune part "{TutorialConfigs.OLDMAN_STAIRS_TARGET}" : le grand-pere descendra sur place `
+				.. "et reviendra d'un coup a la fin. Rojo ne synchronise pas le Workspace."
+		)
+		return
+	end
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then
+		return
+	end
+	local rootPart = root :: BasePart
+	local targetPart = target :: BasePart
+
+	task.spawn(function()
+		-- LA DUREE VIENT DE L'ANIMATION, pas d'un chiffre pose a la main : elle n'est connue qu'une fois la piste
+		-- chargee, donc on l'attend. Retoucher l'animation dans l'editeur suffit alors a regler la descente.
+		local deadline = os.clock() + 3
+		while track.Length <= 0 and os.clock() < deadline do
+			task.wait()
+		end
+		local seconds = if track.Length > 0 then track.Length else 1
+
+		local from = rootPart.CFrame
+		local to = CFrame.new(targetPart.Position) * (from - from.Position)
+
+		local t0 = os.clock()
+		while model.Parent do
+			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
+			-- ON APPLIQUE UN ECART MONDE, pas un pivot : `GetPivot` suit la boite englobante des qu'on ajoute un
+			-- enfant au modele, et le placement partirait de travers sans que rien ne le signale.
+			local now = from:Lerp(to, e)
+			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
+			if e >= 1 then
+				break
+			end
+			task.wait()
+		end
+	end)
+end
+
 -- IL ARRIVE, ET IL SE TIENT LE DOS. Un geste ponctuel, joue une fois, qui rend la main a l'idle quand il
 -- s'acheve -- c'est LUI qui dit quand il a fini, pas un delai pose a cote qui se decalerait si on retouche
 -- l'animation.
@@ -284,6 +334,7 @@ local function playArrival(model: Model)
 	end
 
 	local t = result :: AnimationTrack
+	slideDuringArrival(model, t)
 	-- AU-DESSUS DE L'IDLE, sinon la pose de repos la melangerait : a priorite egale Roblox ne choisit pas, il
 	-- MOYENNE les deux.
 	t.Priority = Enum.AnimationPriority.Action
