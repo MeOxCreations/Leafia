@@ -137,9 +137,12 @@ local function buildRow(parent: Instance): Frame
 		TopLeftRadius = UDim.new(0, 20),
 		TopRightRadius = UDim.new(0, 0),
 	}, bar)
+	-- `ScaledSize` : l'epaisseur est rapportee a la taille de l'element, donc le contour reste juste sur tous les
+	-- ecrans. En `Pixels`, il faudrait le reregler pour chaque resolution.
 	make("UIStroke", {
 		Color = Color3.fromRGB(0, 0, 0),
-		Thickness = 1.4,
+		StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
+		Thickness = 0.14,
 		LineJoinMode = Enum.LineJoinMode.Round,
 	}, bar)
 
@@ -237,7 +240,7 @@ local function buildRow(parent: Instance): Frame
 		ZIndex = 3,
 	}, row)
 
-	make("TextLabel", {
+	local reward = make("TextLabel", {
 		Name = "RewardText",
 		AnchorPoint = Vector2.new(1, 0.5),
 		BackgroundTransparency = 1,
@@ -252,6 +255,27 @@ local function buildRow(parent: Instance): Frame
 		TextXAlignment = Enum.TextXAlignment.Right,
 		ZIndex = 3,
 	}, row)
+
+	-- LE CONTOUR DU CHIFFRE. Il detache la recompense du fond quelle que soit la couleur derriere elle : sans
+	-- lui, un chiffre blanc sur une zone claire disparait.
+	local rewardStroke = make("UIStroke", {
+		Color = Color3.fromRGB(0, 0, 0),
+		StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
+		Thickness = 0.04,
+		LineJoinMode = Enum.LineJoinMode.Round,
+	}, reward)
+	-- LE CONTOUR S'EFFACE VERS LE BAS. Il tient en haut du chiffre, ou il sert a le detacher, et disparait sous
+	-- lui : un trait plein tout autour enfermerait le texte dans une boite.
+	make("UIGradient", {
+		Color = ColorSequence.new(WHITE),
+		Rotation = -90,
+		Transparency = NumberSequence.new({
+			NumberSequenceKeypoint.new(0, 0),
+			NumberSequenceKeypoint.new(0.434, 0.531),
+			NumberSequenceKeypoint.new(0.805, 0.969),
+			NumberSequenceKeypoint.new(1, 1),
+		}),
+	}, rewardStroke)
 
 	make("ImageLabel", {
 		Name = "CurrencyImage",
