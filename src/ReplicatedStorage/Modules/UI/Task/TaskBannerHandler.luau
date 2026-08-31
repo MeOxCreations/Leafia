@@ -1,300 +1,248 @@
 --!strict
--- BANDEAU D'OBJECTIF, en haut de l'ecran. Il dit CE QU'ON DOIT FAIRE, ou l'on en est, et ce que ca rapporte.
+-- BANDEAU D'OBJECTIFS, en haut a gauche. Il dit CE QU'ON DOIT FAIRE, ou l'on en est, et ce que ca rapporte.
 --
--- CONSTRUIT EN CODE et pas dans Studio, contrairement aux autres interfaces du projet. C'est volontaire tant que
--- la maquette bouge : chaque essai part sur GitHub, se relit dans le diff, et ne demande a personne de refaire
--- les memes reglages a la main dans une deuxieme place. Le jour ou la forme est figee, il pourra passer dans
--- Studio comme les autres.
+-- IL NE CONSTRUIT PLUS RIEN. La version precedente dessinait toute l'interface en code, le temps que la maquette
+-- bouge -- chaque essai partait sur GitHub et se relisait dans le diff. La forme est maintenant figee dans
+-- Studio (`StarterGui.LeafiaTaskBanner`), donc ce module la PILOTE, comme tous les autres handlers du projet.
 --
--- PAS DE SYSTEME DE TACHES DERRIERE. Une seule tache s'affiche, et c'est l'appelant qui dit laquelle. Une liste
--- generique -- plusieurs taches, conditions, priorites -- se construira quand il y en aura une deuxieme et une
--- troisieme REELLEMENT differentes : c'est la qu'on saura ce qu'elles ont en commun. Le deviner avant donne une
--- usine qui ne sert qu'un cas.
+-- Ce qu'il attend dans Studio, et rien d'autre :
+--
+--   LeafiaTaskBanner (ScreenGui)
+--     Title, ThicknessTop, Background   -- le decor, on n'y touche pas
+--     TemplateTask (Frame)              -- LE MODELE. Clone une fois par tache, jamais affiche tel quel.
+--       Bar > Fill                      -- la jauge : c'est le Size.X de Fill qui avance
+--       IconColor                       -- la pastille teintee (son UIGradient porte la couleur de la tache)
+--       IconTaskDraw                    -- le dessin de la tache
+--       DescriptionTask, RewardText     -- les textes
+--
+-- Un nom qui change dans Studio casse le pilotage : le module le DIT alors, plutot que d'echouer en silence.
 
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 
 local TaskBannerHandler = {}
 
--- ===== PLACE ET TAILLE =====
--- En FRACTION D'ECRAN : le bandeau garde ses proportions du telephone au grand ecran. En pixels, il serait enorme
--- sur mobile et perdu sur un 27 pouces.
-local POS = UDim2.fromScale(0.5, 0.055)
-local SIZE = UDim2.fromScale(0.46, 0.088)
--- Il ne descend jamais sous cette hauteur en pixels : sous ~54 px le texte devient illisible sur telephone.
-local MIN_HEIGHT = 54
+local GUI_NAME = "LeafiaTaskBanner"
+local TEMPLATE_NAME = "TemplateTask"
 
--- ===== COULEURS =====
-local GREEN_BG = Color3.fromRGB(45, 133, 106)
-local WHITE = Color3.fromRGB(255, 255, 255)
-local ICON_GREEN = Color3.fromRGB(64, 232, 44)
-local BAR_EMPTY = Color3.fromRGB(203, 203, 203)
-local BAR_FILL = Color3.fromRGB(126, 226, 138)
-local XP_CYAN = Color3.fromRGB(96, 240, 255)
+-- Le Y de la premiere ligne et l'ecart entre deux, en part d'ecran. Repris du template pose dans Studio : la
+-- premiere garde sa place, les suivantes se rangent dessous.
+local FIRST_Y = 0.219
+local ROW_GAP = 0.078
 
--- Image de l'icone. VIDE = un losange dessine en code, pour ne pas dependre d'un asset qui n'existe pas encore.
--- Poser un `rbxassetid://` ici remplace le dessin sans toucher au reste.
-local ICON_IMAGE = ""
+-- D'OU ELLES ARRIVENT. Hors champ a gauche, en X : elles entrent par le bord, comme les notifications. Assez
+-- loin pour qu'aucun bout ne depasse avant le depart, quelle que soit la largeur de l'ecran.
+local HIDDEN_X = -0.6
+local SHOWN_X = 0
 
--- ===== ANIMATION =====
--- Il ARRIVE PAR LE HAUT : il vient de hors-champ, donc on comprend qu'il apparait maintenant. Apparaitre sur
--- place se lit comme un element qu'on n'avait pas remarque.
+-- `Back Out` depasse legerement la cible avant de se poser : c'est ce qui donne le petit rebond. Repris tel quel
+-- de la version precedente, le toucher etait bon.
 local SLIDE_IN = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SLIDE_OUT = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-local HIDDEN_POS = UDim2.fromScale(POS.X.Scale, -0.15)
--- Vitesse de remplissage de la barre, en fraction par seconde. La barre GLISSE vers sa valeur au lieu d'y sauter :
--- c'est le mouvement qui se remarque, pas la valeur.
+-- Retard entre deux lignes : elles arrivent en cascade, pas en bloc. Un bloc se lit comme un panneau qui
+-- apparait ; une cascade se lit comme une liste qui se REMPLIT.
+local ROW_STAGGER = 0.09
+
+-- Vitesse de remplissage de la jauge. Elle GLISSE vers sa valeur : c'est le mouvement qui se remarque, pas le
+-- chiffre -- une barre qui saute a sa place ne se voit pas.
 local FILL_SPEED = 6
+-- Largeur de la jauge pleine, en part de `Bar`. Un poil sous 1 : a 1 pile, les coins arrondis du remplissage
+-- debordent de ceux de la barre.
+local FILL_MAX = 0.98
+-- En dessous de cet ecart, on CLE a la cible. Un lerp exponentiel n'atteint jamais sa valeur : sans ce clou, une
+-- jauge "pleine" resterait a 99,7 % pour toujours.
+local FILL_SNAP = 0.004
 
-local player = Players.LocalPlayer
+type Row = {
+	frame: Frame,
+	fill: Frame?,
+	target: number,
+	current: number,
+}
 
-local gui: ScreenGui? = nil
-local root: Frame? = nil
-local titleLabel: TextLabel? = nil
-local rewardLabel: TextLabel? = nil
-local barFill: Frame? = nil
-local shown = false
-local fillNow = 0
-local fillTarget = 0
+local template: Frame? = nil
+local rows: { Row } = {}
 local fillConn: RBXScriptConnection? = nil
 
--- Arrondit les coins d'un element. On PARENTE ici plutot que de rendre l'objet : contrairement a ce que j'avais
--- ecrit, l'API Roblox n'a pas de methode pour ajouter un enfant -- on pose `.Parent`, et rien d'autre. Un appel a
--- une methode qui n'existe pas passe `selene` sans un mot et ne casse qu'au lancement.
---
--- Le cast est necessaire : `Instance.new("UICorner")` n'est pas resolu vers le type `UICorner` par le
--- verificateur utilise ici, et poser `.CornerRadius` sur un `Instance` nu donne une erreur. Deja note au journal.
-local function addCorner(parent: Instance, radius: number)
-	local c = Instance.new("UICorner") :: UICorner
-	c.CornerRadius = UDim.new(0, radius)
-	c.Parent = parent
+--- Retrouve l'interface posee dans Studio. Rend `nil` tant qu'elle n'est pas la.
+local function resolve(): boolean
+	if template and template.Parent then
+		return true
+	end
+	local player = Players.LocalPlayer
+	local gui = player and player:FindFirstChildOfClass("PlayerGui")
+	local sg = gui and gui:FindFirstChild(GUI_NAME)
+	if not (sg and sg:IsA("ScreenGui")) then
+		return false
+	end
+	local model = sg:FindFirstChild(TEMPLATE_NAME)
+	if not (model and model:IsA("Frame")) then
+		warn(`[TaskBanner] "{GUI_NAME}" trouve mais pas de "{TEMPLATE_NAME}" dedans : rien ne s'affichera.`)
+		return false
+	end
+	-- LE MODELE NE S'AFFICHE JAMAIS. Il reste visible dans Studio pour se regler a l'oeil ; en jeu, il ne doit
+	-- servir qu'a etre clone.
+	model.Visible = false
+	template = model
+	return true
 end
 
-local function build(): Frame
-	local existing = root
-	if existing and existing.Parent then
-		return existing
-	end
-
-	local sg = Instance.new("ScreenGui")
-	sg.Name = "LeafiaTaskBanner"
-	-- Il survit aux respawns : sans ca il serait recree a chaque mort, et les references gardees ici pointeraient
-	-- sur du detruit. Le piege est note dans le journal du projet.
-	sg.ResetOnSpawn = false
-	sg.ScreenInsets = Enum.ScreenInsets.None
-	sg.IgnoreGuiInset = true
-	sg.DisplayOrder = 40
-	sg.Parent = player:WaitForChild("PlayerGui")
-	gui = sg
-
-	local frame = Instance.new("Frame")
-	frame.Name = "Banner"
-	frame.AnchorPoint = Vector2.new(0.5, 0.5)
-	frame.Position = HIDDEN_POS
-	frame.Size = SIZE
-	frame.BackgroundColor3 = GREEN_BG
-	frame.BorderSizePixel = 0
-	frame.Parent = sg
-
-	local minSize = Instance.new("UISizeConstraint")
-	minSize.MinSize = Vector2.new(0, MIN_HEIGHT)
-	minSize.Parent = frame
-
-	-- ===== L'ICONE, a gauche =====
-	-- Carree PAR CONTRAINTE et pas par une largeur en fraction : une fraction de la LARGEUR du bandeau
-	-- s'ecraserait sur un ecran etroit, alors qu'un carre reste un carre.
-	local iconBox = Instance.new("Frame")
-	iconBox.Name = "IconBox"
-	iconBox.AnchorPoint = Vector2.new(0, 0.5)
-	iconBox.Position = UDim2.fromScale(0.012, 0.5)
-	iconBox.Size = UDim2.fromScale(0, 1.35)
-	iconBox.BackgroundTransparency = 1
-	iconBox.Parent = frame
-
-	local square = Instance.new("UIAspectRatioConstraint")
-	square.AspectRatio = 1
-	square.Parent = iconBox
-
-	if ICON_IMAGE ~= "" then
-		local img = Instance.new("ImageLabel")
-		img.Size = UDim2.fromScale(1, 1)
-		img.BackgroundTransparency = 1
-		img.Image = ICON_IMAGE
-		img.ScaleType = Enum.ScaleType.Fit
-		img.Parent = iconBox
-	else
-		-- LOSANGE DESSINE : deux carres tournes a 45 degres, l'un blanc (le contour), l'autre vert par-dessus.
-		-- Ce n'est pas l'hexagone de la maquette -- un hexagone ne se dessine pas avec des rectangles -- mais ca
-		-- tient la place et la couleur en attendant l'image.
-		local outer = Instance.new("Frame")
-		outer.AnchorPoint = Vector2.new(0.5, 0.5)
-		outer.Position = UDim2.fromScale(0.5, 0.5)
-		outer.Size = UDim2.fromScale(0.62, 0.62)
-		outer.Rotation = 45
-		outer.BackgroundColor3 = WHITE
-		outer.BorderSizePixel = 0
-		outer.Parent = iconBox
-		addCorner(outer, 6)
-
-		local inner = Instance.new("Frame")
-		inner.AnchorPoint = Vector2.new(0.5, 0.5)
-		inner.Position = UDim2.fromScale(0.5, 0.5)
-		inner.Size = UDim2.fromScale(0.66, 0.66)
-		inner.BackgroundColor3 = ICON_GREEN
-		inner.BorderSizePixel = 0
-		inner.Parent = outer
-		addCorner(inner, 4)
-	end
-
-	-- ===== LE TRAIT DU HAUT =====
-	-- Il part de l'icone et file jusqu'au bord : c'est lui qui relie les trois blocs et qui donne au bandeau son
-	-- allure de barre de mission plutot que de simple rectangle vert.
-	local rule = Instance.new("Frame")
-	rule.Name = "Rule"
-	rule.AnchorPoint = Vector2.new(0, 0.5)
-	rule.Position = UDim2.fromScale(0.13, 0.24)
-	rule.Size = UDim2.new(0.86, 0, 0, 3)
-	rule.BackgroundColor3 = WHITE
-	rule.BorderSizePixel = 0
-	rule.Parent = frame
-	addCorner(rule, 2)
-
-	-- ===== LE TITRE =====
-	local title = Instance.new("TextLabel")
-	title.Name = "Title"
-	title.AnchorPoint = Vector2.new(0, 0.5)
-	title.Position = UDim2.fromScale(0.14, 0.42)
-	title.Size = UDim2.fromScale(0.6, 0.3)
-	title.BackgroundTransparency = 1
-	title.TextColor3 = WHITE
-	title.Font = Enum.Font.GothamBold
-	title.TextScaled = true
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	-- EN ANGLAIS. Le traducteur de Roblox part de l'anglais : un texte ecrit en francais n'est traduit nulle part,
-	-- et le jeu devient illisible pour la quasi-totalite des joueurs de la plateforme.
-	title.Text = "MOW THE LAWN"
-	title.Parent = frame
-	titleLabel = title
-
-	-- ===== LA RECOMPENSE =====
-	local reward = Instance.new("TextLabel")
-	reward.Name = "Reward"
-	reward.AnchorPoint = Vector2.new(1, 0.5)
-	reward.Position = UDim2.fromScale(0.978, 0.42)
-	reward.Size = UDim2.fromScale(0.22, 0.3)
-	reward.BackgroundTransparency = 1
-	reward.TextColor3 = XP_CYAN
-	reward.Font = Enum.Font.GothamBold
-	reward.TextScaled = true
-	reward.TextXAlignment = Enum.TextXAlignment.Right
-	reward.Text = "+ 50 XP"
-	reward.Parent = frame
-	rewardLabel = reward
-
-	local glow = Instance.new("UIStroke")
-	glow.Color = XP_CYAN
-	glow.Thickness = 2
-	glow.Transparency = 0.62
-	glow.Parent = reward
-
-	-- ===== LA BARRE =====
-	local barBack = Instance.new("Frame")
-	barBack.Name = "Bar"
-	barBack.AnchorPoint = Vector2.new(0, 0.5)
-	barBack.Position = UDim2.fromScale(0.145, 0.76)
-	barBack.Size = UDim2.fromScale(0.39, 0.24)
-	barBack.BackgroundColor3 = BAR_EMPTY
-	barBack.BorderSizePixel = 0
-	barBack.Parent = frame
-	addCorner(barBack, 20)
-
-	local outline = Instance.new("UIStroke")
-	outline.Color = WHITE
-	outline.Thickness = 3
-	outline.Parent = barBack
-
-	local fill = Instance.new("Frame")
-	fill.Name = "Fill"
-	fill.AnchorPoint = Vector2.new(0, 0.5)
-	fill.Position = UDim2.fromScale(0, 0.5)
-	fill.Size = UDim2.fromScale(0, 1)
-	fill.BackgroundColor3 = BAR_FILL
-	fill.BorderSizePixel = 0
-	fill.Parent = barBack
-	addCorner(fill, 20)
-	barFill = fill
-
-	root = frame
-	return frame
-end
-
--- Affiche le bandeau. `progress` va de 0 a 1.
-function TaskBannerHandler.show(title: string, reward: string, progress: number?)
-	local frame = build()
-	local t = titleLabel
-	if t then
-		t.Text = title
-	end
-	local r = rewardLabel
-	if r then
-		r.Text = reward
-	end
-	TaskBannerHandler.setProgress(progress or 0)
-
-	if shown then
-		return
-	end
-	shown = true
-	frame.Position = HIDDEN_POS
-	TweenService:Create(frame, SLIDE_IN, { Position = POS }):Play()
-end
-
--- Fixe l'avancement, de 0 a 1. La barre GLISSE vers la valeur : c'est le mouvement qui se remarque, pas le
--- chiffre -- une barre qui saute a sa place ne se voit pas.
-function TaskBannerHandler.setProgress(value: number)
-	fillTarget = math.clamp(value, 0, 1)
-	if fillConn then
-		return
-	end
-	fillConn = RunService.RenderStepped:Connect(function(dt: number)
-		local bar = barFill
-		if not (bar and bar.Parent) then
-			return
-		end
-		fillNow += (fillTarget - fillNow) * math.min(1, FILL_SPEED * dt)
-		-- Cle a la cible : un lerp exponentiel ne l'atteint jamais, et une barre "pleine" resterait a 99 % pour
-		-- toujours -- ce qui se lit comme un objectif jamais fini.
-		if math.abs(fillTarget - fillNow) < 0.002 then
-			fillNow = fillTarget
-		end
-		bar.Size = UDim2.fromScale(fillNow, 1)
-	end)
-end
-
-function TaskBannerHandler.hide()
-	local frame = root
-	if not (shown and frame and frame.Parent) then
-		return
-	end
-	shown = false
-	TweenService:Create(frame, SLIDE_OUT, { Position = HIDDEN_POS }):Play()
-end
-
--- Tout ranger. La boucle de remplissage tourne sur RenderStepped : la laisser vivre apres la fermeture ferait
--- tourner un calcul pour une barre que personne ne regarde.
-function TaskBannerHandler.destroy()
+local function stopFill()
 	if fillConn then
 		fillConn:Disconnect()
 		fillConn = nil
 	end
-	if gui then
-		gui:Destroy()
-		gui = nil
+end
+
+--- La boucle qui fait glisser les jauges. Une seule pour toutes les lignes : une par ligne ferait tourner trois
+--- connexions pour trois barres qui bougent aux memes instants.
+local function startFill()
+	if fillConn then
+		return
 	end
-	root, titleLabel, rewardLabel, barFill = nil, nil, nil, nil
-	shown = false
-	fillNow, fillTarget = 0, 0
+	fillConn = RunService.RenderStepped:Connect(function(dt)
+		local moving = false
+		for _, row in ipairs(rows) do
+			local fill = row.fill
+			if not fill or not fill.Parent then
+				continue
+			end
+			local gap = row.target - row.current
+			if math.abs(gap) <= FILL_SNAP then
+				row.current = row.target
+			else
+				row.current += gap * math.min(dt * FILL_SPEED, 1)
+				moving = true
+			end
+			fill.Size = UDim2.new(row.current * FILL_MAX, 0, fill.Size.Y.Scale, fill.Size.Y.Offset)
+		end
+		if not moving then
+			stopFill() -- plus rien ne bouge : la boucle n'a plus de raison de tourner
+		end
+	end)
+end
+
+local function clearRows()
+	for _, row in ipairs(rows) do
+		row.frame:Destroy()
+	end
+	table.clear(rows)
+	stopFill()
+end
+
+--- Remplit une ligne clonee avec une tache.
+---
+--- Le parametre ne s'appelle PAS `task` : ce nom masquerait le service `task` de Roblox, et un `task.delay`
+--- ajoute ici un jour appellerait `.delay` sur la config au lieu du planificateur -- en silence.
+local function dress(frame: Frame, entry: TaskConfigs.Task)
+	local desc = frame:FindFirstChild("DescriptionTask")
+	if desc and desc:IsA("TextLabel") then
+		desc.Text = entry.text
+	end
+
+	local reward = frame:FindFirstChild("RewardText")
+	if reward and reward:IsA("TextLabel") then
+		reward.Text = entry.reward
+	end
+
+	local draw = frame:FindFirstChild("IconTaskDraw")
+	if draw and draw:IsA("ImageLabel") then
+		local id = TaskConfigs.ICONS[entry.icon]
+		if not id then
+			-- ON NOMME LA CLE MANQUANTE. "L'icone ne s'affiche pas" enverrait chercher du cote de l'image ;
+			-- c'est la CLE qui est fausse, et elle se corrige a l'appel.
+			warn(`[TaskBanner] Icone inconnue "{entry.icon}" : voir TaskConfigs.ICONS.`)
+		end
+		draw.Image = id or ""
+	end
+
+	-- LA TEINTE VA SUR LE GRADIENT DE LA PASTILLE, pas sur sa couleur : le degrade est ce qui lui donne son
+	-- relief, et ecrire ImageColor3 par-dessus l'aplatirait.
+	local tint = entry.tint
+	if tint then
+		local pastille = frame:FindFirstChild("IconColor")
+		local grad = pastille and pastille:FindFirstChildOfClass("UIGradient")
+		if grad then
+			grad.Color = tint
+		end
+	end
+end
+
+--- Affiche la liste des taches. Remplace ce qui etait a l'ecran.
+function TaskBannerHandler.show(tasks: { TaskConfigs.Task })
+	if not resolve() then
+		return
+	end
+	local model = template :: Frame
+	clearRows()
+
+	for i, entry in ipairs(tasks) do
+		local frame = model:Clone()
+		frame.Name = `Task{i}`
+		frame.Visible = true
+		frame.Position = UDim2.fromScale(HIDDEN_X, FIRST_Y + (i - 1) * ROW_GAP)
+		frame.Parent = model.Parent
+		dress(frame, entry)
+
+		local bar = frame:FindFirstChild("Bar")
+		local fillFrame = bar and bar:FindFirstChild("Fill")
+		local fill = if fillFrame and fillFrame:IsA("Frame") then fillFrame else nil
+		if fill then
+			-- La jauge part de zero et se remplit ensuite. Posee directement a sa valeur, on ne verrait pas
+			-- qu'elle avance.
+			fill.Size = UDim2.new(0, 0, fill.Size.Y.Scale, fill.Size.Y.Offset)
+		end
+
+		table.insert(rows, { frame = frame, fill = fill, target = entry.progress or 0, current = 0 })
+
+		-- EN CASCADE. Chaque ligne part apres la precedente : une liste qui se remplit, pas un panneau qui
+		-- apparait d'un coup.
+		local slideTo = UDim2.fromScale(SHOWN_X, frame.Position.Y.Scale)
+		task.delay((i - 1) * ROW_STAGGER, function()
+			if frame.Parent then
+				TweenService:Create(frame, SLIDE_IN, { Position = slideTo }):Play()
+			end
+		end)
+	end
+
+	startFill()
+end
+
+--- Fixe l'avancement d'une ligne, de 0 a 1. `index` est sa place dans la liste passee a `show`.
+function TaskBannerHandler.setProgress(index: number, value: number)
+	local row = rows[index]
+	if not row then
+		return
+	end
+	row.target = math.clamp(value, 0, 1)
+	startFill()
+end
+
+--- Range tout, en cascade elle aussi.
+function TaskBannerHandler.hide()
+	for i, row in ipairs(rows) do
+		local frame = row.frame
+		local out = UDim2.fromScale(HIDDEN_X, frame.Position.Y.Scale)
+		task.delay((i - 1) * ROW_STAGGER, function()
+			if frame.Parent then
+				TweenService:Create(frame, SLIDE_OUT, { Position = out }):Play()
+			end
+		end)
+	end
+	-- On attend que la derniere soit sortie avant de detruire : detruire pendant le tween ferait disparaitre les
+	-- lignes d'un coup au lieu de les faire glisser.
+	local wait = (#rows - 1) * ROW_STAGGER + SLIDE_OUT.Time
+	task.delay(wait, clearRows)
+end
+
+--- Tout ranger sans animation. La boucle de remplissage tourne sur RenderStepped : la laisser vivre apres la
+--- fermeture ferait tourner un calcul pour des barres que personne ne regarde.
+function TaskBannerHandler.destroy()
+	clearRows()
 end
 
 return TaskBannerHandler

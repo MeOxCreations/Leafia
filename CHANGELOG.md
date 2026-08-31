@@ -2204,6 +2204,46 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.605 — Le bandeau d'objectifs passe dans Studio, et les taches entrent par la gauche
+
+Le handler dessinait toute l'interface en code. Il la PILOTE desormais : la maquette est figee dans
+`StarterGui.LeafiaTaskBanner`, avec ses degrades, ses ombres et sa pastille d'icone -- des reglages qui se
+jugent a l'oeil et qui n'ont rien a faire dans un fichier.
+
+C'etait prevu depuis le debut : *"le jour ou la forme est figee, il pourra passer dans Studio comme les
+autres"*. Ce jour est arrive.
+
+### Plusieurs taches, en cascade
+
+`show` prend maintenant une LISTE. Chaque entree clone `TemplateTask`, se range sous la precedente, et glisse
+depuis le bord GAUCHE de l'ecran -- plus depuis le haut.
+
+Elles arrivent **decalees** (`ROW_STAGGER`), pas ensemble : un bloc se lit comme un panneau qui apparait, une
+cascade se lit comme une liste qui se REMPLIT. Le rebond `Back Out` de l'ancienne version est conserve, le
+toucher etait bon.
+
+### Une seule boucle pour toutes les jauges
+
+Elle ne tourne que tant qu'une barre bouge, et se coupe seule quand tout est arrive. Une connexion par ligne
+ferait tourner trois boucles pour trois barres qui avancent aux memes instants.
+
+La jauge est CLEE a sa cible sous `FILL_SNAP` : un lerp exponentiel n'atteint jamais sa valeur, et sans ce clou
+une barre "pleine" resterait a 99,7 % pour toujours.
+
+### Deux pieges de nommage evites
+
+La variable de boucle s'appelait `task`. Ce nom **masque le service `task` de Roblox** : `task.delay` aurait
+appele `.delay` sur la config au lieu du planificateur, et l'animation ne serait jamais partie -- sans erreur.
+Renommee en `entry`, ici et dans `dress`, ou le piege dormait sans encore mordre.
+
+### A faire dans Studio
+
+`LeafiaTaskBanner` doit exister dans la place, avec `TemplateTask` dedans et ses enfants aux noms attendus
+(`Bar > Fill`, `IconColor`, `IconTaskDraw`, `DescriptionTask`, `RewardText`). Rojo ne synchronise pas StarterGui.
+
+Deux reglages a verifier dans Studio : `ScreenInsets = None` (sinon tout descend de l'inset de la barre Roblox)
+et `ResetOnSpawn = false` (sinon l'interface est recreee a chaque mort et les references gardees ici pointent
+sur du detruit).
 ## 0.0.604 — Une trainee de poussiere derriere ses pas
 
 Une part plate suit le joueur au sol, un peu DERRIERE lui, et porte l'emetteur `CloudsWalk`. Elle fume tant

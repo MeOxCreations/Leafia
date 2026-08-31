@@ -375,6 +375,10 @@ return {
 	-- la source qui paie -- une valeur affichee qui ne correspond pas a ce qu'on recoit est pire que pas de
 	-- valeur du tout.
 	TASK_REWARD = "+ 50 XP",
+	-- L'ICONE ET LA TEINTE de cette tache. Cles de `TaskConfigs` et non ids en dur : l'image se change a un seul
+	-- endroit, et une cle fausse se signale au lieu d'afficher un carre vide.
+	TASK_ICON = "Mower",
+	TASK_TINT = "Green",
 
 	-- ===== LE GRAND-PERE SORT DE CHEZ LUI =====
 	-- La scene finie, il ne reste pas plante dans l'embrasure : il marche jusque devant sa porte.

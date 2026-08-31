@@ -23,6 +23,7 @@ local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local SoundDuck = require(ReplicatedStorage.Modules.UI.Core.SoundDuck)
 local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
@@ -564,7 +565,15 @@ local function releaseScene()
 	--
 	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
 	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
-	TaskBannerHandler.show(TutorialConfigs.TASK_TITLE, TutorialConfigs.TASK_REWARD, 0)
+	TaskBannerHandler.show({
+		{
+			icon = TutorialConfigs.TASK_ICON,
+			tint = TaskConfigs.TINTS[TutorialConfigs.TASK_TINT],
+			text = TutorialConfigs.TASK_TITLE,
+			reward = TutorialConfigs.TASK_REWARD,
+			progress = 0,
+		},
+	})
 end
 
 local function endScene()
