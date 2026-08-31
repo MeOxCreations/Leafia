@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.606 — Les objectifs s'affichent des l'arrivee, sans attendre la scene
+
+Le bandeau attendait la fin du scenario du grand-pere. Il s'affiche maintenant des que le joueur arrive.
+
+Un joueur qui decouvre le jeu doit savoir ce qu'on attend de lui TOUT DE SUITE. Attendre la fin de la
+cinematique, c'etait le laisser sans consigne pendant la seule minute ou l'on peut encore le perdre.
+
+L'affichage part APRES le personnage, et en tache de fond. Une ScreenGui de StarterGui n'existe dans PlayerGui
+qu'au SPAWN, et le spawn peut tarder de plusieurs secondes quand les donnees chargent : la chercher au boot la
+raterait, sans la moindre erreur -- piege deja paye dans ce projet. Le `task.spawn` evite en plus de bloquer le
+reste de l'init pendant l'attente.
 ## 0.0.605 — Le bandeau d'objectifs passe dans Studio, et les taches entrent par la gauche
 
 Le handler dessinait toute l'interface en code. Il la PILOTE desormais : la maquette est figee dans

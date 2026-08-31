@@ -560,20 +560,6 @@ local function releaseScene()
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 	CameraEffects.SetFovOffset(0)
 
-	-- L'OBJECTIF S'AFFICHE. C'est le moment ou le joueur reprend la main : sans bandeau, il sait que la scene est
-	-- finie mais pas ce qu'on attend de lui -- et c'est la premiere minute, celle ou l'on perd un joueur.
-	--
-	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
-	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
-	TaskBannerHandler.show({
-		{
-			icon = TutorialConfigs.TASK_ICON,
-			tint = TaskConfigs.TINTS[TutorialConfigs.TASK_TINT],
-			text = TutorialConfigs.TASK_TITLE,
-			reward = TutorialConfigs.TASK_REWARD,
-			progress = 0,
-		},
-	})
 end
 
 local function endScene()
@@ -1410,6 +1396,31 @@ function TutorialController.init()
 		return
 	end
 	startedAt = os.clock()
+
+	-- LES OBJECTIFS S'AFFICHENT DES L'ARRIVEE, pas a la fin de la scene. Un joueur qui decouvre le jeu doit
+	-- savoir ce qu'on attend de lui tout de suite : attendre la fin du scenario, c'est le laisser sans consigne
+	-- pendant la seule minute ou l'on peut encore le perdre.
+	--
+	-- APRES LE PERSONNAGE, ET EN TACHE DE FOND. Une ScreenGui de StarterGui n'existe dans PlayerGui qu'au SPAWN,
+	-- et le spawn peut tarder de plusieurs secondes (chargement des donnees) : la chercher au boot la raterait,
+	-- sans la moindre erreur. Le `task.spawn` evite en plus de bloquer le reste de l'init pendant l'attente.
+	--
+	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
+	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
+	task.spawn(function()
+		if not player.Character then
+			player.CharacterAdded:Wait()
+		end
+		TaskBannerHandler.show({
+			{
+				icon = TutorialConfigs.TASK_ICON,
+				tint = TaskConfigs.TINTS[TutorialConfigs.TASK_TINT],
+				text = TutorialConfigs.TASK_TITLE,
+				reward = TutorialConfigs.TASK_REWARD,
+				progress = 0,
+			},
+		})
+	end)
 
 	-- LE REMOTE SE RESOUT EN TACHE DE FOND. `getRemote` cache un `WaitForChild` : appele en ligne droite ici, il
 	-- gele TOUT le boot le temps de son timeout quand la replication tarde -- un trou de dix secondes sans la
