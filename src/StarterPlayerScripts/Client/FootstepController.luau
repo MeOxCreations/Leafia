@@ -30,12 +30,16 @@ local GROUND_RAY = 8
 -- image ou deux apres le relachement de la touche, et l'emetteur clignoterait a chaque arret.
 local MOVE_MIN = 0.1
 
+-- COMBIEN DE TEMPS ON ATTEND les morceaux du personnage. A `CharacterAdded` il est parente mais PAS complet :
+-- le HRP et l'Humanoid arrivent quelques images plus tard, et un `FindFirstChild` a cet instant rend `nil`.
+local PART_WAIT = 10
+
 local function muteDefaultRunning(char: Model)
-	local hrp = char:FindFirstChild("HumanoidRootPart")
-	if not hrp then
-		return
-	end
 	task.spawn(function()
+		local hrp = char:WaitForChild("HumanoidRootPart", PART_WAIT)
+		if not hrp then
+			return
+		end
 		local running = hrp:WaitForChild("Running", 5)
 		if running and running:IsA("Sound") then
 			running.Volume = 0
@@ -81,9 +85,18 @@ local function startDust(char: Model)
 		return
 	end
 
-	local hrp = char:FindFirstChild("HumanoidRootPart") :: BasePart?
-	local humanoid = char:FindFirstChildOfClass("Humanoid")
+	-- ON ATTEND, ON NE CHERCHE PAS. Voir PART_WAIT : a cet instant le personnage n'a pas encore ses morceaux.
+	local hrp = char:WaitForChild("HumanoidRootPart", PART_WAIT) :: BasePart?
+	local humanoid = char:WaitForChild("Humanoid", PART_WAIT) :: Humanoid?
 	if not hrp or not humanoid then
+		-- ON LE DIT. Cette sortie etait muette, et un module qui abandonne sans un mot est indiscernable d'un
+		-- module qui n'est pas appele -- c'est exactement ce qui a rendu le probleme invisible.
+		warn(`[Footstep] "{char.Name}" n'a ni HumanoidRootPart ni Humanoid apres {PART_WAIT}s : pas de poussiere.`)
+		return
+	end
+	-- La scene a pu changer pendant l'attente : un respawn rapide aurait lance un second startDust, et celui-ci
+	-- poserait sa part par-dessus.
+	if char ~= player.Character then
 		return
 	end
 
@@ -141,7 +154,9 @@ end
 
 local function onCharacter(char: Model)
 	muteDefaultRunning(char)
-	startDust(char)
+	-- EN TACHE DE FOND : `startDust` attend desormais les morceaux du personnage, et un `WaitForChild` pose en
+	-- ligne droite dans un chemin de boot gele tout ce qui suit jusqu'au timeout.
+	task.spawn(startDust, char)
 end
 
 function FootstepController.init()
