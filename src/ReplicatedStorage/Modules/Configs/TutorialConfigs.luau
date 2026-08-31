@@ -397,19 +397,6 @@ return {
 	-- OU IL VA : une part posee dans Studio. Pas un point calcule -- le pas exact ou s'arrete un personnage dans
 	-- une scene se decide a l'oeil, pas par une formule, et le deplacer ne doit demander aucun code.
 	OLDMAN_WALK_TARGET = "OldManWalkTo",
-	-- CE QU'IL FAIT EN ARRIVANT. Il descend les marches en se tenant le dos : c'est ce geste, et non une replique,
-	-- qui dit son age et pourquoi il ne peut plus s'occuper de son jardin. La scene explique ainsi le contrat du
-	-- jeu sans une ligne de texte.
-	--
-	-- Vide ("") pour le couper : il passe alors directement a son idle.
-	OLDMAN_ARRIVE_ANIM = "rbxassetid://101362993241676",
-	-- LE MARQUEUR DE FIN DE DESCENTE, pose dans l'animation. A cet instant le corps est visuellement EN BAS des
-	-- marches, alors que son point d'ancrage est reste en haut : c'est le seul moment ou l'on peut poser l'ancrage
-	-- en bas sans que rien ne saute a l'ecran. Une image plus tot le corps n'y est pas encore, une image plus tard
-	-- l'animation s'est relachee et il est deja remonte.
-	--
-	-- Absent, le grand-pere descend puis REMONTE d'un coup a la fin du geste. Le service le dit alors.
-	OLDMAN_ARRIVE_END_EVENT = "EndEventIsDown",
 	-- Sa vitesse de marche, en studs/s.
 	-- LENT, et c'est le sujet du plan. C'est un vieux monsieur avec une canne qui sort de chez lui : le voir
 	-- traverser prend du temps, et ce temps EST ce qu'on raconte. L'animation suit cette vitesse toute seule

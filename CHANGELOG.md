@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.613 — Plus d'escaliers, plus d'animation de descente
+
+La maison a ete abaissee et les marches supprimees dans Studio : le grand-pere sort de chez lui de plain-pied.
+Toute la machinerie de descente disparait avec elles.
+
+    avant   il marche, descend les marches, on rattrape son ancrage au marqueur, il reprend son idle
+    apres   il marche, il reprend son idle
+
+`OLDMAN_ARRIVE_ANIM`, `OLDMAN_ARRIVE_END_EVENT` et la fonction qui les jouait sont retires. `OldManWalkTo2` et
+le marqueur `EndEventIsDown` ne servent plus a rien dans Studio.
+
+C'est le bon arbitrage : le probleme ne se reglait pas, il se SUPPRIMAIT. Une animation qui deplace son
+personnage se bat contre le moteur -- il a fallu trois tentatives et une mesure de joint pour la faire tenir,
+alors qu'un sol plat rend la question sans objet.
+
+Ce qui reste du chantier : la marche prend desormais sa CIBLE et sa SUITE en parametres, au lieu de les lire
+dans la config. C'etait necessaire pour enchainer deux trajets ; ca reste utile le jour ou le grand-pere ira
+ailleurs.
 ## 0.0.612 — La descente du grand-pere se MESURE, elle ne se cale plus a la main
 
 Trois versions ont essaye de faire coincider sa descente avec un point pose dans Studio : le faire glisser
