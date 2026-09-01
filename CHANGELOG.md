@@ -2204,6 +2204,49 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.615 — Les papillons battent plus vite des ailes, et ne passent plus sous la map
+
+### Les ailes
+
+`SPEED_MIN` / `SPEED_MAX` : **0.85-1.2 -> 1.7-2.4**. Environ deux fois plus rapide.
+
+**Mais ce reglage cachait un piege.** Chaque battement POUSSE le papillon : battre deux fois plus vite, c'est
+recevoir deux fois plus d'impulsions par seconde. Monter la vitesse l'aurait fait decoller comme une fusee, et il
+aurait fallu re-regler `FLAP_UP` derriere.
+
+L'impulsion est donc DIVISEE par la vitesse de lecture. Impulsion moitie moindre, deux fois plus souvent : la
+poussee moyenne ne bouge pas, et `SPEED` ne change plus que l'ASPECT des ailes.
+
+Compenser a la main aurait marche une fois, puis se serait retrouve faux au reglage suivant. Deux reglages qui
+s'annulent l'un l'autre finissent toujours par se battre -- lecon deja payee sur la cadence de pas de la coupe.
+
+### Le sol
+
+Ils passaient SOUS la map. Le rappel vers la hauteur de croisiere est une force DOUCE, et une force douce ne
+garantit AUCUNE borne : entre deux battements, la gravite gagnait.
+
+**Une borne se clampe.** `MIN_HEIGHT` (1.2 stud au-dessus du bas de la zone) est maintenant un mur dur, et seule
+la composante DESCENDANTE de la vitesse est annulee -- garder la montante laisse le battement suivant le relancer
+normalement au lieu de le coller au sol une image de plus.
+
+Le plancher ne s'applique pas pendant le DEPART : la, il monte pour s'en aller, il n'y a plus rien a defendre.
+
+Mesure depuis le BAS DE LA ZONE : poser la part de facon que son dessous affleure le sol cale tous les papillons
+d'un coup, sans toucher a un reglage.
+
+### Deux reglages qui ne servaient a rien
+
+`SCALE_MIN` / `SCALE_MAX` etaient dans la config et n'etaient lus par personne. Ils le sont : chaque papillon a
+maintenant sa taille. Des papillons rigoureusement identiques trahissent le clone -- l'oeil repere la repetition
+avant de reperer la forme.
+
+`ZONE_PART` est supprime : toute part du dossier est une zone, quel que soit son nom. Imposer un nom obligerait a
+le retaper a chaque nouvelle zone, et une zone mal nommee echouerait en silence.
+
+### A faire dans Studio
+
+Rien. Si un papillon rase encore le sol, monter `MIN_HEIGHT` -- ou remonter la part de zone.
+
 ## 0.0.614 — Des papillons traversent le jardin
 
 Nouveau `ButterflyController` + `ButterflyConfigs`. Ils apparaissent dans les parts posees sous

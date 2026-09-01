@@ -123,6 +123,10 @@ local function spawnOne(zone: Zone, now: number)
 
 	local height = ButterflyConfigs.FLY_HEIGHT
 		+ rng:NextNumber(-ButterflyConfigs.FLY_HEIGHT_RANGE, ButterflyConfigs.FLY_HEIGHT_RANGE)
+	-- CHACUN SA TAILLE. Des papillons rigoureusement identiques trahissent le clone : l'oeil repere la repetition
+	-- avant de reperer la forme. Applique AVANT le placement -- ScaleTo travaille autour du pivot, et le faire
+	-- ensuite deplacerait le papillon qu'on vient de poser.
+	model:ScaleTo(rng:NextNumber(ButterflyConfigs.SCALE_MIN, ButterflyConfigs.SCALE_MAX))
 	local heading = rng:NextNumber(0, math.pi * 2)
 	model:PivotTo(CFrame.new(spawnPoint(zone, height)) * CFrame.Angles(0, heading, 0))
 	model.Parent = Workspace
@@ -154,13 +158,23 @@ local function spawnOne(zone: Zone, now: number)
 			track.Looped = true
 			track.Priority = Enum.AnimationPriority.Idle
 			track:Play()
-			track:AdjustSpeed(rng:NextNumber(ButterflyConfigs.SPEED_MIN, ButterflyConfigs.SPEED_MAX))
+			local speed = rng:NextNumber(ButterflyConfigs.SPEED_MIN, ButterflyConfigs.SPEED_MAX)
+			track:AdjustSpeed(speed)
+			-- L'IMPULSION SE DIVISE PAR LA VITESSE DE LECTURE, et c'est ce qui DECOUPLE les deux reglages.
+			--
+			-- Battre des ailes deux fois plus vite, c'est recevoir deux fois plus d'impulsions par seconde : sans
+			-- cette division, accelerer l'animation ferait decoller le papillon comme une fusee, et il faudrait
+			-- re-regler FLAP_UP a chaque essai. Avec elle, la poussee MOYENNE ne bouge pas -- impulsion divisee
+			-- par deux, deux fois plus souvent -- et SPEED ne change plus que l'aspect des ailes.
+			--
+			-- Compenser a la main aurait marche une fois, puis se serait retrouve faux au reglage suivant.
+			local flapScale = 1 / math.max(speed, 0.01)
 			-- CHAQUE BATTEMENT POUSSE. C'est le marqueur pose dans l'editeur qui commande le deplacement : les
 			-- ailes et le mouvement ne peuvent donc pas se desynchroniser, quelle que soit la vitesse de lecture.
 			track:GetMarkerReachedSignal(ButterflyConfigs.WING_EVENT):Connect(function()
 				local forward = Vector3.new(-math.sin(butterfly.facing), 0, -math.cos(butterfly.facing))
-				butterfly.velocity += UP * ButterflyConfigs.FLAP_UP
-					+ forward * ButterflyConfigs.FLAP_FORWARD
+				butterfly.velocity += UP * (ButterflyConfigs.FLAP_UP * flapScale)
+					+ forward * (ButterflyConfigs.FLAP_FORWARD * flapScale)
 			end)
 			butterfly.track = track
 		end
@@ -253,6 +267,24 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 	end
 
 	local newPos = pos + butterfly.velocity * dt
+
+	-- LE PLANCHER EST UN MUR, pas une suggestion. Le rappel vers la hauteur de croisiere est une force douce, et
+	-- une force douce ne garantit AUCUNE borne : entre deux battements, la gravite faisait passer le papillon
+	-- sous la map. Une borne se clampe.
+	--
+	-- Pas pendant le DEPART : la, il monte pour s'en aller, le plancher n'a plus rien a defendre.
+	if not leaving then
+		local floor = (part.Position.Y - half.Y) + ButterflyConfigs.MIN_HEIGHT
+		if newPos.Y < floor then
+			newPos = Vector3.new(newPos.X, floor, newPos.Z)
+			-- On n'annule que la composante DESCENDANTE : garder la montante laisse le prochain battement le
+			-- relancer normalement au lieu de le coller au sol une image de plus.
+			if butterfly.velocity.Y < 0 then
+				butterfly.velocity = Vector3.new(butterfly.velocity.X, 0, butterfly.velocity.Z)
+			end
+		end
+	end
+
 	butterfly.model:PivotTo(CFrame.new(newPos) * CFrame.Angles(0, butterfly.facing, 0))
 	return true
 end

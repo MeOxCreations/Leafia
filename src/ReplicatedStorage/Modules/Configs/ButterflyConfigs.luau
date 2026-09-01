@@ -6,9 +6,9 @@ return {
 	-- Le modele a cloner, et le dossier de zones dans le Workspace. Cherches par leur NOM, pas par un chemin
 	-- complet : un objet pose par quelqu'un dans Studio se retrouve par son nom, son rangement est un detail.
 	MESH_PATH = { "Assets", "Contents", "Animals", "ButterflyMesh" },
+	-- CHAQUE PART de ce dossier est une zone, quel que soit son nom : imposer un nom obligerait a le retaper a
+	-- chaque nouvelle zone, et une zone mal nommee ne dirait rien en echouant.
 	ZONE_FOLDER = "ButterflyZones",
-	-- Chaque part de ce dossier est une zone. Le nom sert au log quand on n'en trouve aucune.
-	ZONE_PART = "ZoneActionSpawn",
 	-- L'animation de battement d'ailes, et le marqueur pose dedans a l'instant ou les ailes claquent.
 	ANIM_PATH = { "Animations", "Animals", "Butterfly", "Butterfly_flying_Animation" },
 	WING_EVENT = "BattementWingsEvent",
@@ -72,12 +72,24 @@ return {
 	-- sol ; la hauteur se regle ici, sinon il faudrait redimensionner la part a chaque essai.
 	FLY_HEIGHT = 3.5,
 	FLY_HEIGHT_RANGE = 2.5,
+	-- PLANCHER DUR, au-dessus du bas de la zone. Le rappel vers la hauteur de croisiere est une force DOUCE, et
+	-- une force douce ne garantit jamais une borne : entre deux battements la gravite faisait passer le papillon
+	-- SOUS la map. Une borne, ca se clampe, ca ne se ressort pas.
+	--
+	-- Mesure depuis le BAS DE LA ZONE : poser la part de facon que son dessous affleure le sol suffit a caler
+	-- tous les papillons d'un coup, sans toucher a un seul reglage.
+	MIN_HEIGHT = 1.2,
 
 	-- ===== L'ANIMATION =====
 	-- Chacun bat des ailes a son propre rythme. Deux papillons parfaitement synchrones se lisent comme un seul
 	-- objet duplique -- meme piege que les plantes de l'ambiance.
-	SPEED_MIN = 0.85,
-	SPEED_MAX = 1.2,
+	--
+	-- CE REGLAGE NE CHANGE QUE L'ASPECT DES AILES. Chaque battement pousse le papillon : battre deux fois plus
+	-- vite donnerait deux fois plus d'impulsions par seconde, et le papillon decollerait comme une fusee. Le
+	-- controller DIVISE donc l'impulsion par cette vitesse. On peut monter ce chiffre autant qu'on veut sans
+	-- retoucher FLAP_UP -- deux reglages qu'il faudrait compenser l'un par l'autre finiraient par se battre.
+	SPEED_MIN = 1.7,
+	SPEED_MAX = 2.4,
 	-- Echelle du modele, avec un peu de variation. Des papillons tous identiques trahissent le clone.
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.15,
