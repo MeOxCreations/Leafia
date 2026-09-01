@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.625 — Plus de flash sombre avant le ciel
+
+La couleur de secours du CanvasGroup etait un gris fonce. Elle ne se voit qu'un instant -- celui ou le rideau
+existe deja mais ou son cadre degrade n'est pas encore pose -- mais cet instant tombe pile au demarrage, quand
+l'oeil arrive sur l'ecran. Ca faisait un flash noir avant le bleu.
+
+Elle prend maintenant un bleu DU MEME degrade. Le passage devient invisible au lieu d'etre un a-coup.
+
+**Une couleur de secours doit ressembler a ce qu'elle remplace**, sinon elle se voit precisement parce qu'elle
+est de secours. Elle sert aussi partout ou le cadre degrade ne couvrirait pas -- un format d'ecran inattendu, une
+frame de redimensionnement.
+
 ## 0.0.624 — Le fond de l'ecran de chargement redevient un ciel
 
 Cyan clair d'un coin, bleu profond de l'autre, en diagonale.

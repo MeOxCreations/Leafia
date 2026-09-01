@@ -105,7 +105,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- StarterGui, donc le modele n'existait que dans le lieu ou on l'avait dessine, et le tuto tombait sur le
 	-- rideau de secours. Le code, lui, arrive dans TOUS les lieux sans qu'on ait rien a recopier.
 	-- Les valeurs ci-dessous sont celles du dessin fait dans l'editeur.
-	local BG = Color3.fromRGB(31, 31, 31)
+	-- COULEUR DE SECOURS DU CANVASGROUP. Elle ne se voit qu'un instant -- celui ou le rideau existe deja mais ou
+	-- son cadre degrade n'est pas encore pose -- et partout ou ce cadre ne couvrirait pas.
+	--
+	-- Un gris fonce y creait un FLASH SOMBRE avant le ciel. On prend donc un bleu DU MEME degrade : le passage
+	-- devient invisible au lieu d'etre un a-coup. Une couleur de secours doit ressembler a ce qu'elle remplace,
+	-- sinon elle se voit precisement parce qu'elle est de secours.
+	local BG = Color3.fromHex("2AC9F7")
 
 	-- FOND TUILE qui defile en diagonale.
 	local TILE_IMAGE_ID = "rbxassetid://80842701479373"
