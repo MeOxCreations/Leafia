@@ -164,9 +164,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Ces valeurs rendent EXACTEMENT ce qu'elles disent parce que l'image du bandeau est en blanc pur : un
 	-- UIGradient multiplie la couleur de l'objet, donc toute autre teinte les raboterait en silence.
-	-- BLANC. Il etait noir quand il servait de socle a du texte clair en bas de l'ecran ; en haut, derriere le
-	-- titre, un bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
-	local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+	-- BLEU TRES CLAIR, presque blanc. Il etait noir quand il servait de socle a du texte clair en bas de l'ecran ;
+	-- en haut, un bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
+	--
+	-- Pas blanc PUR non plus : une teinte prise dans la famille du ciel se pose SUR le fond, un blanc pur se
+	-- decoupe dessus. La difference est minuscule et c'est toute la difference.
+	local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(166, 243, 255))
 
 	-- ===== FOND DEGRADE =====
 	-- Pose sur un CADRE dedie, pas sur le CanvasGroup. Un UIGradient sur le groupe teinterait TOUT ce qu'il
@@ -232,8 +235,21 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Il tourne a vitesse CONSTANTE et ne represente aucune progression. Une progression, c'est le travail des
 	-- feuilles -- deux indicateurs qui racontent la meme chose finiraient par se contredire.
 	local RING_IMAGE_ID = "rbxassetid://127162788265693"
-	local RING_SIZE = UDim2.fromScale(0.22, 0.39)
+	-- SERRE AUTOUR DU VISAGE, et presque transparent. Large et plein, l'anneau devenait le sujet du plan ; c'est
+	-- le visage, le sujet. Un signal de vie n'a pas besoin d'etre vu pour etre lu -- il a besoin de BOUGER.
+	local RING_SIZE = UDim2.fromScale(0.13, 0.23)
+	local RING_TRANSPARENCY = 0.88
 	local RING_SPEED = 40 -- degres par seconde
+
+	-- ===== LE HALO =====
+	-- Une lueur derriere le visage. Elle ne dit rien et ne bouge pas : elle DETACHE le grand-pere du ciel, qui a
+	-- pratiquement sa couleur. Sans elle, un dessin blanc sur un fond cyan clair se fond dedans dans le coin le
+	-- plus lumineux de l'ecran.
+	local GLOW_IMAGE_ID = "rbxassetid://108057663284590"
+	local GLOW_COLOR = Color3.fromRGB(99, 221, 255)
+	-- Plus grand que l'anneau : un halo qui s'arrete au bord de ce qu'il eclaire n'est pas un halo, c'est un
+	-- contour.
+	local GLOW_SIZE = UDim2.fromScale(0.34, 0.6)
 	-- ===== DESTINATION =====
 	-- Le lieu ou l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend.
 	-- ReplicatedFirst ne peut pas require PlacesConfig : les identifiants sont donc EN DUR ici, comme
@@ -245,7 +261,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		[77113670151896] = "TEST",
 	}
 	local DEST_FALLBACK = "LOADING"
-	local DEST_POS = UDim2.fromScale(0.955, 0.075)
+	local DEST_POS = UDim2.fromScale(0.988, 0.056)
 	local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 
 	-- JAUGE DE FEUILLES, en bas a droite. CINQ feuilles qui s'allument une par une.
@@ -509,6 +525,20 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- L'anneau est le SIGNAL DE VIE de l'ecran : une rotation continue est la seule chose qui dise "le jeu n'est
 	-- pas plante" sans avoir a mesurer quoi que ce soit. Il ne represente AUCUNE progression -- c'est le travail
 	-- des feuilles, et deux indicateurs qui racontent la meme chose finiraient par se contredire.
+	-- LE HALO EN PREMIER : pose avant l'anneau et le visage, donc DERRIERE eux. L'ordre de creation ne suffirait
+	-- pas seul (les ZIndex tranchent), mais garder les deux d'accord evite d'avoir a se demander lequel gagne.
+	local glow = Instance.new("ImageLabel")
+	glow.Name = "FaceGlow"
+	glow.BackgroundTransparency = 1
+	glow.Image = GLOW_IMAGE_ID
+	glow.ImageColor3 = GLOW_COLOR
+	glow.ScaleType = Enum.ScaleType.Fit
+	glow.AnchorPoint = Vector2.new(0.5, 0.5)
+	glow.Position = UDim2.fromScale(0.5, 0.5)
+	glow.Size = GLOW_SIZE
+	glow.ZIndex = 3
+	glow.Parent = curtain
+
 	local ring = Instance.new("ImageLabel")
 	ring.Name = "LoadRing"
 	ring.BackgroundTransparency = 1
@@ -519,7 +549,8 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	ring.AnchorPoint = Vector2.new(0.5, 0.5)
 	ring.Position = UDim2.fromScale(0.5, 0.5)
 	ring.Size = RING_SIZE
-	ring.ZIndex = 3
+	ring.ImageTransparency = RING_TRANSPARENCY
+	ring.ZIndex = 4
 	ring.Parent = curtain
 
 	local ringConn: RBXScriptConnection? = nil
@@ -539,7 +570,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	face.AnchorPoint = Vector2.new(0.5, 0.5)
 	face.Position = UDim2.fromScale(0.5, 0.5)
 	face.Size = FACE_SIZE
-	face.ZIndex = 4
+	face.ZIndex = 5
 	face.Parent = curtain
 
 	-- IL CLIGNE DES YEUX, ET IL REGARDE AILLEURS.
@@ -846,7 +877,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- MONTSERRAT EN GRAISSE MAXIMALE. LuckiestGuy est une police d'affiche : elle allait pour un mot pose au
 	-- milieu d'un ecran, elle bavarde derriere un bandeau. Montserrat Heavy tient la meme place avec une lettre
 	-- plus nette, et elle porte les accents des langues que Roblox traduit -- ce que LuckiestGuy fait mal.
-	dest.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy)
+	-- `Heavy` EST le "Black" de Montserrat : c'est la graisse 900, la plus epaisse de la famille. Roblox ne
+	-- l'appelle pas Black -- et `FontStyle`, lui, ne connait que Normal et Italic, jamais une graisse.
+	dest.FontFace = Font.new(
+		"rbxasset://fonts/families/Montserrat.json",
+		Enum.FontWeight.Heavy,
+		Enum.FontStyle.Normal
+	)
 	dest.ZIndex = 4
 	dest.Parent = curtain
 	local tipsShade = Instance.new("UIGradient")

@@ -2204,6 +2204,48 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.626 — Halo derriere le grand-pere, anneau discret, bandeau teinte
+
+### Un halo derriere le visage
+
+Nouvelle image de lueur, en bleu clair, posee derriere l'anneau et le visage.
+
+Elle ne dit rien et ne bouge pas : elle DETACHE le grand-pere du ciel, qui a pratiquement sa couleur. Sans elle,
+un dessin blanc sur du cyan clair se fond dedans dans le coin le plus lumineux de l'ecran -- exactement le
+probleme de lisibilite qu'on avait vu venir sur le texte des conseils.
+
+Elle est plus grande que l'anneau : un halo qui s'arrete au bord de ce qu'il eclaire n'est pas un halo, c'est un
+contour.
+
+### L'anneau s'efface
+
+`RING_SIZE` : **0.22x0.39 -> 0.13x0.23**, et `ImageTransparency` a **0.88**.
+
+Large et plein, il devenait le sujet du plan. C'est le VISAGE, le sujet. Un signal de vie n'a pas besoin d'etre
+vu pour etre lu -- il a besoin de BOUGER, et une rotation se remarque meme a peine visible.
+
+Les ZIndex sont reordonnes : halo (3), anneau (4), visage (5).
+
+### Le bandeau prend une teinte
+
+`BANNER_COLOR` : blanc pur -> **166, 243, 255**.
+
+Pas blanc pur, et ce n'est pas un detail : une teinte prise dans la famille du ciel se POSE sur le fond, un blanc
+pur se DECOUPE dessus. La difference est minuscule et c'est toute la difference.
+
+### Le nom du lieu
+
+Position **0.988, 0.056** -- plus haut et plus a droite, cale dans le bandeau.
+
+Sa police est precisee : `Montserrat` + `FontWeight.Heavy` + `FontStyle.Normal`. **`Heavy` EST le "Black" de
+Montserrat** -- c'est la graisse 900, la plus epaisse de la famille. Roblox ne l'appelle simplement pas Black, et
+`FontStyle` ne connait que Normal et Italic : une graisse ne s'ecrit jamais la.
+
+### A faire dans Studio
+
+Rien. Les tailles du halo (`GLOW_SIZE`) et de l'anneau (`RING_SIZE`) sont des estimations : elles se jugent a
+l'ecran.
+
 ## 0.0.625 — Plus de flash sombre avant le ciel
 
 La couleur de secours du CanvasGroup etait un gris fonce. Elle ne se voit qu'un instant -- celui ou le rideau
