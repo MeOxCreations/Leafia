@@ -2204,6 +2204,51 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.616 — Les papillons regardent ou ils vont, s'inclinent dans les virages, et rentrent chez eux
+
+Trois corrections sur le vol.
+
+### Ils volaient en crabe
+
+Le corps etait oriente sur le cap VOULU. Or le rappel du bord pousse de cote, la gravite tire vers le bas, et
+l elan du battement precedent survit au changement de cap : la vitesse REELLE n est presque jamais alignee sur
+l intention. Le papillon regardait droit devant tout en derivant en travers.
+
+Deux directions, desormais separees :
+
+- le **cap voulu** sert a POUSSER -- c est dans cette direction qu il bat des ailes ;
+- la **vitesse reelle** sert a ORIENTER le corps -- c est ce qui se voit.
+
+Le realignement est rapide : c est une correction, pas un mouvement a admirer.
+
+### Ils s inclinent comme des avions
+
+Le roulis vient de la VITESSE DE ROTATION, pas du cap : c est EN tournant qu on s incline, pas en AYANT tourne.
+Cale sur le cap, le papillon resterait penche en ligne droite.
+
+Il prend et rend son inclinaison plus lentement qu il ne tourne : elle traine derriere le virage, et c est ce
+retard qui se lit comme du poids.
+
+Le sens depend de l orientation du modele dans Blender et ne se DEDUIT pas :  s il penche du mauvais
+cote.
+
+### La zone est un aimant, plus une suggestion
+
+Ils partaient pour de bon. La force de rappel etait CONSTANTE : elle pouvait perdre contre l elan d un battement,
+et une fois dehors plus rien ne la faisait grandir.
+
+Elle GRANDIT maintenant avec le depassement (), donc elle finit toujours par gagner -- sans mur et
+sans teleportation.
+
+Et surtout, sorti de sa zone, le papillon **decide de rentrer** : son prochain cap vise le centre, et il redecide
+TOUT DE SUITE au lieu d attendre son prochain virage. Il bat donc des ailes dans la bonne direction au lieu
+d etre traine de cote. C est ce qui fait lire le retour comme une intention plutot que comme un courant d air.
+
+### A faire dans Studio
+
+Rien.  si l inclinaison part du mauvais cote,  (50 deg) si elle est trop ou pas assez
+marquee.
+
 ## 0.0.615 — Les papillons battent plus vite des ailes, et ne passent plus sous la map
 
 ### Les ailes

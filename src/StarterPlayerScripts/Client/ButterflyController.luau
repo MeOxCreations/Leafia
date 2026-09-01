@@ -33,8 +33,10 @@ type Butterfly = {
 	track: AnimationTrack?,
 	-- Vitesse propre, en studs/seconde. Le battement l'alimente, la gravite et le frottement la mangent.
 	velocity: Vector3,
-	heading: number, -- cap vise, en radians
-	facing: number, -- cap courant : il rattrape `heading`, il ne lui est pas egal
+	heading: number, -- cap VOULU, en radians. Sert a POUSSER : c'est l'intention.
+	facing: number, -- cap de poussee courant : il rattrape `heading`, il ne lui est pas egal
+	bodyYaw: number, -- orientation MONTREE : elle suit la vitesse reelle, pas l'intention
+	roll: number, -- inclinaison courante, en radians. Vient de la VITESSE de rotation, pas du cap.
 	nextTurn: number,
 	height: number, -- hauteur de croisiere propre a ce papillon
 	dieAt: number,
@@ -56,6 +58,16 @@ local folder: Folder? = nil
 local template: Model? = nil
 local animation: Animation? = nil
 local conn: RBXScriptConnection? = nil
+
+-- Ecart d'angle le plus COURT entre deux caps. Sans ca, passer de 179 a -179 degres ferait faire un tour complet
+-- au papillon pour un ecart de deux degres.
+local function shortestAngle(from: number, to: number): number
+	local d = (to - from) % (math.pi * 2)
+	if d > math.pi then
+		d -= math.pi * 2
+	end
+	return d
+end
 
 local function findByPath(root: Instance, path: { string }): Instance?
 	local node: Instance? = root
@@ -138,6 +150,8 @@ local function spawnOne(zone: Zone, now: number)
 		velocity = Vector3.zero,
 		heading = heading,
 		facing = heading,
+		bodyYaw = heading,
+		roll = 0,
 		nextTurn = now + rng:NextNumber(0, ButterflyConfigs.TURN_EVERY),
 		height = height,
 		dieAt = now + rng:NextNumber(ButterflyConfigs.LIFE_MIN, ButterflyConfigs.LIFE_MAX),
@@ -210,40 +224,62 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 		butterfly.velocity += UP * (ButterflyConfigs.LEAVE_RISE * dt)
 	end
 
-	-- LE CAP CHANGE, par a-coups. Un nouveau but tous les TURN_EVERY environ, jamais une rotation continue.
-	if not leaving and now >= butterfly.nextTurn then
-		butterfly.nextTurn = now
-			+ ButterflyConfigs.TURN_EVERY
-			+ rng:NextNumber(0, ButterflyConfigs.TURN_JITTER)
-		local swing = math.rad(ButterflyConfigs.TURN_ANGLE)
-		butterfly.heading += rng:NextNumber(-swing, swing)
-	end
-
-	-- IL RENTRE CHEZ LUI. Pres du bord, on tire le cap vers le centre au lieu de le faire rebondir : une force
-	-- douce ressemble a une decision, un rebond ressemble a une balle.
+	-- OU EN EST-IL PAR RAPPORT A SA ZONE ? Calcule AVANT la decision de cap : c'est ce qui permet au papillon de
+	-- decider de rentrer, au lieu d'etre seulement tire.
 	local pos = butterfly.root.Position
 	local part = zone.part
 	local half = part.Size * 0.5
 	local inZone = part.CFrame:PointToObjectSpace(pos)
 	local margin = ButterflyConfigs.EDGE_MARGIN
-	local push = Vector3.zero
-	if math.abs(inZone.X) > half.X - margin then
-		push += part.CFrame.RightVector * -math.sign(inZone.X)
-	end
-	if math.abs(inZone.Z) > half.Z - margin then
-		push += part.CFrame.LookVector * -math.sign(inZone.Z)
-	end
-	if push.Magnitude > 1e-3 then
-		butterfly.velocity += push.Unit * (ButterflyConfigs.EDGE_PUSH * dt)
+	-- Depassement sur chaque axe, en studs. Zero tant qu'il est bien au milieu.
+	local overX = math.abs(inZone.X) - (half.X - margin)
+	local overZ = math.abs(inZone.Z) - (half.Z - margin)
+	local overshoot = math.max(overX, overZ, 0)
+
+	-- LE CAP CHANGE, par a-coups. Un nouveau but tous les TURN_EVERY environ, jamais une rotation continue.
+	--
+	-- SAUF S'IL EST SORTI : la il vise le centre, et il redecide TOUT DE SUITE. Attendre son prochain virage le
+	-- laisserait s'eloigner deux secondes de plus pour rien.
+	local outside = overshoot > 0
+	local mustTurn = now >= butterfly.nextTurn or (outside and ButterflyConfigs.EDGE_TURN_NOW)
+	if not leaving and mustTurn then
+		butterfly.nextTurn = now
+			+ ButterflyConfigs.TURN_EVERY
+			+ rng:NextNumber(0, ButterflyConfigs.TURN_JITTER)
+		if outside then
+			-- IL DECIDE DE RENTRER. Son cap vise le centre, donc il BAT DES AILES dans la bonne direction au lieu
+			-- d'etre traine de cote par l'aimant. C'est ce qui fait lire le retour comme une intention.
+			local toCenter = (part.Position - pos) * Vector3.new(1, 0, 1)
+			if toCenter.Magnitude > 1e-3 then
+				local home = toCenter.Unit
+				local jitter = ButterflyConfigs.EDGE_HOME_JITTER
+				butterfly.heading = math.atan2(-home.X, -home.Z) + rng:NextNumber(-jitter, jitter)
+			end
+		else
+			local swing = math.rad(ButterflyConfigs.TURN_ANGLE)
+			butterfly.heading += rng:NextNumber(-swing, swing)
+		end
 	end
 
-	-- LE CORPS RATTRAPE LE CAP. Par le plus court chemin : sans ca, passer de 179 a -179 degres lui ferait faire
-	-- un tour complet sur lui-meme.
-	local diff = (butterfly.heading - butterfly.facing) % (math.pi * 2)
-	if diff > math.pi then
-		diff -= math.pi * 2
+	-- L'AIMANT. Aucun mur, aucune teleportation : la force GRANDIT avec le depassement, donc elle finit toujours
+	-- par gagner. Une force constante pouvait perdre contre l'elan d'un battement, et le papillon partait pour de
+	-- bon -- c'est exactement ce qui se passait.
+	local pull = Vector3.zero
+	if overX > 0 then
+		pull += part.CFrame.RightVector * -math.sign(inZone.X)
 	end
-	butterfly.facing += diff * math.min(1, ButterflyConfigs.TURN_SPEED * dt)
+	if overZ > 0 then
+		pull += part.CFrame.LookVector * -math.sign(inZone.Z)
+	end
+	if pull.Magnitude > 1e-3 then
+		local strength = ButterflyConfigs.EDGE_PUSH * (1 + overshoot * ButterflyConfigs.EDGE_GAIN)
+		butterfly.velocity += pull.Unit * (strength * dt)
+	end
+
+	-- LE CAP DE POUSSEE rattrape le cap voulu. C'est la DIRECTION DANS LAQUELLE IL BAT DES AILES, pas celle dans
+	-- laquelle son corps pointe : les deux sont separees plus bas, et c'est ce qui corrige le vol en crabe.
+	butterfly.facing += shortestAngle(butterfly.facing, butterfly.heading)
+		* math.min(1, ButterflyConfigs.TURN_SPEED * dt)
 
 	-- GRAVITE ET FROTTEMENT. C'est l'ECART entre eux et l'impulsion du battement qui fait la dent de scie : sans
 	-- gravite il monterait indefiniment, sans frottement les impulsions s'additionneraient a l'infini.
@@ -285,7 +321,41 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 		end
 	end
 
-	butterfly.model:PivotTo(CFrame.new(newPos) * CFrame.Angles(0, butterfly.facing, 0))
+	-- LE CORPS REGARDE OU IL VA VRAIMENT, et pas ou il VOUDRAIT aller.
+	--
+	-- Le rappel du bord pousse de cote, la gravite tire vers le bas, et l'elan du battement precedent survit au
+	-- changement de cap : la vitesse reelle n'est presque jamais alignee sur l'intention. En orientant le modele
+	-- sur `facing`, le papillon volait de biais -- il regardait droit devant tout en derivant en travers.
+	--
+	-- On le realigne donc sur son DEPLACEMENT. C'est une correction, pas un mouvement a admirer : elle est rapide.
+	local before = butterfly.bodyYaw
+	local flatVel = Vector3.new(butterfly.velocity.X, 0, butterfly.velocity.Z)
+	if flatVel.Magnitude > ButterflyConfigs.BODY_MIN_SPEED then
+		-- Meme convention que partout dans le projet : un cap `h` se lit comme un regard (-sin h, 0, -cos h).
+		local wanted = math.atan2(-flatVel.X, -flatVel.Z)
+		butterfly.bodyYaw += shortestAngle(butterfly.bodyYaw, wanted)
+			* math.min(1, ButterflyConfigs.BODY_TURN_SPEED * dt)
+	end
+
+	-- IL S'INCLINE DANS LE VIRAGE, COMME UN AVION.
+	--
+	-- Le roulis vient de la VITESSE DE ROTATION, pas du cap : c'est EN tournant qu'on s'incline, pas en AYANT
+	-- tourne. Cale sur le cap, le papillon resterait penche en ligne droite.
+	--
+	-- On mesure donc de combien le corps a tourne pendant CETTE image, ramene par seconde.
+	local turnRate = shortestAngle(before, butterfly.bodyYaw) / math.max(dt, 1e-4)
+	local maxRoll = math.rad(ButterflyConfigs.BANK_MAX)
+	local sign = if ButterflyConfigs.BANK_INVERT then -1 else 1
+	local wantedRoll = math.clamp(-turnRate * ButterflyConfigs.BANK_GAIN * sign, -maxRoll, maxRoll)
+	-- Il PREND et REND son inclinaison plus lentement qu'il ne tourne : elle traine derriere le virage, et c'est
+	-- ce retard qui se lit comme du poids. Instantanee, elle claque et on ne la voit plus.
+	butterfly.roll += (wantedRoll - butterfly.roll) * math.min(1, ButterflyConfigs.BANK_SPEED * dt)
+
+	-- Le roulis APRES le cap, donc autour de l'axe du regard : compose avant, il ferait pivoter tout le repere et
+	-- le papillon partirait de travers au lieu de pencher.
+	butterfly.model:PivotTo(
+		CFrame.new(newPos) * CFrame.Angles(0, butterfly.bodyYaw, 0) * CFrame.Angles(0, 0, butterfly.roll)
+	)
 	return true
 end
 

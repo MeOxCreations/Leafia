@@ -63,11 +63,54 @@ return {
 	-- pour qu'il ne pivote pas comme une tourelle.
 	TURN_SPEED = 3.5,
 
-	-- ===== IL RESTE CHEZ LUI =====
-	-- Marge, en studs, a partir du bord de la zone ou il commence a etre ramene vers le centre. Un mur dur le
-	-- ferait rebondir comme une balle ; une force douce le fait tourner, ce qui ressemble a une decision.
+	-- ===== LE CORPS REGARDE OU IL VA =====
+	-- Deux directions differentes, et il faut les distinguer : le CAP VOULU sert a pousser (c'est l'intention),
+	-- la VITESSE REELLE sert a orienter le corps (c'est ce qui se voit). Le rappel du bord, la gravite et l'elan
+	-- du battement precedent font que les deux ne coincident presque jamais -- oriente sur l'intention, le
+	-- papillon volait EN CRABE.
+	--
+	-- Vitesse a laquelle le corps se realigne sur son deplacement. Haute : c'est une CORRECTION, pas un mouvement
+	-- a admirer. Trop basse, il traine visiblement de travers derriere sa trajectoire.
+	BODY_TURN_SPEED = 8,
+	-- En dessous de cette vitesse horizontale, la direction n'a plus de sens (bruit numerique) : on garde la
+	-- derniere orientation au lieu de faire pivoter le papillon au hasard quand il est presque immobile.
+	BODY_MIN_SPEED = 0.4,
+
+	-- ===== IL S'INCLINE DANS LES VIRAGES, COMME UN AVION =====
+	-- Le roulis vient de la VITESSE DE ROTATION, pas de l'angle : c'est en tournant qu'on s'incline, pas en ayant
+	-- tourne. Un roulis cale sur le cap laisserait le papillon penche en ligne droite.
+	--
+	-- Combien de roulis par unite de vitesse de rotation. Monter ce chiffre rend le vol plus acrobatique.
+	BANK_GAIN = 0.45,
+	-- Inclinaison maximale, en degres. Au-dela d'environ 60 on ne voit plus les ailes de face et ca devient un
+	-- tonneau.
+	BANK_MAX = 50,
+	-- Vitesse a laquelle il prend et rend son inclinaison. Plus bas que le realignement du corps : l'inclinaison
+	-- doit TRAINER un peu derriere le virage, sinon elle claque et on ne la lit plus comme du poids.
+	BANK_SPEED = 5,
+	-- Il s'incline du mauvais cote ? Basculer. Le sens depend de l'orientation du modele dans Blender : ca ne se
+	-- DEDUIT pas, ca se voit a l'ecran.
+	BANK_INVERT = false,
+
+	-- ===== LA ZONE EST UN AIMANT =====
+	-- Aucun mur, aucune teleportation : plus il s'eloigne, plus la zone tire fort. Il fait donc demi-tour tout
+	-- seul, et de l'exterieur ca se lit comme un papillon qui change d'avis.
+	--
+	-- Marge, en studs, a partir du bord ou l'aimant commence a agir.
 	EDGE_MARGIN = 4,
 	EDGE_PUSH = 8,
+	-- DE COMBIEN LA FORCE GRANDIT par stud de depassement. C'est ce qui garantit le retour : une force CONSTANTE
+	-- pouvait perdre contre l'elan d'un battement, et le papillon partait pour de bon. Une force qui grandit
+	-- finit toujours par gagner, sans jamais avoir besoin d'un mur.
+	EDGE_GAIN = 0.9,
+	-- SORTI DE LA ZONE, IL DECIDE DE RENTRER : son prochain cap vise le centre au lieu d'etre tire au hasard. Il
+	-- bat alors des ailes DANS la bonne direction, au lieu d'etre traine de cote par l'aimant -- un retour qu'on
+	-- lit comme une intention, pas comme un courant d'air. Un peu de hasard pour que ce ne soit pas une ligne
+	-- droite de fourmi.
+	EDGE_HOME_JITTER = 0.6, -- radians
+	-- Et il redecide TOUT DE SUITE au lieu d'attendre son prochain virage : dehors, deux secondes d'attente le
+	-- laissent s'eloigner pour rien.
+	EDGE_TURN_NOW = true,
 	-- Hauteur de vol au-dessus du BAS de la zone, et de combien il peut s'en ecarter. La zone donne l'emprise au
 	-- sol ; la hauteur se regle ici, sinon il faudrait redimensionner la part a chaque essai.
 	FLY_HEIGHT = 3.5,
