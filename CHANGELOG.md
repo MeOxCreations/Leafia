@@ -2204,6 +2204,56 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.614 — Des papillons traversent le jardin
+
+Nouveau `ButterflyController` + `ButterflyConfigs`. Ils apparaissent dans les parts posees sous
+`ButterflyZones`, volent, puis s'en vont.
+
+### Le battement POUSSE, et c'est tout le sujet
+
+L'animation ne fait que battre les ailes ; le deplacement est calcule dans le controller. Et il n'est pas lisse :
+chaque marqueur `BattementWingsEvent` donne une impulsion vers le HAUT et vers l'AVANT, la gravite reprend entre
+deux. On obtient la trajectoire en dents de scie qui fait qu'un papillon se lit comme un papillon.
+
+Un vol interpole proprement d'un point a un autre donnerait un drone. **La saccade EST l'effet.**
+
+Autre benefice : les ailes et le mouvement ne peuvent pas se desynchroniser, puisque c'est le meme marqueur qui
+commande les deux. Changer la vitesse de lecture change les deux ensemble, gratuitement.
+
+### Il ne va nulle part
+
+Il choisit un cap au hasard, le tient une a trois secondes, en prend un autre. Un cap lisse en continu
+dessinerait de grands cercles reguliers -- exactement ce qu'un papillon ne fait jamais.
+
+Pres du bord de sa zone, le cap est TIRE vers le centre au lieu de rebondir : une force douce ressemble a une
+decision, un rebond ressemble a une balle.
+
+### 100 % LOCAL
+
+Comme les nuages et l'herbe. C'est du decor : rien ne transite, chaque joueur a les siens, et personne ne
+remarquera qu'ils ne sont pas aux memes endroits. Les faire vivre au serveur voudrait dire repliquer une dizaine
+de CFrame par image pour des insectes.
+
+Rien ne vit au-dela de `VIEW_DISTANCE` : la zone se vide. Un papillon que personne ne voit coute exactement le
+meme prix qu'un papillon qu'on regarde.
+
+### Ils arrivent et ils partent
+
+Un par un, espaces au hasard -- remplir la zone d'un coup se lirait comme une apparition. Et chacun a une duree
+de vie : il finit par monter et s'effacer. C'est ce qui rend son passage precieux au lieu d'en faire un element
+de decor fixe.
+
+L'animation est FACULTATIVE : sans elle ils volent ailes figees plutot que pas du tout. On ne prive pas la scene
+d'un decor entier pour un asset qui n'a pas charge.
+
+Declare dans les DEUX places (Leafia et le tuto) : c'est de l'ambiance, elle vaut partout.
+
+### A faire dans Studio
+
+Le dossier `ButterflyZones` et ses parts existent deja. Les parts servent d'EMPRISE AU SOL : leur hauteur ne
+compte pas, l'altitude de vol se regle par `FLY_HEIGHT` (3.5 studs au-dessus du bas de la zone). Les agrandir en
+X/Z elargit le terrain de jeu.
+
 ## 0.0.613 — Plus d'escaliers, plus d'animation de descente
 
 La maison a ete abaissee et les marches supprimees dans Studio : le grand-pere sort de chez lui de plain-pied.

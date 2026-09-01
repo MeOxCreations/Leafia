@@ -1,0 +1,384 @@
+--!strict
+-- PAPILLONS. Ils apparaissent dans les zones posees dans la map, volent en dents de scie, puis s'en vont.
+--
+-- 100 % LOCAL, comme les nuages et l'herbe. C'est du DECOR : rien ne transite par le reseau, chaque joueur a ses
+-- papillons a lui, et personne ne remarquera jamais qu'ils ne sont pas aux memes endroits. Les faire vivre au
+-- serveur voudrait dire repliquer une dizaine de CFrame par image pour des insectes.
+--
+-- ===== LE BATTEMENT POUSSE, ET C'EST TOUT LE SUJET =====
+-- L'animation ne fait que battre les ailes ; le DEPLACEMENT est calcule ici. Et il n'est pas lisse : chaque
+-- marqueur `BattementWingsEvent` donne une impulsion vers le haut et vers l'avant, la gravite reprend entre
+-- deux. On obtient la trajectoire en dents de scie qui fait qu'un papillon se lit comme un papillon.
+--
+-- Un vol interpole proprement d'un point a un autre donnerait un drone. La saccade EST l'effet.
+--
+-- ===== IL NE VA NULLE PART =====
+-- Il choisit un cap au hasard, le tient une seconde ou deux, en prend un autre. Un cap qui tourne en continu
+-- dessinerait de grands cercles reguliers -- exactement ce qu'un papillon ne fait jamais.
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+
+local ButterflyConfigs = require(ReplicatedStorage.Modules.Configs.ButterflyConfigs)
+
+local ButterflyController = {}
+
+local UP = Vector3.new(0, 1, 0)
+
+type Butterfly = {
+	model: Model,
+	root: BasePart,
+	track: AnimationTrack?,
+	-- Vitesse propre, en studs/seconde. Le battement l'alimente, la gravite et le frottement la mangent.
+	velocity: Vector3,
+	heading: number, -- cap vise, en radians
+	facing: number, -- cap courant : il rattrape `heading`, il ne lui est pas egal
+	nextTurn: number,
+	height: number, -- hauteur de croisiere propre a ce papillon
+	dieAt: number,
+	leavingAt: number?, -- instant ou le depart a commence, nil tant qu'il vit sa vie
+}
+
+type Zone = {
+	part: BasePart,
+	butterflies: { Butterfly },
+	nextSpawn: number,
+	want: number, -- combien cette zone veut en heberger
+}
+
+local player = Players.LocalPlayer
+local rng = Random.new()
+
+local zones: { Zone } = {}
+local folder: Folder? = nil
+local template: Model? = nil
+local animation: Animation? = nil
+local conn: RBXScriptConnection? = nil
+
+local function findByPath(root: Instance, path: { string }): Instance?
+	local node: Instance? = root
+	for _, name in path do
+		node = node and node:FindFirstChild(name)
+	end
+	return node
+end
+
+local function playerPosition(): Vector3?
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	return if root and root:IsA("BasePart") then root.Position else nil
+end
+
+-- Un point au hasard dans la zone, a hauteur de vol. On tire dans la boite ENTIERE en X et Z, mais la hauteur
+-- vient de la config : la part sert d'emprise au sol, pas de volume de vol -- sinon regler la hauteur voudrait
+-- dire redimensionner la part a chaque essai.
+local function spawnPoint(zone: Zone, height: number): Vector3
+	local part = zone.part
+	local half = part.Size * 0.5
+	local local1 = Vector3.new(
+		rng:NextNumber(-half.X, half.X),
+		0,
+		rng:NextNumber(-half.Z, half.Z)
+	)
+	local ground = part.Position.Y - half.Y
+	local flat = part.CFrame:PointToWorldSpace(local1)
+	return Vector3.new(flat.X, ground + height, flat.Z)
+end
+
+local function destroy(butterfly: Butterfly)
+	local track = butterfly.track
+	if track then
+		track:Stop(0)
+	end
+	butterfly.model:Destroy()
+end
+
+local function spawnOne(zone: Zone, now: number)
+	local source = template
+	if not source then
+		return
+	end
+	local model = source:Clone()
+	local root = model.PrimaryPart
+	if not (root and root:IsA("BasePart")) then
+		model:Destroy()
+		return
+	end
+
+	-- ANCRE : on ecrit son CFrame nous-memes a chaque image. La physique n'a rien a dire sur un papillon, et la
+	-- laisser faire le ferait tomber au sol des la premiere frame.
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = true
+			d.CanCollide = false
+			d.CanTouch = false
+			-- Invisible aux raycasts : sinon la coupe de l'herbe et les prompts croiraient a un obstacle qui
+			-- passe. `CanQuery` n'a d'effet que parce que CanCollide est faux.
+			d.CanQuery = false
+			d.CastShadow = false
+		end
+	end
+
+	local height = ButterflyConfigs.FLY_HEIGHT
+		+ rng:NextNumber(-ButterflyConfigs.FLY_HEIGHT_RANGE, ButterflyConfigs.FLY_HEIGHT_RANGE)
+	local heading = rng:NextNumber(0, math.pi * 2)
+	model:PivotTo(CFrame.new(spawnPoint(zone, height)) * CFrame.Angles(0, heading, 0))
+	model.Parent = Workspace
+
+	local butterfly: Butterfly = {
+		model = model,
+		root = root,
+		track = nil,
+		velocity = Vector3.zero,
+		heading = heading,
+		facing = heading,
+		nextTurn = now + rng:NextNumber(0, ButterflyConfigs.TURN_EVERY),
+		height = height,
+		dieAt = now + rng:NextNumber(ButterflyConfigs.LIFE_MIN, ButterflyConfigs.LIFE_MAX),
+		leavingAt = nil,
+	}
+
+	-- L'ANIMATION, et le marqueur qui pousse. Sans elle le papillon vole quand meme -- ailes figees, mais il
+	-- avance : on ne prive pas la scene d'un decor entier pour un asset qui n'a pas charge.
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	local anim = animation
+	if animator and anim then
+		local ok, result = pcall(function()
+			return (animator :: Animator):LoadAnimation(anim :: Animation)
+		end)
+		if ok and typeof(result) == "Instance" then
+			local track = result :: AnimationTrack
+			track.Looped = true
+			track.Priority = Enum.AnimationPriority.Idle
+			track:Play()
+			track:AdjustSpeed(rng:NextNumber(ButterflyConfigs.SPEED_MIN, ButterflyConfigs.SPEED_MAX))
+			-- CHAQUE BATTEMENT POUSSE. C'est le marqueur pose dans l'editeur qui commande le deplacement : les
+			-- ailes et le mouvement ne peuvent donc pas se desynchroniser, quelle que soit la vitesse de lecture.
+			track:GetMarkerReachedSignal(ButterflyConfigs.WING_EVENT):Connect(function()
+				local forward = Vector3.new(-math.sin(butterfly.facing), 0, -math.cos(butterfly.facing))
+				butterfly.velocity += UP * ButterflyConfigs.FLAP_UP
+					+ forward * ButterflyConfigs.FLAP_FORWARD
+			end)
+			butterfly.track = track
+		end
+	end
+
+	table.insert(zone.butterflies, butterfly)
+end
+
+-- Une image de vol.
+local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: number): boolean
+	if not butterfly.model.Parent then
+		return false
+	end
+
+	-- LE DEPART. Il monte et s'efface au lieu de disparaitre sur place : un objet qui s'evapore sous les yeux
+	-- casse l'illusion bien plus qu'un objet qui s'en va.
+	local leaving = butterfly.leavingAt
+	if not leaving and now >= butterfly.dieAt then
+		leaving = now
+		butterfly.leavingAt = leaving
+	end
+	if leaving then
+		local e = (now - leaving) / ButterflyConfigs.LEAVE_TIME
+		if e >= 1 then
+			destroy(butterfly)
+			return false
+		end
+		for _, d in butterfly.model:GetDescendants() do
+			if d:IsA("BasePart") then
+				d.LocalTransparencyModifier = e
+			end
+		end
+		butterfly.velocity += UP * (ButterflyConfigs.LEAVE_RISE * dt)
+	end
+
+	-- LE CAP CHANGE, par a-coups. Un nouveau but tous les TURN_EVERY environ, jamais une rotation continue.
+	if not leaving and now >= butterfly.nextTurn then
+		butterfly.nextTurn = now
+			+ ButterflyConfigs.TURN_EVERY
+			+ rng:NextNumber(0, ButterflyConfigs.TURN_JITTER)
+		local swing = math.rad(ButterflyConfigs.TURN_ANGLE)
+		butterfly.heading += rng:NextNumber(-swing, swing)
+	end
+
+	-- IL RENTRE CHEZ LUI. Pres du bord, on tire le cap vers le centre au lieu de le faire rebondir : une force
+	-- douce ressemble a une decision, un rebond ressemble a une balle.
+	local pos = butterfly.root.Position
+	local part = zone.part
+	local half = part.Size * 0.5
+	local inZone = part.CFrame:PointToObjectSpace(pos)
+	local margin = ButterflyConfigs.EDGE_MARGIN
+	local push = Vector3.zero
+	if math.abs(inZone.X) > half.X - margin then
+		push += part.CFrame.RightVector * -math.sign(inZone.X)
+	end
+	if math.abs(inZone.Z) > half.Z - margin then
+		push += part.CFrame.LookVector * -math.sign(inZone.Z)
+	end
+	if push.Magnitude > 1e-3 then
+		butterfly.velocity += push.Unit * (ButterflyConfigs.EDGE_PUSH * dt)
+	end
+
+	-- LE CORPS RATTRAPE LE CAP. Par le plus court chemin : sans ca, passer de 179 a -179 degres lui ferait faire
+	-- un tour complet sur lui-meme.
+	local diff = (butterfly.heading - butterfly.facing) % (math.pi * 2)
+	if diff > math.pi then
+		diff -= math.pi * 2
+	end
+	butterfly.facing += diff * math.min(1, ButterflyConfigs.TURN_SPEED * dt)
+
+	-- GRAVITE ET FROTTEMENT. C'est l'ECART entre eux et l'impulsion du battement qui fait la dent de scie : sans
+	-- gravite il monterait indefiniment, sans frottement les impulsions s'additionneraient a l'infini.
+	butterfly.velocity -= UP * (ButterflyConfigs.GRAVITY * dt)
+	butterfly.velocity *= 1 - math.min(1, ButterflyConfigs.DRAG * dt)
+
+	-- La vitesse HORIZONTALE est bornee, pas la verticale : c'est le battement qui doit rester libre de le
+	-- soulever, alors qu'un papillon rapide en translation devient une mouche.
+	local flat = Vector3.new(butterfly.velocity.X, 0, butterfly.velocity.Z)
+	if flat.Magnitude > ButterflyConfigs.MAX_SPEED then
+		flat = flat.Unit * ButterflyConfigs.MAX_SPEED
+		butterfly.velocity = Vector3.new(flat.X, butterfly.velocity.Y, flat.Z)
+	end
+
+	-- IL REVIENT A SA HAUTEUR DE CROISIERE. Doucement : c'est une tendance, pas un rail -- le battement doit
+	-- pouvoir le faire monter au-dessus et la gravite le faire descendre en dessous.
+	if not leaving then
+		local ground = part.Position.Y - half.Y
+		local wanted = ground + butterfly.height
+		butterfly.velocity += UP * ((wanted - pos.Y) * dt)
+	end
+
+	local newPos = pos + butterfly.velocity * dt
+	butterfly.model:PivotTo(CFrame.new(newPos) * CFrame.Angles(0, butterfly.facing, 0))
+	return true
+end
+
+local function clearZone(zone: Zone)
+	for _, butterfly in zone.butterflies do
+		destroy(butterfly)
+	end
+	table.clear(zone.butterflies)
+end
+
+local function update(dt: number)
+	local from = playerPosition()
+	local now = os.clock()
+
+	for _, zone in zones do
+		if not zone.part.Parent then
+			continue
+		end
+		-- RIEN NE VIT LOIN DU JOUEUR. On vide la zone au lieu de laisser tourner des papillons que personne ne
+		-- voit : ils coutent exactement le meme prix vus ou non.
+		local far = not from
+			or (Vector3.new(zone.part.Position.X - from.X, 0, zone.part.Position.Z - from.Z)).Magnitude
+				> ButterflyConfigs.VIEW_DISTANCE
+		if far then
+			if #zone.butterflies > 0 then
+				clearZone(zone)
+			end
+			continue
+		end
+
+		for index = #zone.butterflies, 1, -1 do
+			if not stepButterfly(zone.butterflies[index], zone, now, dt) then
+				table.remove(zone.butterflies, index)
+			end
+		end
+
+		-- ILS ARRIVENT UN PAR UN. Remplir la zone d'un coup se lirait comme une apparition ; espaces, ils ont
+		-- l'air de passer par la.
+		if #zone.butterflies < zone.want and now >= zone.nextSpawn then
+			zone.nextSpawn = now
+				+ ButterflyConfigs.SPAWN_EVERY
+				+ rng:NextNumber(0, ButterflyConfigs.SPAWN_JITTER)
+			spawnOne(zone, now)
+		end
+	end
+end
+
+local function collectZones()
+	local host = folder
+	if not host then
+		return
+	end
+	table.clear(zones)
+	local now = os.clock()
+	for _, child in host:GetChildren() do
+		if child:IsA("BasePart") then
+			table.insert(zones, {
+				part = child,
+				butterflies = {},
+				nextSpawn = now + rng:NextNumber(0, ButterflyConfigs.SPAWN_JITTER),
+				want = rng:NextInteger(ButterflyConfigs.PER_ZONE_MIN, ButterflyConfigs.PER_ZONE_MAX),
+			})
+		end
+	end
+end
+
+function ButterflyController.init()
+	if conn then
+		return
+	end
+
+	-- EN TACHE DE FOND. Avec le streaming, les zones arrivent bien apres le boot -- et un `init` qui attend gele
+	-- tout le demarrage du client. On re-scanne jusqu'a trouver, puis on branche.
+	task.spawn(function()
+		local mesh = findByPath(ReplicatedStorage, ButterflyConfigs.MESH_PATH)
+		if mesh and mesh:IsA("Model") then
+			template = mesh
+		else
+			warn(
+				`[Butterfly] Modele introuvable : ReplicatedStorage.`
+					.. `{table.concat(ButterflyConfigs.MESH_PATH, ".")}. Aucun papillon.`
+			)
+			return
+		end
+
+		local anim = findByPath(ReplicatedStorage, ButterflyConfigs.ANIM_PATH)
+		if anim and anim:IsA("Animation") then
+			animation = anim
+		else
+			-- ANORMAL MAIS PAS BLOQUANT : ils voleront ailes figees plutot que pas du tout.
+			warn(
+				`[Butterfly] Animation introuvable : ReplicatedStorage.`
+					.. `{table.concat(ButterflyConfigs.ANIM_PATH, ".")}. Ailes figees.`
+			)
+		end
+
+		local deadline = os.clock() + ButterflyConfigs.FIND_TIMEOUT
+		while os.clock() < deadline do
+			local found = Workspace:FindFirstChild(ButterflyConfigs.ZONE_FOLDER, true)
+			if found and found:IsA("Folder") and #found:GetChildren() > 0 then
+				folder = found
+				collectZones()
+				break
+			end
+			task.wait(ButterflyConfigs.FIND_INTERVAL)
+		end
+
+		if #zones == 0 then
+			warn(
+				`[Butterfly] Aucun dossier "{ButterflyConfigs.ZONE_FOLDER}" avec des parts apres `
+					.. `{ButterflyConfigs.FIND_TIMEOUT} s. Aucun papillon dans cette place.`
+			)
+			return
+		end
+
+		-- Une zone ajoutee ou retiree en cours de partie (streaming, edition en direct) est prise en compte.
+		local host = folder
+		if host then
+			host.ChildAdded:Connect(collectZones)
+			host.ChildRemoved:Connect(collectZones)
+		end
+
+		print(`[Butterfly] {#zones} zone(s) trouvee(s).`)
+		conn = RunService.Heartbeat:Connect(update)
+	end)
+end
+
+return ButterflyController

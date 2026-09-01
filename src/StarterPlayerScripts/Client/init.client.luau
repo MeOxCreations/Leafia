@@ -70,6 +70,7 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.RakeController).init()
 	-- Nuages : du ciel, rien d'autre. Local, aucun reseau. Ordre indifferent.
 	require(script.CloudController).init()
+	require(script.ButterflyController).init()
 	-- DIDACTICIEL : le halo qui respire sur la porte du grand-pere, pour dire ou aller sans l'ecrire. Purement
 	-- visuel, ne depend de rien. TUTO UNIQUEMENT : il n'y a pas de porte a montrer dans le hub.
 	-- Necessite un Highlight pose A LA MAIN sous le Model "Door" (Rojo ne synchronise pas le Workspace).
@@ -174,6 +175,11 @@ RakeController.init()
 -- Ordre indifferent, il ne partage rien avec les autres.
 local CloudController = require(script.CloudController)
 CloudController.init()
+
+-- Papillons qui traversent les zones posees dans la map. 100% LOCAL comme les nuages : c'est du decor, chaque
+-- joueur a les siens et rien ne transite. Ordre indifferent, il ne partage rien avec les autres.
+local ButterflyController = require(script.ButterflyController)
+ButterflyController.init()
 
 -- HedgeMeshController n'est PLUS demarre : il a servi de banc d'essai a la texture repetee, qui est maintenant
 -- dans HedgeBranchService. Le laisser tourner poserait une plaque flottante devant le joueur a chaque spawn.
