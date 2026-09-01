@@ -38,6 +38,8 @@ type Butterfly = {
 	bodyYaw: number, -- orientation MONTREE : elle suit la vitesse reelle, pas l'intention
 	roll: number, -- inclinaison courante, en radians. Vient de la VITESSE de rotation, pas du cap.
 	nextTurn: number,
+	turnSign: number, -- de quel cote est parti le DERNIER virage. Le suivant part de l'autre : c'est ca, le zigzag.
+	noiseSeed: number, -- decalage propre dans le champ de bruit de la derive
 	height: number, -- hauteur de croisiere propre a ce papillon
 	dieAt: number,
 	leavingAt: number?, -- instant ou le depart a commence, nil tant qu'il vit sa vie
@@ -153,6 +155,10 @@ local function spawnOne(zone: Zone, now: number)
 		bodyYaw = heading,
 		roll = 0,
 		nextTurn = now + rng:NextNumber(0, ButterflyConfigs.TURN_EVERY),
+		turnSign = if rng:NextNumber() < 0.5 then -1 else 1,
+		-- Chacun son coin du champ de bruit : deux papillons voisins onduleraient sinon exactement pareil, et on
+		-- lirait un banc de poissons au lieu de deux insectes.
+		noiseSeed = rng:NextNumber(0, 1000),
 		height = height,
 		dieAt = now + rng:NextNumber(ButterflyConfigs.LIFE_MIN, ButterflyConfigs.LIFE_MAX),
 		leavingAt = nil,
@@ -256,9 +262,30 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 				butterfly.heading = math.atan2(-home.X, -home.Z) + rng:NextNumber(-jitter, jitter)
 			end
 		else
+			-- IL PART DE L'AUTRE COTE QUE LA DERNIERE FOIS. C'est ca qui fait le zigzag : un tirage purement au
+			-- hasard enchaine deux ou trois virages du meme cote et dessine un cercle.
+			--
+			-- Pas TOUJOURS, quand meme : une alternance parfaite est un motif, et un motif se repere. La
+			-- probabilite laisse passer un virage sur cinq du meme cote.
+			local sign = butterfly.turnSign
+			if rng:NextNumber() < ButterflyConfigs.TURN_ALTERNATE then
+				sign = -sign
+			end
+			butterfly.turnSign = sign
+			-- Amplitude tiree entre 40 % et 100 % : des virages tous identiques redeviendraient un motif.
 			local swing = math.rad(ButterflyConfigs.TURN_ANGLE)
-			butterfly.heading += rng:NextNumber(-swing, swing)
+			butterfly.heading += sign * rng:NextNumber(swing * 0.4, swing)
 		end
+	end
+
+	-- LA DERIVE CONTINUE, par-dessus les virages. Entre deux decisions le cap ondule doucement : aucun segment
+	-- n'est jamais parfaitement droit, meme sur une demi-seconde.
+	--
+	-- Du bruit de Perlin et pas du hasard par image : le hasard pur donnerait un tremblement, le bruit donne une
+	-- ondulation. C'est la difference entre un papillon et une mouche electrocutee.
+	if not leaving then
+		local wave = math.noise(now * ButterflyConfigs.WANDER_SCALE + butterfly.noiseSeed, 0, 0) * 2
+		butterfly.heading += wave * ButterflyConfigs.WANDER_AMOUNT * dt
 	end
 
 	-- L'AIMANT. Aucun mur, aucune teleportation : la force GRANDIT avec le depassement, donc elle finit toujours

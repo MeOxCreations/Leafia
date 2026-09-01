@@ -56,16 +56,34 @@ return {
 	-- plafond ne change rien du tout, les deux vont ensemble.
 	MAX_SPEED = 14,
 
-	-- ===== LA DIRECTION CHANGE TOUT LE TEMPS =====
-	-- Un papillon ne va nulle part. Il choisit un cap, le tient quelques secondes, en prend un autre. Un cap
-	-- lisse en continu donnerait de grands cercles reguliers, ce qui est l'inverse de l'effet voulu.
-	TURN_EVERY = 1.6,
-	TURN_JITTER = 1.4,
-	-- De combien il peut tourner d'un coup, en degres. Large : c'est le caractere erratique qu'on cherche.
-	TURN_ANGLE = 110,
-	-- Vitesse a laquelle il s'oriente vers son nouveau cap. Assez vif pour qu'on voie le changement, assez mou
-	-- pour qu'il ne pivote pas comme une tourelle.
-	TURN_SPEED = 3.5,
+	-- ===== LE ZIGZAG =====
+	-- Un papillon ne va nulle part, et surtout il ne va JAMAIS TOUT DROIT. Trois mecanismes se superposent pour
+	-- obtenir ca, et il en faut bien trois : chacun tout seul donne quelque chose de faux.
+	--
+	-- 1) DES VIRAGES FREQUENTS. Toutes les demi-secondes environ. Espaces de deux secondes, on voyait de longs
+	--    segments rectilignes entre deux decisions -- exactement le "tout droit" qu'on veut supprimer.
+	TURN_EVERY = 0.5,
+	TURN_JITTER = 0.5,
+	-- De combien il tourne d'un coup, en degres. C'est un MAXIMUM : chaque virage tire entre 40 % et 100 % de
+	-- cette valeur, sinon tous les virages ont la meme amplitude et ca redevient un motif.
+	TURN_ANGLE = 75,
+	--
+	-- 2) ILS ALTERNENT. C'EST LE COEUR DU ZIGZAG, et c'est ce qui manquait.
+	--    Un tirage purement au hasard part deux ou trois fois du meme cote et dessine des CERCLES -- ce qu'on
+	--    voyait. En forcant le virage suivant a partir de l'autre cote, on obtient gauche-droite-gauche : un
+	--    zigzag. La probabilite reste sous 1 pour qu'il puisse enchainer deux fois du meme cote de temps en
+	--    temps, sinon l'alternance devient elle-meme un motif regulier.
+	TURN_ALTERNATE = 0.78,
+	--
+	-- 3) UNE DERIVE CONTINUE, par-dessus. Entre deux virages, le cap ondule doucement : aucun segment n'est donc
+	--    jamais parfaitement droit, meme sur une demi-seconde. Sans elle, le vol reste une suite de traits.
+	WANDER_AMOUNT = 1.1, -- radians par seconde, au maximum
+	WANDER_SCALE = 0.45, -- lenteur de l'ondulation : plus bas = plus lent, plus mou
+	--
+	-- Vitesse a laquelle il s'oriente vers son nouveau cap. RELEVEE avec la frequence des virages : trop molle,
+	-- il n'aurait jamais fini un virage avant qu'on lui en demande un autre, et le zigzag se moyennerait en
+	-- ligne droite. Deux reglages qui doivent monter ensemble.
+	TURN_SPEED = 6,
 
 	-- ===== LE CORPS REGARDE OU IL VA =====
 	-- Deux directions differentes, et il faut les distinguer : le CAP VOULU sert a pousser (c'est l'intention),

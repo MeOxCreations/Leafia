@@ -2204,6 +2204,48 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.618 — Les papillons zigzaguent au lieu d'aller tout droit
+
+Ils volaient par longs segments rectilignes. Trois mecanismes se superposent maintenant, et il en faut bien
+trois : chacun tout seul donne quelque chose de faux.
+
+### 1. Des virages frequents
+
+`TURN_EVERY` : **1.6 -> 0.5 s**, `TURN_JITTER` : **1.4 -> 0.5**. Espaces de deux secondes, les virages laissaient
+de longues lignes droites entre deux decisions -- exactement le "tout droit" a supprimer.
+
+`TURN_SPEED` monte avec (**3.5 -> 6**) : trop molle, l'orientation n'aurait jamais fini un virage avant qu'on lui
+en demande un autre, et le zigzag se serait MOYENNE en ligne droite. Deux reglages qui doivent monter ensemble.
+
+### 2. Ils ALTERNENT, et c'est le coeur du zigzag
+
+C'est ce qui manquait vraiment. **Un tirage purement au hasard part deux ou trois fois du meme cote et dessine
+des CERCLES** -- ce qu'on voyait. Ce n'etait pas un probleme d'amplitude ni de frequence : c'etait la nature meme
+du tirage.
+
+Le virage suivant part donc de l'autre cote que le precedent : gauche, droite, gauche. `TURN_ALTERNATE` (0.78)
+reste sous 1 pour qu'il puisse enchainer deux fois du meme cote de temps en temps -- une alternance PARFAITE est
+elle-meme un motif, et un motif se repere.
+
+L'amplitude est tiree entre 40 % et 100 % du maximum, pour la meme raison : des virages tous identiques
+redeviendraient reguliers.
+
+### 3. Une derive continue, par-dessus
+
+Entre deux virages, le cap ondule doucement : aucun segment n'est jamais parfaitement droit, meme sur une demi-
+seconde.
+
+Du **bruit de Perlin**, pas du hasard par image. Le hasard pur donnerait un tremblement ; le bruit donne une
+ondulation. C'est la difference entre un papillon et une mouche electrocutee.
+
+Chacun a son coin du champ de bruit : deux papillons voisins onduleraient sinon exactement pareil, et on lirait
+un banc de poissons au lieu de deux insectes.
+
+### A faire dans Studio
+
+Rien. `TURN_ANGLE` (75 deg) pour des zigzags plus larges, `WANDER_AMOUNT` (1.1) pour plus d'ondulation entre les
+virages.
+
 ## 0.0.617 — Papillons plus vifs : ailes plus rapides, vol plus rapide, inclinaison inversee
 
 Trois reglages, et une distinction qui vaut la peine d'etre notee.
