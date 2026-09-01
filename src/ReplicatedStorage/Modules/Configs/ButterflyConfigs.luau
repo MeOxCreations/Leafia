@@ -163,9 +163,17 @@ return {
 	-- retoucher FLAP_UP -- deux reglages qu'il faudrait compenser l'un par l'autre finiraient par se battre.
 	SPEED_MIN = 3.6,
 	SPEED_MAX = 4.8,
-	-- Echelle du modele, avec un peu de variation. Des papillons tous identiques trahissent le clone.
-	SCALE_MIN = 0.85,
-	SCALE_MAX = 1.15,
+	-- ===== LA TAILLE =====
+	-- UN SEUL BOUTON POUR LA TAILLE GENERALE, un autre pour la variete. C'etait un couple min/max, et changer la
+	-- taille globale obligeait alors a bouger les DEUX en gardant leur ecart -- deux reglages qu'il faut tenir
+	-- d'accord a la main finissent toujours par se contredire.
+	--
+	-- Multiplie la taille du modele tel qu'il est dans ReplicatedStorage. 1 = taille d'origine, 2 = deux fois plus
+	-- gros. C'est ici qu'on regle si les papillons sont trop petits ou trop gros a l'ecran.
+	SCALE = 1,
+	-- De combien ils different les uns des autres, en fraction. 0.15 = plus ou moins 15 %. A zero ils sont tous
+	-- rigoureusement identiques, et l'oeil repere la repetition avant de reperer la forme.
+	SCALE_VARIATION = 0.15,
 
 	-- ===== LA COULEUR DES AILES =====
 	-- Les parts a teinter. Le reste du modele (corps, antennes) garde sa couleur : c'est la teinte des AILES qui

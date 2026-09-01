@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.620 — Un seul bouton pour la taille des papillons
+
+`SCALE_MIN` / `SCALE_MAX` deviennent `SCALE` (1) et `SCALE_VARIATION` (0.15).
+
+Avant, changer la taille GENERALE obligeait a bouger les deux bornes en gardant leur ecart a la main. Deux
+reglages qu'il faut tenir d'accord finissent toujours par se contredire : on en monte un, on oublie l'autre, et
+la variete disparait ou explose sans qu'on comprenne pourquoi.
+
+Maintenant les deux questions sont separees, et chacune a son bouton :
+
+- **`SCALE`** : ils sont trop petits ou trop gros ? C'est ici, et nulle part ailleurs. 1 = la taille du modele
+  tel qu'il est dans ReplicatedStorage, 2 = deux fois plus gros.
+- **`SCALE_VARIATION`** : de combien ils different entre eux, en fraction. A zero ils sont rigoureusement
+  identiques -- et l'oeil repere alors la repetition avant de reperer la forme.
+
+Meme motif que `TRY_PUSH` / `SCARE_EXTRA` pour la camera du tuto, et que la poussee / le plafond de vitesse :
+quand on se surprend a compenser un reglage en tournant un autre, c'est qu'ils sont deja en train de se battre.
+
+### A faire dans Studio
+
+Rien. `SCALE` est le seul chiffre a toucher pour la taille.
+
 ## 0.0.619 — Des papillons de couleur, et chacun son allure
 
 ### La couleur des ailes

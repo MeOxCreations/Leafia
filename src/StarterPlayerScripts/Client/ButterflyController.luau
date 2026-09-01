@@ -141,7 +141,8 @@ local function spawnOne(zone: Zone, now: number)
 	-- CHACUN SA TAILLE. Des papillons rigoureusement identiques trahissent le clone : l'oeil repere la repetition
 	-- avant de reperer la forme. Applique AVANT le placement -- ScaleTo travaille autour du pivot, et le faire
 	-- ensuite deplacerait le papillon qu'on vient de poser.
-	model:ScaleTo(rng:NextNumber(ButterflyConfigs.SCALE_MIN, ButterflyConfigs.SCALE_MAX))
+	local variation = ButterflyConfigs.SCALE_VARIATION
+	model:ScaleTo(ButterflyConfigs.SCALE * (1 + rng:NextNumber(-variation, variation)))
 
 	-- ET CHACUN SA COULEUR D'AILES. On ne teinte QUE les ailes : la couleur du corps ne distingue rien, celle des
 	-- ailes fait l'espece. Les deux ailes prennent la MEME teinte -- un papillon depareille se lit comme un bug.
