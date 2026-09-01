@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.627 — Les conseils disparaissent de l'ecran de chargement
+
+Tout le systeme part : l'etiquette TIPS, la liste des conseils, la rangee du bas, le degrade de l'etiquette, et
+l'ecriture lettre par lettre avec son rebond -- une centaine de lignes et une vingtaine de constantes.
+
+C'etait le morceau le plus travaille de cet ecran, et c'est justement pour ca qu'il fallait le sortir en entier
+plutot que le cacher. Un bloc desactive mais present, on le retrouve six mois plus tard sans savoir s'il est mort
+ou casse. Le git le garde ; le fichier n'a pas a le porter.
+
+Une reference restait dans un commentaire du bandeau : corrigee. Un commentaire faux est pire que pas de
+commentaire -- il envoie chercher quelque chose qui n'existe plus.
+
+### La tete du grand-pere
+
+`FACE_SIZE` : **0.11x0.2 -> 0.133x0.229**.
+
+### Ce qui reste sur cet ecran
+
+Le ciel, la tuile qui defile, le halo, l'anneau qui tourne, le visage qui cligne, le nom du lieu dans son bandeau,
+et la jauge de feuilles. Rien d'autre.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.626 — Halo derriere le grand-pere, anneau discret, bandeau teinte
 
 ### Un halo derriere le visage
