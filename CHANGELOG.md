@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.622 — Papillons plus petits et plus nerveux
+
+Reglages seuls, aucun code touche.
+
+| Reglage | Avant | Apres | Ce que ca fait |
+|---|---|---|---|
+| `SCALE` | 1 | **0.6** | la taille |
+| `FLAP_FORWARD` | 6 | **8.5** | la vitesse de vol |
+| `MAX_SPEED` | 14 | **19** | son plafond |
+| `FLAP_UP` | 5.5 | **7** | la portance |
+| `TURN_EVERY` | 0.5 | **0.35** | il change d'avis plus souvent |
+| `TURN_JITTER` | 0.5 | **0.4** | |
+| `BANK_GAIN` | 0.45 | **0.55** | il s'incline plus franchement |
+
+### Pourquoi la portance monte aussi
+
+Elle n'a rien a voir avec la taille -- un papillon plus petit n'est pas plus lourd. Mais elle doit rester EN
+PROPORTION de l'avance : une machine qui pousse fort vers l'avant et peu vers le haut file a l'horizontale, et la
+dent de scie disparait. Or c'est elle qui fait lire le papillon.
+
+Monter la vitesse sans monter la portance aurait donc transforme le papillon en fleche -- exactement ce qu'on
+avait corrige au 0.0.618.
+
+### Et le roulis suit les virages
+
+Des virages plus serres et plus frequents avec la meme inclinaison se seraient lus comme des changements de
+direction SECS, sans poids. `BANK_GAIN` monte avec eux.
+
+### A faire dans Studio
+
+Rien. Rappel du seul bouton pour la taille : `SCALE` dans `ButterflyConfigs`. 1 = taille du modele tel qu'il est
+dans ReplicatedStorage, 0.5 = deux fois plus petit.
+
 ## 0.0.621 — Un papillon traverse le plan pendant que le joueur toque
 
 Il part de `ButterflyPointStart` vers `ButterflyPointEnd`, 1,2 s apres le debut de la scene, et disparait en

@@ -58,11 +58,14 @@ return {
 	-- LE BATTEMENT POUSSE. Chaque marqueur de l'animation donne une impulsion vers le HAUT et vers l'AVANT : c'est
 	-- ce qui fait la trajectoire en dents de scie d'un papillon, et pourquoi il ne ressemble pas a un drone.
 	-- Sans ca on obtient un vol lisse, et un vol lisse ne se lit jamais comme un insecte.
-	FLAP_UP = 5.5, -- studs/seconde ajoutes vers le haut a chaque battement
+	-- LA PORTANCE MONTE AVEC LA POUSSEE. Elle n'a pas de rapport avec la taille du modele -- un papillon plus
+	-- petit n'est pas plus lourd -- mais elle doit rester en proportion de l'avance : une machine qui pousse fort
+	-- vers l'avant et peu vers le haut file a l'horizontale, et la dent de scie disparait.
+	FLAP_UP = 7, -- studs/seconde ajoutes vers le haut a chaque battement
 	-- LA POUSSEE VERS L'AVANT, et c'est ELLE qui regle la vitesse de vol -- pas SPEED_MIN/MAX. Battre des ailes
 	-- plus vite ne fait qu'accelerer les ailes : l'impulsion est divisee par la vitesse de lecture, expres, pour
 	-- que les deux reglages ne se battent pas. Pour aller plus vite, c'est ici.
-	FLAP_FORWARD = 6,
+	FLAP_FORWARD = 8.5,
 	-- Entre deux battements il RETOMBE. Plus fort que la gravite reelle serait brutal, plus faible le ferait
 	-- planer comme un oiseau : c'est cet ecart avec FLAP_UP qui donne le rebond caracteristique.
 	GRAVITY = 11,
@@ -71,7 +74,7 @@ return {
 	DRAG = 1.8,
 	-- Plafond de vitesse horizontale. Il borne le resultat de FLAP_FORWARD : monter la poussee sans monter ce
 	-- plafond ne change rien du tout, les deux vont ensemble.
-	MAX_SPEED = 14,
+	MAX_SPEED = 19,
 	-- CHACUN SON ALLURE. Un multiplicateur tire par papillon, applique A LA FOIS a la poussee et au plafond --
 	-- ne toucher qu'a l'un des deux ne changerait rien (une poussee bridee par un plafond commun, ou un plafond
 	-- jamais atteint faute de poussee).
@@ -87,8 +90,8 @@ return {
 	--
 	-- 1) DES VIRAGES FREQUENTS. Toutes les demi-secondes environ. Espaces de deux secondes, on voyait de longs
 	--    segments rectilignes entre deux decisions -- exactement le "tout droit" qu'on veut supprimer.
-	TURN_EVERY = 0.5,
-	TURN_JITTER = 0.5,
+	TURN_EVERY = 0.35,
+	TURN_JITTER = 0.4,
 	-- De combien il tourne d'un coup, en degres. C'est un MAXIMUM : chaque virage tire entre 40 % et 100 % de
 	-- cette valeur, sinon tous les virages ont la meme amplitude et ca redevient un motif.
 	TURN_ANGLE = 75,
@@ -128,7 +131,7 @@ return {
 	-- tourne. Un roulis cale sur le cap laisserait le papillon penche en ligne droite.
 	--
 	-- Combien de roulis par unite de vitesse de rotation. Monter ce chiffre rend le vol plus acrobatique.
-	BANK_GAIN = 0.45,
+	BANK_GAIN = 0.55,
 	-- Inclinaison maximale, en degres. Au-dela d'environ 60 on ne voit plus les ailes de face et ca devient un
 	-- tonneau.
 	BANK_MAX = 50,
@@ -187,7 +190,7 @@ return {
 	--
 	-- Multiplie la taille du modele tel qu'il est dans ReplicatedStorage. 1 = taille d'origine, 2 = deux fois plus
 	-- gros. C'est ici qu'on regle si les papillons sont trop petits ou trop gros a l'ecran.
-	SCALE = 1,
+	SCALE = 0.6,
 	-- De combien ils different les uns des autres, en fraction. 0.15 = plus ou moins 15 %. A zero ils sont tous
 	-- rigoureusement identiques, et l'oeil repere la repetition avant de reperer la forme.
 	SCALE_VARIATION = 0.15,
