@@ -203,20 +203,15 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Il remplace le dessin de maison qui occupait le fond. Une maison dit OU l'on va ; un visage dit CHEZ QUI --
 	-- et c'est lui, le personnage qu'on va rencontrer.
 	--
-	-- SEPT IMAGES, et c'est ce qui le rend vivant plutot que pose : trois directions de regard, et pour chacune
-	-- l'etat paupieres fermees. Le clignement de face a en plus une image intermediaire, parce qu'un clignement
-	-- de face se voit en entier -- de profil, l'oeil est deja a moitie cache.
+	-- DE FACE, ET RIEN D'AUTRE. Les regards de cote existent en asset (gauche, droite, et leurs paupieres
+	-- fermees) et ne sont PAS utilises : le pivot demandait de faire coincider trois dessins au pixel pres, et le
+	-- moindre decalage se voit comme une saccade sur un visage immobile.
 	--
-	-- LE CHANGEMENT DE REGARD SE FAIT PENDANT QUE LES YEUX SONT FERMES. C'est le detail qui fait tout : un
-	-- visage qui pivote les yeux ouverts se lit comme une image qu'on remplace ; qui pivote pendant un
-	-- clignement, ca se lit comme quelqu'un qui regarde ailleurs.
+	-- Trois images suffisent a le rendre vivant. Un clignement bien fait vaut mieux qu'un regard qui se decale --
+	-- et il n'y a plus rien qui puisse mal se poser.
 	local FACE_FRONT = "rbxassetid://116099459878511"
 	local FACE_FRONT_HALF = "rbxassetid://95027481047570"
 	local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
-	local FACE_LEFT = "rbxassetid://80943546819363"
-	local FACE_LEFT_SHUT = "rbxassetid://76739934994310"
-	local FACE_RIGHT = "rbxassetid://140521073004811"
-	local FACE_RIGHT_SHUT = "rbxassetid://137589144939199"
 	local FACE_SIZE = UDim2.fromScale(0.133, 0.229)
 	-- Ecart entre deux clignements, plus du hasard. Sans hasard, un clignement toutes les N secondes pile se lit
 	-- comme un metronome -- exactement ce qu'un vivant ne fait pas.
@@ -225,8 +220,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
 	local FACE_BLINK_HALF = 0.05
 	local FACE_BLINK_SHUT = 0.09
-	-- Une fois sur trois environ, le clignement change aussi la direction du regard.
-	local FACE_GLANCE_CHANCE = 0.35
 
 	-- ===== L'ANNEAU QUI TOURNE =====
 	-- Un cercle en pointilles autour du visage. C'est LE signal "ca charge" : une rotation continue est la seule
@@ -508,21 +501,18 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	face.ZIndex = 5
 	face.Parent = curtain
 
-	-- IL CLIGNE DES YEUX, ET IL REGARDE AILLEURS.
+	-- IL CLIGNE DES YEUX. Rien d'autre.
 	--
-	-- Le changement de direction se fait PENDANT QUE LES YEUX SONT FERMES, et c'est le detail qui fait tout : un
-	-- visage qui pivote les yeux ouverts se lit comme une image qu'on remplace ; qui pivote pendant un
-	-- clignement, ca se lit comme quelqu'un qui regarde ailleurs.
+	-- Le pivot du regard a ete essaye puis retire : faire coincider trois dessins au pixel pres est un pari, et
+	-- le moindre decalage se voit comme une saccade sur un visage par ailleurs immobile. Un clignement bien fait
+	-- vaut mieux qu'un regard qui saute.
 	--
-	-- De face il y a une image intermediaire (paupieres a moitie), de profil non : de profil l'oeil est deja a
-	-- moitie cache, l'etape ne se verrait pas et couterait une image de plus.
+	-- L'image INTERMEDIAIRE (paupieres a moitie) est jouee a l'aller ET au retour : sans elle l'oeil passe
+	-- d'ouvert a ferme en une image, ce qui claque au lieu de cligner.
+	--
+	-- L'ecart entre deux clignements a du hasard. Toutes les N secondes pile, ca se lit comme un metronome -- et
+	-- un metronome n'est pas vivant.
 	task.spawn(function()
-		local looks = {
-			{ open = FACE_FRONT, half = FACE_FRONT_HALF, shut = FACE_FRONT_SHUT },
-			{ open = FACE_LEFT, half = nil :: string?, shut = FACE_LEFT_SHUT },
-			{ open = FACE_RIGHT, half = nil :: string?, shut = FACE_RIGHT_SHUT },
-		}
-		local current = 1
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
 		-- instance detruite.
 		while sg.Parent do
@@ -530,29 +520,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			if not sg.Parent then
 				return
 			end
-			local from = looks[current]
-			if from.half then
-				face.Image = from.half :: string
-				task.wait(FACE_BLINK_HALF)
-			end
-			face.Image = from.shut
+			face.Image = FACE_FRONT_HALF
+			task.wait(FACE_BLINK_HALF)
+			face.Image = FACE_FRONT_SHUT
 			task.wait(FACE_BLINK_SHUT)
-
-			-- YEUX FERMES : c'est ici, et nulle part ailleurs, qu'on change de direction.
-			if math.random() < FACE_GLANCE_CHANCE then
-				local pick = current
-				while pick == current do
-					pick = math.random(1, #looks)
-				end
-				current = pick
-			end
-
-			local to = looks[current]
-			if to.half then
-				face.Image = to.half :: string
-				task.wait(FACE_BLINK_HALF)
-			end
-			face.Image = to.open
+			face.Image = FACE_FRONT_HALF
+			task.wait(FACE_BLINK_HALF)
+			face.Image = FACE_FRONT
 		end
 	end)
 

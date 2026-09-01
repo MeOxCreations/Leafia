@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.628 — Le grand-pere cligne des yeux, et ne regarde plus de cote
+
+Le pivot du regard est retire. Il restait quatre images sur sept -- gauche, droite et leurs paupieres fermees --
+et elles ne sont plus utilisees.
+
+Faire coincider trois dessins au pixel pres est un pari, et le moindre decalage se voit comme une SACCADE sur un
+visage par ailleurs immobile. Sur un ecran ou il n'y a presque rien d'autre a regarder, ce genre de defaut est
+exactement ce que l'oeil trouve.
+
+Il reste trois images : ouvert, a moitie, ferme. L'image intermediaire est jouee a l'aller ET au retour -- sans
+elle l'oeil passe d'ouvert a ferme en une seule image, ce qui claque au lieu de cligner.
+
+L'ecart entre deux clignements garde son hasard : toutes les N secondes pile, ca se lit comme un metronome, et un
+metronome n'est pas vivant.
+
+**Un clignement bien fait vaut mieux qu'un regard qui saute.** Les quatre assets restent uploades si on veut
+retenter un jour, mais le code ne les porte plus.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.627 — Les conseils disparaissent de l'ecran de chargement
 
 Tout le systeme part : l'etiquette TIPS, la liste des conseils, la rangee du bas, le degrade de l'etiquette, et
