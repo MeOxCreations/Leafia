@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.619 — Des papillons de couleur, et chacun son allure
+
+### La couleur des ailes
+
+Ils etaient tous blancs. Chaque papillon tire maintenant sa teinte dans une palette : blanc, jaune, orange, rose,
+rouge, bleu ciel, lavande.
+
+Seules les parts `Aile1` et `Aile2` sont teintees. La couleur du corps ne distingue rien ; celle des ailes fait
+l'espece. Et les DEUX ailes prennent la meme teinte -- un papillon depareille se lit comme un bug, pas comme une
+variete.
+
+**Aucune couleur sombre, aucun noir.** Deux raisons opposees et complementaires :
+
+- rien de VERT, parce que le jardin l'est et qu'un papillon vert serait invisible ;
+- rien de SOMBRE, parce qu'une aile noire se lit comme une ombre ou un trou dans le decor, pas comme un insecte.
+
+Le blanc reste dans le lot : c'est une vraie couleur de papillon, il ne fallait juste pas que ce soit la seule.
+
+### Chacun son allure
+
+`SPEED_VAR_MIN` / `SPEED_VAR_MAX` (0.7 a 1.35) : un multiplicateur tire par papillon.
+
+Applique **a la fois** a la poussee et a son plafond, et il fallait les deux. Ne toucher qu'a la poussee laisse
+tout le monde bride par le meme plafond ; ne toucher qu'au plafond donne une limite que la poussee commune
+n'atteint jamais. Dans les deux cas, la variation ne se voit pas.
+
+La PORTANCE, elle, reste commune : un papillon lent doit rester un papillon, pas un papillon qui tombe.
+
+Sans ca, dix papillons dans la meme zone avancent exactement au meme rythme et l'oeil lit un systeme au lieu
+d'individus. Meme raison que la taille variable, la vitesse d'ailes variable et le decalage du champ de bruit.
+
+### A faire dans Studio
+
+Rien -- tant que les ailes s'appellent `Aile1` et `Aile2`. Les renommer coupe la coloration EN SILENCE : le
+papillon reste blanc et rien ne le signale. Pour ajouter une teinte, une ligne dans `WING_COLORS`.
+
 ## 0.0.618 — Les papillons zigzaguent au lieu d'aller tout droit
 
 Ils volaient par longs segments rectilignes. Trois mecanismes se superposent maintenant, et il en faut bien

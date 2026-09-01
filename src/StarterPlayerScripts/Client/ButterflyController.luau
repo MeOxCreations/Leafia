@@ -37,6 +37,7 @@ type Butterfly = {
 	facing: number, -- cap de poussee courant : il rattrape `heading`, il ne lui est pas egal
 	bodyYaw: number, -- orientation MONTREE : elle suit la vitesse reelle, pas l'intention
 	roll: number, -- inclinaison courante, en radians. Vient de la VITESSE de rotation, pas du cap.
+	speedMul: number, -- allure propre a ce papillon : multiplie la poussee ET son plafond
 	nextTurn: number,
 	turnSign: number, -- de quel cote est parti le DERNIER virage. Le suivant part de l'autre : c'est ca, le zigzag.
 	noiseSeed: number, -- decalage propre dans le champ de bruit de la derive
@@ -141,6 +142,17 @@ local function spawnOne(zone: Zone, now: number)
 	-- avant de reperer la forme. Applique AVANT le placement -- ScaleTo travaille autour du pivot, et le faire
 	-- ensuite deplacerait le papillon qu'on vient de poser.
 	model:ScaleTo(rng:NextNumber(ButterflyConfigs.SCALE_MIN, ButterflyConfigs.SCALE_MAX))
+
+	-- ET CHACUN SA COULEUR D'AILES. On ne teinte QUE les ailes : la couleur du corps ne distingue rien, celle des
+	-- ailes fait l'espece. Les deux ailes prennent la MEME teinte -- un papillon depareille se lit comme un bug.
+	local palette = ButterflyConfigs.WING_COLORS
+	local wingColor = palette[rng:NextInteger(1, #palette)]
+	for _, name in ButterflyConfigs.WING_PARTS do
+		local wing = model:FindFirstChild(name, true)
+		if wing and wing:IsA("BasePart") then
+			wing.Color = wingColor
+		end
+	end
 	local heading = rng:NextNumber(0, math.pi * 2)
 	model:PivotTo(CFrame.new(spawnPoint(zone, height)) * CFrame.Angles(0, heading, 0))
 	model.Parent = Workspace
@@ -154,6 +166,7 @@ local function spawnOne(zone: Zone, now: number)
 		facing = heading,
 		bodyYaw = heading,
 		roll = 0,
+		speedMul = rng:NextNumber(ButterflyConfigs.SPEED_VAR_MIN, ButterflyConfigs.SPEED_VAR_MAX),
 		nextTurn = now + rng:NextNumber(0, ButterflyConfigs.TURN_EVERY),
 		turnSign = if rng:NextNumber() < 0.5 then -1 else 1,
 		-- Chacun son coin du champ de bruit : deux papillons voisins onduleraient sinon exactement pareil, et on
@@ -193,8 +206,10 @@ local function spawnOne(zone: Zone, now: number)
 			-- ailes et le mouvement ne peuvent donc pas se desynchroniser, quelle que soit la vitesse de lecture.
 			track:GetMarkerReachedSignal(ButterflyConfigs.WING_EVENT):Connect(function()
 				local forward = Vector3.new(-math.sin(butterfly.facing), 0, -math.cos(butterfly.facing))
+				-- L'ALLURE PROPRE ne touche que la poussee VERS L'AVANT. La portance reste commune : un papillon
+				-- lent doit rester un papillon, pas un papillon qui tombe.
 				butterfly.velocity += UP * (ButterflyConfigs.FLAP_UP * flapScale)
-					+ forward * (ButterflyConfigs.FLAP_FORWARD * flapScale)
+					+ forward * (ButterflyConfigs.FLAP_FORWARD * flapScale * butterfly.speedMul)
 			end)
 			butterfly.track = track
 		end
@@ -315,9 +330,12 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 
 	-- La vitesse HORIZONTALE est bornee, pas la verticale : c'est le battement qui doit rester libre de le
 	-- soulever, alors qu'un papillon rapide en translation devient une mouche.
+	-- Le plafond suit la MEME allure que la poussee : brider un papillon rapide au plafond commun le ramenerait
+	-- au rythme de tous les autres, et la variation d'allure ne se verrait que sur les lents.
+	local topSpeed = ButterflyConfigs.MAX_SPEED * butterfly.speedMul
 	local flat = Vector3.new(butterfly.velocity.X, 0, butterfly.velocity.Z)
-	if flat.Magnitude > ButterflyConfigs.MAX_SPEED then
-		flat = flat.Unit * ButterflyConfigs.MAX_SPEED
+	if flat.Magnitude > topSpeed then
+		flat = flat.Unit * topSpeed
 		butterfly.velocity = Vector3.new(flat.X, butterfly.velocity.Y, flat.Z)
 	end
 

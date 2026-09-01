@@ -55,6 +55,14 @@ return {
 	-- Plafond de vitesse horizontale. Il borne le resultat de FLAP_FORWARD : monter la poussee sans monter ce
 	-- plafond ne change rien du tout, les deux vont ensemble.
 	MAX_SPEED = 14,
+	-- CHACUN SON ALLURE. Un multiplicateur tire par papillon, applique A LA FOIS a la poussee et au plafond --
+	-- ne toucher qu'a l'un des deux ne changerait rien (une poussee bridee par un plafond commun, ou un plafond
+	-- jamais atteint faute de poussee).
+	--
+	-- Sans ca, dix papillons dans la meme zone avancent tous exactement au meme rythme : l'oeil lit un systeme,
+	-- pas des individus. C'est la meme raison que la taille et la vitesse d'ailes variables.
+	SPEED_VAR_MIN = 0.7,
+	SPEED_VAR_MAX = 1.35,
 
 	-- ===== LE ZIGZAG =====
 	-- Un papillon ne va nulle part, et surtout il ne va JAMAIS TOUT DROIT. Trois mecanismes se superposent pour
@@ -158,4 +166,26 @@ return {
 	-- Echelle du modele, avec un peu de variation. Des papillons tous identiques trahissent le clone.
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.15,
+
+	-- ===== LA COULEUR DES AILES =====
+	-- Les parts a teinter. Le reste du modele (corps, antennes) garde sa couleur : c'est la teinte des AILES qui
+	-- distingue une espece, pas celle du corps.
+	WING_PARTS = { "Aile1", "Aile2" },
+	-- Une couleur tiree au hasard par papillon. Le blanc reste dans le lot -- c'est une vraie couleur de
+	-- papillon, il ne fallait juste pas que ce soit la SEULE.
+	--
+	-- Toutes choisies pour ressortir sur du VERT : le jardin est vert, et un papillon vert serait invisible.
+	-- C'est pour ca qu'il n'y en a pas dans la liste, meme si ca existe dans la nature.
+	--
+	-- NI NOIR NI COULEUR SOMBRE, pour la meme raison a l'envers : une aile sombre se lit comme une ombre ou un
+	-- trou dans le decor, pas comme un insecte. Toutes les teintes ci-dessous sont CLAIRES.
+	WING_COLORS = {
+		Color3.fromRGB(255, 255, 255), -- blanc
+		Color3.fromRGB(255, 214, 84), -- jaune
+		Color3.fromRGB(255, 146, 62), -- orange
+		Color3.fromRGB(255, 110, 160), -- rose
+		Color3.fromRGB(224, 78, 78), -- rouge
+		Color3.fromRGB(140, 194, 255), -- bleu ciel
+		Color3.fromRGB(186, 142, 255), -- lavande
+	},
 }
