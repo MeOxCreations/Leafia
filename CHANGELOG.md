@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.624 — Le fond de l'ecran de chargement redevient un ciel
+
+Cyan clair d'un coin, bleu profond de l'autre, en diagonale.
+
+L'ancien degrade allait d'un gris-bleu sombre a un vert, puis a un noir. Trois familles de teinte sur un seul
+fond : le regard s'accrochait aux transitions au lieu d'aller sur ce qu'on lui demande de regarder.
+
+**Quatre etapes, toutes dans la meme famille.** Seule la LUMINOSITE voyage -- du cyan clair au bleu profond --
+donc le fond se lit comme un ESPACE et plus comme un motif. C'est ca qui le rend calme.
+
+Les etapes ne sont pas regulierement espacees : le clair tient un peu plus de la moitie du trajet, puis ca fonce
+plus vite. Un degrade lineaire parait mou ; celui-ci a une direction.
+
+`BG_ROTATION` passe de 88 a **40** : la lumiere vient du haut-gauche, comme dans a peu pres toutes les images
+qu'on regarde. Le sens d'un UIGradient ne se DEDUIT pas -- si la lumiere part du mauvais coin, c'est le premier
+nombre a tourner.
+
+### A verifier a l'ecran
+
+Le texte des conseils est BLANC, et il etait pose sur le bandeau sombre du bas. Ce bandeau est monte en haut a
+droite au 0.0.623 : le conseil s'affiche donc maintenant directement sur le ciel, et du blanc sur du cyan clair
+peut manquer de contraste dans le coin le plus lumineux.
+
+Deux sorties si ca se voit : passer le conseil en texte SOMBRE (comme sur la maquette), ou lui remettre un socle
+clair sous le texte. Ca se tranche a l'ecran, pas au raisonnement.
+
 ## 0.0.623 — Nouvel ecran de chargement : le grand-pere au centre, dans un anneau qui tourne
 
 Refonte du rideau des places secondaires (celui qui affiche TUTORIAL). Le grand ecran de Leafia n'est pas touche.

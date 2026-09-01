@@ -166,13 +166,25 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Pose sur un CADRE dedie, pas sur le CanvasGroup. Un UIGradient sur le groupe teinterait TOUT ce qu'il
 	-- contient -- le texte blanc des conseils virerait au bleu, les feuilles perdraient leur vert. Un cadre au
 	-- fond du tas donne exactement la meme image sans toucher a ce qui est pose dessus.
-	local BG_ROTATION = 88
+	-- CIEL, EN DIAGONALE. Cyan clair dans un coin, bleu profond dans l'autre.
+	--
+	-- QUATRE ETAPES, TOUTES DANS LA MEME FAMILLE. C'est ce qui le rend calme : un degrade qui change de TEINTE en
+	-- route (l'ancien passait par un vert avant de finir noir) attire l'oeil sur la transition elle-meme, et
+	-- l'oeil quitte alors ce qu'on lui demande de regarder. Ici seule la LUMINOSITE voyage -- du cyan clair au
+	-- bleu profond -- donc le fond se lit comme un espace et pas comme un motif.
+	--
+	-- Les etapes ne sont pas regulierement espacees : le clair tient la moitie du trajet puis fonce plus vite.
+	-- Un degrade lineaire parait mou ; celui-ci a une direction.
+	--
+	-- 40 degres : la lumiere vient du haut-gauche, comme dans a peu pres toutes les images qu'on regarde. Le sens
+	-- d'un UIGradient ne se DEDUIT pas -- si la lumiere part du mauvais coin, ce nombre est la premiere chose a
+	-- tourner.
+	local BG_ROTATION = 40
 	local BG_COLOR = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromHex("425974")),
-		ColorSequenceKeypoint.new(0.748, Color3.fromHex("425974")),
-		ColorSequenceKeypoint.new(0.977, Color3.fromHex("8ee38d")),
-		ColorSequenceKeypoint.new(0.998, Color3.fromHex("293747")),
-		ColorSequenceKeypoint.new(1, Color3.fromHex("11191f")),
+		ColorSequenceKeypoint.new(0, Color3.fromHex("6BEBFF")),
+		ColorSequenceKeypoint.new(0.38, Color3.fromHex("2AC9F7")),
+		ColorSequenceKeypoint.new(0.74, Color3.fromHex("1E90E2")),
+		ColorSequenceKeypoint.new(1, Color3.fromHex("1567C6")),
 	})
 
 	-- ===== MAISON DU CLIENT =====
