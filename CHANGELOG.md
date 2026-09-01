@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.617 — Papillons plus vifs : ailes plus rapides, vol plus rapide, inclinaison inversee
+
+Trois reglages, et une distinction qui vaut la peine d'etre notee.
+
+`BANK_INVERT` : **false -> true**. Ils penchaient a l'EXTERIEUR du virage au lieu de l'interieur. Le sens depend
+de l'orientation du modele dans Blender et ne se deduit pas -- seul l'ecran tranche, comme prevu.
+
+`SPEED_MIN` / `SPEED_MAX` : **1.7-2.4 -> 3.6-4.8**. Les ailes battent enfin comme des ailes de papillon.
+
+`FLAP_FORWARD` : **3.2 -> 6**, et `MAX_SPEED` : **9 -> 14**. Ils traversent leur zone au lieu de flotter.
+
+### Deux reglages qui ne font PAS la meme chose
+
+C'est le fruit du decouplage du 0.0.615, et ca vaut d'etre dit clairement parce que c'est contre-intuitif :
+
+- **`SPEED_MIN/MAX` ne change QUE l'aspect des ailes.** L'impulsion est divisee par la vitesse de lecture, donc
+  battre deux fois plus vite ne pousse pas deux fois plus fort. On peut monter ce chiffre autant qu'on veut sans
+  que le vol bouge d'un pouce.
+- **`FLAP_FORWARD` regle la vitesse de vol**, et `MAX_SPEED` la plafonne. Monter l'un sans l'autre ne donne rien :
+  une poussee qui vise au-dessus du plafond est rabotee, un plafond releve sans poussee n'est jamais atteint.
+
+Sans ce decouplage, accelerer les ailes aurait envoye les papillons en orbite et il aurait fallu re-regler la
+poussee derriere -- a chaque essai.
+
+### A faire dans Studio
+
+Rien. S'ils vont trop vite maintenant, c'est `FLAP_FORWARD` qu'on baisse, jamais `SPEED_MIN/MAX`.
+
 ## 0.0.616 — Les papillons regardent ou ils vont, s'inclinent dans les virages, et rentrent chez eux
 
 Trois corrections sur le vol.

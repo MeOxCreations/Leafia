@@ -42,15 +42,19 @@ return {
 	-- ce qui fait la trajectoire en dents de scie d'un papillon, et pourquoi il ne ressemble pas a un drone.
 	-- Sans ca on obtient un vol lisse, et un vol lisse ne se lit jamais comme un insecte.
 	FLAP_UP = 5.5, -- studs/seconde ajoutes vers le haut a chaque battement
-	FLAP_FORWARD = 3.2, -- studs/seconde ajoutes vers l'avant
+	-- LA POUSSEE VERS L'AVANT, et c'est ELLE qui regle la vitesse de vol -- pas SPEED_MIN/MAX. Battre des ailes
+	-- plus vite ne fait qu'accelerer les ailes : l'impulsion est divisee par la vitesse de lecture, expres, pour
+	-- que les deux reglages ne se battent pas. Pour aller plus vite, c'est ici.
+	FLAP_FORWARD = 6,
 	-- Entre deux battements il RETOMBE. Plus fort que la gravite reelle serait brutal, plus faible le ferait
 	-- planer comme un oiseau : c'est cet ecart avec FLAP_UP qui donne le rebond caracteristique.
 	GRAVITY = 11,
 	-- Frottement de l'air, par seconde. Il empeche les impulsions de s'accumuler a l'infini et fait retomber la
 	-- vitesse entre deux coups d'ailes.
 	DRAG = 1.8,
-	-- Vitesse horizontale maximale. Un papillon rapide devient une mouche.
-	MAX_SPEED = 9,
+	-- Plafond de vitesse horizontale. Il borne le resultat de FLAP_FORWARD : monter la poussee sans monter ce
+	-- plafond ne change rien du tout, les deux vont ensemble.
+	MAX_SPEED = 14,
 
 	-- ===== LA DIRECTION CHANGE TOUT LE TEMPS =====
 	-- Un papillon ne va nulle part. Il choisit un cap, le tient quelques secondes, en prend un autre. Un cap
@@ -88,9 +92,9 @@ return {
 	-- Vitesse a laquelle il prend et rend son inclinaison. Plus bas que le realignement du corps : l'inclinaison
 	-- doit TRAINER un peu derriere le virage, sinon elle claque et on ne la lit plus comme du poids.
 	BANK_SPEED = 5,
-	-- Il s'incline du mauvais cote ? Basculer. Le sens depend de l'orientation du modele dans Blender : ca ne se
-	-- DEDUIT pas, ca se voit a l'ecran.
-	BANK_INVERT = false,
+	-- Le sens depend de l'orientation du modele dans Blender : ca ne se DEDUIT pas, ca se voit a l'ecran. Regle
+	-- a `true` apres essai -- le papillon penchait a l'exterieur du virage au lieu de l'interieur.
+	BANK_INVERT = true,
 
 	-- ===== LA ZONE EST UN AIMANT =====
 	-- Aucun mur, aucune teleportation : plus il s'eloigne, plus la zone tire fort. Il fait donc demi-tour tout
@@ -131,8 +135,8 @@ return {
 	-- vite donnerait deux fois plus d'impulsions par seconde, et le papillon decollerait comme une fusee. Le
 	-- controller DIVISE donc l'impulsion par cette vitesse. On peut monter ce chiffre autant qu'on veut sans
 	-- retoucher FLAP_UP -- deux reglages qu'il faudrait compenser l'un par l'autre finiraient par se battre.
-	SPEED_MIN = 1.7,
-	SPEED_MAX = 2.4,
+	SPEED_MIN = 3.6,
+	SPEED_MAX = 4.8,
 	-- Echelle du modele, avec un peu de variation. Des papillons tous identiques trahissent le clone.
 	SCALE_MIN = 0.85,
 	SCALE_MAX = 1.15,
