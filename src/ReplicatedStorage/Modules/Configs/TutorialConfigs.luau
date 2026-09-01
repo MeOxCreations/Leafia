@@ -121,6 +121,18 @@ return {
 	-- Ce que la camera VISE, en studs au-dessus du centre de la porte. A zero elle vise le milieu exact.
 	SCENE_LOOK_UP = 0.5,
 
+	-- ===== LE PAPILLON DE LA SCENE =====
+	-- Un papillon traverse le cadre pendant que le joueur toque. Il ne raconte rien et ne sert a rien -- c'est
+	-- exactement pour ca qu'il compte : un plan ou SEUL le sujet bouge se lit comme une image fixe avec un acteur
+	-- dessus. Un mouvement gratuit au second plan suffit a rendre le monde vivant.
+	--
+	-- Les deux parts sont posees dans Studio : on ne devine pas une trajectoire, on la CADRE a la main.
+	BUTTERFLY_START = "ButterflyPointStart",
+	BUTTERFLY_END = "ButterflyPointEnd",
+	-- Apres le debut de la scene. Pas a l'instant zero : la camera est encore en train d'arriver et les barres de
+	-- se poser -- le papillon passerait pendant que l'oeil cherche encore le cadre.
+	BUTTERFLY_DELAY = 1.2,
+
 	-- ===== LE PLAN DE SORTIE : le joueur ET le grand-pere, vus d'un peu au-dessus =====
 	-- La camera ne rend pas la main tout de suite quand la porte est ouverte. Elle prend un dernier plan, large,
 	-- ou l'on voit le joueur se pousser et le grand-pere sortir de chez lui.
@@ -349,7 +361,7 @@ return {
 	--
 	-- Distance en studs a `OLDMAN_WALK_TARGET` sous laquelle elle part. La monter la referme plus tot.
 	DOOR_CLOSE_DISTANCE = 6,
-	-- LE BRUIT DU BATTANT QUI RETOMBE. C'est le grincement de l'ouverture, faute de son dedié : une porte qui se
+	-- LE BRUIT DU BATTANT QUI RETOMBE. C'est le grincement de l'ouverture, faute de son dedie : une porte qui se
 	-- ferme fait le meme bois qui travaille. Le jour ou tu enregistres un vrai bruit de fermeture -- avec le
 	-- "clac" du loquet, qui est ce qui manque ici -- il suffit de changer ce chemin, rien d'autre.
 	CLOSE_SOUND = { "Sounds", "Scenes", "Scene1", "OpenDoorSound" },

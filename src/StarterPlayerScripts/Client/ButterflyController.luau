@@ -27,9 +27,20 @@ local ButterflyController = {}
 
 local UP = Vector3.new(0, 1, 0)
 
+type Zone = {
+	part: BasePart,
+	butterflies: { Butterfly },
+	nextSpawn: number,
+	want: number, -- combien cette zone veut en heberger
+}
+
 type Butterfly = {
 	model: Model,
 	root: BasePart,
+	-- SA ZONE, ou nil pour un papillon de SCENE. C'est elle qui decide de l'aimant et de la hauteur de croisiere :
+	-- un papillon lance d'un point a un autre n'en a pas, il a un BUT a la place.
+	zone: Zone?,
+	target: Vector3?, -- but a atteindre. nil = il flane dans sa zone.
 	track: AnimationTrack?,
 	-- Vitesse propre, en studs/seconde. Le battement l'alimente, la gravite et le frottement la mangent.
 	velocity: Vector3,
@@ -46,17 +57,14 @@ type Butterfly = {
 	leavingAt: number?, -- instant ou le depart a commence, nil tant qu'il vit sa vie
 }
 
-type Zone = {
-	part: BasePart,
-	butterflies: { Butterfly },
-	nextSpawn: number,
-	want: number, -- combien cette zone veut en heberger
-}
-
 local player = Players.LocalPlayer
 local rng = Random.new()
 
 local zones: { Zone } = {}
+-- LES PAPILLONS DE SCENE, hors zone. Ils vivent dans leur propre liste parce qu'ils ne suivent AUCUNE des regles
+-- des autres : pas d'aimant, pas de repeuplement, et surtout pas de purge a distance -- une scene se joue la ou
+-- le realisateur l'a posee, pas la ou le joueur se trouve.
+local loose: { Butterfly } = {}
 local folder: Folder? = nil
 local template: Model? = nil
 local animation: Animation? = nil
@@ -110,16 +118,18 @@ local function destroy(butterfly: Butterfly)
 	butterfly.model:Destroy()
 end
 
-local function spawnOne(zone: Zone, now: number)
+-- Fabrique un papillon a un endroit donne. `zone` nil = papillon de SCENE : pas d'aimant, pas de hauteur de
+-- croisiere, il suit son `target` puis s'en va.
+local function spawnOne(zone: Zone?, now: number, at: Vector3?, target: Vector3?): Butterfly?
 	local source = template
 	if not source then
-		return
+		return nil
 	end
 	local model = source:Clone()
 	local root = model.PrimaryPart
 	if not (root and root:IsA("BasePart")) then
 		model:Destroy()
-		return
+		return nil
 	end
 
 	-- ANCRE : on ecrit son CFrame nous-memes a chaque image. La physique n'a rien a dire sur un papillon, et la
@@ -154,13 +164,25 @@ local function spawnOne(zone: Zone, now: number)
 			wing.Color = wingColor
 		end
 	end
+	-- Le point de depart vient de la zone, ou est impose (papillon de scene).
+	local start = at or (if zone then spawnPoint(zone, height) else Vector3.zero)
+	-- IL PART DEJA TOURNE VERS SON BUT quand il en a un : demarrer sur un cap au hasard le ferait faire demi-tour
+	-- au premier virage, ce qui se voit tout de suite dans un plan pose.
 	local heading = rng:NextNumber(0, math.pi * 2)
-	model:PivotTo(CFrame.new(spawnPoint(zone, height)) * CFrame.Angles(0, heading, 0))
+	if target then
+		local aim = (target - start) * Vector3.new(1, 0, 1)
+		if aim.Magnitude > 1e-3 then
+			heading = math.atan2(-aim.Unit.X, -aim.Unit.Z)
+		end
+	end
+	model:PivotTo(CFrame.new(start) * CFrame.Angles(0, heading, 0))
 	model.Parent = Workspace
 
 	local butterfly: Butterfly = {
 		model = model,
 		root = root,
+		zone = zone,
+		target = target,
 		track = nil,
 		velocity = Vector3.zero,
 		heading = heading,
@@ -174,7 +196,12 @@ local function spawnOne(zone: Zone, now: number)
 		-- lirait un banc de poissons au lieu de deux insectes.
 		noiseSeed = rng:NextNumber(0, 1000),
 		height = height,
-		dieAt = now + rng:NextNumber(ButterflyConfigs.LIFE_MIN, ButterflyConfigs.LIFE_MAX),
+		-- Un papillon de SCENE ne meurt pas de vieillesse : il part en arrivant. Le delai n'est qu'un filet, pour
+		-- qu'un but inatteignable ne le laisse pas a l'ecran tout le reste de la partie.
+		dieAt = now
+			+ if target
+				then ButterflyConfigs.SCENE_LIFE_MAX
+				else rng:NextNumber(ButterflyConfigs.LIFE_MIN, ButterflyConfigs.LIFE_MAX),
 		leavingAt = nil,
 	}
 
@@ -216,11 +243,14 @@ local function spawnOne(zone: Zone, now: number)
 		end
 	end
 
-	table.insert(zone.butterflies, butterfly)
+	if zone then
+		table.insert(zone.butterflies, butterfly)
+	end
+	return butterfly
 end
 
 -- Une image de vol.
-local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: number): boolean
+local function stepButterfly(butterfly: Butterfly, now: number, dt: number): boolean
 	if not butterfly.model.Parent then
 		return false
 	end
@@ -246,17 +276,31 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 		butterfly.velocity += UP * (ButterflyConfigs.LEAVE_RISE * dt)
 	end
 
-	-- OU EN EST-IL PAR RAPPORT A SA ZONE ? Calcule AVANT la decision de cap : c'est ce qui permet au papillon de
-	-- decider de rentrer, au lieu d'etre seulement tire.
 	local pos = butterfly.root.Position
-	local part = zone.part
-	local half = part.Size * 0.5
-	local inZone = part.CFrame:PointToObjectSpace(pos)
-	local margin = ButterflyConfigs.EDGE_MARGIN
-	-- Depassement sur chaque axe, en studs. Zero tant qu'il est bien au milieu.
-	local overX = math.abs(inZone.X) - (half.X - margin)
-	local overZ = math.abs(inZone.Z) - (half.Z - margin)
-	local overshoot = math.max(overX, overZ, 0)
+	local zone = butterfly.zone
+	local target = butterfly.target
+
+	-- IL EST ARRIVE ? Un papillon de scene s'en va des qu'il touche son but : il n'a plus rien a faire la, et le
+	-- laisser tourner autour transformerait un passage en decor.
+	if target and not leaving then
+		local gap = (target - pos) * Vector3.new(1, 0, 1)
+		if gap.Magnitude < ButterflyConfigs.SCENE_ARRIVE_DIST then
+			butterfly.dieAt = now
+		end
+	end
+
+	-- OU EN EST-IL PAR RAPPORT A SA ZONE ? Calcule AVANT la decision de cap : c'est ce qui permet au papillon de
+	-- decider de rentrer, au lieu d'etre seulement tire. Un papillon de scene n'a pas de zone : rien a depasser.
+	local overX, overZ, overshoot = 0, 0, 0
+	local part = if zone then zone.part else nil
+	local half = if part then part.Size * 0.5 else Vector3.zero
+	local inZone = if part then part.CFrame:PointToObjectSpace(pos) else Vector3.zero
+	if part then
+		local margin = ButterflyConfigs.EDGE_MARGIN
+		overX = math.abs(inZone.X) - (half.X - margin)
+		overZ = math.abs(inZone.Z) - (half.Z - margin)
+		overshoot = math.max(overX, overZ, 0)
+	end
 
 	-- LE CAP CHANGE, par a-coups. Un nouveau but tous les TURN_EVERY environ, jamais une rotation continue.
 	--
@@ -268,7 +312,15 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 		butterfly.nextTurn = now
 			+ ButterflyConfigs.TURN_EVERY
 			+ rng:NextNumber(0, ButterflyConfigs.TURN_JITTER)
-		if outside then
+		if target then
+			-- IL VISE SON BUT, mais de BIAIS. Viser pile en ligne droite annulerait le zigzag et donnerait une
+			-- trajectoire de fleche -- or c'est le zigzag qui vend le papillon dans un plan pose.
+			local aim = (target - pos) * Vector3.new(1, 0, 1)
+			if aim.Magnitude > 1e-3 then
+				local jitter = ButterflyConfigs.SCENE_AIM_JITTER
+				butterfly.heading = math.atan2(-aim.Unit.X, -aim.Unit.Z) + rng:NextNumber(-jitter, jitter)
+			end
+		elseif outside and part then
 			-- IL DECIDE DE RENTRER. Son cap vise le centre, donc il BAT DES AILES dans la bonne direction au lieu
 			-- d'etre traine de cote par l'aimant. C'est ce qui fait lire le retour comme une intention.
 			local toCenter = (part.Position - pos) * Vector3.new(1, 0, 1)
@@ -308,10 +360,10 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 	-- par gagner. Une force constante pouvait perdre contre l'elan d'un battement, et le papillon partait pour de
 	-- bon -- c'est exactement ce qui se passait.
 	local pull = Vector3.zero
-	if overX > 0 then
+	if part and overX > 0 then
 		pull += part.CFrame.RightVector * -math.sign(inZone.X)
 	end
-	if overZ > 0 then
+	if part and overZ > 0 then
 		pull += part.CFrame.LookVector * -math.sign(inZone.Z)
 	end
 	if pull.Magnitude > 1e-3 then
@@ -342,9 +394,12 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 
 	-- IL REVIENT A SA HAUTEUR DE CROISIERE. Doucement : c'est une tendance, pas un rail -- le battement doit
 	-- pouvoir le faire monter au-dessus et la gravite le faire descendre en dessous.
+	-- Depuis sa zone quand il en a une ; depuis son BUT sinon -- un papillon de scene doit finir a la hauteur ou
+	-- on l'attend, pas a celle d'une zone qui n'existe pas.
 	if not leaving then
-		local ground = part.Position.Y - half.Y
-		local wanted = ground + butterfly.height
+		local wanted = if part
+			then (part.Position.Y - half.Y) + butterfly.height
+			else (if target then target.Y else pos.Y)
 		butterfly.velocity += UP * ((wanted - pos.Y) * dt)
 	end
 
@@ -355,7 +410,7 @@ local function stepButterfly(butterfly: Butterfly, zone: Zone, now: number, dt: 
 	-- sous la map. Une borne se clampe.
 	--
 	-- Pas pendant le DEPART : la, il monte pour s'en aller, le plancher n'a plus rien a defendre.
-	if not leaving then
+	if not leaving and part then
 		local floor = (part.Position.Y - half.Y) + ButterflyConfigs.MIN_HEIGHT
 		if newPos.Y < floor then
 			newPos = Vector3.new(newPos.X, floor, newPos.Z)
@@ -433,7 +488,7 @@ local function update(dt: number)
 		end
 
 		for index = #zone.butterflies, 1, -1 do
-			if not stepButterfly(zone.butterflies[index], zone, now, dt) then
+			if not stepButterfly(zone.butterflies[index], now, dt) then
 				table.remove(zone.butterflies, index)
 			end
 		end
@@ -445,6 +500,14 @@ local function update(dt: number)
 				+ ButterflyConfigs.SPAWN_EVERY
 				+ rng:NextNumber(0, ButterflyConfigs.SPAWN_JITTER)
 			spawnOne(zone, now)
+		end
+	end
+
+	-- LES PAPILLONS DE SCENE, mis a jour quoi qu'il arrive. Pas de test de distance : ils sont poses pour etre
+	-- VUS a un moment precis, et les couper parce que le joueur est loin viderait le plan de son sujet.
+	for index = #loose, 1, -1 do
+		if not stepButterfly(loose[index], now, dt) then
+			table.remove(loose, index)
 		end
 	end
 end
@@ -465,6 +528,21 @@ local function collectZones()
 				want = rng:NextInteger(ButterflyConfigs.PER_ZONE_MIN, ButterflyConfigs.PER_ZONE_MAX),
 			})
 		end
+	end
+end
+
+-- LANCE UN PAPILLON DE A VERS B. Pour une scene : il traverse le cadre, puis s'en va.
+--
+-- Il reutilise TOUT le vol normal -- battement, zigzag, roulis, couleur, taille. Seule la decision de cap change :
+-- au lieu de flaner dans une zone, il vise son but. C'est ce qui garantit qu'il ressemble aux autres : un
+-- papillon de scene ecrit a part aurait fini par voler differemment sans que personne s'en apercoive.
+--
+-- Sans effet tant que le modele n'est pas resolu (place sans papillons) : une scene ne doit pas dependre d'un
+-- decor pour se jouer.
+function ButterflyController.flyTo(from: Vector3, to: Vector3)
+	local butterfly = spawnOne(nil, os.clock(), from, to)
+	if butterfly then
+		table.insert(loose, butterfly)
 	end
 end
 

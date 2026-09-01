@@ -31,6 +31,7 @@ local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfig
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
+local ButterflyController = require(script.Parent.ButterflyController)
 
 local player = Players.LocalPlayer
 
@@ -1218,6 +1219,19 @@ function TutorialController.startMission()
 	-- AVANT TOUT LE RESTE : le joueur a appuye sur E, il tient peut-etre encore une touche de deplacement. Couper
 	-- ici l'arrete net, avant que la camera ne parte et ne le laisse marcher hors champ.
 	freezePlayer()
+
+	-- UN PAPILLON TRAVERSE LE PLAN. Il ne raconte rien : c'est du mouvement gratuit au second plan, et c'est ce
+	-- qui empeche le cadre de se lire comme une image fixe avec un acteur dessus.
+	--
+	-- Les deux points sont poses dans Studio -- on CADRE la trajectoire au lieu de la deviner. Absents, il ne se
+	-- passe rien : une scene ne doit pas dependre d'un decor pour se jouer.
+	task.delay(TutorialConfigs.BUTTERFLY_DELAY, function()
+		local startPart = findByName(TutorialConfigs.BUTTERFLY_START)
+		local endPart = findByName(TutorialConfigs.BUTTERFLY_END)
+		if startPart and startPart:IsA("BasePart") and endPart and endPart:IsA("BasePart") then
+			ButterflyController.flyTo(startPart.Position, endPart.Position)
+		end
+	end)
 
 	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
 	-- n'attend pas que le noir soit en place.

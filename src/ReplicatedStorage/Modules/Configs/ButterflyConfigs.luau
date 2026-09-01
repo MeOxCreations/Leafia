@@ -33,6 +33,23 @@ return {
 	LEAVE_TIME = 3,
 	LEAVE_RISE = 14, -- studs gagnes pendant le depart
 
+	-- ===== LE PAPILLON DE SCENE =====
+	-- Un papillon qu'on lance d'un point A vers un point B, pour une scene. Il reutilise tout le reste -- le
+	-- battement, le zigzag, le roulis, la couleur -- il a juste un BUT au lieu d'une zone.
+	--
+	-- Le zigzag reste ACTIF pendant le trajet : un papillon qui file droit vers sa cible ne ressemble plus a un
+	-- papillon, et c'est justement le zigzag qui vend l'ambiance dans un plan pose.
+	--
+	-- Distance a laquelle on le considere arrive. Genereuse : le zigzag l'empeche de viser au stud pres, et
+	-- exiger la precision le ferait tourner autour du point sans jamais "arriver".
+	SCENE_ARRIVE_DIST = 5,
+	-- Filet de securite : meme s'il n'arrive jamais (cible inatteignable, aimant absent), il finit par partir.
+	-- Sans ca, un papillon de scene rate resterait a l'ecran pour le reste de la partie.
+	SCENE_LIFE_MAX = 40,
+	-- De combien il vise a cote de sa cible, en radians. A zero il fonce en ligne droite malgre le zigzag ; un
+	-- peu de biais lui laisse le temps de flaner en chemin.
+	SCENE_AIM_JITTER = 0.45,
+
 	-- RIEN NE VIT LOIN DU JOUEUR. Au-dela, la zone se vide et cesse d'etre mise a jour : un papillon que personne
 	-- ne voit coute exactement autant qu'un papillon qu'on regarde.
 	VIEW_DISTANCE = 140,

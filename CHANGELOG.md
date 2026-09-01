@@ -2204,6 +2204,47 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.621 — Un papillon traverse le plan pendant que le joueur toque
+
+Il part de `ButterflyPointStart` vers `ButterflyPointEnd`, 1,2 s apres le debut de la scene, et disparait en
+arrivant.
+
+Il ne raconte rien et ne sert a rien. C'est exactement pour ca qu'il compte : **un plan ou SEUL le sujet bouge se
+lit comme une image fixe avec un acteur dessus.** Un mouvement gratuit au second plan suffit a rendre le monde
+vivant.
+
+Le delai n'est pas a zero : la camera arrive encore et les barres se posent. Un papillon qui passe pendant que
+l'oeil cherche le cadre ne se voit pas.
+
+### Le module sait maintenant faire un vol dirige
+
+`ButterflyController.flyTo(from, to)`. Il **reutilise tout le vol normal** -- battement, zigzag, roulis, couleur,
+taille, allure. Seule la decision de cap change : au lieu de flaner dans une zone, il vise son but.
+
+C'etait le point important. Un papillon de scene ecrit a part aurait fini par voler differemment des autres sans
+que personne s'en apercoive -- et le jour ou on regle le vol, on n'en regle qu'un des deux.
+
+Il vise **de biais** (`SCENE_AIM_JITTER`) : viser pile en ligne droite annulerait le zigzag et donnerait une
+trajectoire de fleche. Or c'est le zigzag qui vend le papillon dans un plan pose.
+
+### Ce qui a change dans le module
+
+La zone devient FACULTATIVE : elle est portee par le papillon au lieu d'etre passee a chaque image. Sans zone,
+pas d'aimant, pas de plancher, pas de hauteur de croisiere -- il n'y a rien a defendre.
+
+Les papillons de scene vivent dans leur propre liste, et **ils echappent a la purge par distance**. Une scene se
+joue la ou le realisateur l'a posee, pas la ou le joueur se trouve : couper le papillon parce que le joueur est
+loin viderait le plan de son sujet.
+
+Filet : `SCENE_LIFE_MAX` (40 s). Meme si le but est inatteignable, il finit par partir au lieu de rester a
+l'ecran tout le reste de la partie.
+
+### A faire dans Studio
+
+Les deux parts existent deja sous `Scenario.Points.ButterflyPoints`. On CADRE la trajectoire a la main : les
+deplacer change le passage, sans toucher au code. Absentes, il ne se passe rien -- une scene ne doit pas dependre
+d'un decor pour se jouer.
+
 ## 0.0.620 — Un seul bouton pour la taille des papillons
 
 `SCALE_MIN` / `SCALE_MAX` deviennent `SCALE` (1) et `SCALE_VARIATION` (0.15).
