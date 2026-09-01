@@ -108,7 +108,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local BG = Color3.fromRGB(31, 31, 31)
 
 	-- FOND TUILE qui defile en diagonale.
-	local TILE_IMAGE_ID = "rbxassetid://78626050824347"
+	local TILE_IMAGE_ID = "rbxassetid://80842701479373"
 	-- BLANC PUR, et ce n'est pas cosmetique : un UIGradient MULTIPLIE la couleur de l'objet. Sur un gris, les
 	-- valeurs du degrade sont rabotees en silence et on regle une courbe dont on ne voit jamais le vrai rendu.
 	-- Meme regle que le bandeau et que l'etiquette TIPS.
@@ -134,8 +134,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 
 	-- BANDEAU du bas, avec son degrade de transparence.
 	local BANNER_IMAGE_ID = "rbxassetid://129604305857410"
-	local BANNER_POS = UDim2.fromScale(0.453, 0.904)
-	local BANNER_SIZE = UDim2.fromScale(1.002, 0.132)
+	-- EN HAUT A DROITE, derriere le nom du lieu. Il servait de socle au texte des conseils en bas ; il sert
+	-- maintenant de fond au titre. Retourne de 180 degres pour que sa pointe parte du bon cote -- l'image a un
+	-- sens, et le sens ne se DEDUIT pas, il se voit.
+	local BANNER_POS = UDim2.fromScale(0.933, 0.068)
+	local BANNER_SIZE = UDim2.fromScale(0.479, 0.176)
+	local BANNER_ROTATION = 180
 	-- Le bandeau n'est PAS plein d'un bout a l'autre : sa transparence monte le long de sa largeur. C'est un
 	-- FONDU, pas un reflet -- il ne s'anime pas. L'avoir promene une fois a suffi a le rendre completement opaque.
 	--
@@ -154,7 +158,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	--
 	-- Ces valeurs rendent EXACTEMENT ce qu'elles disent parce que l'image du bandeau est en blanc pur : un
 	-- UIGradient multiplie la couleur de l'objet, donc toute autre teinte les raboterait en silence.
-	local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+	-- BLANC. Il etait noir quand il servait de socle a du texte clair en bas de l'ecran ; en haut, derriere le
+	-- titre, un bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
+	local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(255, 255, 255))
 
 	-- ===== FOND DEGRADE =====
 	-- Pose sur un CADRE dedie, pas sur le CanvasGroup. Un UIGradient sur le groupe teinterait TOUT ce qu'il
@@ -172,48 +178,44 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- ===== MAISON DU CLIENT =====
 	-- Le dessin de la maison ou l'on va, en plein cadre derriere la tuile. C'est ce qui fait qu'un chargement
 	-- ressemble a un DEPART chez quelqu'un plutot qu'a une barre qui avance.
-	local HOUSE_IMAGE_ID = "rbxassetid://87460183788335"
-	-- FONDU EN DIAGONALE. La maison doit rester un FOND : lisible d'un cote, effacee de l'autre, sinon elle
-	-- concurrence le bandeau et le texte poses dessus.
+	-- ===== LE VISAGE DU GRAND-PERE, AU CENTRE =====
+	-- Il remplace le dessin de maison qui occupait le fond. Une maison dit OU l'on va ; un visage dit CHEZ QUI --
+	-- et c'est lui, le personnage qu'on va rencontrer.
 	--
-	-- LE SENS NE SE DEDUIT PAS. L'orientation d'un UIGradient est une de ces choses que seul l'ecran tranche :
-	-- si le fondu part du mauvais coin, changer ce nombre de 180 est la premiere chose a essayer.
-	local HOUSE_FADE_ROTATION = 35
-	-- ===== REFLET QUI BALAIE LA MAISON =====
-	-- Une COPIE BLANCHE du dessin, posee par-dessus, dont seule une bande etroite est visible -- et cette bande
-	-- glisse. C'est le dessin lui-meme qui sert de masque : le reflet epouse donc sa forme, sans un pixel qui
-	-- deborde.
+	-- SEPT IMAGES, et c'est ce qui le rend vivant plutot que pose : trois directions de regard, et pour chacune
+	-- l'etat paupieres fermees. Le clignement de face a en plus une image intermediaire, parce qu'un clignement
+	-- de face se voit en entier -- de profil, l'oeil est deja a moitie cache.
 	--
-	-- Une frame rectangulaire posee de travers ferait le meme trajet, mais elle deborderait sur les bords
-	-- transparents du dessin, et il faudrait un CanvasGroup rien que pour la decouper.
-	--
-	-- Demi-largeur de la bande, en fraction du balayage. Etroit = un eclat sec ; large = un voile qui passe.
-	--
-	-- Au-dela de 0.5 la bande est plus large que l'espace du degrade : ses bords sont alors ROGNES, et le profil
-	-- devient une grande rampe douce plutot qu'une barre nette. C'est un choix, pas un defaut -- mais c'est pour
-	-- ca que le trajet ci-dessous s'elargit avec elle, sinon elle serait deja en place a la premiere image.
-	local SHINE_WIDTH = 0.7
-	-- Transparence AU COEUR de la bande. 1 = invisible, 0 = blanc plein. TRES haute : un reflet doit se remarquer
-	-- une demi-seconde sans qu'on sache dire ce qui a bouge. Des qu'on peut le montrer du doigt, il est trop
-	-- fort -- meme regle que le vignettage.
-	--
-	-- Et il ne connait pas le fondu de la maison : il passe donc aussi la ou le dessin est deja efface. Plus il
-	-- est faible, moins cette zone se rallume.
-	local SHINE_STRENGTH = 0.9
-	-- Inclinaison du balayage, et duree d'un passage. Court : c'est un eclat, pas un lever de soleil.
-	local SHINE_ROTATION = 20
-	local SHINE_SWEEP = 0.9
-	-- Temps mort entre deux passages. Un reflet qui ne s'arrete jamais devient un clignotant, et l'oeil finit
-	-- par le suivre au lieu de lire le reste de l'ecran.
-	local SHINE_PAUSE = 2.6
+	-- LE CHANGEMENT DE REGARD SE FAIT PENDANT QUE LES YEUX SONT FERMES. C'est le detail qui fait tout : un
+	-- visage qui pivote les yeux ouverts se lit comme une image qu'on remplace ; qui pivote pendant un
+	-- clignement, ca se lit comme quelqu'un qui regarde ailleurs.
+	local FACE_FRONT = "rbxassetid://116099459878511"
+	local FACE_FRONT_HALF = "rbxassetid://95027481047570"
+	local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
+	local FACE_LEFT = "rbxassetid://80943546819363"
+	local FACE_LEFT_SHUT = "rbxassetid://76739934994310"
+	local FACE_RIGHT = "rbxassetid://140521073004811"
+	local FACE_RIGHT_SHUT = "rbxassetid://137589144939199"
+	local FACE_SIZE = UDim2.fromScale(0.11, 0.2)
+	-- Ecart entre deux clignements, plus du hasard. Sans hasard, un clignement toutes les N secondes pile se lit
+	-- comme un metronome -- exactement ce qu'un vivant ne fait pas.
+	local FACE_BLINK_EVERY = 3.2
+	local FACE_BLINK_JITTER = 2.4
+	-- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
+	local FACE_BLINK_HALF = 0.05
+	local FACE_BLINK_SHUT = 0.09
+	-- Une fois sur trois environ, le clignement change aussi la direction du regard.
+	local FACE_GLANCE_CHANCE = 0.35
 
-	local HOUSE_FADE = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0.231),
-		NumberSequenceKeypoint.new(0.152, 0.612),
-		NumberSequenceKeypoint.new(0.449, 0.919),
-		NumberSequenceKeypoint.new(0.653, 1),
-		NumberSequenceKeypoint.new(1, 1),
-	})
+	-- ===== L'ANNEAU QUI TOURNE =====
+	-- Un cercle en pointilles autour du visage. C'est LE signal "ca charge" : une rotation continue est la seule
+	-- chose a l'ecran qui dise "le jeu n'est pas plante" sans avoir a mesurer quoi que ce soit.
+	--
+	-- Il tourne a vitesse CONSTANTE et ne represente aucune progression. Une progression, c'est le travail des
+	-- feuilles -- deux indicateurs qui racontent la meme chose finiraient par se contredire.
+	local RING_IMAGE_ID = "rbxassetid://127162788265693"
+	local RING_SIZE = UDim2.fromScale(0.22, 0.39)
+	local RING_SPEED = 40 -- degres par seconde
 	-- ===== DESTINATION =====
 	-- Le lieu ou l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend.
 	-- ReplicatedFirst ne peut pas require PlacesConfig : les identifiants sont donc EN DUR ici, comme
@@ -284,7 +286,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local LEAF_COUNT = 5
 	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
 	-- autres, donc le bord reste ou il est.
-	local LEAF_GAUGE_POS = UDim2.fromScale(0.965, 0.906)
+	-- CENTREE EN BAS, plus dans le coin. Elle etait ancree a droite pour que le bord droit ne bouge pas quand on
+	-- ajoutait une feuille ; centree, c'est le MILIEU qui reste en place -- le bloc grandit alors des deux cotes,
+	-- ce qui est ce qu'on veut d'un element pose au centre.
+	local LEAF_GAUGE_POS = UDim2.fromScale(0.5, 0.92)
 	-- LA LARGEUR DE LA JAUGE COMMANDE L'ECART ENTRE LES FEUILLES, pas leur taille.
 	--
 	-- Elles sont en `Fit` : leur taille est donc bornee par la HAUTEUR de la case, pas par sa largeur. Elargir la
@@ -443,77 +448,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	bgGradient.Rotation = BG_ROTATION
 	bgGradient.Parent = bg
 
-	-- ===== MAISON DU CLIENT =====
-	-- Posee entre le degrade et la tuile : la tuile passe DESSUS, ce qui l'inscrit dans le decor au lieu de la
-	-- laisser flotter comme une vignette collee.
-	--
-	-- `Crop` et pas `Fit` : elle remplit l'ecran et deborde, donc aucune bande vide sur les formats larges. Un
-	-- `Fit` laisserait le degrade nu sur les cotes en 21/9.
-	local house = Instance.new("ImageLabel")
-	house.Name = "HouseClientImage"
-	house.BackgroundTransparency = 1
-	house.Image = HOUSE_IMAGE_ID
-	house.ScaleType = Enum.ScaleType.Crop
-	house.Size = UDim2.fromScale(1, 1)
-	house.ZIndex = 1
-	house.Active = false
-	house.Parent = curtain
-	local houseFade = Instance.new("UIGradient")
-	houseFade.Name = "UIGradient"
-	-- Le degrade ne touche QUE la transparence : la couleur du dessin reste la sienne. Une teinte ici raboterait
-	-- ses couleurs en silence, et on reglerait un dessin qu'on ne voit jamais vraiment.
-	houseFade.Transparency = HOUSE_FADE
-	houseFade.Rotation = HOUSE_FADE_ROTATION
-	houseFade.Parent = house
-
-	-- LE REFLET. Meme image, en blanc, avec une bande etroite pour seule partie visible.
-	local shine = Instance.new("ImageLabel")
-	shine.Name = "HouseShine"
-	shine.BackgroundTransparency = 1
-	shine.Image = HOUSE_IMAGE_ID
-	shine.ImageColor3 = Color3.fromRGB(255, 255, 255)
-	shine.ScaleType = Enum.ScaleType.Crop
-	shine.Size = UDim2.fromScale(1, 1)
-	shine.ZIndex = 1
-	shine.Active = false
-	shine.Parent = curtain
-
-	local shineBand = Instance.new("UIGradient")
-	-- La bande est posee AU CENTRE une fois pour toutes, et c'est l'OFFSET qui la promene. Reconstruire la
-	-- sequence a chaque image couterait bien plus, pour le meme trajet.
-	shineBand.Transparency = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(math.max(0.5 - SHINE_WIDTH, 0.001), 1),
-		NumberSequenceKeypoint.new(0.5, SHINE_STRENGTH),
-		NumberSequenceKeypoint.new(math.min(0.5 + SHINE_WIDTH, 0.999), 1),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	shineBand.Rotation = SHINE_ROTATION
-	-- TRAJET ELARGI AVEC LA BANDE. Une bande epaisse doit partir de plus loin pour entrer par un bord et sortir
-	-- par l'autre : a trajet fixe, une bande large serait deja au milieu de l'ecran a la premiere image.
-	local shineTravel = 1 + SHINE_WIDTH
-	shineBand.Offset = Vector2.new(-shineTravel, 0)
-	shineBand.Parent = shine
-
-	task.spawn(function()
-		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
-		-- instance detruite.
-		while sg.Parent do
-			task.wait(SHINE_PAUSE)
-			local t0 = os.clock()
-			while sg.Parent do
-				local e = (os.clock() - t0) / SHINE_SWEEP
-				if e >= 1 then
-					break
-				end
-				-- D'un bout a l'autre du trajet : la bande entre par un bord et sort par l'autre.
-				shineBand.Offset = Vector2.new(-shineTravel + e * shineTravel * 2, 0)
-				RunService.RenderStepped:Wait()
-			end
-			shineBand.Offset = Vector2.new(-shineTravel, 0)
-		end
-	end)
-
 	-- ===== FOND TUILE =====
 	-- Le defilement DIAGONAL n'est pas un caprice : horizontal ou vertical, ca se lit comme un decor qui glisse ;
 	-- en diagonale, ca se lit comme un mouvement propre.
@@ -527,7 +461,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	tile.AnchorPoint = Vector2.new(0.5, 0.5)
 	tile.Position = UDim2.fromScale(0.5, 0.5)
 	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
-	tile.ZIndex = 2 -- AU-DESSUS de la maison : le motif s'inscrit sur le dessin
+	tile.ZIndex = 2 -- au-dessus du degrade, sous tout le reste
 	tile.Parent = curtain
 	-- Le fondu vit sur un UIGradient enfant de la tuile. Il ne s'anime PAS : c'est la tuile qui defile dessous, et
 	-- comme elle ne se deplace que d'une case a la fois, le fondu reste ou il est.
@@ -553,6 +487,91 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		end)
 	end
 
+	-- ===== L'ANNEAU QUI TOURNE, ET LE VISAGE DEDANS =====
+	-- L'anneau est le SIGNAL DE VIE de l'ecran : une rotation continue est la seule chose qui dise "le jeu n'est
+	-- pas plante" sans avoir a mesurer quoi que ce soit. Il ne represente AUCUNE progression -- c'est le travail
+	-- des feuilles, et deux indicateurs qui racontent la meme chose finiraient par se contredire.
+	local ring = Instance.new("ImageLabel")
+	ring.Name = "LoadRing"
+	ring.BackgroundTransparency = 1
+	ring.Image = RING_IMAGE_ID
+	-- `Fit` et pas `Stretch` : un cercle etire n'est plus un cercle, et il tourne alors comme une ellipse -- ce
+	-- qui se remarque immediatement sur une rotation continue.
+	ring.ScaleType = Enum.ScaleType.Fit
+	ring.AnchorPoint = Vector2.new(0.5, 0.5)
+	ring.Position = UDim2.fromScale(0.5, 0.5)
+	ring.Size = RING_SIZE
+	ring.ZIndex = 3
+	ring.Parent = curtain
+
+	local ringConn: RBXScriptConnection? = nil
+	ringConn = RunService.Heartbeat:Connect(function(dt: number)
+		-- Modulo 360 : sans lui, la rotation grandirait sans fin et finirait par perdre en precision sur un
+		-- chargement long.
+		ring.Rotation = (ring.Rotation + RING_SPEED * dt) % 360
+	end)
+
+	-- LE VISAGE, dedans. Il ne tourne PAS avec l'anneau -- il est enfant du rideau, pas de l'anneau : un visage
+	-- qui tourne avec le cercle serait la tete a l'envers une fois sur deux.
+	local face = Instance.new("ImageLabel")
+	face.Name = "OldManFace"
+	face.BackgroundTransparency = 1
+	face.Image = FACE_FRONT
+	face.ScaleType = Enum.ScaleType.Fit
+	face.AnchorPoint = Vector2.new(0.5, 0.5)
+	face.Position = UDim2.fromScale(0.5, 0.5)
+	face.Size = FACE_SIZE
+	face.ZIndex = 4
+	face.Parent = curtain
+
+	-- IL CLIGNE DES YEUX, ET IL REGARDE AILLEURS.
+	--
+	-- Le changement de direction se fait PENDANT QUE LES YEUX SONT FERMES, et c'est le detail qui fait tout : un
+	-- visage qui pivote les yeux ouverts se lit comme une image qu'on remplace ; qui pivote pendant un
+	-- clignement, ca se lit comme quelqu'un qui regarde ailleurs.
+	--
+	-- De face il y a une image intermediaire (paupieres a moitie), de profil non : de profil l'oeil est deja a
+	-- moitie cache, l'etape ne se verrait pas et couterait une image de plus.
+	task.spawn(function()
+		local looks = {
+			{ open = FACE_FRONT, half = FACE_FRONT_HALF, shut = FACE_FRONT_SHUT },
+			{ open = FACE_LEFT, half = nil :: string?, shut = FACE_LEFT_SHUT },
+			{ open = FACE_RIGHT, half = nil :: string?, shut = FACE_RIGHT_SHUT },
+		}
+		local current = 1
+		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
+		-- instance detruite.
+		while sg.Parent do
+			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
+			if not sg.Parent then
+				return
+			end
+			local from = looks[current]
+			if from.half then
+				face.Image = from.half :: string
+				task.wait(FACE_BLINK_HALF)
+			end
+			face.Image = from.shut
+			task.wait(FACE_BLINK_SHUT)
+
+			-- YEUX FERMES : c'est ici, et nulle part ailleurs, qu'on change de direction.
+			if math.random() < FACE_GLANCE_CHANCE then
+				local pick = current
+				while pick == current do
+					pick = math.random(1, #looks)
+				end
+				current = pick
+			end
+
+			local to = looks[current]
+			if to.half then
+				face.Image = to.half :: string
+				task.wait(FACE_BLINK_HALF)
+			end
+			face.Image = to.open
+		end
+	end)
+
 	-- ===== JAUGE DE FEUILLES =====
 	-- SIX feuilles en bas a droite, qui s'allument une par une.
 	--
@@ -565,9 +584,8 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local gauge = Instance.new("Frame")
 	gauge.Name = "LeafGauge"
 	gauge.BackgroundTransparency = 1
-	-- ANCREE A DROITE : ajouter une feuille etire le bloc vers la gauche au lieu de deplacer les autres, donc le
-	-- bord droit reste ou il est.
-	gauge.AnchorPoint = Vector2.new(1, 0.5)
+	-- CENTREE : ajouter une feuille etire le bloc des DEUX cotes, donc son milieu reste sur l'axe de l'ecran.
+	gauge.AnchorPoint = Vector2.new(0.5, 0.5)
 	gauge.Position = LEAF_GAUGE_POS
 	gauge.Size = LEAF_GAUGE_SIZE
 	gauge.ZIndex = 4
@@ -763,6 +781,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	banner.AnchorPoint = Vector2.new(0.5, 0.5)
 	banner.Position = BANNER_POS
 	banner.Size = BANNER_SIZE
+	banner.Rotation = BANNER_ROTATION
 	banner.ZIndex = 3
 	banner.Parent = curtain
 	-- Son degrade est un FONDU FIXE, pas un reflet a promener : sa transparence monte le long de la largeur pour
@@ -806,7 +825,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	dest.TextColor3 = Color3.fromRGB(255, 255, 255)
 	dest.TextScaled = true
 	dest.TextXAlignment = Enum.TextXAlignment.Right
-	dest.FontFace = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
+	-- MONTSERRAT EN GRAISSE MAXIMALE. LuckiestGuy est une police d'affiche : elle allait pour un mot pose au
+	-- milieu d'un ecran, elle bavarde derriere un bandeau. Montserrat Heavy tient la meme place avec une lettre
+	-- plus nette, et elle porte les accents des langues que Roblox traduit -- ce que LuckiestGuy fait mal.
+	dest.FontFace = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy)
 	dest.ZIndex = 4
 	dest.Parent = curtain
 	local tipsShade = Instance.new("UIGradient")
@@ -1273,6 +1295,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- COUVERT : on demonte le rideau pendant qu'on ne voit rien. C'est tout l'interet du volet.
 	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
 	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
+	if ringConn then
+		ringConn:Disconnect()
+		ringConn = nil
+	end
 	if tileConn then
 		tileConn:Disconnect()
 		tileConn = nil

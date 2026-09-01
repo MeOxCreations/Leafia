@@ -2204,6 +2204,54 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.623 — Nouvel ecran de chargement : le grand-pere au centre, dans un anneau qui tourne
+
+Refonte du rideau des places secondaires (celui qui affiche TUTORIAL). Le grand ecran de Leafia n'est pas touche.
+
+### Ce qui part
+
+Le dessin de MAISON en fond, et son reflet qui le balayait -- avec toutes leurs constantes et leur boucle
+d'animation. Une maison dit OU l'on va ; un visage dit CHEZ QUI, et c'est lui le personnage qu'on va rencontrer.
+
+### Ce qui arrive
+
+**Le visage du grand-pere, au centre.** Sept images : trois directions de regard, et pour chacune l'etat
+paupieres fermees. De face il y a en plus une image intermediaire, parce qu'un clignement de face se voit en
+entier -- de profil l'oeil est deja a moitie cache et l'etape ne se verrait pas.
+
+**Le changement de direction se fait PENDANT QUE LES YEUX SONT FERMES.** C'est le detail qui fait tout : un
+visage qui pivote les yeux ouverts se lit comme une image qu'on remplace ; qui pivote pendant un clignement, ca
+se lit comme quelqu'un qui regarde ailleurs.
+
+L'ecart entre deux clignements a du hasard : toutes les N secondes pile, ca se lit comme un metronome, et un
+metronome n'est pas vivant.
+
+**Un anneau en pointilles qui tourne autour de lui.** C'est le SIGNAL DE VIE de l'ecran -- la seule chose qui
+dise "le jeu n'est pas plante" sans avoir a mesurer quoi que ce soit. Il tourne a vitesse constante et ne
+represente AUCUNE progression : c'est le travail des feuilles, et deux indicateurs qui racontent la meme chose
+finiraient par se contredire.
+
+En `Fit`, jamais `Stretch` : un cercle etire n'est plus un cercle, et il tourne alors comme une ellipse -- ce qui
+se remarque immediatement sur une rotation continue. Et il n'est PAS le parent du visage : une tete enfant de
+l'anneau serait a l'envers une fois sur deux.
+
+### Ce qui bouge
+
+- **Tuile** : nouvel identifiant.
+- **Bandeau** : il descend du bas de l'ecran pour monter en haut a DROITE, derriere le titre, retourne de 180
+  degres. Et il passe en **blanc** -- il etait noir quand il servait de socle a du texte clair en bas ; en haut,
+  un bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
+- **Nom du lieu** : Montserrat en graisse Heavy. LuckiestGuy est une police d'affiche, elle bavarde derriere un
+  bandeau -- et elle porte mal les accents des langues que Roblox traduit.
+- **Jauge de feuilles** : centree en bas (`0.5, 0.92`) au lieu du coin droit. Son ancrage passe au milieu : le
+  bloc grandit alors des deux cotes quand on ajoute une feuille, ce qu'on veut d'un element pose au centre.
+
+Les feuilles elles-memes ne changent pas.
+
+### A faire dans Studio
+
+Rien. Tout est construit en code, donc present dans toutes les places sans rien recopier.
+
 ## 0.0.622 — Papillons plus petits et plus nerveux
 
 Reglages seuls, aucun code touche.

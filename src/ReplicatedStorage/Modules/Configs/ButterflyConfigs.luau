@@ -190,7 +190,7 @@ return {
 	--
 	-- Multiplie la taille du modele tel qu'il est dans ReplicatedStorage. 1 = taille d'origine, 2 = deux fois plus
 	-- gros. C'est ici qu'on regle si les papillons sont trop petits ou trop gros a l'ecran.
-	SCALE = 0.6,
+	SCALE = 0.3,
 	-- De combien ils different les uns des autres, en fraction. 0.15 = plus ou moins 15 %. A zero ils sont tous
 	-- rigoureusement identiques, et l'oeil repere la repetition avant de reperer la forme.
 	SCALE_VARIATION = 0.15,
