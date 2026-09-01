@@ -27,11 +27,20 @@ local ButterflyController = {}
 
 local UP = Vector3.new(0, 1, 0)
 
+-- CE QUI FAIT QU'UN PAPILLON EST CELUI-LA ET PAS UN AUTRE. Tire UNE FOIS par zone, garde pour la session : la
+-- purge a distance rend donc les MEMES papillons en revenant, au lieu d'une nouvelle fournee.
+type Identity = {
+	color: Color3,
+	scale: number,
+	speedMul: number,
+	height: number,
+}
+
 type Zone = {
 	part: BasePart,
 	butterflies: { Butterfly },
 	nextSpawn: number,
-	want: number, -- combien cette zone veut en heberger
+	roster: { Identity }, -- les habitants de cette zone, un par place
 }
 
 type Butterfly = {
@@ -53,8 +62,11 @@ type Butterfly = {
 	turnSign: number, -- de quel cote est parti le DERNIER virage. Le suivant part de l'autre : c'est ca, le zigzag.
 	noiseSeed: number, -- decalage propre dans le champ de bruit de la derive
 	height: number, -- hauteur de croisiere propre a ce papillon
-	dieAt: number,
+	-- QUAND IL S'EN VA, ou nil s'il ne s'en va JAMAIS. Seuls les papillons de scene en ont un : les habitants
+	-- d'une zone restent pour la session.
+	dieAt: number?,
 	leavingAt: number?, -- instant ou le depart a commence, nil tant qu'il vit sa vie
+	slot: number, -- sa place dans le roster de sa zone. Zero pour un papillon de scene.
 }
 
 local player = Players.LocalPlayer
@@ -120,7 +132,16 @@ end
 
 -- Fabrique un papillon a un endroit donne. `zone` nil = papillon de SCENE : pas d'aimant, pas de hauteur de
 -- croisiere, il suit son `target` puis s'en va.
-local function spawnOne(zone: Zone?, now: number, at: Vector3?, target: Vector3?): Butterfly?
+-- `who` : l'identite a reprendre (habitant d'une zone). nil = on en tire une neuve, ce que fait un papillon de
+-- scene, qui ne vit qu'une fois.
+local function spawnOne(
+	zone: Zone?,
+	now: number,
+	at: Vector3?,
+	target: Vector3?,
+	who: Identity?,
+	slot: number?
+): Butterfly?
 	local source = template
 	if not source then
 		return nil
@@ -146,18 +167,22 @@ local function spawnOne(zone: Zone?, now: number, at: Vector3?, target: Vector3?
 		end
 	end
 
-	local height = ButterflyConfigs.FLY_HEIGHT
-		+ rng:NextNumber(-ButterflyConfigs.FLY_HEIGHT_RANGE, ButterflyConfigs.FLY_HEIGHT_RANGE)
+	local height = if who
+		then who.height
+		else ButterflyConfigs.FLY_HEIGHT
+			+ rng:NextNumber(-ButterflyConfigs.FLY_HEIGHT_RANGE, ButterflyConfigs.FLY_HEIGHT_RANGE)
 	-- CHACUN SA TAILLE. Des papillons rigoureusement identiques trahissent le clone : l'oeil repere la repetition
 	-- avant de reperer la forme. Applique AVANT le placement -- ScaleTo travaille autour du pivot, et le faire
 	-- ensuite deplacerait le papillon qu'on vient de poser.
 	local variation = ButterflyConfigs.SCALE_VARIATION
-	model:ScaleTo(ButterflyConfigs.SCALE * (1 + rng:NextNumber(-variation, variation)))
+	model:ScaleTo(
+		if who then who.scale else ButterflyConfigs.SCALE * (1 + rng:NextNumber(-variation, variation))
+	)
 
 	-- ET CHACUN SA COULEUR D'AILES. On ne teinte QUE les ailes : la couleur du corps ne distingue rien, celle des
 	-- ailes fait l'espece. Les deux ailes prennent la MEME teinte -- un papillon depareille se lit comme un bug.
 	local palette = ButterflyConfigs.WING_COLORS
-	local wingColor = palette[rng:NextInteger(1, #palette)]
+	local wingColor = if who then who.color else palette[rng:NextInteger(1, #palette)]
 	for _, name in ButterflyConfigs.WING_PARTS do
 		local wing = model:FindFirstChild(name, true)
 		if wing and wing:IsA("BasePart") then
@@ -189,19 +214,20 @@ local function spawnOne(zone: Zone?, now: number, at: Vector3?, target: Vector3?
 		facing = heading,
 		bodyYaw = heading,
 		roll = 0,
-		speedMul = rng:NextNumber(ButterflyConfigs.SPEED_VAR_MIN, ButterflyConfigs.SPEED_VAR_MAX),
+		speedMul = if who
+			then who.speedMul
+			else rng:NextNumber(ButterflyConfigs.SPEED_VAR_MIN, ButterflyConfigs.SPEED_VAR_MAX),
+		slot = slot or 0,
 		nextTurn = now + rng:NextNumber(0, ButterflyConfigs.TURN_EVERY),
 		turnSign = if rng:NextNumber() < 0.5 then -1 else 1,
 		-- Chacun son coin du champ de bruit : deux papillons voisins onduleraient sinon exactement pareil, et on
 		-- lirait un banc de poissons au lieu de deux insectes.
 		noiseSeed = rng:NextNumber(0, 1000),
 		height = height,
-		-- Un papillon de SCENE ne meurt pas de vieillesse : il part en arrivant. Le delai n'est qu'un filet, pour
-		-- qu'un but inatteignable ne le laisse pas a l'ecran tout le reste de la partie.
-		dieAt = now
-			+ if target
-				then ButterflyConfigs.SCENE_LIFE_MAX
-				else rng:NextNumber(ButterflyConfigs.LIFE_MIN, ButterflyConfigs.LIFE_MAX),
+		-- SEUL LE PAPILLON DE SCENE A UNE FIN, et c'est un filet : s'il n'atteint jamais son but, il finit par
+		-- partir au lieu de rester a l'ecran tout le reste de la partie. Un habitant de zone, lui, ne part
+		-- JAMAIS -- des papillons qui font leurs valises se lisent comme un bug, pas comme un cycle.
+		dieAt = if target then now + ButterflyConfigs.SCENE_LIFE_MAX else nil,
 		leavingAt = nil,
 	}
 
@@ -258,7 +284,8 @@ local function stepButterfly(butterfly: Butterfly, now: number, dt: number): boo
 	-- LE DEPART. Il monte et s'efface au lieu de disparaitre sur place : un objet qui s'evapore sous les yeux
 	-- casse l'illusion bien plus qu'un objet qui s'en va.
 	local leaving = butterfly.leavingAt
-	if not leaving and now >= butterfly.dieAt then
+	local dieAt = butterfly.dieAt
+	if not leaving and dieAt and now >= dieAt then
 		leaving = now
 		butterfly.leavingAt = leaving
 	end
@@ -495,11 +522,22 @@ local function update(dt: number)
 
 		-- ILS ARRIVENT UN PAR UN. Remplir la zone d'un coup se lirait comme une apparition ; espaces, ils ont
 		-- l'air de passer par la.
-		if #zone.butterflies < zone.want and now >= zone.nextSpawn then
+		if #zone.butterflies < #zone.roster and now >= zone.nextSpawn then
 			zone.nextSpawn = now
 				+ ButterflyConfigs.SPAWN_EVERY
 				+ rng:NextNumber(0, ButterflyConfigs.SPAWN_JITTER)
-			spawnOne(zone, now)
+			-- ON CHERCHE LA PLACE LIBRE, on ne compte pas. Le papillon qui revient est alors celui qui manquait,
+			-- avec sa couleur et sa taille -- pas le suivant d'une file.
+			local taken: { [number]: boolean } = {}
+			for _, alive in zone.butterflies do
+				taken[alive.slot] = true
+			end
+			for index, who in zone.roster do
+				if not taken[index] then
+					spawnOne(zone, now, nil, nil, who, index)
+					break
+				end
+			end
 		end
 	end
 
@@ -510,6 +548,25 @@ local function update(dt: number)
 			table.remove(loose, index)
 		end
 	end
+end
+
+-- LES HABITANTS D'UNE ZONE, tires une fois pour la session. C'est ce qui fait qu'on retrouve les MEMES papillons
+-- en revenant : sans ca, la purge a distance se verrait comme un changement de decor a chaque aller-retour.
+local function makeRoster(): { Identity }
+	local palette = ButterflyConfigs.WING_COLORS
+	local variation = ButterflyConfigs.SCALE_VARIATION
+	local roster: { Identity } = {}
+	local count = rng:NextInteger(ButterflyConfigs.PER_ZONE_MIN, ButterflyConfigs.PER_ZONE_MAX)
+	for _ = 1, count do
+		table.insert(roster, {
+			color = palette[rng:NextInteger(1, #palette)],
+			scale = ButterflyConfigs.SCALE * (1 + rng:NextNumber(-variation, variation)),
+			speedMul = rng:NextNumber(ButterflyConfigs.SPEED_VAR_MIN, ButterflyConfigs.SPEED_VAR_MAX),
+			height = ButterflyConfigs.FLY_HEIGHT
+				+ rng:NextNumber(-ButterflyConfigs.FLY_HEIGHT_RANGE, ButterflyConfigs.FLY_HEIGHT_RANGE),
+		})
+	end
+	return roster
 end
 
 local function collectZones()
@@ -525,7 +582,7 @@ local function collectZones()
 				part = child,
 				butterflies = {},
 				nextSpawn = now + rng:NextNumber(0, ButterflyConfigs.SPAWN_JITTER),
-				want = rng:NextInteger(ButterflyConfigs.PER_ZONE_MIN, ButterflyConfigs.PER_ZONE_MAX),
+				roster = makeRoster(),
 			})
 		end
 	end

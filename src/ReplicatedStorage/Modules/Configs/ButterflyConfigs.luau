@@ -25,10 +25,13 @@ return {
 	-- toujours au meme rythme et ca se lit comme une machine.
 	SPAWN_EVERY = 6,
 	SPAWN_JITTER = 5,
-	-- DUREE DE VIE. Un papillon FINIT par s'en aller : c'est ce qui rend son passage precieux au lieu d'en faire
-	-- un element de decor fixe. Il monte et disparait, il ne s'evapore pas sur place.
-	LIFE_MIN = 22,
-	LIFE_MAX = 45,
+	-- ILS NE MEURENT PAS DE VIEILLESSE. Ils avaient une duree de vie, au bout de laquelle ils montaient et
+	-- disparaissaient -- l'idee etant qu'un passage vaut mieux qu'un decor fixe. A l'usage, non : on voyait des
+	-- papillons faire leurs valises et partir sans raison, et un jardin dont les habitants s'en vont se lit
+	-- comme un bug, pas comme un cycle.
+	--
+	-- Seul le papillon de SCENE part encore, et lui a une raison : il est arrive.
+	--
 	-- Temps que dure le depart (montee + fondu), en secondes.
 	LEAVE_TIME = 3,
 	LEAVE_RISE = 14, -- studs gagnes pendant le depart
@@ -52,6 +55,10 @@ return {
 
 	-- RIEN NE VIT LOIN DU JOUEUR. Au-dela, la zone se vide et cesse d'etre mise a jour : un papillon que personne
 	-- ne voit coute exactement autant qu'un papillon qu'on regarde.
+	--
+	-- ET ILS REVIENNENT IDENTIQUES. Chaque zone tire ses habitants UNE FOIS -- couleur, taille, allure, hauteur --
+	-- et garde la liste pour la session. En revenant, on retrouve donc les MEMES papillons, pas une nouvelle
+	-- fournee : sinon la purge se verrait comme un changement de decor a chaque aller-retour.
 	VIEW_DISTANCE = 140,
 
 	-- ===== LE VOL =====

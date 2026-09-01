@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.629 — Les papillons ne s'en vont plus, et reviennent identiques
+
+### Ils ne meurent plus de vieillesse
+
+Ils avaient une duree de vie (22 a 45 s), au bout de laquelle ils montaient et disparaissaient. L'idee etait
+qu'un passage vaut mieux qu'un decor fixe.
+
+A l'usage, non : on voyait des papillons faire leurs valises et partir sans raison. **Un jardin dont les
+habitants s'en vont se lit comme un bug, pas comme un cycle.**
+
+Seul le papillon de SCENE part encore, et lui a une raison : il est arrive. Son delai reste un filet, pour qu'un
+but inatteignable ne le laisse pas a l'ecran toute la partie.
+
+### Et ils reviennent LES MEMES
+
+La purge a distance reste -- un papillon que personne ne voit coute autant qu'un papillon qu'on regarde. Mais
+elle avait une consequence qu'on n'avait pas vue : en revenant, on tombait sur une NOUVELLE fournee, avec
+d'autres couleurs et d'autres tailles. La purge se serait donc lue comme un changement de decor a chaque
+aller-retour.
+
+Chaque zone tire maintenant ses habitants UNE FOIS pour la session -- couleur, taille, allure, hauteur -- et
+garde la liste. Chaque papillon connait sa PLACE dans cette liste, et quand la zone se repeuple, on cherche la
+place LIBRE : le papillon qui revient est celui qui manquait, pas le suivant d'une file.
+
+C'est ce qui rend la purge invisible, ce qu'une optimisation doit toujours etre.
+
+### A faire dans Studio
+
+Rien. `PER_ZONE_MIN` / `PER_ZONE_MAX` decident toujours du nombre par zone -- tire une fois, a la decouverte de
+la zone.
+
 ## 0.0.628 — Le grand-pere cligne des yeux, et ne regarde plus de cote
 
 Le pivot du regard est retire. Il restait quatre images sur sept -- gauche, droite et leurs paupieres fermees --
