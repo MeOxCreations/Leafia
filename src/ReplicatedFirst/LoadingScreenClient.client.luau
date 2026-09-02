@@ -158,14 +158,15 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		NumberSequenceKeypoint.new(0.897, 0.319),
 		NumberSequenceKeypoint.new(1, 1),
 	})
-	-- TEINTE du bandeau : vert vif d'un cote, noir de l'autre. Le meme UIGradient porte donc DEUX choses -- la
-	-- couleur et la transparence -- et c'est voulu : elles decrivent le meme voyage le long du bandeau, les
-	-- separer sur deux objets obligerait a les garder d'accord a la main.
+	-- TEINTE du bandeau : un BLEU TRES CLAIR, uni. Le meme UIGradient porte donc DEUX choses -- la couleur et la
+	-- transparence -- et c'est voulu : elles decrivent le meme voyage le long du bandeau, les separer sur deux
+	-- objets obligerait a les garder d'accord a la main.
 	--
 	-- Ces valeurs rendent EXACTEMENT ce qu'elles disent parce que l'image du bandeau est en blanc pur : un
 	-- UIGradient multiplie la couleur de l'objet, donc toute autre teinte les raboterait en silence.
-	-- BLEU TRES CLAIR, presque blanc. Il etait noir quand il servait de socle a du texte clair en bas de l'ecran ;
-	-- en haut, un bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
+	--
+	-- Il etait NOIR quand il servait de socle a du texte clair en bas de l'ecran ; en haut, derriere le titre, un
+	-- bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
 	--
 	-- Pas blanc PUR non plus : une teinte prise dans la famille du ciel se pose SUR le fond, un blanc pur se
 	-- decoupe dessus. La difference est minuscule et c'est toute la difference.
@@ -732,8 +733,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	banner.Name = "Banner"
 	banner.BackgroundTransparency = 1
 	banner.Image = BANNER_IMAGE_ID
-	-- BLANC PUR, ECRIT EXPLICITEMENT. C'est la valeur par defaut, mais c'est aussi ce qui rend le degrade
-	-- litteral : la poser noir sur blanc evite qu'on la teinte un jour sans voir qu'on rabote BANNER_COLOR.
+	-- BLANC PUR, ECRIT EXPLICITEMENT. C'est la valeur par defaut, mais c'est aussi ce qui rend BANNER_COLOR
+	-- LITTERAL : un UIGradient MULTIPLIE la couleur de l'objet. Teinter l'image ici raboterait donc le degrade en
+	-- silence, et on reglerait des couleurs qu'on ne voit jamais vraiment.
+	--
+	-- Autrement dit : la teinte du bandeau se regle dans BANNER_COLOR, jamais ici.
 	banner.ImageColor3 = Color3.fromRGB(255, 255, 255)
 	banner.ScaleType = Enum.ScaleType.Stretch
 	banner.AnchorPoint = Vector2.new(0.5, 0.5)
