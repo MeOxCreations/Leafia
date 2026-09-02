@@ -1481,6 +1481,16 @@ local function update(dt: number)
 	end
 end
 
+--- La tondeuse que le joueur pousse est-elle DEMARREE ?
+---
+--- Expose pour le didacticiel, qui doit savoir quand la tache "demarrer la tondeuse" est accomplie. Il LIT l'etat
+--- au lieu d'ecouter un evenement : le joueur peut lacher la machine, mourir, en reprendre une autre -- un
+--- evenement tire une fois laisserait le didacticiel sur une reponse perimee.
+function MowController.isRunning(): boolean
+	local mine = myMower()
+	return mine ~= nil and mine:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
+end
+
 function MowController.init()
 	-- getRemote cache un WaitForChild : en ligne droite dans un init, il gele TOUT le boot le temps du timeout.
 	task.spawn(function()

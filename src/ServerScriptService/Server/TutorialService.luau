@@ -388,10 +388,17 @@ end
 
 function TutorialService.init()
 	local done = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
-	done.OnServerEvent:Connect(function()
+	local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
+	done.OnServerEvent:Connect(function(player)
 		-- Aucun argument a valider : le client ne fait que dire "la scene est finie". Le pire qu'il puisse faire
 		-- est de la declencher trop tot, ce qui fait sortir le grand-pere -- pas de quoi tricher.
-		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, restoreIdle)
+		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, function(model)
+			restoreIdle(model)
+			-- IL EST ARRIVE, ET C'EST LE SERVEUR QUI LE SAIT. La marche se fait ici, image par image : le client
+			-- ne peut pas connaitre l'instant de l'arrivee sans le deviner, et une duree devinee se decale des
+			-- qu'on change la vitesse, la distance ou l'animation.
+			arrived:FireClient(player)
+		end)
 	end)
 
 	Players.PlayerAdded:Connect(onPlayerAdded)

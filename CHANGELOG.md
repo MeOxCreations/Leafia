@@ -2204,6 +2204,73 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.637 — Le grand-pere explique ce qu'il veut, et le joueur recoit ses objectifs
+
+Il sortait de chez lui, marchait jusque devant sa porte, et... plus rien. Le joueur se retrouvait libre, sans
+savoir ce qu'on attendait de lui.
+
+Maintenant : il arrive, il PARLE, et la premiere consigne arrive dans la foulee.
+
+### La voix commande le texte
+
+La replique est doublee (`Oldman_scene_speech_2`, 14.68 s). Les cinq lignes de la boite de dialogue avancent donc
+TOUTES SEULES, chacune avec sa duree.
+
+Faire taper le joueur pour avancer aurait desynchronise le texte du son des la premiere ligne, et plus rien
+n'aurait pu les recaler. Le tap continue de marcher : il permet de couper court, jamais de rester bloque. Et
+l'indice "tape pour continuer" ne s'affiche plus sur une ligne doublee -- il demandait une action qui casse
+justement le calage.
+
+Nouveau champ `hold` sur `Dialogue.Line`. Absent, la ligne attend le joueur comme avant.
+
+### C'est le SERVEUR qui dit qu'il est arrive
+
+Nouveau remote `TutorialOldManArrived`. La marche se fait cote serveur, image par image : le client ne peut pas
+connaitre l'instant de l'arrivee sans le DEVINER, et une duree devinee se decale des qu'on change la vitesse, la
+distance ou l'animation.
+
+### Les objectifs arrivent quand ils ont un sens
+
+Le bandeau ne s'affiche plus au spawn. Il affichait "MOW THE LAWN" pendant que la seule chose a faire etait
+d'aller toquer -- un objectif qu'on ne peut pas encore accomplir n'est pas un guide, c'est du bruit, et le joueur
+apprend a l'ignorer. Il l'ignorera aussi quand il comptera vraiment.
+
+La sequence est maintenant :
+
+1. Il finit de parler -> **START THE MOWER** (pastille BLEUE, la teinte des outils dans TaskConfigs)
+2. La machine demarre -> la ligne passe en GRIS, jauge pleine
+3. Un souffle plus tard -> **MOW THE LAWN** arrive EN DESSOUS (pastille verte)
+
+La tache finie RESTE a l'ecran. Une ligne grisee au-dessus de la suivante dit "tu as avance" ; une ligne disparue
+ne dit rien. C'est la raison pour laquelle on coche une liste au lieu de la raturer.
+
+`START THE MOWER` n'affiche AUCUNE recompense : c'est une etape, pas un chantier. Une piece a cote d'un geste qui
+ne paie rien apprend au joueur que les chiffres du bandeau ne veulent rien dire.
+
+### Deux ajouts au bandeau d'objectifs
+
+`TaskBannerHandler.add(entry)` ajoute une ligne SOUS les autres sans les rejouer. Repasser par `show` aurait fait
+disparaitre puis revenir la tache terminee, ce qui ressemble a un bug.
+
+`TaskBannerHandler.setDone(index)` grise une ligne. Sans retour en arriere, et c'est voulu : une tache accomplie
+ne se defait pas.
+
+### A faire dans Studio
+
+**Le Sound `Oldman_scene_speech_2` doit exister dans la place TUTORIAL**, sous
+`SoundService/Sounds/Scenes/Scene1/Voices/`. Rojo ne synchronise pas SoundService : pose dans la place principale
+seulement, il est INTROUVABLE dans le tuto et le grand-pere reste muet -- le dialogue, lui, s'affichera quand
+meme, ce qui rend la panne difficile a voir.
+
+### Deux points a regler a l'oeil
+
+**Les durees des lignes** (`SPEECH2_LINES`, champ `hold`) sont proportionnelles a la longueur du texte. C'est une
+approximation : il faut les recaler en ecoutant. Leur somme doit rester egale a la duree du fichier.
+
+**"Since I retired"** : "retired" est un mot d'adulte, et le public de Roblox est des enfants. La regle du projet
+dit de dire la chose CONCRETEMENT. Le texte est laisse tel quel parce qu'il correspond a l'enregistrement -- un
+texte qui contredit la voix serait pire. A corriger AVEC la voix, pas avant.
+
 ## 0.0.636 — Retour a l'ancien enchainement de la porte
 
 Annule 0.0.634 et 0.0.635. La porte revient exactement a ce qu'elle etait avant : le geste de poignee se

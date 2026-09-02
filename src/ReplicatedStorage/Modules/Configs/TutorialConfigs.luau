@@ -379,22 +379,78 @@ return {
 	-- Hauteur au-dessus du centre de la porte, en studs.
 	DOOR_MARKER_UP = 3.5,
 
-	-- ===== L'OBJECTIF =====
+	-- ===== IL EXPLIQUE POURQUOI IL A BESOIN DE NOUS =====
+	-- Deuxieme replique, dite une fois qu'il a MARCHE jusque devant sa porte. C'est le serveur qui previent de son
+	-- arrivee : la marche se fait chez lui, image par image, et une duree devinee cote client se decalerait des
+	-- qu'on change sa vitesse ou la distance.
+	--
+	-- 2D comme le reste de la scene : une replique RACONTE, elle ne vient pas d'un point de la carte.
+	SPEECH2_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_2" },
+	-- Il souffle en arrivant avant de parler. A zero il enchaine sans avoir repris son souffle -- et il vient de
+	-- traverser sa cour.
+	SPEECH2_DELAY = 0.6,
+	-- LE NOM AFFICHE dans la pastille jaune. Ici et nulle part ailleurs : le jour ou il a un vrai prenom, il
+	-- change a un seul endroit.
+	SPEECH2_SPEAKER = "GRANDPA",
+	-- SA REPLIQUE, DECOUPEE. Chaque ligne porte sa duree : elles avancent TOUTES SEULES, sans que le joueur ait a
+	-- taper. Sur une replique doublee c'est obligatoire -- faire avancer a la main desynchronise le texte de la
+	-- voix des la premiere ligne, et plus rien ne les recale ensuite.
+	--
+	-- LA SOMME DES `hold` DOIT VALOIR LA DUREE DU FICHIER SON (14.68 s pour Oldman_scene_speech_2). Ces valeurs
+	-- sont proportionnelles a la longueur du texte : c'est une premiere approximation, elle se REGLE A L'OREILLE.
+	-- Une ligne qui passe avant que la voix l'ait dite est le signe qu'il faut monter son `hold` et baisser celui
+	-- d'a cote, pas allonger le total.
+	--
+	-- `emotion` est une cle de la table EMOTIONS de Dialogue : normal / happy / sad / angry / shocked / wink.
+	SPEECH2_LINES = {
+		{ text = "Ah! There you are! How've you been?", emotion = "happy", hold = 2.2 },
+		{ text = "Right, listen... thanks for coming out!", emotion = "normal", hold = 2.5 },
+		{
+			text = "Since I retired I just haven't gotten around to mowing the lawn or looking after the garden.",
+			emotion = "sad",
+			hold = 5.9,
+		},
+		{ text = "So it's perfect that you're here!", emotion = "happy", hold = 2.1 },
+		{ text = "I'll let you fire up the mower!", emotion = "wink", hold = 2.1 },
+	},
+
+	-- ===== LES OBJECTIFS =====
 	-- EN ANGLAIS, comme tout texte vu par le joueur. Le traducteur de Roblox part de l'anglais : un texte ecrit en
 	-- francais n'est traduit NULLE PART, et le jeu devient illisible pour la quasi-totalite de la plateforme.
-	TASK_TITLE = "MOW THE LAWN",
+	--
+	-- ILS ARRIVENT L'UN APRES L'AUTRE, et jamais avant d'avoir un sens. Le bandeau ne s'affiche plus au spawn :
+	-- pendant l'ouverture, la seule chose a faire est d'aller toquer, et le halo sur la porte le dit deja mieux
+	-- qu'une ligne de texte. Un objectif qu'on ne peut pas encore accomplir n'est pas un guide, c'est du bruit.
+
+	-- 1) DEMARRER LA MACHINE, des qu'il a fini de parler.
+	MOWER_TASK_TITLE = "START THE MOWER",
+	-- AUCUNE RECOMPENSE : c'est une ETAPE, pas un chantier. Afficher une piece pour un geste qui ne paie rien
+	-- apprend au joueur que les chiffres du bandeau ne veulent rien dire -- et il ne les lira plus.
+	MOWER_TASK_REWARD = "",
+	-- L'ICONE ET LA TEINTE de cette tache. Cles de `TaskConfigs` et non ids en dur : l'image se change a un seul
+	-- endroit, et une cle fausse se signale au lieu d'afficher un carre vide.
+	--
+	-- BLEU : c'est la teinte des OUTILS dans TaskConfigs (aller chercher, equiper, demarrer une machine). Le vert
+	-- est celui du vegetal, et il est garde pour la tonte elle-meme -- deux taches de la meme couleur se lisent
+	-- comme la meme tache.
+	MOWER_TASK_ICON = "Mower",
+	MOWER_TASK_TINT = "Blue",
+
+	-- 2) TONDRE, une fois la machine lancee.
+	LAWN_TASK_TITLE = "MOW THE LAWN",
 	-- La recompense est ECRITE, pas calculee : rien ne la verse encore. Le jour ou elle le sera, elle viendra de
 	-- la source qui paie -- une valeur affichee qui ne correspond pas a ce qu'on recoit est pire que pas de
 	-- valeur du tout.
 	-- SANS L'UNITE : l'image de la monnaie est affichee juste a cote et le dit deja. "+ 50 XP" a cote d'une piece
 	-- se lit comme une contradiction.
-	TASK_REWARD = "+ 50",
+	LAWN_TASK_REWARD = "+ 50",
 	-- Une cle de `TaskConfigs.CURRENCIES`. Sans elle, aucune image ne s'affiche a cote du chiffre.
-	TASK_CURRENCY = "Coins",
-	-- L'ICONE ET LA TEINTE de cette tache. Cles de `TaskConfigs` et non ids en dur : l'image se change a un seul
-	-- endroit, et une cle fausse se signale au lieu d'afficher un carre vide.
-	TASK_ICON = "Mower",
-	TASK_TINT = "Green",
+	LAWN_TASK_CURRENCY = "Coins",
+	LAWN_TASK_ICON = "Grass",
+	LAWN_TASK_TINT = "Green",
+	-- Souffle entre le grisage de la tache finie et l'arrivee de la suivante. Les deux au meme instant se lisent
+	-- comme un remplacement ; separes, on voit d'abord qu'on a REUSSI, ensuite ce qui reste a faire.
+	LAWN_TASK_DELAY = 0.9,
 
 	-- ===== LE GRAND-PERE SORT DE CHEZ LUI =====
 	-- La scene finie, il ne reste pas plante dans l'embrasure : il marche jusque devant sa porte.

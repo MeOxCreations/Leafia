@@ -58,6 +58,25 @@ local ROW_STAGGER = 0.09
 -- glissent l'une apres l'autre avec un seul son se lisent comme un bloc.
 local APPEAR_SOUND = { "Sounds", "UI", "AppearSound_1" }
 
+-- ===== UNE TACHE FAITE =====
+-- ELLE RESTE A L'ECRAN, EN GRIS. La retirer effacerait la preuve du travail accompli : une ligne barree au-dessus
+-- de la suivante dit "tu as avance", une ligne disparue ne dit rien du tout. C'est la meme raison qui fait qu'on
+-- coche une liste au lieu de la raturer.
+local DONE_TEXT = Color3.fromRGB(150, 158, 168)
+local DONE_IMAGE = Color3.fromRGB(120, 128, 138)
+-- La pastille perd sa couleur mais garde son degrade : un aplat gris a cote d'une pastille en relief se lirait
+-- comme un element casse, pas comme un element termine.
+local DONE_TINT = ColorSequence.new({
+	ColorSequenceKeypoint.new(0, Color3.fromHex("8b939e")),
+	ColorSequenceKeypoint.new(0.467, Color3.fromHex("8b939e")),
+	ColorSequenceKeypoint.new(0.482, Color3.fromHex("aab2bc")),
+	ColorSequenceKeypoint.new(1, Color3.fromHex("c6ccd4")),
+})
+-- EN FONDU, jamais d'un coup : c'est le seul retour que le joueur recoit quand il termine une tache. Un
+-- changement instantane passe inapercu, surtout s'il regarde ailleurs -- et il regarde ailleurs, il vient
+-- justement de faire quelque chose.
+local DONE_FADE = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 -- LE REBOND DE LA PIECE, quand sa ligne vient de se poser. Elle part decalee a DROITE et revient en tremblant :
 -- `Elastic Out` depasse sa cible puis oscille en s'amortissant, ce qui donne le mouvement mou d'une matiere qui
 -- se remet en place. Un `Back` ne depasserait qu'une fois, et ca se lirait comme un a-coup.
@@ -97,6 +116,9 @@ type Row = {
 	fill: Frame?,
 	target: number,
 	current: number,
+	-- Deja grisee ? Sans ce drapeau, un appel repete rejouerait le fondu a chaque image -- et la boucle qui
+	-- surveille l'accomplissement, elle, tourne bien a chaque image.
+	done: boolean,
 }
 
 local screen: ScreenGui? = nil
@@ -489,53 +511,111 @@ local function dress(frame: Frame, entry: TaskConfigs.Task)
 	end
 end
 
+--- Pose UNE ligne a sa place et la fait glisser. `wait` decale son arrivee (la cascade de `show`).
+---
+--- Extrait de `show` pour que `add` puisse ajouter une ligne SANS rejouer les precedentes : les rejouer ferait
+--- repartir de la gauche des taches deja lues, et la nouvelle se perdrait au milieu du mouvement general.
+local function addRow(entry: TaskConfigs.Task, index: number, wait: number)
+	local model = template :: Frame
+	local frame = model:Clone()
+	frame.Name = `Task{index}`
+	frame.Visible = true
+	frame.Position = UDim2.fromScale(HIDDEN_X, FIRST_Y + (index - 1) * ROW_GAP)
+	frame.Parent = model.Parent
+	dress(frame, entry)
+
+	local bar = frame:FindFirstChild("Bar")
+	local fillFrame = bar and bar:FindFirstChild("Fill")
+	local fill = if fillFrame and fillFrame:IsA("Frame") then fillFrame else nil
+
+	table.insert(rows, { frame = frame, fill = fill, target = entry.progress or 0, current = 0, done = false })
+
+	local slideTo = UDim2.fromScale(SHOWN_X, frame.Position.Y.Scale)
+	task.delay(wait, function()
+		if not frame.Parent then
+			return
+		end
+		SoundUtils.play(APPEAR_SOUND, nil)
+		local slide = TweenService:Create(frame, SLIDE_IN, { Position = slideTo })
+		-- LE REBOND SUIT LA FIN DU GLISSEMENT, pas un delai calcule a cote : un delai se decalerait des qu'on
+		-- retouche la duree de l'arrivee, et la piece rebondirait pendant que la ligne bouge encore.
+		slide.Completed:Connect(function()
+			local coin = frame:FindFirstChild("CurrencyImage")
+			if not (coin and coin:IsA("ImageLabel") and coin.Visible) then
+				return
+			end
+			local home = coin.Position
+			coin.Position = home + UDim2.fromScale(COIN_BOUNCE_X, 0)
+			TweenService:Create(coin, COIN_BOUNCE, { Position = home }):Play()
+		end)
+		slide:Play()
+	end)
+end
+
 --- Affiche la liste des taches. Remplace ce qui etait a l'ecran.
 function TaskBannerHandler.show(tasks: { TaskConfigs.Task })
 	if not build() then
 		warn("[TaskBanner] Pas de PlayerGui : aucun objectif ne s'affichera.")
 		return
 	end
-	local model = template :: Frame
 	clearRows()
-
+	-- EN CASCADE : chaque ligne part apres la precedente.
 	for i, entry in ipairs(tasks) do
-		local frame = model:Clone()
-		frame.Name = `Task{i}`
-		frame.Visible = true
-		frame.Position = UDim2.fromScale(HIDDEN_X, FIRST_Y + (i - 1) * ROW_GAP)
-		frame.Parent = model.Parent
-		dress(frame, entry)
+		addRow(entry, i, (i - 1) * ROW_STAGGER)
+	end
+	startFill()
+end
 
-		local bar = frame:FindFirstChild("Bar")
-		local fillFrame = bar and bar:FindFirstChild("Fill")
-		local fill = if fillFrame and fillFrame:IsA("Frame") then fillFrame else nil
+--- Ajoute une tache SOUS celles deja affichees, sans toucher a elles.
+---
+--- C'est ce qui permet une LISTE qui s'allonge : la tache finie reste en gris au-dessus de la suivante. Passer
+--- par `show` a la place effacerait tout et rejouerait l'arrivee de chaque ligne -- le joueur verrait sa tache
+--- terminee disparaitre puis revenir, ce qui ressemble a un bug.
+function TaskBannerHandler.add(entry: TaskConfigs.Task)
+	if not build() then
+		warn("[TaskBanner] Pas de PlayerGui : aucun objectif ne s'affichera.")
+		return
+	end
+	addRow(entry, #rows + 1, 0)
+	startFill()
+end
 
-		table.insert(rows, { frame = frame, fill = fill, target = entry.progress or 0, current = 0 })
+--- Grise une tache : elle est faite. Sa jauge se remplit, ses couleurs s'eteignent, elle reste a l'ecran.
+---
+--- Sans retour en arriere, et c'est voulu : une tache accomplie ne se defait pas. Rendre l'operation reversible
+--- obligerait a garder les couleurs d'origine de chaque ligne pour un cas qui n'existe pas.
+function TaskBannerHandler.setDone(index: number)
+	local row = rows[index]
+	if not row or row.done then
+		return
+	end
+	row.done = true
+	-- LA JAUGE FINIT SA COURSE. C'est elle qui dit "termine" avant meme que la couleur ne parte : elle bouge, et
+	-- l'oeil suit ce qui bouge.
+	row.target = 1
+	startFill()
 
-		-- EN CASCADE : chaque ligne part apres la precedente.
-		local slideTo = UDim2.fromScale(SHOWN_X, frame.Position.Y.Scale)
-		task.delay((i - 1) * ROW_STAGGER, function()
-			if not frame.Parent then
-				return
-			end
-			SoundUtils.play(APPEAR_SOUND, nil)
-			local slide = TweenService:Create(frame, SLIDE_IN, { Position = slideTo })
-			-- LE REBOND SUIT LA FIN DU GLISSEMENT, pas un delai calcule a cote : un delai se decalerait des
-			-- qu'on retouche la duree de l'arrivee, et la piece rebondirait pendant que la ligne bouge encore.
-			slide.Completed:Connect(function()
-				local coin = frame:FindFirstChild("CurrencyImage")
-				if not (coin and coin:IsA("ImageLabel") and coin.Visible) then
-					return
-				end
-				local home = coin.Position
-				coin.Position = home + UDim2.fromScale(COIN_BOUNCE_X, 0)
-				TweenService:Create(coin, COIN_BOUNCE, { Position = home }):Play()
-			end)
-			slide:Play()
-		end)
+	local frame = row.frame
+	for _, name in { "DescriptionTask", "RewardText" } do
+		local label = frame:FindFirstChild(name)
+		if label and label:IsA("TextLabel") then
+			TweenService:Create(label, DONE_FADE, { TextColor3 = DONE_TEXT }):Play()
+		end
+	end
+	for _, name in { "IconTaskDraw", "CurrencyImage" } do
+		local image = frame:FindFirstChild(name)
+		if image and image:IsA("ImageLabel") then
+			TweenService:Create(image, DONE_FADE, { ImageColor3 = DONE_IMAGE }):Play()
+		end
 	end
 
-	startFill()
+	-- LE DEGRADE SE POSE D'UN COUP : TweenService ne sait pas interpoler une ColorSequence. Le fondu des textes
+	-- et des icones couvre la bascule, on ne voit pas la difference.
+	local pastille = frame:FindFirstChild("IconColor")
+	local grad = pastille and pastille:FindFirstChildOfClass("UIGradient")
+	if grad then
+		grad.Color = DONE_TINT
+	end
 end
 
 --- Fixe l'avancement d'une ligne, de 0 a 1. `index` est sa place dans la liste passee a `show`.

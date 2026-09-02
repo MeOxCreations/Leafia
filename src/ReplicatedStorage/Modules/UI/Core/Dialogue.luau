@@ -23,7 +23,15 @@ local Dialogue = {}
 
 local player = Players.LocalPlayer
 
-export type Line = { speaker: string?, text: string, emotion: string? }
+--- `hold` : la ligne passe TOUTE SEULE apres ce nombre de secondes, compte depuis son APPARITION.
+---
+--- Sert aux repliques DOUBLEES : quand une voix joue par-dessus, faire taper le joueur pour avancer desynchronise
+--- le texte du son des la premiere ligne, et il n'y a plus aucun moyen de les recaler. Avec `hold`, la somme des
+--- lignes vaut la duree du fichier son, et les deux avancent ensemble.
+---
+--- Absent : la ligne attend le joueur, comme avant. Le tap continue de fonctionner dans les deux cas -- il permet
+--- de couper court, jamais de rester bloque.
+export type Line = { speaker: string?, text: string, emotion: string?, hold: number? }
 
 -- Emotions de PAPI (le meme dessin, plusieurs expressions). Une replique choisit son emotion par NOM (lisible),
 -- pas par asset id brut. Emotion absente sur une ligne = on garde le dessin precedent.
@@ -95,6 +103,16 @@ local slideTween: Tween? = nil
 local portrait: ImageLabel? = nil
 local portraitScale: UIScale? = nil
 local lastEmotion: string? = nil -- derniere expression affichee (pour ne popper qu'au CHANGEMENT)
+-- JETON DE LIGNE. `task.delay` ne sait pas s'annuler : sans lui, l'avance automatique d'une ligne qu'on a deja
+-- passee a la main tirerait quand meme, et sauterait la suivante.
+local lineToken = 0
+-- La ligne courante avance-t-elle toute seule ? Lu pour ne PAS afficher l'indice "tape pour continuer" : sur une
+-- replique doublee il demande une action qui ne sert a rien, et qui casserait le calage avec la voix.
+local autoLine = false
+
+-- REMPLIE PLUS BAS. `startLine` doit pouvoir declencher l'avance automatique, et `advance` appelle `startLine` :
+-- l'un des deux doit etre annonce avant l'autre.
+local advance: () -> ()
 
 -- Nombre de graphemes (accents compris) : c'est l'unite de MaxVisibleGraphemes. utf8.len peut renvoyer nil sur une
 -- chaine mal formee -> on retombe sur le nombre d'octets, jamais zero.
@@ -195,6 +213,29 @@ local function startLine(i: number)
 	typing = true
 	typeAccum = 0
 	setHintVisible(false)
+
+	-- ELLE PASSE TOUTE SEULE, si on lui a donne une duree. Comptee depuis l'APPARITION de la ligne et non depuis
+	-- la fin de son ecriture : c'est la seule facon d'additionner les lignes pour tomber sur la duree d'une voix.
+	lineToken += 1
+	local hold = line.hold
+	autoLine = hold ~= nil
+	if hold then
+		local myToken = lineToken
+		task.delay(hold, function()
+			-- Le jeton a bouge : le joueur a deja passe la ligne a la main, ou le dialogue s'est ferme.
+			if lineToken ~= myToken or not shownOnScreen then
+				return
+			end
+			-- ON FIGE LE TEXTE AVANT D'AVANCER. `advance` seul se contenterait de finir l'ecriture quand la ligne
+			-- est plus longue que sa duree : la replique resterait a l'ecran et le calage serait perdu.
+			typing = false
+			local body2 = bodyLabel
+			if body2 then
+				body2.MaxVisibleGraphemes = -1
+			end
+			advance()
+		end)
+	end
 end
 
 local function hideBanner()
@@ -203,6 +244,10 @@ local function hideBanner()
 	end
 	shownOnScreen = false
 	typing = false
+	-- LE JETON BOUGE EN SORTANT. Une avance automatique programmee sur la derniere ligne tirerait apres la
+	-- fermeture, et rouvrirait un bandeau que plus personne n'attend.
+	lineToken += 1
+	autoLine = false
 	setHintVisible(false)
 	local b = banner
 	if not b then
@@ -232,7 +277,7 @@ local function finish()
 end
 
 -- Un tap sur le bandeau : finit la ligne d'un coup si elle s'ecrit encore, sinon passe a la suivante (ferme a la fin).
-local function advance()
+advance = function()
 	if not shownOnScreen then
 		return
 	end
@@ -242,7 +287,7 @@ local function advance()
 		if body then
 			body.MaxVisibleGraphemes = -1 -- tout afficher
 		end
-		setHintVisible(true)
+		setHintVisible(not autoLine)
 		return
 	end
 	currentIndex += 1
@@ -409,7 +454,9 @@ local function build()
 		if n >= total then
 			n = total
 			typing = false
-			setHintVisible(true)
+			-- PAS D'INDICE SUR UNE REPLIQUE DOUBLEE : elle avance toute seule, et "tape pour continuer" y demande
+			-- une action inutile -- que le joueur ferait, ce qui casserait le calage avec la voix.
+			setHintVisible(not autoLine)
 		end
 		body2.MaxVisibleGraphemes = n
 		-- "tap tap tap" : une frappe toutes les TYPE_SOUND_EVERY lettres revelees, pitch varie. Rien si le son est absent.

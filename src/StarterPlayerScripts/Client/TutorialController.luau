@@ -32,6 +32,9 @@ local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
 local ButterflyController = require(script.Parent.ButterflyController)
+-- LU, JAMAIS PILOTE : le didacticiel demande seulement si la machine tourne, pour savoir si sa tache est faite.
+-- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
+local MowController = require(script.Parent.MowController)
 
 local player = Players.LocalPlayer
 
@@ -70,6 +73,13 @@ local grandpaTrack: AnimationTrack? = nil
 -- Resolu EN TACHE DE FOND au demarrage : `getRemote` cache un `WaitForChild`, et l'appeler en ligne droite dans
 -- un `init` gele tout le boot le temps de son timeout. Le piege est note dans le journal du projet.
 local sceneDoneRemote: RemoteEvent? = nil
+-- LA DEUXIEME REPLIQUE N'EST DITE QU'UNE FOIS. Le serveur peut refaire marcher le grand-pere (un joueur qui
+-- relance la scene, un respawn) : sans ce drapeau il se remettrait a expliquer par-dessus lui-meme.
+local spokeTwice = false
+-- OU EN EST LA LISTE D'OBJECTIFS. Deux drapeaux et non un compteur : chacun protege un evenement different, et
+-- un compteur obligerait a savoir quel numero correspond a quelle etape.
+local mowerTaskShown = false
+local mowerTaskDone = false
 
 -- LES SONS DE LA SCENE SONT JOUES EN 2D, pas dans le monde. `nil` en hote = pas de part, donc pas de distance,
 -- pas d'attenuation : le son arrive a plein volume quoi qu'il arrive.
@@ -1265,8 +1275,74 @@ function TutorialController.startMission()
 	end)
 end
 
+-- ===== IL EXPLIQUE, PUIS LE JOUEUR A UNE CONSIGNE =====
+
+--- Il a fini de parler : la premiere vraie consigne arrive.
+---
+--- PAS AVANT. Pendant toute l'ouverture, la seule chose a faire est d'aller toquer, et le halo sur la porte le dit
+--- mieux qu'une ligne de texte. Un objectif qu'on ne peut pas encore accomplir n'est pas un guide, c'est du bruit
+--- que le joueur apprend a ignorer -- et il l'ignorera aussi quand il comptera.
+local function showMowerTask()
+	if mowerTaskShown then
+		return
+	end
+	mowerTaskShown = true
+	TaskBannerHandler.show({
+		{
+			icon = TutorialConfigs.MOWER_TASK_ICON,
+			tint = TaskConfigs.TINTS[TutorialConfigs.MOWER_TASK_TINT],
+			text = TutorialConfigs.MOWER_TASK_TITLE,
+			reward = TutorialConfigs.MOWER_TASK_REWARD,
+			progress = 0,
+		},
+	})
+end
+
+--- LE GRAND-PERE EST ARRIVE DEVANT SA PORTE. Il explique pourquoi il a besoin de nous, et la voix commande : les
+--- repliques avancent toutes seules, calees sur sa duree (voir `hold` dans Dialogue).
+local function onOldManArrived()
+	if spokeTwice then
+		return
+	end
+	spokeTwice = true
+	task.delay(TutorialConfigs.SPEECH2_DELAY, function()
+		SoundUtils.play(TutorialConfigs.SPEECH2_SOUND, SCENE_2D)
+		-- LE NOM DU PERSONNAGE SE POSE ICI, pas sur chacune des cinq repliques : il vit a un seul endroit dans la
+		-- config, et le jour ou le grand-pere a un vrai prenom il change une fois.
+		local lines: { Dialogue.Line } = {}
+		for _, entry in TutorialConfigs.SPEECH2_LINES do
+			table.insert(lines, {
+				speaker = TutorialConfigs.SPEECH2_SPEAKER,
+				text = entry.text,
+				emotion = entry.emotion,
+				hold = entry.hold,
+			})
+		end
+		Dialogue.play(lines, showMowerTask)
+	end)
+end
+
 local function step(dt: number)
 	local now = os.clock()
+
+	-- LA MACHINE A DEMARRE : la tache est faite, elle passe en gris et la tonte prend sa place en dessous.
+	--
+	-- TESTE ICI, EN HAUT, avant les retours anticipes qui suivent : ils sortent des que la porte n'est plus a
+	-- portee, et demarrer la tondeuse n'a plus rien a voir avec la porte -- le joueur est deja parti.
+	if mowerTaskShown and not mowerTaskDone and MowController.isRunning() then
+		mowerTaskDone = true
+		TaskBannerHandler.setDone(1)
+		task.delay(TutorialConfigs.LAWN_TASK_DELAY, function()
+			TaskBannerHandler.add({
+				icon = TutorialConfigs.LAWN_TASK_ICON,
+				tint = TaskConfigs.TINTS[TutorialConfigs.LAWN_TASK_TINT],
+				text = TutorialConfigs.LAWN_TASK_TITLE,
+				reward = TutorialConfigs.LAWN_TASK_REWARD,
+				currency = TaskConfigs.CURRENCIES[TutorialConfigs.LAWN_TASK_CURRENCY],
+				progress = 0,
+			})
+		end)
+	end
 
 	-- ON REVALIDE TANT QU'IL MANQUE QUELQUE CHOSE, pas seulement au premier passage. Avec StreamingEnabled le
 	-- Model arrive souvent AVANT ses parts : resoudre l'ancre une seule fois la laissait a nil pour TOUTE la
@@ -1415,37 +1491,18 @@ function TutorialController.init()
 	end
 	startedAt = os.clock()
 
-	-- LES OBJECTIFS S'AFFICHENT DES L'ARRIVEE, pas a la fin de la scene. Un joueur qui decouvre le jeu doit
-	-- savoir ce qu'on attend de lui tout de suite : attendre la fin du scenario, c'est le laisser sans consigne
-	-- pendant la seule minute ou l'on peut encore le perdre.
+	-- LES REMOTES SE RESOLVENT EN TACHE DE FOND. `getRemote` cache un `WaitForChild` : appele en ligne droite
+	-- ici, il gele TOUT le boot le temps de son timeout quand la replication tarde -- un trou de dix secondes sans
+	-- la moindre erreur, juste un vide dans les horodatages. Le piege a deja ete paye dans ce projet.
 	--
-	-- APRES LE PERSONNAGE, ET EN TACHE DE FOND. Une ScreenGui de StarterGui n'existe dans PlayerGui qu'au SPAWN,
-	-- et le spawn peut tarder de plusieurs secondes (chargement des donnees) : la chercher au boot la raterait,
-	-- sans la moindre erreur. Le `task.spawn` evite en plus de bloquer le reste de l'init pendant l'attente.
-	--
-	-- LA BARRE NE BOUGE PAS ENCORE : personne ne compte l'herbe coupee. Le bandeau est pose pour etre VU et
-	-- juge ; le compteur de progression est un autre chantier, et c'est lui le vrai travail.
-	task.spawn(function()
-		if not player.Character then
-			player.CharacterAdded:Wait()
-		end
-		TaskBannerHandler.show({
-			{
-				icon = TutorialConfigs.TASK_ICON,
-				tint = TaskConfigs.TINTS[TutorialConfigs.TASK_TINT],
-				text = TutorialConfigs.TASK_TITLE,
-				reward = TutorialConfigs.TASK_REWARD,
-				currency = TaskConfigs.CURRENCIES[TutorialConfigs.TASK_CURRENCY],
-				progress = 0,
-			},
-		})
-	end)
-
-	-- LE REMOTE SE RESOUT EN TACHE DE FOND. `getRemote` cache un `WaitForChild` : appele en ligne droite ici, il
-	-- gele TOUT le boot le temps de son timeout quand la replication tarde -- un trou de dix secondes sans la
-	-- moindre erreur, juste un vide dans les horodatages. Le piege a deja ete paye dans ce projet.
+	-- DEUX TACHES SEPAREES et non une seule qui les enchaine : un remote qui tarde retiendrait l'autre, et celui
+	-- qui ecoute l'arrivee du grand-pere raterait alors son evenement.
 	task.spawn(function()
 		sceneDoneRemote = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
+	end)
+	task.spawn(function()
+		local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
+		arrived.OnClientEvent:Connect(onOldManArrived)
 	end)
 
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres

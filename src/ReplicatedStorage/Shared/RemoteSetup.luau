@@ -139,6 +139,14 @@ local REMOTES: { { any } } = {
 	-- La scene est CLIENT (camera, barres, fondu) mais le grand-pere qui marche est un objet du MONDE : il doit
 	-- bouger pour tout le monde, donc c'est le serveur qui le deplace. Ce remote est la couture entre les deux.
 	{ "TutorialSceneDone", E, "Tutorial" },
+	-- LE GRAND-PERE EST ARRIVE DEVANT SA PORTE. Aucun argument : le client sait deja quoi en faire.
+	--
+	-- L'ALLER ET LE RETOUR DE LA MEME COUTURE. Le client dit "la scene est finie", le serveur fait marcher le
+	-- PNJ, et il faut bien que quelqu'un dise au client que la marche est terminee -- sinon il devrait DEVINER
+	-- la duree du trajet, et cette duree change avec la vitesse de marche, la distance, l'animation.
+	--
+	-- Envoye au SEUL joueur concerne : la scene d'introduction est personnelle.
+	{ "TutorialOldManArrived", E, "Tutorial" },
 
 	-- [ BIN ] --
 	-- PRISE / REPOSE du SEAU. Deux arguments : le seau (Instance) et une PHASE.
