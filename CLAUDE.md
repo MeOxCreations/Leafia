@@ -1020,6 +1020,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   famille que Rojo qui ecrase Studio avec le disque local -- dans les deux cas, un etat perime remplace un etat
   recent en silence, et le code perime se lit comme du code valide.
 
+- **Une duree de vie EN DUR dans un utilitaire partage coupe en silence tout ce qui est plus long qu'elle.**
+  `SoundUtils.play` detruisait son clone au bout de 5 s (`Debris:AddItem(sound, 5)`), valeur ecrite pour des sons
+  PONCTUELS -- un pas, un clic. Le jour ou l'on y fait passer une replique de 15 s, elle s'arrete au tiers. Aucune
+  erreur, aucun log : le son commence bien, donc on cherche du cote du fichier, de l'upload, du scenario qui
+  couperait la scene -- jamais dans l'utilitaire, qui a l'air d'un detail resolu depuis longtemps. La bonne forme :
+  nettoyer sur `Ended` (qui tire a la VRAIE fin, quelle que soit la duree) et ne garder le delai que comme FILET
+  pour le cas ou `Ended` ne tire jamais, avec une valeur tres large. Regle generale, deja payee sur le plancher en
+  studs des feuilles : une borne ne doit jamais etre plus serree que la donnee qu'elle borne, et si elle l'est,
+  c'est la borne qu'on monte -- pas la donnee qu'on raccourcit.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

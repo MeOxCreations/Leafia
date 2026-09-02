@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.639 — Les sons vont jusqu'au bout : plus rien ne se coupe a 5 secondes
+
+La replique du grand-pere s'arretait au milieu. Ce n'etait ni le fichier, ni le scenario : `SoundUtils` DETRUISAIT
+le son au bout de 5 secondes.
+
+    Debris:AddItem(sound, 5)
+
+Cinq secondes, ecrites pour des sons PONCTUELS -- un pas, un clic, une porte. Le jour ou l'on y fait passer une
+replique de 14.68 s, elle s'arrete au tiers. Sans erreur, sans log : le son COMMENCE bien, donc on va chercher
+partout ailleurs.
+
+Ca touchait TOUS les sons de plus de cinq secondes du jeu, pas seulement la voix.
+
+### Ce qui remplace le delai
+
+Le clone se nettoie maintenant sur **`Ended`** : il meurt quand le son est FINI, quelle que soit sa duree. Il n'y
+a plus rien a tenir d'accord entre la longueur d'un fichier et une constante.
+
+Le delai reste, mais uniquement comme FILET pour le cas ou `Ended` ne tire jamais (id absent, chargement rate) --
+sans lui, un clone par declenchement s'accumulerait pour toujours. Il est a 180 s, large expres.
+
+### Maintenant seulement, les durees du dialogue veulent dire quelque chose
+
+Les `hold` de `SPEECH2_LINES` etaient regles sur une voix qui se coupait a 5 s : le texte continuait dans le vide
+pendant dix secondes. Elles sont a recaler A L'OREILLE maintenant que la voix se joue en entier.
+
 ## 0.0.638 — Le rose et le rouge des papillons foncent, et la config repart de la bonne version
 
 Les deux teintes tenaient trop de la couleur fluo a cote des autres. Foncees a l'ecran.
