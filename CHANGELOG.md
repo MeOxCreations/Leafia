@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.630 — Le bandeau du titre se fond dans le ciel au lieu de s'arreter net
+
+Troisieme point de `BANNER_FADE` : **(0.897, 0.319) -> (0.798, 0.756)**.
+
+La courbe etait PLATE jusqu'a 0.897, puis montait SEC : la fin du bandeau se coupait sur une arete visible. Elle
+s'ouvre maintenant progressivement sur le dernier quart.
+
+Le palier du debut ne bouge pas, et c'est lui qui compte : le titre est pose dessus, et une densite CONSTANTE
+sous le texte le rend lisible d'un bout a l'autre du mot. La rampe ne commence qu'apres, la ou il n'y a plus rien
+a lire -- un fondu regulier depuis l'origine rendrait le titre plus pale d'un cote que de l'autre.
+
+Les commentaires de la couleur et du fondu parlaient encore d'un bandeau "vert vif d'un cote, noir de l'autre" :
+faux depuis le 0.0.626. Remis d'accord avec le code -- un commentaire faux envoie chercher ce qui n'existe plus.
+
+### A faire dans Studio
+
+Rien.
+
 ## 0.0.629 — Les papillons ne s'en vont plus, et reviennent identiques
 
 ### Ils ne meurent plus de vieillesse

@@ -149,13 +149,19 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Le bandeau n'est PAS plein d'un bout a l'autre : sa transparence monte le long de sa largeur. C'est un
 	-- FONDU, pas un reflet -- il ne s'anime pas. L'avoir promene une fois a suffi a le rendre completement opaque.
 	--
-	-- La courbe est PLATE sur presque toute sa longueur puis monte SEC a la toute fin : le bandeau garde donc la
-	-- meme densite sous le texte -- ce qui le rend lisible partout -- et ne s'efface que dans son dernier
-	-- dixieme. Un fondu regulier d'un bout a l'autre rendrait le texte plus pale a droite qu'a gauche.
+	-- LA COURBE MONTE EN TROIS TEMPS. Plein au depart, puis un palier a un tiers de transparence sous le titre,
+	-- puis elle s'ouvre progressivement jusqu'a disparaitre.
+	--
+	-- Le palier du debut est ce qui compte : c'est la que le texte est pose, et une densite CONSTANTE sous lui le
+	-- rend lisible d'un bout a l'autre du mot. La rampe ne commence qu'apres, la ou il n'y a plus rien a lire --
+	-- un fondu regulier depuis l'origine rendrait le titre plus pale d'un cote que de l'autre.
+	--
+	-- Elle etait plate jusqu'a 0.897 puis montait SEC : la fin du bandeau se coupait net. La montee progressive
+	-- le fait fondre dans le ciel au lieu de s'arreter sur une arete.
 	local BANNER_FADE = NumberSequence.new({
 		NumberSequenceKeypoint.new(0, 0),
 		NumberSequenceKeypoint.new(0.25, 0.319),
-		NumberSequenceKeypoint.new(0.897, 0.319),
+		NumberSequenceKeypoint.new(0.798, 0.756),
 		NumberSequenceKeypoint.new(1, 1),
 	})
 	-- TEINTE du bandeau : un BLEU TRES CLAIR, uni. Le meme UIGradient porte donc DEUX choses -- la couleur et la
