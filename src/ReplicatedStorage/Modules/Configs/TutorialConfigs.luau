@@ -292,6 +292,12 @@ return {
 	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte. Il va JUSQU'AU BOUT, meme si le geste se
 	-- termine avant : un bruit coupe net s'entend comme un bug, alors qu'il deborde ici sans deranger personne.
 	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
+	-- FILET : si le son ne se termine JAMAIS (asset absent, echec de chargement, son mis en boucle par erreur),
+	-- la scene resterait bloquee sur le geste de poignee pour toujours -- porte fermee, camera scriptee, joueur
+	-- coince derriere des barres noires. Passe ce delai, on enchaine quoi qu'il arrive.
+	--
+	-- Genereux : il ne doit JAMAIS se declencher sur un son qui a simplement de la marge.
+	TRY_SOUND_MAX = 12,
 	-- FONDU DE SORTIE du bruit de poignee, quand le geste s'acheve. Il dure plus longtemps que l'animation :
 	-- coupe NET il claque, laisse tourner il grince par-dessus l'ouverture de la porte -- deux bruits de porte en
 	-- meme temps, dont un qui raconte le contraire de l'autre.

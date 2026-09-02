@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.635 — C'est le BRUIT DE SERRURE qui mene le geste de poignee, plus l'animation
+
+Le geste durait ce que durait l'animation, et le son trainait par-dessus ou se coupait trop tot. On calait donc
+l'un sur l'autre a la main, et ca se redecalait a chaque retouche.
+
+Le rapport de force est renverse : **l'animation TOURNE EN BOUCLE, et le SON dit quand elle s'arrete.**
+
+- Un essai = un SON. Le geste tourne pendant toute sa duree.
+- Le son s'acheve -> il souffle (`TRY_OPEN_GAP`), geste a l'arret : un vieux qui s'acharne reprend son souffle,
+  il ne secoue pas la poignee dans le vide.
+- Le DERNIER son s'acheve -> la porte s'ouvre.
+
+Une animation courte et un son long ne peuvent donc plus se desynchroniser. Retoucher l'un n'oblige plus a
+recaler l'autre -- il n'y a plus qu'une seule horloge, et c'est celle qu'on ENTEND.
+
+C'est aussi la bonne : le bruit de serrure raconte l'effort, donc c'est lui qui dit quand l'effort a paye.
+
+### Deux sorties de secours
+
+**`Ended` ne tire jamais** sur un son qui n'a pas charge, ou boucle par erreur. La scene resterait bloquee sur la
+poignee POUR TOUJOURS -- porte fermee, camera scriptee, joueur coince derriere les barres. `TRY_SOUND_MAX` (12 s)
+enchaine quoi qu'il arrive. Genereux : il ne doit jamais se declencher sur un son qui a simplement de la marge.
+
+**Pas de son du tout** (asset absent) : on retombe sur la fin de l'animation, qui existe toujours. Une scene ne
+doit pas dependre d'un asset pour se jouer.
+
+### A faire dans Studio
+
+Rien. `TRY_OPEN_TIMES` decide toujours du nombre d'essais -- c'est maintenant un nombre de SONS.
+
 ## 0.0.634 — La porte s'ouvre quand le geste de poignee finit, plus quand une autre animation le veut bien
 
 Il y avait un temps mort entre la fin du geste de poignee et l'ouverture. Le grand-pere avait fini de se battre
