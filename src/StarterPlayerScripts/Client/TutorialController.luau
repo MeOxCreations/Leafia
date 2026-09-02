@@ -14,6 +14,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
@@ -909,13 +910,38 @@ local function playGrandpa()
 	-- LES DEUX MOMENTS DE LA PORTE, tenus par l'animation. `GetMarkerReachedSignal` est une lecture LOCALE de la
 	-- piste en cours : contrairement a `GetKeyframeSequenceAsync`, il ne part pas sur le reseau et ne peut donc
 	-- pas rater son coup pour toute une session.
-	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_PRE_EVENT):Connect(preOpenDoor)
+	-- L'ENTREBAILLEMENT N'EST PLUS ICI. Il part desormais a la fin du geste de poignee, ou il a lieu vraiment.
+	-- Le rebrancher sur ce marqueur relancerait le demi-battement en plein milieu de la scene, sur une porte deja
+	-- ouverte -- `swingDoor` repart toujours de la pose FERMEE.
+	--
+	-- La GRANDE ouverture, elle, reste tenue par l'animation : c'est le grand-pere qui pousse le battant, donc
+	-- c'est son geste qui dit quand.
 	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_START_EVENT):Connect(openDoor)
 	-- C'EST LA FIN DE L'ANIMATION QUI TERMINE LA SCENE. Une duree en dur et une animation finissent toujours par
 	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.
 	track.Stopped:Connect(endScene)
 	track:Play()
 	checkAnimMoved(model :: Model, TutorialConfigs.GRANDPA_ANIM)
+end
+
+-- ETEINT UN SON EN FONDU, puis le detruit. SoundUtils rend des CLONES : celui-ci nous appartient, on peut donc
+-- le tuer sans priver personne.
+--
+-- Un `Stop()` sec sur un bruit de poignee s'entend comme un cable arrache. Un fondu court fait la meme chose
+-- sans le clic.
+local function fadeOutSound(sound: Sound?, seconds: number)
+	if not (sound and sound.Parent) then
+		return
+	end
+	local tween = TweenService:Create(sound, TweenInfo.new(seconds), { Volume = 0 })
+	tween.Completed:Connect(function()
+		-- `sound.Parent` : SoundUtils a pu le detruire tout seul entre-temps (fin naturelle du son).
+		if sound.Parent then
+			sound:Stop()
+			sound:Destroy()
+		end
+	end)
+	tween:Play()
 end
 
 -- IL S'ACHARNE SUR LA POIGNEE. Entre les coups et l'ouverture : le grand-pere se bat avec sa vieille porte.
@@ -974,9 +1000,18 @@ local function playTryOpen()
 			return
 		end
 		chained = true
-		-- LE SON CONTINUE. Il dure plus longtemps que le geste, et le couper net s'entend comme un bug -- alors
-		-- qu'il deborde sur l'ouverture sans deranger personne. SoundUtils detruit le clone tout seul a la fin.
+		-- LE BRUIT DE POIGNEE S'ETEINT. Il dure plus longtemps que le geste : laisse tourner, il grince PENDANT
+		-- que la porte s'ouvre -- deux bruits de porte en meme temps, dont un qui raconte le contraire de l'autre.
+		fadeOutSound(trySound, TutorialConfigs.TRY_SOUND_FADE)
 		trySound = nil
+
+		-- ET LA PORTE PART TOUT DE SUITE. C'est le changement : elle attendait un marqueur de l'animation du
+		-- GRAND-PERE, qui ne commence qu'apres. Il fallait donc que sa piste se charge, demarre, et atteigne son
+		-- marqueur -- un temps mort ou plus rien ne se passait alors que le geste, lui, etait fini.
+		--
+		-- Le declencheur juste est la FIN DU GESTE : c'est le moment ou il a reussi a ouvrir, et c'est ce que le
+		-- joueur vient de voir. Un marqueur dans une autre animation ne peut que se decaler par rapport a lui.
+		preOpenDoor()
 		playGrandpa()
 	end)
 	track:Play()

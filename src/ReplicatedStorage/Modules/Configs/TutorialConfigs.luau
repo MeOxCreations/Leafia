@@ -292,6 +292,12 @@ return {
 	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte. Il va JUSQU'AU BOUT, meme si le geste se
 	-- termine avant : un bruit coupe net s'entend comme un bug, alors qu'il deborde ici sans deranger personne.
 	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
+	-- FONDU DE SORTIE du bruit de poignee, quand le geste s'acheve. Il dure plus longtemps que l'animation :
+	-- coupe NET il claque, laisse tourner il grince par-dessus l'ouverture de la porte -- deux bruits de porte en
+	-- meme temps, dont un qui raconte le contraire de l'autre.
+	--
+	-- Court : c'est une coupure adoucie, pas un fondu qu'on doit entendre.
+	TRY_SOUND_FADE = 0.3,
 	-- IL S'Y REPREND. Une seule secousse se lit comme une porte un peu dure ; deux, comme une porte qui RESISTE
 	-- et un vieux qui s'acharne -- ce qui est l'histoire qu'on raconte. C'est du rythme, donc ca se juge a
 	-- l'ecran : le nombre est ici pour se regler sans toucher au code.

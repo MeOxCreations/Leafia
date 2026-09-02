@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.634 — La porte s'ouvre quand le geste de poignee finit, plus quand une autre animation le veut bien
+
+Il y avait un temps mort entre la fin du geste de poignee et l'ouverture. Le grand-pere avait fini de se battre
+avec la porte, et il ne se passait plus rien pendant une seconde.
+
+**La cause : l'entrebaillement etait declenche par un marqueur de l'animation du GRAND-PERE**, qui ne commence
+qu'apres. Il fallait donc que sa piste se charge, demarre, et atteigne son marqueur -- tout ca APRES que le geste
+soit termine.
+
+Le declencheur juste est la FIN DU GESTE : c'est le moment ou il reussit a ouvrir, et c'est ce que le joueur
+vient de voir. Un marqueur pose dans une AUTRE animation ne peut que se decaler par rapport a lui, et se
+redecalera a chaque retouche de l'une ou de l'autre.
+
+La GRANDE ouverture, elle, reste tenue par l'animation du grand-pere : c'est lui qui pousse le battant, donc
+c'est son geste qui dit quand. Ce marqueur-la est au bon endroit.
+
+Le marqueur d'entrebaillement n'est plus branche. Le laisser relancerait le demi-battement en plein milieu de la
+scene, sur une porte deja ouverte -- `swingDoor` repart toujours de la pose FERMEE.
+
+### Le bruit de poignee s'eteint en fondu
+
+Il dure plus longtemps que le geste. Laisse tourner, il grince PENDANT que la porte s'ouvre : deux bruits de
+porte en meme temps, dont un qui raconte le contraire de l'autre.
+
+Un `Stop()` sec s'entendrait comme un cable arrache. Un fondu court (`TRY_SOUND_FADE`, 0.3 s) fait la meme chose
+sans le clic.
+
+Le son de la porte, lui, etait deja joue au premier mouvement du battant -- il tombe donc pile, maintenant que ce
+mouvement arrive au bon moment.
+
+### A faire dans Studio
+
+Rien. Le marqueur `DOOR_PRE_EVENT` peut rester dans l'animation, il n'est simplement plus ecoute.
+
 ## 0.0.633 — La tete du grand-pere tangue doucement
 
 Un balancement gauche-droite de 4 degres, tres lent : un aller-retour complet en une dizaine de secondes.
