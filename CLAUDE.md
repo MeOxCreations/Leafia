@@ -1008,6 +1008,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   de la complexite pour un gain qu'on ne saurait meme pas voir. Meme famille que "un drop de FPS vu DANS Studio
   n'est pas forcement un bug du jeu" : mesurer AVANT de corriger.
 
+- **Un fichier ouvert depuis longtemps dans l'editeur rend TOUT son buffer a la sauvegarde, pas seulement la ligne
+  qu'on vient de toucher.** Vecu sur `ButterflyConfigs` : deux couleurs modifiees, et le fichier est reparti deux
+  commits en arriere d'un coup. `FLARE_NAME` avait disparu alors que le controller le lit toujours -- la
+  comparaison se faisait donc contre `nil`, et la trainee du papillon n'etait PLUS JAMAIS teintee, sans la moindre
+  erreur ni le moindre log. Symptome trompeur au possible : ca ressemble a un bug de la feature qu'on vient
+  d'ecrire (on va relire la recherche d'emetteur, la ColorSequence, le rangement dans l'Attachment) alors que
+  c'est la CONFIG qui a recule sous les pieds du code. Le tell qui tranche en une commande : `git diff` sur le
+  fichier -- il montre des blocs SUPPRIMES qu'on n'a pas touches. Reflexe : avant de sauvegarder un fichier qu'on
+  n'a pas rouvert depuis plusieurs commits, le RECHARGER ; et lire le diff avant de committer, toujours. Meme
+  famille que Rojo qui ecrase Studio avec le disque local -- dans les deux cas, un etat perime remplace un etat
+  recent en silence, et le code perime se lit comme du code valide.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
