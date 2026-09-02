@@ -2204,6 +2204,53 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.641 — Un repere au sol montre ou est la tondeuse
+
+"START THE MOWER" dit QUOI faire. Il ne dit pas OU aller -- et chercher un objet dans un jardin qu'on decouvre
+est exactement le moment ou l'on perd un joueur.
+
+Un repere plat apparait maintenant AUX PIEDS du joueur et pointe vers la tondeuse libre la plus proche. Il le
+suit partout, il tourne avec le monde, et il s'efface tout seul quand on arrive (14 studs).
+
+### Pourquoi ni une fleche posee, ni un trait
+
+Une fleche plantee dans le decor se lit mal : vue de face elle disparait, vue de dessus elle ment sur la
+distance. Un trait (Beam) entre le joueur et la cible traverse les murs, et il demande deux Attachments a tenir
+a jour de chaque cote -- c'etait le `Assets/Effects/Tutorial/Arrow` pose dans Studio, que rien n'utilisait.
+
+Un repere PLAT centre sur le joueur n'a aucun des deux problemes : toujours dans le cadre, dependant d'aucun
+objet, et il continue de designer la bonne direction quel que soit l'angle de la camera.
+
+### Le mesh est celui de la tondeuse
+
+`MarkerDirection`, le demi-cercle avec la fleche. Reutilise EXPRES : le joueur a deja appris ce que ce dessin
+veut dire en conduisant, et un deuxieme dessin pour la meme idee serait un deuxieme apprentissage pour rien.
+
+Il garde son propre chemin dans le code malgre tout. Les deux usages n'ont rien a voir -- l'un montre un
+braquage, l'autre une direction a prendre -- et le jour ou l'un change de dessin, l'autre ne doit pas suivre.
+
+### Nouveau module
+
+`Client/Utils/GroundGuide.luau` : `point(position)` a chaque image, `hide()`, `destroy()`. Reutilisable tel quel
+pour le seau, le rateau ou n'importe quel objet a retrouver.
+
+`MowController.freeMowerPosition()` dit ou est la machine libre la plus proche. SANS rayon, contrairement a la
+detection du prompt : celle-la repond "puis-je la prendre maintenant", celle-ci repond "ou dois-je aller". Les
+borner pareil rendrait le guidage inutile -- il ne s'allumerait qu'une fois arrive.
+
+### Ce qui se regle a l'oeil
+
+En tete de `GroundGuide.luau` : `SCALE` (2.2), `YAW` (180), `HEIGHT` (-2.85, la hauteur sous le joueur),
+`ARRIVE_DIST` (14) et `SHOWN_TRANSPARENCY` (0.15).
+
+`YAW` en particulier ne se DEDUIT pas : il depend de la facon dont le mesh a ete modelise. Si la fleche pointe a
+l'oppose de la tondeuse, c'est ce nombre qu'on tourne de 180.
+
+### A faire dans Studio
+
+Rien. Mais `MarkerDirection` doit exister dans la place TUTORIAL sous `ReplicatedStorage.Assets.Contents` --
+Rojo ne synchronise pas les Assets. Absent, le guide ne s'affiche pas et le DIT une fois dans la console.
+
 ## 0.0.640 — Le joueur ne marche plus de travers apres la scene d'introduction
 
 Une fois la scene finie, on controlait un personnage tordu. Ca ressemblait a une animation jouee en boucle ; ce

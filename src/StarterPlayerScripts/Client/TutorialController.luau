@@ -31,6 +31,7 @@ local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfig
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
+local GroundGuide = require(script.Parent.Utils.GroundGuide)
 local ButterflyController = require(script.Parent.ButterflyController)
 -- LU, JAMAIS PILOTE : le didacticiel demande seulement si la machine tourne, pour savoir si sa tache est faite.
 -- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
@@ -1365,8 +1366,29 @@ local function step(dt: number)
 	--
 	-- TESTE ICI, EN HAUT, avant les retours anticipes qui suivent : ils sortent des que la porte n'est plus a
 	-- portee, et demarrer la tondeuse n'a plus rien a voir avec la porte -- le joueur est deja parti.
+	-- ON MONTRE OU EST LA MACHINE, tant que la tache est de la demarrer.
+	--
+	-- Un objectif ecrit dit QUOI faire, jamais OU aller. Sur un premier chantier, "START THE MOWER" ne veut rien
+	-- dire tant qu'on n'a pas trouve la tondeuse -- et chercher un objet dans un jardin qu'on decouvre est
+	-- exactement le moment ou l'on perd un joueur.
+	--
+	-- Le repere se cache tout seul en arrivant : le seuil vit dans GroundGuide, pas ici, sinon deux seuils
+	-- finiraient par se contredire.
+	if mowerTaskShown and not mowerTaskDone then
+		local where = MowController.freeMowerPosition()
+		if where then
+			GroundGuide.point(where)
+		else
+			GroundGuide.hide()
+		end
+	end
+
 	if mowerTaskShown and not mowerTaskDone and MowController.isRunning() then
 		mowerTaskDone = true
+		-- LE GUIDE S'ETEINT AVEC LA TACHE. Il ne se cacherait pas tout seul : le joueur TIENT la machine, donc
+		-- elle n'est plus "libre" et `freeMowerPosition` ne la rend plus -- on ne repasserait jamais par le test
+		-- de distance qui l'efface.
+		GroundGuide.hide()
 		TaskBannerHandler.setDone(1)
 		task.delay(TutorialConfigs.LAWN_TASK_DELAY, function()
 			TaskBannerHandler.add({
@@ -1560,6 +1582,7 @@ end
 
 --- Coupe tout : boucle, halo, prompt et touche. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 function TutorialController.stop()
+	GroundGuide.destroy()
 	if conn then
 		conn:Disconnect()
 		conn = nil

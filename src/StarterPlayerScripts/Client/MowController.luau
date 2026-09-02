@@ -1481,6 +1481,39 @@ local function update(dt: number)
 	end
 end
 
+--- OU est la tondeuse LIBRE la plus proche ? Rend sa position, ou nil s'il n'y en a aucune.
+---
+--- SANS RAYON, contrairement a la detection du prompt : celle-la repond "puis-je la prendre MAINTENANT",
+--- celle-ci repond "ou dois-je aller". Borner la seconde par le rayon de la premiere rendrait le guidage
+--- inutile -- il ne s'allumerait qu'une fois arrive.
+---
+--- Rend une POSITION et non le Model : l'appelant veut savoir ou aller, pas manipuler la machine.
+function MowController.freeMowerPosition(): Vector3?
+	local character = player.Character
+	local rootChild = if character then character:FindFirstChild("HumanoidRootPart") else nil
+	if not (rootChild and rootChild:IsA("BasePart")) then
+		return nil
+	end
+	local from = (rootChild :: BasePart).Position
+	local best: Vector3? = nil
+	local bestDist = math.huge
+	for _, model in ipairs(mowers) do
+		if model:GetAttribute(CARRIED_ATTRIBUTE) == nil then
+			local root = rootOf(model)
+			if root then
+				local d = root.Position - from
+				-- HORIZONTALE : une tondeuse un etage plus bas n'est pas "loin", elle est ailleurs. La hauteur ne
+				-- dit rien du trajet a faire.
+				local dist = math.sqrt(d.X * d.X + d.Z * d.Z)
+				if dist < bestDist then
+					bestDist, best = dist, root.Position
+				end
+			end
+		end
+	end
+	return best
+end
+
 --- La tondeuse que le joueur pousse est-elle DEMARREE ?
 ---
 --- Expose pour le didacticiel, qui doit savoir quand la tache "demarrer la tondeuse" est accomplie. Il LIT l'etat
