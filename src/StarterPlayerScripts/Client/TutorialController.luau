@@ -14,7 +14,6 @@ local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
@@ -910,38 +909,13 @@ local function playGrandpa()
 	-- LES DEUX MOMENTS DE LA PORTE, tenus par l'animation. `GetMarkerReachedSignal` est une lecture LOCALE de la
 	-- piste en cours : contrairement a `GetKeyframeSequenceAsync`, il ne part pas sur le reseau et ne peut donc
 	-- pas rater son coup pour toute une session.
-	-- L'ENTREBAILLEMENT N'EST PLUS ICI. Il part desormais a la fin du geste de poignee, ou il a lieu vraiment.
-	-- Le rebrancher sur ce marqueur relancerait le demi-battement en plein milieu de la scene, sur une porte deja
-	-- ouverte -- `swingDoor` repart toujours de la pose FERMEE.
-	--
-	-- La GRANDE ouverture, elle, reste tenue par l'animation : c'est le grand-pere qui pousse le battant, donc
-	-- c'est son geste qui dit quand.
+	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_PRE_EVENT):Connect(preOpenDoor)
 	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_START_EVENT):Connect(openDoor)
 	-- C'EST LA FIN DE L'ANIMATION QUI TERMINE LA SCENE. Une duree en dur et une animation finissent toujours par
 	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.
 	track.Stopped:Connect(endScene)
 	track:Play()
 	checkAnimMoved(model :: Model, TutorialConfigs.GRANDPA_ANIM)
-end
-
--- ETEINT UN SON EN FONDU, puis le detruit. SoundUtils rend des CLONES : celui-ci nous appartient, on peut donc
--- le tuer sans priver personne.
---
--- Un `Stop()` sec sur un bruit de poignee s'entend comme un cable arrache. Un fondu court fait la meme chose
--- sans le clic.
-local function fadeOutSound(sound: Sound?, seconds: number)
-	if not (sound and sound.Parent) then
-		return
-	end
-	local tween = TweenService:Create(sound, TweenInfo.new(seconds), { Volume = 0 })
-	tween.Completed:Connect(function()
-		-- `sound.Parent` : SoundUtils a pu le detruire tout seul entre-temps (fin naturelle du son).
-		if sound.Parent then
-			sound:Stop()
-			sound:Destroy()
-		end
-	end)
-	tween:Play()
 end
 
 -- IL S'ACHARNE SUR LA POIGNEE. Entre les coups et l'ouverture : le grand-pere se bat avec sa vieille porte.
@@ -968,79 +942,44 @@ local function playTryOpen()
 	end
 	tryTrack = track
 	track.Priority = Enum.AnimationPriority.Action
-	-- BOUCLEE, et c'est ce qui renverse le rapport de force. Le geste ne compte plus ses passages : il TOURNE, et
-	-- c'est le SON qui dit quand il s'arrete. Une animation courte et un son long ne peuvent donc plus se
-	-- desynchroniser -- retoucher l'un n'oblige plus a recaler l'autre.
-	track.Looped = true
+	track.Looped = false
+	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, SCENE_2D)
 	-- ON SE RAPPROCHE, LENTEMENT, pendant qu'il se bat avec la poignee. L'image se resserre sans qu'on s'en rende
 	-- compte : la tension monte toute seule, sans qu'aucun evenement ne la signale.
 	pushScene(TutorialConfigs.TRY_PUSH, TutorialConfigs.TRY_PUSH_TIME)
 	checkAnimMoved(model :: Model, TutorialConfigs.TRY_OPEN_ANIM)
 
+	-- IL S'ACHARNE PLUSIEURS FOIS. La piste se relance sur sa propre fin plutot que sur des delais poses cote a
+	-- cote : une secousse dure ce que dure l'animation, et ca reste vrai si on la retouche dans l'editeur.
 	local attempts = 0
 	local chained = false
-
-	-- IL A FINI DE SE BATTRE. Appele quand le DERNIER son s'acheve, jamais avant.
-	local function finish()
+	track.Stopped:Connect(function()
 		if chained then
 			return
 		end
-		chained = true
-		track:Stop(TutorialConfigs.TRY_SOUND_FADE)
-		fadeOutSound(trySound, TutorialConfigs.TRY_SOUND_FADE)
-		trySound = nil
-
-		-- ET LA PORTE PART. Le declencheur est la fin du BRUIT DE SERRURE : c'est lui qui raconte l'effort, et
-		-- c'est donc lui qui dit quand l'effort a paye. Avant, l'ouverture attendait un marqueur dans
-		-- l'animation du GRAND-PERE, qui ne commence qu'apres -- d'ou un temps mort ou plus rien ne se passait.
-		preOpenDoor()
-		playGrandpa()
-	end
-
-	-- UNE TENTATIVE = UN SON, et le geste tourne pendant tout ce temps.
-	local attempt: () -> ()
-	attempt = function()
-		-- LA SCENE A PU AVANCER PENDANT LE SOUFFLE. `openDoor` remet `tryTrack` a nil en coupant les pistes de la
-		-- porte : sans ce test, une secousse repartirait pendant l'ouverture, sur des parts dont l'angle est
-		-- desormais ecrit par le code.
-		if tryTrack ~= track or chained then
+		attempts += 1
+		if attempts < TutorialConfigs.TRY_OPEN_TIMES then
+			task.delay(TutorialConfigs.TRY_OPEN_GAP, function()
+				-- LA SCENE A PU AVANCER PENDANT LE SOUFFLE. `openDoor` remet `tryTrack` a nil en coupant les
+				-- pistes de la porte : sans ce test, une secousse repartirait pendant l'ouverture, sur des parts
+				-- dont l'angle est desormais ecrit par le code.
+				if tryTrack ~= track then
+					return
+				end
+				-- Le bruit de poignee repart avec le geste. Les clones se superposent proprement : celui d'avant
+				-- finit de s'eteindre pendant que le nouveau demarre, ce qui s'entend comme un vieux qui insiste.
+				trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, SCENE_2D)
+				track:Play()
+			end)
 			return
 		end
-		attempts += 1
-		local sound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, SCENE_2D)
-		trySound = sound
-		track:Play()
-
-		local last = attempts >= TutorialConfigs.TRY_OPEN_TIMES
-		local function nextStep()
-			if tryTrack ~= track or chained then
-				return
-			end
-			if last then
-				finish()
-			else
-				-- IL SOUFFLE ENTRE DEUX ESSAIS. Le geste s'arrete pendant la pause : un vieux qui s'acharne
-				-- reprend son souffle, il ne secoue pas la poignee dans le vide.
-				track:Stop(TutorialConfigs.TRY_SOUND_FADE)
-				task.delay(TutorialConfigs.TRY_OPEN_GAP, attempt)
-			end
-		end
-
-		if sound then
-			sound.Ended:Once(nextStep)
-			-- FILET. `Ended` ne tire jamais sur un son qui n'a pas charge, ou qui serait boucle par erreur : la
-			-- scene resterait alors bloquee sur la poignee POUR TOUJOURS, porte fermee et joueur coince derriere
-			-- les barres. Un systeme qui peut echouer en silence a besoin d'une sortie.
-			task.delay(TutorialConfigs.TRY_SOUND_MAX, nextStep)
-		else
-			-- PAS DE SON DU TOUT : on retombe sur la fin de l'animation, qui existe toujours. Une scene ne doit
-			-- pas dependre d'un asset pour se jouer.
-			track.Looped = false
-			track.Stopped:Once(nextStep)
-		end
-	end
-
-	attempt()
+		chained = true
+		-- LE SON CONTINUE. Il dure plus longtemps que le geste, et le couper net s'entend comme un bug -- alors
+		-- qu'il deborde sur l'ouverture sans deranger personne. SoundUtils detruit le clone tout seul a la fin.
+		trySound = nil
+		playGrandpa()
+	end)
+	track:Play()
 end
 
 -- UN COUP : la porte tremble et on entend le choc. Appele une fois par marqueur de l'animation du joueur, donc

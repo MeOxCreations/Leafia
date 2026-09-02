@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.636 — Retour a l'ancien enchainement de la porte
+
+Annule 0.0.634 et 0.0.635. La porte revient exactement a ce qu'elle etait avant : le geste de poignee se
+relance sur sa propre fin, le bruit de serrure deborde par-dessus, et l'entrebaillement repart du marqueur
+DOOR_PRE_EVENT dans l'animation du grand-pere.
+
+Retire :
+
+- TRY_SOUND_FADE et TRY_SOUND_MAX de TutorialConfigs
+- le helper fadeOutSound et l'import TweenService de TutorialController
+- l'appel a preOpenDoor a la fin du geste
+
+Les deux entrees annulees restent au-dessus : le CHANGELOG ne s'efface pas, il se corrige en avancant.
+
 ## 0.0.635 — C'est le BRUIT DE SERRURE qui mene le geste de poignee, plus l'animation
 
 Le geste durait ce que durait l'animation, et le son trainait par-dessus ou se coupait trop tot. On calait donc
