@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.631 — La tete du grand-pere se deplie en arrivant
+
+Elle demarre ecrasee a plat -- hauteur zero, largeur pleine -- puis s'ouvre en rebondissant.
+
+`Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant, et c'est ce depassement qui
+fait la matiere molle. `Back` ne depasserait qu'une fois (un rebond sec), `Quad` n'irait que jusqu'a la cible et
+ce serait un simple agrandissement.
+
+La duree est volontairement longue (0.75 s) : sous ~0.4 s, `Elastic` n'a pas le temps d'osciller et rend la meme
+chose qu'un ease ordinaire, en plus cher.
+
+Elle grandit depuis son CENTRE : le haut et le bas s'ecartent ensemble, ce qui se lit comme un DEPLIAGE. Ancree
+en bas, elle POUSSERAIT vers le haut -- un autre geste.
+
+Et un souffle de retard avant de partir : le rideau vient d'apparaitre, deplier pile a l'image zero se perdrait
+dans son propre fondu d'arrivee.
+
+### Le piege, et il etait deja dans le journal
+
+Le visage etait en **`ScaleType = Fit`**. Une image en `Fit` conserve ses proportions et se borne au PLUS PETIT
+cote du cadre : **elle ne sait que grossir et rapetisser, elle ne peut pas se deformer.** Ecraser sa hauteur
+aurait donc fait RETRECIR la tete entiere au lieu de l'aplatir.
+
+Il passe en `Stretch`. C'est la troisieme fois que ce piege se presente dans ce projet -- les feuilles du
+chargement, puis le marqueur du monde, maintenant la tete.
+
+Le prix : la tete prend les proportions de son cadre, donc un peu plus fine ou plus large selon le format
+d'ecran. C'est ce que coute la deformation, et c'est invisible sur les formats courants.
+
+### A faire dans Studio
+
+Rien. `FACE_POP_TIME` (0.75) pour la duree du rebond, `FACE_POP_DELAY` (0.15) pour le retard au demarrage.
+
 ## 0.0.630 — Le bandeau du titre se fond dans le ciel au lieu de s'arreter net
 
 Troisieme point de `BANNER_FADE` : **(0.897, 0.319) -> (0.798, 0.756)**.

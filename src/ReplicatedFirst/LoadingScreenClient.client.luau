@@ -220,6 +220,18 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local FACE_FRONT_HALF = "rbxassetid://95027481047570"
 	local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
 	local FACE_SIZE = UDim2.fromScale(0.133, 0.229)
+	-- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
+	--
+	-- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement
+	-- qui fait la matiere molle. `Back` depasserait une seule fois (un rebond sec), `Quad` n'irait que jusqu'a la
+	-- cible et ce serait un simple agrandissement.
+	--
+	-- Assez long pour qu'on VOIE les oscillations : sous ~0.4 s, Elastic n'a pas le temps d'osciller et rend la
+	-- meme chose qu'un ease ordinaire, en plus cher.
+	local FACE_POP_TIME = 0.75
+	-- Un souffle avant de partir. Le rideau vient d'apparaitre : deplier pile a l'image zero, ca se perd dans son
+	-- propre fondu d'arrivee.
+	local FACE_POP_DELAY = 0.15
 	-- Ecart entre deux clignements, plus du hasard. Sans hasard, un clignement toutes les N secondes pile se lit
 	-- comme un metronome -- exactement ce qu'un vivant ne fait pas.
 	local FACE_BLINK_EVERY = 3.2
@@ -501,12 +513,35 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	face.Name = "OldManFace"
 	face.BackgroundTransparency = 1
 	face.Image = FACE_FRONT
-	face.ScaleType = Enum.ScaleType.Fit
+	-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions et borne l'image par le PLUS PETIT cote du
+	-- cadre : ecraser sa hauteur ferait RETRECIR la tete entiere au lieu de l'aplatir. Une image en `Fit` ne sait
+	-- que grossir et rapetisser -- elle ne peut pas se deformer, par construction. Piege deja paye deux fois dans
+	-- ce projet, sur les feuilles du chargement puis sur le marqueur du monde.
+	--
+	-- Le prix : la tete prend les proportions de son cadre, donc elle sera un peu plus fine ou plus large selon le
+	-- format d'ecran. C'est ce que coute la deformation, et c'est invisible sur les formats courants.
+	face.ScaleType = Enum.ScaleType.Stretch
 	face.AnchorPoint = Vector2.new(0.5, 0.5)
 	face.Position = UDim2.fromScale(0.5, 0.5)
-	face.Size = FACE_SIZE
+	-- A PLAT AU DEPART : hauteur zero, largeur pleine. Elle s'ouvre juste apres.
+	--
+	-- Elle grandit depuis son CENTRE (son point d'ancrage y est deja) : le haut et le bas s'ecartent ensemble, ce
+	-- qui se lit comme un depliage. Ancree en bas, elle POUSSERAIT vers le haut -- un autre geste, pas celui-la.
+	face.Size = UDim2.fromScale(FACE_SIZE.X.Scale, 0)
 	face.ZIndex = 5
 	face.Parent = curtain
+
+	-- LE DEPLIAGE. Une seule fois, a l'arrivee.
+	task.delay(FACE_POP_DELAY, function()
+		if not sg.Parent then
+			return
+		end
+		TweenService:Create(
+			face,
+			TweenInfo.new(FACE_POP_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+			{ Size = FACE_SIZE }
+		):Play()
+	end)
 
 	-- IL CLIGNE DES YEUX. Rien d'autre.
 	--
