@@ -189,6 +189,18 @@ local function spawnOne(
 			wing.Color = wingColor
 		end
 	end
+
+	-- LA TRAINEE PREND LA MEME TEINTE. Un papillon rose qui laisse une trainee blanche se lit comme deux objets
+	-- differents, pas comme un insecte qui brille.
+	--
+	-- On balaye TOUS les emetteurs de ce nom au lieu de prendre le premier : le jour ou il y en aura un par aile,
+	-- ils suivront sans qu'on ait a y revenir. `Color` d'un ParticleEmitter est une ColorSequence, jamais un
+	-- Color3 -- l'affecter directement leverait une erreur de type.
+	for _, d in model:GetDescendants() do
+		if d:IsA("ParticleEmitter") and d.Name == ButterflyConfigs.FLARE_NAME then
+			d.Color = ColorSequence.new(wingColor)
+		end
+	end
 	-- Le point de depart vient de la zone, ou est impose (papillon de scene).
 	local start = at or (if zone then spawnPoint(zone, height) else Vector3.zero)
 	-- IL PART DEJA TOURNE VERS SON BUT quand il en a un : demarrer sur un cap au hasard le ferait faire demi-tour

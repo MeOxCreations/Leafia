@@ -206,6 +206,13 @@ return {
 	-- Les parts a teinter. Le reste du modele (corps, antennes) garde sa couleur : c'est la teinte des AILES qui
 	-- distingue une espece, pas celle du corps.
 	WING_PARTS = { "Aile1", "Aile2" },
+	-- L'EMETTEUR DE PARTICULES prend la MEME teinte que les ailes. Il vit dans une Attachment du modele, et il
+	-- etait blanc : un papillon rose qui laisse une trainee blanche se lit comme deux objets differents, pas
+	-- comme un insecte qui brille.
+	--
+	-- Cherche par son NOM dans tout le modele, pas par un chemin : son rangement dans l'Attachment est un detail
+	-- de Studio, et exiger un chemin casserait le jour ou on le deplace.
+	FLARE_NAME = "Flare",
 	-- Une couleur tiree au hasard par papillon. Le blanc reste dans le lot -- c'est une vraie couleur de
 	-- papillon, il ne fallait juste pas que ce soit la SEULE.
 	--

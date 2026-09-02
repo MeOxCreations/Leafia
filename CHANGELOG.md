@@ -2204,6 +2204,56 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.633 — La tete du grand-pere tangue doucement
+
+Un balancement gauche-droite de 4 degres, tres lent : un aller-retour complet en une dizaine de secondes.
+
+Rien ne bouge sur cet ecran a part l'anneau. Une tete parfaitement immobile au centre se lit comme une image
+collee -- et sur un ecran qu'on regarde plusieurs secondes sans rien avoir a faire, l'oeil trouve toujours ce
+genre de detail.
+
+**FAIBLE ET LENT, les deux ensemble.** Une amplitude large ferait un metronome ; une amplitude faible mais rapide
+ferait un tremblement. C'est la LENTEUR qui rend le mouvement organique -- on ne doit pas pouvoir dire dans quel
+sens il part, seulement sentir que ca vit.
+
+Un SINUS, pas un aller-retour lineaire : il ralentit en arrivant a chaque bout et repart, ce qui est exactement ce
+que fait une tete qui balance. Un trajet lineaire claquerait aux deux extremites.
+
+### Une connexion en moins
+
+L'anneau avait sa boucle, le tangage en aurait demande une seconde. Les deux tournent maintenant dans la MEME :
+deux mouvements continus n'ont aucune raison d'avoir chacun leur connexion. Une de moins a brancher, une de moins
+a couper, et rien qui puisse survivre a l'autre.
+
+### A faire dans Studio
+
+Rien. `FACE_SWAY_ANGLE` (4 deg) et `FACE_SWAY_SPEED` (0.6) se reglent a l'oeil.
+
+## 0.0.632 — La trainee du papillon prend la couleur de ses ailes
+
+Le `ParticleEmitter` pose dans le modele (une Attachment, `Flare`) restait BLANC quel que soit le papillon. Un
+papillon rose qui laisse une trainee blanche se lit comme deux objets differents, pas comme un insecte qui
+brille.
+
+Il prend maintenant la meme teinte que les ailes, tiree en meme temps qu'elles.
+
+### Trois details qui evitent trois bugs
+
+**Cherche par son NOM, dans tout le modele.** Son rangement dans une Attachment est un detail de Studio :
+exiger un chemin casserait le jour ou on le deplace. Meme regle que partout ailleurs dans ce projet.
+
+**Tous les emetteurs de ce nom, pas le premier.** Le jour ou il y en aura un par aile, ils suivront sans qu'on
+ait a y revenir.
+
+**`ParticleEmitter.Color` est une `ColorSequence`, jamais un `Color3`.** L'affecter directement leverait une
+erreur de type -- et comme la couleur est tiree au hasard a l'apparition, ca ne casserait pas au premier essai
+mais au dixieme.
+
+### A faire dans Studio
+
+Rien -- tant que l'emetteur s'appelle `Flare`. Le renommer coupe la coloration EN SILENCE : la trainee reste
+blanche et rien ne le signale. Meme piege que `Aile1` / `Aile2`.
+
 ## 0.0.631 — La tete du grand-pere se deplie en arrivant
 
 Elle demarre ecrasee a plat -- hauteur zero, largeur pleine -- puis s'ouvre en rebondissant.

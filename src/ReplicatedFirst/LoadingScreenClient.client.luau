@@ -232,6 +232,14 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Un souffle avant de partir. Le rideau vient d'apparaitre : deplier pile a l'image zero, ca se perd dans son
 	-- propre fondu d'arrivee.
 	local FACE_POP_DELAY = 0.15
+	-- IL TANGUE, tres doucement, de gauche a droite. Rien ne bouge sur cet ecran a part l'anneau : une tete
+	-- parfaitement immobile au centre se lit comme une image collee.
+	--
+	-- FAIBLE ET LENT, les deux ensemble. Une amplitude large ferait un metronome ; une amplitude faible mais
+	-- rapide ferait un tremblement. C'est la LENTEUR qui rend le mouvement organique -- on ne doit pas pouvoir
+	-- dire dans quel sens il part, seulement sentir que ca vit.
+	local FACE_SWAY_ANGLE = 4 -- degres de chaque cote
+	local FACE_SWAY_SPEED = 0.6 -- radians par seconde : un aller-retour complet en une dizaine de secondes
 	-- Ecart entre deux clignements, plus du hasard. Sans hasard, un clignement toutes les N secondes pile se lit
 	-- comme un metronome -- exactement ce qu'un vivant ne fait pas.
 	local FACE_BLINK_EVERY = 3.2
@@ -500,13 +508,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	ring.ZIndex = 4
 	ring.Parent = curtain
 
-	local ringConn: RBXScriptConnection? = nil
-	ringConn = RunService.Heartbeat:Connect(function(dt: number)
-		-- Modulo 360 : sans lui, la rotation grandirait sans fin et finirait par perdre en precision sur un
-		-- chargement long.
-		ring.Rotation = (ring.Rotation + RING_SPEED * dt) % 360
-	end)
-
 	-- LE VISAGE, dedans. Il ne tourne PAS avec l'anneau -- il est enfant du rideau, pas de l'anneau : un visage
 	-- qui tourne avec le cercle serait la tete a l'envers une fois sur deux.
 	local face = Instance.new("ImageLabel")
@@ -530,6 +531,25 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	face.Size = UDim2.fromScale(FACE_SIZE.X.Scale, 0)
 	face.ZIndex = 5
 	face.Parent = curtain
+
+	-- UNE SEULE BOUCLE POUR LES DEUX. L'anneau tourne, la tete tangue : deux mouvements continus qui n'ont aucune
+	-- raison d'avoir chacun sa connexion. Une de moins a brancher, une de moins a couper, et rien qui puisse
+	-- survivre a l'autre.
+	local ringConn: RBXScriptConnection? = nil
+	do
+		local swayTime = 0
+		ringConn = RunService.Heartbeat:Connect(function(dt: number)
+			-- Modulo 360 : sans lui, la rotation grandirait sans fin et finirait par perdre en precision sur un
+			-- chargement long.
+			ring.Rotation = (ring.Rotation + RING_SPEED * dt) % 360
+
+			-- LE TANGAGE. Un sinus, donc il ne s'arrete jamais a un bout : il ralentit en arrivant et repart, ce
+			-- qui est exactement ce que fait une tete qui balance. Un aller-retour lineaire claquerait aux deux
+			-- extremites.
+			swayTime += dt
+			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE
+		end)
+	end
 
 	-- LE DEPLIAGE. Une seule fois, a l'arrivee.
 	task.delay(FACE_POP_DELAY, function()
