@@ -2204,6 +2204,50 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.640 — Le joueur ne marche plus de travers apres la scene d'introduction
+
+Une fois la scene finie, on controlait un personnage tordu. Ca ressemblait a une animation jouee en boucle ; ce
+n'en etait pas une.
+
+Le pas de cote (`Scene1_TocToc2_Animation`) est une pose TENUE : `playHolding` fige sa derniere image et la garde,
+expres, pour que le joueur reste decale pendant que le grand-pere sort. Sauf que **personne ne la relachait
+jamais**.
+
+Elle est en priorite **Action**, donc plus forte que la marche (Movement). Tenue apres la scene, elle ecrase les
+jambes pour le reste de la partie.
+
+Et ca ne se lit pas comme une animation oubliee : ca se lit comme des COMMANDES CASSEES. On va donc chercher du
+cote du deplacement, de la camera, de l'orientation du personnage -- partout sauf dans une pose de scene qu'on
+croyait terminee depuis longtemps.
+
+### Elle tombe avec le blocage, dans le meme geste
+
+`releaseScene` relache les poses AVANT de rendre les commandes.
+
+Pas a la fin de la replique du grand-pere : le probleme n'est pas la duree de la pose, c'est qu'elle SURVIVE a
+l'instant ou le joueur redevient un joueur. Toute pose tenue pendant qu'il peut marcher est fausse, quelle que
+soit la scene qui se joue encore autour de lui.
+
+### Les DEUX pistes, pas seulement le pas de cote
+
+Sans animation de pas de cote (asset absent, chargement rate), `playAside` sort avant d'avoir coupe les coups :
+c'est alors la pose des COUPS qui reste tenue, avec exactement le meme symptome. Une sortie de secours qui laisse
+le meme bug n'est pas une sortie de secours.
+
+Les surveillances de fin de piste sont coupees en meme temps -- une piste relachee avant sa fin laissait la
+sienne branchee, a tourner chaque image sur une animation qui ne joue plus.
+
+### Nouveau reglage
+
+`ASIDE_RELEASE_FADE` (0.35 s), et pas `KNOCK_ASIDE_FADE`. Les deux fondus n'ont rien a voir : l'un croise deux
+poses de scene, l'autre sort vers le deplacement normal. Un reglage partage par deux moments finit toujours par
+les opposer.
+
+### Au passage
+
+La camera, elle, etait deja rendue au joueur (`SceneCamera.exit`). C'est bien la pose qui donnait cette
+impression de vue faussee.
+
 ## 0.0.639 — Les sons vont jusqu'au bout : plus rien ne se coupe a 5 secondes
 
 La replique du grand-pere s'arretait au milieu. Ce n'etait ni le fichier, ni le scenario : `SoundUtils` DETRUISAIT

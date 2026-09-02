@@ -109,6 +109,9 @@ local knockAsideTrack: AnimationTrack? = nil -- le pas de cote, joue quand le gr
 -- le pas de cote : c'est le seul endroit qui sait quand le grand-pere part. Une variable de fonction evite de
 -- deplacer tout un bloc pour un seul appel, et l'appel reste garde par un test.
 local playAside: (() -> ())? = nil
+-- MEME MOTIF : `releaseScene` rend les commandes bien avant que `stopTrack` ne soit defini, et c'est pourtant la
+-- que les poses de scene doivent tomber.
+local releaseScenePoses: (() -> ())? = nil
 -- MEME MOTIF QUE `playAside` : la fermeture a besoin de `swingDoor`, defini bien plus bas, alors que c'est
 -- `endScene` -- plus haut -- qui sait quand le grand-pere se met en marche.
 local closeDoorBehind: (() -> ())? = nil
@@ -560,7 +563,21 @@ end
 -- RENDRE LA MAIN, pour de bon. Separe de `endScene` parce que le plan de sortie s'intercale entre les deux : le
 -- joueur reste bloque et les barres restent en place tant qu'on est encore au cinema.
 local function releaseScene()
-	-- LES JAMBES D'ABORD. La camera met SCENE_CAM_OUT a revenir ; si on rendait les controles seulement apres, le
+	-- LES POSES DE SCENE TOMBENT AVEC LE BLOCAGE, dans le meme geste.
+	--
+	-- Elles sont TENUES : `playHolding` fige la derniere image et la garde. En priorite Action, donc PLUS FORTE
+	-- que la marche (Movement) : gardee apres la scene, le joueur se deplace avec le corps de travers pour le
+	-- reste de la partie. Et ca ne se lit pas comme une animation oubliee -- ca se lit comme des COMMANDES
+	-- CASSEES, donc on va chercher le bug du cote du deplacement.
+	--
+	-- Ici et pas a la fin de la replique du grand-pere : le probleme n'est pas la duree de la pose, c'est qu'elle
+	-- survive a l'instant ou le joueur redevient un joueur. Toute pose tenue pendant qu'il peut marcher est
+	-- fausse, quelle que soit la scene qui se joue encore autour.
+	local release = releaseScenePoses
+	if release then
+		release()
+	end
+	-- LES JAMBES ENSUITE. La camera met SCENE_CAM_OUT a revenir ; si on rendait les controles seulement apres, le
 	-- joueur appuierait dans le vide pendant ce temps -- et une commande qui ne repond pas se lit comme un lag.
 	unfreezePlayer()
 	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
@@ -1175,6 +1192,25 @@ playAside = function()
 	-- Elle tient sa derniere image : il reste sur le cote au lieu de revenir en pose de repos.
 	playHolding(aside, function() end)
 	stopTrack(knockTrack, TutorialConfigs.KNOCK_ASIDE_FADE)
+end
+
+-- ON RELACHE TOUT CE QUE LA SCENE TENAIT SUR LE CORPS DU JOUEUR.
+--
+-- LES DEUX PISTES, pas seulement le pas de cote. Sans animation de pas de cote (asset absent, chargement rate),
+-- `playAside` sort avant d'avoir coupe les coups -- c'est alors la pose des COUPS qui reste tenue, avec
+-- exactement le meme symptome. Une sortie de secours qui laisse le meme bug n'est pas une sortie de secours.
+releaseScenePoses = function()
+	stopTrack(knockAsideTrack, TutorialConfigs.ASIDE_RELEASE_FADE)
+	stopTrack(knockTrack, TutorialConfigs.ASIDE_RELEASE_FADE)
+	knockAsideTrack = nil
+	knockTrack = nil
+	-- LES SURVEILLANCES AUSSI. Elles se coupent toutes seules en figeant leur piste, mais une piste relachee
+	-- AVANT d'avoir atteint sa fin laisse la sienne branchee -- et elle tournerait alors a chaque image pour le
+	-- reste de la partie, a surveiller une animation qui ne joue plus. Celui qui cree est celui qui nettoie.
+	for _, conn in holdConns do
+		conn:Disconnect()
+	end
+	table.clear(holdConns)
 end
 
 -- LE JOUEUR TOQUE, et c'est ce qui OUVRE la scene. Chaque marqueur de son animation donne un coup ; quand elle

@@ -504,6 +504,15 @@ return {
 	-- qui reste juste si on rallonge la cinematique. Il reste ce petit delai a regler parce que l'ordre doit
 	-- encore faire l'aller-retour et que le grand-pere met une fraction de seconde a demarrer pour de bon.
 	KNOCK_ASIDE_DELAY = 0.35,
+	-- FONDU DE RELACHEMENT de la pose de scene, quand les commandes reviennent au joueur.
+	--
+	-- SON PROPRE REGLAGE, et pas `KNOCK_ASIDE_FADE`. Les deux fondus n'ont rien a voir : celui-la est un
+	-- CROISEMENT entre deux poses de scene (les coups qui laissent la place au pas de cote), celui-ci est une
+	-- SORTIE vers le deplacement normal. Un reglage partage par deux moments finit toujours par les opposer.
+	--
+	-- Un peu plus long : le personnage se REDRESSE, et ca doit se lire comme un mouvement, pas comme un
+	-- claquement de doigts.
+	ASIDE_RELEASE_FADE = 0.35,
 
 	-- A quelle distance de la FIN on fige l'animation de coups, en secondes. Le gel doit tomber JUSTE AVANT la
 	-- derniere image : trop tot on coupe le dernier geste, trop tard on rate la fenetre et la piste reboucle.
