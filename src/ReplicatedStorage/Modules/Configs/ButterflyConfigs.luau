@@ -219,14 +219,15 @@ return {
 	-- Toutes choisies pour ressortir sur du VERT : le jardin est vert, et un papillon vert serait invisible.
 	-- C'est pour ca qu'il n'y en a pas dans la liste, meme si ca existe dans la nature.
 	--
-	-- NI NOIR NI COULEUR SOMBRE, pour la meme raison a l'envers : une aile sombre se lit comme une ombre ou un
-	-- trou dans le decor, pas comme un insecte. Toutes les teintes ci-dessous sont CLAIRES.
+	-- PAS DE NOIR, pour la meme raison a l'envers : une aile noire se lit comme une ombre ou un trou dans le
+	-- decor, pas comme un insecte. Le rose et le rouge ont ete FONCES a l'ecran -- ils tenaient trop de la
+	-- couleur fluo a cote des autres -- mais ils restent au-dessus du seuil ou l'aile devient une tache.
 	WING_COLORS = {
 		Color3.fromRGB(255, 255, 255), -- blanc
 		Color3.fromRGB(255, 214, 84), -- jaune
 		Color3.fromRGB(255, 146, 62), -- orange
-		Color3.fromRGB(255, 110, 160), -- rose
-		Color3.fromRGB(224, 78, 78), -- rouge
+		Color3.fromRGB(146, 83, 105), -- rose
+		Color3.fromRGB(155, 53, 53), -- rouge
 		Color3.fromRGB(140, 194, 255), -- bleu ciel
 		Color3.fromRGB(186, 142, 255), -- lavande
 	},

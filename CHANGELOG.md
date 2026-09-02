@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.638 — Le rose et le rouge des papillons foncent, et la config repart de la bonne version
+
+Les deux teintes tenaient trop de la couleur fluo a cote des autres. Foncees a l'ecran.
+
+### Et une reparation qui n'a rien a voir
+
+`ButterflyConfigs` avait ete REECRIT par une version perimee du fichier -- un editeur qui garde en memoire un
+etat d'avant deux commits et qui rend TOUT ce buffer a la sauvegarde, pas seulement la ligne qu'on vient de
+toucher. Trois blocs etaient repartis en arriere :
+
+- **`FLARE_NAME` avait disparu.** Le controller le lit toujours (`d.Name == ButterflyConfigs.FLARE_NAME`), donc
+  la comparaison se faisait contre `nil` : la trainee de particules n'etait PLUS JAMAIS teintee, sans la moindre
+  erreur. Un papillon rose avec une trainee blanche -- exactement le bug repare en 0.0.632.
+- **`LIFE_MIN` / `LIFE_MAX` etaient revenus**, alors que plus personne ne les lit. De la config morte, qui donne
+  a croire que les papillons meurent de vieillesse alors que le code ne le fait plus.
+- Les commentaires qui expliquent POURQUOI ils ne meurent plus et pourquoi ils reviennent identiques.
+
+Rien de tout ca ne produit d'erreur : le jeu tourne, les papillons volent, et seule la couleur d'une trainee
+change en silence.
+
+### Le reflexe a garder
+
+Un fichier ouvert depuis longtemps dans l'editeur ne contient pas forcement ce qu'il y a sur le disque. Avant de
+sauvegarder un fichier qu'on n'a pas touche depuis plusieurs commits, le RECHARGER. Et `git diff` avant de
+committer dit en trois lignes si on rend plus que ce qu'on croit.
+
 ## 0.0.637 — Le grand-pere explique ce qu'il veut, et le joueur recoit ses objectifs
 
 Il sortait de chez lui, marchait jusque devant sa porte, et... plus rien. Le joueur se retrouvait libre, sans
