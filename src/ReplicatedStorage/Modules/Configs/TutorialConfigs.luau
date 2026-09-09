@@ -406,7 +406,7 @@ return {
 		{ text = "Ah! There you are! How've you been?", emotion = "happy", hold = 2.2 },
 		{ text = "Right, listen... thanks for coming out!", emotion = "normal", hold = 2.5 },
 		{
-			text = "Since I retired I just haven't gotten around to mowing the lawn or looking after the garden.",
+			text = "I'm too old now, and my back hurts. I can't mow the lawn or take care of the garden.",
 			emotion = "sad",
 			hold = 5.9,
 		},

@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.642 — Le grand-pere parle avec des mots qu'un enfant comprend
+
+Il disait « Since I retired I just haven't gotten around to mowing the lawn or looking after the garden ».
+Deux problemes dans une seule phrase : « retired » est un mot d'adulte, et « haven't gotten around to » est une
+tournure qu'un gosse de dix ans ne lit pas. La ligne qui explique POURQUOI il a besoin de nous etait donc la
+moins comprise de toute la scene.
+
+Elle devient : « I'm too old now, and my back hurts. I can't mow the lawn or take care of the garden. »
+Meme sens, dit concretement -- trop vieux, mal au dos -- avec des mots du quotidien.
+
+DEPEND D'UN ASSET : la voix `Oldman_scene_speech_2` dit encore l'ancienne phrase. Il faut la reenregistrer,
+sinon le texte a l'ecran et la voix ne racontent plus la meme chose. Et apres le nouvel enregistrement,
+recaler les `hold` de `SPEECH2_LINES` : leur somme doit valoir la duree du nouveau fichier (14.68 s pour
+l'ancien).
+
 ## 0.0.641 — Un repere au sol montre ou est la tondeuse
 
 "START THE MOWER" dit QUOI faire. Il ne dit pas OU aller -- et chercher un objet dans un jardin qu'on decouvre
