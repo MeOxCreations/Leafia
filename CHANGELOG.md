@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.715 — La marche du grand-pere pointait sur l'ancienne animation
+
+`OLDMAN_WALK_ANIM` passe de `109013940658757` a `123299879163087` : celle qui tient la canne. L'ancienne jouait
+encore, ce qui explique tout -- il ne s'agissait pas d'un conflit de priorites, mais d'un ID perime.
+
+Elle sert aux DEUX marches : sa sortie de scene et son suivi du joueur.
+
+Deux choses a savoir sur la priorite, parce que le reglage fait dans l'editeur ne les dit pas :
+
+**Le code ECRASE la priorite de l'editeur.** Elle y est une suggestion : `track.Priority` est repose a chaque
+lecture, donc c'est la valeur de la config qui compte. Regler `Action4` dans l'editeur ne change rien.
+
+**Et elle doit rester SOUS `Action`**, ou vit son geste d'explication. En `Action4`, la marche gagnerait sur les
+bras et le torse : elle EFFACERAIT l'explication qu'elle est censee accompagner, et il traverserait sa cour sans
+plus rien raconter. L'empilement voulu est idle < marche < explication -- les jambes a la marche, le haut du
+corps a l'explication.
+
+Il n'y avait donc pas de confusion entre l'idle et la marche : l'idle est en `Idle`, la marche en `Movement`, et
+`Movement` gagne. Si la canne restait en pose d'idle pendant qu'il marchait, c'est que l'ANCIENNE animation ne la
+clait pas.
+
 ## 0.0.714 — Le grand-pere suit le joueur jusqu'a la tondeuse
 
 Une fois la consigne donnee, il ne reste plus plante devant sa porte : il emboite le pas au joueur qui part

@@ -649,10 +649,18 @@ return {
 	--
 	-- L'ID vit ICI, en code, et pas dans une Instance Animation : Rojo synchronise le code dans TOUTES les places,
 	-- les Instances non (`Animations` est en `$ignoreUnknownInstances`, il se recopie a la main place par place).
-	OLDMAN_WALK_ANIM = "rbxassetid://109013940658757",
+	OLDMAN_WALK_ANIM = "rbxassetid://123299879163087",
 	-- AU-DESSUS de son idle, qui tourne en permanence (AmbientAnimService, priorite `Idle`). En dessous ou a
 	-- EGALITE, Roblox melangerait les deux poses au lieu de choisir : on obtiendrait une marche "presque bonne".
 	-- Et comme l'idle continue dessous, il suffit d'ARRETER la marche pour qu'il revienne s'y poser.
+	--
+	-- CETTE VALEUR ECRASE CELLE DE L'EDITEUR. La priorite reglee dans l'editeur d'animation n'est qu'une
+	-- suggestion : le code la repose a chaque lecture, donc c'est CE nombre-la qui compte.
+	--
+	-- ET ELLE DOIT RESTER SOUS `Action`, ou vit son geste d'explication. En `Action4` la marche gagnerait sur les
+	-- bras et le torse, donc elle EFFACERAIT l'explication qu'elle est censee accompagner : il traverserait sa
+	-- cour sans plus rien raconter. L'empilement voulu est idle < marche < explication -- les jambes a la marche,
+	-- le haut du corps a l'explication.
 	OLDMAN_WALK_PRIORITY = Enum.AnimationPriority.Movement,
 	-- OU IL VA : une part posee dans Studio. Pas un point calcule -- le pas exact ou s'arrete un personnage dans
 	-- une scene se decide a l'oeil, pas par une formule, et le deplacer ne doit demander aucun code.
