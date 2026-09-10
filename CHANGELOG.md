@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.693 — La camera glisse vers une contre-plongee pendant qu'il marche
+
+Une fois le premier plan pose, la camera GLISSE vers un second, plus bas et plus proche, pendant que le
+grand-pere traverse sa cour. Un plan fixe pendant que quelqu'un marche est une PHOTO ; un plan qui bouge
+accompagne le mouvement, et c'est ce qui fait qu'on continue de regarder.
+
+| Reglage | Valeur | Role |
+|---|---|---|
+| `WALK_SHOT_IN` | 2.5 s | Duree du glissement. C'est elle qui donne le mouvement |
+| `WALK_SHOT_UP` | 2 (contre 7) | La camera descend, l'oeil presque au niveau du sol |
+| `WALK_SHOT_LOOK_UP` | 3.2 | Elle regarde plus haut : c'est ca qui fait la contre-plongee |
+| `WALK_SHOT_BACK` | 0.72 | Fraction du recul du premier plan -- elle se rapproche |
+| `WALK_SHOT_SIDE` | 1.5 | Decale vers l'arrivee, pour laisser de la place devant lui |
+
+**Les deux plans sortent de la MEME construction**, avec des reglages differents : meme axe, meme cote, meme
+point vise. Le passage de l'un a l'autre est donc un glissement, pas un changement de plan -- deux constructions
+separees auraient fini par diverger, et le saut a l'image se serait appele un faux raccord.
+
+**Le rapprochement est une FRACTION du recul, pas des studs.** Il suit ainsi l'ouverture du plan quand on eloigne
+le point d'arrivee dans Studio ; en studs, il serait juste sur une distance et faux sur toutes les autres.
+
+**Le second plan se calcule au moment ou l'on part vers lui**, pas a la fin de la scene : le joueur vient de se
+pousser sur le cote, et un cadre calcule sur sa position d'avant le sortirait du champ.
+
+En contre-plongee, le grand-pere parait plus grand et son trajet plus long. C'est le meme metre de cour, filme
+comme s'il en valait dix.
+
+## 0.0.694 — Plus de son fantome pour la replique d'arrivee
+
+`SPEECH2_SOUND` est retire : le fichier n'existe plus. Il ne restait qu'un avertissement de son introuvable a
+chaque scene -- et un warn sur un cas NORMAL finit par etre ignore, en emportant les vrais avec lui.
+
+Le TEXTE reste et avance tout seul sur ses `hold`, comme avant.
+
 ## 0.0.692 — Le demi-tour de l'animation reste au joueur
 
 Meme cause que la version precedente, autre grandeur : une animation qui fait PIVOTER le corps le tourne a

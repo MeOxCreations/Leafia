@@ -180,6 +180,33 @@ return {
 	-- rien dire le long du trajet. Un reglage garde apres un changement de sens est un reglage faux.
 	EXIT_SHOT_SIDE = 0,
 
+	-- ===== LE SECOND PLAN : IL MARCHE =====
+	-- Une fois le premier plan pose, la camera GLISSE vers un second, plus bas et plus proche, pendant que le
+	-- grand-pere traverse sa cour. Un plan fixe pendant que quelqu'un marche est une PHOTO ; un plan qui bouge
+	-- accompagne le mouvement, et c'est ce qui fait qu'on continue de regarder.
+	--
+	-- MEME GEOMETRIE que le premier -- meme axe, meme cote, meme point vise -- avec d'autres reglages : le passage
+	-- de l'un a l'autre est donc un glissement, pas un changement de plan. Deux constructions differentes auraient
+	-- donne un saut a l'image, ce qu'on appelle un faux raccord.
+	--
+	-- Duree du glissement. LONGUE : c'est elle qui donne le mouvement, et elle doit couvrir une bonne part de la
+	-- marche. Trop courte, la camera arrive avant lui et le plan redevient fixe.
+	WALK_SHOT_IN = 2.5,
+	-- LA CAMERA DESCEND (7 -> 2) : on passe d'un plan "un peu du dessus" a une CONTRE-PLONGEE, l'oeil presque au
+	-- niveau du sol. Le grand-pere y parait plus grand, et son trajet plus long -- c'est le meme metre de cour,
+	-- filme comme s'il en valait dix.
+	WALK_SHOT_UP = 2,
+	-- ET ELLE REGARDE PLUS HAUT que ce qu'elle vise d'habitude : c'est ce qui fait la contre-plongee. Camera basse
+	-- ET regard bas donnerait un plan rasant, pas une contre-plongee.
+	WALK_SHOT_LOOK_UP = 3.2,
+	-- ET ELLE SE RAPPROCHE. Fraction du recul du premier plan : 1 = meme distance, 0.7 = un tiers plus pres. En
+	-- fraction et pas en studs, pour que le rapprochement suive l'ouverture du plan quand on eloigne le point
+	-- d'arrivee dans Studio -- sinon il serait juste sur une distance et faux sur toutes les autres.
+	WALK_SHOT_BACK = 0.72,
+	-- Decalage le long du trajet, comme pour le premier plan. Positif = vers le point d'arrivee, ce qui laisse de
+	-- la place devant le marcheur.
+	WALK_SHOT_SIDE = 1.5,
+
 	-- ===== LE SON BAISSE PENDANT LA SCENE =====
 	-- Volume du reste du jeu pendant la cinematique, en fraction. 0.25 = un quart. Pas ZERO : un silence total
 	-- s'entend comme une coupure, et le monde a l'air de s'eteindre. On veut que l'oreille se tourne vers la
@@ -524,8 +551,9 @@ return {
 	-- arrivee : la marche se fait chez lui, image par image, et une duree devinee cote client se decalerait des
 	-- qu'on change sa vitesse ou la distance.
 	--
-	-- 2D comme le reste de la scene : une replique RACONTE, elle ne vient pas d'un point de la carte.
-	SPEECH2_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_2" },
+	-- PLUS DE FICHIER SON POUR CETTE REPLIQUE : elle a ete retiree, et le chemin avec elle. Il ne restait qu'un
+	-- avertissement de son introuvable a chaque scene -- un warn sur un cas NORMAL finit par etre ignore, et il
+	-- emporte les vrais avec lui. Le TEXTE, lui, reste : il avance tout seul sur les `hold` ci-dessous.
 	-- Il souffle en arrivant avant de parler. A zero il enchaine sans avoir repris son souffle -- et il vient de
 	-- traverser sa cour.
 	SPEECH2_DELAY = 0.6,

@@ -591,7 +591,12 @@ end
 -- On cadre le TRAJET, pas le marcheur : on vise le milieu entre le joueur et le point d'arrivee du grand-pere,
 -- et on recule d'autant qu'ils sont ecartes. Le plan n'a donc rien a suivre -- l'action entre dedans toute seule
 -- et la respiration de la camera reste intacte.
-local function exitShotCFrame(): CFrame?
+-- LES DEUX PLANS DE SORTIE SORTENT DE LA MEME CONSTRUCTION, avec des reglages differents : meme axe, meme cote,
+-- meme point vise. Le passage de l'un a l'autre est donc un GLISSEMENT et pas un changement de plan -- deux
+-- constructions separees auraient fini par diverger, et le saut a l'image se serait appele un faux raccord.
+type ShotTune = { up: number, lookUp: number, back: number, side: number }
+
+local function exitShotCFrame(tune: ShotTune): CFrame?
 	local root = getRoot()
 	if not root then
 		return nil
@@ -623,14 +628,30 @@ local function exitShotCFrame(): CFrame?
 	end
 
 	local spread = (root.Position - endPos).Magnitude
+	-- LE RECUL DE BASE, celui du premier plan. Le second en prend une FRACTION : c'est ce qui le rapproche sans
+	-- rien recalculer, et le rapprochement suit l'ouverture du plan si on eloigne le point d'arrivee dans Studio.
 	local back = math.max(TutorialConfigs.EXIT_SHOT_MIN_BACK, spread * TutorialConfigs.EXIT_SHOT_SPREAD)
 	local pos = mid
-		+ across * back
-		+ Vector3.new(0, TutorialConfigs.EXIT_SHOT_UP, 0)
+		+ across * back * tune.back
+		+ Vector3.new(0, tune.up, 0)
 		-- Le long du trajet : decale le cadre vers l'arrivee pour laisser de la place devant le marcheur.
-		+ axis * TutorialConfigs.EXIT_SHOT_SIDE
-	return CFrame.lookAt(pos, mid + Vector3.new(0, TutorialConfigs.EXIT_SHOT_LOOK_UP, 0))
+		+ axis * tune.side
+	return CFrame.lookAt(pos, mid + Vector3.new(0, tune.lookUp, 0))
 end
+
+-- LE PLAN POSE a la fin de la scene, puis CELUI VERS LEQUEL ON GLISSE pendant qu'il marche.
+local EXIT_TUNE: ShotTune = {
+	up = TutorialConfigs.EXIT_SHOT_UP,
+	lookUp = TutorialConfigs.EXIT_SHOT_LOOK_UP,
+	back = 1,
+	side = TutorialConfigs.EXIT_SHOT_SIDE,
+}
+local WALK_TUNE: ShotTune = {
+	up = TutorialConfigs.WALK_SHOT_UP,
+	lookUp = TutorialConfigs.WALK_SHOT_LOOK_UP,
+	back = TutorialConfigs.WALK_SHOT_BACK,
+	side = TutorialConfigs.WALK_SHOT_SIDE,
+}
 
 -- RENDRE LA MAIN, pour de bon. Separe de `endScene` parce que le plan de sortie s'intercale entre les deux : le
 -- joueur reste bloque et les barres restent en place tant qu'on est encore au cinema.
@@ -734,11 +755,24 @@ local function endScene()
 	-- parler -- et c'est le plus tardif qui decide.
 	--
 	-- Le filet de `whenSpeechDone` garantit qu'on rend la main meme si une voix ne se termine jamais.
-	local shot = exitShotCFrame()
+	local shot = exitShotCFrame(EXIT_TUNE)
 	if shot then
 		SceneCamera.moveTo(shot, TutorialConfigs.EXIT_SHOT_IN, function()
 			task.delay(TutorialConfigs.EXIT_SHOT_HOLD, function()
-				whenSpeechDone(releaseScene)
+				-- PUIS ELLE GLISSE VERS LE SECOND PLAN, plus bas et plus pres, pendant qu'il traverse sa cour. Un
+				-- plan fixe pendant que quelqu'un marche est une photo ; celui-la accompagne le mouvement.
+				--
+				-- LE SECOND PLAN SE CALCULE MAINTENANT, pas tout a l'heure : le joueur a pu bouger entre les deux
+				-- (il vient de se pousser sur le cote), et un cadre calcule sur sa position d'avant le sortirait
+				-- du champ.
+				local walkShot = exitShotCFrame(WALK_TUNE)
+				if walkShot then
+					SceneCamera.moveTo(walkShot, TutorialConfigs.WALK_SHOT_IN, function()
+						whenSpeechDone(releaseScene)
+					end)
+				else
+					whenSpeechDone(releaseScene)
+				end
 			end)
 		end)
 	else
@@ -1719,7 +1753,7 @@ local function onOldManArrived()
 	end
 	spokeTwice = true
 	task.delay(TutorialConfigs.SPEECH2_DELAY, function()
-		SoundUtils.play(TutorialConfigs.SPEECH2_SOUND, SCENE_2D)
+		-- SANS VOIX : le fichier de cette replique a ete retire, le texte avance seul sur ses `hold`.
 		-- LE NOM DU PERSONNAGE SE POSE ICI, pas sur chacune des cinq repliques : il vit a un seul endroit dans la
 		-- config, et le jour ou le grand-pere a un vrai prenom il change une fois.
 		local lines: { Dialogue.Line } = {}
