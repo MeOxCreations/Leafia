@@ -68,7 +68,14 @@ local TILT = 11
 -- TOUT LE BALANCEMENT SE JOUE AUTOUR D'ELLE, jamais autour de zero : le repos vaut cet angle, et la pulsation
 -- l'ecarte de part et d'autre. Revenir a zero entre deux battements le redresserait a chaque fois, ce qui se
 -- lirait comme un tic et pas comme une inclinaison.
-local BASE_TILT = -20
+--
+-- A -90 IL EST COUCHE : il part a l'horizontale, loin de la tete, comme un jet lateral. L'etirement suit, parce
+-- qu'il s'allonge dans le sens du DESSIN et pas dans celui de l'ecran -- couche, il s'etire donc sur le cote.
+--
+-- LE SIGNE NE SE DEDUIT PAS. Il depend de la facon dont le dessin a ete fait, et seul l'ecran tranche : si
+-- l'eclair part du mauvais cote, c'est ce nombre qu'on passe a +90. Meme famille que le sens d'un wipe par
+-- gradient, faux une fois sur deux tant qu'on ne l'a pas regarde.
+local BASE_TILT = -90
 -- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
 -- ce qui se lit comme un tremblement et pas comme de la souplesse.
 local PULSE_UP = 0.11

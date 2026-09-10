@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.680 — L'eclair de colere se couche et se rapproche de sa tete
+
+| Reglage | Avant | Apres |
+|---|---|---|
+| `BASE_TILT` | -20 | -90, couche a l'horizontale |
+| `IMPATIENT_BURST_UP` | 3.4 | 2.2 |
+| `IMPATIENT_BURST_SIDE` | 2.2 | 1.3 |
+
+**Couche, il part a l'horizontale, loin de la tete** -- un jet lateral plutot qu'un point d'exclamation pose a
+cote. L'etirement suit tout seul : il s'allonge dans le sens du DESSIN, pas dans celui de l'ecran.
+
+**Le grand-pere est PETIT**, et ces studs se comptent depuis sa RootPart, pas depuis sa tete. Regles sur un
+personnage de taille normale, ils envoyaient l'eclair flotter au-dessus de la maison.
+
+LE SIGNE DE L'ANGLE NE SE DEDUIT PAS. Il depend de la facon dont le dessin a ete fait, et seul l'ecran tranche :
+si l'eclair part du mauvais cote, c'est ce nombre qu'on passe a +90. Meme famille que le sens d'un wipe par
+gradient, faux une fois sur deux tant qu'on ne l'a pas regarde.
+
 ## 0.0.679 — Il reprend le joueur qui repose la tondeuse
 
 `Oldman_scene_speech_GrabMowerAgain` part quand le joueur LACHE la machine apres s'etre fait dire de tirer la

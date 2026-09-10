@@ -459,13 +459,15 @@ return {
 	-- Elle ne remplace pas la voix, elle la DOUBLE : une voix ne s'entend pas quand on est de dos ou loin, et
 	-- elle ne s'entend pas du tout chez un joueur qui a coupe le son -- ce qui est le cas d'une bonne part des
 	-- joueurs Roblox.
-	IMPATIENT_BURST_UP = 3.4,
+	-- LE GRAND-PERE EST PETIT, et ces studs se comptent depuis sa RootPart -- pas depuis sa tete. Regle sur un
+	-- personnage de taille normale, l'eclair flottait au-dessus de la maison.
+	IMPATIENT_BURST_UP = 2.2,
 	-- ET SUR LE COTE, en studs. Pose au-dessus de sa tete, l'eclair la couvre a moitie -- or c'est justement son
 	-- visage qu'on veut lire quand il rale. Decale, les deux se voient.
 	--
 	-- Lu dans le repere de la CAMERA (voir AngerBurst) : il reste du meme cote de l'ecran quel que soit l'angle
 	-- de vue. Positif = a sa droite a l'ecran.
-	IMPATIENT_BURST_SIDE = 2.2,
+	IMPATIENT_BURST_SIDE = 1.3,
 
 	-- ===== IL LE VOIT ENFIN PRENDRE LA MACHINE =====
 	-- Sa replique quand le joueur met la main sur la tondeuse : il arrete de raler et lui dit quoi faire ensuite.
