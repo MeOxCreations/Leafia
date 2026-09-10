@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.652 — Sa premiere replique part des que la porte s'entrebaille
+
+`Oldman_scene_speech_0` partait a la grande ouverture, en meme temps que la scene atteignait son sommet. Trop
+tard : elle doit arriver AVEC le premier mouvement du battant. On entend alors quelqu'un qu'on ne voit pas
+encore, et c'est ca qui fait attendre l'ouverture.
+
+Elle part maintenant 0.15 s apres l'entrebaillement (`SPEECH0_DELAY`). La seconde (`speech_1`) garde sa place :
+0.3 s apres la grande ouverture.
+
+**La seconde attend DEUX choses, pas seulement son heure** : que la porte soit grande ouverte, ET que la
+premiere ait fini de parler. Les deux moments viennent des marqueurs de l'animation du grand-pere, qu'on
+retouche souvent -- n'en tester qu'un ferait parler deux voix en meme temps le jour ou l'ecart se resserre.
+
+Les deux conditions peuvent se remplir dans n'importe quel ordre, et chacune rappelle la meme fonction : un
+garde assure qu'elle ne joue qu'une fois.
+
+Les trois drapeaux repartent a zero au nettoyage. Sans ca, rejouer la scene trouverait le garde deja pose et
+sauterait la seconde replique.
+
 ## 0.0.651 — Le grand-pere dit deux choses en ouvrant sa porte
 
 Une nouvelle replique (`Oldman_scene_speech_0`) part a l'ouverture. L'ancienne (`speech_1`) prend la suite quand

@@ -870,6 +870,61 @@ local function prepDoor(): boolean
 	return true
 end
 
+-- SES DEUX REPLIQUES D'OUVERTURE, a deux moments du battant.
+--
+-- LA SECONDE ATTEND DEUX CHOSES, et pas seulement son heure : que la porte soit grande ouverte, ET que la
+-- premiere ait fini de parler. Les deux moments viennent des marqueurs de l'animation du grand-pere, qu'on
+-- retouche souvent -- n'en tester qu'un ferait parler deux voix en meme temps le jour ou l'ecart se resserre.
+local doorOpened = false -- le battant a fini sa GRANDE ouverture
+local firstSpeechOver = false -- la premiere replique a fini de parler
+-- Garde : une seule fois, quel que soit le chemin qui y mene. Les deux conditions peuvent se remplir dans
+-- n'importe quel ordre, et chacune rappelle la meme fonction.
+local secondSpeechOn = false
+
+local function playSecondSpeech()
+	if secondSpeechOn or not (doorOpened and firstSpeechOver) then
+		return
+	end
+	secondSpeechOn = true
+	speechSound = SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
+end
+
+-- IL PARLE DERRIERE LE BATTANT ENTREBAILLE.
+--
+-- LA SUITE EST ENCHAINEE SUR SA FIN, jamais sur une duree ecrite dans la config : la seconde replique part quand
+-- il a VRAIMENT fini, quel que soit le fichier qu'on met. Un delai a la main serait a refaire a chaque
+-- reenregistrement, et il se tromperait en silence -- soit en lui coupant la parole, soit en laissant un blanc.
+--
+-- FILET : si le son n'arrive jamais, sa fin ne tire pas et la seconde ne partirait JAMAIS. Passe le delai, on
+-- regarde s'il a seulement CHARGE. On ne coupe pas un son qui joue encore : le filet repond a "il n'est jamais
+-- arrive", pas a "il est plus long que prevu".
+local function playFirstSpeech()
+	local first = SoundUtils.play(TutorialConfigs.SPEECH0_SOUND, SCENE_2D)
+	speechSound = first
+
+	local function done()
+		firstSpeechOver = true
+		playSecondSpeech()
+	end
+
+	if not first then
+		-- Introuvable, et SoundUtils l'a deja dit : on ne retient pas la suite pour un fichier qui n'existe pas.
+		done()
+		return
+	end
+	-- Sorti en variable, et pas `(first :: Sound)` en debut de ligne : une instruction qui commence par une
+	-- parenthese se lit comme la SUITE de la ligne du dessus, donc comme un appel de fonction.
+	local voice = first :: Sound
+	voice.Ended:Once(function()
+		task.delay(TutorialConfigs.SPEECH_GAP, done)
+	end)
+	task.delay(TutorialConfigs.SPEECH_CHAIN_TIMEOUT, function()
+		if not voice.IsLoaded then
+			done()
+		end
+	end)
+end
+
 -- IL DEVERROUILLE : LA PORTE S'ENTREBAILLE. Premier des deux marqueurs.
 local function preOpenDoor()
 	if not prepDoor() then
@@ -879,52 +934,20 @@ local function preOpenDoor()
 	-- derriere, pas de fuir. Le sursaut arriere viendra a la grande ouverture, et il n'en sera que plus net
 	-- d'avoir ete precede d'une avancee.
 	pushScene(TutorialConfigs.PRE_OPEN_PUSH, TutorialConfigs.PRE_OPEN_PUSH_TIME)
-	-- Rien a enchainer ici : IL NE PARLE PLUS DERRIERE LE BATTANT ENTREBAILLE. Sa replique attend maintenant la
-	-- grande ouverture (voir openDoor). L'entrebaillement ne porte donc que le mouvement et le son de la porte.
-	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME)
-end
-
--- SES DEUX REPLIQUES D'OUVERTURE, l'une apres l'autre.
---
--- ENCHAINEES SUR LA FIN DE LA PREMIERE, jamais sur une duree ecrite ici : la seconde part quand il a VRAIMENT
--- fini de parler, quel que soit le fichier qu'on met. Un delai a la main serait a refaire a chaque
--- reenregistrement, et il se tromperait en silence -- soit en lui coupant la parole, soit en laissant un blanc.
---
--- FILET : si le son n'arrive jamais, sa fin ne tire pas et la seconde replique ne partirait JAMAIS. Passe le
--- delai, on regarde s'il a seulement CHARGE. On ne coupe pas un son qui joue encore : le filet repond a "il
--- n'est jamais arrive", pas a "il est plus long que prevu".
-local function playDoorSpeech()
-	local token = doorSwingToken
-	local first = SoundUtils.play(TutorialConfigs.SPEECH0_SOUND, SCENE_2D)
-	speechSound = first
-
-	-- UNE SEULE FOIS, quel que soit le chemin qui y mene : la fin du son, le filet, ou l'absence de fichier. Sans
-	-- ce garde, un son qui charge tard jouerait la seconde replique DEUX fois, l'une par-dessus l'autre.
-	local started = false
-	local function second()
-		if started or doorSwingToken ~= token then
-			return
-		end
-		started = true
-		speechSound = SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
-	end
-
-	if not first then
-		-- Introuvable, et SoundUtils l'a deja dit : on ne fait pas attendre la suite pour un fichier qui n'existe
-		-- pas.
-		second()
-		return
-	end
-	-- Sorti en variable, et pas `(first :: Sound)` en debut de ligne : une instruction qui commence par une
-	-- parenthese se lit comme la SUITE de la ligne du dessus, donc comme un appel de fonction.
-	local voice = first :: Sound
-	voice.Ended:Once(function()
-		task.delay(TutorialConfigs.SPEECH_GAP, second)
-	end)
-	task.delay(TutorialConfigs.SPEECH_CHAIN_TIMEOUT, function()
-		if not voice.IsLoaded then
-			second()
-		end
+	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME, function()
+		-- IL PARLE DERRIERE LA PORTE ENTREBAILLEE. On entend quelqu'un qu'on ne voit pas encore, et c'est CA qui
+		-- fait attendre la grande ouverture.
+		--
+		-- Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui protege le mouvement de
+		-- la porte, et sans ce test la voix partirait meme si la scene a ete coupee entre-temps -- seule, sur un
+		-- plan qui n'existe plus.
+		local speechToken = doorSwingToken
+		task.delay(TutorialConfigs.SPEECH0_DELAY, function()
+			if doorSwingToken ~= speechToken then
+				return
+			end
+			playFirstSpeech()
+		end)
 	end)
 end
 
@@ -951,9 +974,12 @@ local function openDoor()
 			TutorialConfigs.REVEAL_ZOOM_SPEED
 		)
 
-		-- IL PARLE, LA PORTE GRANDE OUVERTE. Le compte part de la FIN du mouvement -- ce callback -- et pas du
+		-- SA SECONDE REPLIQUE PEUT PARTIR. Le compte part de la FIN du mouvement -- ce callback -- et pas du
 		-- marqueur qui l'a lancee : entre les deux il y a toute la duree du battant, et un delai qui partirait
 		-- d'avant se decalerait a la premiere retouche de DOOR_FULL_TIME.
+		--
+		-- ON POSE UNE CONDITION, on ne joue pas : si la premiere replique parle encore, c'est SA FIN qui declenchera
+		-- celle-ci. La porte ouverte n'est que la moitie de ce qu'on attend.
 		--
 		-- Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui protege le mouvement de
 		-- la porte, et sans ce test la voix partirait meme si la scene a ete coupee entre-temps -- seule, sur un
@@ -963,7 +989,8 @@ local function openDoor()
 			if doorSwingToken ~= speechToken then
 				return
 			end
-			playDoorSpeech()
+			doorOpened = true
+			playSecondSpeech()
 		end)
 	end)
 end
@@ -1709,6 +1736,9 @@ function TutorialController.stop()
 		voice:Stop()
 		voice:Destroy()
 	end
+	-- LES TROIS DRAPEAUX REPARTENT A ZERO. Sans ca, rejouer la scene trouverait `secondSpeechOn` deja vrai et
+	-- sauterait la seconde replique.
+	doorOpened, firstSpeechOver, secondSpeechOn = false, false, false
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

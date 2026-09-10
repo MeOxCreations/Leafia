@@ -207,9 +207,12 @@ return {
 	-- vient pas d'un point de la carte. Spatialisee, elle baisserait avec la distance de la camera pendant le plan
 	-- large -- alors qu'on vient justement de tourner l'oreille vers lui.
 	--
-	-- IL DIT DEUX CHOSES, L'UNE APRES L'AUTRE. La premiere (`speech_0`) part a l'ouverture, la seconde
-	-- (`speech_1`) quand la premiere a fini de parler.
+	-- IL DIT DEUX CHOSES, A DEUX MOMENTS. La premiere (`speech_0`) part des que le battant S'ENTREBAILLE : on
+	-- entend quelqu'un qu'on ne voit pas encore, et c'est ca qui fait attendre la grande ouverture. La seconde
+	-- (`speech_1`) part une fois la porte GRANDE OUVERTE -- la, il voit qui est la et il repond a quelqu'un.
 	SPEECH0_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_0" },
+	-- Delai apres l'entrebaillement. COURT : sa voix doit arriver avec le mouvement du battant, pas apres.
+	SPEECH0_DELAY = 0.15,
 	SPEECH_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_1" },
 	-- Souffle entre les deux repliques. Enchainees sans blanc, elles se lisent comme une seule phrase coupee au
 	-- montage ; trop espacees, on croit qu'il a fini.
@@ -221,7 +224,7 @@ return {
 	-- On ne coupe PAS un son qui joue encore : ce filet ne repond qu'a "il n'est jamais arrive", jamais a "il est
 	-- plus long que prevu". Une borne ne doit jamais etre plus serree que la donnee qu'elle borne.
 	SPEECH_CHAIN_TIMEOUT = 6,
-	-- Respiration entre la fin du mouvement de la porte et sa premiere syllabe. A zero il enchaine sans avoir eu
+	-- Respiration entre la fin du mouvement de la porte et la SECONDE replique. A zero il enchaine sans avoir eu
 	-- le temps de regarder qui est la ; trop haut, le silence devient un blanc.
 	--
 	-- Le compte part de la FIN du battant, pas du marqueur qui l'a lance : ce delai reste donc juste quand on
