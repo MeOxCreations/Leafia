@@ -99,6 +99,10 @@ local revealed = 0 -- combien on en a ecrit (fractionnaire, arrondi a l'affichag
 local typing = false -- vrai tant que la ligne s'ecrit
 local shownOnScreen = false
 local onDoneFn: (() -> ())? = nil
+-- APPELE A CHAQUE LIGNE QUI COMMENCE, avec son numero. Sert au MONTAGE : une scene qui veut couper sur un plan
+-- pile a la bonne phrase a besoin de savoir ou en est le texte -- calculer l'instant en additionnant les `hold`
+-- marcherait, mais se decalerait a la premiere retouche d'une duree.
+local onLineFn: ((number) -> ())? = nil
 local slideTween: Tween? = nil
 local portrait: ImageLabel? = nil
 local portraitScale: UIScale? = nil
@@ -206,6 +210,10 @@ local function startLine(i: number)
 	end
 	setSpeaker(line.speaker)
 	setEmotion(line.emotion)
+	local notify = onLineFn
+	if notify then
+		notify(i)
+	end
 	body.Text = line.text
 	body.MaxVisibleGraphemes = 0
 	total = graphemeCount(line.text)
@@ -475,7 +483,7 @@ end
 
 -- Joue une SEQUENCE de repliques. onDone est appele quand le joueur a passe la derniere. Rejouer pendant un dialogue
 -- en cours le remplace.
-function Dialogue.play(lines: { Line }, onDone: (() -> ())?)
+function Dialogue.play(lines: { Line }, onDone: (() -> ())?, onLine: ((number) -> ())?)
 	build()
 	local b = banner
 	if not b or #lines == 0 then
@@ -484,6 +492,7 @@ function Dialogue.play(lines: { Line }, onDone: (() -> ())?)
 	sequence = lines
 	currentIndex = 1
 	onDoneFn = onDone
+	onLineFn = onLine
 	shownOnScreen = true
 	b.Visible = true
 	refreshScale()
@@ -505,6 +514,7 @@ end
 -- Ferme le dialogue tout de suite, SANS appeler onDone (annulation). Sans effet si rien n'est affiche.
 function Dialogue.hide()
 	onDoneFn = nil
+	onLineFn = nil
 	hideBanner()
 end
 

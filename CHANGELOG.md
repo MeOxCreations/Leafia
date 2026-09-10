@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.699 — On coupe sur le joueur quand il annonce qu'il crie
+
+Sur la ligne "Watch out, I shout sometimes", la camera passe DERRIERE le grand-pere et regarde le JOUEUR. C'est
+le montage le plus banal du cinema et le plus efficace : quand quelqu'un annonce quelque chose qui vous concerne,
+on montre celui qui RECOIT, pas celui qui parle.
+
+**Le declencheur est le NUMERO DE LIGNE, pas un delai.** `Dialogue.play` prend un troisieme argument, appele a
+chaque ligne qui commence avec son numero. Calculer l'instant en additionnant les `hold` aurait marche, puis se
+serait decale a la premiere retouche d'une duree ou du texte.
+
+**Le retour se compte sur la ligne elle-meme**, moins ce qu'a pris l'arrivee : le plan couvre exactement sa
+phrase, et il suit tout seul si on rallonge son `hold`.
+
+**On ne bloque PAS le joueur.** Le plan dure le temps d'une ligne, et lui reprendre la main deux secondes apres
+l'avoir enfin recuperee se ressent comme un a-coup de commandes. S'il marche pendant ce temps, il sort un peu du
+cadre : moins grave qu'un joueur immobilise sans savoir pourquoi.
+
+| Reglage | Valeur | Role |
+|---|---|---|
+| `REACT_SHOT_LINE` | 2 | Quelle ligne declenche le plan |
+| `REACT_SHOT_BACK` | 3.2 | Recul derriere le grand-pere |
+| `REACT_SHOT_UP` / `REACT_SHOT_LOOK_UP` | 2.6 / 1.4 | Hauteur de l'oeil, et ce qu'on vise sur le joueur |
+| `REACT_SHOT_IN` / `REACT_SHOT_OUT` | 0.35 / 0.4 | Courts : une coupe doit se sentir comme une coupe |
+
+Sans cadrage possible (grand-pere introuvable, les deux confondus), on ne coupe pas : mieux vaut rester sur la
+camera de jeu que couper sur du vide.
+
 ## 0.0.698 — La camera ne reste plus coincee en scene
 
 Vrai bug, pas un reglage. La condition "il a fini de parler" exigeait que la SECONDE replique soit partie -- et

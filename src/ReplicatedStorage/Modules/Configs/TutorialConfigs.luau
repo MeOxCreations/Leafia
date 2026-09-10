@@ -564,6 +564,29 @@ return {
 	-- LE NOM AFFICHE dans la pastille jaune. Ici et nulle part ailleurs : le jour ou il a un vrai prenom, il
 	-- change a un seul endroit.
 	SPEECH2_SPEAKER = "GRANDPA",
+
+	-- ===== LE CONTRE-CHAMP : ON COUPE SUR LE JOUEUR =====
+	-- Sur UNE ligne du dialogue, la camera passe derriere le grand-pere et regarde le JOUEUR. C'est le montage le
+	-- plus banal du cinema et le plus efficace : quand quelqu'un annonce quelque chose qui vous concerne, on
+	-- montre CELUI QUI RECOIT, pas celui qui parle.
+	--
+	-- Numero de la ligne, dans SPEECH2_LINES. Ici la 2 : "Watch out, I shout sometimes." -- l'avertissement, donc
+	-- le seul moment ou la reaction du joueur vaut un plan.
+	--
+	-- UN NUMERO ET PAS UN DELAI : le plan tombe sur la LIGNE, donc il reste juste quand on retouche un `hold` ou
+	-- qu'on reecrit le texte. Un instant calcule en additionnant les durees se decalerait a la premiere retouche.
+	REACT_SHOT_LINE = 2,
+	-- Recul DERRIERE le grand-pere, en studs. C'est ce qui fait le contre-champ : la camera est de son cote et
+	-- regarde dans l'autre sens.
+	REACT_SHOT_BACK = 3.2,
+	-- Hauteur de l'oeil, et ce qu'on vise sur le joueur. Vers le visage : viser le sol le couperait a la taille.
+	REACT_SHOT_UP = 2.6,
+	-- Vise plus haut que le sol : la tete du joueur, pas ses pieds. Compte depuis sa RootPart.
+	REACT_SHOT_LOOK_UP = 1.4,
+	-- Duree du glissement vers ce plan, puis du retour. COURTS : une coupe de montage doit se sentir comme une
+	-- coupe. Trop longs, on voit la camera voyager et l'effet devient un mouvement, pas un changement de plan.
+	REACT_SHOT_IN = 0.35,
+	REACT_SHOT_OUT = 0.4,
 	-- SA REPLIQUE, DECOUPEE. Chaque ligne porte sa duree : elles avancent TOUTES SEULES, sans que le joueur ait a
 	-- taper. Sur une replique doublee c'est obligatoire -- faire avancer a la main desynchronise le texte de la
 	-- voix des la premiere ligne, et plus rien ne les recale ensuite.

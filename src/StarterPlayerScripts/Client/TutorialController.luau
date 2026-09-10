@@ -1779,6 +1779,30 @@ local function showMowerTask()
 	})
 end
 
+-- LE CONTRE-CHAMP SUR LE JOUEUR : la camera passe derriere le grand-pere et le regarde.
+--
+-- ON NE BLOQUE PAS LE JOUEUR. Le plan dure le temps d'une ligne, et lui rendre la main juste apres l'avoir prise
+-- se ressent comme un a-coup de commandes. S'il marche pendant ce temps, il sort un peu du cadre -- c'est moins
+-- grave qu'un joueur immobilise sans savoir pourquoi, deux secondes apres avoir enfin recupere ses jambes.
+local function reactShotCFrame(): CFrame?
+	local root = getRoot()
+	local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
+	local anchor = if grandpa then bodyPart(grandpa) else nil
+	if not (root and anchor) then
+		return nil
+	end
+	-- DE LUI VERS LE JOUEUR, a plat. La camera se met dans son dos et regarde dans ce sens : c'est ca, un
+	-- contre-champ.
+	local axis = (root.Position - anchor.Position) * Vector3.new(1, 0, 1)
+	if axis.Magnitude < 1e-3 then
+		return nil -- les deux confondus : aucun sens de regard a en tirer
+	end
+	axis = axis.Unit
+	local pos = anchor.Position - axis * TutorialConfigs.REACT_SHOT_BACK
+		+ Vector3.new(0, TutorialConfigs.REACT_SHOT_UP, 0)
+	return CFrame.lookAt(pos, root.Position + Vector3.new(0, TutorialConfigs.REACT_SHOT_LOOK_UP, 0))
+end
+
 --- LE GRAND-PERE EST ARRIVE DEVANT SA PORTE. Il explique pourquoi il a besoin de nous, et la voix commande : les
 --- repliques avancent toutes seules, calees sur sa duree (voir `hold` dans Dialogue).
 local function onOldManArrived()
@@ -1799,7 +1823,28 @@ local function onOldManArrived()
 				hold = entry.hold,
 			})
 		end
-		Dialogue.play(lines, showMowerTask)
+		Dialogue.play(lines, showMowerTask, function(index)
+			-- ON COUPE SUR LE JOUEUR, sur UNE ligne precise -- celle ou il annonce qu'il crie. Le plan tient le
+			-- temps de la ligne, puis la camera revient d'elle-meme.
+			--
+			-- LE DECLENCHEUR EST LE NUMERO DE LIGNE, pas un delai : il reste donc juste quand on retouche une
+			-- duree ou qu'on reecrit le texte.
+			if index ~= TutorialConfigs.REACT_SHOT_LINE then
+				return
+			end
+			local shot = reactShotCFrame()
+			if not shot then
+				return -- pas de cadrage possible : on ne coupe pas sur du vide
+			end
+			local line = TutorialConfigs.SPEECH2_LINES[index]
+			local hold = if line then line.hold else 0
+			SceneCamera.enter(shot, TutorialConfigs.REACT_SHOT_IN)
+			-- LE RETOUR SE COMPTE SUR LA LIGNE ELLE-MEME, moins ce qu'a pris l'arrivee : le plan couvre donc
+			-- exactement sa phrase, et il suit tout seul si on rallonge son `hold`.
+			task.delay(math.max(0.1, hold - TutorialConfigs.REACT_SHOT_IN), function()
+				SceneCamera.exit(TutorialConfigs.REACT_SHOT_OUT)
+			end)
+		end)
 	end)
 end
 
