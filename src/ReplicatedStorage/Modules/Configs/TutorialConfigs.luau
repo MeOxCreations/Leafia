@@ -485,6 +485,13 @@ return {
 	-- fois -- parce qu'elle repond a une action REPETABLE. Sans ce garde, prendre et lacher la machine en boucle
 	-- la ferait bafouiller, et une reaction qui se declenche trop vite cesse d'etre une reaction.
 	GRAB_AGAIN_COOLDOWN = 9,
+	-- ET S'IL LA REPREND, toujours sans l'avoir demarree : il redit de tirer la corde, autrement. Une SECONDE
+	-- formulation et pas la premiere rejouee -- reentendre mot pour mot ce qu'on vient d'entendre sonne comme une
+	-- bande qui saute, alors qu'une variante sonne comme quelqu'un qui insiste.
+	PULL_ROPE_AGAIN_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Pulltherope2" },
+	-- Son propre ecart minimum, separe de celui de la repose. Les deux repliques encadrent le meme aller-retour
+	-- (lacher puis reprendre) : un reglage partage par les deux finirait par en desservir une.
+	PULL_ROPE_AGAIN_COOLDOWN = 9,
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,

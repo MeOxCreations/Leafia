@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.689 — Il redit de tirer la corde, autrement
+
+`Oldman_scene_speech_Pulltherope2` part quand le joueur REPREND la tondeuse sans l'avoir demarree.
+
+L'aller-retour complet a maintenant ses trois repliques :
+
+| Moment | Replique |
+|---|---|
+| Il prend la machine | `PullTheRope`, une seule fois par partie |
+| Il la repose | `GrabMowerAgain` |
+| Il la reprend | `Pulltherope2` |
+
+**Une SECONDE formulation, pas la premiere rejouee.** Reentendre mot pour mot ce qu'on vient d'entendre sonne
+comme une bande qui saute ; une variante sonne comme quelqu'un qui insiste.
+
+`not wasCarrying` isole l'instant de la REPRISE. Sans lui, le test serait vrai a chaque image ou il tient la
+machine, et la phrase repartirait en boucle tant qu'il ne la lache pas.
+
+Elle a son propre ecart minimum, separe de celui de la repose. Les deux encadrent le meme aller-retour : un
+reglage partage par les deux finirait par en desservir une.
+
+DEPEND D'UN ASSET : le son doit exister sous SoundService.Sounds.Scenes.Scene1.Voices dans la place du tuto.
+
 ## 0.0.688 — L'eclair redescend un peu, et son inclinaison est calee
 
 `IMPATIENT_BURST_UP` passe de 6 a 4.5.

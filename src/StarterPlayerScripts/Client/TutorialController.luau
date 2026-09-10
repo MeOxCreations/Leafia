@@ -1547,6 +1547,7 @@ local saidPullRope = false
 -- mort, un respawn) et un evenement par cas en laisserait toujours un dehors.
 local wasCarrying = false
 local nextGrabAgainAt = 0
+local nextRopeAgainAt = 0
 
 -- JAMAIS DEUX FOIS LA MEME D'AFFILEE. Un tirage au hasard pur repete, et une repetition immediate s'entend comme
 -- un bug ("il a bugue, il redit pareil") -- alors que c'est le hasard qui fait son travail.
@@ -1673,6 +1674,14 @@ local function step(dt: number)
 			if not saidPullRope then
 				saidPullRope = true
 				sayVoice(TutorialConfigs.PULL_ROPE_SOUND)
+			elseif not wasCarrying and now >= nextRopeAgainAt then
+				-- IL LA REPREND, toujours sans l'avoir demarree. Il redit de tirer la corde, mais AUTREMENT :
+				-- reentendre mot pour mot ce qu'on vient d'entendre sonne comme une bande qui saute.
+				--
+				-- `not wasCarrying` isole l'instant de la REPRISE. Sans lui, le test serait vrai a chaque image ou
+				-- il tient la machine, et la phrase repartirait en boucle tant qu'il ne la lache pas.
+				nextRopeAgainAt = now + TutorialConfigs.PULL_ROPE_AGAIN_COOLDOWN
+				sayVoice(TutorialConfigs.PULL_ROPE_AGAIN_SOUND)
 			end
 		elseif wasCarrying and saidPullRope and now >= nextGrabAgainAt then
 			-- IL VIENT DE LA REPOSER, alors qu'on venait de lui dire de tirer la corde. Le grand-pere le reprend.
@@ -1987,6 +1996,7 @@ function TutorialController.stop()
 	saidPullRope = false
 	wasCarrying = false
 	nextGrabAgainAt = 0
+	nextRopeAgainAt = 0
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX
