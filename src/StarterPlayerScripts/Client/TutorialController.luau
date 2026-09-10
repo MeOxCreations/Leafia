@@ -684,6 +684,25 @@ local function whenSpeechDone(fn: () -> ())
 	end)
 end
 
+-- LA CAMERA REVIENT AU JOUEUR. Separee du reste, et c'est tout l'objet de ce decoupage : l'oeil et les jambes
+-- n'ont pas a attendre la meme chose.
+--
+-- La camera n'a plus rien a montrer des que son plan est fini -- le grand-pere marche, on l'a vu partir. La
+-- garder jusqu'a la fin de sa replique faisait attendre le joueur devant une image qui ne racontait plus rien.
+--
+-- Les JAMBES, elles, attendent qu'il se taise : parti pendant qu'il parle, le joueur court sur une phrase qu'il
+-- n'entend plus.
+local sceneCamReleased = false
+
+local function releaseSceneCamera()
+	if sceneCamReleased then
+		return
+	end
+	sceneCamReleased = true
+	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
+	CameraEffects.SetFovOffset(0)
+end
+
 local function releaseScene()
 	-- LES POSES DE SCENE TOMBENT AVEC LE BLOCAGE, dans le meme geste.
 	--
@@ -699,17 +718,16 @@ local function releaseScene()
 	if release then
 		release()
 	end
-	-- LES JAMBES ENSUITE. La camera met SCENE_CAM_OUT a revenir ; si on rendait les controles seulement apres, le
-	-- joueur appuierait dans le vide pendant ce temps -- et une commande qui ne repond pas se lit comme un lag.
 	unfreezePlayer()
-	SceneCamera.exit(TutorialConfigs.SCENE_CAM_OUT)
+	-- LA CAMERA EST DEJA REVENUE, a la fin de son plan (voir releaseSceneCamera). L'appel reste ici en FILET :
+	-- idempotent, il ne fait rien si c'est deja fait, et il couvre les chemins qui arrivent ici sans etre passes
+	-- par le plan de sortie -- la mort en pleine scene, ou une porte introuvable.
+	releaseSceneCamera()
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
 	-- LE TITRE S'EN VA AVEC LES BARRES. Il s'efface deja tout seul apres son temps de lecture, mais une scene
 	-- ecourtee le laisserait ecrit sur une image rendue au joueur.
 	ChapterTitle.hide()
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
-	CameraEffects.SetFovOffset(0)
-
 end
 
 local function endScene()
@@ -772,17 +790,17 @@ local function endScene()
 				-- LE SECOND PLAN SE CALCULE MAINTENANT, pas tout a l'heure : le joueur a pu bouger entre les deux
 				-- (il vient de se pousser sur le cote), et un cadre calcule sur sa position d'avant le sortirait
 				-- du champ.
+				-- LA CAMERA REND LA MAIN A LA FIN DE SON PLAN, sans attendre qu'il ait fini de parler. Elle n'a
+				-- plus rien a montrer : on l'a vu se mettre en route, c'est tout ce que ce plan raconte.
 				local walkShot = exitShotCFrame(WALK_TUNE)
 				if walkShot then
-					SceneCamera.moveTo(walkShot, TutorialConfigs.WALK_SHOT_IN)
+					SceneCamera.moveTo(walkShot, TutorialConfigs.WALK_SHOT_IN, releaseSceneCamera)
+				else
+					releaseSceneCamera()
 				end
-				-- ET LA MAIN REVIENT DES QU'IL S'EST TU, sans attendre la fin du glissement. Les deux ne
-				-- racontent pas la meme chose : le glissement occupe l'oeil PENDANT qu'il parle, la parole dit
-				-- quand la scene est finie. En attendant les deux, on gardait le joueur immobile devant une
-				-- camera qui bougeait encore pour rien.
-				--
-				-- `SceneCamera.exit` part de la CFrame COURANTE : couper un glissement en cours ne fait donc
-				-- aucun saut, la sortie reprend exactement la ou la camera en etait.
+				-- LES JAMBES, ELLES, ATTENDENT QU'IL SE TAISE. Deux attentes differentes parce que deux besoins
+				-- differents : l'oeil n'a plus rien a regarder, mais un joueur qui part en courant sur une phrase
+				-- qu'il n'entend plus rate ce qu'on vient de lui dire.
 				whenSpeechDone(releaseScene)
 			end)
 		end)
@@ -2152,6 +2170,7 @@ function TutorialController.stop()
 	end
 	-- LE GARDE REPART A ZERO. Sans ca, rejouer la scene le trouverait deja pose et sauterait la seconde replique.
 	secondSpeechOn = false
+	sceneCamReleased = false
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
 	saidPullRope = false

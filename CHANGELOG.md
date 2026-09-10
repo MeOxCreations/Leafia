@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.701 — La camera revient au joueur bien avant ses jambes
+
+L'oeil et les jambes n'attendaient pas la meme chose, et pourtant ils partaient ensemble. Ils sont separes.
+
+**La camera rend la main a la fin de son plan** (environ 2.6 s apres la scene), sans attendre que le grand-pere
+ait fini de parler. Elle n'a plus rien a montrer : on l'a vu se mettre en route, c'est tout ce que ce plan
+raconte. La garder faisait attendre le joueur devant une image qui ne racontait plus rien.
+
+**Les jambes attendent qu'il se taise.** Parti pendant qu'il parle, le joueur court sur une phrase qu'il n'entend
+plus -- et rate ce qu'on vient de lui dire.
+
+`WALK_SHOT_IN` passe de 2.5 s a 1.4. Il etait long pour couvrir une bonne part de la marche, mais c'est le joueur
+qui attendait sa camera pendant ce temps. Le mouvement se lit meme bref : ce qu'on montre, c'est qu'il se met en
+route, pas tout son trajet.
+
+La sortie de camera reste appelee dans le relachement general, en FILET : elle est idempotente, ne fait rien si
+c'est deja fait, et couvre les chemins qui arrivent la sans etre passes par le plan de sortie -- la mort en
+pleine scene, ou une porte introuvable.
+
 ## 0.0.700 — Le contre-champ est retire
 
 Annulation complete de la version precedente : la camera ne coupe plus sur le joueur pendant le dialogue. A
