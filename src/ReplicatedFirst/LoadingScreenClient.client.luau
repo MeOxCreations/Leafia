@@ -284,85 +284,33 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local DEST_POS = UDim2.fromScale(0.988, 0.056)
 	local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 
-	-- JAUGE DE FEUILLES, en bas a droite. CINQ feuilles qui s'allument une par une.
+	-- INDICATEUR DE CHARGEMENT : une couronne de points qui tourne, en bas de l'ecran.
 	--
-	-- Elle remplace la grande feuille du milieu, qui se remplissait en continu. Une jauge CONTINUE dit "ca
-	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur compte au lieu d'estimer, et chaque cran
-	-- qui s'allume SURSAUTE, au lieu d'un mouvement qu'on finit par ne plus voir.
-	--
-	-- SANS BRUIT : six sons pendant un chargement, c'est un compte a rebours qu'on subit. Le sursaut se fait
-	-- remarquer si on regarde l'ecran, et se tait si on regarde ailleurs -- ce qu'un son ne sait pas faire.
-	local LEAF_ID = "rbxassetid://117703108607506"
-	-- LE MEME VERT QUE LE DEBUT DU BANDEAU : la feuille et le bandeau se repondent, l'ecran a une seule couleur
-	-- d'accent au lieu de deux elements gris qui se ressemblent sans se parler.
-	--
-	-- Le degrade pose sur la feuille ne touche QUE sa transparence (c'est lui qui la remplit) : sa couleur reste
-	-- neutre, donc ce vert s'affiche tel quel.
-	-- LA SILHOUETTE, dessous. Elle donne la forme et le creux ; le vert vient par-dessus.
-	local LEAF_TINT = Color3.fromRGB(0, 0, 0)
-	-- LE VERT, par-dessus, avec un degrade de transparence du BAS vers le HAUT : la feuille est pleine en bas et
-	-- s'efface en montant, laissant reapparaitre la silhouette noire.
-	--
-	-- Deux couches et pas une seule teintee : une couche unique ne peut pas etre a la fois noire et verte, et un
-	-- degrade de COULEUR ferait passer par des verts sombres au lieu de laisser voir le noir du dessous.
-	local LEAF_GREEN = Color3.fromRGB(142, 255, 93)
-	-- Rotation du degrade. 90 = il court a la verticale. Le SENS ne se DEDUIT pas -- il depend de la convention de
-	-- Roblox et de l'orientation de l'image : c'est l'ecran qui tranche, d'ou le bouton juste en dessous.
-	local LEAF_FILL_ROTATION = 90
-	-- Le vert monte du mauvais cote ? Mettre true.
-	local LEAF_FILL_INVERT = false
-	-- Temps de remplissage d'UNE feuille, en secondes.
-	local LEAF_FILL_TIME = 0.32
-	-- Temps mort avant que la suivante parte. COURT : c'est ce qui les enchaine sans qu'on les compte une par une.
-	local LEAF_FILL_GAP = 0.06
-	-- Blanc apres la sixieme, avant que tout reparte a zero. Sans lui, la derniere et la premiere s'enchainent et
-	-- le cycle n'a plus de debut visible.
-	local LEAF_CYCLE_GAP = 0.45
-	-- Epaisseur de la frontiere du degrade, en fraction de la feuille. AUSSI PETITE QUE POSSIBLE : c'est elle qui
-	-- fait la nettete. Deux points de degrade ne peuvent pas etre AU MEME endroit -- Roblox rejette la sequence
-	-- entiere -- donc on ne peut pas descendre a zero, seulement s'en approcher.
-	local LEAF_EDGE = 0.01
-	-- LE SURSAUT, quand une feuille finit de se remplir. Elle S'ETIRE VERS LE HAUT puis revient -- c'est ce qui
-	-- marque l'instant ou elle est pleine, sans rien ajouter a l'ecran.
-	--
-	-- Hauteur atteinte, en multiple de sa taille normale.
-	local LEAF_POP_SCALE = 1.7
-	-- LARGEUR pendant l'etirement, en multiple de sa largeur normale. SOUS 1 : elle s'AFFINE en montant.
-	--
-	-- C'est ce qui fait la matiere molle, plus que la hauteur. Une forme qui grandit sans s'affiner ne s'etire
-	-- pas, elle GROSSIT -- et grossir n'evoque rien de souple. En conservant a peu pres son volume, elle se lit
-	-- comme une goutte qu'on tire.
-	local LEAF_POP_X = 0.74
-	-- Montee douce, retour un peu plus long. Le retour reste PLUS LENT que la montee : c'est cet ecart qui fait
-	-- le sursaut plutot qu'un gonflement. Mais les deux sont assez longs pour qu'aucun ne claque.
-	local LEAF_POP_UP = 0.16
-	local LEAF_POP_BACK = 0.42
-	local LEAF_COUNT = 5
-	-- Bloc de la jauge, ancre a DROITE : ajouter une feuille l'etire vers la gauche au lieu de deplacer les
-	-- autres, donc le bord reste ou il est.
-	-- CENTREE EN BAS, plus dans le coin. Elle etait ancree a droite pour que le bord droit ne bouge pas quand on
-	-- ajoutait une feuille ; centree, c'est le MILIEU qui reste en place -- le bloc grandit alors des deux cotes,
-	-- ce qui est ce qu'on veut d'un element pose au centre.
-	local LEAF_GAUGE_POS = UDim2.fromScale(0.5, 0.92)
-	-- LA LARGEUR DE LA JAUGE COMMANDE L'ECART ENTRE LES FEUILLES, pas leur taille.
-	--
-	-- Elles sont en `Fit` : leur taille est donc bornee par la HAUTEUR de la case, pas par sa largeur. Elargir la
-	-- jauge ne les grossit pas, ca les ECARTE ; la retrecir les rapproche sans les rapetisser -- jusqu'au point
-	-- ou la case devient plus etroite que haute, et la elles retrecissent pour de bon.
-	--
-	-- C'est aussi elle qui borne le texte des conseils, qui s'arrete juste avant : la retrecir donne donc plus de
-	-- place au texte, sans rien avoir a regler d'autre.
-	--
-	-- ELLE SUIT LE NOMBRE DE FEUILLES. En passant de six a cinq sans la toucher, les cinq restantes s'ECARTENT
-	-- pour occuper la meme largeur -- ce qui n'est pas "enlever une feuille", c'est "etaler la jauge". On retire
-	-- donc une case de large en meme temps qu'on retire la feuille : l'ecart entre deux feuilles ne bouge pas, et
-	-- le bord droit non plus (le bloc est ancre a droite).
-	local LEAF_GAUGE_SIZE = UDim2.fromScale(0.167, 0.055)
-	-- Part de la case occupee par la feuille. Proche de 1 : la case ne sert presque plus de marge, et c'est la
-	-- largeur de la jauge ci-dessus qui fait l'espacement. Baisser cette valeur remet de la marge PARTOUT, y
-	-- compris aux deux bouts.
-	local LEAF_FILL = 0.95
-	local LEAF_ANGLE = -10
+	-- Les feuilles qui s'allumaient une par une ont ete retirees. Une jauge a CRANS raconte une PROGRESSION -- "il
+	-- en reste deux" -- alors que personne ne sait combien il reste : elle finissait donc par mentir a chaque tour.
+	-- Une couronne qui tourne ne promet rien d'autre que "ca travaille", et c'est la seule chose qu'on sache.
+	local SPIN_POS = UDim2.fromScale(0.5, 0.92)
+	-- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
+	local SPIN_SIZE = 0.08
+	-- Nombre de points. Sous 8 la rotation se lit comme une suite de sauts ; au-dela de 16 ils se touchent et la
+	-- couronne devient un anneau plein.
+	local SPIN_DOTS = 12
+	-- Rayon du cercle, en fraction du cadre. 0.5 poserait les centres pile sur le bord, donc les points
+	-- DEPASSERAIENT de la moitie de leur taille : il faut garder de quoi les loger.
+	local SPIN_RADIUS = 0.38
+	-- Diametre d'un point, meme unite. Trop gros, les voisins se touchent et le trou du milieu disparait.
+	local SPIN_DOT = 0.16
+	-- BLANC sur le rideau sombre. Pas le vert de Leafia : cet indicateur doit se lire comme une piece de
+	-- l'interface, pas comme un element du jeu -- et un accent de couleur ici volerait l'oeil au texte du bas.
+	local SPIN_COLOR = Color3.fromRGB(255, 255, 255)
+	-- Duree d'UN TOUR, en secondes. Plus vite, ca s'agite ; plus lentement, ca a l'air en panne.
+	local SPIN_PERIOD = 1
+	-- Transparence du point de TETE et du plus pale, celui juste devant elle. Le second n'est pas a 1 : les points
+	-- eteints doivent rester VISIBLES, sinon on ne voit plus une couronne qui tourne mais un point qui saute.
+	local SPIN_HEAD_T = 0
+	local SPIN_TAIL_T = 0.78
+	-- De combien le point de tete grossit. Le meme dessin en deux tailles se distingue mieux qu'en deux gris.
+	local SPIN_HEAD_SCALE = 1.35
 	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
 	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
 	-- ===== LE REBOND DE BALLE =====
@@ -592,158 +540,50 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		end
 	end)
 
-	-- ===== JAUGE DE FEUILLES =====
-	-- SIX feuilles en bas a droite, qui s'allument une par une.
+	-- ===== L'INDICATEUR QUI TOURNE =====
+	-- Une couronne de points, dont l'un apres l'autre s'allume : la forme que tout le monde a deja vue mille fois.
+	-- C'est exactement ce qu'on lui demande -- personne n'a a APPRENDRE que ca veut dire "ca charge".
 	--
-	-- Elle remplace la grande feuille du milieu qui se remplissait en continu. Une jauge CONTINUE dit "ca
-	-- avance" ; une jauge a CRANS dit "il en reste trois". Le joueur COMPTE au lieu d'estimer, et chaque cran
-	-- qui s'allume SURSAUTE, au lieu d'un mouvement qu'on finit par ne plus voir.
-	--
-	-- SANS BRUIT : six sons pendant un chargement, c'est un compte a rebours qu'on subit. Le sursaut se fait
-	-- remarquer si on regarde l'ecran, et se tait si on regarde ailleurs -- ce qu'un son ne sait pas faire.
-	local gauge = Instance.new("Frame")
-	gauge.Name = "LeafGauge"
-	gauge.BackgroundTransparency = 1
-	-- CENTREE : ajouter une feuille etire le bloc des DEUX cotes, donc son milieu reste sur l'axe de l'ecran.
-	gauge.AnchorPoint = Vector2.new(0.5, 0.5)
-	gauge.Position = LEAF_GAUGE_POS
-	gauge.Size = LEAF_GAUGE_SIZE
-	gauge.ZIndex = 4
-	gauge.Parent = curtain
+	-- LES POINTS NE BOUGENT PAS. Ils sont poses une fois pour toutes sur le cercle, et seule leur TRANSPARENCE
+	-- tourne. Faire tourner un objet le long d'un cercle demanderait de recalculer sa position a chaque image, et
+	-- une trainee reclamerait alors autant d'objets qu'on veut de tetes -- pour le meme dessin a l'ecran.
+	local spinner = Instance.new("Frame")
+	spinner.Name = "Spinner"
+	spinner.BackgroundTransparency = 1
+	spinner.AnchorPoint = Vector2.new(0.5, 0.5)
+	spinner.Position = SPIN_POS
+	-- CARRE PAR CONSTRUCTION. `RelativeYY` calcule les DEUX cotes sur la HAUTEUR du parent : sans lui, une taille
+	-- en scale suit la largeur d'un cote et la hauteur de l'autre, et la couronne devient un ovale des que l'ecran
+	-- n'est pas carre -- c'est-a-dire toujours.
+	spinner.SizeConstraint = Enum.SizeConstraint.RelativeYY
+	spinner.Size = UDim2.fromScale(SPIN_SIZE, SPIN_SIZE)
+	spinner.ZIndex = 4
+	spinner.Parent = curtain
 
-	-- SIX SILHOUETTES, POSEES. Aucune animation : ni apparition, ni cycle, ni boucle de fond.
-	--
-	-- L'indicateur qui tournait a ete retire en entier -- l'apparition des feuilles, l'enchainement d'une a
-	-- l'autre, la pause entre deux tours. On repart de la forme la plus simple pour voir ce qu'elle donne, et ce
-	-- qui reviendra reviendra par-dessus.
-	local leafW = LEAF_FILL / LEAF_COUNT
-	local fills: { UIGradient } = {}
-	local leaves: { ImageLabel } = {}
-	for i = 1, LEAF_COUNT do
-		local leaf = Instance.new("ImageLabel")
-		leaf.Name = `Leaf{i}`
-		leaf.BackgroundTransparency = 1
-		leaf.Image = LEAF_ID
-		leaf.ImageColor3 = LEAF_TINT
-		-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions de l'image et la borne par le PLUS PETIT
-		-- cote : retrecir la largeur retrecit alors l'image ENTIERE au lieu de la deformer. Une feuille en `Fit`
-		-- ne peut pas s'etirer, par construction -- elle ne sait que grossir et rapetisser.
+	local dots: { Frame } = {}
+	for i = 1, SPIN_DOTS do
+		local a = (i - 1) / SPIN_DOTS * math.pi * 2
+		local dot = Instance.new("Frame")
+		dot.Name = `Dot{i}`
+		dot.AnchorPoint = Vector2.new(0.5, 0.5)
+		-- L'ANGLE PART DU HAUT et tourne dans le sens des aiguilles. Le `-cos` sur Y n'est pas une coquette : l'axe
+		-- Y d'une interface DESCEND, a l'envers du repere d'un cercle. Sans lui la trainee tournerait a l'envers.
+		dot.Position = UDim2.fromScale(0.5 + math.sin(a) * SPIN_RADIUS, 0.5 - math.cos(a) * SPIN_RADIUS)
+		dot.Size = UDim2.fromScale(SPIN_DOT, SPIN_DOT)
+		dot.BackgroundColor3 = SPIN_COLOR
+		dot.BorderSizePixel = 0
+		dot.ZIndex = 4
+		-- Un rayon en SCALE (0.5 = la moitie du cote) fait un rond quelle que soit la taille du point. En pixels, il
+		-- faudrait le refaire a chaque fois qu'on touche a SPIN_DOT -- et le point de tete, qui grossit, ne serait
+		-- deja plus rond.
 		--
-		-- En contrepartie, la feuille prend les proportions de son cadre : sur un ecran tres large ou tres carre,
-		-- elle sera un peu plus fine ou un peu plus large qu'a l'origine. C'est le prix de la deformation, et il
-		-- est invisible sur les formats courants.
-		leaf.ScaleType = Enum.ScaleType.Stretch
-		-- Ancree EN BAS AU MILIEU : leurs pieds sont alignes sur la meme ligne quelle que soit leur taille. C'est
-		-- ce qui les fait lire comme une rangee posee, et pas comme six images centrees cote a cote.
-		leaf.AnchorPoint = Vector2.new(0.5, 1)
-		-- Placees A LA MAIN plutot qu'avec un UIListLayout : un layout REPOSE ses enfants a chaque image, donc il
-		-- reprendrait la main sur toute animation qu'on voudrait leur donner plus tard.
-		leaf.Position = UDim2.fromScale((i - 0.5) / LEAF_COUNT, 1)
-		leaf.Size = UDim2.fromScale(leafW, 1)
-		leaf.Rotation = LEAF_ANGLE
-		leaf.ZIndex = 4
-		leaf.Parent = gauge
-
-		-- LA COUCHE VERTE, exactement par-dessus. Elle remplit tout le cadre de la silhouette : c'est le degrade
-		-- qui decide de ce qu'on en voit, pas sa taille.
-		local fill = Instance.new("ImageLabel")
-		fill.Name = `LeafFill{i}`
-		fill.BackgroundTransparency = 1
-		fill.Image = LEAF_ID
-		fill.ImageColor3 = LEAF_GREEN
-		-- MEME REGLAGE que la silhouette, obligatoirement : deux modes differents les feraient se deformer
-		-- differemment pendant le sursaut, et le vert deborderait du noir.
-		fill.ScaleType = Enum.ScaleType.Stretch
-		fill.AnchorPoint = Vector2.new(0.5, 0.5)
-		fill.Position = UDim2.fromScale(0.5, 0.5)
-		fill.Size = UDim2.fromScale(1, 1)
-		fill.ZIndex = 5
-		-- ENFANT DE LA SILHOUETTE, et pas une seconde feuille posee a cote : elle herite ainsi de sa position, de
-		-- sa taille et de son inclinaison. Deux images placees separement finiraient par se decaler des qu'on
-		-- touche a l'une des trois.
-		fill.Parent = leaf
-
-		local grad = Instance.new("UIGradient")
-		grad.Rotation = LEAF_FILL_ROTATION
-		grad.Parent = fill
-		fills[i] = grad
-		leaves[i] = leaf
-	end
-
-	-- LE SURSAUT DE FIN. La feuille s'etire vers le HAUT puis revient.
-	--
-	-- Elle grandit par le haut TOUTE SEULE : son ancre est en bas au milieu, donc son pied ne bouge pas. C'est le
-	-- meme point d'ancrage qui aligne la rangee -- une propriete, deux usages, rien a synchroniser.
-	--
-	-- On anime la TAILLE et pas un UIScale : un UIScale est UNIFORME, il grossirait la feuille dans les deux sens
-	-- au lieu de l'etirer.
-	--
-	-- La couche verte suit sans qu'on la touche : elle est ENFANT de la feuille et occupe tout son cadre.
-	local function popLeaf(i: number)
-		local leaf = leaves[i]
-		if not (leaf and leaf.Parent) then
-			return
-		end
-		local normal = UDim2.fromScale(leafW, 1)
-		local up = TweenService:Create(
-			leaf,
-			-- `Sine` en sortie : la courbe la plus douce des deux cotes. `Quad Out` partait a pleine vitesse, et un
-			-- depart sec sur un etirement se ressent comme un tic meme quand la fin est douce.
-			TweenInfo.new(LEAF_POP_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-			{ Size = UDim2.fromScale(leafW * LEAF_POP_X, LEAF_POP_SCALE) }
-		)
-		up.Completed:Connect(function()
-			if leaf.Parent then
-				-- `Back` et pas `Elastic`. Les deux depassent la taille de repos, mais `Elastic` OSCILLE ensuite --
-				-- plusieurs allers-retours qui se lisent comme un tremblement, pas comme de la souplesse. `Back`
-				-- depasse UNE fois et se pose : c'est le meme ressort, en plus calme.
-				TweenService
-					:Create(leaf, TweenInfo.new(LEAF_POP_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-						Size = normal,
-					})
-					:Play()
-			end
-		end)
-		up:Play()
-	end
-
-	-- REMPLIT UNE FEUILLE, de 0 (vide) a 1 (pleine).
-	--
-	-- UNE ARETE, PAS UN FONDU. Le degrade ne prend que deux valeurs -- visible et cache -- separees par une
-	-- frontiere qu'on DEPLACE. C'est le bord net qui monte, pas la couleur qui apparait.
-	--
-	-- LES DEUX BOUTS D'UNE NumberSequence DOIVENT ETRE 0 ET 1, et les points STRICTEMENT croissants : Roblox
-	-- rejette la sequence ENTIERE si ce n'est pas le cas, sans un mot. C'est pour ca que les extremes ont leur
-	-- propre cas -- a 0 et a 1, la frontiere sortirait du cadre et les points se marcheraient dessus.
-	local function setFill(i: number, amount: number)
-		local grad = fills[i]
-		if not (grad and grad.Parent) then
-			return
-		end
-		local shown, hidden = 0, 1
-		if amount <= 0 then
-			grad.Transparency = NumberSequence.new(hidden)
-			return
-		elseif amount >= 1 then
-			grad.Transparency = NumberSequence.new(shown)
-			return
-		end
-		-- La frontiere avance du bout PLEIN vers le bout VIDE. Le sens depend de la convention de Roblox et de
-		-- l'orientation de l'image : il se voit a l'ecran, d'ou LEAF_FILL_INVERT.
-		local edge = if LEAF_FILL_INVERT then amount else 1 - amount
-		edge = math.clamp(edge, LEAF_EDGE, 1 - 2 * LEAF_EDGE)
-		local before = if LEAF_FILL_INVERT then shown else hidden
-		local after = if LEAF_FILL_INVERT then hidden else shown
-		grad.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, before),
-			NumberSequenceKeypoint.new(edge, before),
-			NumberSequenceKeypoint.new(edge + LEAF_EDGE, after),
-			NumberSequenceKeypoint.new(1, after),
-		})
-	end
-
-	for i = 1, LEAF_COUNT do
-		setFill(i, 0)
+		-- Le cast est OBLIGATOIRE : luau-lsp ne resout pas `Instance.new("UICorner")` vers `UICorner`, et poser
+		-- `.CornerRadius` sur ce qu'il croit etre une `Instance` sort en erreur rouge.
+		local corner = Instance.new("UICorner") :: UICorner
+		corner.CornerRadius = UDim.new(0.5, 0)
+		corner.Parent = dot
+		dot.Parent = spinner
+		dots[i] = dot
 	end
 
 	task.spawn(function()
@@ -752,40 +592,25 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		--
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
 		-- instance detruite.
+		local t0 = os.clock()
 		while sg.Parent do
-			for i = 1, LEAF_COUNT do
-				if not sg.Parent then
-					return
-				end
-				-- LINEAIRE, sans adoucissement. Une arete qui accelere puis ralentit se lit comme une hesitation ;
-				-- on veut une montee reguliere, comme un niveau qui se remplit.
-				local t0 = os.clock()
-				while true do
-					local e = math.clamp((os.clock() - t0) / LEAF_FILL_TIME, 0, 1)
-					setFill(i, e)
-					if e >= 1 or not sg.Parent then
-						break
-					end
-					task.wait()
-				end
-				-- LE SURSAUT PART ICI, sans qu'on l'attende : la feuille suivante commence a se remplir pendant
-				-- qu'il finit. Les attendre l'un apres l'autre ajouterait un temps mort a chaque cran et la
-				-- rangee se lirait au ralenti.
-				popLeaf(i)
-				task.wait(LEAF_FILL_GAP)
-			end
-			task.wait(LEAF_CYCLE_GAP)
-			-- Elles se vident TOUTES A LA FOIS : les vider une par une lirait comme un second passage en sens
-			-- inverse, et on ne saurait plus ou commence le cycle.
-			for i = 1, LEAF_COUNT do
-				setFill(i, 0)
-				-- ON REND AUSSI LA TAILLE. Le sursaut de la derniere feuille peut encore tourner : sans ca, elle
-				-- repartirait etiree et son tween finirait par la rendre a sa taille en plein cycle suivant.
-				local leaf = leaves[i]
-				if leaf and leaf.Parent then
-					leaf.Size = UDim2.fromScale(leafW, 1)
+			-- OU EN EST LA TETE sur le cercle, de 0 a 1. Le temps ECOULE et pas un compteur qu'on incremente : a bas
+			-- FPS un compteur par image ralentit la rotation, alors que l'horloge, elle, ne se trompe jamais.
+			local head = ((os.clock() - t0) / SPIN_PERIOD) % 1
+			for i = 1, SPIN_DOTS do
+				local dot = dots[i]
+				if dot.Parent then
+					-- DISTANCE DERRIERE LA TETE, de 0 (c'est elle) a presque 1 (juste devant elle). Le modulo fait le
+					-- tour tout seul : aucun cas particulier a ecrire au passage par zero.
+					local d = (head - (i - 1) / SPIN_DOTS) % 1
+					dot.BackgroundTransparency = SPIN_HEAD_T + (SPIN_TAIL_T - SPIN_HEAD_T) * d
+					-- ET IL GROSSIT UN PEU. La transparence seule se lit mal sur un fond sombre : deux points pales se
+					-- ressemblent, deux tailles non.
+					local s = SPIN_DOT * (1 + (SPIN_HEAD_SCALE - 1) * (1 - d))
+					dot.Size = UDim2.fromScale(s, s)
 				end
 			end
+			task.wait()
 		end
 	end)
 

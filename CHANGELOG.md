@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.650 — Le rideau de chargement affiche un indicateur qui tourne
+
+Les cinq feuilles qui s'allumaient une par une sont retirees. A la place, la couronne de points que tout le monde
+a deja vue mille fois : personne n'a a APPRENDRE que ca veut dire "ca charge".
+
+Une jauge a CRANS raconte une PROGRESSION -- "il en reste deux" -- alors que personne ne sait combien il reste.
+Elle finissait donc par mentir a chaque tour. Une couronne qui tourne ne promet rien d'autre que "ca travaille",
+et c'est la seule chose qu'on sache.
+
+**Les points ne bougent pas.** Ils sont poses une fois pour toutes sur le cercle, et seule leur TRANSPARENCE
+tourne. Deplacer un objet le long d'un cercle demanderait de recalculer sa position a chaque image, et une
+trainee reclamerait alors autant d'objets qu'on veut de tetes -- pour exactement le meme dessin a l'ecran.
+
+| Reglage | Role |
+|---|---|
+| `SPIN_SIZE` | Cote du cadre, en fraction de la HAUTEUR de l'ecran |
+| `SPIN_DOTS` | Nombre de points (12). Sous 8 ca saute, au-dela de 16 ca devient un anneau plein |
+| `SPIN_RADIUS` / `SPIN_DOT` | Rayon du cercle et diametre d'un point, en fraction du cadre |
+| `SPIN_PERIOD` | Duree d'un tour (1 s) |
+| `SPIN_HEAD_T` / `SPIN_TAIL_T` | Transparence de la tete et du point le plus pale |
+| `SPIN_HEAD_SCALE` | De combien la tete grossit |
+
+**Le cadre est carre PAR CONSTRUCTION** (`SizeConstraint = RelativeYY`, les deux cotes calcules sur la hauteur).
+Sans ca, une taille en scale suit la largeur d'un cote et la hauteur de l'autre : la couronne serait un ovale des
+que l'ecran n'est pas carre, c'est-a-dire toujours.
+
+**Le point le plus pale n'est pas invisible** (0.78 et pas 1) : les points eteints doivent rester VISIBLES,
+sinon on ne voit plus une couronne qui tourne mais un point qui saute dans le noir.
+
+La rotation se calcule sur le temps ECOULE, jamais sur un compteur incremente par image : a bas FPS un compteur
+ralentirait la rotation, l'horloge non.
+
 ## 0.0.649 — Le guidage prend son propre dessin, et le point d'exclamation monte sur la tondeuse
 
 Le repere de guidage clonait `MarkerDirection` : le repere de BRAQUAGE de la tondeuse. Deux dessins voisins,
