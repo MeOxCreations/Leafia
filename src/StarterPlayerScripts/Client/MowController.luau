@@ -24,6 +24,7 @@ local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
+local SkillController = require(script.Parent.SkillController)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
@@ -1478,6 +1479,9 @@ local function update(dt: number)
 		if cutNow > 0 then
 			lastCutAt = os.clock()
 		end
+		-- ET LA COMPETENCE MONTE, sur la MEME mesure. Elle compte donc le TRAVAIL et pas la presence : rouler
+		-- moteur allume sur une allee ne fait rien monter. Le controller ignore les zeros, on l'appelle sans test.
+		SkillController.addMow(cutNow)
 	end
 end
 

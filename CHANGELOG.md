@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.666 — Une jauge de competence monte pendant qu'on tond
+
+Une barre bleue apparait a cote de la tete du joueur quand il tond, se remplit pendant qu'il coupe, et s'efface
+quand il s'arrete. Facon jeu de vie : le joueur VOIT qu'il devient meilleur au moment ou il fait le geste, au
+lieu de recevoir un chiffre a la fin.
+
+Trois fichiers, chacun avec une seule responsabilite :
+
+| Fichier | Role |
+|---|---|
+| `Modules/UI/Core/SkillBar.luau` | La jauge. Elle ne connait ni la tonte ni le joueur : une cible, une fraction |
+| `Modules/Configs/SkillConfigs.luau` | Tous les reglages, zero logique |
+| `Client/SkillController.luau` | Le compte : progression, paliers, quand montrer |
+
+**Elle compte le TRAVAIL, pas la presence.** L'unite est ce que rend `GrassZoneController.mowAt` : une quantite
+d'herbe reellement rabattue. Rouler moteur allume sur une allee ne fait donc rien monter. Une jauge qui monte
+sans qu'on travaille ne recompense plus rien.
+
+**Elle n'est pas toujours la.** Affichee en permanence, elle deviendrait du decor -- on cesse de la voir, donc
+elle cesse de recompenser. Elle reste 2.5 s apres la derniere coupe (`MOW_LINGER`), assez pour couvrir un
+demi-tour de tondeuse : plus court, elle clignoterait a chaque manoeuvre, ce qui est pire que de ne pas l'avoir.
+
+**Le decalage lateral suit la CAMERA** (`cameraRelative`). En repere monde, la jauge passerait derriere le
+personnage des qu'on tourne autour de lui.
+
+**Les paliers ralentissent** (`MOW_GROWTH` 1.35, dix niveaux). Monter de 1 a 2 est rapide, de 9 a 10 beaucoup
+moins. Au maximum la jauge reste PLEINE : la vider ferait croire qu'on repart de zero.
+
+**Elle est detruite avec le personnage.** Accrochee a une part du rig, gardee apres une mort, elle suivrait une
+RootPart detruite -- WorldAnchor calculerait une position pour un objet qui n'existe plus.
+
+COTE CLIENT, comme l'herbe elle-meme : il n'y a aujourd'hui aucune autorite serveur sur la pelouse, donc rien a
+demander au serveur. Le jour ou cette progression devra etre SAUVEGARDEE, un service tiendra le compte et le
+controller n'affichera plus que ce qu'on lui pose -- comme `ExperiencesController` le fait deja pour le niveau.
+Le niveau et le remplissage sont deja poses en attributs sur le joueur, donc n'importe quel module peut les lire.
+
 ## 0.0.665 — Une gerbe d'eclairs quand le grand-pere s'agace
 
 Nouvelle primitive `Modules/UI/Core/AngerBurst.luau` : deux eclairs, une triple etincelle et un point

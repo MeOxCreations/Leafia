@@ -60,6 +60,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- TONDEUSE : prompt de prise, coupe, roues. APRES GrassZoneController, dont il appelle mowAt.
 	-- Le geste CENTRAL du jeu s'apprend dans le tuto : l'oublier ici rendait la tondeuse inutilisable
 	-- dans la seule place ou on l'enseigne, alors que le code etait bien synce.
+	-- COMPETENCE DE TONTE : la jauge bleue a cote de la tete. AVANT MowController, qui l'appelle a chaque brin
+	-- coupe -- un controller qui recoit des gains sans avoir demarre les perdrait en silence.
+	require(script.SkillController).init()
 	require(script.MowController).init()
 	-- SEAU : meme raison que la tondeuse ci-dessus. Le module etait synce et BinConfigs bien present, mais rien
 	-- ne l'initialisait ici -- donc pas la moindre trace dans la console, ce qui ressemble a un bug de detection
@@ -159,6 +162,11 @@ GrassZoneController.init()
 
 -- Tondeuse : prompt de prise, coupe de l'herbe sous la CutZone, rotation des roues. APRES GrassZoneController :
 -- il appelle son mowAt. Le PORTAGE lui-meme appartient au serveur (MowService).
+-- COMPETENCE DE TONTE : la jauge bleue a cote de la tete. AVANT MowController, qui l'appelle a chaque brin coupe
+-- -- un controller qui recoit des gains sans avoir demarre les perdrait en silence.
+local SkillController = require(script.SkillController)
+SkillController.init()
+
 local MowController = require(script.MowController)
 MowController.init()
 
