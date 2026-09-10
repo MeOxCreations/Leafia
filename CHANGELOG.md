@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.674 — L'eclair de colere passe au rouge et s'agite
+
+Rouge vif, plus gros, et le mouvement est nettement pousse.
+
+| Reglage | Avant | Apres |
+|---|---|---|
+| `BURST_SCALE` | 0.9 | 1.15 |
+| `STRETCH_Y` / `STRETCH_X` | 1.45 / 0.8 | 1.9 / 0.66 |
+| `PULSE_UP` / `PULSE_BACK` | 0.16 / 0.42 | 0.11 / 0.28 |
+| `TILT` | (n'existait pas) | 11 degres, en alternance |
+
+**Le rouge passe par `ImageColor3`, qui MULTIPLIE le dessin.** Ca ne marche que parce que l'eclair est BLANC :
+une forme noire resterait noire quelle que soit la teinte, puisque zero multiplie par n'importe quoi fait zero.
+Son contour sombre ne bouge pas, et c'est tant mieux -- c'est lui qui le detache du decor.
+
+**Il se balance maintenant, en alternance.** Un mouvement vertical seul est regulier, donc calme : c'est
+l'alternance gauche/droite qui fait la difference entre un objet qui respire et quelqu'un qui s'enerve. Toujours
+du meme cote, ca se lirait comme un tic.
+
+La rotation pivote autour de l'ancre, qui est au pied : il se penche, il ne glisse pas.
+
+**Taille et angle voyagent dans le MEME tween.** Deux tweens separes sur le meme objet finissent toujours par se
+decaler d'une image ou deux, et le balancement ne tomberait plus avec l'etirement.
+
 ## 0.0.673 — Son geste dure ce que dure sa voix, et sa colere tient dans un seul eclair
 
 Deux corrections, la seconde etant un contresens de ma part sur la demande precedente.

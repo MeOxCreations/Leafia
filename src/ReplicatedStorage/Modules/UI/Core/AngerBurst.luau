@@ -28,7 +28,11 @@ local player = Players.LocalPlayer
 -- il garde les proportions par construction.
 local IMAGE = "rbxassetid://84029477406959"
 local IMAGE_W, IMAGE_H = 114, 100
-local BURST_SCALE = 0.9
+local BURST_SCALE = 1.15
+-- ROUGE. `ImageColor3` MULTIPLIE le dessin : ca ne marche que parce que l'eclair est BLANC -- une forme noire
+-- resterait noire quelle que soit la teinte, puisque zero multiplie par n'importe quoi fait zero. Son contour
+-- sombre, lui, ne bouge pas, et c'est tant mieux : c'est lui qui le detache du decor.
+local IMAGE_COLOR = Color3.fromRGB(255, 62, 48)
 
 -- ===== LA DISTANCE =====
 -- Comme WorldMarker : taille bornee pour rester lisible de loin sans devenir enorme colle dessus.
@@ -49,12 +53,18 @@ local POP_TIME = 0.18
 --
 -- ET LA LARGEUR PASSE SOUS 1 : il s'affine en montant, et c'est ca qui fait la matiere molle. Grandir sans
 -- s'affiner ne s'etire pas, ca GROSSIT.
-local STRETCH_Y = 1.45
-local STRETCH_X = 0.8
+local STRETCH_Y = 1.9
+local STRETCH_X = 0.66
+-- ET IL SE BALANCE. La rotation alterne d'un cote a l'autre a chaque pulsation, et c'est ce qui fait la
+-- difference entre un objet qui respire et quelqu'un qui s'ENERVE : un mouvement vertical seul est regulier,
+-- donc calme.
+--
+-- Elle pivote autour de l'ANCRE, qui est au pied : il se penche, il ne glisse pas.
+local TILT = 11
 -- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
 -- ce qui se lit comme un tremblement et pas comme de la souplesse.
-local PULSE_UP = 0.16
-local PULSE_BACK = 0.42
+local PULSE_UP = 0.11
+local PULSE_BACK = 0.28
 
 -- Combien de temps il reste, une fois apparu.
 local HOLD_TIME = 2
@@ -97,6 +107,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	label.Name = "AngerBurst"
 	label.BackgroundTransparency = 1
 	label.Image = IMAGE
+	label.ImageColor3 = IMAGE_COLOR
 	label.Size = UDim2.fromOffset(0, 0)
 	-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions et borne l'image par le plus PETIT cote du
 	-- cadre : elle ne sait alors que grossir et rapetisser, jamais s'etirer -- la pulsation la RETRECIRAIT au lieu
@@ -122,10 +133,14 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	-- voit pas, puisqu'il part en fondu par-dessus.
 	task.spawn(function()
 		task.wait(POP_TIME)
+		local side = 1
 		while label.Parent do
+			-- LA TAILLE ET L'ANGLE DANS LE MEME TWEEN : deux tweens separes sur le meme objet finissent toujours
+			-- par se decaler d'une image ou deux, et le balancement ne tomberait plus avec l'etirement.
 			TweenService
 				:Create(label, TweenInfo.new(PULSE_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
 					Size = UDim2.fromOffset(w * STRETCH_X, h * STRETCH_Y),
+					Rotation = TILT * side,
 				})
 				:Play()
 			task.wait(PULSE_UP)
@@ -135,9 +150,13 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 			TweenService
 				:Create(label, TweenInfo.new(PULSE_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 					Size = normal,
+					Rotation = 0,
 				})
 				:Play()
 			task.wait(PULSE_BACK)
+			-- IL REPART DE L'AUTRE COTE. Toujours du meme cote, ca se lirait comme un tic ; en alternance, comme
+			-- quelqu'un qui s'agite.
+			side = -side
 		end
 	end)
 
