@@ -581,12 +581,6 @@ return {
 		-- IL ANNONCE SON CARACTERE LUI-MEME, et c'est la meilleure place pour le dire : ses coups de gueule
 		-- deviennent une blague qu'il a faite d'avance, au lieu d'une surprise qui ressemble a une faute du joueur.
 		{ text = "Watch out, I shout sometimes. Haha!", emotion = "happy", hold = 2.6 },
-		{ text = "Would you mind mowing the lawn for me?", emotion = "normal", hold = 3 },
-		{
-			text = "Everything you need's in the back of my truck. Go on, help yourself!",
-			emotion = "wink",
-			hold = 4.2,
-		},
 	},
 
 	-- ===== LES OBJECTIFS =====

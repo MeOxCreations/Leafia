@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.696 — Il en dit moins a son arrivee
+
+Les deux dernieres lignes sont retirees : la demande de tondre et le renvoi au camion. Il ne reste que ce qu'il
+dit de LUI.
+
+> As you can see, I'm too old for this. My back's giving out, I can't mow the lawn anymore.
+> Watch out, I shout sometimes. Haha!
+
+La consigne, elle, est deja donnee par le bandeau de tache -- la redire a la voix, c'est la dire deux fois. Et le
+camion viendra a son moment, quand il y aura quelque chose a y prendre.
+
+Le geste d'explication suit tout seul : sa duree est la somme des `hold`, donc raccourcir la replique raccourcit
+le geste, sans rien a re-regler.
+
 ## 0.0.695 — Le nouveau texte du grand-pere
 
 Les cinq lignes d'origine sont remplacees par le texte reecrit par Meox :
