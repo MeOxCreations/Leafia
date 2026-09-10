@@ -870,22 +870,9 @@ local function preOpenDoor()
 	-- derriere, pas de fuir. Le sursaut arriere viendra a la grande ouverture, et il n'en sera que plus net
 	-- d'avoir ete precede d'une avancee.
 	pushScene(TutorialConfigs.PRE_OPEN_PUSH, TutorialConfigs.PRE_OPEN_PUSH_TIME)
-	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME, function()
-		-- IL PARLE DERRIERE LA PORTE ENTREBAILLEE. C'est le moment juste : on entend quelqu'un qu'on ne voit pas
-		-- encore, et c'est CA qui fait attendre la grande ouverture. Dite une fois qu'il s'est montre, la replique
-		-- commentait une surprise deja passee.
-		--
-		-- Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui protege le mouvement
-		-- de la porte, et sans ce test la voix partirait meme si la scene a ete coupee entre-temps -- seule, sur
-		-- un plan qui n'existe plus.
-		local speechToken = doorSwingToken
-		task.delay(TutorialConfigs.SPEECH_DELAY, function()
-			if doorSwingToken ~= speechToken then
-				return
-			end
-			SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
-		end)
-	end)
+	-- Rien a enchainer ici : IL NE PARLE PLUS DERRIERE LE BATTANT ENTREBAILLE. Sa replique attend maintenant la
+	-- grande ouverture (voir openDoor). L'entrebaillement ne porte donc que le mouvement et le son de la porte.
+	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME)
 end
 
 -- SA MAIN POUSSE LE BATTANT : LA PORTE S'OUVRE EN GRAND. Second marqueur. Aucune attente entre les deux n'est
@@ -910,6 +897,21 @@ local function openDoor()
 			-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
 			TutorialConfigs.REVEAL_ZOOM_SPEED
 		)
+
+		-- IL PARLE, LA PORTE GRANDE OUVERTE. Le compte part de la FIN du mouvement -- ce callback -- et pas du
+		-- marqueur qui l'a lancee : entre les deux il y a toute la duree du battant, et un delai qui partirait
+		-- d'avant se decalerait a la premiere retouche de DOOR_FULL_TIME.
+		--
+		-- Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui protege le mouvement de
+		-- la porte, et sans ce test la voix partirait meme si la scene a ete coupee entre-temps -- seule, sur un
+		-- plan qui n'existe plus.
+		local speechToken = doorSwingToken
+		task.delay(TutorialConfigs.SPEECH_DELAY, function()
+			if doorSwingToken ~= speechToken then
+				return
+			end
+			SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
+		end)
 	end)
 end
 

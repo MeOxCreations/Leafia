@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.644 — Le grand-pere parle une fois la porte grande ouverte
+
+Sa replique partait a la DEMI-ouverture, derriere le battant entrebaille. Une voix sans visage, qui commentait
+une surprise qui n'avait pas encore eu lieu.
+
+Elle part maintenant 0.3 s apres la FIN de la grande ouverture : il voit qui est la, et il repond a quelqu'un.
+
+Le compte part du callback de fin du battant, jamais du marqueur qui l'a lance. Entre les deux il y a toute la
+duree du mouvement : un delai qui partirait d'avant se decalerait a la premiere retouche de `DOOR_FULL_TIME`.
+Meme famille que le plancher du rideau de chargement, qui comptait depuis le clic au lieu de l'evenement qu'il
+devait couvrir.
+
+`SPEECH_DELAY` passe de 0.45 a 0.3.
+
 ## 0.0.643 — Le grand-pere explique avec les bras
 
 Il arrivait devant sa porte, se posait sur son idle, et debitait quinze secondes de texte sans un geste. Le plan
