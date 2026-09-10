@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.691 — Le joueur ne se teleporte plus en arriere a la fin de la scene
+
+Les poses de scene deplacent le corps par son LowerTorso : le joueur qui se pousse sur le cote bouge A L'ECRAN,
+mais sa HumanoidRootPart -- la seule position que la physique et le reste du jeu connaissent -- n'a pas bouge
+d'un stud. Relacher la pose ramenait donc le corps sur sa racine, d'un coup, a l'instant precis ou on lui rendait
+la main. Ca ne se lit pas comme une animation qui se termine : ca se lit comme des COMMANDES CASSEES, donc on va
+chercher le bug du cote du deplacement.
+
+On mesure maintenant l'ecart entre le corps et la racine, on l'applique a la racine, et on coupe la pose SANS
+FONDU -- les deux dans la MEME image. Ce qu'on retire au Transform de l'animation, on vient de l'ajouter a la
+racine : rien ne bouge a l'ecran.
+
+**Le fondu devient impossible des qu'on rattrape.** Il servait a voir le personnage se redresser, mais garde
+ici, le corps se retrouverait a DEUX fois l'ecart le temps qu'il redescende -- un saut deux fois pire que celui
+qu'on repare. Il est donc conserve dans le seul cas ou l'on n'a rien rattrape.
+
+**Seul l'HORIZONTAL est mesure.** La verticale ne raconte rien du deplacement -- l'animation peut faire flechir
+les jambes -- et l'appliquer enfoncerait le joueur dans le sol ou le ferait tomber. Au repos les deux parts sont
+sur le meme axe vertical, donc l'ecart horizontal EST le deplacement de l'animation : aucune pose de reference a
+mesurer avant la scene.
+
+Deux bornes : sous `DRIFT_MIN` (0.08) on ne touche a rien, c'est du bruit ; au-dessus de `DRIFT_MAX` (6) on
+renonce, parce que rien ne verifie qu'il y a de la place a l'arrivee -- mieux vaut le saut visuel qu'un joueur
+dans un mur.
+
+Sans LowerTorso (rig R6), la fonction rend faux et l'ancien comportement s'applique : une animation ne peut pas
+deplacer le corps de cette facon sur un tel rig.
+
 ## 0.0.690 — Le joueur ne reprend la main qu'une fois le grand-pere tu
 
 Le plan de sortie et le grand-pere ne suivent pas la meme horloge : son ANIMATION peut finir alors que sa

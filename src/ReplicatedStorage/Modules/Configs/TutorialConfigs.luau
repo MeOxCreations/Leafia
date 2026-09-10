@@ -673,6 +673,24 @@ return {
 	-- claquement de doigts.
 	ASIDE_RELEASE_FADE = 0.35,
 
+	-- ===== CE QUE L'ANIMATION A DEPLACE, ON LE REND AU PERSONNAGE =====
+	-- Les poses de scene bougent le corps par son LowerTorso : le joueur qui se pousse sur le cote se DEPLACE a
+	-- l'ecran, mais sa HumanoidRootPart -- la seule que la physique connaisse -- n'a pas bouge d'un stud.
+	-- Relacher la pose ramene donc le corps sur sa racine, d'un coup : il se teleporte en arriere a l'instant
+	-- precis ou on lui rend la main, ce qui se lit comme des commandes cassees.
+	--
+	-- On mesure l'ecart HORIZONTAL entre les deux, on l'applique a la racine, et on coupe la pose SANS FONDU --
+	-- les deux dans la meme image. Ce qu'on retire au Transform de l'animation, on vient de l'ajouter a la racine :
+	-- rien ne bouge a l'ecran. Avec un fondu, le corps se retrouverait a DEUX fois l'ecart le temps qu'il
+	-- redescende, soit un saut deux fois pire que celui qu'on repare.
+	--
+	-- SOUS CE SEUIL on ne touche a rien : c'est du bruit, et deplacer un joueur pour trois centimetres est un
+	-- risque pour rien.
+	DRIFT_MIN = 0.08,
+	-- ET AU-DESSUS, ON RENONCE. Une animation qui deplacerait le corps de dix studs teleporterait le joueur, sans
+	-- rien pour verifier qu'il y a de la place a l'arrivee. Mieux vaut le saut visuel qu'un joueur dans un mur.
+	DRIFT_MAX = 6,
+
 	-- A quelle distance de la FIN on fige l'animation de coups, en secondes. Le gel doit tomber JUSTE AVANT la
 	-- derniere image : trop tot on coupe le dernier geste, trop tard on rate la fenetre et la piste reboucle.
 	-- 0.05 s vaut une a trois images -- la pose de fin, sans le risque.

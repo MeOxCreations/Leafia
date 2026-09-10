@@ -484,6 +484,35 @@ local function sinkMovement(): Enum.ContextActionResult
 	return Enum.ContextActionResult.Sink
 end
 
+-- REND AU PERSONNAGE CE QUE L'ANIMATION A DEPLACE. Vrai si on a bouge quelque chose.
+--
+-- Une animation qui translate le LowerTorso deplace le corps A L'ECRAN sans jamais toucher a la
+-- HumanoidRootPart, qui est la seule position que la physique -- et le reste du jeu -- connaisse. Les deux se
+-- separent donc pendant la scene, et se rejoignent d'un coup a l'instant ou on relache la pose.
+--
+-- ON NE MESURE QUE L'HORIZONTAL. La verticale ne raconte rien du deplacement -- l'animation peut faire flechir
+-- les jambes -- et l'appliquer enfoncerait le joueur dans le sol ou le ferait tomber. Au repos, les deux parts
+-- sont sur le meme axe vertical, donc l'ecart horizontal EST le deplacement de l'animation, sans avoir a
+-- mesurer une pose de reference avant.
+local function absorbAnimDrift(): boolean
+	local character = player.Character
+	local hrpChild = if character then character:FindFirstChild("HumanoidRootPart") else nil
+	local lowerChild = if character then character:FindFirstChild("LowerTorso") else nil
+	if not (hrpChild and hrpChild:IsA("BasePart") and lowerChild and lowerChild:IsA("BasePart")) then
+		return false -- rig sans LowerTorso (R6) : rien a rattraper, l'animation n'a pas pu deplacer le corps ainsi
+	end
+	local hrp = hrpChild :: BasePart
+	local lower = lowerChild :: BasePart
+	local d = lower.Position - hrp.Position
+	local flat = Vector3.new(d.X, 0, d.Z)
+	local distance = flat.Magnitude
+	if distance < TutorialConfigs.DRIFT_MIN or distance > TutorialConfigs.DRIFT_MAX then
+		return false
+	end
+	hrp.CFrame = hrp.CFrame + flat
+	return true
+end
+
 local function freezePlayer()
 	-- PRIORITE HAUTE : les actions de deplacement sont liees par le PlayerModule lui-meme. A priorite egale c'est
 	-- le dernier lie qui gagne, ce qui dependrait de l'ordre de chargement -- donc du hasard.
@@ -1385,8 +1414,15 @@ end
 -- `playAside` sort avant d'avoir coupe les coups -- c'est alors la pose des COUPS qui reste tenue, avec
 -- exactement le meme symptome. Une sortie de secours qui laisse le meme bug n'est pas une sortie de secours.
 releaseScenePoses = function()
-	stopTrack(knockAsideTrack, TutorialConfigs.ASIDE_RELEASE_FADE)
-	stopTrack(knockTrack, TutorialConfigs.ASIDE_RELEASE_FADE)
+	-- D'ABORD ON RATTRAPE LE DEPLACEMENT DE L'ANIMATION, ensuite on coupe. L'inverse mesurerait un ecart qui a
+	-- deja commence a disparaitre.
+	local absorbed = absorbAnimDrift()
+	-- SANS FONDU QUAND ON A RATTRAPE, avec fondu sinon. Le fondu sert a voir le personnage se REDRESSER ; mais si
+	-- on vient de deplacer sa racine, il faut que le Transform tombe dans la MEME image -- sinon le corps se
+	-- retrouve a deux fois l'ecart le temps que le fondu descende.
+	local fade = if absorbed then 0 else TutorialConfigs.ASIDE_RELEASE_FADE
+	stopTrack(knockAsideTrack, fade)
+	stopTrack(knockTrack, fade)
 	knockAsideTrack = nil
 	knockTrack = nil
 	-- LES SURVEILLANCES AUSSI. Elles se coupent toutes seules en figeant leur piste, mais une piste relachee
