@@ -2204,6 +2204,10 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.684 — L'eclair monte deux fois plus haut
+
+`IMPATIENT_BURST_UP` passe de 3 a 6 studs. Reglage a l'oeil.
+
 ## 0.0.683 — L'eclair repasse au-dessus de sa tete
 
 `IMPATIENT_BURST_SIDE` revient a 0.
