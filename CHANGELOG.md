@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.707 — Le marqueur est ecoute sur TOUTES les pistes de la scene
+
+Il ne tirait pas. Cause : il n'etait ecoute que sur l'animation du grand-pere, alors que la scene en joue
+QUATRE -- les coups, le pas de cote, le geste de poignee, l'ouverture. Brancher sur une seule suppose qu'on sait
+dans laquelle il a ete pose, et une supposition fausse ne produit RIEN : pas d'erreur, pas de log, juste un
+silence qu'on prend pour "l'evenement ne marche pas".
+
+L'ecoute passe donc dans le chargeur commun : toute piste de scene l'ecoute, et le message dit LAQUELLE a parle.
+
+**Et chaque piste annonce sa LONGUEUR au chargement.** C'est la mesure qui manque quand un marqueur reste muet :
+pose a 14.7 s dans une piste qui en fait 9, il ne peut PAS tirer -- et aucune relecture du code ne le dira.
+`Length` vaut zero avant que l'asset soit charge, d'ou la petite attente avant de mesurer.
+
 ## 0.0.706 — On ecoute le marqueur EndFocusPlayerEvent
 
 Nouveau marqueur pose dans l'animation du grand-pere. Il ne fait pour l'instant qu'un LOG : on verifie qu'il
