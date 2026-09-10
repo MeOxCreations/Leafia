@@ -28,7 +28,7 @@ local player = Players.LocalPlayer
 -- il garde les proportions par construction.
 local IMAGE = "rbxassetid://84029477406959"
 local IMAGE_W, IMAGE_H = 114, 100
-local BURST_SCALE = 0.4
+local BURST_SCALE = 0.6
 -- ROUGE. `ImageColor3` MULTIPLIE le dessin : ca ne marche que parce que l'eclair est BLANC -- une forme noire
 -- resterait noire quelle que soit la teinte, puisque zero multiplie par n'importe quoi fait zero. Son contour
 -- sombre, lui, ne bouge pas, et c'est tant mieux : c'est lui qui le detache du decor.

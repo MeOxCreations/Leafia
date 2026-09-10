@@ -2204,6 +2204,10 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.686 — L'eclair grossit un peu
+
+`BURST_SCALE` passe de 0.4 a 0.6, a mi-chemin entre les deux dernieres valeurs. Reglage a l'oeil.
+
 ## 0.0.685 — On previent que le grand-pere a un caractere
 
 Une notification laterale rouge-orange (`Warning`) apparait quand il a fini de parler :
