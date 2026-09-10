@@ -1442,6 +1442,56 @@ local function bodyPart(model: Model): BasePart?
 	return model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
 end
 
+-- SON VISAGE QUAND IL RALE.
+--
+-- JOUEE CHEZ CE JOUEUR, pas par le serveur -- contrairement a sa marche et a son explication. Et c'est VOULU :
+-- l'impatience est une affaire PERSONNELLE. Elle repond a "CE joueur n'a pas encore pris la tondeuse", donc a
+-- deux, celui qui traine doit se faire rappeler a l'ordre sans que l'autre, qui tond deja, voie le grand-pere
+-- lui faire la tete.
+--
+-- LA PISTE EST GARDEE. `LoadAnimation` a chaque replique fabriquerait une piste de plus a chaque fois, toutes
+-- vivantes sur le meme Animator : elles finiraient par se melanger entre elles.
+--
+-- ON GARDE AUSSI LE MODELE POUR LEQUEL ELLE A ETE CHARGEE. Une piste appartient a UN Animator : avec le
+-- streaming, le grand-pere peut disparaitre et revenir, et la piste d'avant ne piloterait plus rien -- elle
+-- jouerait sans erreur sur un rig qui n'existe plus. Comparer les modeles la fait recharger toute seule.
+local faceTrack: AnimationTrack? = nil
+local faceModel: Model? = nil
+
+local function playImpatientFace(model: Model)
+	local existing = faceTrack
+	if not existing or faceModel ~= model then
+		local animator = animatorOf(model)
+		if not animator then
+			return -- pas d'Animator : il ralera sans changer de tete, ce n'est pas de quoi couper la replique
+		end
+		local anim = Instance.new("Animation")
+		anim.AnimationId = TutorialConfigs.IMPATIENT_FACE_ANIM
+		local ok, result = pcall(function()
+			return animator:LoadAnimation(anim)
+		end)
+		if not (ok and typeof(result) == "Instance") then
+			warn(
+				`[Tutorial] Visage de rale non chargeable ({TutorialConfigs.IMPATIENT_FACE_ANIM}). `
+					.. "Il ralera sans changer de tete."
+			)
+			return
+		end
+		existing = result :: AnimationTrack
+		-- FORCE A NE PAS BOUCLER, quoi qu'en dise l'editeur. Son reglage n'est qu'une suggestion, et une piste
+		-- bouclee par erreur reste a plein poids POUR TOUJOURS -- elle figerait son visage sur cette grimace.
+		existing.Looped = false
+		existing.Priority = TutorialConfigs.IMPATIENT_FACE_PRIORITY
+		faceTrack, faceModel = existing, model
+	end
+	local track = existing :: AnimationTrack
+	-- ON REPART DU DEBUT. Sans ca, une deuxieme replique pendant que la premiere grimace joue encore ne
+	-- relancerait rien du tout -- la piste est deja en cours, et `Play` sur une piste qui joue ne la rembobine pas.
+	track:Stop(0)
+	track.TimePosition = 0
+	track:Play(TutorialConfigs.IMPATIENT_FACE_FADE)
+end
+
 -- IL S'IMPATIENTE, tant que la tondeuse est encore par terre.
 --
 -- QUAND ELLE PARLE et QUELLE PHRASE : deux questions separees. Le "quand" vit dans la boucle par image, le
@@ -1472,10 +1522,16 @@ local function playImpatient()
 	-- ACCROCHEE A UNE PART, pas a un point : il est immobile aujourd'hui, mais une position figee est un
 	-- instantane -- le jour ou il fait un pas, la colere resterait en l'air derriere lui.
 	local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
-	local anchor = if grandpa then bodyPart(grandpa) else nil
+	if not grandpa then
+		return
+	end
+	local anchor = bodyPart(grandpa)
 	if anchor then
 		AngerBurst.play(anchor, Vector3.new(0, TutorialConfigs.IMPATIENT_BURST_UP, 0))
 	end
+	-- ET IL EN FAIT LA TETE. Le visage part avec la voix : une grimace qui arrive apres la phrase se lit comme
+	-- une reaction a autre chose.
+	playImpatientFace(grandpa)
 	-- 2D, comme les repliques de la scene : c'est une VOIX qui s'adresse au joueur, pas un bruit qui vient d'un
 	-- point de la carte. Spatialisee, elle baisserait quand il s'eloigne pour chercher la machine -- soit
 	-- exactement quand elle a quelque chose a dire.

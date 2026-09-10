@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.670 — Le grand-pere fait la tete quand il rale
+
+Son animation faciale (`138039446311488`) part avec chaque replique d'impatience. Une grimace qui arriverait
+apres la phrase se lirait comme une reaction a autre chose.
+
+**En `Action2`, une priorite AU-DESSUS de son explication** (`Action`). A priorite EGALE, Roblox ne choisit pas :
+il MELANGE. La tete recevrait la moyenne des deux poses, et on obtiendrait un visage "presque bon" qu'on irait
+corriger dans l'editeur alors que le probleme serait ici.
+
+**`Looped` force a faux cote code**, quoi qu'en dise l'editeur. Son reglage n'est qu'une suggestion, et une piste
+bouclee par erreur reste a plein poids POUR TOUJOURS -- elle figerait son visage sur cette grimace.
+
+**Elle repart du debut a chaque replique.** `Play` sur une piste deja en cours ne la rembobine pas : sans le
+`Stop` prealable, une deuxieme phrase pendant que la premiere grimace joue encore ne relancerait rien du tout.
+
+**Jouee chez CE joueur, pas par le serveur** -- contrairement a sa marche et a son explication, et c'est voulu.
+L'impatience est une affaire personnelle : elle repond a "CE joueur n'a pas encore pris la tondeuse". A deux,
+celui qui traine se fait rappeler a l'ordre sans que l'autre, qui tond deja, voie le grand-pere lui faire la tete.
+
+La piste est gardee en cache AVEC le modele pour lequel elle a ete chargee. Une piste appartient a UN Animator :
+avec le streaming, le grand-pere peut disparaitre et revenir, et l'ancienne jouerait sans erreur sur un rig qui
+n'existe plus.
+
 ## 0.0.669 — Le grand-pere explique deja en marchant
 
 Son animation d'explication demarre a ses PREMIERS PAS et se superpose a la marche. Il raconte son affaire en

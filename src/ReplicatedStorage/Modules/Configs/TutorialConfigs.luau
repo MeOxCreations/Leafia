@@ -451,6 +451,15 @@ return {
 	-- elle ne s'entend pas du tout chez un joueur qui a coupe le son -- ce qui est le cas d'une bonne part des
 	-- joueurs Roblox.
 	IMPATIENT_BURST_UP = 4,
+	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
+	--
+	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,
+	-- il MELANGE : la tete recevrait la moyenne des deux poses, et on obtiendrait un visage "presque bon" qu'on
+	-- irait corriger dans l'editeur alors que le probleme est ici.
+	IMPATIENT_FACE_ANIM = "rbxassetid://138039446311488",
+	IMPATIENT_FACE_PRIORITY = Enum.AnimationPriority.Action2,
+	-- Fondu d'entree. Court : une grimace qui arrive en douceur n'est plus une grimace.
+	IMPATIENT_FACE_FADE = 0.1,
 
 	-- ===== LE MEME MARQUEUR, SUR LA TONDEUSE =====
 	-- Hauteur au-dessus de la RootPart de la machine, en studs. PLUS BAS que celui de la porte : une tondeuse
