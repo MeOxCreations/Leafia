@@ -38,7 +38,7 @@ local ASSET_PATH = { "Contents", "MarkerDirection" }
 -- ===== REGLAGES A L'OEIL =====
 -- TAILLE, en multiple du mesh d'origine. Posee UNE FOIS a la creation : un mesh qu'on redimensionne en jeu
 -- CLIGNOTE si sa RenderFidelity est `Automatic` (Roblox echange le maillage selon la taille a l'ecran).
-local SCALE = 3
+local SCALE = 0.6
 -- ORIENTATION du mesh, en degres autour de la verticale. Le sens ne se DEDUIT pas : il depend de la facon dont le
 -- mesh a ete modelise. Ca se voit a l'ecran, et c'est la seule facon de le savoir. 180 = demi-tour.
 local YAW = 180

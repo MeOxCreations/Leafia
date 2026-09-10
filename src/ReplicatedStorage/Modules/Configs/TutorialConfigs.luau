@@ -383,6 +383,15 @@ return {
 	-- Hauteur au-dessus du centre de la porte, en studs.
 	DOOR_MARKER_UP = 3.5,
 
+	-- ===== LE MEME MARQUEUR, SUR LA TONDEUSE =====
+	-- Hauteur au-dessus de la RootPart de la machine, en studs. PLUS BAS que celui de la porte : une tondeuse
+	-- arrive a la taille, une porte fait deux metres. Le marqueur doit flotter juste au-dessus de l'objet qu'il
+	-- designe -- trop haut, il montre le ciel et on cherche ce qu'il pointe.
+	--
+	-- SON PROPRE REGLAGE, et pas celui de la porte : deux objets de tailles differentes, et un reglage partage par
+	-- deux moments finit toujours par les opposer.
+	MOWER_MARKER_UP = 2,
+
 	-- ===== IL EXPLIQUE POURQUOI IL A BESOIN DE NOUS =====
 	-- Deuxieme replique, dite une fois qu'il a MARCHE jusque devant sa porte. C'est le serveur qui previent de son
 	-- arrivee : la marche se fait chez lui, image par image, et une duree devinee cote client se decalerait des

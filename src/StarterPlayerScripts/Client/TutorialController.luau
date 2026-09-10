@@ -64,6 +64,11 @@ local elapsed = 0
 local doorHint = true
 -- Le point d'exclamation au-dessus de la porte. `nil` = pas affiche.
 local doorMarker: Frame? = nil
+-- LE MARQUEUR DE LA TONDEUSE, et LA PART qu'il designe. On garde les deux : le marqueur est accroche a une part
+-- precise, donc si une AUTRE tondeuse devient la plus proche, il faut le refaire -- il ne se deplace pas tout seul
+-- d'une machine a l'autre.
+local mowerMarker: Frame? = nil
+local mowerMarkerPart: BasePart? = nil
 local missionStarted = false
 local sceneEnded = false
 local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
@@ -1377,20 +1382,37 @@ local function step(dt: number)
 	-- Le repere se cache tout seul en arrivant : le seuil vit dans GroundGuide, pas ici, sinon deux seuils
 	-- finiraient par se contredire.
 	if mowerTaskShown and not mowerTaskDone then
-		local where = MowController.freeMowerPosition()
-		if where then
-			GroundGuide.point(where)
+		local mower = MowController.freeMowerPart()
+		if mower then
+			GroundGuide.point(mower.Position)
+			-- ET LE MEME MARQUEUR QUE LA PORTE, SUR LA MACHINE. Les deux se completent au lieu de se repeter : le
+			-- repere au sol donne la DIRECTION quand on ne voit pas encore l'objet, le marqueur dit "c'est CELUI-
+			-- LA" des qu'il est a l'ecran. Et c'est un dessin que le joueur a deja appris sur la porte, donc rien
+			-- de neuf a comprendre.
+			--
+			-- ON LUI PASSE LA PART, pas sa position : une position est un instantane, et une tondeuse qu'un autre
+			-- joueur pousse laisserait le marqueur plante ou elle etait. Meme piege que le marqueur de la porte,
+			-- qui naissait a l'origine de la map.
+			if mowerMarkerPart ~= mower then
+				WorldMarker.remove(mowerMarker)
+				mowerMarker = WorldMarker.show(mower, Vector3.new(0, TutorialConfigs.MOWER_MARKER_UP, 0))
+				mowerMarkerPart = mower
+			end
 		else
 			GroundGuide.hide()
+			WorldMarker.remove(mowerMarker)
+			mowerMarker, mowerMarkerPart = nil, nil
 		end
 	end
 
 	if mowerTaskShown and not mowerTaskDone and MowController.isRunning() then
 		mowerTaskDone = true
 		-- LE GUIDE S'ETEINT AVEC LA TACHE. Il ne se cacherait pas tout seul : le joueur TIENT la machine, donc
-		-- elle n'est plus "libre" et `freeMowerPosition` ne la rend plus -- on ne repasserait jamais par le test
+		-- elle n'est plus "libre" et `freeMowerPart` ne la rend plus -- on ne repasserait jamais par le test
 		-- de distance qui l'efface.
 		GroundGuide.hide()
+		WorldMarker.remove(mowerMarker)
+		mowerMarker, mowerMarkerPart = nil, nil
 		TaskBannerHandler.setDone(1)
 		task.delay(TutorialConfigs.LAWN_TASK_DELAY, function()
 			TaskBannerHandler.add({
@@ -1585,6 +1607,8 @@ end
 --- Coupe tout : boucle, halo, prompt et touche. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 function TutorialController.stop()
 	GroundGuide.destroy()
+	WorldMarker.remove(mowerMarker)
+	mowerMarker, mowerMarkerPart = nil, nil
 	if conn then
 		conn:Disconnect()
 		conn = nil

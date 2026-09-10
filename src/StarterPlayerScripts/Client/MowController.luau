@@ -1481,21 +1481,23 @@ local function update(dt: number)
 	end
 end
 
---- OU est la tondeuse LIBRE la plus proche ? Rend sa position, ou nil s'il n'y en a aucune.
+--- OU est la tondeuse LIBRE la plus proche ? Rend sa PART racine, ou nil s'il n'y en a aucune.
 ---
 --- SANS RAYON, contrairement a la detection du prompt : celle-la repond "puis-je la prendre MAINTENANT",
 --- celle-ci repond "ou dois-je aller". Borner la seconde par le rayon de la premiere rendrait le guidage
 --- inutile -- il ne s'allumerait qu'une fois arrive.
 ---
---- Rend une POSITION et non le Model : l'appelant veut savoir ou aller, pas manipuler la machine.
-function MowController.freeMowerPosition(): Vector3?
+--- ELLE REND LA PART ET NON SA POSITION, alors que l'appelant ne veut qu'un endroit. Une position est un
+--- INSTANTANE : accrochee a un marqueur, elle le fige la ou la machine etait au moment de la question, et la
+--- tondeuse peut tres bien partir -- un autre joueur la pousse. La part, elle, reste juste toute seule.
+function MowController.freeMowerPart(): BasePart?
 	local character = player.Character
 	local rootChild = if character then character:FindFirstChild("HumanoidRootPart") else nil
 	if not (rootChild and rootChild:IsA("BasePart")) then
 		return nil
 	end
 	local from = (rootChild :: BasePart).Position
-	local best: Vector3? = nil
+	local best: BasePart? = nil
 	local bestDist = math.huge
 	for _, model in ipairs(mowers) do
 		if model:GetAttribute(CARRIED_ATTRIBUTE) == nil then
@@ -1506,7 +1508,7 @@ function MowController.freeMowerPosition(): Vector3?
 				-- dit rien du trajet a faire.
 				local dist = math.sqrt(d.X * d.X + d.Z * d.Z)
 				if dist < bestDist then
-					bestDist, best = dist, root.Position
+					bestDist, best = dist, root
 				end
 			end
 		end

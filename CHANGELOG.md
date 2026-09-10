@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.648 — Un point d'exclamation sur la tondeuse, et un repere au sol cinq fois plus petit
+
+**Le marqueur de la porte sert maintenant aussi a la machine.** Le meme `WorldMarker`, le meme dessin : le joueur
+a deja appris ce qu'il veut dire en allant toquer, il n'a rien de neuf a comprendre.
+
+Les deux aides se completent au lieu de se repeter. Le repere au sol donne la DIRECTION quand la tondeuse n'est
+pas encore a l'ecran ; le marqueur dit "c'est CELLE-LA" des qu'elle y est. Il s'eteint avec la tache, comme le
+repere.
+
+**`MowController.freeMowerPosition` devient `freeMowerPart`** et rend la PART au lieu de sa position. Une
+position est un INSTANTANE : accrochee au marqueur, elle le planterait la ou la machine etait au moment de la
+question, et une tondeuse peut partir -- un autre joueur la pousse. Meme piege que le marqueur de la porte, qui
+naissait a l'origine de la map faute d'avoir recu une reference.
+
+Le marqueur est refait si une AUTRE tondeuse devient la plus proche : il est accroche a une part precise, il ne
+se deplace pas tout seul d'une machine a l'autre.
+
+`MOWER_MARKER_UP` (2 studs) a son propre reglage, separe de `DOOR_MARKER_UP` (3.5) : une tondeuse arrive a la
+taille, une porte fait deux metres. Trop haut, un marqueur montre le ciel et on cherche ce qu'il pointe.
+
+**Le repere au sol passe de 3 a 0.6**, cinq fois plus petit : le mesh a change de dessin.
+
 ## 0.0.647 — Le repere de direction flotte a hauteur de taille
 
 `HEIGHT` passe de -2.85 (pose au sol) a 0, c'est-a-dire la HumanoidRootPart -- qui sur un rig R15 est exactement
