@@ -13,9 +13,9 @@
 -- d'aucun objet, et il tourne avec le MONDE -- donc il continue de designer la bonne direction quel que soit
 -- l'angle de vue.
 --
--- LE MESH EST CELUI DE LA TONDEUSE (`MarkerDirection`, un demi-cercle avec une fleche a l'avant). Reutilise
--- expres : le joueur a deja appris ce que ce dessin veut dire en conduisant, et un deuxieme dessin pour la meme
--- idee est un deuxieme apprentissage pour rien.
+-- SON PROPRE MESH : `MarkerDirectionTutorial`. A ne pas confondre avec `MarkerDirection`, qui est le repere de
+-- BRAQUAGE pose sur la tondeuse elle-meme -- deux dessins voisins, ranges cote a cote, pour deux choses qui n'ont
+-- rien a voir : l'un montre ou la machine va tourner, l'autre ou aller la chercher.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,10 +30,10 @@ local player = Players.LocalPlayer
 -- Chemin sous `ReplicatedStorage.Assets`. Le mesh vit dans Studio et Rojo ne synchronise pas les Assets : on le
 -- retrouve par son chemin plutot que de le decrire en code.
 --
--- SON PROPRE CHEMIN, meme si c'est aujourd'hui le meme mesh que le marqueur de la tondeuse. Les deux usages n'ont
--- rien a voir -- l'un montre un braquage, l'autre une direction a prendre -- et le jour ou l'un des deux change de
--- dessin, l'autre ne doit pas suivre.
-local ASSET_PATH = { "Contents", "MarkerDirection" }
+-- LES DEUX USAGES ONT CHACUN LEUR MESH, et c'est ce qui evite qu'une retouche de l'un abime l'autre. Ce chemin a
+-- d'abord pointe sur `MarkerDirection` -- le repere de braquage de la machine -- et le dessin du guidage a ete
+-- refait depuis : les deux ne se ressemblent plus.
+local ASSET_PATH = { "Contents", "MarkerDirectionTutorial" }
 
 -- ===== REGLAGES A L'OEIL =====
 -- TAILLE, en multiple du mesh d'origine. Posee UNE FOIS a la creation : un mesh qu'on redimensionne en jeu

@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.649 — Le guidage prend son propre dessin, et le point d'exclamation monte sur la tondeuse
+
+Le repere de guidage clonait `MarkerDirection` : le repere de BRAQUAGE de la tondeuse. Deux dessins voisins,
+ranges cote a cote dans les Assets, pour deux choses qui n'ont rien a voir -- l'un montre ou la machine va
+tourner, l'autre ou aller la chercher. Il clone maintenant `MarkerDirectionTutorial`, qui est fait pour ca.
+
+`MOWER_MARKER_UP` passe de 2 a 4 studs : le point d'exclamation flottait trop bas, dans la machine.
+
+A REGLER A L'OEIL : `SCALE` (0.6) avait ete choisi sur l'ANCIEN mesh. Le nouveau n'a ni la meme taille de
+depart ni le meme dessin, donc cette valeur n'a plus de raison d'etre juste. Elle se regle a l'ecran, en haut de
+`GroundGuide`.
+
 ## 0.0.648 — Un point d'exclamation sur la tondeuse, et un repere au sol cinq fois plus petit
 
 **Le marqueur de la porte sert maintenant aussi a la machine.** Le meme `WorldMarker`, le meme dessin : le joueur

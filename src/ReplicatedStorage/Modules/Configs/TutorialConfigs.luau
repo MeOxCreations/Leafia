@@ -390,7 +390,7 @@ return {
 	--
 	-- SON PROPRE REGLAGE, et pas celui de la porte : deux objets de tailles differentes, et un reglage partage par
 	-- deux moments finit toujours par les opposer.
-	MOWER_MARKER_UP = 2,
+	MOWER_MARKER_UP = 4,
 
 	-- ===== IL EXPLIQUE POURQUOI IL A BESOIN DE NOUS =====
 	-- Deuxieme replique, dite une fois qu'il a MARCHE jusque devant sa porte. C'est le serveur qui previent de son
