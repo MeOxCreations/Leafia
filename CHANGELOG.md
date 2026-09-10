@@ -2204,6 +2204,36 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.643 — Le grand-pere explique avec les bras
+
+Il arrivait devant sa porte, se posait sur son idle, et debitait quinze secondes de texte sans un geste. Le plan
+etait une photo avec du son par-dessus.
+
+Une animation d'explication (`107093983212125`) joue maintenant pendant toute sa replique, puis se relache et il
+revient respirer.
+
+| Reglage | Role |
+|---|---|
+| `OLDMAN_TALK_ANIM` | L'animation. En code et pas en Instance : Rojo la porte dans les DEUX places |
+| `OLDMAN_TALK_PRIORITY` | `Action`, donc au-dessus de l'idle qui continue de tourner dessous |
+| `OLDMAN_TALK_LOOP` | Bouclee tant qu'il parle. Elle est plus courte que la voix |
+| `OLDMAN_TALK_FADE` | Fondu d'entree et de sortie, sinon les bras SAUTENT au dernier mot |
+
+**Elle part avec la voix, pas a l'arrivee** (`SPEECH2_DELAY`, le souffle qu'il prend en arrivant) : gesticuler
+pendant ce silence le ferait commencer sans raison. Un seul reglage pour les deux, donc rien a garder d'accord.
+
+**Sa duree est la SOMME des `hold` de `SPEECH2_LINES`**, jamais un chiffre pose a la main. La config est
+partagee : le jour ou la voix est reenregistree et les `hold` recales, la piste suit toute seule.
+
+**La sonde de l'idle a ete rendue honnete au passage.** Elle verifiait que les articulations BOUGENT pour
+conclure que l'idle joue vraiment. L'explication bouge les memes articulations : "ca bouge" ne prouvait donc plus
+que c'est l'idle qui ecrit, et un idle mort serait passe pour vivant jusqu'a ce qu'il finisse de parler -- puis
+statue, sans un mot dans la console. Quand une piste plus forte joue par-dessus, elle ne conclut plus que sur ce
+qu'elle peut encore prouver : le chargement. Une sonde ne compte que ce qu'elle peut prouver.
+
+Si l'animation ne charge jamais, il parle sans les bras et la console le DIT. Rien a reposer : l'idle n'a jamais
+ete coupe.
+
 ## 0.0.642 — Le grand-pere parle avec des mots qu'un enfant comprend
 
 Il disait « Since I retired I just haven't gotten around to mowing the lawn or looking after the garden ».

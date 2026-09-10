@@ -220,8 +220,18 @@ local function restoreIdle(model: Model)
 			return
 		end
 		local joints = #before
-		if track.Length > 0 and poseMoved(before, jointPose(model)) then
-			return -- ca joue ET ca bouge : rien a dire
+		-- UNE PISTE PLUS FORTE PAR-DESSUS REND CE CONTROLE AVEUGLE. L'explication (priorite Action) bouge les memes
+		-- articulations : "ca bouge" ne prouve donc plus que c'est l'IDLE qui ecrit. On ne conclut alors que sur ce
+		-- qu'on peut encore prouver -- le chargement -- au lieu de rendre un OK qu'on n'a pas mesure.
+		local covered = false
+		for _, playing in (animator :: Animator):GetPlayingAnimationTracks() do
+			if playing ~= track and playing.Priority.Value > Enum.AnimationPriority.Idle.Value then
+				covered = true
+				break
+			end
+		end
+		if track.Length > 0 and (covered or poseMoved(before, jointPose(model))) then
+			return -- ca joue, et soit ca bouge, soit une autre piste nous empeche de le dire
 		end
 
 		if track.Length <= 0 then
@@ -247,6 +257,82 @@ local function restoreIdle(model: Model)
 	print(
 		`[Tutorial] Idle du grand-pere : {idle.AnimationId} `
 			.. `(remplace {#stoppedIds} : {if #stoppedIds > 0 then table.concat(stoppedIds, ", ") else "aucune"})`
+	)
+end
+
+-- IL EXPLIQUE AVEC LES BRAS pendant sa replique, puis se repose sur son idle -- qui n'a jamais cesse de tourner
+-- dessous, l'explication etant en priorite Action.
+--
+-- LE SERVEUR TIENT CETTE PISTE, comme la marche : le grand-pere est un modele du monde et non le personnage d'un
+-- joueur. Jouee cote client, elle ne se verrait que chez celui qui l'a lancee.
+--
+-- SA DUREE EST LA SOMME DES `hold` DE LA REPLIQUE, jamais un chiffre pose a la main : la config est partagee, donc
+-- reenregistrer la voix (et rebouger les `hold`) rallonge la piste toute seule. Et elle part au meme instant que
+-- la voix -- SPEECH2_DELAY, le souffle qu'il prend en arrivant -- pour ne pas gesticuler dans le silence.
+local talkTrack: AnimationTrack? = nil
+
+local function playTalk(model: Model)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	if not animator then
+		return -- restoreIdle a deja prevenu : sans Animator il n'y a aucune animation du tout
+	end
+
+	-- La scene peut etre rejouee (second joueur, retour au tuto). Deux pistes a priorite EGALE ne se choisissent
+	-- pas, Roblox les MELANGE : on ferme la precedente avant d'en poser une neuve.
+	if talkTrack then
+		(talkTrack :: AnimationTrack):Stop(TutorialConfigs.OLDMAN_TALK_FADE)
+		talkTrack = nil
+	end
+
+	local anim = Instance.new("Animation")
+	anim.AnimationId = TutorialConfigs.OLDMAN_TALK_ANIM
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(anim)
+	end)
+	if not (ok and typeof(result) == "Instance") then
+		warn(
+			`[Tutorial] Explication non chargeable ({TutorialConfigs.OLDMAN_TALK_ANIM}). `
+				.. "Il parlera sans bouger les bras."
+		)
+		return
+	end
+	local track = result :: AnimationTrack
+	track.Looped = TutorialConfigs.OLDMAN_TALK_LOOP
+	track.Priority = TutorialConfigs.OLDMAN_TALK_PRIORITY
+	talkTrack = track
+
+	local seconds = 0
+	for _, line in TutorialConfigs.SPEECH2_LINES do
+		seconds += line.hold
+	end
+
+	task.delay(TutorialConfigs.SPEECH2_DELAY, function()
+		if not model.Parent or talkTrack ~= track then
+			return -- detruit en chemin, ou une autre lecture a pris la place
+		end
+		track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
+
+		task.delay(seconds, function()
+			track:Stop(TutorialConfigs.OLDMAN_TALK_FADE)
+			if talkTrack == track then
+				talkTrack = nil
+			end
+			-- ON MESURE LE RESULTAT, pas l'intention : une piste dont l'asset n'arrive jamais garde une longueur de
+			-- zero et n'ecrit RIEN, sans la moindre erreur -- on irait chercher le bug dans l'animation. Rien a
+			-- reposer ici, l'idle tourne dessous : il aura juste parle sans les bras.
+			if track.Length <= 0 then
+				warn(
+					`[Tutorial] L'explication {TutorialConfigs.OLDMAN_TALK_ANIM} n'a jamais charge : il a parle sans `
+						.. "bouger. Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
+				)
+			end
+		end)
+	end)
+
+	print(
+		`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM} `
+			.. `pendant {string.format("%.1f", seconds)} s`
 	)
 end
 
@@ -394,6 +480,10 @@ function TutorialService.init()
 		-- est de la declencher trop tot, ce qui fait sortir le grand-pere -- pas de quoi tricher.
 		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, function(model)
 			restoreIdle(model)
+			-- APRES l'idle : restoreIdle coupe les pistes de priorite Idle, et l'explication en est une autre. Dans
+			-- l'ordre inverse elle survivrait quand meme, mais l'ordre "on repose sa respiration, puis on pose le
+			-- geste par-dessus" est celui qui se lit.
+			playTalk(model)
 			-- IL EST ARRIVE, ET C'EST LE SERVEUR QUI LE SAIT. La marche se fait ici, image par image : le client
 			-- ne peut pas connaitre l'instant de l'arrivee sans le deviner, et une duree devinee se decale des
 			-- qu'on change la vitesse, la distance ou l'animation.

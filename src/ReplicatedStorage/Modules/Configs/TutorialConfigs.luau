@@ -524,6 +524,24 @@ return {
 	-- court pour ne pas laisser une statue a l'ecran si le verdict est mauvais.
 	OLDMAN_IDLE_SAMPLE = 0.35,
 
+	-- ===== IL PARLE AVEC LES BRAS =====
+	-- Arrive devant sa porte, il EXPLIQUE. Sans cette piste il debite quinze secondes de texte sans un geste, et
+	-- le plan devient une photo.
+	--
+	-- L'ID vit ICI, en code, comme celui de la marche : Rojo synchronise le code dans TOUTES les places, les
+	-- Instances non (`Animations` est en `$ignoreUnknownInstances`, elles se recopient a la main place par place).
+	OLDMAN_TALK_ANIM = "rbxassetid://107093983212125",
+	-- AU-DESSUS de l'idle (priorite `Idle`), qui continue de tourner dessous : il suffit d'ARRETER celle-ci pour
+	-- qu'il revienne respirer, sans rien avoir a reposer. En `Action` et pas en `Movement` : Movement est la
+	-- priorite de sa marche, et deux pistes a priorite EGALE ne se choisissent pas -- Roblox les MELANGE.
+	OLDMAN_TALK_PRIORITY = Enum.AnimationPriority.Action,
+	-- BOUCLEE, parce qu'elle est presque surement plus courte que la replique (14.68 s de voix). Sans boucle il
+	-- finirait de parler immobile, ce qui se lit comme une animation cassee. A false le jour ou elle couvre tout.
+	OLDMAN_TALK_LOOP = true,
+	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
+	-- pose de repos au dernier mot.
+	OLDMAN_TALK_FADE = 0.3,
+
 	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend
 	-- entre les deux le ferait s'enfoncer ou leviter.
