@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.687 — L'eclair penche de vingt degres de plus
+
+`BASE_TILT` passe de -20 a -40. Le balancement continue de se jouer autour de cette valeur, donc il ne se
+redresse jamais entre deux battements.
+
 ## 0.0.686 — L'eclair grossit un peu
 
 `BURST_SCALE` passe de 0.4 a 0.6, a mi-chemin entre les deux dernieres valeurs. Reglage a l'oeil.

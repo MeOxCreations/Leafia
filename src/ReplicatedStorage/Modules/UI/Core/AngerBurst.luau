@@ -72,7 +72,7 @@ local TILT = 11
 -- IL A ETE COUCHE A -90 UNE VERSION, puis remis debout : l'ecran a tranche. A plat, il s'etire sur le COTE --
 -- l'etirement suit le sens du dessin, pas celui de l'ecran -- et un eclair qui s'allonge a l'horizontale ne
 -- monte plus, donc il ne jaillit plus. C'est la verticale qui porte le geste.
-local BASE_TILT = -20
+local BASE_TILT = -40
 -- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
 -- ce qui se lit comme un tremblement et pas comme de la souplesse.
 local PULSE_UP = 0.11
