@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.658 — Il rale deja en se battant avec sa poignee
+
+`Oldman_scene_speech_BeforeOpen` part 0.25 s apres le debut du geste de poignee. On sait qu'il y a quelqu'un
+derriere bien avant que la porte bouge : le bruit de serrure dit qu'une porte resiste, la voix dit que c'est UN
+VIEUX MONSIEUR qui resiste avec elle.
+
+Pas zero seconde de delai : le bruit de serrure et sa voix partiraient ensemble et se masqueraient l'un l'autre.
+On entend d'abord la porte resister, il repond ensuite.
+
+**Une seule fois, pas a chaque secousse.** La relance rejoue le BRUIT de poignee, pas sa phrase : un vieux qui
+redit la meme chose a chaque essai s'entend comme une bande qui saute.
+
+**Toutes ses voix passent maintenant par un seul point** (`sayVoice`), qui coupe celle qui parle avant d'en
+lancer une autre. Un personnage n'a qu'une bouche : deux repliques superposees ne s'entendent pas comme deux
+phrases, elles s'entendent comme un bug. Et le cas arrive tout seul -- un fichier plus long qu'a
+l'enregistrement, un marqueur d'animation qui tombe plus tot -- donc le rendre IMPOSSIBLE vaut mieux que
+demander a chaque appelant d'y penser.
+
+Les quatre endroits qui parlaient (les deux repliques d'ouverture, l'impatience, et celle-ci) y passent.
+
 ## 0.0.657 — Une cinquieme phrase d'impatience
 
 `Oldman_scene_speech_Impatient_5` rejoint la liste. Une ligne, et le tirage la prend en compte tout seul : c'est

@@ -126,9 +126,8 @@ local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
 local trySound: Sound? = nil
--- LA REPLIQUE EN COURS a l'ouverture de la porte. Gardee pour pouvoir la couper si la scene est abandonnee : une
--- voix qui continue sur un plan qui n'existe plus s'entend comme un bug, et personne ne fait le lien avec une
--- scene finie.
+-- LA REPLIQUE EN COURS du grand-pere. Gardee pour pouvoir la couper si la scene est abandonnee : une voix qui
+-- continue sur un plan qui n'existe plus s'entend comme un bug, et personne ne fait le lien avec une scene finie.
 local speechSound: Sound? = nil
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
@@ -881,6 +880,23 @@ local function prepDoor(): boolean
 	return true
 end
 
+-- IL PARLE. Une seule voix a la fois : on coupe celle qui parle avant d'en lancer une autre.
+--
+-- UN PERSONNAGE N'A QU'UNE BOUCHE. Deux repliques superposees ne s'entendent pas comme deux phrases, elles
+-- s'entendent comme un bug -- et ca arrive tout seul des qu'un fichier est plus long qu'a l'enregistrement, ou
+-- qu'un marqueur d'animation tombe plus tot. Passer par ici rend le cas impossible, au lieu de demander a chaque
+-- appelant d'y penser.
+local function sayVoice(path: { string }): Sound?
+	local previous = speechSound
+	speechSound = nil
+	if previous and previous.Parent then
+		previous:Stop()
+		previous:Destroy()
+	end
+	speechSound = SoundUtils.play(path, SCENE_2D)
+	return speechSound
+end
+
 -- SES DEUX REPLIQUES D'OUVERTURE. Elles se suivent : la premiere part quand le battant s'entrebaille, la seconde
 -- des que la premiere a fini de parler. La porte, elle, continue de s'ouvrir pendant qu'il parle -- son mouvement
 -- ne commande plus rien de la voix.
@@ -894,7 +910,7 @@ local function playSecondSpeech()
 		return
 	end
 	secondSpeechOn = true
-	speechSound = SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
+	sayVoice(TutorialConfigs.SPEECH_SOUND)
 end
 
 -- IL PARLE DERRIERE LE BATTANT ENTREBAILLE.
@@ -907,8 +923,7 @@ end
 -- regarde s'il a seulement CHARGE. On ne coupe pas un son qui joue encore : le filet repond a "il n'est jamais
 -- arrive", pas a "il est plus long que prevu".
 local function playFirstSpeech()
-	local first = SoundUtils.play(TutorialConfigs.SPEECH0_SOUND, SCENE_2D)
-	speechSound = first
+	local first = sayVoice(TutorialConfigs.SPEECH0_SOUND)
 
 	if not first then
 		-- Introuvable, et SoundUtils l'a deja dit : on ne retient pas la suite pour un fichier qui n'existe pas.
@@ -1041,6 +1056,18 @@ local function playTryOpen()
 	track.Priority = Enum.AnimationPriority.Action
 	track.Looped = false
 	trySound = SoundUtils.play(TutorialConfigs.TRY_OPEN_SOUND, SCENE_2D)
+	-- ET IL RALE DERRIERE, une seule fois -- pas a chaque secousse : la relance ci-dessous rejoue le BRUIT de
+	-- poignee, pas sa phrase. Un vieux qui redit la meme chose a chaque essai s'entend comme une bande qui saute.
+	--
+	-- Le jeton de la porte sert d'annulation : `task.delay` ne connait pas la fin de scene, et sans ce test la
+	-- voix partirait toute seule sur un plan qui n'existe plus.
+	local voiceToken = doorSwingToken
+	task.delay(TutorialConfigs.TRY_OPEN_VOICE_DELAY, function()
+		if doorSwingToken ~= voiceToken or sceneEnded then
+			return
+		end
+		sayVoice(TutorialConfigs.TRY_OPEN_VOICE)
+	end)
 	-- ON SE RAPPROCHE, LENTEMENT, pendant qu'il se bat avec la poignee. L'image se resserre sans qu'on s'en rende
 	-- compte : la tension monte toute seule, sans qu'aucun evenement ne la signale.
 	pushScene(TutorialConfigs.TRY_PUSH, TutorialConfigs.TRY_PUSH_TIME)
@@ -1414,7 +1441,7 @@ local function playImpatient()
 	-- 2D, comme les repliques de la scene : c'est une VOIX qui s'adresse au joueur, pas un bruit qui vient d'un
 	-- point de la carte. Spatialisee, elle baisserait quand il s'eloigne pour chercher la machine -- soit
 	-- exactement quand elle a quelque chose a dire.
-	speechSound = SoundUtils.play(sounds[i], SCENE_2D)
+	sayVoice(sounds[i])
 end
 
 local function showMowerTask()

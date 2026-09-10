@@ -313,6 +313,13 @@ return {
 	-- Le bruit de poignee qu'on secoue. Spatial, au niveau de la porte. Il va JUSQU'AU BOUT, meme si le geste se
 	-- termine avant : un bruit coupe net s'entend comme un bug, alors qu'il deborde ici sans deranger personne.
 	TRY_OPEN_SOUND = { "Sounds", "Scenes", "Scene1", "TryUnlockDoorSound" },
+	-- IL PARLE EN SE BATTANT AVEC SA POIGNEE. Une voix avant meme que la porte bouge : on sait qu'il y a
+	-- quelqu'un derriere, et on l'entend galerer. Le bruit de serrure dit qu'une porte resiste, la voix dit que
+	-- c'est UN VIEUX MONSIEUR qui resiste avec elle.
+	TRY_OPEN_VOICE = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_BeforeOpen" },
+	-- Apres le debut du geste. COURT, mais pas zero : le bruit de serrure et sa voix partiraient ensemble et se
+	-- masqueraient l'un l'autre. On entend d'abord la porte resister, il repond ensuite.
+	TRY_OPEN_VOICE_DELAY = 0.25,
 	-- IL S'Y REPREND. Une seule secousse se lit comme une porte un peu dure ; deux, comme une porte qui RESISTE
 	-- et un vieux qui s'acharne -- ce qui est l'histoire qu'on raconte. C'est du rythme, donc ca se juge a
 	-- l'ecran : le nombre est ici pour se regler sans toucher au code.
