@@ -199,9 +199,9 @@ return {
 	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
 	REVEAL_ZOOM_SPEED = 6,
 
-	-- ET LE CADRE S'OUVRE AVEC LA PORTE. Les bandes ne partent pas -- on est encore dans la scene -- elles se
-	-- RETRACTENT : l'image s'agrandit a l'instant ou il apparait, et le joueur en voit plus sans qu'on lui dise
-	-- rien. Ce que la porte fait au decor, le cadre le fait a l'ecran.
+	-- ET LE CADRE S'OUVRE AVEC LE BATTANT, des qu'il s'ENTREBAILLE. Les bandes ne partent pas -- on est encore
+	-- dans la scene -- elles se RETRACTENT : l'image grandit pendant qu'on se penche vers l'ouverture, donc en
+	-- meme temps que l'envie de voir. Ce que la porte fait au decor, le cadre le fait a l'ecran.
 	--
 	-- Fraction de leur hauteur normale. A zero elles disparaitraient et la scene perdrait ce qui dit qu'elle en
 	-- est une ; a 1 il ne se passe rien. Entre les deux, ca se juge a l'ecran.

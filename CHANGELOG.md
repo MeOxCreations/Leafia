@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.661 — Le cadre s'ouvre des que le battant s'entrebaille
+
+Le retrait des barres passe de la GRANDE ouverture a l'ENTREBAILLEMENT, le premier mouvement du battant.
+
+Le cadre s'ecarte pendant qu'on se penche vers l'ouverture : l'image grandit en meme temps que l'envie de voir.
+Pose plus tard, ce mouvement s'ajoutait a la revelation au lieu de la preparer -- et deux effets sur la meme
+image se seraient annules.
+
 ## 0.0.660 — Le cadre s'ouvre avec la porte
 
 A la grande ouverture, les barres noires se RETRACTENT de moitie au lieu de rester figees. L'image s'agrandit a

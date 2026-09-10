@@ -952,6 +952,14 @@ local function preOpenDoor()
 	-- derriere, pas de fuir. Le sursaut arriere viendra a la grande ouverture, et il n'en sera que plus net
 	-- d'avoir ete precede d'une avancee.
 	pushScene(TutorialConfigs.PRE_OPEN_PUSH, TutorialConfigs.PRE_OPEN_PUSH_TIME)
+	-- ET LE CADRE S'OUVRE AVEC LE BATTANT. Les bandes se RETRACTENT des le premier mouvement, pas a la grande
+	-- ouverture : le cadre s'ecarte PENDANT qu'on se penche vers l'entrebaillement, donc l'image grandit en meme
+	-- temps que l'envie de voir. Arrive plus tard, ce mouvement se serait ajoute a la revelation au lieu de la
+	-- preparer -- et deux effets sur la meme image se seraient annules.
+	--
+	-- `setHeight` et pas `hide` : `hide` dirait a tout le reste du code que la scene est finie -- il eteint le
+	-- ScreenGui et repond faux a `isShown`, qui sert de filet au respawn en pleine scene.
+	Letterbox.setHeight(TutorialConfigs.REVEAL_BARS, TutorialConfigs.REVEAL_BARS_TIME)
 	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME, function()
 		-- IL PARLE DERRIERE LA PORTE ENTREBAILLEE. On entend quelqu'un qu'on ne voit pas encore, et c'est CA qui
 		-- fait attendre la grande ouverture.
@@ -991,12 +999,6 @@ local function openDoor()
 			-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
 			TutorialConfigs.REVEAL_ZOOM_SPEED
 		)
-		-- ET LE CADRE S'OUVRE AVEC ELLE. Les bandes se RETRACTENT, elles ne partent pas : la scene continue, on
-		-- rend juste de l'image au joueur a l'instant ou il y a quelque chose a voir.
-		--
-		-- `setHeight` et pas `hide` : `hide` dirait a tout le reste du code que la scene est finie -- il eteint le
-		-- ScreenGui et repond faux a `isShown`, qui sert de filet au respawn en pleine scene.
-		Letterbox.setHeight(TutorialConfigs.REVEAL_BARS, TutorialConfigs.REVEAL_BARS_TIME)
 
 		-- RIEN A DECLENCHER ICI. Les deux repliques s'enchainent entre elles depuis l'entrebaillement : la
 		-- grande ouverture ne commande plus la voix, elle se contente d'arriver pendant qu'il parle.
