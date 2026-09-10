@@ -120,6 +120,10 @@ local playAside: (() -> ())? = nil
 -- MEME MOTIF : `releaseScene` rend les commandes bien avant que `stopTrack` ne soit defini, et c'est pourtant la
 -- que les poses de scene doivent tomber.
 local releaseScenePoses: (() -> ())? = nil
+-- DECLAREE ICI, DEFINIE PLUS BAS. Elle est appelee par la fin de scene, qui vit tout en haut du fichier, alors
+-- qu'elle a besoin de Dialogue et de la config des repliques -- donc elle ne peut pas etre ecrite avant. Meme
+-- pattern que `releaseScenePoses` juste au-dessus : on ne cite jamais une fonction avant sa definition.
+local startOldManSpeech: (() -> ())? = nil
 -- MEME MOTIF QUE `playAside` : la fermeture a besoin de `swingDoor`, defini bien plus bas, alors que c'est
 -- `endScene` -- plus haut -- qui sait quand le grand-pere se met en marche.
 local closeDoorBehind: (() -> ())? = nil
@@ -739,6 +743,17 @@ local function endScene()
 	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
 	-- LE TITRE PART AVEC ELLES : il s'ecrit DANS la bande du bas, il resterait donc en l'air sur le jeu.
 	ChapterTitle.hide()
+
+	-- ET IL COMMENCE A PARLER, puisqu'il vient de se mettre en marche. Le bandeau glisse depuis le bas pendant
+	-- qu'il traverse sa cour.
+	--
+	-- ON N'ATTEND PAS QUE LE SERVEUR CONFIRME son depart : c'est nous qui venons de le lui ordonner, et un
+	-- aller-retour reseau de plus n'apporterait qu'un decalage. Son geste d'explication, cote serveur, part au
+	-- meme instant pour la meme raison.
+	local speak = startOldManSpeech
+	if speak then
+		speak()
+	end
 
 	-- LE JOUEUR SE POUSSE, maintenant que le grand-pere se met en marche. Pas a la fin des coups : a ce
 	-- moment-la la porte etait encore fermee, et se decaler devant une porte fermee ne veut rien dire.
@@ -1789,9 +1804,14 @@ local function showMowerTask()
 	})
 end
 
---- LE GRAND-PERE EST ARRIVE DEVANT SA PORTE. Il explique pourquoi il a besoin de nous, et la voix commande : les
---- repliques avancent toutes seules, calees sur sa duree (voir `hold` dans Dialogue).
-local function onOldManArrived()
+--- IL SE MET EN MARCHE, ET IL PARLE EN MARCHANT. Le bandeau de dialogue glisse depuis le bas a cet instant.
+---
+--- PAS A SON ARRIVEE. Il traverse sa cour en expliquant son affaire : attendre qu'il soit plante devant sa porte
+--- pour ouvrir le bandeau laissait un trou -- quelques secondes ou l'on regarde un vieux marcher en silence,
+--- alors que son geste d'explication, lui, avait deja commence.
+---
+--- Les repliques avancent toutes seules, calees sur leurs `hold` (voir Dialogue).
+startOldManSpeech = function()
 	if spokeTwice then
 		return
 	end
@@ -2083,10 +2103,6 @@ function TutorialController.init()
 	-- qui ecoute l'arrivee du grand-pere raterait alors son evenement.
 	task.spawn(function()
 		sceneDoneRemote = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
-	end)
-	task.spawn(function()
-		local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
-		arrived.OnClientEvent:Connect(onOldManArrived)
 	end)
 	-- LE MARQUEUR DE FIN DE GESTE, relaye par le serveur : c'est lui qui affiche la consigne. `showMowerTask` est
 	-- idempotente, donc le marqueur qui retombe a chaque replique ne rejoue rien.

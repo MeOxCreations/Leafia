@@ -558,7 +558,6 @@ end
 
 function TutorialService.init()
 	local done = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
-	local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
 	focusRemote = RemoteSetup.getRemote("TutorialFocusDone", "Tutorial") :: RemoteEvent
 
 	done.OnServerEvent:Connect(function(player)
@@ -570,10 +569,6 @@ function TutorialService.init()
 			-- IL CONTINUE D'EXPLIQUER. Rien a calculer : la piste va jusqu'a sa derniere image, et si elle tourne
 			-- deja depuis son premier pas, cet appel ne la relance pas.
 			talkFor(model)
-			-- IL EST ARRIVE, ET C'EST LE SERVEUR QUI LE SAIT. La marche se fait ici, image par image : le client
-			-- ne peut pas connaitre l'instant de l'arrivee sans le deviner, et une duree devinee se decale des
-			-- qu'on change la vitesse, la distance ou l'animation.
-			arrived:FireClient(player)
 		end, function(model)
 			-- IL PARLE EN MARCHANT. Lancee ici, au premier pas, elle se superpose a la marche au lieu d'attendre
 			-- qu'il soit arrete.

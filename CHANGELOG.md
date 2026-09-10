@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.712 — Le dialogue glisse a l'ecran quand il se met en marche
+
+Le bandeau attendait son ARRIVEE devant sa porte. Il glisse maintenant depuis le bas a l'instant ou il se met en
+route, et il parle en traversant sa cour.
+
+Ce qu'on gagne : le trou disparait. Il y avait quelques secondes ou l'on regardait un vieux marcher en silence,
+alors que son geste d'explication, cote serveur, avait deja commence -- il gesticulait sans rien dire.
+
+**On n'attend pas que le serveur confirme son depart** : c'est le client qui vient de le lui ordonner, et un
+aller-retour reseau de plus n'apporterait qu'un decalage. Le geste, cote serveur, part au meme instant pour la
+meme raison.
+
+Le remote `TutorialOldManArrived` disparait : plus personne n'ecoutait son arrivee. Un remote qui ne sert plus
+devient un mort qu'on n'ose plus supprimer -- autant le faire tout de suite.
+
+`startOldManSpeech` est declaree en tete et definie plus bas, comme `releaseScenePoses` : la fin de scene vit tout
+en haut du fichier, alors que la replique a besoin de Dialogue et de la config. On ne cite jamais une fonction
+avant sa definition.
+
 ## 0.0.711 — La consigne arrive sur le marqueur de son animation
 
 Le bandeau de tache, la notification d'avertissement et les marqueurs de la tondeuse attendent maintenant
