@@ -141,10 +141,17 @@ return {
 	-- marche doit bouger a chaque image, donc se battre avec la respiration du plan ; un cadre pose sur le trajet
 	-- ENTIER n'a rien a suivre et laisse l'action entrer dedans. C'est aussi ce qu'on fait au cinema.
 	--
-	-- Duree du glissement vers ce plan, puis duree pendant laquelle on le tient. Le maintien doit couvrir la
-	-- marche : trop court, la camera rend la main pendant que le grand-pere est encore en route.
+	-- Duree du glissement vers ce plan, puis duree pendant laquelle on le tient.
+	--
+	-- LE MAINTIEN A ETE COUPE COURT (3 s -> 0.8). Il etait cale pour couvrir toute la marche du grand-pere, donc
+	-- le joueur regardait sans rien faire pendant que le vieux traversait sa cour -- une attente pure, et il ne
+	-- sait meme pas ce qu'il attend. Rendre la main plus tot le laisse AVANCER pendant que l'autre marche : la
+	-- meme duree, mais vecue au lieu d'etre subie.
+	--
+	-- Ce qu'on perd : la camera rend la main alors que le grand-pere est encore en route. Ce n'est plus un plan
+	-- de cinema sur sa sortie, c'est une respiration avant de reprendre le jeu.
 	EXIT_SHOT_IN = 0.8,
-	EXIT_SHOT_HOLD = 3,
+	EXIT_SHOT_HOLD = 0.8,
 	-- DE COTE, PERPENDICULAIREMENT AU TRAJET. Premiere version : dans l'axe de la porte -- la camera se retrouvait
 	-- DANS LE MUR de la maison, et on ne voyait rien. Normal : cet axe pointe vers la maison, et reculer dessus
 	-- rentre dedans.
@@ -250,6 +257,13 @@ return {
 	-- au moment ou l'on veut qu'il parte vers la porte.
 	REVEAL_FADE_TIME = 0.45,
 
+	-- LES BARRES NOIRES, coupees. Elles disent "regarde, c'est du cinema" -- et c'est bien ce qu'elles faisaient
+	-- -- mais elles encadrent aussi une ATTENTE : le joueur voit qu'il n'a pas la main, et la scene parait plus
+	-- longue qu'elle n'est. La camera scriptee suffit a dire qu'il se passe quelque chose.
+	--
+	-- Le chemin reste entierement branche : remettre `true` les rend. Ce qu'on perd en les coupant : le carton de
+	-- chapitre s'ecrit dans la bande du BAS, il s'affiche donc maintenant sur le jeu, sans fond noir derriere.
+	SCENE_BARS = false,
 	-- Durees. Les barres et la camera partent ENSEMBLE : dans un film le cadre bouge pendant que le rideau
 	-- descend, il n'attend pas.
 	SCENE_BARS_TIME = 0.6,

@@ -1340,7 +1340,13 @@ function TutorialController.startMission()
 
 	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
 	-- n'attend pas que le noir soit en place.
-	Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
+	--
+	-- SEUL L'AFFICHAGE EST SOUS CONDITION : tous les `hide` restent inconditionnels. Cacher ce qui n'est pas
+	-- affiche ne coute rien, alors qu'un `hide` saute -- le jour ou on rallume les barres puis on les coupe --
+	-- laisserait le joueur derriere un cache noir sans aucun moyen d'en sortir.
+	if TutorialConfigs.SCENE_BARS then
+		Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
+	end
 	-- LE TITRE S'ECRIT DANS LA BANDE DU BAS, une fois qu'elle est en place. Il n'attend pas la fin de la scene :
 	-- un chapitre s'annonce quand il commence.
 	task.delay(TutorialConfigs.CHAPTER_DELAY, function()

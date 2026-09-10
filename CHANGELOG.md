@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.654 — Plus de barres noires, et la main rendue bien plus tot
+
+**Les barres noires sont coupees** (`SCENE_BARS = false`). Elles disent "regarde, c'est du cinema" -- et elles le
+faisaient bien -- mais elles encadrent aussi une ATTENTE : le joueur voit qu'il n'a pas la main, et la scene
+parait plus longue qu'elle n'est. La camera scriptee suffit a dire qu'il se passe quelque chose.
+
+Le chemin reste entierement branche, remettre `true` les rend. Ce qu'on perd : le carton de chapitre s'ecrit dans
+la bande du BAS, il s'affiche donc sur le jeu, sans fond noir derriere.
+
+Seul l'AFFICHAGE est sous condition ; tous les `hide` restent inconditionnels. Cacher ce qui n'est pas affiche ne
+coute rien, alors qu'un `hide` saute -- le jour ou on rallume puis recoupe les barres -- laisserait le joueur
+derriere un cache noir sans aucun moyen d'en sortir.
+
+**Le plan de sortie passe de 3 s a 0.8 s** (`EXIT_SHOT_HOLD`). Il etait cale pour couvrir toute la marche du
+grand-pere : le joueur regardait donc sans rien faire pendant que le vieux traversait sa cour, sans meme savoir
+ce qu'il attendait. Rendre la main plus tot le laisse AVANCER pendant que l'autre marche -- la meme duree, mais
+vecue au lieu d'etre subie.
+
+Ce qu'on perd : la camera rend la main alors que le grand-pere est encore en route. Ce n'est plus un plan de
+cinema sur sa sortie, c'est une respiration avant de reprendre le jeu.
+
 ## 0.0.653 — Les deux repliques du grand-pere s'enchainent sans attendre la porte
 
 La seconde (`speech_1`) attendait la GRANDE OUVERTURE du battant, plus un delai de 0.3 s. Elle laissait donc un
