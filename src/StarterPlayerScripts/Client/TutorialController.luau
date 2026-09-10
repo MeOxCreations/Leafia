@@ -895,6 +895,10 @@ local function sayVoice(path: { string }): Sound?
 		previous:Destroy()
 	end
 	speechSound = SoundUtils.play(path, SCENE_2D)
+	-- HORS DE PORTEE DU FONDU. La scene baisse tout le jeu pour qu'on l'ecoute : baisser aussi celui qui PARLE
+	-- defait exactement ce qu'on vient de faire. Ici et nulle part ailleurs -- toutes ses repliques passent par
+	-- cette fonction, donc il n'y a qu'un endroit ou y penser.
+	SoundDuck.keepLoud(speechSound)
 	return speechSound
 end
 

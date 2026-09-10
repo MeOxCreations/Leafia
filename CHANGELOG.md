@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.668 — Les repliques du grand-pere ne baissent plus avec le reste
+
+La scene baisse tout le jeu pour qu'on l'ecoute -- et elle baissait AUSSI celui qui parle. On baissait donc le
+monde pour mieux entendre quelqu'un qu'on baissait en meme temps.
+
+`SoundDuck` a maintenant un second groupe, `LeafiaVoices`, que le fondu ne touche jamais. `SoundDuck.keepLoud`
+y range un son.
+
+Un second groupe plutot qu'une liste d'exceptions dans le premier : `adopt` n'adopte que les sons SANS groupe,
+donc un son deja range ici est hors de portee du fondu PAR CONSTRUCTION. Il n'y a rien a tenir a jour, et un son
+ajoute demain ne peut pas etre oublie.
+
+Un seul endroit a toucher cote didacticiel : toutes les repliques du grand-pere passent deja par `sayVoice`. La
+musique et les bruits, eux, baissent comme avant.
+
 ## 0.0.667 — Le marqueur reprend le nouveau point d'exclamation
 
 `WorldMarker` affiche desormais le dessin `78589393871508`, le meme que celui de la gerbe de colere. Le cercle ne

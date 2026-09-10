@@ -13,6 +13,9 @@
 --
 -- CE QUE CA NE COUVRE PAS : les Sound poses sur des parts du Workspace. Ils vivent hors de SoundService, donc
 -- hors du groupe. A traiter le jour ou il y en aura un qui gene -- pas avant, ce serait deviner.
+--
+-- ET CE QU'ON EN SORT EXPRES : les REPLIQUES (`keepLoud`). On baisse le monde pour mieux entendre quelqu'un ; le
+-- baisser lui aussi annulerait le geste. Elles vivent dans un second groupe, que le fondu ne touche jamais.
 
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
@@ -20,8 +23,15 @@ local TweenService = game:GetService("TweenService")
 local SoundDuck = {}
 
 local GROUP_NAME = "LeafiaGameSounds"
+-- LE GROUPE QUI NE BAISSE JAMAIS. Baisser le jeu pendant une scene sert a tourner l'oreille vers ce qui s'y dit :
+-- baisser AUSSI ce qui s'y dit defait exactement ce qu'on vient de faire.
+--
+-- Un second groupe plutot qu'une liste d'exceptions dans le premier : `adopt` n'adopte que les sons SANS groupe,
+-- donc un son deja range ici est hors de portee du fondu par construction -- il n'y a rien a tenir a jour.
+local VOICE_GROUP_NAME = "LeafiaVoices"
 
 local group: SoundGroup? = nil
+local voiceGroup: SoundGroup? = nil
 local tween: Tween? = nil
 
 -- On n'ADOPTE que les sons SANS groupe. Voler ceux qui en ont deja un ecraserait un reglage fait dans Studio,
@@ -74,6 +84,34 @@ local function fadeTo(volume: number, seconds: number)
 	)
 	tween = next_
 	next_:Play()
+end
+
+--- RANGE UN SON HORS DE PORTEE DU FONDU : il gardera son volume quoi qu'il arrive au reste.
+---
+--- Pour les repliques, et rien d'autre. Ce qui RACONTE la scene ne doit pas baisser avec le decor -- sinon on a
+--- baisse le monde pour mieux entendre quelqu'un qu'on a baisse en meme temps.
+---
+--- A appeler APRES `SoundUtils.play` : c'est le CLONE qu'on range, pas le modele de Studio. Ranger le modele
+--- toucherait tous les sons qu'on en tirera ensuite.
+function SoundDuck.keepLoud(sound: Sound?)
+	if not sound then
+		return
+	end
+	local existing = voiceGroup
+	if not (existing and existing.Parent) then
+		local found = SoundService:FindFirstChild(VOICE_GROUP_NAME)
+		if found and found:IsA("SoundGroup") then
+			existing = found
+		else
+			local made = Instance.new("SoundGroup")
+			made.Name = VOICE_GROUP_NAME
+			made.Volume = 1
+			made.Parent = SoundService
+			existing = made
+		end
+		voiceGroup = existing
+	end
+	sound.SoundGroup = existing
 end
 
 --- Baisse le jeu a `amount` (fraction de son volume normal), en `seconds`.
