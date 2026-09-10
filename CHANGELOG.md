@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.676 — Le joueur reprend la main bien plus tot
+
+`EXIT_SHOT_HOLD` passe de 3 s a 0.4. Avec le glissement de camera (0.8), il ne reste plus qu'une seconde entre la
+fin de la scene et le moment ou le joueur peut bouger, au lieu de pres de quatre.
+
+Ce maintien avait ete cale pour couvrir toute la marche du grand-pere. Le joueur regardait donc sans rien faire
+pendant qu'un vieux traversait sa cour, sans meme savoir ce qu'il attendait. La scene est FINIE a cet instant :
+ce qui reste est du jeu, pas du cinema.
+
+Ce qu'on perd : la camera rend la main alors que le grand-pere est encore en route. On ne le regarde plus
+marcher, on le voit marcher pendant qu'on avance -- ce qui est exactement ce qu'on attend d'un PNJ.
+
+A SAVOIR pour aller plus loin : ces deux chiffres sont tout ce qui separe la fin de la SCENE du moment ou le
+joueur bouge. Mais la scene, elle, se termine a la fin de l'ANIMATION du grand-pere (c'est elle qui sait combien
+de temps ca dure, pas une constante). Si l'attente reste trop longue, c'est cette animation qu'il faut
+raccourcir -- pas un delai a chercher dans le code.
+
 ## 0.0.675 — Il ne gesticule plus pendant qu'il se bat avec sa poignee
 
 Regression introduite deux versions plus tot, en calant le geste sur la voix : sa replique de poignee

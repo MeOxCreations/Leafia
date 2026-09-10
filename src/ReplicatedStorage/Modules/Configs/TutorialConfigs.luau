@@ -141,10 +141,19 @@ return {
 	-- marche doit bouger a chaque image, donc se battre avec la respiration du plan ; un cadre pose sur le trajet
 	-- ENTIER n'a rien a suivre et laisse l'action entrer dedans. C'est aussi ce qu'on fait au cinema.
 	--
-	-- Duree du glissement vers ce plan, puis duree pendant laquelle on le tient. Le maintien doit couvrir la
-	-- marche : trop court, la camera rend la main pendant que le grand-pere est encore en route.
+	-- Duree du glissement vers ce plan, puis duree pendant laquelle on le tient.
+	--
+	-- LE MAINTIEN EST COURT, ET C'EST VOULU. Il a d'abord ete cale pour couvrir toute la marche du grand-pere :
+	-- le joueur regardait donc sans rien faire pendant qu'un vieux traversait sa cour, sans meme savoir ce qu'il
+	-- attendait. La scene est FINIE a cet instant -- ce qui reste est du jeu, pas du cinema.
+	--
+	-- Ce qu'on perd : la camera rend la main alors que le grand-pere est encore en route. On ne le regarde plus
+	-- marcher, on le voit marcher pendant qu'on avance -- ce qui est exactement ce qu'on veut d'un PNJ.
+	--
+	-- Le joueur reprend la main a la FIN de ce maintien : les deux chiffres ci-dessous sont donc tout ce qui
+	-- separe la fin de la scene du moment ou il peut bouger.
 	EXIT_SHOT_IN = 0.8,
-	EXIT_SHOT_HOLD = 3,
+	EXIT_SHOT_HOLD = 0.4,
 	-- DE COTE, PERPENDICULAIREMENT AU TRAJET. Premiere version : dans l'axe de la porte -- la camera se retrouvait
 	-- DANS LE MUR de la maison, et on ne voyait rien. Normal : cet axe pointe vers la maison, et reculer dessus
 	-- rentre dedans.
