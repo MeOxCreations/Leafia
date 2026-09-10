@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.705 — Retour en arriere : le dialogue repart a l'arrivee
+
+Annulation de la version precedente. Le dialogue du grand-pere, le bandeau de tache et la notification repartent
+des qu'il arrive devant sa porte, sans attendre que le joueur ait la main.
+
+Le diagnostic restait juste -- il arrive bien avant la fin du plan -- mais le corriger la n'a pas donne ce qu'on
+attendait a l'ecran. La file d'attente part avec.
+
 ## 0.0.704 — Rien ne s'affiche plus par-dessus la cinematique
 
 VOILA la cause de tous les allers-retours precedents sur la camera : le grand-pere ARRIVE avant la fin du plan de
