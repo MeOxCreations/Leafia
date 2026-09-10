@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.647 — Le repere de direction flotte a hauteur de taille
+
+`HEIGHT` passe de -2.85 (pose au sol) a 0, c'est-a-dire la HumanoidRootPart -- qui sur un rig R15 est exactement
+a l'endroit du LowerTorso. Le repere devient un anneau qui flotte a hauteur de taille, devant le joueur.
+
+**On mesure depuis la RootPart et pas depuis le LowerTorso lui-meme**, alors que c'est lui qu'on vise. La
+RootPart est STABLE ; le LowerTorso est tire par l'animation et monte et descend a chaque pas, donc le repere
+ferait du yo-yo au rythme de la marche.
+
+En l'air, il ne peut plus clignoter contre le terrain (z-fighting). En echange il se voit par la TRANCHE quand la
+camera descend a son niveau : un disque plat n'a pas d'epaisseur.
+
+L'en-tete du module a ete corrigee -- il n'est plus "au sol". Le nom `GroundGuide` reste : le renommer toucherait
+ses appelants sans rien changer a ce qu'il fait.
+
 ## 0.0.646 — Le repere de la tondeuse n'est plus qu'un voile au sol
 
 `SHOWN_TRANSPARENCY` passe de 0.45 a 0.85.

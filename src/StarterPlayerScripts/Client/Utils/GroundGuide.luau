@@ -1,6 +1,9 @@
 --!strict
--- GUIDE AU SOL : un repere pose AUX PIEDS DU JOUEUR, qui pointe vers un endroit du monde. Il dit "c'est par la"
--- sans jamais rien ecrire, et il suit le joueur partout.
+-- GUIDE DE DIRECTION : un repere plat porte PAR LE JOUEUR, qui pointe vers un endroit du monde. Il dit "c'est par
+-- la" sans jamais rien ecrire, et il le suit partout.
+--
+-- Il a commence pose AU SOL, d'ou le nom du module. Il flotte maintenant a hauteur de taille et devant lui (voir
+-- HEIGHT et FORWARD). Le nom reste : le renommer toucherait ses appelants pour ne rien changer a ce qu'il fait.
 --
 -- POURQUOI PAS UNE FLECHE, ni un trait entre les deux. Une fleche posee dans le monde se lit mal des qu'on tourne
 -- la camera : vue de face elle disparait, vue de dessus elle ment sur la distance. Un trait (Beam) entre le joueur
@@ -49,11 +52,16 @@ local YAW = 180
 -- loin, plus il s'enfonce dans une montee et plus il flotte dans une descente. Sur un terrain tres accidente il
 -- faudrait mesurer le sol sous LUI ; tant que les jardins sont plats, ce serait un raycast par image pour rien.
 local FORWARD = 4
--- HAUTEUR sous le centre du joueur, en studs. La HumanoidRootPart d'un R15 flotte a peu pres trois studs au-dessus
--- du sol : on redescend d'autant pour poser le repere a ses pieds.
+-- HAUTEUR par rapport au centre du joueur, en studs. ZERO = la HumanoidRootPart, et sur un rig R15 elle est
+-- exactement a l'endroit du LowerTorso : le repere flotte donc a hauteur de taille, comme un anneau autour de lui.
 --
--- LEGEREMENT AU-DESSUS DU SOL, jamais dedans : pile au ras, le repere clignote contre le terrain (z-fighting).
-local HEIGHT = -2.85
+-- ON MESURE DEPUIS LA ROOTPART ET PAS DEPUIS LE LOWERTORSO LUI-MEME, alors que c'est lui qu'on vise. La RootPart
+-- est STABLE : le LowerTorso, lui, est tire par l'animation et monte et descend a chaque pas -- le repere ferait
+-- du yo-yo au rythme de la marche.
+--
+-- IL ETAIT A -2.85, soit pose au sol. En l'air il ne peut plus clignoter contre le terrain (z-fighting), mais il
+-- se voit par la TRANCHE quand la camera descend a son niveau : un disque plat n'a pas d'epaisseur.
+local HEIGHT = 0
 -- Le repere apparait et disparait en fondu. D'un coup, il attire l'oeil sur son apparition au lieu de la
 -- direction qu'il montre.
 local FADE_TIME = 0.3
