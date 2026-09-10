@@ -411,13 +411,6 @@ return {
 	CHAPTER_DELAY = 0.8,
 	DOOR_PRE_EVENT = "PreOpenEvent",
 	DOOR_START_EVENT = "OuvertureDoorEvent",
-	-- FIN DU CADRAGE SUR LE JOUEUR, pose dans l'animation du grand-pere. Pour l'instant il ne fait qu'un LOG : on
-	-- verifie d'abord qu'il tire, et a quel instant, avant de lui accrocher quoi que ce soit.
-	--
-	-- Un marqueur se lit pendant la lecture (`GetMarkerReachedSignal`), donc localement. Il n'y a aucun appel
-	-- reseau la-dedans -- contrairement a la lecture d'une KeyframeSequence, qui peut rater pour une session
-	-- entiere.
-	END_FOCUS_EVENT = "EndFocusPlayerEvent",
 
 	-- Le grincement de la porte qui s'ouvre. Joue au DEBUT du mouvement, avec lui : un bruit qui arrive une fois
 	-- la porte deja entrebaillee sonne en retard. Spatial, au niveau de la porte.
@@ -766,6 +759,15 @@ return {
 	-- BOUCLEE, parce qu'elle est presque surement plus courte que la replique (14.68 s de voix). Sans boucle il
 	-- finirait de parler immobile, ce qui se lit comme une animation cassee. A false le jour ou elle couvre tout.
 	OLDMAN_TALK_LOOP = true,
+	-- MARQUEUR POSE DANS CETTE ANIMATION-LA, pas dans celles de la scene. Pour l'instant il ne fait qu'un LOG : on
+	-- verifie qu'il tire, et a quel instant, avant de lui accrocher quoi que ce soit.
+	--
+	-- ELLE EST JOUEE PAR LE SERVEUR (le grand-pere est un modele du monde), donc c'est le SERVEUR qui l'ecoute.
+	-- Un marqueur ne se signale qu'a la machine qui LIT la piste : le client ne le verra jamais.
+	--
+	-- ET ELLE BOUCLE tant qu'il parle, donc le marqueur retombe a CHAQUE tour. Le message donne le numero de tour
+	-- pour que ca se voie tout de suite.
+	END_FOCUS_EVENT = "EndFocusPlayerEvent",
 	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
 	-- pose de repos au dernier mot.
 	OLDMAN_TALK_FADE = 0.3,

@@ -316,6 +316,20 @@ local function playTalk(model: Model)
 	track.Priority = TutorialConfigs.OLDMAN_TALK_PRIORITY
 	talkTrack = track
 
+	-- ON ECOUTE SON MARQUEUR. Branche AVANT `Play` : une connexion posee apres pourrait rater un marqueur place
+	-- tout au debut de la piste.
+	--
+	-- LA PISTE BOUCLE tant qu'il parle, donc il retombe a chaque tour : on compte les tours, sinon trois lignes
+	-- identiques dans la console ressemblent a un bug plutot qu'a une boucle qui fait son travail.
+	local hits = 0
+	track:GetMarkerReachedSignal(TutorialConfigs.END_FOCUS_EVENT):Connect(function()
+		hits += 1
+		warn(
+			`[Tutorial] {TutorialConfigs.END_FOCUS_EVENT} (tour {hits}) a `
+				.. `{string.format("%.2f", track.TimePosition)} s sur {string.format("%.2f", track.Length)} s`
+		)
+	end)
+
 	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
 	print(`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM}`)
 end

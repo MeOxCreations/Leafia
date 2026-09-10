@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.708 — Le marqueur est ecoute la ou il est : sur l'animation d'explication
+
+Il est pose dans `107093983212125`, l'animation d'EXPLICATION -- pas dans celles de la scene. Le diagnostic de
+la version precedente, qui l'ecoutait sur les quatre pistes du client, est retire : il cherchait au mauvais
+endroit.
+
+**Et cette animation est jouee par le SERVEUR**, parce que le grand-pere est un modele du monde. C'est donc le
+serveur qui l'ecoute : un marqueur ne se signale qu'a la machine qui LIT la piste, le client ne l'aurait jamais
+vu. Meme famille que `Emit()` qui ne se replique pas -- ce qui traverse le reseau, ce sont les etats, pas les
+evenements de lecture.
+
+La connexion est posee AVANT `Play` : apres, elle pourrait rater un marqueur place tout au debut de la piste.
+
+**La piste boucle tant qu'il parle**, donc le marqueur retombe a chaque tour. Le message compte les tours, sinon
+trois lignes identiques dans la console ressemblent a un bug plutot qu'a une boucle qui fait son travail.
+
 ## 0.0.707 — Le marqueur est ecoute sur TOUTES les pistes de la scene
 
 Il ne tirait pas. Cause : il n'etait ecoute que sur l'animation du grand-pere, alors que la scene en joue
