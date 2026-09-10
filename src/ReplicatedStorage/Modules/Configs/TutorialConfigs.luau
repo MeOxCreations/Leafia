@@ -571,15 +571,22 @@ return {
 	--
 	-- `emotion` est une cle de la table EMOTIONS de Dialogue : normal / happy / sad / angry / shocked / wink.
 	SPEECH2_LINES = {
-		{ text = "Ah! There you are! How've you been?", emotion = "happy", hold = 2.2 },
-		{ text = "Right, listen... thanks for coming out!", emotion = "normal", hold = 2.5 },
 		{
-			text = "I'm too old now, and my back hurts. I can't mow the lawn or take care of the garden.",
+			-- SANS TIRET CADRATIN au milieu : deux phrases nettes a la place. Un tiret long se lit mal a l'ecran,
+			-- et le traducteur automatique de Roblox le rend n'importe comment.
+			text = "As you can see, I'm too old for this. My back's giving out, I can't mow the lawn anymore.",
 			emotion = "sad",
-			hold = 5.9,
+			hold = 6.2,
 		},
-		{ text = "So it's perfect that you're here!", emotion = "happy", hold = 2.1 },
-		{ text = "I'll let you fire up the mower!", emotion = "wink", hold = 2.1 },
+		-- IL ANNONCE SON CARACTERE LUI-MEME, et c'est la meilleure place pour le dire : ses coups de gueule
+		-- deviennent une blague qu'il a faite d'avance, au lieu d'une surprise qui ressemble a une faute du joueur.
+		{ text = "Watch out, I shout sometimes. Haha!", emotion = "happy", hold = 2.6 },
+		{ text = "Would you mind mowing the lawn for me?", emotion = "normal", hold = 3 },
+		{
+			text = "Everything you need's in the back of my truck. Go on, help yourself!",
+			emotion = "wink",
+			hold = 4.2,
+		},
 	},
 
 	-- ===== LES OBJECTIFS =====

@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.695 — Le nouveau texte du grand-pere
+
+Les cinq lignes d'origine sont remplacees par le texte reecrit par Meox :
+
+> As you can see, I'm too old for this. My back's giving out, I can't mow the lawn anymore.
+> Watch out, I shout sometimes. Haha!
+> Would you mind mowing the lawn for me?
+> Everything you need's in the back of my truck. Go on, help yourself!
+
+**Il annonce son caractere lui-meme**, et c'est la meilleure place pour le dire : ses coups de gueule deviennent
+une blague qu'il a faite d'avance, au lieu d'une surprise qui ressemble a une faute du joueur. La notification
+d'avertissement ne fait plus que confirmer ce qu'il vient de dire.
+
+Le tiret cadratin du texte d'origine est remplace par deux phrases nettes : il se lit mal a l'ecran, et le
+traducteur automatique de Roblox le rend n'importe comment.
+
+Les `hold` sont proportionnels a la longueur, comme avant. Il n'y a plus de voix sur cette replique, donc ce sont
+eux SEULS qui donnent le rythme : ils se reglent maintenant a la LECTURE, plus a l'oreille.
+
 ## 0.0.693 — La camera glisse vers une contre-plongee pendant qu'il marche
 
 Une fois le premier plan pose, la camera GLISSE vers un second, plus bas et plus proche, pendant que le
