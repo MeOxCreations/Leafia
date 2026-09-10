@@ -2204,6 +2204,51 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.673 — Son geste dure ce que dure sa voix, et sa colere tient dans un seul eclair
+
+Deux corrections, la seconde etant un contresens de ma part sur la demande precedente.
+
+### Le geste suit la voix, plus une duree ecrite
+
+Il arrivait qu'il PARLE sans bouger : son animation d'explication etait calee sur la somme des `hold` du
+dialogue, pas sur la longueur reelle des fichiers son. Une replique plus longue que prevu finissait donc dans le
+vide, et une voix reenregistree decalait tout sans rien signaler.
+
+Le client annonce maintenant au serveur la LONGUEUR REELLE du son (`OldManTalkFor`). C'est lui qui la connait :
+les voix sont jouees chez lui, et `TimeLength` vaut zero tant que l'asset n'est pas charge -- le serveur, qui ne
+charge jamais l'audio, ne peut pas la mesurer. Il attend `Loaded` quand le son ne l'est pas encore, sinon la
+premiere replique de la partie demanderait zero seconde de geste.
+
+**Une DUREE, pas un "il commence / il a fini".** Un "fini" perdu laisserait le geste tourner pour toujours ; une
+duree se perime toute seule. Bornee cote serveur, comme tout ce qui vient du client.
+
+**Le geste tourne jusqu'a une DATE, et la demande la plus lointaine gagne.** La marche et chaque replique la
+repoussent chacune leur tour, sans avoir a savoir ce que les autres ont demande. Avec un minuteur par demandeur,
+c'est le PREMIER a expirer qui coupe : une replique commencee pendant la marche aurait vu son geste coupe par la
+fin de la marche.
+
+`playTalk` est devenue idempotente : rappelee pendant qu'elle joue, elle ne relance rien -- sinon chaque phrase
+couperait le geste en cours pour le redemarrer, un a-coup a chaque fois.
+
+### Sa colere ne tient plus qu'en un eclair
+
+Contresens de ma part : le triple eclair seul etait demande pour le GRAND-PERE, pas pour la tondeuse. Le tirage
+de corde retrouve donc sa gerbe d'etoiles, et `AngerBurst` ne pose plus qu'un seul dessin.
+
+Quatre dessins faisaient une gerbe, donc un EVENEMENT -- alors qu'un vieux qui rale pour la troisieme fois n'en
+est pas un. Un seul eclair qui pulse dit la meme chose sans prendre toute l'image.
+
+Il reste 2 secondes et PULSE : il s'etire vers le haut et revient, en boucle. L'etirement se fait sur la TAILLE
+et jamais sur un `UIScale` -- une echelle est uniforme, elle ne sait que grossir, donc le meme mouvement se
+lirait comme un grossissement. Et sa largeur passe SOUS 1 : il s'affine en montant, ce qui fait la matiere molle.
+Grandir sans s'affiner ne s'etire pas.
+
+L'ancre est en BAS AU MILIEU : son pied ne bouge pas et il se dresse. Au centre, il pousserait vers le bas autant
+que vers le haut. Elle est posee APRES `WorldAnchor`, qui centre lui-meme ce qu'il accroche.
+
+Meme mecanique que les feuilles de l'ecran de chargement, `Stretch` compris : en `Fit`, la pulsation aurait
+RETRECI le dessin au lieu de l'allonger.
+
 ## 0.0.672 — Le tirage de corde ne montre plus qu'un triple eclair
 
 La gerbe de huit etoiles etait trop pour un tirage de corde : elle raconte un COUP, pas un effort qui rate. Le

@@ -130,6 +130,8 @@ local trySound: Sound? = nil
 -- LA REPLIQUE EN COURS du grand-pere. Gardee pour pouvoir la couper si la scene est abandonnee : une voix qui
 -- continue sur un plan qui n'existe plus s'entend comme un bug, et personne ne fait le lien avec une scene finie.
 local speechSound: Sound? = nil
+-- Le remote qui dit au serveur combien de temps il parle. Resolu en tache de fond au boot (voir init).
+local talkRemote: RemoteEvent? = nil
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
 -- Le conteneur lui-meme, retenu a la resolution : c'est LUI qui donne le point d'impact a l'ecran. Le relire par
@@ -881,6 +883,30 @@ local function prepDoor(): boolean
 	return true
 end
 
+-- IL GESTICULE LE TEMPS DE SA REPLIQUE. On envoie au SERVEUR la duree du son, parce que l'animation du PNJ doit
+-- se voir chez tout le monde -- une piste jouee par un client ne se replique pas.
+--
+-- `TimeLength` VAUT ZERO TANT QUE L'ASSET N'EST PAS CHARGE, et c'est tout le piege : mesuree trop tot, la
+-- replique demanderait zero seconde de geste et le grand-pere parlerait sans bouger. On attend donc `Loaded`
+-- quand il ne l'est pas encore -- ce qui est le cas normal la toute premiere fois qu'un son se joue.
+local function announceTalk(sound: Sound?)
+	local remote = talkRemote
+	if not (sound and remote) then
+		return
+	end
+	local voice = sound :: Sound
+	if voice.IsLoaded then
+		remote:FireServer(voice.TimeLength)
+	else
+		voice.Loaded:Once(function()
+			-- On ne retire pas le temps deja ecoule : le son a commence a jouer pendant le chargement, donc en
+			-- theorie il en reste moins. En pratique l'ecart est de quelques dizaines de millisecondes, et un
+			-- geste qui deborde un peu vaut mieux qu'un geste coupe au dernier mot.
+			remote:FireServer(voice.TimeLength)
+		end)
+	end
+end
+
 -- IL PARLE. Une seule voix a la fois : on coupe celle qui parle avant d'en lancer une autre.
 --
 -- UN PERSONNAGE N'A QU'UNE BOUCHE. Deux repliques superposees ne s'entendent pas comme deux phrases, elles
@@ -899,6 +925,10 @@ local function sayVoice(path: { string }): Sound?
 	-- defait exactement ce qu'on vient de faire. Ici et nulle part ailleurs -- toutes ses repliques passent par
 	-- cette fonction, donc il n'y a qu'un endroit ou y penser.
 	SoundDuck.keepLoud(speechSound)
+	-- ET IL GESTICULE PENDANT CE TEMPS-LA. On annonce au serveur la LONGUEUR REELLE du fichier : c'est la seule
+	-- valeur qui reste juste quand on reenregistre une voix, alors qu'une duree ecrite en config serait a refaire
+	-- a chaque fois -- et se tromperait en silence, laissant le grand-pere parler sans bouger.
+	announceTalk(speechSound)
 	return speechSound
 end
 
@@ -1817,6 +1847,12 @@ function TutorialController.init()
 	task.spawn(function()
 		local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
 		arrived.OnClientEvent:Connect(onOldManArrived)
+	end)
+	-- EN TACHE DE FOND : `getRemote` cache un WaitForChild, et en ligne droite dans un init il gele TOUT le boot
+	-- le temps de son timeout. Tant qu'il n'est pas la, les repliques se jouent -- sans le geste, ce qui est le
+	-- comportement d'avant.
+	task.spawn(function()
+		talkRemote = RemoteSetup.getRemote("OldManTalkFor", "Tutorial") :: RemoteEvent
 	end)
 
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres

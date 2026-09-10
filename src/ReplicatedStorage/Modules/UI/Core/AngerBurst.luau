@@ -1,14 +1,17 @@
 --!strict
--- COLERE EN IMAGES : la gerbe d'eclairs et de points d'exclamation qui saute au-dessus de quelqu'un qui s'agace.
+-- COLERE EN IMAGE : le triple eclair qui saute au-dessus de quelqu'un qui s'agace, s'etire, et repart.
 -- L'onomatopee de bande dessinee, en dessin plutot qu'en mot -- donc rien a traduire, et lisible par un enfant qui
 -- ne lit pas encore.
+--
+-- UN SEUL DESSIN, ET C'EST UN CHOIX. La premiere version en posait quatre (deux eclairs, le triple, un point
+-- d'exclamation) : ca faisait une gerbe, donc un EVENEMENT -- alors qu'un vieux qui rale pour la troisieme fois
+-- n'est pas un evenement. Un seul eclair qui pulse dit la meme chose sans prendre toute l'image.
 --
 -- PAS UN BillboardGui, pour les memes raisons que WorldMarker : un Billboard subit l'eclairage, passe derriere le
 -- decor, et change de taille avec la distance. Ici c'est un ScreenGui projete (WorldAnchor) : pixels constants,
 -- couleurs exactes, toujours au-dessus.
 --
 -- PRIMITIVE REUTILISABLE : elle ne connait ni le grand-pere ni le didacticiel. On lui donne une cible, elle joue.
--- Le jour ou un client rale sur un chantier rate, ce sera la meme gerbe.
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -19,27 +22,13 @@ local AngerBurst = {}
 
 local player = Players.LocalPlayer
 
--- ===== LES DESSINS =====
--- CHAQUE IMAGE PORTE SA TAILLE NATURELLE, en pixels. Le rapport largeur/hauteur vient du dessin lui-meme : lui en
--- imposer un autre l'APLATIT, et un eclair aplati ne ressemble plus a un eclair. On ne touche donc qu'a
--- `BURST_SCALE`, qui les agrandit toutes ensemble sans jamais deformer aucune.
---
--- `x` et `y` sont des fractions du cadre, `rot` un angle en degres, `delay` le retard a l'apparition : elles ne
--- sortent pas ensemble, elles se declenchent l'une apres l'autre. Un bloc qui apparait d'un coup se lit comme une
--- image posee ; en decalage, ca se lit comme un mouvement d'humeur.
-local PIECES = {
-	{ image = "rbxassetid://98278550736283", w = 57, h = 118, x = 0.11, y = 0.54, rot = -16, delay = 0.09 },
-	{ image = "rbxassetid://84029477406959", w = 114, h = 100, x = 0.36, y = 0.66, rot = -4, delay = 0.14 },
-	{ image = "rbxassetid://97318817152559", w = 71, h = 126, x = 0.63, y = 0.46, rot = 13, delay = 0.04 },
-	{ image = "rbxassetid://78589393871508", w = 63, h = 115, x = 0.89, y = 0.40, rot = 7, delay = 0 },
-}
-
--- Cadre qui contient tout, en pixels a la distance de reference. Les `x`/`y` ci-dessus s'y rapportent : changer
--- cette taille ecarte ou resserre la gerbe entiere sans toucher a une seule position.
-local FRAME_W, FRAME_H = 300, 150
--- Grossissement d'ensemble. Le seul chiffre a tourner pour une gerbe plus grosse : les proportions de chaque
--- dessin sont preservees par construction.
-local BURST_SCALE = 0.85
+-- ===== LE DESSIN =====
+-- SA TAILLE NATURELLE, en pixels. Le rapport largeur/hauteur vient du dessin lui-meme : lui en imposer un autre
+-- l'APLATIT au repos, et un eclair aplati ne ressemble plus a un eclair. Seul `BURST_SCALE` le redimensionne, et
+-- il garde les proportions par construction.
+local IMAGE = "rbxassetid://84029477406959"
+local IMAGE_W, IMAGE_H = 114, 100
+local BURST_SCALE = 0.9
 
 -- ===== LA DISTANCE =====
 -- Comme WorldMarker : taille bornee pour rester lisible de loin sans devenir enorme colle dessus.
@@ -48,14 +37,28 @@ local SCALE: WorldAnchor.Scale = { ref = 40, min = 0.55, max = 1.3 }
 local MAX_DISTANCE = 140
 
 -- ===== LE MOUVEMENT =====
--- ELLE JAILLIT. Chaque image part de rien et DEPASSE sa taille avant de se poser : c'est ce depassement qui donne
--- le coup de nerf. Une echelle qui monte tout droit se lirait comme un fondu.
-local POP_TIME = 0.16
-local POP_OVER = 1.18
-local SETTLE_TIME = 0.12
--- Puis elle tient, et elle s'efface en MONTANT un peu : une gerbe qui disparait sur place s'eteint, une gerbe qui
--- monte s'echappe.
-local HOLD_TIME = 0.55
+-- IL JAILLIT. Il part de rien et DEPASSE sa taille avant de se poser : c'est ce depassement qui donne le coup de
+-- nerf. Une echelle qui monte tout droit se lirait comme un fondu.
+local POP_TIME = 0.18
+
+-- PUIS IL PULSE : il s'ETIRE vers le haut et revient, en boucle, tout le temps qu'il reste a l'ecran.
+--
+-- L'ETIREMENT SE FAIT SUR LA TAILLE, jamais sur un UIScale : une echelle est UNIFORME, elle ne sait que grossir.
+-- Elle ne peut donc PAS etirer, et le meme mouvement se lirait comme un simple grossissement. Meme mecanique que
+-- les feuilles de l'ecran de chargement.
+--
+-- ET LA LARGEUR PASSE SOUS 1 : il s'affine en montant, et c'est ca qui fait la matiere molle. Grandir sans
+-- s'affiner ne s'etire pas, ca GROSSIT.
+local STRETCH_Y = 1.45
+local STRETCH_X = 0.8
+-- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
+-- ce qui se lit comme un tremblement et pas comme de la souplesse.
+local PULSE_UP = 0.16
+local PULSE_BACK = 0.42
+
+-- Combien de temps il reste, une fois apparu.
+local HOLD_TIME = 2
+-- Puis il s'efface en MONTANT un peu : un eclair qui disparait sur place s'eteint, un eclair qui monte s'echappe.
 local OUT_TIME = 0.3
 local OUT_RISE = 0.9 -- studs
 
@@ -69,7 +72,7 @@ local function getGui(): ScreenGui
 	local created = Instance.new("ScreenGui")
 	created.Name = "LeafiaAngerBursts"
 	-- `None` EST OBLIGATOIRE : WorldAnchor rend des coordonnees dont l'origine est le coin ABSOLU de l'ecran. Avec
-	-- l'inset par defaut, la gerbe suivrait 36 px trop bas. Piege deja paye dans ce projet.
+	-- l'inset par defaut, l'eclair suivrait 36 px trop bas. Piege deja paye dans ce projet.
 	created.ScreenInsets = Enum.ScreenInsets.None
 	created.IgnoreGuiInset = true
 	created.ResetOnSpawn = false
@@ -80,122 +83,92 @@ local function getGui(): ScreenGui
 	return created
 end
 
--- LE TRIPLE ECLAIR SEUL, centre. Pour un coup ponctuel -- un effort qui ne donne rien, un a-coup -- ou la gerbe
--- entiere raconterait une colere qu'il n'y a pas.
---
--- Meme forme que PIECES, donc le meme moteur les joue toutes les deux : une gerbe n'est qu'une LISTE de dessins.
-local SPARK = {
-	{ image = "rbxassetid://84029477406959", w = 114, h = 100, x = 0.5, y = 0.5, rot = 0, delay = 0 },
-}
-
-type Piece = { image: string, w: number, h: number, x: number, y: number, rot: number, delay: number }
-
-local function burst(target: WorldAnchor.Target, offset: Vector3?, pieces: { Piece })
+--- Fait jaillir un eclair au-dessus de `target`, le laisse pulser, puis nettoie tout. Rien a garder chez
+--- l'appelant.
+---
+--- `offset` decale le point vise, en studs -- typiquement pour le poser au-dessus de la tete.
+function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	local holder = getGui()
 
-	local frame = Instance.new("Frame")
-	frame.Name = "AngerBurst"
-	frame.BackgroundTransparency = 1
-	frame.Size = UDim2.fromOffset(FRAME_W * BURST_SCALE, FRAME_H * BURST_SCALE)
-	frame.Parent = holder
+	local w, h = IMAGE_W * BURST_SCALE, IMAGE_H * BURST_SCALE
+	local normal = UDim2.fromOffset(w, h)
 
+	local label = Instance.new("ImageLabel")
+	label.Name = "AngerBurst"
+	label.BackgroundTransparency = 1
+	label.Image = IMAGE
+	label.Size = UDim2.fromOffset(0, 0)
+	-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions et borne l'image par le plus PETIT cote du
+	-- cadre : elle ne sait alors que grossir et rapetisser, jamais s'etirer -- la pulsation la RETRECIRAIT au lieu
+	-- de l'allonger. Piege deja paye sur les feuilles du chargement.
+	label.ScaleType = Enum.ScaleType.Stretch
+	label.Parent = holder
+
+	-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND L'ETIREMENT POSSIBLE. Avec une ancre au centre, un eclair qu'on
+	-- allonge pousse vers le bas autant que vers le haut : il grandit des deux cotes au lieu de se dresser. Ancre
+	-- par le bas, son pied ne bouge pas et il monte.
+	--
+	-- WorldAnchor pose lui aussi une ancre -- il centre ce qu'il accroche -- donc on la remet APRES lui.
 	local base = offset or Vector3.zero
-	WorldAnchor.attach(frame, target, base, MAX_DISTANCE, SCALE)
+	WorldAnchor.attach(label, target, base, MAX_DISTANCE, SCALE)
+	label.AnchorPoint = Vector2.new(0.5, 1)
 
-	local images: { ImageLabel } = {}
-	for _, piece in pieces do
-		local label = Instance.new("ImageLabel")
-		label.BackgroundTransparency = 1
-		label.Image = piece.image
-		label.AnchorPoint = Vector2.new(0.5, 0.5)
-		label.Position = UDim2.fromScale(piece.x, piece.y)
-		label.Size = UDim2.fromOffset(piece.w * BURST_SCALE, piece.h * BURST_SCALE)
-		label.Rotation = piece.rot
-		-- `Fit` : le cadre a DEJA le rapport du dessin, donc Fit et Stretch donnent la meme image -- mais Fit
-		-- garantit qu'une erreur de saisie sur `w` ou `h` retrecit le dessin au lieu de l'ecraser.
-		label.ScaleType = Enum.ScaleType.Fit
-		label.Parent = frame
+	TweenService
+		:Create(label, TweenInfo.new(POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = normal })
+		:Play()
 
-		-- LE JAILLISSEMENT PASSE PAR UN UIScale, jamais par la taille. Une echelle est UNIFORME : elle ne PEUT pas
-		-- deformer, donc l'eclair reste un eclair quelle que soit l'etape de l'animation. Animer `Size` demanderait
-		-- de tenir les deux axes d'accord a la main, et le premier arrondi aplatirait le dessin.
-		local us = Instance.new("UIScale")
-		us.Scale = 0
-		us.Parent = label
-		images[#images + 1] = label
-
-		task.delay(piece.delay, function()
+	-- LA PULSATION TOURNE TANT QU'IL EST LA. Une boucle plutot qu'un nombre de cycles calcule : changer `HOLD_TIME`
+	-- ne demande alors de recalculer rien du tout, et le dernier cycle est coupe net par le depart -- ce qui ne se
+	-- voit pas, puisqu'il part en fondu par-dessus.
+	task.spawn(function()
+		task.wait(POP_TIME)
+		while label.Parent do
+			TweenService
+				:Create(label, TweenInfo.new(PULSE_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+					Size = UDim2.fromOffset(w * STRETCH_X, h * STRETCH_Y),
+				})
+				:Play()
+			task.wait(PULSE_UP)
 			if not label.Parent then
 				return
 			end
-			local up = TweenService:Create(
-				us,
-				TweenInfo.new(POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-				{ Scale = POP_OVER }
-			)
-			up.Completed:Connect(function()
-				if label.Parent then
-					TweenService
-						:Create(us, TweenInfo.new(SETTLE_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-							Scale = 1,
-						})
-						:Play()
-				end
-			end)
-			up:Play()
-		end)
-	end
-
-	-- LE DEPART. Le compte part de la DERNIERE image sortie, pas du debut : sinon la piece la plus retardee
-	-- n'aurait presque pas le temps d'exister avant qu'on efface tout.
-	local last = 0
-	for _, piece in pieces do
-		last = math.max(last, piece.delay)
-	end
-	task.delay(last + POP_TIME + SETTLE_TIME + HOLD_TIME, function()
-		if not frame.Parent then
-			return
-		end
-		for _, label in images do
 			TweenService
-				:Create(label, TweenInfo.new(OUT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-					ImageTransparency = 1,
+				:Create(label, TweenInfo.new(PULSE_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+					Size = normal,
 				})
 				:Play()
+			task.wait(PULSE_BACK)
 		end
-		-- ELLE MONTE EN PARTANT. On bouge le point VISE dans le monde et pas la position a l'ecran : la gerbe
-		-- continue ainsi de suivre son personnage pendant qu'elle s'echappe, meme s'il marche.
+	end)
+
+	task.delay(POP_TIME + HOLD_TIME, function()
+		if not label.Parent then
+			return
+		end
+		TweenService
+			:Create(label, TweenInfo.new(OUT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+				ImageTransparency = 1,
+			})
+			:Play()
+		-- IL MONTE EN PARTANT. On bouge le point VISE dans le monde et pas la position a l'ecran : il continue
+		-- ainsi de suivre son personnage pendant qu'il s'echappe, meme si celui-ci marche.
 		local steps = 12
 		task.spawn(function()
 			for i = 1, steps do
-				if not frame.Parent then
+				if not label.Parent then
 					return
 				end
-				WorldAnchor.setOffset(frame, base + Vector3.new(0, OUT_RISE * (i / steps), 0))
+				WorldAnchor.setOffset(label, base + Vector3.new(0, OUT_RISE * (i / steps), 0))
 				task.wait(OUT_TIME / steps)
 			end
 		end)
 		task.delay(OUT_TIME, function()
 			-- CELUI QUI CREE EST CELUI QUI NETTOIE, et il nettoie TOUT : l'entree de WorldAnchor survivrait au
 			-- Destroy et sa boucle continuerait de calculer une position pour un objet mort.
-			WorldAnchor.detach(frame)
-			frame:Destroy()
+			WorldAnchor.detach(label)
+			label:Destroy()
 		end)
 	end)
-end
-
---- Fait jaillir la gerbe ENTIERE au-dessus de `target`, puis nettoie tout. Rien a garder chez l'appelant.
----
---- `offset` decale le point vise, en studs -- typiquement pour la poser au-dessus de la tete.
-function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
-	burst(target, offset, PIECES)
-end
-
---- LE TRIPLE ECLAIR SEUL. Pour un a-coup, un effort qui ne donne rien : un seul dessin, centre sur le point.
----
---- La gerbe entiere dit "il est en colere" ; celle-ci ne dit que "ca a cogne". Les melanger userait la premiere.
-function AngerBurst.spark(target: WorldAnchor.Target, offset: Vector3?)
-	burst(target, offset, SPARK)
 end
 
 return AngerBurst

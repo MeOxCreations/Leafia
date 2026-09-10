@@ -25,7 +25,7 @@ local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local SkillController = require(script.Parent.SkillController)
-local AngerBurst = require(ReplicatedStorage.Modules.UI.Core.AngerBurst)
+local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
@@ -1269,12 +1269,10 @@ local function setPullBound(active: boolean)
 				--
 				-- ELLE PART A CHAQUE TIRAGE, y compris celui qui reussit : c'est l'EFFORT qu'elle illustre, pas
 				-- l'echec. Le moteur qui demarre a deja son propre son pour se signaler.
-				-- ACCROCHE A LA PART, pas a sa position : un point est un instantane, et la machine peut bouger
-				-- -- un autre joueur la pousse, elle glisse sur une pente. L'eclair resterait alors en l'air.
 				local mine = myMower()
 				local root = if mine then rootOf(mine) else nil
 				if root then
-					AngerBurst.spark(root, Vector3.new(0, MowConfigs.START_BURST_UP, 0))
+					StarBurst.at(root.Position + Vector3.new(0, MowConfigs.START_BURST_UP, 0))
 				end
 			end
 			return Enum.ContextActionResult.Pass

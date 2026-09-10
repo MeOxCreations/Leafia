@@ -632,6 +632,13 @@ return {
 	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
 	-- pose de repos au dernier mot.
 	OLDMAN_TALK_FADE = 0.3,
+	-- DUREE MAXIMALE qu'une replique peut demander, en secondes. Le client annonce la longueur de son fichier son :
+	-- c'est une valeur qui vient de LUI, donc on la borne. Le pire qu'un client modifie puisse faire est de faire
+	-- gesticuler un PNJ, mais une duree absurde l'y figerait pour le reste de la partie.
+	--
+	-- Large : elle doit laisser passer la plus longue replique reelle sans la couper. Une borne plus serree que la
+	-- donnee qu'elle borne coupe le cas normal en croyant arreter un abus.
+	OLDMAN_TALK_MAX = 60,
 
 	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend

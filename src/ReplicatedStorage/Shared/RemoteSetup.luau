@@ -24,6 +24,17 @@ local REMOTES: { { any } } = {
 	-- Rien a valider a l'arrivee : c'est le SERVEUR qui emet, vers les clients. Un client ne peut pas s'en servir.
 	{ "PlayDropEffect", E, "Fx" },
 
+	-- [ TUTORIAL ] --
+	-- COMBIEN DE TEMPS LE GRAND-PERE PARLE, en secondes. Le client l'envoie a chaque replique.
+	--
+	-- POURQUOI C'EST LE CLIENT QUI LE SAIT. Les voix sont jouees chez lui, et la duree d'un son ne se connait
+	-- qu'une fois l'asset CHARGE (`TimeLength` vaut zero avant). Le serveur, lui, ne charge jamais l'audio : il ne
+	-- peut donc pas mesurer ce que dure une replique, alors qu'il est le seul a pouvoir animer le PNJ pour tous.
+	--
+	-- Une DUREE et pas un "il commence / il a fini" : un "fini" perdu laisserait le geste tourner pour toujours,
+	-- alors qu'une duree se perime toute seule. Bornee cote serveur, comme tout ce qui vient du client.
+	{ "OldManTalkFor", E, "Tutorial" },
+
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur
 	-- tient, donc il n'y a rien a valider et rien a falsifier.
