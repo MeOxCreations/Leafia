@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.703 — La camera attend de nouveau la fin du glissement ET de la parole
+
+Retour a l'enchainement complet : plan de sortie, pause, glissement en contre-plongee, puis la fin de sa
+replique. La main revient au bout des deux.
+
+Ce qui reste acquis au passage, et qui n'est pas un reglage : la fin de la parole se mesure sur une DATE que
+chaque replique repousse, pas sur "la seconde replique est-elle partie". C'etait le bug de la camera coincee en
+scene -- une chaine qui peut ne jamais demarrer laissait la condition fausse pour toujours.
+
 ## 0.0.702 — Retour en arriere : la camera repart avec les jambes
 
 Annulation de la version precedente. La camera et les commandes reviennent de nouveau ENSEMBLE, quand le

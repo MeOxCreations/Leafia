@@ -774,16 +774,12 @@ local function endScene()
 				-- du champ.
 				local walkShot = exitShotCFrame(WALK_TUNE)
 				if walkShot then
-					SceneCamera.moveTo(walkShot, TutorialConfigs.WALK_SHOT_IN)
+					SceneCamera.moveTo(walkShot, TutorialConfigs.WALK_SHOT_IN, function()
+						whenSpeechDone(releaseScene)
+					end)
+				else
+					whenSpeechDone(releaseScene)
 				end
-				-- ET LA MAIN REVIENT DES QU'IL S'EST TU, sans attendre la fin du glissement. Les deux ne
-				-- racontent pas la meme chose : le glissement occupe l'oeil PENDANT qu'il parle, la parole dit
-				-- quand la scene est finie. En attendant les deux, on gardait le joueur immobile devant une
-				-- camera qui bougeait encore pour rien.
-				--
-				-- `SceneCamera.exit` part de la CFrame COURANTE : couper un glissement en cours ne fait donc
-				-- aucun saut, la sortie reprend exactement la ou la camera en etait.
-				whenSpeechDone(releaseScene)
 			end)
 		end)
 	else
