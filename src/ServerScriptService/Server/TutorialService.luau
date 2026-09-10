@@ -332,6 +332,49 @@ local function playTalk(model: Model)
 
 	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
 	print(`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM}`)
+
+	-- ===== POURQUOI LE MARQUEUR NE TIRE PAS : ON MESURE, ON NE DEVINE PAS =====
+	-- Deux causes possibles, et elles se corrigent a deux endroits opposes :
+	--   1) le marqueur n'est PAS dans l'asset publie -- ajoute dans l'editeur mais l'animation n'a pas ete
+	--      republiee, ce qui est le cas le plus courant et le plus invisible ;
+	--   2) il y est, mais APRES l'endroit ou la lecture s'arrete -- pose a 14.7 s dans une piste qu'on ne joue
+	--      que 12 s, il ne peut pas tomber.
+	--
+	-- Un "ca ne marche pas" ne separe pas les deux. Ces deux mesures, oui.
+	task.spawn(function()
+		local deadline = os.clock() + 8
+		while track.Length <= 0 and os.clock() < deadline do
+			task.wait(0.2)
+		end
+		print(`[Tutorial] piste d'explication : {string.format("%.2f", track.Length)} s de long`)
+
+		-- LES MARQUEURS REELLEMENT PRESENTS dans l'asset. `GetKeyframeSequenceAsync` est un appel RESEAU
+		-- capricieux -- le journal du projet le dit -- donc pcall et rien de casse s'il rate : c'est un
+		-- diagnostic, pas une dependance.
+		local ok, seq = pcall(function()
+			return game:GetService("KeyframeSequenceProvider")
+				:GetKeyframeSequenceAsync(TutorialConfigs.OLDMAN_TALK_ANIM)
+		end)
+		if not (ok and typeof(seq) == "Instance") then
+			print("[Tutorial] marqueurs de l'explication : lecture impossible (appel reseau rate)")
+			return
+		end
+		local found: { string } = {}
+		for _, kf in (seq :: Instance):GetChildren() do
+			if kf:IsA("Keyframe") then
+				for _, m in kf:GetChildren() do
+					if m:IsA("KeyframeMarker") then
+						table.insert(found, `{m.Name}@{string.format("%.2f", (kf :: Keyframe).Time)}s`)
+					end
+				end
+			end
+		end
+		if #found == 0 then
+			print("[Tutorial] marqueurs de l'explication : AUCUN dans l'asset publie.")
+		else
+			print(`[Tutorial] marqueurs de l'explication : {table.concat(found, ", ")}`)
+		end
+	end)
 end
 
 -- COMBIEN DE TEMPS DURE SA REPLIQUE : la somme des `hold`, jamais un chiffre pose a la main. La config est
@@ -379,6 +422,12 @@ local function talkFor(model: Model, seconds: number)
 	talkModel = model
 	talkUntil = math.max(talkUntil, os.clock() + seconds)
 	playTalk(model)
+	-- COMBIEN DE TEMPS ELLE VA TOURNER, en tout. A comparer a sa longueur : un marqueur pose au-dela de cette
+	-- duree ne sera jamais atteint, meme si la piste boucle -- elle est coupee avant d'y arriver.
+	print(
+		`[Tutorial] explication demandee : +{string.format("%.2f", seconds)} s `
+			.. `(total {string.format("%.2f", talkUntil - os.clock())} s)`
+	)
 	-- UNE SEULE SENTINELLE EN VOL. Une par appel donnerait autant de reveils que de repliques, et le premier
 	-- couperait le geste alors que les suivants venaient de le prolonger.
 	if talkWatching then

@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.709 — On mesure pourquoi le marqueur ne tire pas
+
+Il joue, il boucle, et il ne tombe jamais. Deux causes possibles, qui se corrigent a deux endroits OPPOSES :
+
+1. le marqueur n'est pas dans l'asset PUBLIE -- ajoute dans l'editeur mais l'animation n'a pas ete republiee.
+   C'est le cas le plus courant, et le plus invisible : l'editeur le montre, le jeu ne le voit pas ;
+2. il y est, mais APRES l'endroit ou la lecture s'arrete. Pose a 14.7 s dans une piste qu'on ne joue que douze
+   secondes, il ne peut pas tomber -- meme si elle boucle, elle est coupee avant d'y arriver.
+
+Un "ca ne marche pas" ne separe pas les deux. Trois mesures, si :
+
+- la LONGUEUR de la piste d'explication ;
+- COMBIEN DE TEMPS on la joue, cumule sur toutes les demandes ;
+- les MARQUEURS reellement presents dans l'asset, avec leur instant.
+
+Le troisieme passe par `GetKeyframeSequenceAsync`, un appel reseau que le journal du projet decrit comme
+capricieux : il est donc sous `pcall`, et son echec ne casse rien -- c'est un diagnostic, pas une dependance.
+
 ## 0.0.708 — Le marqueur est ecoute la ou il est : sur l'animation d'explication
 
 Il est pose dans `107093983212125`, l'animation d'EXPLICATION -- pas dans celles de la scene. Le diagnostic de
