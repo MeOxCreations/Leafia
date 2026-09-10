@@ -73,6 +73,17 @@ local mowerMarker: Frame? = nil
 local mowerMarkerPart: BasePart? = nil
 local missionStarted = false
 local sceneEnded = false
+-- LA MAIN EST-ELLE RENDUE ? Et ce qui attend qu'elle le soit.
+--
+-- LE GRAND-PERE PEUT ARRIVER AVANT LA FIN DE LA CINEMATIQUE : sa marche part a la fin de la scene, et si son
+-- point d'arrivee est proche il y est avant que la camera ait fini son plan. Tout ce qui suit son arrivee -- son
+-- dialogue, le bandeau de tache, la notification, les marqueurs -- se posait donc PAR-DESSUS le plan, pendant
+-- que le joueur ne pouvait rien faire.
+--
+-- Une FILE plutot qu'un simple drapeau teste par chaque appelant : celui qui arrive apres le relachement doit
+-- partir tout de suite, celui qui arrive avant doit etre RAPPELE. Un drapeau seul ferait perdre le second.
+local sceneReleased = false
+local afterRelease: { () -> () } = {}
 local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
 local fadeBound = false -- la boucle qui repose la transparence a chaque image tourne-t-elle ?
 local grandpaTrack: AnimationTrack? = nil
@@ -684,6 +695,15 @@ local function whenSpeechDone(fn: () -> ())
 	end)
 end
 
+-- Appelle `fn` quand le joueur a repris la main, ou tout de suite si c'est deja fait.
+local function whenReleased(fn: () -> ())
+	if sceneReleased then
+		fn()
+		return
+	end
+	table.insert(afterRelease, fn)
+end
+
 local function releaseScene()
 	-- LES POSES DE SCENE TOMBENT AVEC LE BLOCAGE, dans le meme geste.
 	--
@@ -710,6 +730,14 @@ local function releaseScene()
 	SoundDuck.restore(TutorialConfigs.SCENE_DUCK_TIME)
 	CameraEffects.SetFovOffset(0)
 
+	-- ET ON LIBERE CE QUI ATTENDAIT. La file est VIDEE AVANT d'etre parcourue : une de ces fonctions peut en
+	-- ajouter une autre, et on ne veut pas la rejouer dans la meme passe.
+	sceneReleased = true
+	local waiting = afterRelease
+	afterRelease = {}
+	for _, fn in waiting do
+		fn()
+	end
 end
 
 local function endScene()
@@ -1782,20 +1810,28 @@ local function onOldManArrived()
 		return
 	end
 	spokeTwice = true
-	task.delay(TutorialConfigs.SPEECH2_DELAY, function()
-		-- SANS VOIX : le fichier de cette replique a ete retire, le texte avance seul sur ses `hold`.
-		-- LE NOM DU PERSONNAGE SE POSE ICI, pas sur chacune des cinq repliques : il vit a un seul endroit dans la
-		-- config, et le jour ou le grand-pere a un vrai prenom il change une fois.
-		local lines: { Dialogue.Line } = {}
-		for _, entry in TutorialConfigs.SPEECH2_LINES do
-			table.insert(lines, {
-				speaker = TutorialConfigs.SPEECH2_SPEAKER,
-				text = entry.text,
-				emotion = entry.emotion,
-				hold = entry.hold,
-			})
-		end
-		Dialogue.play(lines, showMowerTask)
+	-- IL ATTEND QUE LE JOUEUR AIT LA MAIN. Il peut arriver AVANT la fin du plan de sortie -- sa marche part a la
+	-- fin de la scene, et un point d'arrivee proche le met la en deux secondes. Son dialogue, le bandeau de tache
+	-- et la notification qui suivent tomberaient alors par-dessus la cinematique, sur un joueur qui ne peut pas
+	-- encore bouger : il lit une consigne qu'il n'a pas les moyens de suivre.
+	--
+	-- On ne perd rien a attendre : il reste plante devant sa porte, ce qui est exactement ce qu'on lui demande.
+	whenReleased(function()
+		task.delay(TutorialConfigs.SPEECH2_DELAY, function()
+			-- SANS VOIX : le fichier de cette replique a ete retire, le texte avance seul sur ses `hold`.
+			-- LE NOM DU PERSONNAGE SE POSE ICI, pas sur chacune des repliques : il vit a un seul endroit dans la
+			-- config, et le jour ou le grand-pere a un vrai prenom il change une fois.
+			local lines: { Dialogue.Line } = {}
+			for _, entry in TutorialConfigs.SPEECH2_LINES do
+				table.insert(lines, {
+					speaker = TutorialConfigs.SPEECH2_SPEAKER,
+					text = entry.text,
+					emotion = entry.emotion,
+					hold = entry.hold,
+				})
+			end
+			Dialogue.play(lines, showMowerTask)
+		end)
 	end)
 end
 
@@ -2148,6 +2184,10 @@ function TutorialController.stop()
 	end
 	-- LE GARDE REPART A ZERO. Sans ca, rejouer la scene le trouverait deja pose et sauterait la seconde replique.
 	secondSpeechOn = false
+	-- LE RENDEZ-VOUS AUSSI. Une scene rejouee doit retrouver une file VIDE : sinon ce qui attendait la main lors
+	-- de la partie precedente partirait au relachement de la suivante.
+	sceneReleased = false
+	afterRelease = {}
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
 	saidPullRope = false

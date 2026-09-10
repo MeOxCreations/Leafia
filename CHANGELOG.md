@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.704 — Rien ne s'affiche plus par-dessus la cinematique
+
+VOILA la cause de tous les allers-retours precedents sur la camera : le grand-pere ARRIVE avant la fin du plan de
+sortie. Sa marche part a la fin de la scene, et un point d'arrivee proche le met devant sa porte en deux
+secondes -- pendant que la camera tient encore son plan.
+
+Tout ce qui suit son arrivee tombait donc PAR-DESSUS la cinematique : son dialogue, le bandeau de tache, la
+notification d'avertissement, le repere au sol et le marqueur sur la tondeuse. Le joueur lisait une consigne
+qu'il n'avait pas les moyens de suivre, et ce n'est pas la camera qui etait en retard -- c'est le reste qui etait
+en avance.
+
+Son dialogue attend maintenant que le joueur ait la main. Le reste suit tout seul : la tache arrive a la fin du
+dialogue, et les marqueurs suivent la tache.
+
+**Une FILE, pas un drapeau teste par chaque appelant.** Celui qui arrive apres le relachement doit partir tout de
+suite ; celui qui arrive avant doit etre RAPPELE. Un drapeau seul ferait perdre le second, ce qui est
+exactement le bug qu'on repare.
+
+La file est VIDEE avant d'etre parcourue : une de ces fonctions peut en ajouter une autre, et on ne veut pas la
+rejouer dans la meme passe. Elle repart vide a chaque scene rejouee.
+
+On ne perd rien a le faire attendre : il reste plante devant sa porte, ce qui est exactement ce qu'on lui demande.
+
 ## 0.0.703 — La camera attend de nouveau la fin du glissement ET de la parole
 
 Retour a l'enchainement complet : plan de sortie, pause, glissement en contre-plongee, puis la fin de sa
