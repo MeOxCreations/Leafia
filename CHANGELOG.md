@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.702 — Retour en arriere : la camera repart avec les jambes
+
+Annulation de la version precedente. La camera et les commandes reviennent de nouveau ENSEMBLE, quand le
+grand-pere s'est tu, et le glissement retrouve ses 2.5 s.
+
+A l'ecran, les separer ne donnait pas ce qu'on en attendait : recuperer sa camera alors qu'on ne peut pas encore
+bouger se ressent comme des commandes qui ne repondent pas -- exactement ce que le decoupage voulait eviter. Deux
+attentes differentes sur le meme personnage ne se lisent pas comme deux etapes, elles se lisent comme un bug.
+
 ## 0.0.701 — La camera revient au joueur bien avant ses jambes
 
 L'oeil et les jambes n'attendaient pas la meme chose, et pourtant ils partaient ensemble. Ils sont separes.

@@ -189,13 +189,9 @@ return {
 	-- de l'un a l'autre est donc un glissement, pas un changement de plan. Deux constructions differentes auraient
 	-- donne un saut a l'image, ce qu'on appelle un faux raccord.
 	--
-	-- Duree du glissement, et de tout ce qui reste de scene pour l'OEIL : la camera de jeu revient a sa fin, sans
-	-- attendre que le grand-pere ait fini de parler.
-	--
-	-- COURTE. Elle a d'abord ete longue -- 2.5 s -- pour couvrir une bonne part de la marche, mais c'est le
-	-- joueur qui attendait sa camera pendant ce temps. Le mouvement se lit meme bref : ce qu'on montre, c'est
-	-- qu'il se met en route, pas tout son trajet.
-	WALK_SHOT_IN = 1.4,
+	-- Duree du glissement. LONGUE : c'est elle qui donne le mouvement, et elle doit couvrir une bonne part de la
+	-- marche. Trop courte, la camera arrive avant lui et le plan redevient fixe.
+	WALK_SHOT_IN = 2.5,
 	-- LA CAMERA DESCEND (7 -> 2) : on passe d'un plan "un peu du dessus" a une CONTRE-PLONGEE, l'oeil presque au
 	-- niveau du sol. Le grand-pere y parait plus grand, et son trajet plus long -- c'est le meme metre de cour,
 	-- filme comme s'il en valait dix.
