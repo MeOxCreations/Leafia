@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.656 — Le grand-pere s'impatiente tant que la tondeuse est par terre
+
+Une fois la consigne donnee, il ne restait plus qu'une statue devant sa porte. Il relance maintenant : quatre
+phrases (`Oldman_scene_speech_Impatient_1` a `4`), une de temps en temps, jamais deux fois la meme d'affilee.
+
+| Reglage | Valeur | Role |
+|---|---|---|
+| `IMPATIENT_FIRST` | 14 s | Avant la premiere. Relancer quelqu'un qui vient de recevoir sa consigne, ce n'est pas de l'impatience, c'est du harcelement |
+| `IMPATIENT_EVERY` | 16 s | Ecart entre deux |
+| `IMPATIENT_JITTER` | 5 s | Le hasard par-dessus, pour qu'on ne PREVOIE pas la prochaine |
+
+**Il se tait des que le joueur TIENT la machine**, pas quand elle demarre. C'est le geste d'aller la chercher
+qu'il attend ; une fois qu'elle est dans ses mains, continuer a le presser n'a plus de sens. Nouvelle fonction
+`MowController.isCarrying`, qui LIT l'etat au lieu d'ecouter un evenement -- le joueur peut la lacher, mourir, en
+reprendre une autre.
+
+Et pendant qu'il la tient, l'echeance est REPOUSSEE, pas simplement ignoree. Sans ca, lacher la machine ferait
+partir une phrase dans la seconde : toutes celles qui n'ont pas pu sortir pendant ce temps.
+
+**Jamais deux fois la meme d'affilee.** Un tirage au hasard pur repete, et une repetition immediate s'entend
+comme un bug alors que c'est le hasard qui fait son travail. En cas de doublon on DECALE d'un cran plutot que de
+retirer : un nouveau tirage peut retomber sur le meme, autant de fois qu'il veut.
+
+Les voix sont en 2D comme les repliques de la scene : c'est une VOIX qui s'adresse au joueur. Spatialisee, elle
+baisserait quand il s'eloigne pour chercher la machine -- soit exactement quand elle a quelque chose a dire.
+
+A SAVOIR : `Oldman_scene_speech_Perfect` existe dans SoundService mais n'est branche nulle part.
+
 ## 0.0.655 — Les barres noires tombent quand le grand-pere se met en marche
 
 Retour en arriere sur la version precedente, qui les avait coupees ENTIEREMENT : ce n'etait pas la demande. Elles

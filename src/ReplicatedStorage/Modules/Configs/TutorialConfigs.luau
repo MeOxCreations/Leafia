@@ -400,6 +400,28 @@ return {
 	-- Hauteur au-dessus du centre de la porte, en studs.
 	DOOR_MARKER_UP = 3.5,
 
+	-- ===== IL S'IMPATIENTE =====
+	-- Tant que la machine est encore par terre, le grand-pere relance. Une phrase de temps en temps, pas un
+	-- rappel qui se repete : c'est ce qui le fait exister entre deux moments scenarises, au lieu d'attendre
+	-- planté a sa porte.
+	--
+	-- ELLES SONT LISTEES UNE PAR UNE, et pas devinees par un prefixe et un compteur. Une liste explicite se lit,
+	-- se reordonne, et en ajouter une est UNE ligne -- alors qu'un nom fabrique casse en silence le jour ou
+	-- l'asset s'appelle autrement.
+	IMPATIENT_SOUNDS = {
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_1" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_2" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_3" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_4" },
+	},
+	-- Avant la PREMIERE. Assez long pour laisser le joueur chercher tout seul : relancer quelqu'un qui vient de
+	-- recevoir sa consigne, ce n'est pas de l'impatience, c'est du harcelement.
+	IMPATIENT_FIRST = 14,
+	-- Puis l'ecart entre deux, plus un peu de hasard. Le hasard sert a ce qu'on ne PREVOIE pas la prochaine :
+	-- une cadence reguliere se lit comme une horloge, donc comme un systeme, pas comme quelqu'un qui s'agace.
+	IMPATIENT_EVERY = 16,
+	IMPATIENT_JITTER = 5,
+
 	-- ===== LE MEME MARQUEUR, SUR LA TONDEUSE =====
 	-- Hauteur au-dessus de la RootPart de la machine, en studs. PLUS BAS que celui de la porte : une tondeuse
 	-- arrive a la taille, une porte fait deux metres. Le marqueur doit flotter juste au-dessus de l'objet qu'il

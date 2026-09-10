@@ -1389,11 +1389,42 @@ end
 --- PAS AVANT. Pendant toute l'ouverture, la seule chose a faire est d'aller toquer, et le halo sur la porte le dit
 --- mieux qu'une ligne de texte. Un objectif qu'on ne peut pas encore accomplir n'est pas un guide, c'est du bruit
 --- que le joueur apprend a ignorer -- et il l'ignorera aussi quand il comptera.
+-- IL S'IMPATIENTE, tant que la tondeuse est encore par terre.
+--
+-- QUAND ELLE PARLE et QUELLE PHRASE : deux questions separees. Le "quand" vit dans la boucle par image, le
+-- "laquelle" ici -- sinon la moindre retouche de cadence obligerait a relire le tirage.
+local nextImpatientAt = math.huge
+local lastImpatient = 0
+
+-- JAMAIS DEUX FOIS LA MEME D'AFFILEE. Un tirage au hasard pur repete, et une repetition immediate s'entend comme
+-- un bug ("il a bugue, il redit pareil") -- alors que c'est le hasard qui fait son travail.
+local function playImpatient()
+	local sounds = TutorialConfigs.IMPATIENT_SOUNDS
+	local count = #sounds
+	if count == 0 then
+		return
+	end
+	local i = math.random(1, count)
+	if count > 1 and i == lastImpatient then
+		-- On DECALE d'un cran plutot que de retirer : un nouveau tirage peut retomber sur le meme, autant de fois
+		-- qu'il veut. Un decalage donne une reponse en une fois, et sans boucle qui pourrait tourner longtemps.
+		i = 1 + (i % count)
+	end
+	lastImpatient = i
+	-- 2D, comme les repliques de la scene : c'est une VOIX qui s'adresse au joueur, pas un bruit qui vient d'un
+	-- point de la carte. Spatialisee, elle baisserait quand il s'eloigne pour chercher la machine -- soit
+	-- exactement quand elle a quelque chose a dire.
+	speechSound = SoundUtils.play(sounds[i], SCENE_2D)
+end
+
 local function showMowerTask()
 	if mowerTaskShown then
 		return
 	end
 	mowerTaskShown = true
+	-- LE COMPTE PART D'ICI, l'instant ou la consigne apparait. Laisse a zero, la premiere phrase tomberait a la
+	-- premiere image de la boucle -- avant meme que le joueur ait lu ce qu'on lui demande.
+	nextImpatientAt = os.clock() + TutorialConfigs.IMPATIENT_FIRST
 	TaskBannerHandler.show({
 		{
 			icon = TutorialConfigs.MOWER_TASK_ICON,
@@ -1445,6 +1476,20 @@ local function step(dt: number)
 	-- Le repere se cache tout seul en arrivant : le seuil vit dans GroundGuide, pas ici, sinon deux seuils
 	-- finiraient par se contredire.
 	if mowerTaskShown and not mowerTaskDone then
+		-- IL RELANCE, tant que le joueur n'a pas mis la main dessus. On teste ce qu'il TIENT, pas si la machine
+		-- tourne : c'est le geste d'aller la chercher qu'il attend, et une fois qu'elle est dans ses mains,
+		-- continuer a le presser n'a plus de sens.
+		if MowController.isCarrying() then
+			-- ON REPOUSSE L'ECHEANCE au lieu de la laisser passer. Sans ca, lacher la machine ferait partir une
+			-- phrase dans la seconde -- toutes celles qui n'ont pas pu sortir pendant qu'il la tenait.
+			nextImpatientAt = now + TutorialConfigs.IMPATIENT_EVERY
+		elseif now >= nextImpatientAt then
+			nextImpatientAt = now
+				+ TutorialConfigs.IMPATIENT_EVERY
+				+ math.random() * TutorialConfigs.IMPATIENT_JITTER
+			playImpatient()
+		end
+
 		local mower = MowController.freeMowerPart()
 		if mower then
 			GroundGuide.point(mower.Position)
@@ -1476,6 +1521,9 @@ local function step(dt: number)
 		GroundGuide.hide()
 		WorldMarker.remove(mowerMarker)
 		mowerMarker, mowerMarkerPart = nil, nil
+		-- ET IL SE TAIT. `math.huge` plutot qu'un drapeau de plus : la boucle compare deja une date, une date
+		-- qui n'arrive jamais est la facon la plus courte de dire "plus jamais".
+		nextImpatientAt = math.huge
 		TaskBannerHandler.setDone(1)
 		task.delay(TutorialConfigs.LAWN_TASK_DELAY, function()
 			TaskBannerHandler.add({
@@ -1726,6 +1774,8 @@ function TutorialController.stop()
 	end
 	-- LE GARDE REPART A ZERO. Sans ca, rejouer la scene le trouverait deja pose et sauterait la seconde replique.
 	secondSpeechOn = false
+	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
+	nextImpatientAt = math.huge
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

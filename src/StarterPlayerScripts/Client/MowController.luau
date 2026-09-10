@@ -1516,6 +1516,15 @@ function MowController.freeMowerPart(): BasePart?
 	return best
 end
 
+--- Le joueur TIENT-IL une tondeuse ? (Peu importe qu'elle tourne ou non.)
+---
+--- Expose pour le didacticiel, qui arrete de le relancer des qu'il en a pris une. Il LIT l'etat au lieu
+--- d'ecouter un evenement : le joueur peut la lacher, mourir, en reprendre une autre -- un evenement tire une
+--- fois laisserait le didacticiel sur une reponse perimee.
+function MowController.isCarrying(): boolean
+	return myMower() ~= nil
+end
+
 --- La tondeuse que le joueur pousse est-elle DEMARREE ?
 ---
 --- Expose pour le didacticiel, qui doit savoir quand la tache "demarrer la tondeuse" est accomplie. Il LIT l'etat
