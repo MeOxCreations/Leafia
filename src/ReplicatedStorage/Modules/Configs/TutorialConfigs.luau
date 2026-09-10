@@ -246,6 +246,14 @@ return {
 	-- On ne coupe PAS un son qui joue encore : ce filet ne repond qu'a "il n'est jamais arrive", jamais a "il est
 	-- plus long que prevu". Une borne ne doit jamais etre plus serree que la donnee qu'elle borne.
 	SPEECH_CHAIN_TIMEOUT = 6,
+	-- FILET D'ATTENTE AVANT DE RENDRE LA MAIN, en secondes. La scene ne relache le joueur qu'une fois le grand-pere
+	-- TU : parti pendant qu'il parle, il court sur une replique qu'il n'entend plus, et le plan se termine tout
+	-- seul dans le vide.
+	--
+	-- Mais on ne l'enferme JAMAIS pour de bon : si une voix ne se termine pas (asset absent, `Ended` qui ne tire
+	-- pas), passe ce delai on rend la main quoi qu'il arrive. Un joueur bloque par un fichier son manquant est le
+	-- pire des deux maux.
+	SPEECH_WAIT_MAX = 20,
 
 	-- ===== LE JOUEUR S'EFFACE, MAIS PAS TOUT DE SUITE =====
 	-- LA SCENE A DEUX TEMPS, et le personnage n'a pas le meme role dans les deux.

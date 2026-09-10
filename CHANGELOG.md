@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.690 — Le joueur ne reprend la main qu'une fois le grand-pere tu
+
+Le plan de sortie et le grand-pere ne suivent pas la meme horloge : son ANIMATION peut finir alors que sa
+replique court encore. Le joueur partait donc en courant sur une phrase qu'il n'entendait plus, et le plan se
+terminait tout seul dans le vide.
+
+On attend maintenant les DEUX -- la camera a fini son plan, ET il a fini de parler -- et c'est le plus tardif qui
+decide.
+
+**"Aucun son en cours" ne suffit pas a dire qu'il a fini.** Ses deux repliques d'ouverture s'enchainent : entre
+les deux il y a un silence pendant lequel il n'a pas fini du tout. On verifie donc aussi que la SECONDE est
+partie.
+
+**Mais on ne l'enferme jamais pour de bon.** Si une voix ne se termine pas -- asset absent, `Ended` qui ne tire
+jamais -- on rend la main au bout de `SPEECH_WAIT_MAX` (20 s) quoi qu'il arrive. Un joueur bloque par un fichier
+son manquant est le pire des deux maux.
+
 ## 0.0.689 — Il redit de tirer la corde, autrement
 
 `Oldman_scene_speech_Pulltherope2` part quand le joueur REPREND la tondeuse sans l'avoir demarree.

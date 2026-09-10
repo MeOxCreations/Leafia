@@ -133,6 +133,12 @@ local trySound: Sound? = nil
 local speechSound: Sound? = nil
 -- Le remote qui dit au serveur combien de temps il parle. Resolu en tache de fond au boot (voir init).
 local talkRemote: RemoteEvent? = nil
+-- LA SECONDE REPLIQUE D'OUVERTURE EST-ELLE PARTIE ? Garde : elle ne doit sortir qu'une fois, et deux chemins y
+-- menent -- la fin du premier son, et le filet qui couvre le cas ou cette fin ne tire jamais.
+--
+-- Declaree ICI, tout en haut, parce que la fin de scene la lit AUSSI : elle sert a savoir s'il a fini de parler,
+-- et un silence entre deux repliques ne veut pas dire qu'il a fini.
+local secondSpeechOn = false
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
 -- Le conteneur lui-meme, retenu a la resolution : c'est LUI qui donne le point d'impact a l'ecran. Le relire par
@@ -575,6 +581,28 @@ end
 
 -- RENDRE LA MAIN, pour de bon. Separe de `endScene` parce que le plan de sortie s'intercale entre les deux : le
 -- joueur reste bloque et les barres restent en place tant qu'on est encore au cinema.
+-- LE GRAND-PERE A-T-IL FINI DE PARLER ? Vrai quand plus rien ne joue ET que la suite de sa chaine est deja
+-- partie -- ses deux repliques d'ouverture s'enchainent, donc "aucun son en cours" ne suffit pas : entre les
+-- deux il y a un silence pendant lequel il n'a pas fini du tout.
+local function speechOver(): boolean
+	if not secondSpeechOn then
+		return false -- la seconde replique n'est pas encore partie
+	end
+	local sound = speechSound
+	return not (sound and sound.Parent and sound.IsPlaying)
+end
+
+-- Appelle `fn` quand il s'est TU, ou au bout du filet.
+local function whenSpeechDone(fn: () -> ())
+	task.spawn(function()
+		local deadline = os.clock() + TutorialConfigs.SPEECH_WAIT_MAX
+		while not speechOver() and os.clock() < deadline do
+			task.wait(0.1)
+		end
+		fn()
+	end)
+end
+
 local function releaseScene()
 	-- LES POSES DE SCENE TOMBENT AVEC LE BLOCAGE, dans le meme geste.
 	--
@@ -647,14 +675,23 @@ local function endScene()
 
 	-- LE PLAN DE SORTIE. On garde les barres et le blocage pendant qu'il dure : c'est encore du cinema, et rendre
 	-- les commandes au milieu ferait marcher le joueur dans son propre plan.
+	-- ON NE REND LA MAIN QU'UNE FOIS QU'IL S'EST TU. Le plan de sortie et le grand-pere ne suivent pas la meme
+	-- horloge : son animation peut finir alors que sa replique court encore, et le joueur partait en courant sur
+	-- une phrase qu'il n'entendait plus. On attend donc les DEUX -- la camera a fini son plan, ET il a fini de
+	-- parler -- et c'est le plus tardif qui decide.
+	--
+	-- Le filet de `whenSpeechDone` garantit qu'on rend la main meme si une voix ne se termine jamais.
 	local shot = exitShotCFrame()
 	if shot then
 		SceneCamera.moveTo(shot, TutorialConfigs.EXIT_SHOT_IN, function()
-			task.delay(TutorialConfigs.EXIT_SHOT_HOLD, releaseScene)
+			task.delay(TutorialConfigs.EXIT_SHOT_HOLD, function()
+				whenSpeechDone(releaseScene)
+			end)
 		end)
 	else
-		-- Pas de cadrage possible (pas de personnage, pas de porte) : on ne retient pas le joueur pour rien.
-		releaseScene()
+		-- Pas de cadrage possible (pas de personnage, pas de porte) : on ne retient pas le joueur pour le plan --
+		-- mais on attend quand meme qu'il ait fini sa phrase.
+		whenSpeechDone(releaseScene)
 	end
 end
 
@@ -948,10 +985,6 @@ end
 -- des que la premiere a fini de parler. La porte, elle, continue de s'ouvrir pendant qu'il parle -- son mouvement
 -- ne commande plus rien de la voix.
 --
--- Garde : une seule fois, quel que soit le chemin qui y mene. La fin du son ET le filet appellent tous les deux
--- cette fonction, et l'un des deux arrive toujours en second.
-local secondSpeechOn = false
-
 local function playSecondSpeech()
 	if secondSpeechOn then
 		return
