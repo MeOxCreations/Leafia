@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.692 — Le demi-tour de l'animation reste au joueur
+
+Meme cause que la version precedente, autre grandeur : une animation qui fait PIVOTER le corps le tourne a
+l'ecran sans toucher a la racine. Relachee, il se remettait d'un coup face a sa direction d'avant -- un demi-tour
+joue dans l'animation se perdait donc entierement, et le joueur se retrouvait dos a ce qu'il croyait regarder.
+
+Le cap de l'animation est maintenant rendu a la racine, comme l'etait deja le deplacement.
+
+**Le YAW seulement.** Le tangage et le roulis appartiennent a la POSE -- il se penche -- pas a sa direction : les
+appliquer a la racine coucherait le personnage. Meme raison qui fait ignorer la verticale du deplacement.
+
+**Les deux mesures sont independantes.** Un deplacement hors bornes n'empeche plus de rendre le demi-tour, et
+l'inverse aussi : perdre les deux parce qu'une seule est aberrante serait un choix qu'aucune des deux ne
+justifie.
+
+**L'ordre des composantes n'est pas libre** : la rotation s'applique en LOCAL (a droite), la translation en
+MONDE. Tourner d'abord puis translater en local enverrait le joueur dans une direction qui depend de l'angle
+qu'on vient de poser.
+
+`DRIFT_YAW_MAX` est a 200 degres : un demi-tour doit passer, une valeur aberrante non.
+
 ## 0.0.691 — Le joueur ne se teleporte plus en arriere a la fin de la scene
 
 Les poses de scene deplacent le corps par son LowerTorso : le joueur qui se pousse sur le cote bouge A L'ECRAN,

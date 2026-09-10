@@ -490,10 +490,16 @@ end
 -- HumanoidRootPart, qui est la seule position que la physique -- et le reste du jeu -- connaisse. Les deux se
 -- separent donc pendant la scene, et se rejoignent d'un coup a l'instant ou on relache la pose.
 --
--- ON NE MESURE QUE L'HORIZONTAL. La verticale ne raconte rien du deplacement -- l'animation peut faire flechir
--- les jambes -- et l'appliquer enfoncerait le joueur dans le sol ou le ferait tomber. Au repos, les deux parts
--- sont sur le meme axe vertical, donc l'ecart horizontal EST le deplacement de l'animation, sans avoir a
--- mesurer une pose de reference avant.
+-- ON NE MESURE QUE L'HORIZONTAL ET LE CAP. La verticale ne raconte rien du deplacement -- l'animation peut faire
+-- flechir les jambes -- et l'appliquer enfoncerait le joueur dans le sol ou le ferait tomber. Meme raison pour
+-- le tangage et le roulis : ils appartiennent a la POSE, pas a la direction.
+--
+-- Au repos, les deux parts sont sur le meme axe vertical et alignees : l'ecart mesure EST donc ce que
+-- l'animation a ajoute, sans avoir a relever une pose de reference avant la scene.
+--
+-- LES DEUX SE RATTRAPENT SEPAREMENT. Un deplacement hors bornes n'empeche pas de rendre le demi-tour, et
+-- l'inverse aussi : ce sont deux mesures independantes, et perdre les deux parce qu'une seule est aberrante
+-- serait un choix qu'aucune des deux ne justifie.
 local function absorbAnimDrift(): boolean
 	local character = player.Character
 	local hrpChild = if character then character:FindFirstChild("HumanoidRootPart") else nil
@@ -503,13 +509,31 @@ local function absorbAnimDrift(): boolean
 	end
 	local hrp = hrpChild :: BasePart
 	local lower = lowerChild :: BasePart
+
+	-- CE QUE L'ANIMATION A DEPLACE, mesure dans le repere de la racine : c'est exactement l'ecart que le
+	-- Transform du RootJoint a ajoute, et il vaut zero au repos.
 	local d = lower.Position - hrp.Position
 	local flat = Vector3.new(d.X, 0, d.Z)
 	local distance = flat.Magnitude
 	if distance < TutorialConfigs.DRIFT_MIN or distance > TutorialConfigs.DRIFT_MAX then
+		flat = Vector3.zero
+		distance = 0
+	end
+
+	-- ET CE QU'ELLE A FAIT PIVOTER. Le YAW seulement : le tangage et le roulis appartiennent a la pose -- il se
+	-- penche -- pas a sa direction, et les appliquer a la racine coucherait le personnage.
+	local _, yaw = hrp.CFrame:ToObjectSpace(lower.CFrame):ToEulerAnglesYXZ()
+	local turn = math.deg(math.abs(yaw))
+	if turn < TutorialConfigs.DRIFT_YAW_MIN or turn > TutorialConfigs.DRIFT_YAW_MAX then
+		yaw = 0
+	end
+
+	if distance <= 0 and yaw == 0 then
 		return false
 	end
-	hrp.CFrame = hrp.CFrame + flat
+	-- LA ROTATION S'APPLIQUE EN LOCAL (a droite), la translation en MONDE. L'ordre compte : tourner d'abord puis
+	-- translater en local enverrait le joueur dans une direction qui depend de l'angle qu'on vient de poser.
+	hrp.CFrame = CFrame.new(hrp.Position + flat) * (hrp.CFrame - hrp.CFrame.Position) * CFrame.Angles(0, yaw, 0)
 	return true
 end
 

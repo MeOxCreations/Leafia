@@ -690,6 +690,17 @@ return {
 	-- ET AU-DESSUS, ON RENONCE. Une animation qui deplacerait le corps de dix studs teleporterait le joueur, sans
 	-- rien pour verifier qu'il y a de la place a l'arrivee. Mieux vaut le saut visuel qu'un joueur dans un mur.
 	DRIFT_MAX = 6,
+	-- ET LA MEME CHOSE POUR LE CAP. Une animation qui fait pivoter le corps le tourne A L'ECRAN sans toucher a la
+	-- racine : relachee, il se remet d'un coup face a sa direction d'avant. Un demi-tour joue dans l'animation se
+	-- perd donc entierement -- le joueur se retrouve dos a l'endroit ou il croyait regarder.
+	--
+	-- On ne prend que le YAW, la rotation autour de la verticale. Le tangage et le roulis appartiennent a la pose
+	-- (il se penche), pas a sa direction : les appliquer coucherait le personnage.
+	--
+	-- Borne en degres, un peu au-dela de 180 : un demi-tour doit passer, une valeur aberrante non.
+	DRIFT_YAW_MAX = 200,
+	-- Sous ce seuil, c'est du bruit de pose : on ne fait pas pivoter un joueur pour un degre.
+	DRIFT_YAW_MIN = 2,
 
 	-- A quelle distance de la FIN on fige l'animation de coups, en secondes. Le gel doit tomber JUSTE AVANT la
 	-- derniere image : trop tot on coupe le dernier geste, trop tard on rate la fenetre et la piste reboucle.
