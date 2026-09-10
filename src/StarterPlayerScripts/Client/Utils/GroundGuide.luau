@@ -60,9 +60,10 @@ local FADE_TIME = 0.3
 -- Transparence quand il est visible. Pas zero : c'est une AIDE posee sur le decor, pas un objet du monde -- plus
 -- elle monte, plus il se lit comme une indication et moins comme quelque chose de POSE par terre.
 --
--- Elle a une limite haute : au-dela d'environ 0.7 le mesh passe dans le rendu TRANSPARENT de Roblox, ou le tri se
--- fait par objet et non par profondeur -- il se met alors a passer devant ou derriere le decor selon l'angle.
-local SHOWN_TRANSPARENCY = 0.45
+-- TRES HAUTE ICI, c'est voulu : a peine un voile au sol. La seule borne reelle est ce qu'on VOIT -- des 0.01 la
+-- part est deja dans le rendu transparent de Roblox, il n'y a donc aucun seuil a franchir en montant. Le risque
+-- est l'autre bout : trop haut, le repere disparait sur un sol clair et n'indique plus rien.
+local SHOWN_TRANSPARENCY = 0.85
 -- SOUS CETTE DISTANCE, il n'a plus rien a dire : le joueur est arrive, il voit la machine. Le laisser tourner sous
 -- ses pieds ferait une girouette.
 local ARRIVE_DIST = 14

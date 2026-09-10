@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.646 — Le repere de la tondeuse n'est plus qu'un voile au sol
+
+`SHOWN_TRANSPARENCY` passe de 0.45 a 0.85.
+
+Correction d'un commentaire FAUX ecrit une version plus tot : il annoncait une limite haute vers 0.7, au-dela de
+laquelle le mesh serait passe dans le rendu transparent de Roblox. Il y est deja. Des 0.01 une part quitte le
+rendu opaque -- le projet le savait, c'est la lecon du residu de fondu a 0.005 notee dans le journal. Il n'y a
+donc aucun seuil a franchir en montant.
+
+La seule borne reelle est ce qu'on VOIT, et elle est a l'autre bout : trop transparent, le repere disparait sur
+un sol clair et n'indique plus rien.
+
 ## 0.0.645 — Le repere de la tondeuse se lit mieux : plus grand, devant les pieds, plus discret
 
 Trois reglages a l'oeil sur `GroundGuide`, tous dans le meme fichier :
