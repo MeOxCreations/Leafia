@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.713 — Le geste s'arrete quand la phrase s'arrete
+
+Il continuait de s'agiter longtemps apres s'etre tu : une phrase d'impatience de deux secondes lancait les
+dix-sept secondes de l'animation entiere. Ca ne se lit pas comme un personnage qui vit, ca se lit comme une
+animation oubliee.
+
+Deux usages, deux regles, et c'est un seul argument qui les separe :
+
+- **la GRANDE explication** (sa marche, sa replique d'arrivee) joue EN ENTIER. Elle porte le marqueur qui
+  declenche la consigne du joueur, a 14.92 s : la couper avant, c'est ne jamais l'atteindre ;
+- **une petite replique** (impatience, "prends la tondeuse", "reprends-la") dure ce que dure SON SON. Le client
+  envoie la longueur du fichier -- lui seul la connait, `TimeLength` valant zero avant chargement.
+
+**Seul celui qui a DEMARRE la piste decide de sa fin.** Une phrase d'impatience qui tomberait pendant la grande
+explication l'amputerait de son marqueur, et casserait la consigne -- alors qu'elle ne demandait qu'a
+accompagner deux secondes de voix. `playTalk` rend donc vrai ou faux selon qu'elle a lance une piste neuve.
+
+La duree vient du client, donc elle est bornee (`OLDMAN_TALK_MAX`, 60 s). Une valeur qui n'est pas un nombre est
+ignoree : le geste joue alors en entier, ce qui est moche mais jamais casse.
+
+Le bloc de diagnostic des marqueurs est retire : il a repondu a sa question -- le marqueur existe, a 14.92 s,
+dans une piste de 17.24 s.
+
 ## 0.0.712 — Le dialogue glisse a l'ecran quand il se met en marche
 
 Le bandeau attendait son ARRIVEE devant sa porte. Il glisse maintenant depuis le bas a l'instant ou il se met en

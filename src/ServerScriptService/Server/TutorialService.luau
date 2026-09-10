@@ -285,18 +285,23 @@ local talkModel: Model? = nil
 local sceneOwner: Player? = nil
 local focusRemote: RemoteEvent? = nil
 
-local function playTalk(model: Model)
+--- Rend VRAI si elle vient de lancer une piste neuve, faux si une lecture etait deja en cours.
+---
+--- L'appelant s'en sert pour savoir s'il a le droit de decider de la FIN : celui qui n'a pas demarre la piste ne
+--- doit pas la couper -- une phrase d'impatience arrivee pendant la grande explication l'amputerait de son
+--- marqueur.
+local function playTalk(model: Model): boolean
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
 	if not animator then
-		return -- restoreIdle a deja prevenu : sans Animator il n'y a aucune animation du tout
+		return false -- restoreIdle a deja prevenu : sans Animator il n'y a aucune animation du tout
 	end
 
 	-- DEJA EN TRAIN DE JOUER : on ne fait RIEN. Elle est rappelee a chaque replique, et la relancer couperait le
 	-- geste en cours pour le redemarrer -- un a-coup a chaque phrase, alors qu'on veut justement qu'il continue.
 	local current = talkTrack
 	if current and current.IsPlaying then
-		return
+		return false
 	end
 	-- Une piste chargee mais arretee (replique precedente finie) : on la ferme avant d'en poser une neuve. Deux
 	-- pistes a priorite EGALE ne se choisissent pas, Roblox les MELANGE.
@@ -315,7 +320,7 @@ local function playTalk(model: Model)
 			`[Tutorial] Explication non chargeable ({TutorialConfigs.OLDMAN_TALK_ANIM}). `
 				.. "Il parlera sans bouger les bras."
 		)
-		return
+		return false
 	end
 	local track = result :: AnimationTrack
 	track.Looped = TutorialConfigs.OLDMAN_TALK_LOOP
@@ -356,60 +361,39 @@ local function playTalk(model: Model)
 
 	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
 	print(`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM}`)
-
-	-- ===== POURQUOI LE MARQUEUR NE TIRE PAS : ON MESURE, ON NE DEVINE PAS =====
-	-- Deux causes possibles, et elles se corrigent a deux endroits opposes :
-	--   1) le marqueur n'est PAS dans l'asset publie -- ajoute dans l'editeur mais l'animation n'a pas ete
-	--      republiee, ce qui est le cas le plus courant et le plus invisible ;
-	--   2) il y est, mais APRES l'endroit ou la lecture s'arrete -- pose a 14.7 s dans une piste qu'on ne joue
-	--      que 12 s, il ne peut pas tomber.
-	--
-	-- Un "ca ne marche pas" ne separe pas les deux. Ces deux mesures, oui.
-	task.spawn(function()
-		local deadline = os.clock() + 8
-		while track.Length <= 0 and os.clock() < deadline do
-			task.wait(0.2)
-		end
-		print(`[Tutorial] piste d'explication : {string.format("%.2f", track.Length)} s de long`)
-
-		-- LES MARQUEURS REELLEMENT PRESENTS dans l'asset. `GetKeyframeSequenceAsync` est un appel RESEAU
-		-- capricieux -- le journal du projet le dit -- donc pcall et rien de casse s'il rate : c'est un
-		-- diagnostic, pas une dependance.
-		local ok, seq = pcall(function()
-			return game:GetService("KeyframeSequenceProvider")
-				:GetKeyframeSequenceAsync(TutorialConfigs.OLDMAN_TALK_ANIM)
-		end)
-		if not (ok and typeof(seq) == "Instance") then
-			print("[Tutorial] marqueurs de l'explication : lecture impossible (appel reseau rate)")
-			return
-		end
-		local found: { string } = {}
-		for _, kf in (seq :: Instance):GetChildren() do
-			if kf:IsA("Keyframe") then
-				for _, m in kf:GetChildren() do
-					if m:IsA("KeyframeMarker") then
-						table.insert(found, `{m.Name}@{string.format("%.2f", (kf :: Keyframe).Time)}s`)
-					end
-				end
-			end
-		end
-		if #found == 0 then
-			print("[Tutorial] marqueurs de l'explication : AUCUN dans l'asset publie.")
-		else
-			print(`[Tutorial] marqueurs de l'explication : {table.concat(found, ", ")}`)
-		end
-	end)
+	return true
 end
 
--- IL SE MET A EXPLIQUER, et l'animation va jusqu'au bout. Appelee par la marche et par chaque replique.
+-- IL SE MET A EXPLIQUER. `seconds` borne le geste ; sans elle, l'animation va jusqu'a sa derniere image.
 --
--- PLUS AUCUN MINUTEUR. La piste n'est plus bouclee : elle se relache a sa derniere image, donc elle porte
--- elle-meme sa duree -- c'est ce qui permet a son marqueur de 14.92 s d'etre atteint. Toute la machinerie qui
--- calculait "jusqu'a quand il parle" pour la couper a disparu avec, et deux choses qui ne peuvent plus se
--- contredire valent mieux qu'un calcul juste.
-local function talkFor(model: Model)
+-- DEUX USAGES, DEUX REGLES, et c'est tout l'objet de cet argument :
+--   -- LA GRANDE EXPLICATION (sa marche, sa replique d'arrivee) joue EN ENTIER. Elle porte le marqueur qui
+--      declenche la consigne du joueur, a 14.92 s : la couper avant, c'est ne jamais l'atteindre.
+--   -- UNE PETITE REPLIQUE (impatience, "prends la tondeuse") dure ce que dure SON SON. Deux secondes de
+--      phrase ne doivent pas lancer dix-sept secondes de gestes, sinon il continue de s'agiter longtemps apres
+--      s'etre tu -- et ca se lit comme une animation oubliee.
+--
+-- SEUL CELUI QUI A DEMARRE LA PISTE DECIDE DE SA FIN. Une phrase d'impatience qui tomberait pendant la grande
+-- explication l'amputerait de son marqueur, ce qui casserait la consigne -- alors qu'elle ne demandait qu'a
+-- accompagner deux secondes de voix.
+local function talkFor(model: Model, seconds: number?)
 	talkModel = model
-	playTalk(model)
+	local started = playTalk(model)
+	if not (started and seconds and seconds > 0) then
+		return
+	end
+	local track = talkTrack
+	if not track then
+		return
+	end
+	task.delay(seconds, function()
+		-- On revalide : une autre lecture a pu prendre la place pendant la replique.
+		if talkTrack ~= track then
+			return
+		end
+		track:Stop(TutorialConfigs.OLDMAN_TALK_FADE)
+		talkTrack = nil
+	end)
 end
 
 -- LE GRAND-PERE SORT DE CHEZ LUI. Il glisse jusqu'a la part posee dans Studio, puis se repose sur son idle.
@@ -579,10 +563,16 @@ function TutorialService.init()
 	-- IL GESTICULE QUAND IL PARLE. Le client ne fait que declencher : aucun argument, donc rien a valider -- ce
 	-- qui vaut toujours mieux que borner une valeur venue de lui.
 	local talkRemote = RemoteSetup.getRemote("OldManTalk", "Tutorial") :: RemoteEvent
-	talkRemote.OnServerEvent:Connect(function()
+	talkRemote.OnServerEvent:Connect(function(_player, seconds)
+		-- LE CLIENT MENT TOUJOURS : on borne, et une valeur qui n'est pas un nombre est simplement ignoree -- le
+		-- geste joue alors en entier, ce qui est moche mais jamais casse.
+		local bounded: number? = nil
+		if type(seconds) == "number" and seconds == seconds then
+			bounded = math.clamp(seconds, 0, TutorialConfigs.OLDMAN_TALK_MAX)
+		end
 		local model = talkModel or findByName(TutorialConfigs.GRANDPA_NAME)
 		if model and model:IsA("Model") then
-			talkFor(model)
+			talkFor(model, bounded)
 		end
 	end)
 

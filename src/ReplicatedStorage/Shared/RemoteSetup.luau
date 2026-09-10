@@ -30,9 +30,13 @@ local REMOTES: { { any } } = {
 	-- POURQUOI IL EXISTE. Les voix sont jouees chez le client, l'animation du PNJ par le serveur -- seul lui peut
 	-- la faire voir a tout le monde. Il faut donc bien que l'un previenne l'autre.
 	--
-	-- IL A PORTE UNE DUREE, un temps : le geste s'arretait avec la replique. Il n'en porte plus, parce que c'est
-	-- l'ANIMATION qui decide de sa longueur -- et rien a valider a l'arrivee, du coup, ce qui est toujours mieux
-	-- que borner une valeur venue du client.
+	-- IL PORTE LA LONGUEUR DU SON, en secondes. Le client seul la connait : les voix sont jouees chez lui, et
+	-- `TimeLength` vaut zero tant que l'asset n'est pas charge -- le serveur, qui ne charge jamais l'audio, ne
+	-- peut pas la mesurer.
+	--
+	-- ELLE NE SERT QU'AUX PETITES REPLIQUES. La grande explication, celle qui accompagne sa marche, est lancee
+	-- par le serveur SANS duree : elle doit jouer en entier, parce qu'elle porte le marqueur qui declenche la
+	-- consigne. Une phrase d'impatience de deux secondes, elle, ne doit pas lancer dix-sept secondes de gestes.
 	{ "OldManTalk", E, "Tutorial" },
 	-- LE MARQUEUR `EndFocusPlayerEvent` EST TOMBE dans son animation d'explication : c'est le moment ou l'on
 	-- affiche la consigne au joueur.

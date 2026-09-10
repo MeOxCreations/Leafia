@@ -1055,16 +1055,19 @@ local function announceTalk(sound: Sound?)
 	-- besoin de savoir jusqu'a quand il parle, MEME pendant qu'elle joue -- c'est ce qui decide quand rendre la
 	-- main -- alors que le geste d'explication, lui, ecraserait l'animation de la porte (deux pistes en priorite
 	-- `Action` se MELANGENT). On mesure donc toujours, on n'envoie que dehors.
-	-- LE SERVEUR NE RECOIT PLUS LA DUREE : son animation va jusqu'a sa derniere image, elle porte sa propre
-	-- longueur. On ne lui envoie donc qu'un signal, et une seule fois par replique -- la mesure, elle, peut etre
-	-- reprise deux fois (avant et apres le chargement du son).
+	-- ON ENVOIE LA LONGUEUR DU SON : c'est elle qui borne le geste du grand-pere, pour qu'il cesse de s'agiter en
+	-- meme temps qu'il cesse de parler. Nous seuls la connaissons -- les voix jouent ici, et `TimeLength` vaut
+	-- zero tant que l'asset n'est pas charge.
+	--
+	-- UNE SEULE FOIS PAR REPLIQUE, meme si la mesure est reprise (avant, puis apres le chargement) : deux envois
+	-- feraient programmer deux fins pour un seul geste.
 	local announced = false
 	local function apply(seconds: number)
 		markSpeaking(seconds)
 		local remote = talkRemote
 		if remote and sceneEnded and not announced then
 			announced = true
-			remote:FireServer()
+			remote:FireServer(seconds)
 		end
 	end
 
