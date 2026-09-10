@@ -199,24 +199,26 @@ return {
 	-- fond : elle mettrait deux secondes, et l'accent serait fini apres le moment qu'il souligne.
 	REVEAL_ZOOM_SPEED = 6,
 
-	-- IL PARLE. Sa replique part une fois la porte GRANDE OUVERTE : il voit enfin qui est la, et il repond a
-	-- quelqu'un. Elle partait avant, derriere le battant entrebaille -- une voix sans visage, qui commentait une
-	-- surprise qui n'avait pas encore eu lieu.
+	-- IL PARLE, des le premier mouvement du battant. Une voix sans visage : on entend quelqu'un qu'on ne voit pas
+	-- encore, et c'est ce qui fait attendre la grande ouverture.
 	--
 	-- 2D comme les autres sons de la scene (voir SCENE_2D dans le controller) : une replique RACONTE, elle ne
 	-- vient pas d'un point de la carte. Spatialisee, elle baisserait avec la distance de la camera pendant le plan
 	-- large -- alors qu'on vient justement de tourner l'oreille vers lui.
 	--
-	-- IL DIT DEUX CHOSES, A DEUX MOMENTS. La premiere (`speech_0`) part des que le battant S'ENTREBAILLE : on
-	-- entend quelqu'un qu'on ne voit pas encore, et c'est ca qui fait attendre la grande ouverture. La seconde
-	-- (`speech_1`) part une fois la porte GRANDE OUVERTE -- la, il voit qui est la et il repond a quelqu'un.
+	-- IL DIT DEUX CHOSES, L'UNE APRES L'AUTRE. La premiere (`speech_0`) part des que le battant S'ENTREBAILLE :
+	-- on entend quelqu'un qu'on ne voit pas encore, et c'est ca qui fait attendre la grande ouverture. La seconde
+	-- (`speech_1`) enchaine des qu'il a fini de dire la premiere.
+	--
+	-- LA PORTE NE COMMANDE PLUS LA VOIX : elle finit de s'ouvrir pendant qu'il parle. Caler la seconde replique
+	-- sur la grande ouverture faisait attendre un mouvement qui n'a rien a voir avec ce qu'il raconte.
 	SPEECH0_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_0" },
 	-- Delai apres l'entrebaillement. COURT : sa voix doit arriver avec le mouvement du battant, pas apres.
 	SPEECH0_DELAY = 0.15,
 	SPEECH_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_1" },
-	-- Souffle entre les deux repliques. Enchainees sans blanc, elles se lisent comme une seule phrase coupee au
-	-- montage ; trop espacees, on croit qu'il a fini.
-	SPEECH_GAP = 0.35,
+	-- Souffle entre les deux repliques. A ZERO : elles s'enchainent, comme quelqu'un qui parle sans reprendre son
+	-- souffle. Le knob reste, c'est ici qu'on remet du silence si un jour la seconde arrive trop vite.
+	SPEECH_GAP = 0,
 	-- FILET, en secondes. La seconde replique est enchainee sur la FIN de la premiere : si le fichier n'arrive
 	-- jamais, cette fin ne tire pas et la seconde ne partirait JAMAIS. Passe ce delai, on regarde si le son a
 	-- seulement charge -- s'il n'a pas charge, on enchaine sans lui.
@@ -224,12 +226,6 @@ return {
 	-- On ne coupe PAS un son qui joue encore : ce filet ne repond qu'a "il n'est jamais arrive", jamais a "il est
 	-- plus long que prevu". Une borne ne doit jamais etre plus serree que la donnee qu'elle borne.
 	SPEECH_CHAIN_TIMEOUT = 6,
-	-- Respiration entre la fin du mouvement de la porte et la SECONDE replique. A zero il enchaine sans avoir eu
-	-- le temps de regarder qui est la ; trop haut, le silence devient un blanc.
-	--
-	-- Le compte part de la FIN du battant, pas du marqueur qui l'a lance : ce delai reste donc juste quand on
-	-- retouche DOOR_FULL_TIME.
-	SPEECH_DELAY = 0.3,
 
 	-- ===== LE JOUEUR S'EFFACE, MAIS PAS TOUT DE SUITE =====
 	-- LA SCENE A DEUX TEMPS, et le personnage n'a pas le meme role dans les deux.

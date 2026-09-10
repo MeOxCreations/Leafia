@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.653 — Les deux repliques du grand-pere s'enchainent sans attendre la porte
+
+La seconde (`speech_1`) attendait la GRANDE OUVERTURE du battant, plus un delai de 0.3 s. Elle laissait donc un
+blanc entre les deux phrases, dont la duree ne dependait de rien de ce qu'il raconte : elle venait du mouvement
+de la porte.
+
+Elle part maintenant des que la premiere a fini de parler. La porte finit de s'ouvrir PENDANT qu'il parle, elle
+ne commande plus la voix.
+
+`SPEECH_DELAY` est supprime -- plus personne ne l'utilisait. `SPEECH_GAP` passe a 0 : le knob reste, c'est la
+qu'on remet du silence si la seconde arrive un jour trop vite.
+
+Ca supprime aussi les deux drapeaux qui coordonnaient les deux conditions. Il n'en reste qu'un, le garde qui
+empeche la seconde replique de partir deux fois -- la fin du son et le filet l'appellent tous les deux.
+
 ## 0.0.652 — Sa premiere replique part des que la porte s'entrebaille
 
 `Oldman_scene_speech_0` partait a la grande ouverture, en meme temps que la scene atteignait son sommet. Trop

@@ -870,19 +870,16 @@ local function prepDoor(): boolean
 	return true
 end
 
--- SES DEUX REPLIQUES D'OUVERTURE, a deux moments du battant.
+-- SES DEUX REPLIQUES D'OUVERTURE. Elles se suivent : la premiere part quand le battant s'entrebaille, la seconde
+-- des que la premiere a fini de parler. La porte, elle, continue de s'ouvrir pendant qu'il parle -- son mouvement
+-- ne commande plus rien de la voix.
 --
--- LA SECONDE ATTEND DEUX CHOSES, et pas seulement son heure : que la porte soit grande ouverte, ET que la
--- premiere ait fini de parler. Les deux moments viennent des marqueurs de l'animation du grand-pere, qu'on
--- retouche souvent -- n'en tester qu'un ferait parler deux voix en meme temps le jour ou l'ecart se resserre.
-local doorOpened = false -- le battant a fini sa GRANDE ouverture
-local firstSpeechOver = false -- la premiere replique a fini de parler
--- Garde : une seule fois, quel que soit le chemin qui y mene. Les deux conditions peuvent se remplir dans
--- n'importe quel ordre, et chacune rappelle la meme fonction.
+-- Garde : une seule fois, quel que soit le chemin qui y mene. La fin du son ET le filet appellent tous les deux
+-- cette fonction, et l'un des deux arrive toujours en second.
 local secondSpeechOn = false
 
 local function playSecondSpeech()
-	if secondSpeechOn or not (doorOpened and firstSpeechOver) then
+	if secondSpeechOn then
 		return
 	end
 	secondSpeechOn = true
@@ -902,25 +899,20 @@ local function playFirstSpeech()
 	local first = SoundUtils.play(TutorialConfigs.SPEECH0_SOUND, SCENE_2D)
 	speechSound = first
 
-	local function done()
-		firstSpeechOver = true
-		playSecondSpeech()
-	end
-
 	if not first then
 		-- Introuvable, et SoundUtils l'a deja dit : on ne retient pas la suite pour un fichier qui n'existe pas.
-		done()
+		playSecondSpeech()
 		return
 	end
 	-- Sorti en variable, et pas `(first :: Sound)` en debut de ligne : une instruction qui commence par une
 	-- parenthese se lit comme la SUITE de la ligne du dessus, donc comme un appel de fonction.
 	local voice = first :: Sound
 	voice.Ended:Once(function()
-		task.delay(TutorialConfigs.SPEECH_GAP, done)
+		task.delay(TutorialConfigs.SPEECH_GAP, playSecondSpeech)
 	end)
 	task.delay(TutorialConfigs.SPEECH_CHAIN_TIMEOUT, function()
 		if not voice.IsLoaded then
-			done()
+			playSecondSpeech()
 		end
 	end)
 end
@@ -974,24 +966,8 @@ local function openDoor()
 			TutorialConfigs.REVEAL_ZOOM_SPEED
 		)
 
-		-- SA SECONDE REPLIQUE PEUT PARTIR. Le compte part de la FIN du mouvement -- ce callback -- et pas du
-		-- marqueur qui l'a lancee : entre les deux il y a toute la duree du battant, et un delai qui partirait
-		-- d'avant se decalerait a la premiere retouche de DOOR_FULL_TIME.
-		--
-		-- ON POSE UNE CONDITION, on ne joue pas : si la premiere replique parle encore, c'est SA FIN qui declenchera
-		-- celle-ci. La porte ouverte n'est que la moitie de ce qu'on attend.
-		--
-		-- Le jeton est relu APRES l'attente : `task.delay` ne connait pas l'annulation qui protege le mouvement de
-		-- la porte, et sans ce test la voix partirait meme si la scene a ete coupee entre-temps -- seule, sur un
-		-- plan qui n'existe plus.
-		local speechToken = doorSwingToken
-		task.delay(TutorialConfigs.SPEECH_DELAY, function()
-			if doorSwingToken ~= speechToken then
-				return
-			end
-			doorOpened = true
-			playSecondSpeech()
-		end)
+		-- RIEN A DECLENCHER ICI. Les deux repliques s'enchainent entre elles depuis l'entrebaillement : la
+		-- grande ouverture ne commande plus la voix, elle se contente d'arriver pendant qu'il parle.
 	end)
 end
 
@@ -1736,9 +1712,8 @@ function TutorialController.stop()
 		voice:Stop()
 		voice:Destroy()
 	end
-	-- LES TROIS DRAPEAUX REPARTENT A ZERO. Sans ca, rejouer la scene trouverait `secondSpeechOn` deja vrai et
-	-- sauterait la seconde replique.
-	doorOpened, firstSpeechOver, secondSpeechOn = false, false, false
+	-- LE GARDE REPART A ZERO. Sans ca, rejouer la scene le trouverait deja pose et sauterait la seconde replique.
+	secondSpeechOn = false
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX
