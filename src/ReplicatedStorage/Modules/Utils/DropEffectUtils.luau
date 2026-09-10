@@ -2,15 +2,24 @@
 -- POUSSIERE DE POSE : la bouffee de particules qui part quand un objet touche le sol. Un seau, une echelle, et
 -- tout ce qu'on posera ensuite -- l'effet ne connait aucun d'eux, on lui donne un point.
 --
--- APPELE COTE SERVEUR. L'objet est pose pour tout le monde, donc l'effet doit se voir chez tout le monde. Joue
--- cote client, seul celui qui pose verrait la poussiere : les autres verraient une caisse se poser en silence.
+-- DEUX FONCTIONS, ET IL FAUT LES DEUX. `broadcast` est ce qu'appelle le SERVEUR : il ne joue rien lui-meme, il
+-- dit a tous les clients ou l'objet a touche. `spawnAt` est ce que chaque client execute chez lui.
+--
+-- POURQUOI CE DETOUR. `ParticleEmitter:Emit()` NE SE REPLIQUE PAS. Appele par le serveur, il emet dans la
+-- simulation serveur et personne ne voit rien -- alors que le clone, lui, se replique parfaitement. Symptome
+-- trompeur au possible : la part EST dans le Workspace de tout le monde, a la bonne place, avec ses emetteurs
+-- dedans, et il ne se passe rien. On va donc chercher le bug dans l'effet, dans l'ancrage, dans la position...
+-- alors que seules les PROPRIETES se repliquent, jamais les appels de methode.
 --
 -- LE MODELE VIT DANS STUDIO (`ReplicatedStorage.Assets.Effects.DropOnGroundEffect`). Rojo ne synchronise pas les
 -- Assets : on le retrouve par son chemin plutot que de le decrire en code.
 
 local Debris = game:GetService("Debris")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+
+local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 
 local DropEffectUtils = {}
 
@@ -46,9 +55,11 @@ local function asset(): BasePart?
 	return nil
 end
 
---- Joue la bouffee a un point du monde. Rien a nettoyer chez l'appelant : le clone se detruit tout seul quand la
---- derniere particule est eteinte.
-function DropEffectUtils.playAt(position: Vector3)
+--- Joue la bouffee a un point du monde, SUR CETTE MACHINE. Rien a nettoyer chez l'appelant : le clone se detruit
+--- tout seul quand la derniere particule est eteinte.
+---
+--- Cote serveur, ca ne sert a rien -- voir l'en-tete du module. C'est `broadcast` qu'il faut appeler.
+function DropEffectUtils.spawnAt(position: Vector3)
 	local source = asset()
 	if not source then
 		return
@@ -85,14 +96,26 @@ function DropEffectUtils.playAt(position: Vector3)
 	Debris:AddItem(clone, (if longest > 0 then longest else FALLBACK_LIFE) + CLEANUP_MARGIN)
 end
 
---- Joue la bouffee SOUS un modele : au centre de son emprise, a la hauteur de son point le plus bas.
+--- SERVEUR : demande a tous les clients de jouer la bouffee a ce point.
+---
+--- Silencieuse hors du serveur : appelee par erreur cote client, elle ne fait rien plutot que de crasher. Un
+--- effet decoratif ne doit jamais casser l'action qu'il accompagne.
+function DropEffectUtils.broadcast(position: Vector3)
+	if not RunService:IsServer() then
+		return
+	end
+	local remote = RemoteSetup.getRemote("PlayDropEffect", "Fx") :: RemoteEvent
+	remote:FireAllClients(position)
+end
+
+--- SERVEUR : la meme chose, SOUS un modele -- au centre de son emprise, a la hauteur de son point le plus bas.
 ---
 --- La boite englobante plutot que le pivot : `GetPivot` d'un Model SANS PrimaryPart suit deja la boite, et avec
 --- un PrimaryPart il suit une part qui peut etre n'importe ou dans l'objet. La boite, elle, repond toujours a la
 --- meme question -- ou est le bas de ce qu'on voit.
-function DropEffectUtils.playUnder(model: Model)
+function DropEffectUtils.broadcastUnder(model: Model)
 	local cf, size = model:GetBoundingBox()
-	DropEffectUtils.playAt(cf.Position - Vector3.new(0, size.Y / 2, 0))
+	DropEffectUtils.broadcast(cf.Position - Vector3.new(0, size.Y / 2, 0))
 end
 
 return DropEffectUtils

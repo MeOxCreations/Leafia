@@ -13,6 +13,17 @@ local E, F = "Event", "Function"
 -- Vide au demarrage : on n'ajoute un remote QUE quand une feature en a reellement besoin. Une liste de
 -- remotes "au cas ou" finit toujours par contenir des morts qu'on n'ose plus supprimer.
 local REMOTES: { { any } } = {
+	-- [ FX ] --
+	-- POUSSIERE DE POSE. Un Vector3 : le point ou l'objet a touche le sol.
+	--
+	-- POURQUOI UN REMOTE ICI alors qu'on evite d'en ajouter. `ParticleEmitter:Emit()` NE SE REPLIQUE PAS : appele
+	-- par le serveur, il emet dans la simulation serveur et AUCUN client ne voit quoi que ce soit. Seules les
+	-- PROPRIETES se repliquent, pas les appels de methode. Le serveur ne peut donc que dire "joue-le", et chaque
+	-- client l'emet chez lui.
+	--
+	-- Rien a valider a l'arrivee : c'est le SERVEUR qui emet, vers les clients. Un client ne peut pas s'en servir.
+	{ "PlayDropEffect", E, "Fx" },
+
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur
 	-- tient, donc il n'y a rien a valider et rien a falsifier.

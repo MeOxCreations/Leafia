@@ -1030,6 +1030,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   studs des feuilles : une borne ne doit jamais etre plus serree que la donnee qu'elle borne, et si elle l'est,
   c'est la borne qu'on monte -- pas la donnee qu'on raccourcit.
 
+- **`ParticleEmitter:Emit()` NE SE REPLIQUE PAS : appele par le serveur, il n'emet chez PERSONNE.** Seules les
+  PROPRIETES traversent le reseau, jamais les appels de methode. Le piege est que tout le reste marche : le
+  serveur clone la part, elle arrive dans le Workspace de tous les clients, a la bonne place, avec ses emetteurs
+  dedans -- et il ne sort rien. On va donc chercher dans l'effet, l'ancrage, la position, la transparence,
+  pendant que la cause est qu'aucun ordre d'emettre n'est jamais parti. Vecu sur la poussiere de pose du seau et
+  de l'echelle. Deux sorties : passer par `Enabled` (qui, lui, se replique) mais alors le nombre de particules
+  depend du `Rate` -- donc d'un reglage Studio qu'aucun code ne devine -- ou envoyer un remote et laisser CHAQUE
+  client emettre chez lui, ce qui donne un compte exact. Regle generale : quand un effet visuel doit se voir
+  chez tout le monde, se demander si on replique un ETAT (ok) ou une ACTION (a diffuser soi-meme).
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

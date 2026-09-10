@@ -263,7 +263,7 @@ local function place(player: Player, model: Model)
 	CarryUtils.release(player, "Ladder")
 	-- LA POUSSIERE PART ICI, apres le `unweld` : avant, l'echelle est encore soudee au porteur et sa boite
 	-- englobante est celle qu'elle a DANS SES MAINS -- l'effet sortirait au niveau de son torse.
-	DropEffectUtils.playUnder(model)
+	DropEffectUtils.broadcastUnder(model)
 	if mt then
 		mt:AdjustSpeed(1) -- repart de CLOSE_EVENT vers OPEN_EVENT : depli
 	else

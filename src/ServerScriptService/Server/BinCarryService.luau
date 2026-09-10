@@ -393,7 +393,7 @@ local function place(player: Player, model: Model)
 		-- le sol : l'effet serait sorti dans les mains du joueur, une seconde avant l'impact qu'il illustre.
 		--
 		-- Au point le plus BAS du seau, mesure sur place : `target` est la pose du modele, donc son milieu.
-		DropEffectUtils.playAt(Vector3.new(target.Position.X, lowestY(model), target.Position.Z))
+		DropEffectUtils.broadcast(Vector3.new(target.Position.X, lowestY(model), target.Position.Z))
 
 		-- MESURE, pas supposition. Si le seau parait encore penche, ces nombres disent OU est l'angle : dans la
 		-- pose (tangage/roulis non nuls sur la racine) ou dans le MODEL lui-meme (racine a plat mais mesh penche

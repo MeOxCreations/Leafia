@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.663 — La poussiere de pose se voit enfin (Emit ne se replique pas)
+
+L'effet etait bien clone par le serveur, bien pose au bon endroit, avec ses emetteurs dedans -- et il ne sortait
+rien. Cause : **`ParticleEmitter:Emit()` ne se replique pas**. Seules les PROPRIETES traversent le reseau, jamais
+les appels de methode. Le serveur emettait dans sa propre simulation, que personne ne regarde.
+
+Symptome trompeur au possible : la part EST dans le Workspace de tout le monde. Tout ce qu'on peut verifier a
+l'oeil est juste, donc on cherche dans l'effet, l'ancrage, la position, la transparence -- alors qu'aucun ordre
+d'emettre n'est jamais parti.
+
+Nouveau remote `PlayDropEffect` (dossier `Fx`) : le serveur dit OU, chaque client emet chez lui. Rien a valider a
+l'arrivee, c'est le serveur qui parle vers les clients.
+
+L'autre sortie aurait ete de passer par `Enabled`, qui se replique -- mais le nombre de particules aurait alors
+dependu du `Rate` de chaque emetteur, donc d'un reglage Studio qu'aucun code ne peut deviner. Le remote donne un
+compte exact : 15 par emetteur, comme demande.
+
+`DropEffectUtils` a donc deux entrees maintenant : `broadcast` / `broadcastUnder` pour le serveur, `spawnAt` pour
+la machine qui joue. Nouveau `DropEffectController` cote client, declare dans LES DEUX places -- un effet declare
+d'un seul cote ne fait rien dans l'autre, sans la moindre erreur pour le dire.
+
 ## 0.0.662 — De la poussiere quand on pose un objet au sol
 
 Nouveau module `ReplicatedStorage/Modules/Utils/DropEffectUtils.luau`. Il clone
