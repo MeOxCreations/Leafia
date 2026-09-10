@@ -461,7 +461,7 @@ return {
 	-- joueurs Roblox.
 	-- LE GRAND-PERE EST PETIT, et ces studs se comptent depuis sa RootPart -- pas depuis sa tete. Regle sur un
 	-- personnage de taille normale, l'eclair flottait au-dessus de la maison.
-	IMPATIENT_BURST_UP = 2.2,
+	IMPATIENT_BURST_UP = 3,
 	-- ET SUR LE COTE, en studs. Pose au-dessus de sa tete, l'eclair la couvre a moitie -- or c'est justement son
 	-- visage qu'on veut lire quand il rale. Decale, les deux se voient.
 	--

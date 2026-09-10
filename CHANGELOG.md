@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.682 — L'eclair de colere : deux fois plus petit, et plus haut
+
+`BURST_SCALE` passe de 0.8 a 0.4, `IMPATIENT_BURST_UP` de 2.2 a 3.
+
+Reglage a l'oeil, rien d'autre. Les proportions du dessin ne bougent pas : l'echelle les preserve par
+construction, c'est tout l'interet de n'avoir qu'un seul chiffre a tourner.
+
 ## 0.0.681 — L'eclair de colere se redresse
 
 `BASE_TILT` revient de -90 a -20 : l'ecran a tranche, il reste debout.
