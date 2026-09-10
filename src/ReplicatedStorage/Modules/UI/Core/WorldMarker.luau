@@ -22,7 +22,17 @@ local WorldAnchor = require(script.Parent.WorldAnchor)
 local WorldMarker = {}
 
 local CIRCLE_IMAGE = "rbxassetid://124707156951795"
-local MARK_IMAGE = "rbxassetid://126407419808567"
+local MARK_IMAGE = "rbxassetid://78589393871508"
+-- LA MARQUE A SES PROPRES PROPORTIONS, en fraction du cercle. Le dessin fait 63 x 115 pixels a sa taille
+-- naturelle : lui donner un cadre CARRE l'ecraserait, et un " ! " ecrase ne ressemble plus a rien.
+--
+-- Le cercle etant carre, une fraction en X et la meme en Y valent le meme nombre de pixels : la largeur se
+-- deduit donc de la hauteur par le rapport du dessin, et il n'y a qu'UN chiffre a regler.
+local MARK_HEIGHT = 0.66
+local MARK_RATIO = 63 / 115
+-- OU SON PIED SE POSE dans le cercle, en fraction. Elle est ancree par le BAS (voir plus loin), donc ce chiffre
+-- descend ou remonte le " ! " entier. A 1 il collerait au bord bas ; ici il tombe au milieu du cercle.
+local MARK_BOTTOM = 0.83
 
 -- Taille a la distance de reference, en pixels. Le reste suit la distance via WorldAnchor.
 local SIZE = 46
@@ -93,11 +103,15 @@ local function popMark(mark: ImageLabel)
 	if not mark.Parent then
 		return
 	end
-	local normal = UDim2.fromScale(1, 1)
+	-- LA TAILLE DE REPOS EST CELLE DU DESSIN, pas le cadre entier : le sursaut part donc de ses vraies
+	-- proportions et y revient. Multiplier des facteurs par 1 marchait tant que la marque remplissait tout le
+	-- cercle -- ce n'est plus le cas.
+	local w, h = MARK_HEIGHT * MARK_RATIO, MARK_HEIGHT
+	local normal = UDim2.fromScale(w, h)
 	local up = TweenService:Create(
 		mark,
 		TweenInfo.new(MARK_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-		{ Size = UDim2.fromScale(MARK_SCALE_X, MARK_SCALE_Y) }
+		{ Size = UDim2.fromScale(w * MARK_SCALE_X, h * MARK_SCALE_Y) }
 	)
 	up.Completed:Connect(function()
 		if mark.Parent then
@@ -158,21 +172,23 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 	-- plus PETIT cote du cadre : une image en `Fit` ne sait que grossir et rapetisser, elle ne peut pas s'etirer.
 	-- Le sursaut du " ! " le RETRECIRAIT au lieu de l'allonger. Piege deja paye sur les feuilles du chargement.
 	--
-	-- Le cadre est CARRE (SIZE x SIZE) et les deux images le sont aussi : `Stretch` ne deforme donc rien au repos.
+	-- Le cercle est CARRE et son image aussi ; la marque, elle, porte le rapport de son propre dessin (voir
+	-- MARK_RATIO). `Stretch` ne deforme donc rien au repos, et reste libre d'etirer pendant le sursaut.
 	circle.ScaleType = Enum.ScaleType.Stretch
 	circle.Parent = frame
 
 	local mark = Instance.new("ImageLabel")
 	mark.Name = "Mark"
 	mark.BackgroundTransparency = 1
-	mark.Size = UDim2.fromScale(1, 1)
+	-- AUX PROPORTIONS DU DESSIN, jamais au cadre entier : le cercle est carre, le " ! " ne l'est pas.
+	mark.Size = UDim2.fromScale(MARK_HEIGHT * MARK_RATIO, MARK_HEIGHT)
 	mark.Image = MARK_IMAGE
 	mark.ScaleType = Enum.ScaleType.Stretch
 	-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND LE SURSAUT POSSIBLE. Avec une ancre au coin, un " ! " qu'on
 	-- etire pousse vers le bas autant que vers le haut et sort du cercle. Ancre par le bas, son pied ne bouge pas
 	-- et il s'allonge VERS LE HAUT -- exactement comme les feuilles du chargement.
 	mark.AnchorPoint = Vector2.new(0.5, 1)
-	mark.Position = UDim2.fromScale(0.5, 1)
+	mark.Position = UDim2.fromScale(0.5, MARK_BOTTOM)
 	-- ENFANT DU CERCLE, pas pose a cote : il herite de sa taille et de sa place, donc les deux ne peuvent pas se
 	-- decaler. Deux images placees separement finissent toujours par diverger d'un reglage.
 	mark.ZIndex = 2

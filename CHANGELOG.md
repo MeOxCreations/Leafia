@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.667 — Le marqueur reprend le nouveau point d'exclamation
+
+`WorldMarker` affiche desormais le dessin `78589393871508`, le meme que celui de la gerbe de colere. Le cercle ne
+bouge pas.
+
+**La marque a maintenant ses propres proportions.** Le dessin fait 63 x 115 pixels a sa taille naturelle : le
+cadre carre du cercle l'aurait ECRASE, et un point d'exclamation ecrase ne ressemble plus a rien. Le cercle etant
+carre, une fraction en X vaut le meme nombre de pixels qu'en Y -- la largeur se deduit donc de la hauteur par le
+rapport du dessin, et il n'y a qu'UN chiffre a regler (`MARK_HEIGHT`).
+
+Le sursaut part de cette taille de repos et y revient. Multiplier des facteurs par 1 marchait tant que la marque
+remplissait tout le cercle ; ce n'est plus le cas.
+
+`MARK_BOTTOM` (0.83) pose son pied dans le cercle. Elle est ancree par le BAS -- c'est ce qui fait qu'elle
+s'allonge vers le haut sans sortir -- donc ce chiffre descend ou remonte le " ! " entier.
+
 ## 0.0.666 — Une jauge de competence monte pendant qu'on tond
 
 Une barre bleue apparait a cote de la tete du joueur quand il tond, se remplit pendant qu'il coupe, et s'efface
