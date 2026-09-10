@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.685 — On previent que le grand-pere a un caractere
+
+Une notification laterale rouge-orange (`Warning`) apparait quand il a fini de parler :
+
+> **Grandpa Is Watching**
+> He gets angry if you take too long. Do what he asks and he calms down.
+
+Sans elle, ses coups de gueule arrivent sans prevenir : le joueur croit avoir fait une faute, ou pire, que le jeu
+bugue. Annonces, ils deviennent un TRAIT DE CARACTERE -- et c'est ce qui donne envie de ne pas le faire attendre.
+
+`Warning` et pas `Info` : ce n'est pas un renseignement, c'est un avertissement. Il a sa couleur et son icone
+dans l'interface, il n'y avait rien a creer.
+
+Elle arrive 1.6 s apres le bandeau de tache, pas en meme temps : deux choses qui s'ouvrent a la meme seconde se
+marchent dessus, et on ne lit ni l'une ni l'autre.
+
 ## 0.0.684 — L'eclair monte deux fois plus haut
 
 `IMPATIENT_BURST_UP` passe de 3 a 6 studs. Reglage a l'oeil.

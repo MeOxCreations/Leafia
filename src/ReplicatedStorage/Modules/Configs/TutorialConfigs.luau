@@ -547,6 +547,25 @@ return {
 	-- pendant l'ouverture, la seule chose a faire est d'aller toquer, et le halo sur la porte le dit deja mieux
 	-- qu'une ligne de texte. Un objectif qu'on ne peut pas encore accomplir n'est pas un guide, c'est du bruit.
 
+	-- ===== ON PREVIENT QUE LE GRAND-PERE A UN CARACTERE =====
+	-- Une notification laterale, une fois qu'il a fini de parler. Sans elle, ses coups de gueule arrivent sans
+	-- prevenir : le joueur croit avoir fait une faute, ou pire, que le jeu bugue. Annonces, ils deviennent un
+	-- TRAIT DE CARACTERE -- et c'est ce qui donne envie de ne pas le faire attendre.
+	--
+	-- `Warning` : le rouge-orange de l'interface, avec son icone. Pas `Info` -- ce n'est pas un renseignement,
+	-- c'est un avertissement.
+	--
+	-- EN ANGLAIS, comme tout texte vu par le joueur, et en mots simples : le public a dix ans.
+	GRUMPY_NOTIF = {
+		kind = "Warning",
+		title = "Grandpa Is Watching",
+		description = "He gets angry if you take too long. Do what he asks and he calms down.",
+		duration = 14,
+	},
+	-- Apres la fin de sa replique. Il laisse la place au bandeau de tache, qui arrive au meme instant : les deux
+	-- ensemble se marchent dessus, et on ne lit ni l'un ni l'autre.
+	GRUMPY_NOTIF_DELAY = 1.6,
+
 	-- 1) DEMARRER LA MACHINE, des qu'il a fini de parler.
 	MOWER_TASK_TITLE = "START THE MOWER",
 	-- AUCUNE RECOMPENSE : c'est une ETAPE, pas un chantier. Afficher une piece pour un geste qui ne paie rien

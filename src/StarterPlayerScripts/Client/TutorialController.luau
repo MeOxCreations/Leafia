@@ -26,6 +26,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
+local SideNotificationHandler = require(ReplicatedStorage.Modules.UI.Notification.SideNotificationHandler)
 local AngerBurst = require(ReplicatedStorage.Modules.UI.Core.AngerBurst)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
@@ -1597,6 +1598,14 @@ local function showMowerTask()
 	-- LE COMPTE PART D'ICI, l'instant ou la consigne apparait. Laisse a zero, la premiere phrase tomberait a la
 	-- premiere image de la boucle -- avant meme que le joueur ait lu ce qu'on lui demande.
 	nextImpatientAt = os.clock() + TutorialConfigs.IMPATIENT_FIRST
+	-- ET ON PREVIENT QU'IL A UN CARACTERE, avant qu'il ne le montre. Un coup de gueule qui arrive sans prevenir
+	-- se lit comme une faute du joueur, ou comme un bug ; annonce, il devient un trait de caractere.
+	--
+	-- APRES le bandeau de tache, pas en meme temps : deux choses qui s'ouvrent a la meme seconde se marchent
+	-- dessus, et on ne lit ni l'une ni l'autre.
+	task.delay(TutorialConfigs.GRUMPY_NOTIF_DELAY, function()
+		SideNotificationHandler.spawn(TutorialConfigs.GRUMPY_NOTIF)
+	end)
 	TaskBannerHandler.show({
 		{
 			icon = TutorialConfigs.MOWER_TASK_ICON,
