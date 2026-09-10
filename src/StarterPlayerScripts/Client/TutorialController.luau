@@ -1040,11 +1040,16 @@ local function announceTalk(sound: Sound?)
 	-- besoin de savoir jusqu'a quand il parle, MEME pendant qu'elle joue -- c'est ce qui decide quand rendre la
 	-- main -- alors que le geste d'explication, lui, ecraserait l'animation de la porte (deux pistes en priorite
 	-- `Action` se MELANGENT). On mesure donc toujours, on n'envoie que dehors.
+	-- LE SERVEUR NE RECOIT PLUS LA DUREE : son animation va jusqu'a sa derniere image, elle porte sa propre
+	-- longueur. On ne lui envoie donc qu'un signal, et une seule fois par replique -- la mesure, elle, peut etre
+	-- reprise deux fois (avant et apres le chargement du son).
+	local announced = false
 	local function apply(seconds: number)
 		markSpeaking(seconds)
 		local remote = talkRemote
-		if remote and sceneEnded then
-			remote:FireServer(seconds)
+		if remote and sceneEnded and not announced then
+			announced = true
+			remote:FireServer()
 		end
 	end
 
@@ -2078,7 +2083,7 @@ function TutorialController.init()
 	-- le temps de son timeout. Tant qu'il n'est pas la, les repliques se jouent -- sans le geste, ce qui est le
 	-- comportement d'avant.
 	task.spawn(function()
-		talkRemote = RemoteSetup.getRemote("OldManTalkFor", "Tutorial") :: RemoteEvent
+		talkRemote = RemoteSetup.getRemote("OldManTalk", "Tutorial") :: RemoteEvent
 	end)
 
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres

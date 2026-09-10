@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.710 — L'animation d'explication joue en entier, et son marqueur tombe
+
+Les mesures ont tranche : la piste fait 17.24 s, le marqueur est a 14.92 s, et on ne la jouait que 12.2 s. Il ne
+pouvait donc PAS etre atteint -- meme en boucle, elle etait coupee avant d'y arriver.
+
+C'est desormais l'ANIMATION qui decide de sa duree, comme celle de la porte decide de la fin de la scene. Elle
+n'est plus bouclee et plus coupee : elle se relache a sa derniere image.
+
+**Ca supprime plus de code que ca n'en ajoute.** Disparaissent : la date "jusqu'a quand il parle" cote serveur, la
+sentinelle qui la surveillait, la fonction d'arret, la somme des `hold`, la duree transmise par le remote et la
+borne qui la validait. Deux choses qui ne peuvent plus se contredire valent mieux qu'un calcul juste.
+
+Le remote `OldManTalkFor` devient `OldManTalk` et ne porte plus aucun argument : le client DECLENCHE, il ne
+mesure plus pour le serveur. Rien a valider a l'arrivee, ce qui vaut toujours mieux que borner une valeur venue
+du client.
+
+LE PRIX, a savoir : il gesticule encore quelques secondes apres avoir fini de parler, et une replique
+d'impatience de deux secondes lance dix-sept secondes de geste. Si ca se voit a l'ecran, le reglage n'est pas
+dans le code -- c'est la longueur de l'animation.
+
+La piste se libere sur son propre `Stopped` : sans ca le serveur garderait une piste morte, et le prochain appel
+la couperait pour rien avant d'en charger une neuve.
+
 ## 0.0.709 — On mesure pourquoi le marqueur ne tire pas
 
 Il joue, il boucle, et il ne tombe jamais. Deux causes possibles, qui se corrigent a deux endroits OPPOSES :

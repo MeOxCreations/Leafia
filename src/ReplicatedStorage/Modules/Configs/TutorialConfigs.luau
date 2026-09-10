@@ -756,9 +756,13 @@ return {
 	-- qu'il revienne respirer, sans rien avoir a reposer. En `Action` et pas en `Movement` : Movement est la
 	-- priorite de sa marche, et deux pistes a priorite EGALE ne se choisissent pas -- Roblox les MELANGE.
 	OLDMAN_TALK_PRIORITY = Enum.AnimationPriority.Action,
-	-- BOUCLEE, parce qu'elle est presque surement plus courte que la replique (14.68 s de voix). Sans boucle il
-	-- finirait de parler immobile, ce qui se lit comme une animation cassee. A false le jour ou elle couvre tout.
-	OLDMAN_TALK_LOOP = true,
+	-- ELLE JOUE EN ENTIER, UNE FOIS. Donc pas de boucle : la piste se relache a sa derniere image.
+	--
+	-- POURQUOI CE CHOIX. Elle a d'abord ete bouclee et COUPEE quand il finissait de parler -- la duree venait de
+	-- la replique. Mais elle porte un MARQUEUR a 14.92 s, et on ne la jouait que douze secondes : il n'etait
+	-- jamais atteint. C'est l'animation qui decide maintenant, comme celle de la porte decide de la fin de la
+	-- scene. Le prix : il gesticule quelques secondes apres avoir fini de parler.
+	OLDMAN_TALK_LOOP = false,
 	-- MARQUEUR POSE DANS CETTE ANIMATION-LA, pas dans celles de la scene. Pour l'instant il ne fait qu'un LOG : on
 	-- verifie qu'il tire, et a quel instant, avant de lui accrocher quoi que ce soit.
 	--
@@ -771,13 +775,6 @@ return {
 	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
 	-- pose de repos au dernier mot.
 	OLDMAN_TALK_FADE = 0.3,
-	-- DUREE MAXIMALE qu'une replique peut demander, en secondes. Le client annonce la longueur de son fichier son :
-	-- c'est une valeur qui vient de LUI, donc on la borne. Le pire qu'un client modifie puisse faire est de faire
-	-- gesticuler un PNJ, mais une duree absurde l'y figerait pour le reste de la partie.
-	--
-	-- Large : elle doit laisser passer la plus longue replique reelle sans la couper. Une borne plus serree que la
-	-- donnee qu'elle borne coupe le cas normal en croyant arreter un abus.
-	OLDMAN_TALK_MAX = 60,
 
 	-- Distance de recherche du sol sous lui, en studs. Il est ANCRE, donc la physique ne le pose pas : on mesure
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend

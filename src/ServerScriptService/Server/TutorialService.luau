@@ -330,6 +330,14 @@ local function playTalk(model: Model)
 		)
 	end)
 
+	-- ELLE SE LIBERE QUAND ELLE FINIT. Sans ca, `talkTrack` garderait une piste morte, et le prochain appel la
+	-- croirait encore en place : il la couperait pour rien avant d'en charger une neuve.
+	track.Stopped:Connect(function()
+		if talkTrack == track then
+			talkTrack = nil
+		end
+	end)
+
 	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
 	print(`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM}`)
 
@@ -377,72 +385,15 @@ local function playTalk(model: Model)
 	end)
 end
 
--- COMBIEN DE TEMPS DURE SA REPLIQUE : la somme des `hold`, jamais un chiffre pose a la main. La config est
--- partagee, donc reenregistrer la voix (et recaler les `hold`) rallonge le geste tout seul.
-local function speechSeconds(): number
-	local total = 0
-	for _, line in TutorialConfigs.SPEECH2_LINES do
-		total += line.hold
-	end
-	return total
-end
-
--- JUSQU'A QUAND LE GESTE DOIT TOURNER, en horloge. Une DATE plutot qu'un minuteur par demandeur : la marche et
--- chaque replique la repoussent chacune leur tour, et la plus lointaine gagne sans que personne n'ait a savoir ce
--- que les autres ont demande.
+-- IL SE MET A EXPLIQUER, et l'animation va jusqu'au bout. Appelee par la marche et par chaque replique.
 --
--- LE PIEGE QU'ELLE EVITE : avec un minuteur par demandeur, c'est le PREMIER a expirer qui coupe le geste. Une
--- replique commencee pendant la marche verrait donc le sien coupe par la fin de la marche.
-local talkUntil = 0
-local talkWatching = false
-
-local function stopTalk()
-	local track = talkTrack
-	if not track then
-		return
-	end
-	track:Stop(TutorialConfigs.OLDMAN_TALK_FADE)
-	talkTrack = nil
-	-- ON MESURE LE RESULTAT, pas l'intention : une piste dont l'asset n'arrive jamais garde une longueur de zero
-	-- et n'ecrit RIEN, sans la moindre erreur -- on irait chercher le bug dans l'animation. Rien a reposer ici,
-	-- l'idle tourne dessous : il aura juste parle sans les bras.
-	if track.Length <= 0 then
-		warn(
-			`[Tutorial] L'explication {TutorialConfigs.OLDMAN_TALK_ANIM} n'a jamais charge : il a parle sans `
-				.. "bouger. Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
-		)
-	end
-end
-
--- IL EXPLIQUE PENDANT `seconds` DE PLUS, AU MOINS. Appelee par la marche et par chaque replique.
-local function talkFor(model: Model, seconds: number)
-	if seconds <= 0 then
-		return
-	end
+-- PLUS AUCUN MINUTEUR. La piste n'est plus bouclee : elle se relache a sa derniere image, donc elle porte
+-- elle-meme sa duree -- c'est ce qui permet a son marqueur de 14.92 s d'etre atteint. Toute la machinerie qui
+-- calculait "jusqu'a quand il parle" pour la couper a disparu avec, et deux choses qui ne peuvent plus se
+-- contredire valent mieux qu'un calcul juste.
+local function talkFor(model: Model)
 	talkModel = model
-	talkUntil = math.max(talkUntil, os.clock() + seconds)
 	playTalk(model)
-	-- COMBIEN DE TEMPS ELLE VA TOURNER, en tout. A comparer a sa longueur : un marqueur pose au-dela de cette
-	-- duree ne sera jamais atteint, meme si la piste boucle -- elle est coupee avant d'y arriver.
-	print(
-		`[Tutorial] explication demandee : +{string.format("%.2f", seconds)} s `
-			.. `(total {string.format("%.2f", talkUntil - os.clock())} s)`
-	)
-	-- UNE SEULE SENTINELLE EN VOL. Une par appel donnerait autant de reveils que de repliques, et le premier
-	-- couperait le geste alors que les suivants venaient de le prolonger.
-	if talkWatching then
-		return
-	end
-	talkWatching = true
-	task.spawn(function()
-		while os.clock() < talkUntil do
-			-- On dort jusqu'a la date COURANTE de fin, qui a pu etre repoussee pendant qu'on dormait : la boucle la
-			-- relit a chaque tour. Le plancher evite de tourner a vide si elle est deja passee.
-			task.wait(math.max(0.05, talkUntil - os.clock()))
-		end
-		talkWatching = false
-		stopTalk()
-	end)
 end
 
 -- LE GRAND-PERE SORT DE CHEZ LUI. Il glisse jusqu'a la part posee dans Studio, puis se repose sur son idle.
@@ -459,7 +410,7 @@ end
 --- `onStart` tire quand il se met REELLEMENT en marche, c'est-a-dire une fois tous les controles passes. Un
 --- appelant qui lancerait son geste avant saurait seulement qu'il l'a DEMANDE : le modele peut etre introuvable,
 --- la cible absente, une marche deja en cours -- et le geste partirait dans le vide.
-local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart: ((Model, number) -> ())?)
+local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart: ((Model) -> ())?)
 	if walking then
 		return
 	end
@@ -544,10 +495,8 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 	-- alors a rallonger le trajet, et ses pieds restent d'accord avec son deplacement quoi qu'on change.
 	local seconds = flat.Magnitude / math.max(TutorialConfigs.OLDMAN_WALK_SPEED, 0.1)
 
-	-- ON PREVIENT MAINTENANT, et pas plus haut : `onStart` recoit la duree du trajet, qui vient d'etre calculee.
-	-- Le geste que l'appelant lance ici doit pouvoir durer exactement le temps de la marche.
 	if onStart then
-		onStart(model :: Model, seconds)
+		onStart(model :: Model)
 	end
 
 	task.spawn(function()
@@ -599,38 +548,27 @@ function TutorialService.init()
 		-- est de la declencher trop tot, ce qui fait sortir le grand-pere -- pas de quoi tricher.
 		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, function(model)
 			restoreIdle(model)
-			-- IL CONTINUE D'EXPLIQUER LE TEMPS DE SA REPLIQUE D'ARRIVEE. On REPOUSSE la date de fin, on ne la pose
-			-- pas : si une voix parle encore a cet instant, c'est la plus lointaine des deux qui gagne.
-			--
-			-- Le compte part d'ici, l'instant de l'arrivee : rallonger sa marche ne raccourcit donc pas son geste,
-			-- et deplacer sa part de destination ne decale rien.
-			talkFor(model, TutorialConfigs.SPEECH2_DELAY + speechSeconds())
+			-- IL CONTINUE D'EXPLIQUER. Rien a calculer : la piste va jusqu'a sa derniere image, et si elle tourne
+			-- deja depuis son premier pas, cet appel ne la relance pas.
+			talkFor(model)
 			-- IL EST ARRIVE, ET C'EST LE SERVEUR QUI LE SAIT. La marche se fait ici, image par image : le client
 			-- ne peut pas connaitre l'instant de l'arrivee sans le deviner, et une duree devinee se decale des
 			-- qu'on change la vitesse, la distance ou l'animation.
 			arrived:FireClient(player)
-		end, function(model, seconds)
+		end, function(model)
 			-- IL PARLE EN MARCHANT. Lancee ici, au premier pas, elle se superpose a la marche au lieu d'attendre
 			-- qu'il soit arrete.
-			--
-			-- LA DUREE DU TRAJET NOUS EST DONNEE par walkOldMan, qui vient de la calculer pour le deplacement
-			-- lui-meme. La recalculer ici en ferait une seconde verite a garder d'accord avec la premiere.
-			talkFor(model, seconds)
+			talkFor(model)
 		end)
 	end)
 
-	-- IL GESTICULE PENDANT QU'IL PARLE. Le client envoie la duree de la replique qu'il vient de lancer : lui seul
-	-- la connait, parce que lui seul charge l'audio.
-	local talkRemote = RemoteSetup.getRemote("OldManTalkFor", "Tutorial") :: RemoteEvent
-	talkRemote.OnServerEvent:Connect(function(_player, seconds)
-		-- LE CLIENT MENT TOUJOURS : on borne. Le pire qu'il puisse faire est de faire gesticuler un PNJ, mais une
-		-- duree absurde le figerait dans ce geste pour le reste de la partie.
-		if type(seconds) ~= "number" or seconds ~= seconds then
-			return -- pas un nombre, ou NaN (qui echappe a toute comparaison)
-		end
+	-- IL GESTICULE QUAND IL PARLE. Le client ne fait que declencher : aucun argument, donc rien a valider -- ce
+	-- qui vaut toujours mieux que borner une valeur venue de lui.
+	local talkRemote = RemoteSetup.getRemote("OldManTalk", "Tutorial") :: RemoteEvent
+	talkRemote.OnServerEvent:Connect(function()
 		local model = talkModel or findByName(TutorialConfigs.GRANDPA_NAME)
 		if model and model:IsA("Model") then
-			talkFor(model, math.clamp(seconds, 0, TutorialConfigs.OLDMAN_TALK_MAX))
+			talkFor(model)
 		end
 	end)
 

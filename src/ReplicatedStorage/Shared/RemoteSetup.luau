@@ -25,15 +25,15 @@ local REMOTES: { { any } } = {
 	{ "PlayDropEffect", E, "Fx" },
 
 	-- [ TUTORIAL ] --
-	-- COMBIEN DE TEMPS LE GRAND-PERE PARLE, en secondes. Le client l'envoie a chaque replique.
+	-- LE GRAND-PERE SE MET A PARLER. Aucun argument : le client ne fait que DECLENCHER.
 	--
-	-- POURQUOI C'EST LE CLIENT QUI LE SAIT. Les voix sont jouees chez lui, et la duree d'un son ne se connait
-	-- qu'une fois l'asset CHARGE (`TimeLength` vaut zero avant). Le serveur, lui, ne charge jamais l'audio : il ne
-	-- peut donc pas mesurer ce que dure une replique, alors qu'il est le seul a pouvoir animer le PNJ pour tous.
+	-- POURQUOI IL EXISTE. Les voix sont jouees chez le client, l'animation du PNJ par le serveur -- seul lui peut
+	-- la faire voir a tout le monde. Il faut donc bien que l'un previenne l'autre.
 	--
-	-- Une DUREE et pas un "il commence / il a fini" : un "fini" perdu laisserait le geste tourner pour toujours,
-	-- alors qu'une duree se perime toute seule. Bornee cote serveur, comme tout ce qui vient du client.
-	{ "OldManTalkFor", E, "Tutorial" },
+	-- IL A PORTE UNE DUREE, un temps : le geste s'arretait avec la replique. Il n'en porte plus, parce que c'est
+	-- l'ANIMATION qui decide de sa longueur -- et rien a valider a l'arrivee, du coup, ce qui est toujours mieux
+	-- que borner une valeur venue du client.
+	{ "OldManTalk", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur
