@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.645 — Le repere de la tondeuse se lit mieux : plus grand, devant les pieds, plus discret
+
+Trois reglages a l'oeil sur `GroundGuide`, tous dans le meme fichier :
+
+| Reglage | Avant | Apres |
+|---|---|---|
+| `SCALE` | 2.2 | 3 |
+| `FORWARD` | (n'existait pas, il etait centre sur les pieds) | 4 studs devant |
+| `SHOWN_TRANSPARENCY` | 0.15 | 0.45 |
+
+**Pousse devant.** Centre sur les pieds, le personnage se tient au milieu du dessin : il en masque une partie, et
+l'oeil doit demeler la fleche du corps. Devant, le repere est degage ET deja du cote ou il faut partir.
+
+Le decalage s'applique APRES avoir fixe la direction. Decaler le point de depart AVANT de viser changerait la
+visee elle-meme, et le repere pointerait a cote de la cible -- d'autant plus qu'on en est proche.
+
+**Le prix du decalage**, ecrit dans la config pour ne pas etre redecouvert : la hauteur du repere est celle des
+pieds du joueur. Plus on le pousse loin, plus il s'enfonce dans une montee et plus il flotte dans une descente.
+Tant que les jardins sont plats, mesurer le sol sous LUI serait un raycast par image pour rien.
+
+**La transparence a une limite haute** : au-dela d'environ 0.7, le mesh passe dans le rendu transparent de
+Roblox, ou le tri se fait par objet et pas par profondeur -- il se mettrait a passer devant ou derriere le decor
+selon l'angle de vue.
+
 ## 0.0.644 — Le grand-pere parle une fois la porte grande ouverte
 
 Sa replique partait a la DEMI-ouverture, derriere le battant entrebaille. Une voix sans visage, qui commentait

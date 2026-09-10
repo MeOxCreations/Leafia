@@ -35,10 +35,20 @@ local ASSET_PATH = { "Contents", "MarkerDirection" }
 -- ===== REGLAGES A L'OEIL =====
 -- TAILLE, en multiple du mesh d'origine. Posee UNE FOIS a la creation : un mesh qu'on redimensionne en jeu
 -- CLIGNOTE si sa RenderFidelity est `Automatic` (Roblox echange le maillage selon la taille a l'ecran).
-local SCALE = 2.2
+local SCALE = 3
 -- ORIENTATION du mesh, en degres autour de la verticale. Le sens ne se DEDUIT pas : il depend de la facon dont le
 -- mesh a ete modelise. Ca se voit a l'ecran, et c'est la seule facon de le savoir. 180 = demi-tour.
 local YAW = 180
+-- DE COMBIEN ON LE POUSSE DEVANT LE JOUEUR, en studs, dans la direction qu'il montre.
+--
+-- A zero il est centre sur les pieds, et le personnage se tient au milieu du dessin -- il le masque en partie, et
+-- l'oeil doit demeler la fleche du corps. Pousse devant, le repere est degage ET il est deja du cote ou l'on doit
+-- partir : le regard n'a plus qu'a le suivre.
+--
+-- SON PRIX, a connaitre avant de le monter : la hauteur du repere est celle des pieds du JOUEUR. Plus on le pousse
+-- loin, plus il s'enfonce dans une montee et plus il flotte dans une descente. Sur un terrain tres accidente il
+-- faudrait mesurer le sol sous LUI ; tant que les jardins sont plats, ce serait un raycast par image pour rien.
+local FORWARD = 4
 -- HAUTEUR sous le centre du joueur, en studs. La HumanoidRootPart d'un R15 flotte a peu pres trois studs au-dessus
 -- du sol : on redescend d'autant pour poser le repere a ses pieds.
 --
@@ -47,8 +57,12 @@ local HEIGHT = -2.85
 -- Le repere apparait et disparait en fondu. D'un coup, il attire l'oeil sur son apparition au lieu de la
 -- direction qu'il montre.
 local FADE_TIME = 0.3
--- Transparence quand il est visible. Pas zero : c'est une AIDE posee sur le decor, pas un objet du monde.
-local SHOWN_TRANSPARENCY = 0.15
+-- Transparence quand il est visible. Pas zero : c'est une AIDE posee sur le decor, pas un objet du monde -- plus
+-- elle monte, plus il se lit comme une indication et moins comme quelque chose de POSE par terre.
+--
+-- Elle a une limite haute : au-dela d'environ 0.7 le mesh passe dans le rendu TRANSPARENT de Roblox, ou le tri se
+-- fait par objet et non par profondeur -- il se met alors a passer devant ou derriere le decor selon l'angle.
+local SHOWN_TRANSPARENCY = 0.45
 -- SOUS CETTE DISTANCE, il n'a plus rien a dire : le joueur est arrive, il voit la machine. Le laisser tourner sous
 -- ses pieds ferait une girouette.
 local ARRIVE_DIST = 14
@@ -153,9 +167,12 @@ function GroundGuide.point(target: Vector3)
 		dir = flat.Unit
 		lastDir = dir
 	end
+	-- ON LE POUSSE DEVANT, APRES avoir fixe la direction. Decaler le point de depart AVANT de viser changerait la
+	-- visee elle-meme : le repere pointerait a cote de la cible, d'autant plus qu'il est proche.
+	local at = from + dir * FORWARD
 	-- `lookAt` rend un repere dont le -Z pointe la cible, avec la verticale du monde pour haut. La correction du
 	-- mesh vient EN DERNIER : posee avant, elle ferait tourner la visee avec elle.
-	part.CFrame = CFrame.lookAt(from, from + dir) * CFrame.Angles(0, math.rad(YAW), 0)
+	part.CFrame = CFrame.lookAt(at, at + dir) * CFrame.Angles(0, math.rad(YAW), 0)
 
 	if not shown then
 		shown = true
