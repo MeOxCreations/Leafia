@@ -473,6 +473,13 @@ return {
 	-- UNE SEULE FOIS PAR PARTIE. Lachez la machine, reprenez-la : il ne recommence pas. Une phrase scenarisee qui
 	-- se rejoue a chaque prise cesse d'etre une reaction et devient un bruit de porte.
 	PULL_ROPE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PullTheRope" },
+	-- ET S'IL LA REPOSE juste apres qu'on lui a dit de tirer la corde : il le reprend. C'est ce genre de reaction
+	-- a une BETISE du joueur qui fait qu'un PNJ a l'air de regarder, au lieu de reciter un script.
+	GRAB_AGAIN_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GrabMowerAgain" },
+	-- Ecart minimum entre deux fois, en secondes. Celle-la se rejoue -- contrairement a PULL_ROPE, dite une seule
+	-- fois -- parce qu'elle repond a une action REPETABLE. Sans ce garde, prendre et lacher la machine en boucle
+	-- la ferait bafouiller, et une reaction qui se declenche trop vite cesse d'etre une reaction.
+	GRAB_AGAIN_COOLDOWN = 9,
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,

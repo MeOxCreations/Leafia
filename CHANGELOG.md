@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.679 — Il reprend le joueur qui repose la tondeuse
+
+`Oldman_scene_speech_GrabMowerAgain` part quand le joueur LACHE la machine apres s'etre fait dire de tirer la
+corde. C'est ce genre de reaction a une betise du joueur qui fait qu'un PNJ a l'air de regarder, au lieu de
+reciter un script.
+
+**On compare deux etats plutot que d'ecouter un evenement de repose.** Le joueur peut lacher la machine de trois
+facons -- le bouton, la mort, un respawn -- et un evenement par cas en laisserait toujours un dehors. Un etat qui
+change les couvre tous, y compris ceux qu'on n'a pas prevus.
+
+**Elle se rejoue**, contrairement a la phrase de prise qui n'est dite qu'une fois : celle-ci repond a une action
+REPETABLE. D'ou un ecart minimum de 9 s (`GRAB_AGAIN_COOLDOWN`) -- sans lui, prendre et lacher la machine en
+boucle la ferait bafouiller, et une reaction qui se declenche trop vite cesse d'etre une reaction.
+
+Elle repousse aussi l'impatience, sinon celle-ci pourrait tomber dans la seconde et lui couper la parole.
+
+DEPEND D'UN ASSET : le son doit exister sous SoundService.Sounds.Scenes.Scene1.Voices dans la place du tuto.
+
 ## 0.0.678 — "Enfin ! Tire sur la corde"
 
 Le grand-pere lance `Oldman_scene_speech_PullTheRope` a l'instant ou le joueur met la main sur la tondeuse.

@@ -1541,6 +1541,11 @@ local nextImpatientAt = math.huge
 local lastImpatient = 0
 -- Il n'a qu'une phrase a dire quand le joueur prend enfin la machine, et il ne la dit qu'une fois.
 local saidPullRope = false
+-- TENAIT-IL LA MACHINE A L'IMAGE PRECEDENTE ? C'est le seul moyen de reperer l'instant ou il la REPOSE : on
+-- compare deux etats, on n'ecoute pas un evenement -- le joueur peut la lacher de trois facons (le bouton, la
+-- mort, un respawn) et un evenement par cas en laisserait toujours un dehors.
+local wasCarrying = false
+local nextGrabAgainAt = 0
 
 -- JAMAIS DEUX FOIS LA MEME D'AFFILEE. Un tirage au hasard pur repete, et une repetition immediate s'entend comme
 -- un bug ("il a bugue, il redit pareil") -- alors que c'est le hasard qui fait son travail.
@@ -1646,7 +1651,8 @@ local function step(dt: number)
 		-- IL RELANCE, tant que le joueur n'a pas mis la main dessus. On teste ce qu'il TIENT, pas si la machine
 		-- tourne : c'est le geste d'aller la chercher qu'il attend, et une fois qu'elle est dans ses mains,
 		-- continuer a le presser n'a plus de sens.
-		if MowController.isCarrying() then
+		local carrying = MowController.isCarrying()
+		if carrying then
 			-- ON REPOUSSE L'ECHEANCE au lieu de la laisser passer. Sans ca, lacher la machine ferait partir une
 			-- phrase dans la seconde -- toutes celles qui n'ont pas pu sortir pendant qu'il la tenait.
 			nextImpatientAt = now + TutorialConfigs.IMPATIENT_EVERY
@@ -1659,12 +1665,23 @@ local function step(dt: number)
 				saidPullRope = true
 				sayVoice(TutorialConfigs.PULL_ROPE_SOUND)
 			end
+		elseif wasCarrying and saidPullRope and now >= nextGrabAgainAt then
+			-- IL VIENT DE LA REPOSER, alors qu'on venait de lui dire de tirer la corde. Le grand-pere le reprend.
+			--
+			-- ON COMPARE DEUX ETATS plutot que d'ecouter un evenement de repose : le joueur peut lacher la machine
+			-- de trois facons -- le bouton, la mort, un respawn -- et un evenement par cas en laisserait toujours
+			-- un dehors. Un etat qui change les couvre tous, y compris ceux qu'on n'a pas prevus.
+			nextGrabAgainAt = now + TutorialConfigs.GRAB_AGAIN_COOLDOWN
+			-- ET ON REPOUSSE L'IMPATIENCE : sans ca, elle peut tomber dans la seconde et lui couper la parole.
+			nextImpatientAt = now + TutorialConfigs.IMPATIENT_EVERY
+			sayVoice(TutorialConfigs.GRAB_AGAIN_SOUND)
 		elseif now >= nextImpatientAt then
 			nextImpatientAt = now
 				+ TutorialConfigs.IMPATIENT_EVERY
 				+ math.random() * TutorialConfigs.IMPATIENT_JITTER
 			playImpatient()
 		end
+		wasCarrying = carrying
 
 		local mower = MowController.freeMowerPart()
 		if mower then
@@ -1959,6 +1976,8 @@ function TutorialController.stop()
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
 	saidPullRope = false
+	wasCarrying = false
+	nextGrabAgainAt = 0
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX
