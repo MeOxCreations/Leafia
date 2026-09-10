@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.675 — Il ne gesticule plus pendant qu'il se bat avec sa poignee
+
+Regression introduite deux versions plus tot, en calant le geste sur la voix : sa replique de poignee
+(`BeforeOpen`) declenchait l'animation d'explication -- par-dessus celle qui le fait justement ouvrir sa porte.
+
+Les deux sont en priorite `Action`, et a priorite EGALE Roblox ne choisit pas : il MELANGE. On voyait donc la
+MOYENNE des deux poses, c'est-a-dire un grand-pere qui ouvre sa porte "presque bien". Exactement le genre de
+symptome qu'on va corriger dans l'editeur d'animation alors que rien n'y est faux.
+
+Le geste n'est plus demande tant que la scene tourne. Ses trois repliques de scene -- la poignee,
+l'entrebaillement, la grande ouverture -- se jouent donc sans lui, et il reprend a la sortie.
+
+**On teste l'ETAT de la scene, pas la replique.** Marquer chaque appel une par une obligerait a y penser a
+chaque voix ajoutee, et celle qu'on oublierait casserait la scene en silence. Ici, le defaut est le cas sur.
+
 ## 0.0.674 — L'eclair de colere passe au rouge et s'agite
 
 Rouge vif, plus gros, et le mouvement est nettement pousse.

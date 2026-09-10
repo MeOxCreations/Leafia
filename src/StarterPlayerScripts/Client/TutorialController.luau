@@ -925,10 +925,21 @@ local function sayVoice(path: { string }): Sound?
 	-- defait exactement ce qu'on vient de faire. Ici et nulle part ailleurs -- toutes ses repliques passent par
 	-- cette fonction, donc il n'y a qu'un endroit ou y penser.
 	SoundDuck.keepLoud(speechSound)
-	-- ET IL GESTICULE PENDANT CE TEMPS-LA. On annonce au serveur la LONGUEUR REELLE du fichier : c'est la seule
-	-- valeur qui reste juste quand on reenregistre une voix, alors qu'une duree ecrite en config serait a refaire
-	-- a chaque fois -- et se tromperait en silence, laissant le grand-pere parler sans bouger.
-	announceTalk(speechSound)
+	-- ET IL GESTICULE PENDANT CE TEMPS-LA -- MAIS SEULEMENT UNE FOIS LA SCENE FINIE.
+	--
+	-- PENDANT LA SCENE, IL A DEJA UNE ANIMATION : celle qui le fait se battre avec sa poignee puis ouvrir sa
+	-- porte, en priorite `Action`. L'explication est en `Action` elle aussi, et a priorite EGALE Roblox ne
+	-- choisit pas -- il MELANGE. On obtenait donc une moyenne des deux poses : un grand-pere qui ouvre sa porte
+	-- "presque bien", qu'on serait alle corriger dans l'editeur d'animation alors que rien n'y est faux.
+	--
+	-- On teste l'ETAT de la scene, pas la replique : marquer chaque appel obligerait a y penser a chaque voix
+	-- ajoutee, et celle qu'on oublierait casserait la scene en silence. Ici, le defaut est le cas sur.
+	--
+	-- La longueur annoncee est celle du FICHIER : c'est la seule valeur qui reste juste quand on reenregistre une
+	-- voix, alors qu'une duree ecrite en config serait a refaire a chaque fois.
+	if sceneEnded then
+		announceTalk(speechSound)
+	end
 	return speechSound
 end
 
