@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.655 — Les barres noires tombent quand le grand-pere se met en marche
+
+Retour en arriere sur la version precedente, qui les avait coupees ENTIEREMENT : ce n'etait pas la demande. Elles
+sont de nouveau la pendant les coups, la porte et ses deux repliques. `EXIT_SHOT_HOLD` retrouve ses 3 s.
+
+Ce qui change : elles s'en vont a l'instant ou le grand-pere se met a MARCHER, plus quand la camera rend la main.
+Ce qu'elles encadraient est fini a ce moment-la ; la suite est un vieux qui traverse sa cour, et ca n'a pas
+besoin d'etre cadre. Gardees pendant ce trajet, elles ne disaient plus "regarde", elles disaient "attends
+encore".
+
+**La camera, elle, tient encore son plan de sortie.** Les deux ne racontent pas la meme chose : les barres disent
+"ceci est une scene", la camera dit "regarde par la". Seule la premiere n'a plus rien a dire une fois la porte
+passee.
+
+Le carton de chapitre part avec elles : il s'ecrit DANS la bande du bas, il resterait sinon en l'air sur le jeu.
+
 ## 0.0.654 — Plus de barres noires, et la main rendue bien plus tot
 
 **Les barres noires sont coupees** (`SCENE_BARS = false`). Elles disent "regarde, c'est du cinema" -- et elles le

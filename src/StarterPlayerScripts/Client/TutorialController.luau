@@ -617,6 +617,17 @@ local function endScene()
 		done:FireServer()
 	end
 
+	-- ET LES BARRES S'EN VONT AVEC LUI. Ce qu'elles encadraient -- les coups, la porte, ses deux repliques -- est
+	-- fini ; la suite est un vieux qui traverse sa cour, et ca n'a pas besoin d'etre cadre. Gardees pendant ce
+	-- trajet elles ne disaient plus "regarde", elles disaient "attends encore".
+	--
+	-- La CAMERA, elle, tient encore son plan de sortie (EXIT_SHOT_HOLD) : les deux ne racontent pas la meme
+	-- chose. Les barres disent "ceci est une scene", la camera dit "regarde par la" -- et seule la premiere n'a
+	-- plus rien a dire une fois la porte passee.
+	Letterbox.hide(TutorialConfigs.SCENE_BARS_TIME)
+	-- LE TITRE PART AVEC ELLES : il s'ecrit DANS la bande du bas, il resterait donc en l'air sur le jeu.
+	ChapterTitle.hide()
+
 	-- LE JOUEUR SE POUSSE, maintenant que le grand-pere se met en marche. Pas a la fin des coups : a ce
 	-- moment-la la porte etait encore fermee, et se decaler devant une porte fermee ne veut rien dire.
 	local aside = playAside
@@ -1341,12 +1352,7 @@ function TutorialController.startMission()
 	-- LES BARRES ET LA CAMERA PARTENT ENSEMBLE. Dans un film le cadre bouge pendant que le rideau descend, il
 	-- n'attend pas que le noir soit en place.
 	--
-	-- SEUL L'AFFICHAGE EST SOUS CONDITION : tous les `hide` restent inconditionnels. Cacher ce qui n'est pas
-	-- affiche ne coute rien, alors qu'un `hide` saute -- le jour ou on rallume les barres puis on les coupe --
-	-- laisserait le joueur derriere un cache noir sans aucun moyen d'en sortir.
-	if TutorialConfigs.SCENE_BARS then
-		Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
-	end
+	Letterbox.show(TutorialConfigs.SCENE_BARS_TIME)
 	-- LE TITRE S'ECRIT DANS LA BANDE DU BAS, une fois qu'elle est en place. Il n'attend pas la fin de la scene :
 	-- un chapitre s'annonce quand il commence.
 	task.delay(TutorialConfigs.CHAPTER_DELAY, function()
