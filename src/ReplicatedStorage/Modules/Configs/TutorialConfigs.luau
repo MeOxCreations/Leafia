@@ -320,10 +320,13 @@ return {
 	-- Apres le debut du geste. COURT, mais pas zero : le bruit de serrure et sa voix partiraient ensemble et se
 	-- masqueraient l'un l'autre. On entend d'abord la porte resister, il repond ensuite.
 	TRY_OPEN_VOICE_DELAY = 0.25,
-	-- IL S'Y REPREND. Une seule secousse se lit comme une porte un peu dure ; deux, comme une porte qui RESISTE
-	-- et un vieux qui s'acharne -- ce qui est l'histoire qu'on raconte. C'est du rythme, donc ca se juge a
-	-- l'ecran : le nombre est ici pour se regler sans toucher au code.
-	TRY_OPEN_TIMES = 2,
+	-- COMBIEN DE FOIS IL S'Y REPREND. A DEUX, ca racontait bien une porte qui resiste -- mais l'ecran a tranche :
+	-- la scene ENTIERE devient trop longue, et une seconde secousse identique n'ajoute rien qu'on n'ait deja
+	-- compris a la premiere. C'est du rythme, donc ca se juge a l'ecran, pas au raisonnement.
+	--
+	-- A 1, tout ce qui suit se coupe tout seul : plus de relance, donc TRY_OPEN_GAP ne sert plus a rien tant
+	-- qu'on ne remonte pas ce nombre.
+	TRY_OPEN_TIMES = 1,
 	-- Le temps de souffle entre deux secousses. A zero elles s'enchainent sans respirer et on dirait une
 	-- animation qui begaie, pas quelqu'un qui reessaie.
 	TRY_OPEN_GAP = 0.25,

@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.659 — Il ne s'y reprend plus a deux fois
+
+`TRY_OPEN_TIMES` passe de 2 a 1 : une seule secousse de poignee, un seul bruit de serrure.
+
+A deux, ca racontait bien une porte qui resiste et un vieux qui s'acharne. L'ecran a tranche : la scene ENTIERE
+devient trop longue, et la seconde secousse est identique a la premiere -- elle n'ajoute rien qu'on n'ait deja
+compris.
+
+Tout le reste se coupe tout seul : plus de relance, donc plus de souffle entre deux (`TRY_OPEN_GAP` ne sert plus
+a rien tant qu'on ne remonte pas le nombre). Le code n'a pas bouge d'une ligne.
+
 ## 0.0.658 — Il rale deja en se battant avec sa poignee
 
 `Oldman_scene_speech_BeforeOpen` part 0.25 s apres le debut du geste de poignee. On sait qu'il y a quelqu'un
