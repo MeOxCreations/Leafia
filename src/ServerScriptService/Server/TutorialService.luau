@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 
@@ -548,18 +549,24 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 end
 
 
--- ===== IL SUIT LE JOUEUR =====
+-- ===== IL VA VERS LA TONDEUSE, LE JOUEUR AVEC =====
 -- Une boucle par image, cote SERVEUR : le grand-pere est un objet du monde, il doit bouger pour tout le monde.
+--
+-- CE QU'IL VISE EST LA MACHINE, PAS LE JOUEUR. Une cible qui bouge a chaque image donne un PNJ collant, qui
+-- repart et s'arrete des que l'autre change de pied -- un vieux monsieur ne fait pas ca. Ce qui l'interesse,
+-- c'est la ou le travail va se faire ; le joueur s'y rend en meme temps que lui. Une cible FIXE donne un
+-- deplacement lisse, sans qu'on ait rien a lisser.
+--
+-- IL RESTE QUAND MEME DERRIERE LE JOUEUR : deux gardes suffisent, l'un sur la distance a la machine, l'autre sur
+-- la distance au joueur -- il s'arrete au premier des deux atteint.
 --
 -- ON LE DEPLACE PAR LE CODE, comme pour sa sortie, et pour la meme raison : son rig est ANCRE, et Roblox REFUSE
 -- de deplacer une part ancree -- `Humanoid:MoveTo` partirait, ne bougerait rien, et rendrait "chemin barre" au
 -- bout de son delai.
---
--- IL NE VISE PAS LE JOUEUR, IL VISE UNE DISTANCE. Marcher jusqu'a sa position exacte le ferait lui rentrer dans
--- le dos, puis reculer, puis avancer -- une oscillation permanente autour d'un point qu'il ne peut pas occuper.
 local followConn: RBXScriptConnection? = nil
 local followTrack: AnimationTrack? = nil
 local followGroundOffset = 0
+local followStopped = false -- il est arrive : sert d'hysteresis, il faut REdepasser la distance pour repartir
 
 local function stopFollow()
 	if followConn then
@@ -592,7 +599,7 @@ local function setFollowWalking(model: Model, moving: boolean)
 		local humanoid = model:FindFirstChildOfClass("Humanoid")
 		local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
 		if not animator then
-			return -- sans Animator il glissera sans bouger les jambes, mais il suivra
+			return -- sans Animator il glissera sans bouger les jambes, mais il avancera
 		end
 		local anim = Instance.new("Animation")
 		anim.AnimationId = TutorialConfigs.OLDMAN_WALK_ANIM
@@ -605,8 +612,8 @@ local function setFollowWalking(model: Model, moving: boolean)
 		track = result :: AnimationTrack
 		track.Looped = true
 		track.Priority = TutorialConfigs.OLDMAN_WALK_PRIORITY
-		-- Jouee au RAPPORT des deux vitesses, comme sa sortie : changer sa vitesse de suivi ne fait pas patiner
-		-- ses pieds, et il n'y a aucune seconde valeur a garder d'accord avec la premiere.
+		-- Jouee au RAPPORT des deux vitesses, comme sa sortie : changer sa vitesse ne fait pas patiner ses pieds,
+		-- et il n'y a aucune seconde valeur a garder d'accord avec la premiere.
 		track:AdjustSpeed(
 			TutorialConfigs.FOLLOW_SPEED / TutorialConfigs.OLDMAN_WALK_REFERENCE * TutorialConfigs.FOLLOW_ANIM_BOOST
 		)
@@ -615,22 +622,49 @@ local function setFollowWalking(model: Model, moving: boolean)
 	track:Play(TutorialConfigs.FOLLOW_ANIM_FADE)
 end
 
+-- LA TONDEUSE LIBRE LA PLUS PROCHE DU JOUEUR. Meme critere que le repere affiche chez lui : les deux doivent
+-- designer la MEME machine, sinon le grand-pere part vers une autre que celle qu'on montre au joueur.
+--
+-- Distance HORIZONTALE : une machine un etage plus bas n'est pas "loin", elle est ailleurs.
+local function nearestFreeMower(from: Vector3): BasePart?
+	local best: BasePart? = nil
+	local bestDist = math.huge
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d.Name == MowConfigs.MODEL_NAME and d:GetAttribute(MowConfigs.CARRIED_ATTRIBUTE) == nil then
+			local root = d.PrimaryPart or d:FindFirstChild(MowConfigs.ROOT_NAME)
+			if root and root:IsA("BasePart") then
+				local flat = (root :: BasePart).Position - from
+				local dist = math.sqrt(flat.X * flat.X + flat.Z * flat.Z)
+				if dist < bestDist then
+					bestDist, best = dist, root :: BasePart
+				end
+			end
+		end
+	end
+	return best
+end
+
 startFollow = function(player: Player, model: Model)
 	if followConn then
-		return -- deja en train de suivre : une seconde boucle se battrait avec la premiere pour la meme pose
+		return -- deja en route : une seconde boucle se battrait avec la premiere pour la meme pose
 	end
 	local root = model:FindFirstChild("HumanoidRootPart")
 	if not (root and root:IsA("BasePart")) then
-		warn(`[Tutorial] "{model.Name}" n'a pas de HumanoidRootPart : il ne suivra pas le joueur.`)
+		warn(`[Tutorial] "{model.Name}" n'a pas de HumanoidRootPart : il n'ira pas vers la tondeuse.`)
 		return
 	end
 	local rootPart = root :: BasePart
 
 	-- SA HAUTEUR AU-DESSUS DU SOL, mesuree UNE FOIS. Il est ancre, donc la physique ne le pose pas : sans cette
-	-- mesure il faudrait deviner de combien lever son rig, et un rig dont l'origine n'est pas aux pieds
-	-- s'enfoncerait ou leviterait. Mesuree a chaque image, un sol qui manque (trou, bord) la ferait sauter.
+	-- mesure il faudrait deviner de combien lever son rig. Mesuree a chaque image, un sol qui manque (trou, bord
+	-- de dalle) la ferait sauter.
 	local ground = groundAt(rootPart.Position, { model })
 	followGroundOffset = if ground then rootPart.Position.Y - ground else 0
+	followStopped = false
+
+	-- SON TEMPS DE REACTION. Il ne s'ebranle pas a la milliseconde ou la consigne tombe : ce retard est ce qui
+	-- separe un vieux monsieur d'un chien de garde.
+	local startAt = os.clock() + TutorialConfigs.FOLLOW_DELAY
 
 	followConn = RunService.Heartbeat:Connect(function(dt: number)
 		if not model.Parent or not player.Parent then
@@ -646,41 +680,59 @@ startFollow = function(player: Player, model: Model)
 			return
 		end
 		local character = player.Character
-		local hrp = character and character:FindFirstChild("HumanoidRootPart")
-		if not (hrp and hrp:IsA("BasePart")) then
+		local hrpChild = character and character:FindFirstChild("HumanoidRootPart")
+		if not (hrpChild and hrpChild:IsA("BasePart")) or os.clock() < startAt then
 			setFollowWalking(model, false)
-			return -- mort, respawn : on ne bouge pas, mais on reste branche pour reprendre quand il revient
+			return -- mort, respawn, ou temps de reaction : on reste branche, on ne bouge pas
+		end
+		local hrp = hrpChild :: BasePart
+
+		-- LA MACHINE EST CHERCHEE DEPUIS LE JOUEUR, pas depuis lui : c'est celle vers laquelle le JOUEUR se
+		-- dirige qui compte, et c'est aussi celle que son repere a l'ecran lui montre.
+		local mower = nearestFreeMower(hrp.Position)
+		if not mower then
+			setFollowWalking(model, false)
+			return -- aucune machine libre : rien a viser, mais on reste branche (elle peut etre reposee)
 		end
 
-		local target = (hrp :: BasePart).Position
-		local flat = Vector3.new(target.X - rootPart.Position.X, 0, target.Z - rootPart.Position.Z)
-		local distance = flat.Magnitude
-		if distance <= TutorialConfigs.FOLLOW_DIST or distance < 1e-3 then
-			-- ASSEZ PRES : il s'arrete, mais il continue de REGARDER le joueur. Un PNJ qui garde le dos tourne
-			-- pendant qu'on tourne autour de lui cesse d'avoir l'air de nous accompagner.
+		local here = rootPart.Position
+		local toMower = Vector3.new(mower.Position.X - here.X, 0, mower.Position.Z - here.Z)
+		local mowerDist = toMower.Magnitude
+		local playerDist = (Vector3.new(hrp.Position.X - here.X, 0, hrp.Position.Z - here.Z)).Magnitude
+
+		-- IL EST ARRIVE, OU IL EST TROP PRES DU JOUEUR : il s'arrete. `followStopped` fait l'hysteresis -- sans
+		-- elle, arrete pile a la distance d'arret, il repartirait au moindre centimetre.
+		local arriveDist = TutorialConfigs.FOLLOW_MOWER_DIST
+			+ (if followStopped then TutorialConfigs.FOLLOW_HYST else 0)
+		if mowerDist <= arriveDist or playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER or mowerDist < 1e-3 then
+			followStopped = true
 			setFollowWalking(model, false)
-			if distance >= 1e-3 then
-				local look = CFrame.lookAt(rootPart.Position, rootPart.Position + flat.Unit)
+			-- ARRETE, IL REGARDE LE JOUEUR. C'est lui qu'il surveille -- un PNJ qui garde le dos tourne pendant
+			-- qu'on tourne autour de lui cesse d'avoir l'air de nous accompagner.
+			local toPlayer = Vector3.new(hrp.Position.X - here.X, 0, hrp.Position.Z - here.Z)
+			if toPlayer.Magnitude >= 1e-3 then
+				local look = CFrame.lookAt(here, here + toPlayer.Unit)
 				model:PivotTo(look * rootPart.CFrame:Inverse() * model:GetPivot())
 			end
 			return
 		end
+		followStopped = false
 
-		-- ON AVANCE D'UN PAS DE CETTE IMAGE, jamais jusqu'a la cible : la cible bouge, et l'atteindre d'un coup
-		-- serait une teleportation. `dt` fait que la vitesse est la meme quel que soit le nombre d'images.
-		local step = math.min(TutorialConfigs.FOLLOW_SPEED * dt, distance - TutorialConfigs.FOLLOW_DIST)
-		local nextPos = rootPart.Position + flat.Unit * step
+		-- ON AVANCE D'UN PAS DE CETTE IMAGE, jamais jusqu'a la cible : `dt` fait que la vitesse est la meme quel
+		-- que soit le nombre d'images, et on ne depasse pas la distance d'arret.
+		local step = math.min(TutorialConfigs.FOLLOW_SPEED * dt, mowerDist - TutorialConfigs.FOLLOW_MOWER_DIST)
+		local nextPos = here + toMower.Unit * step
 		local nextGround = groundAt(nextPos, { model, character })
 		if nextGround then
 			nextPos = Vector3.new(nextPos.X, nextGround + followGroundOffset, nextPos.Z)
 		end
-		local now = CFrame.lookAt(nextPos, nextPos + flat.Unit)
+		local now = CFrame.lookAt(nextPos, nextPos + toMower.Unit)
 		-- ON APPLIQUE UN ECART MONDE et pas un pivot : `PivotTo` passe par `GetPivot`, qui suit la boite
 		-- englobante -- une part ajoutee au modele dans Studio le decalerait.
 		model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
 		setFollowWalking(model, true)
 	end)
-	print(`[Tutorial] Le grand-pere suit {player.Name} (a {TutorialConfigs.FOLLOW_DIST} studs).`)
+	print(`[Tutorial] Le grand-pere se dirige vers la tondeuse, derriere {player.Name}.`)
 end
 
 local function onPlayerAdded(player: Player)

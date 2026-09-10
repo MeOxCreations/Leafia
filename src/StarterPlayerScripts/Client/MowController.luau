@@ -47,7 +47,7 @@ local STEER_BIND = "LeafiaMowSteer"
 local ACTION_KEY = Enum.KeyCode.E
 -- REVELATION : touche MAINTENUE qui allume ce qui reste a tondre. G, libre dans tout le projet.
 local HIGHLIGHT_KEY = Enum.KeyCode.G
-local CARRIED_ATTRIBUTE = "LeafiaCarriedBy" -- pose par MowService : UserId du porteur
+local CARRIED_ATTRIBUTE = MowConfigs.CARRIED_ATTRIBUTE -- pose par MowService : UserId du porteur
 local RESCAN_INTERVAL = 2 -- secondes entre deux balayages du Workspace (streaming : une tondeuse peut arriver tard)
 local PROMPT_INTERVAL = 0.15 -- on ne teste pas la proximite a chaque image, ca ne se voit pas et ca coute
 

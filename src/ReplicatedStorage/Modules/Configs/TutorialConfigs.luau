@@ -796,9 +796,25 @@ return {
 	-- IL S'ARRETE des que la tondeuse est dans les mains du joueur : sa consigne est suivie, il n'a plus rien a
 	-- surveiller.
 	--
-	-- DISTANCE A LAQUELLE IL SE TIENT, en studs. Il ne colle pas : au-dessous de trois ou quatre studs il rentre
-	-- dans le dos du joueur et se voit a travers la camera. Au-dela de huit, il ne suit plus, il traine.
-	FOLLOW_DIST = 6,
+	-- CE QU'IL VISE : LA TONDEUSE, pas le joueur.
+	--
+	-- LA PREMIERE VERSION SUIVAIT LE JOUEUR, et ca se voyait : une cible qui bouge a chaque image donne un PNJ
+	-- collant, qui repart et s'arrete des que l'autre change de pied. Un vieux monsieur ne fait pas ca. Ce qui
+	-- l'interesse, c'est la MACHINE -- il va la ou le travail va se faire, et le joueur s'y rend en meme temps
+	-- que lui. Une cible FIXE donne un deplacement lisse, sans qu'on ait rien a lisser.
+	--
+	-- Distance a laquelle il s'arrete de la machine, en studs.
+	FOLLOW_MOWER_DIST = 7,
+	-- HYSTERESIS : de combien il faut la depasser pour qu'il REPARTE. Sans elle, arrete pile a la distance
+	-- d'arret, il repart au moindre centimetre -- des micro-pas permanents, ce qui est exactement le tic qu'on
+	-- veut eviter.
+	FOLLOW_HYST = 1.5,
+	-- ET IL NE COLLE PAS AU JOUEUR. S'approcher plus pres que ca le ferait entrer dans son dos et passer devant
+	-- la camera. Il s'arrete alors, meme s'il n'est pas encore arrive a la machine.
+	FOLLOW_MIN_PLAYER = 4.5,
+	-- SON TEMPS DE REACTION, en secondes. Il ne s'ebranle pas a la milliseconde ou le joueur bouge : ce petit
+	-- retard est ce qui separe un vieux monsieur d'un chien de garde.
+	FOLLOW_DELAY = 1.2,
 	-- SA VITESSE DE SUIVI, en studs/s. SON PROPRE REGLAGE, separe de sa marche de sortie (OLDMAN_WALK_SPEED, 4) :
 	-- celle-la est LENTE parce qu'elle est le sujet du plan, alors qu'ici il doit tenir le rythme de quelqu'un qui
 	-- traverse un jardin. Un reglage partage par les deux moments aurait fini par les opposer.

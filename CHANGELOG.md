@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.716 — Ce n'est plus le joueur qu'il suit, c'est la tondeuse qui l'attire
+
+La premiere version suivait le joueur, et ca se voyait : une cible qui bouge a chaque image donne un PNJ
+COLLANT, qui repart et s'arrete des que l'autre change de pied. Un vieux monsieur ne fait pas ca.
+
+Ce qui l'interesse, c'est la MACHINE -- il va la ou le travail va se faire, et le joueur s'y rend en meme temps
+que lui. Une cible FIXE donne un deplacement lisse, sans qu'on ait rien a lisser.
+
+| Reglage | Valeur | Role |
+|---|---|---|
+| `FOLLOW_MOWER_DIST` | 7 | Ou il s'arrete de la machine |
+| `FOLLOW_HYST` | 1.5 | De combien il faut REdepasser pour qu'il reparte |
+| `FOLLOW_MIN_PLAYER` | 4.5 | Il ne s'approche jamais plus pres du joueur |
+| `FOLLOW_DELAY` | 1.2 s | Son temps de reaction avant de s'ebranler |
+
+**Il reste derriere le joueur avec deux gardes, pas avec un calcul** : la distance a la machine, la distance au
+joueur, et il s'arrete au premier des deux atteint. Il n'y a rien a arbitrer.
+
+**L'hysteresis n'est pas un detail.** Arrete pile a la distance d'arret, il repartirait au moindre centimetre :
+des micro-pas permanents, exactement le tic qu'on veut eviter.
+
+**Son temps de reaction non plus.** Il ne s'ebranle pas a la milliseconde ou la consigne tombe -- ce retard est
+ce qui separe un vieux monsieur d'un chien de garde.
+
+**La machine est cherchee depuis le JOUEUR**, pas depuis lui : c'est celle vers laquelle le joueur se dirige qui
+compte, et c'est aussi celle que son repere a l'ecran lui montre. Les deux doivent designer la MEME -- sinon le
+grand-pere part vers une autre que celle qu'on montre.
+
+Au passage, `CARRIED_ATTRIBUTE` entre dans `MowConfigs` : ce nom etait ecrit en dur a QUATRE endroits, dont
+celui-ci. Une meme donnee declaree plusieurs fois finit toujours par diverger, et le jour ou l'un change, les
+autres cessent de voir le portage sans une seule erreur pour le dire.
+
 ## 0.0.715 — La marche du grand-pere pointait sur l'ancienne animation
 
 `OLDMAN_WALK_ANIM` passe de `109013940658757` a `123299879163087` : celle qui tient la canne. L'ancienne jouait

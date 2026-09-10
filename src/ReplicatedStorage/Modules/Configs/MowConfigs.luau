@@ -18,6 +18,13 @@ return {
 	-- Part fixe qui sert de reference de position. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc
 	-- ajouter la moindre part enfant (CutZone...) le decale et tous les calculs partent de travers.
 	ROOT_NAME = "RootPart",
+	-- QUI PORTE CETTE MACHINE : l'UserId du porteur, pose par MowService, nil quand elle est libre.
+	--
+	-- ICI ET NULLE PART AILLEURS. Ce nom etait ecrit en dur a QUATRE endroits (deux dans le service, un dans le
+	-- controller, un dans le didacticiel qui vient de s'y ajouter). Une meme donnee declaree a plusieurs endroits
+	-- finit toujours par diverger, et le jour ou l'un des quatre change, les trois autres cessent de voir le
+	-- portage sans une seule erreur pour le dire.
+	CARRIED_ATTRIBUTE = "LeafiaCarriedBy",
 	-- Part posee sous le carter, creee par scripts/studio/CreerZoneDeCoupeTondeuse.lua. Sa POSITION dit ou on coupe,
 	-- sa largeur donne le rayon. Absente, on retombe sur FALLBACK_* ci-dessous (le jeu tourne quand meme).
 	CUT_ZONE_NAME = "CutZone",

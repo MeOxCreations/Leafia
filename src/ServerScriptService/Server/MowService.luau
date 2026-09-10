@@ -1038,7 +1038,7 @@ local function release(model: Model)
 	restoreJump(state)
 	releaseLauncher(model, state) -- filet : repose (ou mort) en plein tirage
 	carried[model] = nil
-	model:SetAttribute("LeafiaCarriedBy", nil)
+	model:SetAttribute(MowConfigs.CARRIED_ATTRIBUTE, nil)
 	model:SetAttribute(MowConfigs.RUNNING_ATTRIBUTE, nil)
 	CarryUtils.release(state.owner, "Mower")
 end
@@ -1147,7 +1147,7 @@ local function grab(player: Player, model: Model)
 	state.weld = weld
 	carried[model] = state
 	-- Lu par le client pour savoir si c'est LUI qui pousse (donc s'il doit couper et tourner les roues).
-	model:SetAttribute("LeafiaCarriedBy", player.UserId)
+	model:SetAttribute(MowConfigs.CARRIED_ATTRIBUTE, player.UserId)
 	-- ON POUSSE LA TONDEUSE A DEUX MAINS : plus d'outil pendant ce temps.
 	--
 	-- On RANGE l'outil au lieu de refuser la prise. Refuser laisserait le joueur appuyer sur E devant sa tondeuse
