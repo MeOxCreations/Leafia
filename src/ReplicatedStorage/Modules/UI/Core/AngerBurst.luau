@@ -28,7 +28,7 @@ local player = Players.LocalPlayer
 -- il garde les proportions par construction.
 local IMAGE = "rbxassetid://84029477406959"
 local IMAGE_W, IMAGE_H = 114, 100
-local BURST_SCALE = 1.15
+local BURST_SCALE = 0.8
 -- ROUGE. `ImageColor3` MULTIPLIE le dessin : ca ne marche que parce que l'eclair est BLANC -- une forme noire
 -- resterait noire quelle que soit la teinte, puisque zero multiplie par n'importe quoi fait zero. Son contour
 -- sombre, lui, ne bouge pas, et c'est tant mieux : c'est lui qui le detache du decor.
@@ -61,6 +61,14 @@ local STRETCH_X = 0.66
 --
 -- Elle pivote autour de l'ANCRE, qui est au pied : il se penche, il ne glisse pas.
 local TILT = 11
+-- SON INCLINAISON DE REPOS, en degres. Le dessin arrive droit, et droit il se lit comme un point d'exclamation
+-- pose la ; penche, il a l'air d'avoir ete JETE. C'est la meme raison qui fait incliner les onomatopees dans une
+-- case de bande dessinee.
+--
+-- TOUT LE BALANCEMENT SE JOUE AUTOUR D'ELLE, jamais autour de zero : le repos vaut cet angle, et la pulsation
+-- l'ecarte de part et d'autre. Revenir a zero entre deux battements le redresserait a chaque fois, ce qui se
+-- lirait comme un tic et pas comme une inclinaison.
+local BASE_TILT = -20
 -- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
 -- ce qui se lit comme un tremblement et pas comme de la souplesse.
 local PULSE_UP = 0.11
@@ -113,6 +121,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	-- cadre : elle ne sait alors que grossir et rapetisser, jamais s'etirer -- la pulsation la RETRECIRAIT au lieu
 	-- de l'allonger. Piege deja paye sur les feuilles du chargement.
 	label.ScaleType = Enum.ScaleType.Stretch
+	label.Rotation = BASE_TILT
 	label.Parent = holder
 
 	-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND L'ETIREMENT POSSIBLE. Avec une ancre au centre, un eclair qu'on
@@ -120,8 +129,12 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	-- par le bas, son pied ne bouge pas et il monte.
 	--
 	-- WorldAnchor pose lui aussi une ancre -- il centre ce qu'il accroche -- donc on la remet APRES lui.
+	-- L'OFFSET EST LU DANS LE REPERE DE LA CAMERA (dernier argument), pas dans celui du monde. Un decalage
+	-- lateral en repere monde passerait DERRIERE le personnage des qu'on tourne autour de lui : l'eclair
+	-- disparaitrait, ou se retrouverait du mauvais cote. En repere camera, il reste toujours a cote de sa tete a
+	-- l'ecran, quelle que soit la vue.
 	local base = offset or Vector3.zero
-	WorldAnchor.attach(label, target, base, MAX_DISTANCE, SCALE)
+	WorldAnchor.attach(label, target, base, MAX_DISTANCE, SCALE, true)
 	label.AnchorPoint = Vector2.new(0.5, 1)
 
 	TweenService
@@ -140,7 +153,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 			TweenService
 				:Create(label, TweenInfo.new(PULSE_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
 					Size = UDim2.fromOffset(w * STRETCH_X, h * STRETCH_Y),
-					Rotation = TILT * side,
+					Rotation = BASE_TILT + TILT * side,
 				})
 				:Play()
 			task.wait(PULSE_UP)
@@ -150,7 +163,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 			TweenService
 				:Create(label, TweenInfo.new(PULSE_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 					Size = normal,
-					Rotation = 0,
+					Rotation = BASE_TILT,
 				})
 				:Play()
 			task.wait(PULSE_BACK)

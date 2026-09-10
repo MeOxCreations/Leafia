@@ -459,7 +459,13 @@ return {
 	-- Elle ne remplace pas la voix, elle la DOUBLE : une voix ne s'entend pas quand on est de dos ou loin, et
 	-- elle ne s'entend pas du tout chez un joueur qui a coupe le son -- ce qui est le cas d'une bonne part des
 	-- joueurs Roblox.
-	IMPATIENT_BURST_UP = 4,
+	IMPATIENT_BURST_UP = 3.4,
+	-- ET SUR LE COTE, en studs. Pose au-dessus de sa tete, l'eclair la couvre a moitie -- or c'est justement son
+	-- visage qu'on veut lire quand il rale. Decale, les deux se voient.
+	--
+	-- Lu dans le repere de la CAMERA (voir AngerBurst) : il reste du meme cote de l'ecran quel que soit l'angle
+	-- de vue. Positif = a sa droite a l'ecran.
+	IMPATIENT_BURST_SIDE = 2.2,
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,

@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.677 — L'eclair penche, retrecit, et se pose a cote de sa tete
+
+| Reglage | Avant | Apres |
+|---|---|---|
+| `BASE_TILT` | (n'existait pas, donc droit) | -20 degres |
+| `BURST_SCALE` | 1.15 | 0.8 |
+| `IMPATIENT_BURST_SIDE` | (n'existait pas) | 2.2 studs |
+| `IMPATIENT_BURST_UP` | 4 | 3.4 |
+
+**Une inclinaison de repos.** Droit, le dessin se lit comme un point d'exclamation POSE la ; penche, il a l'air
+d'avoir ete jete. C'est la meme raison qui fait incliner les onomatopees dans une case de bande dessinee.
+
+**Tout le balancement se joue AUTOUR de cette inclinaison**, jamais autour de zero. Revenir a zero entre deux
+battements le redresserait a chaque fois, ce qui se lirait comme un tic et pas comme une inclinaison.
+
+**Il se pose a COTE de sa tete, plus dessus.** Au-dessus, il la couvrait a moitie -- or c'est justement son
+visage qu'on veut lire quand il rale.
+
+**Le decalage est lu dans le repere de la CAMERA**, pas dans celui du monde. En repere monde, il passerait
+DERRIERE le personnage des qu'on tourne autour de lui : l'eclair disparaitrait, ou se retrouverait du mauvais
+cote. En repere camera, il reste du meme cote de l'ecran quelle que soit la vue.
+
 ## 0.0.676 — Le joueur reprend la main bien plus tot
 
 `EXIT_SHOT_HOLD` passe de 3 s a 0.4. Avec le glissement de camera (0.8), il ne reste plus qu'une seconde entre la

@@ -1568,7 +1568,10 @@ local function playImpatient()
 	end
 	local anchor = bodyPart(grandpa)
 	if anchor then
-		AngerBurst.play(anchor, Vector3.new(0, TutorialConfigs.IMPATIENT_BURST_UP, 0))
+		AngerBurst.play(
+			anchor,
+			Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0)
+		)
 	end
 	-- ET IL EN FAIT LA TETE. Le visage part avec la voix : une grimace qui arrive apres la phrase se lit comme
 	-- une reaction a autre chose.
