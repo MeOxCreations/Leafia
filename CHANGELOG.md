@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.700 — Le contre-champ est retire
+
+Annulation complete de la version precedente : la camera ne coupe plus sur le joueur pendant le dialogue. A
+l'ecran ca ne ressemblait pas a une coupe de montage, ca ressemblait a une SECONDE camera qui s'invite -- et une
+camera qu'on ne comprend pas est pire que pas de camera du tout.
+
+Ce qui n'a pas marche, pour ne pas le refaire tel quel : le plan arrivait alors que le joueur venait tout juste
+de recuperer ses commandes, et sans le bloquer -- il pouvait donc marcher pendant qu'on lui volait son point de
+vue. Deux intentions qui se contredisent : un plan veut un sujet immobile, un joueur libre veut sa camera. Le
+jour ou l'on retentera, il faudra choisir l'une des deux, pas les deux.
+
+Le troisieme argument de `Dialogue.play` (savoir quelle ligne commence) part avec : plus personne ne l'utilise,
+et une primitive gardee "au cas ou" devient un mort qu'on n'ose plus supprimer.
+
 ## 0.0.699 — On coupe sur le joueur quand il annonce qu'il crie
 
 Sur la ligne "Watch out, I shout sometimes", la camera passe DERRIERE le grand-pere et regarde le JOUEUR. C'est
