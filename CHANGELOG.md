@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.664 — La poussiere du seau part avant le contact
+
+Elle sortait a l'instant EXACT ou le seau touche, et ca se lit en retard : une bouffee de particules met le temps
+de naitre et de s'ecarter, donc le nuage n'existe vraiment qu'apres. Partie en avance, elle est deja ouverte
+quand le seau arrive.
+
+`PLACE_FX_LEAD` (0.2 s) se compte DEPUIS LA FIN du trajet, pas depuis son debut : retoucher `PLACE_TWEEN_TIME` ne
+la decale pas. Plus grande que le trajet, elle part au tout debut du glissement -- jamais avant le lacher.
+
+Le jeton du glissement est relu APRES l'attente : un seau repris en plein trajet ne doit pas laisser partir la
+poussiere de sa pose annulee.
+
+**Le point de sortie est maintenant le SOL**, plus le point le plus bas du seau. La hauteur exacte trouvee par le
+raycast est retenue pendant qu'on l'a encore sous la main -- la mesurer plus tard obligerait a interroger un seau
+EN PLEIN TRAJET, ou il n'est ni en haut ni en bas.
+
+L'ECHELLE n'a pas d'avance a prendre : sa repose est instantanee, l'effet part deja a l'instant du geste.
+
 ## 0.0.663 — La poussiere de pose se voit enfin (Emit ne se replique pas)
 
 L'effet etait bien clone par le serveur, bien pose au bon endroit, avec ses emetteurs dedans -- et il ne sortait

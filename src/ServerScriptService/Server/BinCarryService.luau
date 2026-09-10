@@ -311,6 +311,9 @@ local function place(player: Player, model: Model)
 	-- quoi que ce soit. C'est de la qu'il partira pour glisser au sol.
 	local startCF = model:GetPivot()
 	local finalCF: CFrame? = nil
+	-- LE POINT OU LA POUSSIERE SORTIRA, retenu pendant qu'on connait encore le sol. Le mesurer plus tard
+	-- obligerait a redemander la hauteur du seau EN PLEIN TRAJET, ou il n'est plus ni en haut ni en bas.
+	local fxPoint: Vector3? = nil
 
 	detach(state)
 	carried[model] = nil
@@ -362,6 +365,12 @@ local function place(player: Player, model: Model)
 		end
 		model:PivotTo(startCF)
 		finalCF = target
+		-- AU SOL, pas au milieu du seau : `groundY` est la hauteur exacte que le raycast a trouvee. Sans sol
+		-- trouve, on se rabat sur la pose finale -- la poussiere sortira au niveau du seau, ce qui est moins juste
+		-- mais toujours mieux que rien.
+		fxPoint = if groundY
+			then Vector3.new(target.Position.X, groundY, target.Position.Z)
+			else target.Position
 	end
 
 	restore(state)
@@ -387,13 +396,25 @@ local function place(player: Player, model: Model)
 	local token = (slideTokens[model] or 0) + 1
 	slideTokens[model] = token
 
+	-- LA POUSSIERE PART UN PEU AVANT LE CONTACT. Elle sortait a l'instant exact ou le seau touche, et ca se lit en
+	-- retard : une bouffee de particules met le temps de naitre et de s'ecarter, donc le nuage n'existe vraiment
+	-- qu'apres. Partie en avance, elle est deja ouverte quand le seau arrive.
+	--
+	-- L'AVANCE SE COMPTE DEPUIS LA FIN du trajet : retoucher la duree du glissement ne la decale pas. Et le jeton
+	-- est relu APRES l'attente -- un seau repris en plein trajet ne doit pas laisser partir la poussiere de sa
+	-- pose annulee.
+	local slideTime = math.max(BinConfigs.PLACE_TWEEN_TIME, BinConfigs.PLACE_TWEEN_ROT_TIME)
+	local point = fxPoint
+	if point then
+		task.delay(math.max(0, slideTime - BinConfigs.PLACE_FX_LEAD), function()
+			if slideTokens[model] == token then
+				DropEffectUtils.broadcast(point :: Vector3)
+			end
+		end)
+	end
+
 	slideToGround(model, startCF, target, token, function()
 		slideTokens[model] = nil
-		-- LA POUSSIERE PART QUAND IL TOUCHE, pas quand on le lache. Entre les deux il y a tout le glissement vers
-		-- le sol : l'effet serait sorti dans les mains du joueur, une seconde avant l'impact qu'il illustre.
-		--
-		-- Au point le plus BAS du seau, mesure sur place : `target` est la pose du modele, donc son milieu.
-		DropEffectUtils.broadcast(Vector3.new(target.Position.X, lowestY(model), target.Position.Z))
 
 		-- MESURE, pas supposition. Si le seau parait encore penche, ces nombres disent OU est l'angle : dans la
 		-- pose (tangage/roulis non nuls sur la racine) ou dans le MODEL lui-meme (racine a plat mais mesh penche

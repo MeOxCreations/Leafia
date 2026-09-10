@@ -241,6 +241,15 @@ return {
 	-- A 0.001 le redressement tient dans la premiere image : le seau est deja droit quand il commence a
 	-- descendre. C'est le reglage voulu -- on ne veut PAS voir la rotation, seulement la descente.
 	PLACE_TWEEN_ROT_TIME = 0.001,
+	-- DE COMBIEN LA POUSSIERE PREND DE L'AVANCE sur l'arrivee au sol, en secondes.
+	--
+	-- Elle partait a l'instant EXACT du contact, et ca se voit en retard : une bouffee de particules met le temps
+	-- de naitre et de s'ecarter, donc le nuage n'existe vraiment qu'apres. Les faire partir un peu avant les rend
+	-- deja ouvertes quand le seau touche -- c'est le nuage qu'on regarde, pas l'instant de l'emission.
+	--
+	-- Comptee DEPUIS LA FIN du trajet, pas depuis son debut : rallonger PLACE_TWEEN_TIME ne decale donc rien.
+	-- Plus grande que le trajet, elle part au tout debut -- jamais avant le lacher.
+	PLACE_FX_LEAD = 0.2,
 
 	-- ANCRE UNE FOIS POSE. Le seau est DESANCRE pour etre porte (une part ancree ignore sa soudure). A la
 	-- repose, on lui rendait son etat d'origine -- et s'il etait LIBRE dans Studio, la physique reprend la main
