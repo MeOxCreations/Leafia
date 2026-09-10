@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.717 — Fin des zigzag, il suit de moins pres, et il felicite le joueur
+
+### Les zigzag : trois causes, toutes de moi
+
+1. **La cible etait re-choisie a CHAQUE IMAGE**, depuis la position du joueur. Avec deux machines a peu pres a
+   egale distance, elle changeait d'une image a l'autre : il partait vers l'une, puis l'autre, sans avancer. La
+   machine visee est maintenant GARDEE -- on ne la remet en question que si elle est detruite ou prise, et jamais
+   plus souvent que `FOLLOW_RESCAN` (0.75 s).
+2. **Son cap etait pose d'un coup**, vers la machine quand il avance, vers le joueur quand il s'arrete. A la
+   limite entre les deux, il alternait donc entre deux orientations une image sur l'autre -- ce qui se voit
+   exactement comme un tremblement. Il tourne maintenant PROGRESSIVEMENT (`FOLLOW_TURN`), et deux cibles qui
+   s'alternent ne produisent plus qu'une moyenne stable.
+3. **La pose etait ecrite a deux endroits** (arrete / en marche), donc deux calculs a garder d'accord. Il n'y en a
+   plus qu'un : arrete, le pas vaut zero, et le reste du calcul est identique.
+
+Bonus : le balayage de tout le Workspace ne se fait plus soixante fois par seconde pour une reponse qui ne change
+pas.
+
+### Il suit de moins pres
+
+`FOLLOW_MOWER_DIST` passe de 7 a 12, `FOLLOW_SPEED` de 11 a 8.
+
+### Il felicite le joueur
+
+`Oldman_scene_speech_Perfect` part a l'instant ou le moteur prend -- la seule fois du tuto ou il est content.
+Dite ICI, dans le meme geste que la tache qui passe en gris : l'image et la voix disent alors la meme chose.
+
+Une seule fois : le moteur peut caler et repartir, et le feliciter a chaque fois viderait la phrase de ce qu'elle
+dit. Le garde de la tache s'en occupe -- elle ne se termine qu'une fois.
+
+DEPEND D'UN ASSET : le son doit exister sous SoundService.Sounds.Scenes.Scene1.Voices dans la place du tuto.
+
 ## 0.0.716 — Ce n'est plus le joueur qu'il suit, c'est la tondeuse qui l'attire
 
 La premiere version suivait le joueur, et ca se voyait : une cible qui bouge a chaque image donne un PNJ

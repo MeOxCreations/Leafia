@@ -567,6 +567,11 @@ local followConn: RBXScriptConnection? = nil
 local followTrack: AnimationTrack? = nil
 local followGroundOffset = 0
 local followStopped = false -- il est arrive : sert d'hysteresis, il faut REdepasser la distance pour repartir
+-- LA MACHINE QU'IL VISE, GARDEE. On ne la re-cherche qu'a intervalle, et on ne CHANGE que si celle qu'on avait
+-- ne fait plus l'affaire : re-choisir a chaque image faisait alterner la cible entre deux machines proches, donc
+-- zigzaguer sur place.
+local followMower: BasePart? = nil
+local followScanAt = 0
 
 local function stopFollow()
 	if followConn then
@@ -575,6 +580,7 @@ local function stopFollow()
 	end
 	local track = followTrack
 	followTrack = nil
+	followMower = nil
 	if track then
 		-- L'idle tourne DESSOUS (priorite Idle contre Movement) : arreter le pas suffit a le remettre au repos,
 		-- il n'y a rien a reposer.
@@ -644,6 +650,38 @@ local function nearestFreeMower(from: Vector3): BasePart?
 	return best
 end
 
+-- La machine qu'il vise, gardee d'une image sur l'autre.
+--
+-- ON NE LA REMET EN QUESTION QUE SI ELLE NE FAIT PLUS L'AFFAIRE -- detruite, ou prise par quelqu'un -- et jamais
+-- plus souvent que `FOLLOW_RESCAN`. Deux raisons, et la premiere est un bug qu'on vient de payer : re-choisir a
+-- chaque image faisait alterner la cible entre deux machines a peu pres a egale distance, donc zigzaguer sur
+-- place. La seconde est le cout : un balayage de tout le Workspace par image, pour une reponse qui ne change pas
+-- soixante fois par seconde.
+local function currentMower(from: Vector3): BasePart?
+	local kept = followMower
+	local usable = kept ~= nil
+		and (kept :: BasePart).Parent ~= nil
+		and (function(): boolean
+			local model = (kept :: BasePart):FindFirstAncestorOfClass("Model")
+			return model ~= nil and model:GetAttribute(MowConfigs.CARRIED_ATTRIBUTE) == nil
+		end)()
+	if usable and os.clock() < followScanAt then
+		return kept
+	end
+	if not usable then
+		followMower = nil
+	end
+	if os.clock() >= followScanAt then
+		followScanAt = os.clock() + TutorialConfigs.FOLLOW_RESCAN
+		-- ON NE CHANGE QUE SI ON N'EN A PLUS : une machine gardee reste la cible tant qu'elle est libre, meme si
+		-- une autre devient plus proche. Sinon on retrouve l'alternance qu'on vient de supprimer.
+		if not followMower then
+			followMower = nearestFreeMower(from)
+		end
+	end
+	return followMower
+end
+
 startFollow = function(player: Player, model: Model)
 	if followConn then
 		return -- deja en route : une seconde boucle se battrait avec la premiere pour la meme pose
@@ -689,7 +727,7 @@ startFollow = function(player: Player, model: Model)
 
 		-- LA MACHINE EST CHERCHEE DEPUIS LE JOUEUR, pas depuis lui : c'est celle vers laquelle le JOUEUR se
 		-- dirige qui compte, et c'est aussi celle que son repere a l'ecran lui montre.
-		local mower = nearestFreeMower(hrp.Position)
+		local mower = currentMower(hrp.Position)
 		if not mower then
 			setFollowWalking(model, false)
 			return -- aucune machine libre : rien a viser, mais on reste branche (elle peut etre reposee)
@@ -704,33 +742,50 @@ startFollow = function(player: Player, model: Model)
 		-- elle, arrete pile a la distance d'arret, il repartirait au moindre centimetre.
 		local arriveDist = TutorialConfigs.FOLLOW_MOWER_DIST
 			+ (if followStopped then TutorialConfigs.FOLLOW_HYST else 0)
-		if mowerDist <= arriveDist or playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER or mowerDist < 1e-3 then
-			followStopped = true
-			setFollowWalking(model, false)
-			-- ARRETE, IL REGARDE LE JOUEUR. C'est lui qu'il surveille -- un PNJ qui garde le dos tourne pendant
-			-- qu'on tourne autour de lui cesse d'avoir l'air de nous accompagner.
-			local toPlayer = Vector3.new(hrp.Position.X - here.X, 0, hrp.Position.Z - here.Z)
-			if toPlayer.Magnitude >= 1e-3 then
-				local look = CFrame.lookAt(here, here + toPlayer.Unit)
-				model:PivotTo(look * rootPart.CFrame:Inverse() * model:GetPivot())
-			end
-			return
-		end
-		followStopped = false
+		local arrived = mowerDist <= arriveDist
+			or playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER
+			or mowerDist < 1e-3
+		followStopped = arrived
 
-		-- ON AVANCE D'UN PAS DE CETTE IMAGE, jamais jusqu'a la cible : `dt` fait que la vitesse est la meme quel
-		-- que soit le nombre d'images, et on ne depasse pas la distance d'arret.
-		local step = math.min(TutorialConfigs.FOLLOW_SPEED * dt, mowerDist - TutorialConfigs.FOLLOW_MOWER_DIST)
-		local nextPos = here + toMower.Unit * step
-		local nextGround = groundAt(nextPos, { model, character })
-		if nextGround then
-			nextPos = Vector3.new(nextPos.X, nextGround + followGroundOffset, nextPos.Z)
+		-- OU IL AVANCE, ET DE COMBIEN. Arrete, le pas vaut zero : la suite du calcul est alors la meme, ce qui
+		-- evite d'ecrire la pose a deux endroits differents -- et donc de les voir diverger.
+		local step = 0
+		if not arrived then
+			-- `dt` fait que la vitesse est la meme quel que soit le nombre d'images, et on ne depasse jamais la
+			-- distance d'arret.
+			step = math.min(TutorialConfigs.FOLLOW_SPEED * dt, mowerDist - TutorialConfigs.FOLLOW_MOWER_DIST)
 		end
-		local now = CFrame.lookAt(nextPos, nextPos + toMower.Unit)
-		-- ON APPLIQUE UN ECART MONDE et pas un pivot : `PivotTo` passe par `GetPivot`, qui suit la boite
-		-- englobante -- une part ajoutee au modele dans Studio le decalerait.
-		model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
-		setFollowWalking(model, true)
+		local nextPos = if step > 0 then here + toMower.Unit * step else here
+		if step > 0 then
+			local nextGround = groundAt(nextPos, { model, character })
+			if nextGround then
+				nextPos = Vector3.new(nextPos.X, nextGround + followGroundOffset, nextPos.Z)
+			end
+		end
+
+		-- SON CAP : la machine quand il avance, le JOUEUR quand il est arrete -- c'est lui qu'il surveille, et un
+		-- PNJ qui garde le dos tourne pendant qu'on tourne autour de lui cesse d'avoir l'air de nous accompagner.
+		--
+		-- ET IL Y TOURNE PROGRESSIVEMENT. Pose d'un coup, ce cap alternait entre deux directions a la limite de la
+		-- distance d'arret -- une image sur l'autre, ce qui se voyait exactement comme un tremblement. Un demi-tour
+		-- lent transforme cette alternance en une moyenne stable.
+		local toPlayer = Vector3.new(hrp.Position.X - here.X, 0, hrp.Position.Z - here.Z)
+		local aim = if arrived then toPlayer else toMower
+		local facing = rootPart.CFrame
+		if aim.Magnitude >= 1e-3 then
+			local wanted = CFrame.lookAt(nextPos, nextPos + aim.Unit)
+			-- Un lerp de CFrame interpole la rotation par le plus court chemin : pas besoin de manipuler des
+			-- angles, ni de gerer le passage par 180 degres.
+			facing = CFrame.new(nextPos) * (facing - facing.Position)
+			facing = facing:Lerp(wanted, math.clamp(TutorialConfigs.FOLLOW_TURN * dt, 0, 1))
+		else
+			facing = CFrame.new(nextPos) * (facing - facing.Position)
+		end
+
+		-- UNE SEULE ECRITURE DE POSE PAR IMAGE. On applique un ECART MONDE et pas un pivot : `PivotTo` passe par
+		-- `GetPivot`, qui suit la boite englobante -- une part ajoutee au modele dans Studio le decalerait.
+		model:PivotTo(facing * rootPart.CFrame:Inverse() * model:GetPivot())
+		setFollowWalking(model, step > 0)
 	end)
 	print(`[Tutorial] Le grand-pere se dirige vers la tondeuse, derriere {player.Name}.`)
 end

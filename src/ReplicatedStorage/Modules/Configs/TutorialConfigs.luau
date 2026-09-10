@@ -531,6 +531,12 @@ return {
 	-- Son propre ecart minimum, separe de celui de la repose. Les deux repliques encadrent le meme aller-retour
 	-- (lacher puis reprendre) : un reglage partage par les deux finirait par en desservir une.
 	PULL_ROPE_AGAIN_COOLDOWN = 9,
+	-- ET LE MOTEUR PART. Sa replique de satisfaction : c'est la premiere fois du jeu qu'on lui donne raison, et
+	-- c'est le seul moment de tout le tuto ou il est content.
+	--
+	-- UNE SEULE FOIS. Le moteur peut caler et repartir ; le feliciter a chaque fois viderait la phrase de ce
+	-- qu'elle dit.
+	PERFECT_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Perfect" },
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,
@@ -804,7 +810,7 @@ return {
 	-- que lui. Une cible FIXE donne un deplacement lisse, sans qu'on ait rien a lisser.
 	--
 	-- Distance a laquelle il s'arrete de la machine, en studs.
-	FOLLOW_MOWER_DIST = 7,
+	FOLLOW_MOWER_DIST = 12,
 	-- HYSTERESIS : de combien il faut la depasser pour qu'il REPARTE. Sans elle, arrete pile a la distance
 	-- d'arret, il repart au moindre centimetre -- des micro-pas permanents, ce qui est exactement le tic qu'on
 	-- veut eviter.
@@ -815,12 +821,28 @@ return {
 	-- SON TEMPS DE REACTION, en secondes. Il ne s'ebranle pas a la milliseconde ou le joueur bouge : ce petit
 	-- retard est ce qui separe un vieux monsieur d'un chien de garde.
 	FOLLOW_DELAY = 1.2,
+	-- VITESSE A LAQUELLE IL TOURNE, en fraction de l'ecart rattrapee par seconde.
+	--
+	-- IL FAISAIT DES ZIGZAG SANS ELLE. Son cap etait pose d'un coup a chaque image : vers la machine quand il
+	-- avance, vers le joueur quand il s'arrete. A la limite entre les deux, il alternait donc entre deux
+	-- orientations differentes -- une image sur l'autre, ce qui se voit exactement comme un tremblement.
+	--
+	-- En tournant PROGRESSIVEMENT, un changement de cible devient un demi-tour lent, et deux cibles qui
+	-- s'alternent ne produisent plus qu'une moyenne stable.
+	FOLLOW_TURN = 6,
+	-- A QUELLE FREQUENCE il re-cherche la machine, en secondes.
+	--
+	-- DEUXIEME CAUSE DES ZIGZAG : la cible etait re-choisie a CHAQUE IMAGE, depuis la position du joueur. Avec
+	-- deux machines a peu pres a egale distance, elle changeait d'une image a l'autre -- il partait vers l'une,
+	-- puis l'autre, sans avancer. Et un balayage de tout le Workspace par image coute cher pour rien : la reponse
+	-- ne change pas soixante fois par seconde.
+	FOLLOW_RESCAN = 0.75,
 	-- SA VITESSE DE SUIVI, en studs/s. SON PROPRE REGLAGE, separe de sa marche de sortie (OLDMAN_WALK_SPEED, 4) :
 	-- celle-la est LENTE parce qu'elle est le sujet du plan, alors qu'ici il doit tenir le rythme de quelqu'un qui
 	-- traverse un jardin. Un reglage partage par les deux moments aurait fini par les opposer.
 	--
 	-- Un peu sous la vitesse de marche du joueur : il reste derriere, ce qui est exactement l'effet voulu.
-	FOLLOW_SPEED = 11,
+	FOLLOW_SPEED = 8,
 	-- Vitesse de son animation de pas quand il suit, en multiple. Comme pour sa sortie, elle est jouee au RAPPORT
 	-- de sa vitesse reelle sur OLDMAN_WALK_REFERENCE : ce facteur ne fait que l'accentuer, sans toucher au trajet.
 	FOLLOW_ANIM_BOOST = 1.2,

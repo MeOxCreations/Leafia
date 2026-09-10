@@ -1935,6 +1935,9 @@ local function step(dt: number)
 		GroundGuide.hide()
 		WorldMarker.remove(mowerMarker)
 		mowerMarker, mowerMarkerPart = nil, nil
+		-- IL EST CONTENT, et c'est la seule fois du tuto. On le dit ICI, a l'instant ou le moteur prend : la
+		-- tache passe en gris dans le meme geste, donc l'image et la voix disent la meme chose.
+		sayVoice(TutorialConfigs.PERFECT_SOUND)
 		-- ET IL SE TAIT. `math.huge` plutot qu'un drapeau de plus : la boucle compare deja une date, une date
 		-- qui n'arrive jamais est la facon la plus courte de dire "plus jamais".
 		nextImpatientAt = math.huge
