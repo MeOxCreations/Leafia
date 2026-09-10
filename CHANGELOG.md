@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.706 — On ecoute le marqueur EndFocusPlayerEvent
+
+Nouveau marqueur pose dans l'animation du grand-pere. Il ne fait pour l'instant qu'un LOG : on verifie qu'il
+tire, et a quel instant, avant de lui accrocher quoi que ce soit.
+
+Le message donne la MESURE et pas seulement le fait -- l'instant dans la piste, et la longueur de la piste. Si le
+moment ne colle pas a ce qu'on voit, c'est ce nombre qui le dira ; un "ca a tire" ne repond a aucune question.
+
+Un marqueur se lit pendant la lecture (`GetMarkerReachedSignal`), donc localement : aucun appel reseau la-dedans,
+contrairement a la lecture d'une KeyframeSequence, qui peut rater pour une session entiere.
+
 ## 0.0.705 — Retour en arriere : le dialogue repart a l'arrivee
 
 Annulation de la version precedente. Le dialogue du grand-pere, le bandeau de tache et la notification repartent

@@ -1228,6 +1228,15 @@ local function playGrandpa()
 	-- pas rater son coup pour toute une session.
 	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_PRE_EVENT):Connect(preOpenDoor)
 	track:GetMarkerReachedSignal(TutorialConfigs.DOOR_START_EVENT):Connect(openDoor)
+	-- ON DIT QUAND LE MARQUEUR TOMBE, et A QUEL INSTANT de la piste. La mesure et pas seulement le fait : si le
+	-- moment ne colle pas a ce qu'on voit, c'est ce nombre qui le dira -- pas un "ca a tire" qui ne repond a
+	-- aucune question. Rien n'est encore branche dessus.
+	track:GetMarkerReachedSignal(TutorialConfigs.END_FOCUS_EVENT):Connect(function()
+		warn(
+			`[Tutorial] {TutorialConfigs.END_FOCUS_EVENT} atteint a `
+				.. `{string.format("%.2f", track.TimePosition)} s (piste de {string.format("%.2f", track.Length)} s)`
+		)
+	end)
 	-- C'EST LA FIN DE L'ANIMATION QUI TERMINE LA SCENE. Une duree en dur et une animation finissent toujours par
 	-- se contredire, et c'est la duree qui a tort : elle ne suit pas quand on retouche l'animation.
 	track.Stopped:Connect(endScene)

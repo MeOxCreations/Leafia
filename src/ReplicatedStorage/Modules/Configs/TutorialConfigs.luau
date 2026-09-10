@@ -411,6 +411,13 @@ return {
 	CHAPTER_DELAY = 0.8,
 	DOOR_PRE_EVENT = "PreOpenEvent",
 	DOOR_START_EVENT = "OuvertureDoorEvent",
+	-- FIN DU CADRAGE SUR LE JOUEUR, pose dans l'animation du grand-pere. Pour l'instant il ne fait qu'un LOG : on
+	-- verifie d'abord qu'il tire, et a quel instant, avant de lui accrocher quoi que ce soit.
+	--
+	-- Un marqueur se lit pendant la lecture (`GetMarkerReachedSignal`), donc localement. Il n'y a aucun appel
+	-- reseau la-dedans -- contrairement a la lecture d'une KeyframeSequence, qui peut rater pour une session
+	-- entiere.
+	END_FOCUS_EVENT = "EndFocusPlayerEvent",
 
 	-- Le grincement de la porte qui s'ouvre. Joue au DEBUT du mouvement, avec lui : un bruit qui arrive une fois
 	-- la porte deja entrebaillee sonne en retard. Spatial, au niveau de la porte.
