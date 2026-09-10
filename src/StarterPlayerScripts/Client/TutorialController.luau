@@ -1539,6 +1539,8 @@ end
 -- "laquelle" ici -- sinon la moindre retouche de cadence obligerait a relire le tirage.
 local nextImpatientAt = math.huge
 local lastImpatient = 0
+-- Il n'a qu'une phrase a dire quand le joueur prend enfin la machine, et il ne la dit qu'une fois.
+local saidPullRope = false
 
 -- JAMAIS DEUX FOIS LA MEME D'AFFILEE. Un tirage au hasard pur repete, et une repetition immediate s'entend comme
 -- un bug ("il a bugue, il redit pareil") -- alors que c'est le hasard qui fait son travail.
@@ -1648,6 +1650,15 @@ local function step(dt: number)
 			-- ON REPOUSSE L'ECHEANCE au lieu de la laisser passer. Sans ca, lacher la machine ferait partir une
 			-- phrase dans la seconde -- toutes celles qui n'ont pas pu sortir pendant qu'il la tenait.
 			nextImpatientAt = now + TutorialConfigs.IMPATIENT_EVERY
+			-- IL LE VOIT ENFIN PRENDRE LA MACHINE. Cette phrase COUPE l'impatience en cours, et c'est voulu : il
+			-- repond a ce qu'il vient de voir, il ne finit pas de raler dans le vide.
+			--
+			-- Une seule fois par partie. Lachee et reprise, la tondeuse ne la relance pas : une phrase scenarisee
+			-- qui se rejoue a chaque prise cesse d'etre une reaction et devient un bruit de porte.
+			if not saidPullRope then
+				saidPullRope = true
+				sayVoice(TutorialConfigs.PULL_ROPE_SOUND)
+			end
 		elseif now >= nextImpatientAt then
 			nextImpatientAt = now
 				+ TutorialConfigs.IMPATIENT_EVERY
@@ -1947,6 +1958,7 @@ function TutorialController.stop()
 	secondSpeechOn = false
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
+	saidPullRope = false
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

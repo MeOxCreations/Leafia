@@ -466,6 +466,13 @@ return {
 	-- Lu dans le repere de la CAMERA (voir AngerBurst) : il reste du meme cote de l'ecran quel que soit l'angle
 	-- de vue. Positif = a sa droite a l'ecran.
 	IMPATIENT_BURST_SIDE = 2.2,
+
+	-- ===== IL LE VOIT ENFIN PRENDRE LA MACHINE =====
+	-- Sa replique quand le joueur met la main sur la tondeuse : il arrete de raler et lui dit quoi faire ensuite.
+	--
+	-- UNE SEULE FOIS PAR PARTIE. Lachez la machine, reprenez-la : il ne recommence pas. Une phrase scenarisee qui
+	-- se rejoue a chaque prise cesse d'etre une reaction et devient un bruit de porte.
+	PULL_ROPE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PullTheRope" },
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,

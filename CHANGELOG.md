@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.678 — "Enfin ! Tire sur la corde"
+
+Le grand-pere lance `Oldman_scene_speech_PullTheRope` a l'instant ou le joueur met la main sur la tondeuse.
+
+**Elle COUPE l'impatience en cours**, et c'est voulu : il repond a ce qu'il vient de voir, il ne finit pas de
+raler dans le vide. Toutes ses voix passent par le meme point, qui ferme la precedente -- un personnage n'a
+qu'une bouche.
+
+**Une seule fois par partie.** Lachez la machine, reprenez-la : il ne recommence pas. Une phrase scenarisee qui
+se rejoue a chaque prise cesse d'etre une reaction et devient un bruit de porte.
+
+Elle declenche son geste d'explication toute seule, comme les autres repliques d'apres-scene : la duree vient du
+fichier son, il n'y a rien a regler.
+
+DEPEND D'UN ASSET : le son doit exister sous SoundService.Sounds.Scenes.Scene1.Voices dans la place du tuto.
+
 ## 0.0.677 — L'eclair penche, retrecit, et se pose a cote de sa tete
 
 | Reglage | Avant | Apres |
