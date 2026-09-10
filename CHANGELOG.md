@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.698 — La camera ne reste plus coincee en scene
+
+Vrai bug, pas un reglage. La condition "il a fini de parler" exigeait que la SECONDE replique soit partie -- et
+elle peut ne JAMAIS partir : il suffit que la porte ne s'entrebaille pas (marqueur d'animation absent, scene
+ecourtee) pour que la chaine ne soit jamais lancee. La condition restait alors fausse pour toujours, et la camera
+ne rendait la main qu'au bout du filet de vingt secondes. Sans une erreur pour le dire : juste une camera qui
+"reste en scene".
+
+A la place, une DATE que chaque replique repousse, comme le fait deja le geste d'explication cote serveur. Elle
+vaut zero au depart, donc "il a fini" est vrai par defaut : une scene ou personne ne parle n'attend rien.
+
+**`TimeLength` vaut zero tant que l'asset n'est pas charge**, donc on pose une duree SUPPOSEE (2 s) a l'instant du
+lancement, remplacee par la vraie des que le fichier est la. Sans elle, la scene croirait qu'il a fini de parler
+avant sa premiere syllabe -- l'inverse exact du bug qu'on repare.
+
+**La mesure tourne pendant la scene, le GESTE non.** Deux besoins dans la meme donnee : la scene doit savoir
+jusqu'a quand il parle meme pendant qu'elle joue, alors que le geste d'explication ecraserait l'animation de la
+porte (deux pistes en priorite `Action` se MELANGENT, correction de la version 0.0.675). On mesure donc toujours,
+on n'envoie que dehors.
+
 ## 0.0.697 — La camera rend la main des qu'il s'est tu
 
 Elle attendait la FIN du glissement de 2.5 s en plus de la fin de la parole. Le joueur restait donc immobile

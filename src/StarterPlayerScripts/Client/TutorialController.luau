@@ -133,6 +133,12 @@ local trySound: Sound? = nil
 local speechSound: Sound? = nil
 -- Le remote qui dit au serveur combien de temps il parle. Resolu en tache de fond au boot (voir init).
 local talkRemote: RemoteEvent? = nil
+-- JUSQU'A QUAND IL PARLE, en horloge. Chaque replique la repousse, et la plus lointaine gagne -- meme mecanique
+-- que le geste d'explication cote serveur, et pour la meme raison : deux minuteurs separes laisseraient le
+-- premier a expirer decider a la place des autres.
+--
+-- Zero au depart, donc "il a fini" est vrai par defaut : une scene ou personne ne parle n'attend rien.
+local speakingUntil = 0
 -- LA SECONDE REPLIQUE D'OUVERTURE EST-ELLE PARTIE ? Garde : elle ne doit sortir qu'une fois, et deux chemins y
 -- menent -- la fin du premier son, et le filet qui couvre le cas ou cette fin ne tire jamais.
 --
@@ -655,15 +661,16 @@ local WALK_TUNE: ShotTune = {
 
 -- RENDRE LA MAIN, pour de bon. Separe de `endScene` parce que le plan de sortie s'intercale entre les deux : le
 -- joueur reste bloque et les barres restent en place tant qu'on est encore au cinema.
--- LE GRAND-PERE A-T-IL FINI DE PARLER ? Vrai quand plus rien ne joue ET que la suite de sa chaine est deja
--- partie -- ses deux repliques d'ouverture s'enchainent, donc "aucun son en cours" ne suffit pas : entre les
--- deux il y a un silence pendant lequel il n'a pas fini du tout.
+-- LE GRAND-PERE A-T-IL FINI DE PARLER ? On compare a une DATE que chaque replique repousse.
+--
+-- LA VERSION D'AVANT EXIGEAIT QUE LA SECONDE REPLIQUE SOIT PARTIE, et c'etait un piege : elle peut ne JAMAIS
+-- partir. Il suffit que la porte ne s'entrebaille pas -- marqueur d'animation absent, scene ecourtee -- pour que
+-- la chaine ne soit jamais lancee. La condition restait alors fausse pour toujours, et la camera ne rendait la
+-- main qu'au bout du filet de vingt secondes : "la cam reste en scene", sans une erreur pour le dire.
+--
+-- Une date, elle, est vraie par defaut : personne n'a parle, donc il n'y a rien a attendre.
 local function speechOver(): boolean
-	if not secondSpeechOn then
-		return false -- la seconde replique n'est pas encore partie
-	end
-	local sound = speechSound
-	return not (sound and sound.Parent and sound.IsPlaying)
+	return os.clock() >= speakingUntil
 end
 
 -- Appelle `fn` quand il s'est TU, ou au bout du filet.
@@ -1018,22 +1025,46 @@ end
 -- `TimeLength` VAUT ZERO TANT QUE L'ASSET N'EST PAS CHARGE, et c'est tout le piege : mesuree trop tot, la
 -- replique demanderait zero seconde de geste et le grand-pere parlerait sans bouger. On attend donc `Loaded`
 -- quand il ne l'est pas encore -- ce qui est le cas normal la toute premiere fois qu'un son se joue.
+-- COMBIEN DE TEMPS ENCORE IL PARLE. Repousse la date de fin, et previent le serveur pour le geste.
+--
+-- `TimeLength` VAUT ZERO TANT QUE L'ASSET N'EST PAS CHARGE, et c'est tout le piege : mesuree trop tot, la
+-- replique compterait zero seconde. On pose donc une duree SUPPOSEE tout de suite, remplacee par la vraie des
+-- que le fichier est la. Sans elle, la scene croirait qu'il a fini avant sa premiere syllabe.
+local function markSpeaking(seconds: number)
+	speakingUntil = math.max(speakingUntil, os.clock() + seconds)
+end
+
 local function announceTalk(sound: Sound?)
-	local remote = talkRemote
-	if not (sound and remote) then
+	if not sound then
 		return
 	end
 	local voice = sound :: Sound
-	if voice.IsLoaded then
-		remote:FireServer(voice.TimeLength)
-	else
-		voice.Loaded:Once(function()
-			-- On ne retire pas le temps deja ecoule : le son a commence a jouer pendant le chargement, donc en
-			-- theorie il en reste moins. En pratique l'ecart est de quelques dizaines de millisecondes, et un
-			-- geste qui deborde un peu vaut mieux qu'un geste coupe au dernier mot.
-			remote:FireServer(voice.TimeLength)
-		end)
+
+	-- LE GESTE NE PART PAS PENDANT LA SCENE, la DATE si. Deux besoins differents dans la meme mesure : la scene a
+	-- besoin de savoir jusqu'a quand il parle, MEME pendant qu'elle joue -- c'est ce qui decide quand rendre la
+	-- main -- alors que le geste d'explication, lui, ecraserait l'animation de la porte (deux pistes en priorite
+	-- `Action` se MELANGENT). On mesure donc toujours, on n'envoie que dehors.
+	local function apply(seconds: number)
+		markSpeaking(seconds)
+		local remote = talkRemote
+		if remote and sceneEnded then
+			remote:FireServer(seconds)
+		end
 	end
+
+	if voice.IsLoaded then
+		apply(voice.TimeLength)
+		return
+	end
+	-- Le temps de connaitre la vraie duree, on en suppose une : mesuree avant le chargement, `TimeLength` vaut
+	-- zero, et la scene croirait qu'il a fini de parler avant sa premiere syllabe.
+	apply(TutorialConfigs.SPEECH_ASSUME)
+	voice.Loaded:Once(function()
+		-- On ne retire pas le temps deja ecoule : le son a commence a jouer pendant le chargement, donc en
+		-- theorie il en reste moins. En pratique l'ecart est de quelques dizaines de millisecondes, et un geste
+		-- qui deborde un peu vaut mieux qu'un geste coupe au dernier mot.
+		apply(voice.TimeLength)
+	end)
 end
 
 -- IL PARLE. Une seule voix a la fois : on coupe celle qui parle avant d'en lancer une autre.
@@ -1054,7 +1085,8 @@ local function sayVoice(path: { string }): Sound?
 	-- defait exactement ce qu'on vient de faire. Ici et nulle part ailleurs -- toutes ses repliques passent par
 	-- cette fonction, donc il n'y a qu'un endroit ou y penser.
 	SoundDuck.keepLoud(speechSound)
-	-- ET IL GESTICULE PENDANT CE TEMPS-LA -- MAIS SEULEMENT UNE FOIS LA SCENE FINIE.
+	-- ET ON MESURE COMBIEN DE TEMPS IL PARLE : la scene s'en sert pour savoir quand rendre la main, et le serveur
+	-- pour la duree du geste -- mais ce dernier, seulement une fois la scene finie.
 	--
 	-- PENDANT LA SCENE, IL A DEJA UNE ANIMATION : celle qui le fait se battre avec sa poignee puis ouvrir sa
 	-- porte, en priorite `Action`. L'explication est en `Action` elle aussi, et a priorite EGALE Roblox ne
@@ -1066,9 +1098,7 @@ local function sayVoice(path: { string }): Sound?
 	--
 	-- La longueur annoncee est celle du FICHIER : c'est la seule valeur qui reste juste quand on reenregistre une
 	-- voix, alors qu'une duree ecrite en config serait a refaire a chaque fois.
-	if sceneEnded then
-		announceTalk(speechSound)
-	end
+	announceTalk(speechSound)
 	return speechSound
 end
 

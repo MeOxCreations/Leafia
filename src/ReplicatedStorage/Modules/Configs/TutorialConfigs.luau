@@ -281,6 +281,10 @@ return {
 	-- pas), passe ce delai on rend la main quoi qu'il arrive. Un joueur bloque par un fichier son manquant est le
 	-- pire des deux maux.
 	SPEECH_WAIT_MAX = 20,
+	-- DUREE SUPPOSEE d'une replique, le temps de connaitre la vraie. `TimeLength` vaut zero jusqu'a ce que l'asset
+	-- soit charge : entre l'instant ou l'on lance un son et celui ou l'on sait combien il dure, il faut bien
+	-- compter QUELQUE CHOSE -- sinon la scene croirait qu'il a fini de parler avant sa premiere syllabe.
+	SPEECH_ASSUME = 2,
 
 	-- ===== LE JOUEUR S'EFFACE, MAIS PAS TOUT DE SUITE =====
 	-- LA SCENE A DEUX TEMPS, et le personnage n'a pas le meme role dans les deux.
