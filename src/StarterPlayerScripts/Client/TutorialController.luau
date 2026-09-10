@@ -126,6 +126,10 @@ local shakeTrack: AnimationTrack? = nil
 local tryTrack: AnimationTrack? = nil
 -- Surveille la fin de l'animation d'ouverture, pour la figer avant qu'elle ne reboucle.
 local trySound: Sound? = nil
+-- LA REPLIQUE EN COURS a l'ouverture de la porte. Gardee pour pouvoir la couper si la scene est abandonnee : une
+-- voix qui continue sur un plan qui n'existe plus s'entend comme un bug, et personne ne fait le lien avec une
+-- scene finie.
+local speechSound: Sound? = nil
 -- Emetteurs et eclairs de l'impact, resolus une seule fois puis gardes. `nil` = pas encore cherches.
 local knockEmitters: { ParticleEmitter }? = nil
 -- Le conteneur lui-meme, retenu a la resolution : c'est LUI qui donne le point d'impact a l'ecran. Le relire par
@@ -880,6 +884,50 @@ local function preOpenDoor()
 	swingDoor(TutorialConfigs.DOOR_HALF_ANGLE, TutorialConfigs.DOOR_HALF_TIME)
 end
 
+-- SES DEUX REPLIQUES D'OUVERTURE, l'une apres l'autre.
+--
+-- ENCHAINEES SUR LA FIN DE LA PREMIERE, jamais sur une duree ecrite ici : la seconde part quand il a VRAIMENT
+-- fini de parler, quel que soit le fichier qu'on met. Un delai a la main serait a refaire a chaque
+-- reenregistrement, et il se tromperait en silence -- soit en lui coupant la parole, soit en laissant un blanc.
+--
+-- FILET : si le son n'arrive jamais, sa fin ne tire pas et la seconde replique ne partirait JAMAIS. Passe le
+-- delai, on regarde s'il a seulement CHARGE. On ne coupe pas un son qui joue encore : le filet repond a "il
+-- n'est jamais arrive", pas a "il est plus long que prevu".
+local function playDoorSpeech()
+	local token = doorSwingToken
+	local first = SoundUtils.play(TutorialConfigs.SPEECH0_SOUND, SCENE_2D)
+	speechSound = first
+
+	-- UNE SEULE FOIS, quel que soit le chemin qui y mene : la fin du son, le filet, ou l'absence de fichier. Sans
+	-- ce garde, un son qui charge tard jouerait la seconde replique DEUX fois, l'une par-dessus l'autre.
+	local started = false
+	local function second()
+		if started or doorSwingToken ~= token then
+			return
+		end
+		started = true
+		speechSound = SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
+	end
+
+	if not first then
+		-- Introuvable, et SoundUtils l'a deja dit : on ne fait pas attendre la suite pour un fichier qui n'existe
+		-- pas.
+		second()
+		return
+	end
+	-- Sorti en variable, et pas `(first :: Sound)` en debut de ligne : une instruction qui commence par une
+	-- parenthese se lit comme la SUITE de la ligne du dessus, donc comme un appel de fonction.
+	local voice = first :: Sound
+	voice.Ended:Once(function()
+		task.delay(TutorialConfigs.SPEECH_GAP, second)
+	end)
+	task.delay(TutorialConfigs.SPEECH_CHAIN_TIMEOUT, function()
+		if not voice.IsLoaded then
+			second()
+		end
+	end)
+end
+
 -- SA MAIN POUSSE LE BATTANT : LA PORTE S'OUVRE EN GRAND. Second marqueur. Aucune attente entre les deux n'est
 -- codee ici : elle dure ce que le grand-pere met entre ses deux gestes.
 local function openDoor()
@@ -915,7 +963,7 @@ local function openDoor()
 			if doorSwingToken ~= speechToken then
 				return
 			end
-			SoundUtils.play(TutorialConfigs.SPEECH_SOUND, SCENE_2D)
+			playDoorSpeech()
 		end)
 	end)
 end
@@ -1654,6 +1702,12 @@ function TutorialController.stop()
 	if sfx and sfx.Parent then
 		sfx:Stop()
 		sfx:Destroy()
+	end
+	local voice = speechSound
+	speechSound = nil
+	if voice and voice.Parent then
+		voice:Stop()
+		voice:Destroy()
 	end
 	local halo = highlight
 	if halo and halo.Parent then

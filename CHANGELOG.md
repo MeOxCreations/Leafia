@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.651 — Le grand-pere dit deux choses en ouvrant sa porte
+
+Une nouvelle replique (`Oldman_scene_speech_0`) part a l'ouverture. L'ancienne (`speech_1`) prend la suite quand
+il a fini de parler.
+
+**Enchainees sur la FIN de la premiere, jamais sur une duree ecrite dans la config.** La seconde part quand il a
+vraiment fini, quel que soit le fichier qu'on met. Un delai a la main serait a refaire a chaque
+reenregistrement, et il se tromperait en silence -- soit en lui coupant la parole, soit en laissant un blanc.
+
+**Un filet, parce qu'un son qui n'arrive jamais ne finit jamais.** Sans lui, un fichier absent emporterait la
+seconde replique avec lui. Passe `SPEECH_CHAIN_TIMEOUT` (6 s), on regarde si le son a seulement CHARGE : s'il n'a
+pas charge, on enchaine sans l'attendre. On ne coupe PAS un son qui joue encore -- le filet repond a "il n'est
+jamais arrive", pas a "il est plus long que prevu". Une borne ne doit jamais etre plus serree que la donnee
+qu'elle borne.
+
+`SPEECH_GAP` (0.35 s) est le souffle entre les deux. Sans blanc elles se lisent comme une seule phrase coupee au
+montage ; trop espacees, on croit qu'il a fini.
+
+La replique en cours est maintenant gardee sous la main et COUPEE si la scene est abandonnee. Une voix qui
+continue sur un plan qui n'existe plus s'entend comme un bug, et personne ne fait le lien avec une scene finie.
+
+DEPEND D'UN ASSET : `Oldman_scene_speech_0` doit exister sous SoundService.Sounds.Scenes.Scene1.Voices. Rojo ne
+synchronise pas les sons.
+
 ## 0.0.650 — Le rideau de chargement affiche un indicateur qui tourne
 
 Les cinq feuilles qui s'allumaient une par une sont retirees. A la place, la couronne de points que tout le monde

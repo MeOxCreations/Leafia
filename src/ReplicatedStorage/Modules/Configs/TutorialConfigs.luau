@@ -206,7 +206,21 @@ return {
 	-- 2D comme les autres sons de la scene (voir SCENE_2D dans le controller) : une replique RACONTE, elle ne
 	-- vient pas d'un point de la carte. Spatialisee, elle baisserait avec la distance de la camera pendant le plan
 	-- large -- alors qu'on vient justement de tourner l'oreille vers lui.
+	--
+	-- IL DIT DEUX CHOSES, L'UNE APRES L'AUTRE. La premiere (`speech_0`) part a l'ouverture, la seconde
+	-- (`speech_1`) quand la premiere a fini de parler.
+	SPEECH0_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_0" },
 	SPEECH_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_1" },
+	-- Souffle entre les deux repliques. Enchainees sans blanc, elles se lisent comme une seule phrase coupee au
+	-- montage ; trop espacees, on croit qu'il a fini.
+	SPEECH_GAP = 0.35,
+	-- FILET, en secondes. La seconde replique est enchainee sur la FIN de la premiere : si le fichier n'arrive
+	-- jamais, cette fin ne tire pas et la seconde ne partirait JAMAIS. Passe ce delai, on regarde si le son a
+	-- seulement charge -- s'il n'a pas charge, on enchaine sans lui.
+	--
+	-- On ne coupe PAS un son qui joue encore : ce filet ne repond qu'a "il n'est jamais arrive", jamais a "il est
+	-- plus long que prevu". Une borne ne doit jamais etre plus serree que la donnee qu'elle borne.
+	SPEECH_CHAIN_TIMEOUT = 6,
 	-- Respiration entre la fin du mouvement de la porte et sa premiere syllabe. A zero il enchaine sans avoir eu
 	-- le temps de regarder qui est la ; trop haut, le silence devient un blanc.
 	--
