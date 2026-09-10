@@ -462,12 +462,15 @@ return {
 	-- LE GRAND-PERE EST PETIT, et ces studs se comptent depuis sa RootPart -- pas depuis sa tete. Regle sur un
 	-- personnage de taille normale, l'eclair flottait au-dessus de la maison.
 	IMPATIENT_BURST_UP = 3,
-	-- ET SUR LE COTE, en studs. Pose au-dessus de sa tete, l'eclair la couvre a moitie -- or c'est justement son
-	-- visage qu'on veut lire quand il rale. Decale, les deux se voient.
+	-- DECALAGE LATERAL, en studs. A ZERO : l'eclair se pose AU-DESSUS de sa tete, pas a cote.
+	--
+	-- Il a ete decale une version, pour ne pas couvrir son visage. A l'ecran ca ne marchait pas : l'onomatopee
+	-- flottait a cote de lui sans rien designer, alors qu'au-dessus de la tete elle se lit tout de suite comme
+	-- SA pensee. C'est la convention de la bande dessinee, et le joueur la connait deja.
 	--
 	-- Lu dans le repere de la CAMERA (voir AngerBurst) : il reste du meme cote de l'ecran quel que soit l'angle
 	-- de vue. Positif = a sa droite a l'ecran.
-	IMPATIENT_BURST_SIDE = 1.3,
+	IMPATIENT_BURST_SIDE = 0,
 
 	-- ===== IL LE VOIT ENFIN PRENDRE LA MACHINE =====
 	-- Sa replique quand le joueur met la main sur la tondeuse : il arrete de raler et lui dit quoi faire ensuite.

@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.683 — L'eclair repasse au-dessus de sa tete
+
+`IMPATIENT_BURST_SIDE` revient a 0.
+
+Il avait ete decale sur le cote pour ne pas couvrir son visage. A l'ecran ca ne marchait pas : l'onomatopee
+flottait a cote de lui sans rien designer, alors qu'au-dessus de la tete elle se lit tout de suite comme SA
+pensee. C'est la convention de la bande dessinee, et le joueur la connait deja.
+
+Le chemin reste branche -- le decalage se lit dans le repere de la camera, donc il ne peut pas passer derriere le
+personnage -- mais il vaut zero.
+
 ## 0.0.682 — L'eclair de colere : deux fois plus petit, et plus haut
 
 `BURST_SCALE` passe de 0.8 a 0.4, `IMPATIENT_BURST_UP` de 2.2 a 3.
