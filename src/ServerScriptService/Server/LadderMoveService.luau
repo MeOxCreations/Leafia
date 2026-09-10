@@ -15,6 +15,7 @@ local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local DropEffectUtils = require(ReplicatedStorage.Modules.Utils.DropEffectUtils)
 
 local LADDER_PREFIX = "Escabaut"
 local MAX_DIST = 30 -- distance MAX joueur <-> echelle a la prise (anti-triche)
@@ -260,6 +261,9 @@ local function place(player: Player, model: Model)
 	unweld(state, model)
 	carried[model] = nil
 	CarryUtils.release(player, "Ladder")
+	-- LA POUSSIERE PART ICI, apres le `unweld` : avant, l'echelle est encore soudee au porteur et sa boite
+	-- englobante est celle qu'elle a DANS SES MAINS -- l'effet sortirait au niveau de son torse.
+	DropEffectUtils.playUnder(model)
 	if mt then
 		mt:AdjustSpeed(1) -- repart de CLOSE_EVENT vers OPEN_EVENT : depli
 	else

@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.662 — De la poussiere quand on pose un objet au sol
+
+Nouveau module `ReplicatedStorage/Modules/Utils/DropEffectUtils.luau`. Il clone
+`Assets.Effects.DropOnGroundEffect` au point de pose, envoie une bouffee de 15 particules par emetteur, et se
+detruit tout seul quand la derniere est eteinte.
+
+Branche sur le SEAU et sur l'ECHELLE. Il ne connait ni l'un ni l'autre : on lui donne un point, ou un modele
+sous lequel jouer.
+
+**Cote serveur.** L'objet est pose pour tout le monde, donc l'effet doit se voir chez tout le monde. Joue cote
+client, seul celui qui pose verrait la poussiere : les autres verraient une caisse se poser en silence.
+
+**Le clone est ANCRE, et c'est la ligne qui compte.** Une part non ancree TOMBE, et ses emetteurs vont jouer sous
+la map : l'effet se declenche parfaitement, a un endroit que personne ne regarde. Ca se lit comme "l'effet ne
+marche pas" alors qu'il fait exactement son travail -- deja paye sur les coups a la porte.
+
+**Il est rendu invisible.** Le modele est a 0.5 de transparence dans Studio pour qu'on le VOIE en le reglant :
+laisser cette valeur ferait apparaitre un cube gris a chaque pose.
+
+**`Emit` plutot que `Enabled`** : une bouffee dont on maitrise le nombre. Laisser l'emetteur tourner obligerait a
+le couper au bon moment, et ce moment depend de son `Rate` -- donc d'un reglage de Studio qu'aucun code ne peut
+deviner. La duree avant destruction est LUE sur les emetteurs (`Lifetime.Max`), jamais ecrite en dur : un chiffre
+fige couperait l'effet en plein vol le jour ou on allonge une particule.
+
+**Deux points de declenchement differents, pour la meme raison.**
+
+- Le SEAU glisse vers le sol apres qu'on le lache. L'effet part a l'ARRIVEE du glissement, pas au lacher, sinon
+  il sortirait dans les mains du joueur une seconde avant l'impact qu'il illustre.
+- L'ECHELLE, elle, joue apres le `unweld` : avant, elle est encore soudee au porteur et sa boite englobante est
+  celle qu'elle a DANS SES MAINS -- l'effet sortirait au niveau de son torse.
+
+DEPEND D'UN ASSET : `DropOnGroundEffect` doit exister sous ReplicatedStorage.Assets.Effects dans chaque place.
+Rojo ne synchronise pas les Assets. S'il manque, la console le dit UNE fois.
+
 ## 0.0.661 — Le cadre s'ouvre des que le battant s'entrebaille
 
 Le retrait des barres passe de la GRANDE ouverture a l'ENTREBAILLEMENT, le premier mouvement du battant.
