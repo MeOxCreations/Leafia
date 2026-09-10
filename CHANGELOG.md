@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.660 — Le cadre s'ouvre avec la porte
+
+A la grande ouverture, les barres noires se RETRACTENT de moitie au lieu de rester figees. L'image s'agrandit a
+l'instant ou le grand-pere apparait : ce que la porte fait au decor, le cadre le fait a l'ecran.
+
+Elles ne PARTENT pas -- on est encore dans la scene, et ce qui dit qu'elle en est une doit rester.
+
+**Nouvelle primitive `Letterbox.setHeight(amount, seconds)`**, une fraction de la hauteur normale. Ce n'est pas
+`hide` : `hide` dit "la scene est finie", il eteint le ScreenGui et repond desormais faux a `isShown` -- qui sert
+de filet au respawn en pleine scene. Les melanger ferait croire a la suite du code que la scene est terminee.
+
+Une FRACTION et pas une hauteur absolue : `BAR_HEIGHT` reste la seule reference. Un appelant qui donnerait des
+pixels devrait la garder d'accord avec elle, et les deux finiraient par diverger.
+
+| Reglage | Valeur | Role |
+|---|---|---|
+| `REVEAL_BARS` | 0.5 | Ce qu'il reste des bandes. A 0 la scene perd ce qui dit qu'elle en est une, a 1 il ne se passe rien |
+| `REVEAL_BARS_TIME` | 0.7 s | Un peu plus lent que le resserrement du champ de vision : a la meme vitesse, les deux se liraient comme un seul effet |
+
 ## 0.0.659 — Il ne s'y reprend plus a deux fois
 
 `TRY_OPEN_TIMES` passe de 2 a 1 : une seule secousse de poignee, un seul bruit de serrure.

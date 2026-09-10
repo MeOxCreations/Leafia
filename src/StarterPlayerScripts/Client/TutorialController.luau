@@ -991,6 +991,12 @@ local function openDoor()
 			-(TutorialConfigs.SCENE_ZOOM + TutorialConfigs.REVEAL_ZOOM),
 			TutorialConfigs.REVEAL_ZOOM_SPEED
 		)
+		-- ET LE CADRE S'OUVRE AVEC ELLE. Les bandes se RETRACTENT, elles ne partent pas : la scene continue, on
+		-- rend juste de l'image au joueur a l'instant ou il y a quelque chose a voir.
+		--
+		-- `setHeight` et pas `hide` : `hide` dirait a tout le reste du code que la scene est finie -- il eteint le
+		-- ScreenGui et repond faux a `isShown`, qui sert de filet au respawn en pleine scene.
+		Letterbox.setHeight(TutorialConfigs.REVEAL_BARS, TutorialConfigs.REVEAL_BARS_TIME)
 
 		-- RIEN A DECLENCHER ICI. Les deux repliques s'enchainent entre elles depuis l'entrebaillement : la
 		-- grande ouverture ne commande plus la voix, elle se contente d'arriver pendant qu'il parle.

@@ -128,6 +128,24 @@ function Letterbox.show(seconds: number?, onDone: (() -> ())?)
 	slide(BAR_HEIGHT, seconds or SLIDE_TIME, onDone)
 end
 
+--- Change la HAUTEUR des bandes sans les ranger. `amount` est une fraction de leur hauteur normale : 1 = pleines,
+--- 0.5 = a moitie rentrees, 0 = invisibles mais toujours en scene.
+---
+--- POURQUOI CE N'EST PAS `hide`. `hide` dit "la scene est finie" : il eteint le ScreenGui a la fin et repond
+--- desormais faux a `isShown`. Ici la scene CONTINUE, on ne fait que rendre de l'image au joueur -- une porte qui
+--- s'ouvre en grand pendant que le cadre s'ouvre avec elle. Melanger les deux ferait croire a la suite du code
+--- que la scene est terminee.
+---
+--- UNE FRACTION, PAS DES STUDS NI DES PIXELS : la hauteur de reference reste `BAR_HEIGHT`, a un seul endroit.
+--- Un appelant qui donnerait une hauteur absolue devrait la garder d'accord avec elle, et les deux finiraient
+--- par diverger.
+function Letterbox.setHeight(amount: number, seconds: number?)
+	if not gui then
+		return -- rien n'a jamais ete montre : il n'y a aucune bande a redimensionner
+	end
+	slide(BAR_HEIGHT * math.clamp(amount, 0, 1), seconds or SLIDE_TIME)
+end
+
 --- Les fait repartir dans les bords. Le ScreenGui n'est eteint qu'A LA FIN : le couper tout de suite ferait
 --- disparaitre les bandes d'un coup au lieu de les laisser glisser.
 function Letterbox.hide(seconds: number?, onDone: (() -> ())?)
