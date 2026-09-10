@@ -5,9 +5,11 @@
 -- donc invisible. La 1re haie guidee viendra s'ajouter ici plus tard.
 
 local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 
@@ -284,6 +286,10 @@ local talkModel: Model? = nil
 -- envoyer a tout le monde ferait apparaitre la consigne chez quelqu'un qui n'a pas encore vu la scene.
 local sceneOwner: Player? = nil
 local focusRemote: RemoteEvent? = nil
+-- DECLAREE ICI, DEFINIE PLUS BAS. Le marqueur de son animation la declenche, et cette ecoute se branche dans
+-- `playTalk` -- tout en haut du fichier -- alors que le suivi a besoin de `groundAt` et de la config de marche,
+-- donc il ne peut pas etre ecrit avant. On ne cite jamais une fonction avant sa definition.
+local startFollow: ((Player, Model) -> ())? = nil
 
 --- Rend VRAI si elle vient de lancer une piste neuve, faux si une lecture etait deja en cours.
 ---
@@ -348,6 +354,15 @@ local function playTalk(model: Model): boolean
 		local remote, owner = focusRemote, sceneOwner
 		if remote and owner and owner.Parent then
 			remote:FireClient(owner)
+			-- ET IL EMBOITE LE PAS. La consigne vient d'etre donnee : a partir de maintenant il accompagne le
+			-- joueur jusqu'a ce que la machine soit dans ses mains.
+			--
+			-- `startFollow` sort tout seul si une boucle tourne deja, donc ce marqueur qui retombe a chaque
+			-- replique n'en lance pas une seconde.
+			local follow = startFollow
+			if follow then
+				follow(owner, model)
+			end
 		end
 	end)
 
@@ -533,6 +548,141 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 end
 
 
+-- ===== IL SUIT LE JOUEUR =====
+-- Une boucle par image, cote SERVEUR : le grand-pere est un objet du monde, il doit bouger pour tout le monde.
+--
+-- ON LE DEPLACE PAR LE CODE, comme pour sa sortie, et pour la meme raison : son rig est ANCRE, et Roblox REFUSE
+-- de deplacer une part ancree -- `Humanoid:MoveTo` partirait, ne bougerait rien, et rendrait "chemin barre" au
+-- bout de son delai.
+--
+-- IL NE VISE PAS LE JOUEUR, IL VISE UNE DISTANCE. Marcher jusqu'a sa position exacte le ferait lui rentrer dans
+-- le dos, puis reculer, puis avancer -- une oscillation permanente autour d'un point qu'il ne peut pas occuper.
+local followConn: RBXScriptConnection? = nil
+local followTrack: AnimationTrack? = nil
+local followGroundOffset = 0
+
+local function stopFollow()
+	if followConn then
+		followConn:Disconnect()
+		followConn = nil
+	end
+	local track = followTrack
+	followTrack = nil
+	if track then
+		-- L'idle tourne DESSOUS (priorite Idle contre Movement) : arreter le pas suffit a le remettre au repos,
+		-- il n'y a rien a reposer.
+		track:Stop(TutorialConfigs.FOLLOW_ANIM_FADE)
+	end
+end
+
+-- Joue ou coupe son animation de pas, selon qu'il avance ou non. Idempotent : appelee a chaque image, elle ne
+-- relance rien tant que l'etat ne change pas.
+local function setFollowWalking(model: Model, moving: boolean)
+	local track = followTrack
+	if moving == (track ~= nil and track.IsPlaying) then
+		return
+	end
+	if not moving then
+		if track then
+			track:Stop(TutorialConfigs.FOLLOW_ANIM_FADE)
+		end
+		return
+	end
+	if not track then
+		local humanoid = model:FindFirstChildOfClass("Humanoid")
+		local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+		if not animator then
+			return -- sans Animator il glissera sans bouger les jambes, mais il suivra
+		end
+		local anim = Instance.new("Animation")
+		anim.AnimationId = TutorialConfigs.OLDMAN_WALK_ANIM
+		local ok, result = pcall(function()
+			return (animator :: Animator):LoadAnimation(anim)
+		end)
+		if not (ok and typeof(result) == "Instance") then
+			return
+		end
+		track = result :: AnimationTrack
+		track.Looped = true
+		track.Priority = TutorialConfigs.OLDMAN_WALK_PRIORITY
+		-- Jouee au RAPPORT des deux vitesses, comme sa sortie : changer sa vitesse de suivi ne fait pas patiner
+		-- ses pieds, et il n'y a aucune seconde valeur a garder d'accord avec la premiere.
+		track:AdjustSpeed(
+			TutorialConfigs.FOLLOW_SPEED / TutorialConfigs.OLDMAN_WALK_REFERENCE * TutorialConfigs.FOLLOW_ANIM_BOOST
+		)
+		followTrack = track
+	end
+	track:Play(TutorialConfigs.FOLLOW_ANIM_FADE)
+end
+
+startFollow = function(player: Player, model: Model)
+	if followConn then
+		return -- deja en train de suivre : une seconde boucle se battrait avec la premiere pour la meme pose
+	end
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then
+		warn(`[Tutorial] "{model.Name}" n'a pas de HumanoidRootPart : il ne suivra pas le joueur.`)
+		return
+	end
+	local rootPart = root :: BasePart
+
+	-- SA HAUTEUR AU-DESSUS DU SOL, mesuree UNE FOIS. Il est ancre, donc la physique ne le pose pas : sans cette
+	-- mesure il faudrait deviner de combien lever son rig, et un rig dont l'origine n'est pas aux pieds
+	-- s'enfoncerait ou leviterait. Mesuree a chaque image, un sol qui manque (trou, bord) la ferait sauter.
+	local ground = groundAt(rootPart.Position, { model })
+	followGroundOffset = if ground then rootPart.Position.Y - ground else 0
+
+	followConn = RunService.Heartbeat:Connect(function(dt: number)
+		if not model.Parent or not player.Parent then
+			stopFollow()
+			return
+		end
+		-- IL S'ARRETE DES QUE LA TONDEUSE EST DANS SES MAINS. On lit l'ETAT (CarryUtils) et pas un evenement : le
+		-- joueur peut la prendre, la lacher, mourir, en reprendre une autre -- un evenement tire une fois nous
+		-- laisserait sur une reponse perimee.
+		if CarryUtils.holds(player, "Mower") then
+			setFollowWalking(model, false)
+			stopFollow()
+			return
+		end
+		local character = player.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+		if not (hrp and hrp:IsA("BasePart")) then
+			setFollowWalking(model, false)
+			return -- mort, respawn : on ne bouge pas, mais on reste branche pour reprendre quand il revient
+		end
+
+		local target = (hrp :: BasePart).Position
+		local flat = Vector3.new(target.X - rootPart.Position.X, 0, target.Z - rootPart.Position.Z)
+		local distance = flat.Magnitude
+		if distance <= TutorialConfigs.FOLLOW_DIST or distance < 1e-3 then
+			-- ASSEZ PRES : il s'arrete, mais il continue de REGARDER le joueur. Un PNJ qui garde le dos tourne
+			-- pendant qu'on tourne autour de lui cesse d'avoir l'air de nous accompagner.
+			setFollowWalking(model, false)
+			if distance >= 1e-3 then
+				local look = CFrame.lookAt(rootPart.Position, rootPart.Position + flat.Unit)
+				model:PivotTo(look * rootPart.CFrame:Inverse() * model:GetPivot())
+			end
+			return
+		end
+
+		-- ON AVANCE D'UN PAS DE CETTE IMAGE, jamais jusqu'a la cible : la cible bouge, et l'atteindre d'un coup
+		-- serait une teleportation. `dt` fait que la vitesse est la meme quel que soit le nombre d'images.
+		local step = math.min(TutorialConfigs.FOLLOW_SPEED * dt, distance - TutorialConfigs.FOLLOW_DIST)
+		local nextPos = rootPart.Position + flat.Unit * step
+		local nextGround = groundAt(nextPos, { model, character })
+		if nextGround then
+			nextPos = Vector3.new(nextPos.X, nextGround + followGroundOffset, nextPos.Z)
+		end
+		local now = CFrame.lookAt(nextPos, nextPos + flat.Unit)
+		-- ON APPLIQUE UN ECART MONDE et pas un pivot : `PivotTo` passe par `GetPivot`, qui suit la boite
+		-- englobante -- une part ajoutee au modele dans Studio le decalerait.
+		model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
+		setFollowWalking(model, true)
+	end)
+	print(`[Tutorial] Le grand-pere suit {player.Name} (a {TutorialConfigs.FOLLOW_DIST} studs).`)
+end
+
 local function onPlayerAdded(player: Player)
 	player.CharacterAdded:Connect(placeCharacter)
 	if player.Character then
@@ -573,6 +723,16 @@ function TutorialService.init()
 		local model = talkModel or findByName(TutorialConfigs.GRANDPA_NAME)
 		if model and model:IsA("Model") then
 			talkFor(model, bounded)
+		end
+	end)
+
+	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur
+	-- RunService, elle survivrait au depart du joueur et continuerait de deplacer le grand-pere vers un
+	-- personnage detruit.
+	Players.PlayerRemoving:Connect(function(player)
+		if sceneOwner == player then
+			sceneOwner = nil
+			stopFollow()
 		end
 	end)
 

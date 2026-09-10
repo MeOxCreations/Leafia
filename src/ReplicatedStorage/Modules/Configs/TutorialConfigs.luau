@@ -779,6 +779,30 @@ return {
 	-- Un tuto qui depend d'un marqueur d'animation pour donner sa consigne doit pouvoir s'en passer : c'est la
 	-- seule chose qu'il fait, et elle ne peut pas ne pas arriver.
 	END_FOCUS_FALLBACK = 8,
+
+	-- ===== IL SUIT LE JOUEUR JUSQU'A LA TONDEUSE =====
+	-- Une fois la consigne donnee, le grand-pere ne reste pas plante devant sa porte : il emboite le pas au joueur
+	-- qui part chercher la machine. Ce n'est pas un chantier a lui, c'est ce qui le fait exister -- un PNJ qui
+	-- regarde le joueur travailler de vingt metres n'accompagne rien.
+	--
+	-- IL S'ARRETE des que la tondeuse est dans les mains du joueur : sa consigne est suivie, il n'a plus rien a
+	-- surveiller.
+	--
+	-- DISTANCE A LAQUELLE IL SE TIENT, en studs. Il ne colle pas : au-dessous de trois ou quatre studs il rentre
+	-- dans le dos du joueur et se voit a travers la camera. Au-dela de huit, il ne suit plus, il traine.
+	FOLLOW_DIST = 6,
+	-- SA VITESSE DE SUIVI, en studs/s. SON PROPRE REGLAGE, separe de sa marche de sortie (OLDMAN_WALK_SPEED, 4) :
+	-- celle-la est LENTE parce qu'elle est le sujet du plan, alors qu'ici il doit tenir le rythme de quelqu'un qui
+	-- traverse un jardin. Un reglage partage par les deux moments aurait fini par les opposer.
+	--
+	-- Un peu sous la vitesse de marche du joueur : il reste derriere, ce qui est exactement l'effet voulu.
+	FOLLOW_SPEED = 11,
+	-- Vitesse de son animation de pas quand il suit, en multiple. Comme pour sa sortie, elle est jouee au RAPPORT
+	-- de sa vitesse reelle sur OLDMAN_WALK_REFERENCE : ce facteur ne fait que l'accentuer, sans toucher au trajet.
+	FOLLOW_ANIM_BOOST = 1.2,
+	-- Fondu de son animation de pas, a l'arret comme au demarrage. Court : un vieux qui repart doit repartir, pas
+	-- se fondre.
+	FOLLOW_ANIM_FADE = 0.15,
 	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
 	-- pose de repos au dernier mot.
 	OLDMAN_TALK_FADE = 0.3,

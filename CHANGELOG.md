@@ -2204,6 +2204,38 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.714 — Le grand-pere suit le joueur jusqu'a la tondeuse
+
+Une fois la consigne donnee, il ne reste plus plante devant sa porte : il emboite le pas au joueur qui part
+chercher la machine, et s'arrete des qu'elle est dans ses mains.
+
+Ce n'est pas un chantier a lui, c'est ce qui le fait exister -- un PNJ qui regarde le joueur travailler de vingt
+metres n'accompagne rien.
+
+**Il ne vise pas le joueur, il vise une DISTANCE** (`FOLLOW_DIST`, 6 studs). Marcher jusqu'a sa position exacte le
+ferait lui rentrer dans le dos, puis reculer, puis avancer : une oscillation permanente autour d'un point qu'il
+ne peut pas occuper.
+
+**Arrete, il continue de le REGARDER.** Un PNJ qui garde le dos tourne pendant qu'on tourne autour de lui cesse
+d'avoir l'air de nous accompagner.
+
+**Il s'arrete sur un ETAT, pas sur un evenement** : `CarryUtils.holds(player, "Mower")`, relu a chaque image. Le
+joueur peut prendre la machine, la lacher, mourir, en reprendre une autre -- un evenement tire une fois nous
+laisserait sur une reponse perimee.
+
+**Sa vitesse a son propre reglage** (`FOLLOW_SPEED`, 11) separe de sa marche de sortie (4). Celle-la est LENTE
+parce qu'elle est le sujet du plan ; ici il doit tenir le rythme de quelqu'un qui traverse un jardin. Un reglage
+partage par les deux moments aurait fini par les opposer. Un peu sous la vitesse du joueur : il reste derriere,
+ce qui est l'effet voulu.
+
+**Sa hauteur au-dessus du sol est mesuree UNE FOIS**, au depart. Il est ancre, donc la physique ne le pose pas ;
+mesuree a chaque image, un sol qui manque -- trou, bord de dalle -- la ferait sauter.
+
+Details qui evitent des bugs connus du projet : on avance d'un pas par image (`dt`), jamais jusqu'a la cible ; on
+applique un ECART MONDE et pas un pivot, parce que `GetPivot` suit la boite englobante ; l'animation de pas est
+jouee au RAPPORT de sa vitesse reelle, donc changer `FOLLOW_SPEED` ne fait pas patiner ses pieds ; et la boucle
+est coupee au depart du joueur -- elle vit sur RunService et lui survivrait.
+
 ## 0.0.713 — Le geste s'arrete quand la phrase s'arrete
 
 Il continuait de s'agiter longtemps apres s'etre tu : une phrase d'impatience de deux secondes lancait les
