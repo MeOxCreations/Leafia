@@ -25,6 +25,7 @@ local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local SkillController = require(script.Parent.SkillController)
+local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
@@ -1261,6 +1262,18 @@ local function setPullBound(active: boolean)
 		ContextActionService:BindAction(MowConfigs.START_ACTION, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin and pullRemote then
 				pullRemote:FireServer()
+				-- LA GERBE PART TOUT DE SUITE, sans attendre la reponse du serveur. C'est un effet, pas une
+				-- decision : le serveur dira si le moteur prend, mais l'a-coup du bras, lui, a deja eu lieu.
+				-- L'attendre ajouterait un aller-retour reseau entre le clic et ce qu'on voit -- et c'est
+				-- exactement ce qui fait qu'une commande "repond mal".
+				--
+				-- ELLE PART A CHAQUE TIRAGE, y compris celui qui reussit : c'est l'EFFORT qu'elle illustre, pas
+				-- l'echec. Le moteur qui demarre a deja son propre son pour se signaler.
+				local mine = myMower()
+				local root = if mine then rootOf(mine) else nil
+				if root then
+					StarBurst.at(root.Position + Vector3.new(0, MowConfigs.START_BURST_UP, 0))
+				end
 			end
 			return Enum.ContextActionResult.Pass
 		end, true, Enum.UserInputType.MouseButton1)

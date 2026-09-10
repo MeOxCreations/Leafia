@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.671 — Une gerbe d'etoiles a chaque tirage de corde
+
+`StarBurst` -- les huit etoiles filantes des coups a la porte -- part maintenant aussi quand on tire la corde de
+la tondeuse, a hauteur du moteur. Le joueur a deja appris que ce dessin veut dire "un coup vient d'etre donne",
+et un effort qui ne donne rien merite exactement ca.
+
+Le module etait ecrit pour ca : son commentaire d'origine disait qu'il devait pouvoir servir a la tondeuse sans
+etre retouche. Il n'a pas ete touche.
+
+**Elle part au CLIC, sans attendre la reponse du serveur.** C'est un effet, pas une decision : le serveur dira si
+le moteur prend, mais l'a-coup du bras a deja eu lieu. L'attendre ajouterait un aller-retour reseau entre le
+geste et ce qu'on voit -- exactement ce qui fait qu'une commande "repond mal".
+
+**A chaque tirage, y compris celui qui reussit** : c'est l'EFFORT qu'elle illustre, pas l'echec. Le moteur qui
+demarre a deja son propre son pour se signaler.
+
+`START_BURST_UP` (1.6 stud) la pose a hauteur du moteur et pas au sol, sinon elle raconte un coup de pied dans le
+carter.
+
 ## 0.0.670 — Le grand-pere fait la tete quand il rale
 
 Son animation faciale (`138039446311488`) part avec chaque replique d'impatience. Une grimace qui arriverait

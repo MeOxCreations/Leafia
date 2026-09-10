@@ -185,6 +185,13 @@ return {
 	-- Meme mecanique que le lanceur du taille-haie (voir ToolStartService : Ready puis Pulling partagent la meme
 	-- piste, seule la vitesse change).
 	START_ACTION = "LeafiaMowPull",
+	-- LA GERBE D'ETOILES DU TIRAGE, en studs au-dessus de la racine de la machine. La meme que les coups a la
+	-- porte : le joueur a deja appris que ce dessin veut dire "un coup vient d'etre donne", et un effort qui ne
+	-- donne rien merite exactement ca.
+	--
+	-- A hauteur du MOTEUR, pas du sol : la gerbe part de l'endroit ou l'on tire, sinon elle raconte un coup de
+	-- pied dans le carter.
+	START_BURST_UP = 1.6,
 	-- L'AVANT SE LEVE quand on tire la corde : la machine se cabre sous l'a-coup, puis retombe. C'est ce petit
 	-- sursaut qui donne de la FORCE au geste -- sans lui, tirer la corde n'agit que sur le personnage.
 	-- Angle de POINTE atteint, en degres (approximatif : c'est un ressort, pas une cible). Divise par trois
