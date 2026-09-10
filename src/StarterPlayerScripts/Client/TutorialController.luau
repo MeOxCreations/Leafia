@@ -26,6 +26,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
+local AngerBurst = require(ReplicatedStorage.Modules.UI.Core.AngerBurst)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
@@ -1424,6 +1425,19 @@ end
 --- PAS AVANT. Pendant toute l'ouverture, la seule chose a faire est d'aller toquer, et le halo sur la porte le dit
 --- mieux qu'une ligne de texte. Un objectif qu'on ne peut pas encore accomplir n'est pas un guide, c'est du bruit
 --- que le joueur apprend a ignorer -- et il l'ignorera aussi quand il comptera.
+-- UNE PART FIABLE D'UN RIG, pour y accrocher quelque chose.
+--
+-- La RootPart d'abord, et PAS `GetPivot` : le pivot d'un Model suit sa boite englobante, donc il se decale des
+-- qu'on ajoute un enfant -- meme une zone de detection invisible. Une part reelle ne bouge pas sous les pieds du
+-- code qui s'appuie dessus.
+local function bodyPart(model: Model): BasePart?
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if root and root:IsA("BasePart") then
+		return root
+	end
+	return model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
+end
+
 -- IL S'IMPATIENTE, tant que la tondeuse est encore par terre.
 --
 -- QUAND ELLE PARLE et QUELLE PHRASE : deux questions separees. Le "quand" vit dans la boucle par image, le
@@ -1446,6 +1460,18 @@ local function playImpatient()
 		i = 1 + (i % count)
 	end
 	lastImpatient = i
+
+	-- ET ON LE VOIT RALER. La voix seule ne suffit pas : elle ne dit rien a un joueur de dos, loin, ou qui a
+	-- coupe le son -- et sur Roblox ils sont nombreux. Une gerbe d'eclairs au-dessus de sa tete se lit sans un
+	-- mot et sans une oreille.
+	--
+	-- ACCROCHEE A UNE PART, pas a un point : il est immobile aujourd'hui, mais une position figee est un
+	-- instantane -- le jour ou il fait un pas, la colere resterait en l'air derriere lui.
+	local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
+	local anchor = if grandpa then bodyPart(grandpa) else nil
+	if anchor then
+		AngerBurst.play(anchor, Vector3.new(0, TutorialConfigs.IMPATIENT_BURST_UP, 0))
+	end
 	-- 2D, comme les repliques de la scene : c'est une VOIX qui s'adresse au joueur, pas un bruit qui vient d'un
 	-- point de la carte. Spatialisee, elle baisserait quand il s'eloigne pour chercher la machine -- soit
 	-- exactement quand elle a quelque chose a dire.

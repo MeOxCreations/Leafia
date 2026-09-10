@@ -443,6 +443,14 @@ return {
 	-- une cadence reguliere se lit comme une horloge, donc comme un systeme, pas comme quelqu'un qui s'agace.
 	IMPATIENT_EVERY = 16,
 	IMPATIENT_JITTER = 5,
+	-- LA GERBE D'ECLAIRS qui saute au-dessus de lui pendant qu'il rale. Hauteur au-dessus de sa RootPart, en
+	-- studs : au-dessus de sa tete, jamais devant son visage -- une onomatopee qui couvre le personnage cache
+	-- justement celui dont on veut lire l'humeur.
+	--
+	-- Elle ne remplace pas la voix, elle la DOUBLE : une voix ne s'entend pas quand on est de dos ou loin, et
+	-- elle ne s'entend pas du tout chez un joueur qui a coupe le son -- ce qui est le cas d'une bonne part des
+	-- joueurs Roblox.
+	IMPATIENT_BURST_UP = 4,
 
 	-- ===== LE MEME MARQUEUR, SUR LA TONDEUSE =====
 	-- Hauteur au-dessus de la RootPart de la machine, en studs. PLUS BAS que celui de la porte : une tondeuse

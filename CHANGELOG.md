@@ -2204,6 +2204,39 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.665 — Une gerbe d'eclairs quand le grand-pere s'agace
+
+Nouvelle primitive `Modules/UI/Core/AngerBurst.luau` : deux eclairs, une triple etincelle et un point
+d'exclamation jaillissent au-dessus de quelqu'un qui rale, puis s'effacent en montant. L'onomatopee de bande
+dessinee, en dessin plutot qu'en mot -- donc rien a traduire, et lisible par un enfant qui ne lit pas encore.
+
+Elle part avec chaque replique d'impatience du grand-pere.
+
+**Elle ne remplace pas la voix, elle la double.** Une voix ne dit rien a un joueur de dos, loin, ou qui a coupe
+le son -- et sur Roblox ils sont nombreux.
+
+**Chaque dessin porte sa taille naturelle en pixels**, relevee dans Studio. Le rapport largeur/hauteur vient du
+dessin : lui en imposer un autre l'aplatit, et un eclair aplati ne ressemble plus a un eclair. Un seul chiffre
+agrandit la gerbe entiere (`BURST_SCALE`), et il ne peut deformer aucune image par construction.
+
+**Le jaillissement passe par un `UIScale`, jamais par la taille.** Une echelle est UNIFORME : elle ne PEUT pas
+deformer. Animer `Size` demanderait de tenir les deux axes d'accord a la main, et le premier arrondi ecraserait
+le dessin.
+
+Les images ne sortent pas ensemble : chacune a son retard. Un bloc qui apparait d'un coup se lit comme une image
+posee ; en decalage, ca se lit comme un mouvement d'humeur. Le depart de la gerbe se compte depuis la DERNIERE
+sortie, sinon la piece la plus retardee n'aurait presque pas le temps d'exister.
+
+**Accrochee a une PART du rig, pas a un point.** Il est immobile aujourd'hui, mais une position figee est un
+instantane : le jour ou il fait un pas, la colere resterait en l'air derriere lui. Et la RootPart plutot que
+`GetPivot`, qui suit la boite englobante et se decale des qu'on ajoute un enfant au modele.
+
+`IMPATIENT_BURST_UP` (4 studs) la pose au-dessus de sa tete. Une onomatopee qui couvre le personnage cache
+justement celui dont on veut lire l'humeur.
+
+A FAIRE DANS STUDIO : les quatre ImageLabel de test poses dans `StarterGui.ScreenGui` sont a SUPPRIMER. Le code
+cree les siens ; celles-la resteraient affichees en permanence a l'ecran.
+
 ## 0.0.664 — La poussiere du seau part avant le contact
 
 Elle sortait a l'instant EXACT ou le seau touche, et ca se lit en retard : une bouffee de particules met le temps
