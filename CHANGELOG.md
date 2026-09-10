@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.697 — La camera rend la main des qu'il s'est tu
+
+Elle attendait la FIN du glissement de 2.5 s en plus de la fin de la parole. Le joueur restait donc immobile
+devant une camera qui bougeait encore pour rien, une fois la replique terminee.
+
+Les deux ne racontent pas la meme chose : le glissement occupe l'oeil PENDANT qu'il parle, la parole dit quand la
+scene est finie. C'est donc elle, et elle seule, qui rend la main.
+
+Le glissement part toujours, il est simplement coupe quand la parole s'arrete avant lui. `SceneCamera.exit` part
+de la CFrame COURANTE, donc couper un glissement en cours ne fait aucun saut : la sortie reprend exactement la ou
+la camera en etait.
+
+Le premier plan garde son minimum (`EXIT_SHOT_IN` + `EXIT_SHOT_HOLD`, 1.2 s) : sans lui, une scene sans voix --
+assets absents -- rendrait la main avant meme d'avoir pose un cadre.
+
 ## 0.0.696 — Il en dit moins a son arrivee
 
 Les deux dernieres lignes sont retirees : la demande de tondre et le renvoi au camion. Il ne reste que ce qu'il
