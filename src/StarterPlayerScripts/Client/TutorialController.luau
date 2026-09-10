@@ -1809,7 +1809,16 @@ local function onOldManArrived()
 				hold = entry.hold,
 			})
 		end
-		Dialogue.play(lines, showMowerTask)
+		-- LA CONSIGNE N'ARRIVE PLUS A LA FIN DU DIALOGUE : elle attend le marqueur `EndFocusPlayerEvent` de son
+		-- animation d'explication, que le serveur relaie. C'est LUI qui sait quand son geste est fini -- nous ne
+		-- connaissons que la duree du texte, et les deux n'ont aucune raison de coincider.
+		--
+		-- FILET quand meme : si le marqueur ne tombe jamais -- animation republiee sans lui, asset qui ne charge
+		-- pas -- le joueur resterait devant un jardin sans savoir ce qu'on lui demande. La consigne est la seule
+		-- chose que fait ce tuto : elle ne peut pas ne pas arriver.
+		Dialogue.play(lines, function()
+			task.delay(TutorialConfigs.END_FOCUS_FALLBACK, showMowerTask)
+		end)
 	end)
 end
 
@@ -2078,6 +2087,12 @@ function TutorialController.init()
 	task.spawn(function()
 		local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
 		arrived.OnClientEvent:Connect(onOldManArrived)
+	end)
+	-- LE MARQUEUR DE FIN DE GESTE, relaye par le serveur : c'est lui qui affiche la consigne. `showMowerTask` est
+	-- idempotente, donc le marqueur qui retombe a chaque replique ne rejoue rien.
+	task.spawn(function()
+		local focusDone = RemoteSetup.getRemote("TutorialFocusDone", "Tutorial") :: RemoteEvent
+		focusDone.OnClientEvent:Connect(showMowerTask)
 	end)
 	-- EN TACHE DE FOND : `getRemote` cache un WaitForChild, et en ligne droite dans un init il gele TOUT le boot
 	-- le temps de son timeout. Tant qu'il n'est pas la, les repliques se jouent -- sans le geste, ce qui est le

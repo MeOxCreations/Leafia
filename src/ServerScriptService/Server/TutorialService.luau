@@ -278,6 +278,12 @@ local talkTrack: AnimationTrack? = nil
 -- LE MODELE QU'ON ANIME, retenu des qu'on l'a trouve. Les repliques arrivent par remote a n'importe quel moment :
 -- sans lui, il faudrait re-balayer le Workspace a chaque phrase.
 local talkModel: Model? = nil
+-- QUI JOUE LA SCENE, et le remote qui lui dira que le marqueur est tombe.
+--
+-- ON RETIENT LE JOUEUR. Le marqueur arrive d'une piste d'animation, et une piste ne sait pas pour qui elle joue :
+-- envoyer a tout le monde ferait apparaitre la consigne chez quelqu'un qui n'a pas encore vu la scene.
+local sceneOwner: Player? = nil
+local focusRemote: RemoteEvent? = nil
 
 local function playTalk(model: Model)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -324,10 +330,20 @@ local function playTalk(model: Model)
 	local hits = 0
 	track:GetMarkerReachedSignal(TutorialConfigs.END_FOCUS_EVENT):Connect(function()
 		hits += 1
-		warn(
+		print(
 			`[Tutorial] {TutorialConfigs.END_FOCUS_EVENT} (tour {hits}) a `
 				.. `{string.format("%.2f", track.TimePosition)} s sur {string.format("%.2f", track.Length)} s`
 		)
+		-- ET C'EST ICI QUE LA CONSIGNE ARRIVE CHEZ LE JOUEUR. Le marqueur est le seul endroit qui sache ou en est
+		-- ce geste : une duree calculee de notre cote se decalerait a la premiere retouche de l'animation, et
+		-- c'est exactement ce qu'on vient de supprimer ailleurs.
+		--
+		-- Il retombe a chaque replique, puisque la piste rejoue en entier a chaque fois : c'est le CLIENT qui se
+		-- garde des doublons, et il le fait deja pour son bandeau de tache.
+		local remote, owner = focusRemote, sceneOwner
+		if remote and owner and owner.Parent then
+			remote:FireClient(owner)
+		end
 	end)
 
 	-- ELLE SE LIBERE QUAND ELLE FINIT. Sans ca, `talkTrack` garderait une piste morte, et le prochain appel la
@@ -543,7 +559,10 @@ end
 function TutorialService.init()
 	local done = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
 	local arrived = RemoteSetup.getRemote("TutorialOldManArrived", "Tutorial") :: RemoteEvent
+	focusRemote = RemoteSetup.getRemote("TutorialFocusDone", "Tutorial") :: RemoteEvent
+
 	done.OnServerEvent:Connect(function(player)
+		sceneOwner = player
 		-- Aucun argument a valider : le client ne fait que dire "la scene est finie". Le pire qu'il puisse faire
 		-- est de la declencher trop tot, ce qui fait sortir le grand-pere -- pas de quoi tricher.
 		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, function(model)

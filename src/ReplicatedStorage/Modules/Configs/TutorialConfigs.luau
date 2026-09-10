@@ -772,6 +772,13 @@ return {
 	-- ET ELLE BOUCLE tant qu'il parle, donc le marqueur retombe a CHAQUE tour. Le message donne le numero de tour
 	-- pour que ca se voie tout de suite.
 	END_FOCUS_EVENT = "EndFocusPlayerEvent",
+	-- FILET, en secondes apres la fin du dialogue. La consigne arrive normalement sur le marqueur ci-dessus ; si
+	-- celui-ci ne tombe jamais -- animation republiee sans lui, asset qui ne charge pas -- le joueur resterait
+	-- devant un jardin sans savoir ce qu'on lui demande. Passe ce delai, on l'affiche quand meme.
+	--
+	-- Un tuto qui depend d'un marqueur d'animation pour donner sa consigne doit pouvoir s'en passer : c'est la
+	-- seule chose qu'il fait, et elle ne peut pas ne pas arriver.
+	END_FOCUS_FALLBACK = 8,
 	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
 	-- pose de repos au dernier mot.
 	OLDMAN_TALK_FADE = 0.3,

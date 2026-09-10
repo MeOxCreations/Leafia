@@ -34,6 +34,12 @@ local REMOTES: { { any } } = {
 	-- l'ANIMATION qui decide de sa longueur -- et rien a valider a l'arrivee, du coup, ce qui est toujours mieux
 	-- que borner une valeur venue du client.
 	{ "OldManTalk", E, "Tutorial" },
+	-- LE MARQUEUR `EndFocusPlayerEvent` EST TOMBE dans son animation d'explication : c'est le moment ou l'on
+	-- affiche la consigne au joueur.
+	--
+	-- SERVEUR VERS CLIENT, parce que le marqueur ne se signale qu'a la machine qui LIT la piste -- et c'est le
+	-- serveur qui la joue, le grand-pere etant un modele du monde. Le client ne le verrait jamais tout seul.
+	{ "TutorialFocusDone", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

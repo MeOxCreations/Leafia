@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.711 — La consigne arrive sur le marqueur de son animation
+
+Le bandeau de tache, la notification d'avertissement et les marqueurs de la tondeuse attendent maintenant
+`EndFocusPlayerEvent`, le marqueur pose a 14.92 s de son animation d'explication.
+
+C'est LUI qui sait quand son geste est fini. Nous ne connaissions que la duree du texte, et les deux n'ont
+aucune raison de coincider -- c'est ce decalage qui faisait tout arriver trop tot.
+
+**Le marqueur est lu par le SERVEUR**, qui joue la piste, et relaye au joueur de la scene. Un marqueur ne se
+signale qu'a la machine qui LIT l'animation : le client ne l'aurait jamais vu.
+
+**On envoie au JOUEUR, pas a tout le monde.** Une piste d'animation ne sait pas pour qui elle joue : diffuser
+ferait apparaitre la consigne chez quelqu'un qui n'a pas encore vu la scene.
+
+**Un FILET, parce que la consigne ne peut pas ne pas arriver.** Si le marqueur ne tombe jamais -- animation
+republiee sans lui, asset qui ne charge pas -- le joueur resterait devant un jardin sans savoir ce qu'on lui
+demande. Passe `END_FOCUS_FALLBACK` (8 s apres la fin du dialogue), on l'affiche quand meme. Les deux chemins
+peuvent tirer sans se marcher dessus : l'affichage est idempotent, et c'est aussi ce qui absorbe le marqueur qui
+retombe a chaque replique.
+
+Le log du marqueur passe de `warn` a `print` : il n'annonce plus rien d'anormal, il raconte le deroulement.
+
 ## 0.0.710 — L'animation d'explication joue en entier, et son marqueur tombe
 
 Les mesures ont tranche : la piste fait 17.24 s, le marqueur est a 14.92 s, et on ne la jouait que 12.2 s. Il ne
