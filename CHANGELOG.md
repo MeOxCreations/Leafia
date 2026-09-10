@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.681 — L'eclair de colere se redresse
+
+`BASE_TILT` revient de -90 a -20 : l'ecran a tranche, il reste debout.
+
+A plat, il s'etirait sur le COTE -- l'etirement suit le sens du dessin, pas celui de l'ecran. Or un eclair qui
+s'allonge a l'horizontale ne monte plus, donc il ne jaillit plus : c'est la verticale qui porte le geste.
+
+Le placement corrige a la version precedente (plus bas, plus proche de sa tete) ne bouge pas.
+
 ## 0.0.680 — L'eclair de colere se couche et se rapproche de sa tete
 
 | Reglage | Avant | Apres |
