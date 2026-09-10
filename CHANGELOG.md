@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.657 — Une cinquieme phrase d'impatience
+
+`Oldman_scene_speech_Impatient_5` rejoint la liste. Une ligne, et le tirage la prend en compte tout seul : c'est
+exactement pour ca que les repliques sont listees une par une plutot que devinees par un prefixe et un compteur.
+
+Effet de bord gratuit : avec cinq phrases au lieu de quatre, on entend moins souvent la meme -- et l'ecart entre
+deux repetitions grandit sans qu'on touche a la cadence.
+
 ## 0.0.656 — Le grand-pere s'impatiente tant que la tondeuse est par terre
 
 Une fois la consigne donnee, il ne restait plus qu'une statue devant sa porte. Il relance maintenant : quatre

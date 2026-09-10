@@ -413,6 +413,7 @@ return {
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_2" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_3" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_4" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_5" },
 	},
 	-- Avant la PREMIERE. Assez long pour laisser le joueur chercher tout seul : relancer quelqu'un qui vient de
 	-- recevoir sa consigne, ce n'est pas de l'impatience, c'est du harcelement.
