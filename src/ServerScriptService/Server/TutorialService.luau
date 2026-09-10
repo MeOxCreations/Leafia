@@ -260,8 +260,13 @@ local function restoreIdle(model: Model)
 	)
 end
 
--- IL EXPLIQUE AVEC LES BRAS pendant sa replique, puis se repose sur son idle -- qui n'a jamais cesse de tourner
--- dessous, l'explication etant en priorite Action.
+-- IL EXPLIQUE AVEC LES BRAS. Elle demarre DES SES PREMIERS PAS et se superpose a la marche : il raconte deja son
+-- affaire en traversant sa cour, au lieu d'attendre d'etre plante devant sa porte pour commencer a vivre.
+--
+-- LA SUPERPOSITION TIENT A LA PRIORITE. La marche est en `Movement`, l'explication en `Action` : Action gagne sur
+-- les membres qu'elle CLE, et laisse les autres a la marche. Une explication qui clerait aussi les jambes
+-- ecraserait donc le pas -- c'est la meme regle que les poses de maintien d'outil, qui ne clent que bras et
+-- torse. Et l'idle, en `Idle`, continue de tourner sous les deux.
 --
 -- LE SERVEUR TIENT CETTE PISTE, comme la marche : le grand-pere est un modele du monde et non le personnage d'un
 -- joueur. Jouee cote client, elle ne se verrait que chez celui qui l'a lancee.
@@ -302,38 +307,44 @@ local function playTalk(model: Model)
 	track.Priority = TutorialConfigs.OLDMAN_TALK_PRIORITY
 	talkTrack = track
 
-	local seconds = 0
+	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
+	print(`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM}`)
+end
+
+-- COMBIEN DE TEMPS DURE SA REPLIQUE : la somme des `hold`, jamais un chiffre pose a la main. La config est
+-- partagee, donc reenregistrer la voix (et recaler les `hold`) rallonge le geste tout seul.
+local function speechSeconds(): number
+	local total = 0
 	for _, line in TutorialConfigs.SPEECH2_LINES do
-		seconds += line.hold
+		total += line.hold
 	end
+	return total
+end
 
-	task.delay(TutorialConfigs.SPEECH2_DELAY, function()
-		if not model.Parent or talkTrack ~= track then
-			return -- detruit en chemin, ou une autre lecture a pris la place
+-- IL ARRETE D'EXPLIQUER, dans `after` secondes. Separe du demarrage parce que les deux ne tombent plus au meme
+-- endroit : il commence a expliquer EN MARCHANT, et il ne s'arrete qu'une fois sa replique finie -- bien apres
+-- son arrivee.
+local function stopTalk(after: number)
+	local track = talkTrack
+	if not track then
+		return
+	end
+	task.delay(after, function()
+		if talkTrack ~= track then
+			return -- une autre lecture a pris la place entre-temps
 		end
-		track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
-
-		task.delay(seconds, function()
-			track:Stop(TutorialConfigs.OLDMAN_TALK_FADE)
-			if talkTrack == track then
-				talkTrack = nil
-			end
-			-- ON MESURE LE RESULTAT, pas l'intention : une piste dont l'asset n'arrive jamais garde une longueur de
-			-- zero et n'ecrit RIEN, sans la moindre erreur -- on irait chercher le bug dans l'animation. Rien a
-			-- reposer ici, l'idle tourne dessous : il aura juste parle sans les bras.
-			if track.Length <= 0 then
-				warn(
-					`[Tutorial] L'explication {TutorialConfigs.OLDMAN_TALK_ANIM} n'a jamais charge : il a parle sans `
-						.. "bouger. Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
-				)
-			end
-		end)
+		track:Stop(TutorialConfigs.OLDMAN_TALK_FADE)
+		talkTrack = nil
+		-- ON MESURE LE RESULTAT, pas l'intention : une piste dont l'asset n'arrive jamais garde une longueur de
+		-- zero et n'ecrit RIEN, sans la moindre erreur -- on irait chercher le bug dans l'animation. Rien a
+		-- reposer ici, l'idle tourne dessous : il aura juste parle sans les bras.
+		if track.Length <= 0 then
+			warn(
+				`[Tutorial] L'explication {TutorialConfigs.OLDMAN_TALK_ANIM} n'a jamais charge : il a parle sans `
+					.. "bouger. Cet ID est faux, ou l'animation n'appartient pas au proprietaire du jeu."
+			)
+		end
 	end)
-
-	print(
-		`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM} `
-			.. `pendant {string.format("%.1f", seconds)} s`
-	)
 end
 
 -- LE GRAND-PERE SORT DE CHEZ LUI. Il glisse jusqu'a la part posee dans Studio, puis se repose sur son idle.
@@ -346,7 +357,11 @@ end
 ---
 --- La cible est un PARAMETRE et non une constante : le meme trajet sert deux fois -- sortir de chez lui, puis
 --- descendre du perron -- et deux copies de cette fonction finiraient par diverger.
-local function walkOldMan(targetName: string, onDone: ((Model) -> ())?)
+---
+--- `onStart` tire quand il se met REELLEMENT en marche, c'est-a-dire une fois tous les controles passes. Un
+--- appelant qui lancerait son geste avant saurait seulement qu'il l'a DEMANDE : le modele peut etre introuvable,
+--- la cible absente, une marche deja en cours -- et le geste partirait dans le vide.
+local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart: ((Model) -> ())?)
 	if walking then
 		return
 	end
@@ -395,6 +410,9 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?)
 	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
 
 	walking = true
+	if onStart then
+		onStart(model :: Model)
+	end
 
 	-- L'ANIMATION EST FACULTATIVE : sans elle il glisse sans bouger les jambes, mais il arrive. On ne bloque pas
 	-- une scene pour un asset manquant.
@@ -480,14 +498,21 @@ function TutorialService.init()
 		-- est de la declencher trop tot, ce qui fait sortir le grand-pere -- pas de quoi tricher.
 		walkOldMan(TutorialConfigs.OLDMAN_WALK_TARGET, function(model)
 			restoreIdle(model)
-			-- APRES l'idle : restoreIdle coupe les pistes de priorite Idle, et l'explication en est une autre. Dans
-			-- l'ordre inverse elle survivrait quand meme, mais l'ordre "on repose sa respiration, puis on pose le
-			-- geste par-dessus" est celui qui se lit.
-			playTalk(model)
+			-- L'EXPLICATION TOURNE DEJA : elle a demarre avec ses premiers pas. On ne fait que programmer sa FIN,
+			-- calee sur la replique du client -- le souffle qu'il prend en arrivant, puis le texte.
+			--
+			-- La duree du TRAJET n'entre pas dans ce calcul, et c'est voulu : le compte part d'ici, l'instant de
+			-- l'arrivee, donc rallonger sa marche ne raccourcit pas son geste. Un delai qui serait parti du depart
+			-- se serait decale a chaque fois qu'on deplace sa part de destination.
+			stopTalk(TutorialConfigs.SPEECH2_DELAY + speechSeconds())
 			-- IL EST ARRIVE, ET C'EST LE SERVEUR QUI LE SAIT. La marche se fait ici, image par image : le client
 			-- ne peut pas connaitre l'instant de l'arrivee sans le deviner, et une duree devinee se decale des
 			-- qu'on change la vitesse, la distance ou l'animation.
 			arrived:FireClient(player)
+		end, function(model)
+			-- IL PARLE EN MARCHANT. Lancee ici, au premier pas, elle se superpose a la marche au lieu d'attendre
+			-- qu'il soit arrete.
+			playTalk(model)
 		end)
 	end)
 

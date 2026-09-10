@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.669 — Le grand-pere explique deja en marchant
+
+Son animation d'explication demarre a ses PREMIERS PAS et se superpose a la marche. Il raconte son affaire en
+traversant sa cour, au lieu d'attendre d'etre plante devant sa porte pour commencer a vivre.
+
+**La superposition tient a la priorite.** La marche est en `Movement`, l'explication en `Action` : Action gagne
+sur les membres qu'elle CLE et laisse les autres a la marche. Une explication qui clerait aussi les jambes
+ecraserait donc le pas -- meme regle que les poses de maintien d'outil, qui ne clent que bras et torse. L'idle, en
+`Idle`, continue de tourner sous les deux.
+
+`playTalk` ne s'occupe plus que de DEMARRER ; `stopTalk` arrete plus tard. Les deux ne tombent plus au meme
+endroit, donc les separer evite de faire porter deux instants a une seule fonction.
+
+**L'arret se cale sur l'ARRIVEE**, pas sur le depart : souffle avant qu'il parle, puis la duree du texte.
+Rallonger sa marche ne raccourcit donc pas son geste, et deplacer sa part de destination ne decale rien.
+
+`walkOldMan` prend un `onStart`, qui tire quand il se met REELLEMENT en marche -- une fois tous les controles
+passes. Lancer le geste avant l'appel n'aurait dit que "on l'a demande" : le modele peut etre introuvable, la
+cible absente, une marche deja en cours, et le geste serait parti dans le vide.
+
 ## 0.0.668 — Les repliques du grand-pere ne baissent plus avec le reste
 
 La scene baisse tout le jeu pour qu'on l'ecoute -- et elle baissait AUSSI celui qui parle. On baissait donc le
