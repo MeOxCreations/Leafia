@@ -80,10 +80,17 @@ local function getGui(): ScreenGui
 	return created
 end
 
---- Fait jaillir une gerbe au-dessus de `target`, puis nettoie tout. Rien a garder chez l'appelant.
----
---- `offset` decale le point vise, en studs -- typiquement pour la poser au-dessus de la tete.
-function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
+-- LE TRIPLE ECLAIR SEUL, centre. Pour un coup ponctuel -- un effort qui ne donne rien, un a-coup -- ou la gerbe
+-- entiere raconterait une colere qu'il n'y a pas.
+--
+-- Meme forme que PIECES, donc le meme moteur les joue toutes les deux : une gerbe n'est qu'une LISTE de dessins.
+local SPARK = {
+	{ image = "rbxassetid://84029477406959", w = 114, h = 100, x = 0.5, y = 0.5, rot = 0, delay = 0 },
+}
+
+type Piece = { image: string, w: number, h: number, x: number, y: number, rot: number, delay: number }
+
+local function burst(target: WorldAnchor.Target, offset: Vector3?, pieces: { Piece })
 	local holder = getGui()
 
 	local frame = Instance.new("Frame")
@@ -96,7 +103,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	WorldAnchor.attach(frame, target, base, MAX_DISTANCE, SCALE)
 
 	local images: { ImageLabel } = {}
-	for _, piece in PIECES do
+	for _, piece in pieces do
 		local label = Instance.new("ImageLabel")
 		label.BackgroundTransparency = 1
 		label.Image = piece.image
@@ -142,7 +149,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	-- LE DEPART. Le compte part de la DERNIERE image sortie, pas du debut : sinon la piece la plus retardee
 	-- n'aurait presque pas le temps d'exister avant qu'on efface tout.
 	local last = 0
-	for _, piece in PIECES do
+	for _, piece in pieces do
 		last = math.max(last, piece.delay)
 	end
 	task.delay(last + POP_TIME + SETTLE_TIME + HOLD_TIME, function()
@@ -175,6 +182,20 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 			frame:Destroy()
 		end)
 	end)
+end
+
+--- Fait jaillir la gerbe ENTIERE au-dessus de `target`, puis nettoie tout. Rien a garder chez l'appelant.
+---
+--- `offset` decale le point vise, en studs -- typiquement pour la poser au-dessus de la tete.
+function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
+	burst(target, offset, PIECES)
+end
+
+--- LE TRIPLE ECLAIR SEUL. Pour un a-coup, un effort qui ne donne rien : un seul dessin, centre sur le point.
+---
+--- La gerbe entiere dit "il est en colere" ; celle-ci ne dit que "ca a cogne". Les melanger userait la premiere.
+function AngerBurst.spark(target: WorldAnchor.Target, offset: Vector3?)
+	burst(target, offset, SPARK)
 end
 
 return AngerBurst

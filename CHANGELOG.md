@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.672 — Le tirage de corde ne montre plus qu'un triple eclair
+
+La gerbe de huit etoiles etait trop pour un tirage de corde : elle raconte un COUP, pas un effort qui rate. Le
+tirage n'affiche plus que le triple eclair, celui de la gerbe de colere, centre sur le moteur.
+
+Les coups a la porte, eux, gardent la gerbe entiere.
+
+`AngerBurst` a maintenant deux entrees pour un seul moteur : `play` joue la gerbe complete, `spark` ne joue que
+le triple eclair. Une gerbe n'est qu'une LISTE de dessins -- la seule difference entre les deux est cette liste,
+et le code d'animation ne sait meme pas laquelle il joue.
+
+La distinction vaut la peine d'etre gardee : la gerbe entiere dit "il est en colere", l'eclair seul ne dit que
+"ca a cogne". Les melanger userait la premiere.
+
+L'eclair est accroche a la PART de la machine, pas a sa position : un point est un instantane, et la tondeuse
+peut bouger -- un autre joueur la pousse, elle glisse sur une pente. L'eclair resterait alors en l'air.
+
 ## 0.0.671 — Une gerbe d'etoiles a chaque tirage de corde
 
 `StarBurst` -- les huit etoiles filantes des coups a la porte -- part maintenant aussi quand on tire la corde de
