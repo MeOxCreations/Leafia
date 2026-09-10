@@ -72,7 +72,7 @@ local TILT = 11
 -- IL A ETE COUCHE A -90 UNE VERSION, puis remis debout : l'ecran a tranche. A plat, il s'etire sur le COTE --
 -- l'etirement suit le sens du dessin, pas celui de l'ecran -- et un eclair qui s'allonge a l'horizontale ne
 -- monte plus, donc il ne jaillit plus. C'est la verticale qui porte le geste.
-local BASE_TILT = -40
+local BASE_TILT = 15
 -- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
 -- ce qui se lit comme un tremblement et pas comme de la souplesse.
 local PULSE_UP = 0.11
@@ -154,22 +154,18 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 		while label.Parent do
 			-- LA TAILLE ET L'ANGLE DANS LE MEME TWEEN : deux tweens separes sur le meme objet finissent toujours
 			-- par se decaler d'une image ou deux, et le balancement ne tomberait plus avec l'etirement.
-			TweenService
-				:Create(label, TweenInfo.new(PULSE_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-					Size = UDim2.fromOffset(w * STRETCH_X, h * STRETCH_Y),
-					Rotation = BASE_TILT + TILT * side,
-				})
-				:Play()
+			TweenService:Create(label, TweenInfo.new(PULSE_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
+				Size = UDim2.fromOffset(w * STRETCH_X, h * STRETCH_Y),
+				Rotation = BASE_TILT + TILT * side,
+			}):Play()
 			task.wait(PULSE_UP)
 			if not label.Parent then
 				return
 			end
-			TweenService
-				:Create(label, TweenInfo.new(PULSE_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-					Size = normal,
-					Rotation = BASE_TILT,
-				})
-				:Play()
+			TweenService:Create(label, TweenInfo.new(PULSE_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+				Size = normal,
+				Rotation = BASE_TILT,
+			}):Play()
 			task.wait(PULSE_BACK)
 			-- IL REPART DE L'AUTRE COTE. Toujours du meme cote, ca se lirait comme un tic ; en alternance, comme
 			-- quelqu'un qui s'agite.
@@ -181,11 +177,9 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 		if not label.Parent then
 			return
 		end
-		TweenService
-			:Create(label, TweenInfo.new(OUT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-				ImageTransparency = 1,
-			})
-			:Play()
+		TweenService:Create(label, TweenInfo.new(OUT_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+			ImageTransparency = 1,
+		}):Play()
 		-- IL MONTE EN PARTANT. On bouge le point VISE dans le monde et pas la position a l'ecran : il continue
 		-- ainsi de suivre son personnage pendant qu'il s'echappe, meme si celui-ci marche.
 		local steps = 12

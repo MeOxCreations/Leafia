@@ -461,7 +461,7 @@ return {
 	-- joueurs Roblox.
 	-- LE GRAND-PERE EST PETIT, et ces studs se comptent depuis sa RootPart -- pas depuis sa tete. Regle sur un
 	-- personnage de taille normale, l'eclair flottait au-dessus de la maison.
-	IMPATIENT_BURST_UP = 6,
+	IMPATIENT_BURST_UP = 4.5,
 	-- DECALAGE LATERAL, en studs. A ZERO : l'eclair se pose AU-DESSUS de sa tete, pas a cote.
 	--
 	-- Il a ete decale une version, pour ne pas couvrir son visage. A l'ecran ca ne marchait pas : l'onomatopee

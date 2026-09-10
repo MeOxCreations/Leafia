@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.688 — L'eclair redescend un peu, et son inclinaison est calee
+
+`IMPATIENT_BURST_UP` passe de 6 a 4.5.
+
+`BASE_TILT` vaut 15, valeur reglee a l'ecran par Meox lui-meme -- c'est la bonne facon de trouver un angle : on
+le regarde, on ne le calcule pas. Le journal le dit deja pour le sens d'un wipe ou l'orientation d'un mesh.
+
 ## 0.0.687 — L'eclair penche de vingt degres de plus
 
 `BASE_TILT` passe de -20 a -40. Le balancement continue de se jouer autour de cette valeur, donc il ne se
