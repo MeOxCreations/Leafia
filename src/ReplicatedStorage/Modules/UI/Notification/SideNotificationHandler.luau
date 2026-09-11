@@ -74,9 +74,12 @@ local WARN_ICON_SIZE = UDim2.fromScale(0.17, 0.17)
 -- Compte a rebours avant fermeture auto (CooldownClearNotification) : TOUJOURS visible, mais a une place differente et
 -- plus vif (blanc) quand la notif est ouverte, plus discret (gris) quand elle est fermee. Valeurs du design (Studio).
 local COOLDOWN_OPEN_POS = UDim2.fromScale(0.18, 0.92)
-local COOLDOWN_OPEN_SIZE = UDim2.fromScale(0.253, 0.101)
+-- SA TAILLE EST CELLE DE SON CADRE : le TextLabel est en `TextScaled` dans le template Studio, donc retrecir le
+-- cadre retrecit la police. C'est le seul endroit ou regler la taille du chiffre -- aucun `TextSize` n'est pose
+-- par le code, et en poser un ecraserait le reglage fait dans l'editeur.
+local COOLDOWN_OPEN_SIZE = UDim2.fromScale(0.215, 0.086)
 local COOLDOWN_CLOSED_POS = UDim2.fromScale(0.788, 0.55)
-local COOLDOWN_CLOSED_SIZE = UDim2.fromScale(0.13, 0.51)
+local COOLDOWN_CLOSED_SIZE = UDim2.fromScale(0.11, 0.43)
 local COOLDOWN_OPEN_COLOR = Color3.fromRGB(255, 255, 255)
 -- BLANC AUSSI QUAND LA NOTIF EST FERMEE. Il etait gris pour se faire discret, mais ferme il est le SEUL chiffre
 -- a l'ecran, sur un fond sombre et en petit : le gris le rendait a peine lisible, et un compte a rebours qu'on

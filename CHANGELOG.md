@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.731 — Le compte a rebours est un peu plus petit
+
+Les deux tailles du chiffre baissent d'environ 15 % : ouvert 0.253x0.101 -> 0.215x0.086, ferme 0.13x0.51 ->
+0.11x0.43.
+
+Le TextLabel est en `TextScaled` dans le template Studio, donc c'est la taille de son CADRE qui fait la police.
+C'est le seul endroit ou regler ce chiffre -- aucun `TextSize` n'est pose par le code, et en poser un ecraserait
+le reglage fait dans l'editeur.
+
 ## 0.0.730 — Le compte a rebours des notifications passe en blanc
 
 `COOLDOWN_CLOSED_COLOR` passe du gris (184) au blanc.
