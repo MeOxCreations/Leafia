@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.732 — L'anneau derriere la tete du grand-pere s'en va
+
+L'ImageLabel `LoadRing`, ses quatre reglages et sa rotation sont supprimes de l'ecran de chargement. Le visage
+reste pose sur son halo, et il continue de tanguer.
+
+Cet anneau portait le signal "ca charge" du temps ou rien d'autre ne le portait. Depuis 0.0.650, la couronne de
+douze points le dit plus clairement, en bas de l'ecran, sans rien poser sur le dessin du grand-pere. Deux
+signaux qui racontent la meme chose finissent par se gener.
+
+La boucle Heartbeat, elle, RESTE : elle faisait deux choses, tourner l'anneau et faire tanguer la tete. Elle est
+renommee `swayConn` -- un nom qui annonce un anneau disparu serait un commentaire faux.
+
 ## 0.0.731 — Le compte a rebours est un peu plus petit
 
 Les deux tailles du chiffre baissent d'environ 15 % : ouvert 0.253x0.101 -> 0.215x0.086, ferme 0.13x0.51 ->

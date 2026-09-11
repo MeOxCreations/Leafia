@@ -248,18 +248,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local FACE_BLINK_HALF = 0.05
 	local FACE_BLINK_SHUT = 0.09
 
-	-- ===== L'ANNEAU QUI TOURNE =====
-	-- Un cercle en pointilles autour du visage. C'est LE signal "ca charge" : une rotation continue est la seule
-	-- chose a l'ecran qui dise "le jeu n'est pas plante" sans avoir a mesurer quoi que ce soit.
-	--
-	-- Il tourne a vitesse CONSTANTE et ne represente aucune progression. Une progression, c'est le travail des
-	-- feuilles -- deux indicateurs qui racontent la meme chose finiraient par se contredire.
-	local RING_IMAGE_ID = "rbxassetid://127162788265693"
-	-- SERRE AUTOUR DU VISAGE, et presque transparent. Large et plein, l'anneau devenait le sujet du plan ; c'est
-	-- le visage, le sujet. Un signal de vie n'a pas besoin d'etre vu pour etre lu -- il a besoin de BOUGER.
-	local RING_SIZE = UDim2.fromScale(0.13, 0.23)
-	local RING_TRANSPARENCY = 0.88
-	local RING_SPEED = 40 -- degres par seconde
+	-- L'ANNEAU QUI TOURNAIT AUTOUR DU VISAGE EST RETIRE. Il portait le signal "ca charge" a une epoque ou rien
+	-- d'autre ne le portait ; depuis, la couronne de points le dit plus clairement, et sans rien poser sur le
+	-- grand-pere. Deux signaux qui racontent la meme chose finissent par se gener.
 
 	-- ===== LE HALO =====
 	-- Une lueur derriere le visage. Elle ne dit rien et ne bouge pas : elle DETACHE le grand-pere du ciel, qui a
@@ -442,22 +433,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	glow.ZIndex = 3
 	glow.Parent = curtain
 
-	local ring = Instance.new("ImageLabel")
-	ring.Name = "LoadRing"
-	ring.BackgroundTransparency = 1
-	ring.Image = RING_IMAGE_ID
-	-- `Fit` et pas `Stretch` : un cercle etire n'est plus un cercle, et il tourne alors comme une ellipse -- ce
-	-- qui se remarque immediatement sur une rotation continue.
-	ring.ScaleType = Enum.ScaleType.Fit
-	ring.AnchorPoint = Vector2.new(0.5, 0.5)
-	ring.Position = UDim2.fromScale(0.5, 0.5)
-	ring.Size = RING_SIZE
-	ring.ImageTransparency = RING_TRANSPARENCY
-	ring.ZIndex = 4
-	ring.Parent = curtain
-
-	-- LE VISAGE, dedans. Il ne tourne PAS avec l'anneau -- il est enfant du rideau, pas de l'anneau : un visage
-	-- qui tourne avec le cercle serait la tete a l'envers une fois sur deux.
+	-- LE VISAGE, pose sur le halo.
 	local face = Instance.new("ImageLabel")
 	face.Name = "OldManFace"
 	face.BackgroundTransparency = 1
@@ -480,20 +456,13 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	face.ZIndex = 5
 	face.Parent = curtain
 
-	-- UNE SEULE BOUCLE POUR LES DEUX. L'anneau tourne, la tete tangue : deux mouvements continus qui n'ont aucune
-	-- raison d'avoir chacun sa connexion. Une de moins a brancher, une de moins a couper, et rien qui puisse
-	-- survivre a l'autre.
-	local ringConn: RBXScriptConnection? = nil
+	-- LE TANGAGE DE LA TETE. Cette boucle faisait aussi tourner l'anneau, qui est parti : il ne lui reste que ca.
+	local swayConn: RBXScriptConnection? = nil
 	do
 		local swayTime = 0
-		ringConn = RunService.Heartbeat:Connect(function(dt: number)
-			-- Modulo 360 : sans lui, la rotation grandirait sans fin et finirait par perdre en precision sur un
-			-- chargement long.
-			ring.Rotation = (ring.Rotation + RING_SPEED * dt) % 360
-
-			-- LE TANGAGE. Un sinus, donc il ne s'arrete jamais a un bout : il ralentit en arrivant et repart, ce
-			-- qui est exactement ce que fait une tete qui balance. Un aller-retour lineaire claquerait aux deux
-			-- extremites.
+		swayConn = RunService.Heartbeat:Connect(function(dt: number)
+			-- Un sinus, donc le mouvement ne s'arrete jamais a un bout : il ralentit en arrivant et repart, ce qui
+			-- est exactement ce que fait une tete qui balance. Un aller-retour lineaire claquerait aux extremites.
 			swayTime += dt
 			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE
 		end)
@@ -828,9 +797,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- COUVERT : on demonte le rideau pendant qu'on ne voit rien. C'est tout l'interet du volet.
 	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
 	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
-	if ringConn then
-		ringConn:Disconnect()
-		ringConn = nil
+	if swayConn then
+		swayConn:Disconnect()
+		swayConn = nil
 	end
 	if tileConn then
 		tileConn:Disconnect()
