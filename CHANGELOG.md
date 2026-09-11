@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.782 — Le champ de vision se referme doucement quand on s'arrete
+
+Il revenait a sa valeur de repos aussi VITE qu'il s'en eloignait : six degres en une demi-seconde, ce qui ne se lit
+pas comme un retour mais comme un saut. Deux vitesses maintenant -- `FOV_RISE_SPEED` (3, inchangee) pour l'ouvrir,
+`FOV_FALL_SPEED` (1.3) pour le refermer.
+
+UN REGLAGE QUI SERT DEUX MOMENTS FINIT TOUJOURS PAR LES OPPOSER. A une seule valeur il fallait choisir : assez vif
+pour que le depart reponde, donc trop vif pour que le retour se voie. Baisser la valeur unique aurait rendu le
+depart mou.
+
+ET LE RETOUR REPART DE LA OU IL EN EST, ce qui etait DEJA le cas : un lerp part toujours de sa valeur courante. Se
+remettre a marcher a mi-chemin remonte donc depuis le milieu, sans rien memoriser -- c'est le comportement qui
+etait demande, il etait juste invisible parce que trop rapide.
+
+Les trois paliers (repos 70, marche 76, sprint 80) ne changent pas. Ils restent DISCRETS expres : une valeur
+continue tiree de la vitesse a deja ete essayee et faisait trembler la vue au rythme des pas -- c'est pour ca que
+les deux seuils d'entree et de sortie existent.
+
 ## 0.0.781 — Il montre le camion du doigt en arrivant
 
 L'animation `95701919652850` remplace son geste d'explication a partir du moment ou il arrive au camion : il

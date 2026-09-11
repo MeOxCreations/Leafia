@@ -21,7 +21,17 @@ local CameraEffects = {}
 local player = Players.LocalPlayer
 
 -- ===== Champ de vision =====
-local FOV_LERP_SPEED = 3
+-- DEUX VITESSES, ET PAS UNE. Monter et redescendre ne racontent pas la meme chose : on veut sentir la vue
+-- s'ouvrir TOUT DE SUITE quand on part, et la voir se refermer DOUCEMENT quand on s'arrete.
+--
+-- AVEC UNE SEULE VALEUR, IL FALLAIT CHOISIR. A 3 dans les deux sens, le retour couvrait ses six degres en une
+-- demi-seconde : a l'ecran ca ne se lit pas comme un retour, ca se lit comme un saut. Et la baisser aurait rendu
+-- le depart mou. Un reglage qui sert deux moments differents finit toujours par les opposer.
+--
+-- LE POINT DE DEPART DU RETOUR EST LA VALEUR COURANTE, et c'est gratuit : un lerp part toujours d'ou il en est.
+-- S'arreter a mi-chemin puis repartir reprend donc la ou on en etait, sans rien memoriser.
+local FOV_RISE_SPEED = 3
+local FOV_FALL_SPEED = 1.3
 local DEFAULT_FOV = 70
 local fovBase = DEFAULT_FOV
 local fovBaseTarget = DEFAULT_FOV
@@ -31,7 +41,7 @@ local fovPunchDecay = 6
 -- OFFSET DE FOV, persistant. Distinct du "fond" (pilote par CameraController selon repos / mouvement) et de
 -- l'a-coup (transitoire) : c'est un TROISIEME terme, qu'un appelant peut tenir aussi longtemps qu'il veut sans
 -- se battre avec les deux autres. Negatif = la vue se resserre.
--- VITESSE PROPRE, separee de FOV_LERP_SPEED. Le fond change en permanence (repos <-> mouvement) et doit
+-- VITESSE PROPRE, separee de celles du fond. Le fond change en permanence (repos <-> mouvement) et doit
 -- rester vif ; un effet TENU, lui, doit s'installer lentement. Partager la vitesse forcerait a compenser
 -- l'un en reglant l'autre, et le compensateur serait toujours une estimation.
 -- BAS = lent et pose. 1.1 met environ deux secondes a s'installer.
@@ -244,7 +254,9 @@ function CameraEffects.init()
 		-- dt dans chaque facteur de lerp -> meme vitesse quel que soit le framerate.
 		local camera = workspace.CurrentCamera
 		if camera then
-			fovBase += (fovBaseTarget - fovBase) * math.min(1, FOV_LERP_SPEED * dt)
+			-- LA VITESSE DEPEND DU SENS : vif en s'ouvrant, pose en se refermant.
+			local fovSpeed = if fovBaseTarget > fovBase then FOV_RISE_SPEED else FOV_FALL_SPEED
+			fovBase += (fovBaseTarget - fovBase) * math.min(1, fovSpeed * dt)
 			fovPunch += (0 - fovPunch) * math.min(1, fovPunchDecay * dt)
 			fovOffset += (fovOffsetTarget - fovOffset) * math.min(1, fovOffsetSpeed * dt)
 			camera.FieldOfView = fovBase + fovPunch + fovOffset
