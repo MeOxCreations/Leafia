@@ -84,6 +84,18 @@ local TruckConfigs = {
 	-- revenir a cote de la benne au lieu de dedans.
 	POSE_ATTRIBUTE = "LeafiaTruckPose",
 
+	-- CE QUI S'EQUIPE EN MAIN, et sous quel nom. La cle est le nom du MODELE dans la benne, la valeur est la cle
+	-- de `ToolConfigs` -- les deux ne se ressemblent pas toujours : le modele "LeafRake" est l'outil "Rake".
+	--
+	-- ABSENT DE CETTE TABLE = PAS EQUIPABLE, et c'est la regle entiere. Le seau et l'echelle ne s'equipent pas :
+	-- ce sont des objets qu'on va chercher et qu'on PORTE. Les mettre dans un menu les ferait apparaitre dans les
+	-- mains par magie, depuis l'autre bout du jardin.
+	TOOL_EQUIP = {
+		Shear = "Shear",
+		HedgeTrimmer = "HedgeTrimmer",
+		LeafRake = "Rake",
+	},
+
 	-- Ou chacun se pose une fois sorti : un dossier de parts, une par outil, NOMMEE COMME LUI.
 	--
 	-- UNE PART PAR OUTIL et pas un point unique : deux outils lances de suite se poseraient l'un dans l'autre. Et

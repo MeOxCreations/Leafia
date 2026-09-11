@@ -14,6 +14,7 @@
 -- LE VOL EST UNE COURBE DE BEZIER a trois points : depart, sommet, arrivee. Une ligne droite ne se lit pas comme
 -- un objet qu'on SORT mais comme un objet qui glisse ; l'arc dit qu'il a ete souleve et pose.
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -117,6 +118,84 @@ local function bezier(a: Vector3, b: Vector3, c: Vector3, t: number): Vector3
 	return a * (u * u) + b * (2 * u * t) + c * (t * t)
 end
 
+-- ===== L'OUTIL EN MAIN NE RESTE PAS AU SOL =====
+-- Un outil sorti du camion se pose sur le terrain. Equipe, ToolService en met un exemplaire dans la main : sans
+-- rien faire, le joueur le verrait donc DEUX FOIS -- dans ses mains et par terre.
+--
+-- ON LE REND INVISIBLE, ON NE LE DEPLACE PAS. Trois raisons. Il garde sa place, donc il RE-APPARAIT exactement la
+-- quand on le range. Il garde sa marque, donc le menu des outils continue de le compter comme possede -- range
+-- ailleurs, il disparaitrait du menu au moment ou on l'equipe, ce qui est l'inverse de ce qu'on veut dire. Et le
+-- camion peut toujours le reprendre.
+--
+-- LES VALEURS D'ORIGINE SONT GARDEES : une part peut etre deja semi-transparente ou deja traversable, et les
+-- remettre "a zero" les abimerait. On restitue ce qu'on a trouve, pas ce qu'on suppose.
+local hidden: { [Model]: { [BasePart]: { transparency: number, collide: boolean, query: boolean } } } = {}
+
+local function setToolHidden(model: Model, hide: boolean)
+	if hide then
+		if hidden[model] then
+			return
+		end
+		local saved: { [BasePart]: { transparency: number, collide: boolean, query: boolean } } = {}
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") then
+				local part = d :: BasePart
+				saved[part] = { transparency = part.Transparency, collide = part.CanCollide, query = part.CanQuery }
+				part.Transparency = 1
+				part.CanCollide = false
+				part.CanQuery = false
+			end
+		end
+		hidden[model] = saved
+		return
+	end
+	local saved = hidden[model]
+	if not saved then
+		return
+	end
+	hidden[model] = nil
+	for part, was in saved do
+		if part.Parent then
+			part.Transparency = was.transparency
+			part.CanCollide = was.collide
+			part.CanQuery = was.query
+		end
+	end
+end
+
+--- L'outil que ce personnage tient, ou nil. `LeafiaTool` est pose par ToolService sur le MODELE en main.
+local function heldToolName(character: Model): string?
+	for _, child in character:GetChildren() do
+		local name = child:GetAttribute("LeafiaTool")
+		if typeof(name) == "string" then
+			return name :: string
+		end
+	end
+	return nil
+end
+
+--- Cache l'exemplaire au sol de ce qui est en main, et remontre tout le reste.
+---
+--- ON BALAYE TOUT A CHAQUE FOIS plutot que de suivre les changements un par un : la liste est courte (ce qui est
+--- sorti du camion), et un etat reconstruit ne peut pas se desynchroniser -- alors qu'un etat mis a jour par
+--- evenements oublie toujours un cas (mort, respawn, outil detruit, second joueur).
+local function syncHidden()
+	local held: { [string]: boolean } = {}
+	for _, player in Players:GetPlayers() do
+		local character = player.Character
+		local name = if character then heldToolName(character) else nil
+		if name then
+			held[name] = true
+		end
+	end
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d:GetAttribute(TruckConfigs.POSE_ATTRIBUTE) ~= nil then
+			local tool = TruckConfigs.TOOL_EQUIP[d.Name]
+			setToolHidden(d :: Model, tool ~= nil and held[tool] == true)
+		end
+	end
+end
+
 --- FAIT SORTIR `model` DU CAMION et le pose a `landing`.
 ---
 --- IL EST ANCRE PENDANT TOUT LE VOL, et repose ancre a l'arrivee : un modele desancre tombe, rebondit, et finit
@@ -188,6 +267,9 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 		-- ET IL RENTRE DANS LA BENNE, a la FIN du vol seulement. Range avant, il suivrait la carrosserie pendant
 		-- qu'il vole encore -- il arriverait donc a cote de sa place si le camion bouge.
 		if home and home.Parent then
+			-- IL REDEVIENT VISIBLE EN RENTRANT. Range invisible, il resterait un trou dans la benne -- et rien a
+			-- l'ecran ne dirait qu'il est bien revenu.
+			setToolHidden(model, false)
 			model.Parent = home
 			-- LA MARQUE PART AVEC LUI : il n'est plus "sorti", donc l'interface le remontre comme a prendre. C'est
 			-- la meme information qui sert aux deux sens, il n'y a rien a tenir d'accord.
@@ -272,6 +354,33 @@ function TruckToolsService.init()
 
 	-- RIEN A NETTOYER QUAND UN JOUEUR PART : le vol vit dans une tache, pas dans sa session, et il finit tout
 	-- seul. L'outil sorti appartient au MONDE, pas a celui qui l'a sorti.
+	-- ON SUIT CE QUE LES JOUEURS TIENNENT. L'attribut arrive APRES l'enfant -- le modele est parente d'abord, la
+	-- marque posee ensuite -- donc on ecoute les deux : l'ajout, et l'attribut qui apparait dessus.
+	local function watch(character: Model)
+		character.ChildAdded:Connect(function(child)
+			child:GetAttributeChangedSignal("LeafiaTool"):Connect(syncHidden)
+			syncHidden()
+		end)
+		character.ChildRemoved:Connect(syncHidden)
+		syncHidden()
+	end
+
+	local function follow(player: Player)
+		player.CharacterAdded:Connect(watch)
+		if player.Character then
+			watch(player.Character :: Model)
+		end
+	end
+
+	Players.PlayerAdded:Connect(follow)
+	for _, player in Players:GetPlayers() do
+		follow(player)
+	end
+	-- ET AU DEPART D'UN JOUEUR : son outil n'est plus tenu, donc l'exemplaire au sol doit revenir.
+	Players.PlayerRemoving:Connect(function()
+		task.defer(syncHidden)
+	end)
+
 	print("[TruckToolsService] Pret : les outils de la benne peuvent etre sortis.")
 end
 

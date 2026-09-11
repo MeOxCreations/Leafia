@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.777 — Un menu d'outils en bas a gauche, deroulant
+
+Un bouton rond en bas a gauche ; on clique, une colonne de cases se deplie au-dessus, une par outil POSSEDE. Un
+clic sur une case l'equipe, un clic sur l'outil deja en main le range. La case de l'outil tenu a un contour vert.
+
+REPLIE PAR DEFAUT, ET C'EST LE POINT. Le joueur n'a pas trois outils a choisir en permanence : il en a un en main
+et il en change deux fois par chantier. Une barre ouverte en continu occuperait un coin de l'ecran pour une
+decision rare, alors qu'un bouton dit "il y a des outils ici" en un dessin.
+
+POSSEDER, C'EST AVOIR SORTI L'OUTIL DU CAMION. La marque posee sur un outil sorti sert donc une TROISIEME fois :
+elle dit d'ou il vient, ou il se range, et qu'il est a nous. Une liste de possession tenue a part serait un second
+etat a garder d'accord avec le monde, et elle mentirait le jour ou l'autre joueur remet l'outil dans la benne.
+
+ET SEULEMENT CE QUI S'EQUIPE EN MAIN. `TOOL_EQUIP` fait le tri et donne au passage la correspondance entre le nom
+du modele et celui de l'outil -- le modele `LeafRake` est l'outil `Rake`. Le seau et l'echelle n'y sont pas : ce
+sont des objets qu'on va chercher et qu'on porte, et les mettre ici les ferait apparaitre dans les mains depuis
+l'autre bout du jardin.
+
+L'EXEMPLAIRE AU SOL DEVIENT INVISIBLE PENDANT QU'ON LE TIENT, sinon le joueur le verrait deux fois. Invisible et
+non deplace : il garde sa place donc il re-apparait exactement la, il garde sa marque donc le menu continue de le
+compter, et le camion peut toujours le reprendre. Les valeurs d'origine de chaque part sont gardees et rendues --
+une part deja semi-transparente ne doit pas revenir "propre".
+
+L'ETAT EST RECONSTRUIT A CHAQUE CHANGEMENT plutot que suivi pas a pas : la liste est courte, et un etat
+reconstruit ne peut pas se desynchroniser -- alors qu'un etat mis a jour par evenements oublie toujours un cas
+(mort, respawn, outil detruit, second joueur).
+
+Le clic ne decide pas d'equiper ou de ranger : il envoie le nom, et `ToolService.selectTool` tranche. Une bascule
+tenue cote client devrait deviner ce que le serveur a fait de la demande precedente.
+
+### Reste a faire
+
+C'est un prototype. Le dessin du bouton est provisoire (l'icone de la cisaille faute de caisse a outils), et le
+style de la barre du camion sera aligne sur celui-ci quand il sera valide.
+
 ## 0.0.776 — Un script Studio qui cree les points de depot des outils
 
 `scripts/studio/CreerPointsDeDepotOutils.lua` fabrique le dossier `ToolsDropPoints` et une part par outil range

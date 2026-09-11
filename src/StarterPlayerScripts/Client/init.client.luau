@@ -88,6 +88,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- La barre des outils de la benne. Apres TruckController, qui dessine la pilule d'ouverture : on ouvre le
 	-- hayon avant d'y prendre quoi que ce soit.
 	require(script.TruckToolsController).init()
+	-- Le menu des outils possedes, en bas a gauche. Apres la barre du camion : c'est elle qui remplit ce menu, en
+	-- faisant sortir les outils de la benne.
+	require(script.ToolHudController).init()
 
 	-- Musique de fond du TUTO : MusicBuild4 (du dossier des musiques de build), en boucle. Clonee (le Sound d'origine reste
 	-- intact), volume force ici (le reglage Studio est ignore). En task.spawn : le Sound peut arriver un poil apres le boot.
