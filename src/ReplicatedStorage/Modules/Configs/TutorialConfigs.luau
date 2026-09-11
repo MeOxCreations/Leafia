@@ -466,8 +466,13 @@ return {
 	-- Un point d'exclamation flottant au-dessus de la porte, tant qu'on n'a pas toque. Le halo dit "cet objet
 	-- compte" quand on le voit deja ; le marqueur, lui, se voit de LOIN et dit ou aller.
 	--
-	-- Hauteur au-dessus du centre de la porte, en studs.
-	DOOR_MARKER_UP = 3.5,
+	-- Hauteur au-dessus du CENTRE de la porte, en studs. A ZERO : le point vise est deja le milieu du battant,
+	-- soit pile la hauteur ou l'on regarde -- il n'y a rien a corriger.
+	--
+	-- ELLE VALAIT 3.5 SANS JAMAIS SERVIR : le balancement du marqueur ecrasait la hauteur demandee (corrige en
+	-- 0.0.751). Le jour ou elle s'est mise a compter, le marqueur est parti au-dessus du toit. Seul celui du
+	-- grand-pere avait besoin de monter, parce que sa RootPart est a ses pieds.
+	DOOR_MARKER_UP = 0,
 
 	-- ===== IL S'IMPATIENTE =====
 	-- Tant que la machine est encore par terre, le grand-pere relance. Une phrase de temps en temps, pas un

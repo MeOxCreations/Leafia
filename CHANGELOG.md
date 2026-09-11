@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.753 — Le marqueur de la porte redescend a sa place
+
+`DOOR_MARKER_UP` passe de 3.5 a 0. La valeur n'avait jamais servi -- le balancement ecrasait la hauteur demandee
+jusqu'a 0.0.751 -- et le jour ou elle s'est mise a compter, le marqueur est parti au-dessus du toit.
+
+A zero, le point vise est le CENTRE du battant, soit pile la hauteur ou l'on regarde : il n'y a rien a corriger.
+C'est aussi exactement ce qu'on voyait avant, puisque la hauteur etait ignoree.
+
+Seul celui du grand-pere avait besoin de monter, parce que sa RootPart est posee a ses pieds et pas a mi-torse.
+
 ## 0.0.752 — Il se tourne avant de marcher, et il parle en partant puis en arrivant
 
 SA MARCHE PARTAIT DE TRAVERS. Le trajet interpolait la position ET l'orientation ensemble, de sa pose actuelle
