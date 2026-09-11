@@ -2204,6 +2204,34 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.737 — Il marche moins vite, et il se promene au lieu de rester plante
+
+`FOLLOW_SPEED` passe de 8 a 5.5 studs/s : a 8 il trottait. L'animation de pas est jouee au RAPPORT de cette
+valeur, donc elle ralentit toute seule et ses pieds ne patinent pas.
+
+ET IL SE PROMENE. Une fois la machine dans les mains du joueur, la boucle s'arretait et il restait immobile
+jusqu'a la fin du tuto. Elle continue maintenant de tourner et lui choisit de temps en temps un point ou aller
+flaner, dans la part `ZoneWalking` posee dans Studio, toujours a moins de 40 studs du joueur.
+
+UNE SEULE BOUCLE ET UNE SEULE ECRITURE DE POSE, avec deux raisons de marcher qui se relaient : la machine tant
+qu'elle est par terre, la promenade ensuite. Deux boucles se seraient battues pour le meme modele -- une
+propriete, un seul ecrivain.
+
+LE POINT EST TIRE PUIS REFUSE, pas calcule. L'ensemble des points a la fois dans la zone, a bonne distance du
+joueur, a bonne distance de lui et poses sur du SOL n'a aucune forme simple, et il change des qu'on
+redimensionne la zone. Douze tirages, et on retente plus tard si aucun ne convient.
+
+Trois details qui evitent des blocages. Une cible qui s'eloigne de plus de `STROLL_LEASH` (60 studs) du joueur
+est abandonnee, sinon il finirait son trajet vers un coin que le joueur a quitte. Un joueur plante sur lui le
+fait abandonner son point au lieu de le figer sur une cible inatteignable. Et la piste de pas prend desormais
+une VITESSE et plus un booleen : il flane a 3 studs/s, il rejoint la machine a 5.5, et une cadence reglee une
+fois pour toutes patinerait dans l'autre.
+
+### A faire dans Studio
+
+La part `ZoneWalking` doit exister (elle est sous `Worlds/Maps/Assets/House`). Sans elle il ne se promene pas,
+et un warn le dit une fois dans la console au lieu de laisser chercher pourquoi il ne bouge plus.
+
 ## 0.0.736 — Le grand-pere ne pivote plus vers le joueur a la sortie de la scene
 
 Son cap ne suit plus que sa MARCHE : il tourne vers la machine pendant qu'il y va, et garde son orientation des

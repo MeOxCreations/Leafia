@@ -881,14 +881,48 @@ return {
 	-- celle-la est LENTE parce qu'elle est le sujet du plan, alors qu'ici il doit tenir le rythme de quelqu'un qui
 	-- traverse un jardin. Un reglage partage par les deux moments aurait fini par les opposer.
 	--
-	-- Un peu sous la vitesse de marche du joueur : il reste derriere, ce qui est exactement l'effet voulu.
-	FOLLOW_SPEED = 8,
+	-- BIEN SOUS la vitesse de marche du joueur : il reste derriere, ce qui est exactement l'effet voulu, et a
+	-- 8 studs/s il trottait -- un vieux monsieur a canne ne trottine pas. L'animation suit toute seule (elle est
+	-- jouee au rapport de cette valeur), donc baisser ce chiffre ralentit le pas sans faire patiner ses pieds.
+	FOLLOW_SPEED = 5.5,
 	-- Vitesse de son animation de pas quand il suit, en multiple. Comme pour sa sortie, elle est jouee au RAPPORT
 	-- de sa vitesse reelle sur OLDMAN_WALK_REFERENCE : ce facteur ne fait que l'accentuer, sans toucher au trajet.
 	FOLLOW_ANIM_BOOST = 1.2,
 	-- Fondu de son animation de pas, a l'arret comme au demarrage. Court : un vieux qui repart doit repartir, pas
 	-- se fondre.
 	FOLLOW_ANIM_FADE = 0.15,
+
+	-- ===== ET ENTRE DEUX, IL SE PROMENE =====
+	-- La machine une fois dans les mains du joueur, il n'a plus rien a faire -- et il restait plante la jusqu'a la
+	-- fin du tuto. Quelqu'un d'immobile pendant deux minutes cesse d'etre un personnage et devient un decor.
+	--
+	-- DANS UNE PART POSEE DANS STUDIO, jamais dans un rayon autour de lui : un rayon l'enverrait dans la maison,
+	-- dans un massif ou sur la route. La zone dit une fois pour toutes ou il a le droit d'aller, et elle se
+	-- corrige a la souris -- ce qu'aucun chiffre ici ne sait faire.
+	WALK_ZONE_NAME = "ZoneWalking",
+	-- IL RESTE PRES DU JOUEUR : rayon maximum, mesure DEPUIS LE JOUEUR, du point qu'il peut choisir. La zone fait
+	-- plus de cent studs de cote -- sans cette borne il partirait a l'autre bout du jardin, ou personne ne le voit
+	-- et ou il ne raconte plus rien.
+	STROLL_NEAR_PLAYER = 40,
+	-- Et pas trop pres de LUI : sous cette distance le trajet ne vaut pas la peine d'etre joue, on verrait un pas
+	-- et demi -- ce qui se lit comme un tic, pas comme une promenade.
+	STROLL_MIN_DIST = 12,
+	-- SON ALLURE DE FLANERIE. Plus lente encore que son suivi : la il ne va nulle part, il occupe le temps. Son
+	-- propre reglage, parce que les deux moments n'ont pas le meme sens et finiraient par s'opposer.
+	STROLL_SPEED = 3,
+	-- Combien de temps il reste en place entre deux promenades, tire au hasard entre les deux bornes. Le hasard
+	-- sert a ce qu'on ne PREVOIE pas le prochain depart : une cadence reguliere se lit comme une horloge.
+	STROLL_WAIT_MIN = 8,
+	STROLL_WAIT_MAX = 20,
+	-- Distance a laquelle il considere etre arrive, en studs.
+	STROLL_ARRIVE = 1.2,
+	-- Combien de points il tire avant d'abandonner ce tour-ci. Toute la zone n'est pas du sol praticable et le
+	-- joueur peut se tenir a son bord : quand rien ne convient, on retente plus tard plutot que de boucler.
+	STROLL_TRIES = 12,
+	STROLL_RETRY = 2,
+	-- IL LAISSE TOMBER UNE CIBLE DEVENUE TROP LOIN DU JOUEUR. Le joueur marche pendant qu'il marche : sans cette
+	-- laisse, il finirait tranquillement son trajet vers un coin que le joueur a quitte depuis longtemps.
+	STROLL_LEASH = 60,
 	-- Fondus d'entree ET de sortie. L'entree croise l'idle, la sortie y revient : sans eux les bras SAUTENT a la
 	-- pose de repos au dernier mot.
 	OLDMAN_TALK_FADE = 0.3,

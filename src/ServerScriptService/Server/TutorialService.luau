@@ -572,6 +572,16 @@ local followStopped = false -- il est arrive : sert d'hysteresis, il faut REdepa
 -- zigzaguer sur place.
 local followMower: BasePart? = nil
 local followScanAt = 0
+-- LA VITESSE A LAQUELLE SA PISTE DE PAS EST REGLEE. Gardee pour ne la re-ajuster que quand elle change : il
+-- marche a deux allures (vers la machine, puis en flanant), et des pieds restes a la cadence du suivi
+-- patineraient pendant la promenade.
+local followAnimSpeed = 0
+-- OU IL SE PROMENE, et quand il repart. La cible est gardee d'une image sur l'autre : retiree a chaque image, il
+-- en tirerait une nouvelle soixante fois par seconde et n'irait jamais nulle part.
+local strollTarget: Vector3? = nil
+local strollNextAt = 0
+local walkZone: BasePart? = nil
+local warnedZone = false
 
 local function stopFollow()
 	if followConn then
@@ -581,6 +591,8 @@ local function stopFollow()
 	local track = followTrack
 	followTrack = nil
 	followMower = nil
+	followAnimSpeed = 0
+	strollTarget = nil
 	if track then
 		-- L'idle tourne DESSOUS (priorite Idle contre Movement) : arreter le pas suffit a le remettre au repos,
 		-- il n'y a rien a reposer.
@@ -588,15 +600,17 @@ local function stopFollow()
 	end
 end
 
--- Joue ou coupe son animation de pas, selon qu'il avance ou non. Idempotent : appelee a chaque image, elle ne
--- relance rien tant que l'etat ne change pas.
-local function setFollowWalking(model: Model, moving: boolean)
+-- Joue ou coupe son animation de pas, a l'allure DEMANDEE (en studs/s ; zero = arrete). Idempotent : appelee a
+-- chaque image, elle ne relance rien et ne re-regle rien tant que rien ne change.
+--
+-- ELLE PREND UNE VITESSE ET PAS UN BOOLEEN, parce qu'il marche a deux allures : vers la machine, puis en flanant.
+-- Une piste reglee une fois pour toutes garderait la cadence de la premiere et ses pieds patineraient dans la
+-- seconde.
+local function setFollowWalking(model: Model, speed: number)
+	local moving = speed > 0
 	local track = followTrack
-	if moving == (track ~= nil and track.IsPlaying) then
-		return
-	end
 	if not moving then
-		if track then
+		if track and track.IsPlaying then
 			track:Stop(TutorialConfigs.FOLLOW_ANIM_FADE)
 		end
 		return
@@ -618,14 +632,17 @@ local function setFollowWalking(model: Model, moving: boolean)
 		track = result :: AnimationTrack
 		track.Looped = true
 		track.Priority = TutorialConfigs.OLDMAN_WALK_PRIORITY
-		-- Jouee au RAPPORT des deux vitesses, comme sa sortie : changer sa vitesse ne fait pas patiner ses pieds,
-		-- et il n'y a aucune seconde valeur a garder d'accord avec la premiere.
-		track:AdjustSpeed(
-			TutorialConfigs.FOLLOW_SPEED / TutorialConfigs.OLDMAN_WALK_REFERENCE * TutorialConfigs.FOLLOW_ANIM_BOOST
-		)
 		followTrack = track
 	end
-	track:Play(TutorialConfigs.FOLLOW_ANIM_FADE)
+	-- Jouee au RAPPORT des deux vitesses, comme sa sortie : changer son allure ne fait pas patiner ses pieds, et
+	-- il n'y a aucune seconde valeur a garder d'accord avec la premiere.
+	if speed ~= followAnimSpeed then
+		followAnimSpeed = speed
+		track:AdjustSpeed(speed / TutorialConfigs.OLDMAN_WALK_REFERENCE * TutorialConfigs.FOLLOW_ANIM_BOOST)
+	end
+	if not track.IsPlaying then
+		track:Play(TutorialConfigs.FOLLOW_ANIM_FADE)
+	end
 end
 
 -- LA TONDEUSE LIBRE LA PLUS PROCHE DU JOUEUR. Meme critere que le repere affiche chez lui : les deux doivent
@@ -682,6 +699,65 @@ local function currentMower(from: Vector3): BasePart?
 	return followMower
 end
 
+-- LA ZONE OU IL A LE DROIT DE SE PROMENER, gardee des qu'on l'a. RE-CHERCHEE tant qu'on ne l'a pas : avec le
+-- streaming, une part posee dans Studio arrive apres le boot, et une reference resolue une seule fois resterait
+-- vide pour toute la session.
+local function strollZone(): BasePart?
+	local kept = walkZone
+	if kept and kept.Parent then
+		return kept
+	end
+	walkZone = nil
+	local found = findByName(TutorialConfigs.WALK_ZONE_NAME)
+	if found and found:IsA("BasePart") then
+		walkZone = found :: BasePart
+	end
+	return walkZone
+end
+
+-- UN POINT OU ALLER FLANER, ou nil si rien ne convient ce tour-ci.
+--
+-- TIRAGE ET REJET, pas un calcul. L'ensemble des points a la fois DANS la zone, a bonne distance du joueur, a
+-- bonne distance de lui et POSES SUR DU SOL n'a aucune forme simple -- et il change des qu'on redimensionne la
+-- zone dans Studio. Tirer puis refuser tient en quinze lignes et reste juste sans rien savoir de la geometrie.
+local function pickStrollPoint(from: Vector3, playerPos: Vector3, ignore: { Instance }): Vector3?
+	local zone = strollZone()
+	if not zone then
+		-- UNE SEULE FOIS. Un service qui balaye le monde doit dire ce qu'il n'a pas trouve : sans ce mot, le
+		-- grand-pere reste simplement immobile et rien n'explique pourquoi.
+		if not warnedZone then
+			warnedZone = true
+			warn(`[Tutorial] Aucune part "{TutorialConfigs.WALK_ZONE_NAME}" : le grand-pere ne se promenera pas.`)
+		end
+		return nil
+	end
+	local half = zone.Size * 0.5
+	for _ = 1, TutorialConfigs.STROLL_TRIES do
+		-- TIRE EN REPERE DE LA ZONE puis ramene au monde : elle peut etre tournee dans Studio sans que ce calcul
+		-- ait a le savoir.
+		local inZone = Vector3.new((math.random() * 2 - 1) * half.X, 0, (math.random() * 2 - 1) * half.Z)
+		local point = zone.CFrame * inZone
+		local toPlayer = (Vector3.new(point.X - playerPos.X, 0, point.Z - playerPos.Z)).Magnitude
+		local toHere = (Vector3.new(point.X - from.X, 0, point.Z - from.Z)).Magnitude
+		if
+			toPlayer <= TutorialConfigs.STROLL_NEAR_PLAYER
+			and toPlayer >= TutorialConfigs.FOLLOW_MIN_PLAYER
+			and toHere >= TutorialConfigs.STROLL_MIN_DIST
+		then
+			-- LE SOL DECIDE EN DERNIER, et le rayon part du HAUT de la zone : elle est un volume, pas une surface.
+			-- Un point tire au-dessus d'un trou ou d'un massif le ferait marcher dans le vide.
+			local top = Vector3.new(point.X, zone.Position.Y + half.Y, point.Z)
+			local ground = groundAt(top, ignore)
+			if ground then
+				return Vector3.new(point.X, ground + followGroundOffset, point.Z)
+			end
+		end
+	end
+	return nil
+end
+
+-- SA VIE APRES LA SCENE, en UNE boucle et une seule ecriture de pose. Deux raisons de marcher s'y relaient : la
+-- machine tant qu'elle est par terre, une promenade ensuite. Deux boucles se battraient pour le meme modele.
 startFollow = function(player: Player, model: Model)
 	if followConn then
 		return -- deja en route : une seconde boucle se battrait avec la premiere pour la meme pose
@@ -709,55 +785,102 @@ startFollow = function(player: Player, model: Model)
 			stopFollow()
 			return
 		end
-		-- IL S'ARRETE DES QUE LA TONDEUSE EST DANS SES MAINS. On lit l'ETAT (CarryUtils) et pas un evenement : le
-		-- joueur peut la prendre, la lacher, mourir, en reprendre une autre -- un evenement tire une fois nous
-		-- laisserait sur une reponse perimee.
-		if CarryUtils.holds(player, "Mower") then
-			setFollowWalking(model, false)
-			stopFollow()
-			return
-		end
 		local character = player.Character
 		local hrpChild = character and character:FindFirstChild("HumanoidRootPart")
 		if not (hrpChild and hrpChild:IsA("BasePart")) or os.clock() < startAt then
-			setFollowWalking(model, false)
+			setFollowWalking(model, 0)
 			return -- mort, respawn, ou temps de reaction : on reste branche, on ne bouge pas
 		end
 		local hrp = hrpChild :: BasePart
-
-		-- LA MACHINE EST CHERCHEE DEPUIS LE JOUEUR, pas depuis lui : c'est celle vers laquelle le JOUEUR se
-		-- dirige qui compte, et c'est aussi celle que son repere a l'ecran lui montre.
-		local mower = currentMower(hrp.Position)
-		if not mower then
-			setFollowWalking(model, false)
-			return -- aucune machine libre : rien a viser, mais on reste branche (elle peut etre reposee)
-		end
-
 		local here = rootPart.Position
-		local toMower = Vector3.new(mower.Position.X - here.X, 0, mower.Position.Z - here.Z)
-		local mowerDist = toMower.Magnitude
+		local now = os.clock()
+		local ignore: { Instance } = { model }
+		if character then
+			table.insert(ignore, character)
+		end
 		local playerDist = (Vector3.new(hrp.Position.X - here.X, 0, hrp.Position.Z - here.Z)).Magnitude
 
-		-- IL EST ARRIVE, OU IL EST TROP PRES DU JOUEUR : il s'arrete. `followStopped` fait l'hysteresis -- sans
-		-- elle, arrete pile a la distance d'arret, il repartirait au moindre centimetre.
-		local arriveDist = TutorialConfigs.FOLLOW_MOWER_DIST
-			+ (if followStopped then TutorialConfigs.FOLLOW_HYST else 0)
-		local arrived = mowerDist <= arriveDist
-			or playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER
-			or mowerDist < 1e-3
-		followStopped = arrived
+		-- OU IL VA, A QUELLE ALLURE, ET A QUELLE DISTANCE IL S'ARRETE. Trois valeurs, un seul trajet en dessous :
+		-- ecrire la marche deux fois, une par raison, finirait par les faire diverger.
+		--
+		-- LA MACHINE PASSE DEVANT. Tant qu'elle est par terre, c'est la seule chose qui compte pour lui -- la
+		-- promenade est ce qu'il fait quand il n'a plus rien a demander.
+		--
+		-- On lit l'ETAT de ses mains (CarryUtils) et pas un evenement de prise : le joueur peut la prendre, la
+		-- lacher, mourir, en reprendre une autre -- un evenement tire une fois nous laisserait sur une reponse
+		-- perimee.
+		local goal: Vector3? = nil
+		local speed = 0
+		local keepDist = 0
+		local chasing = false
+		if not CarryUtils.holds(player, "Mower") then
+			-- LA MACHINE EST CHERCHEE DEPUIS LE JOUEUR, pas depuis lui : c'est celle vers laquelle le JOUEUR se
+			-- dirige qui compte, et c'est aussi celle que son repere a l'ecran lui montre.
+			local mower = currentMower(hrp.Position)
+			if mower then
+				goal, speed, chasing = mower.Position, TutorialConfigs.FOLLOW_SPEED, true
+				-- `followStopped` fait l'hysteresis : sans elle, arrete pile a la distance d'arret, il repartirait
+				-- au moindre centimetre.
+				keepDist = TutorialConfigs.FOLLOW_MOWER_DIST
+					+ (if followStopped then TutorialConfigs.FOLLOW_HYST else 0)
+			end
+		end
+		if not chasing then
+			local target = strollTarget
+			-- IL LAISSE TOMBER UNE CIBLE QUI S'ELOIGNE : le joueur marche pendant qu'il marche, et finir un
+			-- trajet vers un coin que le joueur a quitte n'accompagne plus personne.
+			if
+				target
+				and (Vector3.new(target.X - hrp.Position.X, 0, target.Z - hrp.Position.Z)).Magnitude
+					> TutorialConfigs.STROLL_LEASH
+			then
+				target = nil
+			end
+			if not target and now >= strollNextAt then
+				target = pickStrollPoint(here, hrp.Position, ignore)
+				if not target then
+					strollNextAt = now + TutorialConfigs.STROLL_RETRY
+				end
+			end
+			strollTarget = target
+			if target then
+				goal, speed, keepDist = target, TutorialConfigs.STROLL_SPEED, TutorialConfigs.STROLL_ARRIVE
+			end
+		end
+
+		local toGoal = if goal then Vector3.new(goal.X - here.X, 0, goal.Z - here.Z) else Vector3.zero
+		local goalDist = toGoal.Magnitude
+
+		-- IL EST ARRIVE, OU IL EST TROP PRES DU JOUEUR : il s'arrete.
+		local arrived = goal == nil or goalDist <= keepDist or goalDist < 1e-3
+		local crowded = playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER
+		if chasing then
+			-- L'HYSTERESIS NE SERT QU'A LA MACHINE. Lui faire porter la promenade la ferait repartir avec une
+			-- distance d'arret qui n'est pas la sienne.
+			followStopped = arrived or crowded
+		elseif strollTarget and (arrived or crowded) then
+			-- ARRIVE, OU LE JOUEUR LUI EST DANS LES PIEDS : il abandonne ce point et se repose un moment. Sans
+			-- l'abandon, un joueur plante sur lui le figerait sur une cible qu'il ne peut plus atteindre.
+			--
+			-- L'attente est tiree au hasard : une cadence reguliere se lit comme une horloge, donc comme un
+			-- systeme, pas comme quelqu'un qui flane.
+			strollTarget = nil
+			strollNextAt = now
+				+ TutorialConfigs.STROLL_WAIT_MIN
+				+ math.random() * (TutorialConfigs.STROLL_WAIT_MAX - TutorialConfigs.STROLL_WAIT_MIN)
+		end
 
 		-- OU IL AVANCE, ET DE COMBIEN. Arrete, le pas vaut zero : la suite du calcul est alors la meme, ce qui
 		-- evite d'ecrire la pose a deux endroits differents -- et donc de les voir diverger.
 		local step = 0
-		if not arrived then
+		if not (arrived or crowded) then
 			-- `dt` fait que la vitesse est la meme quel que soit le nombre d'images, et on ne depasse jamais la
 			-- distance d'arret.
-			step = math.min(TutorialConfigs.FOLLOW_SPEED * dt, mowerDist - TutorialConfigs.FOLLOW_MOWER_DIST)
+			step = math.min(speed * dt, goalDist - keepDist)
 		end
-		local nextPos = if step > 0 then here + toMower.Unit * step else here
+		local nextPos = if step > 0 then here + toGoal.Unit * step else here
 		if step > 0 then
-			local nextGround = groundAt(nextPos, { model, character })
+			local nextGround = groundAt(nextPos, ignore)
 			if nextGround then
 				nextPos = Vector3.new(nextPos.X, nextGround + followGroundOffset, nextPos.Z)
 			end
@@ -775,8 +898,8 @@ startFollow = function(player: Player, model: Model)
 		-- supprime aussi la deuxieme cible, donc l'alternance entre deux caps a la limite de la distance d'arret
 		-- -- le tremblement que `FOLLOW_TURN` servait a moyenner n'a plus de source.
 		local facing = CFrame.new(nextPos) * (rootPart.CFrame - rootPart.CFrame.Position)
-		if step > 0 and toMower.Magnitude >= 1e-3 then
-			local wanted = CFrame.lookAt(nextPos, nextPos + toMower.Unit)
+		if step > 0 and goalDist >= 1e-3 then
+			local wanted = CFrame.lookAt(nextPos, nextPos + toGoal.Unit)
 			-- Un lerp de CFrame interpole la rotation par le plus court chemin : pas besoin de manipuler des
 			-- angles, ni de gerer le passage par 180 degres.
 			facing = facing:Lerp(wanted, math.clamp(TutorialConfigs.FOLLOW_TURN * dt, 0, 1))
@@ -785,9 +908,9 @@ startFollow = function(player: Player, model: Model)
 		-- UNE SEULE ECRITURE DE POSE PAR IMAGE. On applique un ECART MONDE et pas un pivot : `PivotTo` passe par
 		-- `GetPivot`, qui suit la boite englobante -- une part ajoutee au modele dans Studio le decalerait.
 		model:PivotTo(facing * rootPart.CFrame:Inverse() * model:GetPivot())
-		setFollowWalking(model, step > 0)
+		setFollowWalking(model, if step > 0 then speed else 0)
 	end)
-	print(`[Tutorial] Le grand-pere se dirige vers la tondeuse, derriere {player.Name}.`)
+	print(`[Tutorial] Le grand-pere accompagne {player.Name} : la tondeuse, puis la promenade.`)
 end
 
 local function onPlayerAdded(player: Player)
