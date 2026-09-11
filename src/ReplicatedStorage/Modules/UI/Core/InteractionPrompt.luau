@@ -576,4 +576,20 @@ function InteractionPrompt.currentTarget(): WorldAnchor.Target?
 	return if shown and current then current.target else nil
 end
 
+--- LA PILULE EST-ELLE A `target` A CET INSTANT ?
+---
+--- A TESTER AVANT D'AGIR SUR UN APPUI DE TOUCHE, et c'est un bug qu'on vient de payer. `E` est partagee par le
+--- seau, la tondeuse, l'echelle et la porte du didacticiel. Chacun garde son propre bind et rend `Pass` (avaler
+--- l'input casserait les autres), donc UN appui reveille TOUT ce qui est a portee : un seau pose a cote d'une
+--- tondeuse, et le joueur prend la machine ET part marcher vers le seau.
+---
+--- Le badge, lui, est deja arbitre -- le plus proche gagne. Ce test fait simplement SUIVRE LA TOUCHE A CE QUE LE
+--- JOUEUR VOIT : une seule action par appui, celle qu'il a lue a l'ecran.
+---
+--- L'exception est le geste INVERSE (reposer ce qu'on tient) : il n'y a alors aucun badge, et rien a arbitrer
+--- puisque personne d'autre ne peut reposer notre objet. Les appelants gardent donc ce chemin en dehors du test.
+function InteractionPrompt.owns(target: WorldAnchor.Target?): boolean
+	return target ~= nil and InteractionPrompt.currentTarget() == target
+end
+
 return InteractionPrompt

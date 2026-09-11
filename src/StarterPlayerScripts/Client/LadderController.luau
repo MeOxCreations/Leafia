@@ -598,6 +598,14 @@ local function tryMount()
 	if mountCFrame or not (zone and ladder and canMount) then
 		return
 	end
+	-- LA TOUCHE SUIT LE BADGE. `E` est partagee avec le seau, la tondeuse et la porte, et chaque feature garde
+	-- son propre declencheur : un seul appui reveille tout ce qui est a portee. Le badge est deja arbitre (le
+	-- plus proche gagne), donc on le suit -- une seule action par appui, celle que le joueur a lue.
+	--
+	-- Le tap de la pilule passe aussi par ici : la pilule y est a nous par definition, donc le test est vrai.
+	if not InteractionPrompt.owns(mountPromptAnchor) then
+		return
+	end
 	-- LES MAINS SONT PRISES : pas de grimpe. Deux cas differents sous la meme regle.
 	--   L'ECHELLE : portee, elle est soudee a nous, donc ses zones de grimpe nous suivent et on grimperait sa
 	--   propre echelle en permanence.

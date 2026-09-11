@@ -214,7 +214,11 @@ local function setActionBound(active: boolean)
 	actionBound = active
 	if active then
 		ContextActionService:BindAction(TutorialConfigs.ACTION_NAME, function(_, state: Enum.UserInputState)
-			if state == Enum.UserInputState.Begin then
+			-- LA TOUCHE SUIT LE BADGE : `Pass` laisse passer l'appui a tout ce qui est a portee, donc sans ce
+			-- test toquer a la porte pouvait aussi ramasser un seau pose devant. Le badge est deja arbitre, on le
+			-- suit. Le test est ICI et pas dans `startMission` : la mission se lance aussi par le tap de la
+			-- pilule (ou la pilule est a nous par definition) et pourra se lancer par la scene.
+			if state == Enum.UserInputState.Begin and InteractionPrompt.owns(anchorPos) then
 				-- Lu au moment de l'appui, donc bien apres que le module soit charge : pas d'appel au-dessus
 				-- d'une definition, c'est le champ qui est resolu a l'usage.
 				TutorialController.startMission()

@@ -1053,6 +1053,22 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   interpolee (donc des durees, des easings) alors que le probleme est un CONFLIT DE PROPRIETAIRE -- aucun
   reglage de courbe ne peut le corriger.
 
+- **UN SINGLETON ARBITRE N'ARBITRE QUE CE QU'IL AFFICHE : la TOUCHE, elle, reste branchee chez tout le monde.**
+  `InteractionPrompt` choisit qui montre son badge (le plus proche gagne, avec hysteresis) -- ce travail avait
+  deja coute une session. Mais chaque feature garde SON bind sur `E` et rend `Pass` (avaler l'input casserait les
+  voisines), donc UN appui reveille TOUT ce qui est a portee : un seau pose a cote d'une tondeuse, et le joueur
+  empoigne la machine ET part en marche d'approche vers le seau. Symptome trompeur : ca ressemble a une faille
+  d'autorite ("on peut porter deux objets"), et on part verifier le serveur -- qui est innocent, les deux services
+  testent `CarryUtils.isFree` puis claiment sans yield entre les deux, donc la deuxieme prise est bien refusee.
+  Ce qu'on voit n'est pas deux objets portes, c'est deux ACTIONS lancees, dont une qui echoue a moitie.
+  La reponse : faire SUIVRE la touche au badge (`InteractionPrompt.owns(target)` avant d'agir), une seule action
+  par appui, celle que le joueur a lue. Trois corollaires. (1) Ca ne se centralise PAS en faisant binder la touche
+  par le prompt : le geste INVERSE (reposer ce qu'on tient) n'a pas de badge, il serait perdu -- le test va donc
+  apres la branche de repose, jamais avant. (2) Le tap de la pilule passe par le meme `onActivate`, et le test y
+  est vrai par definition : un seul garde couvre les deux entrees. (3) Toute feature qui ajoute un bind sur une
+  touche PARTAGEE doit le poser, sinon elle rouvre le trou -- auditer les quatre (seau, tondeuse, echelle, porte)
+  et pas seulement celle qui a montre le bug.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

@@ -540,6 +540,15 @@ local function toggleCarry()
 	if not root then
 		return
 	end
+	-- LA TOUCHE SUIT LE BADGE. `E` est partagee avec la tondeuse, l'echelle et la porte : chacun garde son bind
+	-- et rend `Pass`, donc un seul appui reveille tout ce qui est a portee. Sans ce test, un seau pose a cote
+	-- d'une tondeuse partait en marche d'approche pendant que le joueur empoignait la machine.
+	--
+	-- APRES LA REPOSE ci-dessus, jamais avant : seau en main, il n'y a plus de badge, et personne d'autre ne
+	-- peut le reposer pour nous.
+	if not InteractionPrompt.owns(promptAnchor) then
+		return
+	end
 	local target = freeBinNear(root.Position, now)
 	if target then
 		approachThenPickUp(target)

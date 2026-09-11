@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.741 — Un appui sur E ne declenche plus qu'une seule action
+
+Un seau pose a cote de la tondeuse, un appui sur `E`, et les deux partaient : la machine en main, et le joueur en
+marche d'approche vers le seau. Chaque feature garde son propre bind sur `E` et rend `Pass` (avaler l'input
+casserait les voisines), donc un appui reveillait TOUT ce qui etait a portee.
+
+`InteractionPrompt.owns(target)` repond a "la pilule est-elle a moi ?", et les quatre features qui se partagent
+`E` le demandent avant d'agir : le seau, la tondeuse, l'echelle et la porte du didacticiel. Le badge etait deja
+arbitre -- le plus proche gagne -- la touche le SUIT maintenant. Une action par appui, celle que le joueur a lue.
+
+LE SERVEUR ETAIT INNOCENT, et c'est le piege du diagnostic. Les deux services testent `CarryUtils.isFree` puis
+claiment sans yield entre les deux : la seconde prise etait bien refusee. On ne voyait donc pas deux objets
+portes mais deux ACTIONS lancees, dont une qui echouait a moitie -- apres avoir deplace le joueur.
+
+LE TEST VA APRES LA BRANCHE DE REPOSE, jamais avant. Reposer ce qu'on tient n'a pas de badge (on l'a en main,
+le badge a disparu) et n'a rien a arbitrer : personne d'autre ne peut reposer notre objet. Pour la meme raison
+la touche ne peut pas etre centralisee dans le prompt : ce geste-la serait perdu.
+
+Le tap de la pilule passe par le meme `onActivate`, ou le test est vrai par definition. Un seul garde couvre donc
+le clavier et le tactile.
+
+Note pour la suite : toute feature qui ajoutera un bind sur une touche PARTAGEE doit poser ce test, sinon elle
+rouvre le trou. C'est ecrit dans le journal de CLAUDE.md.
+
 ## 0.0.740 — Il ne part se promener qu'une fois le moteur lance
 
 La promenade partait des que la tondeuse etait dans les mains du joueur. Elle attend maintenant que le MOTEUR ait

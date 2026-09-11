@@ -1263,6 +1263,15 @@ local function toggleCarry()
 	if approaching then
 		return -- deja en train de rejoindre une tondeuse : on ne relance pas la marche par-dessus
 	end
+	-- LA TOUCHE SUIT LE BADGE. `E` est partagee avec le seau, l'echelle et la porte : chacun garde son bind et
+	-- rend `Pass`, donc un seul appui reveille tout ce qui est a portee. Sans ce test, un seau pose a cote de la
+	-- tondeuse faisait les DEUX d'un coup -- la machine en main, et le joueur qui part marcher vers le seau.
+	--
+	-- APRES LA REPOSE ci-dessus, jamais avant : on pousse la machine, donc il n'y a plus de badge sur elle, et
+	-- personne d'autre ne peut la reposer pour nous.
+	if not InteractionPrompt.owns(promptAnchor) then
+		return
+	end
 	-- Mains prises par autre chose (seau, echelle) : le serveur refusera la prise. Teste APRES la repose
 	-- ci-dessus, pour qu'on puisse toujours reposer SA tondeuse, et avant la marche d'approche : sans ca le
 	-- joueur partait marcher vers une tondeuse qu'il ne pouvait pas prendre.
