@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.730 — Le compte a rebours des notifications passe en blanc
+
+`COOLDOWN_CLOSED_COLOR` passe du gris (184) au blanc.
+
+Il etait gris pour se faire discret, mais notification FERMEE il est le SEUL chiffre a l'ecran, sur un fond
+sombre et en petit : le gris le rendait a peine lisible, et un compte a rebours qu'on ne lit pas ne sert a rien.
+
+La discretion se joue sur sa TAILLE et sa PLACE, pas sur son contraste.
+
+Le chemin de teinte reste branche -- les deux constantes sont juste egales -- donc remettre une nuance a l'etat
+ferme ne demande qu'un chiffre.
+
 ## 0.0.729 — Les outils sont verrouilles jusqu'a ce qu'on toque, et le refus se VOIT
 
 Le joueur spawn devant une tondeuse et un seau. Sans verrou, il les emporte avant que l'histoire commence : la

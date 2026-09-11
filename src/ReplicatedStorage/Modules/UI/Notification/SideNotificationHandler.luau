@@ -78,7 +78,10 @@ local COOLDOWN_OPEN_SIZE = UDim2.fromScale(0.253, 0.101)
 local COOLDOWN_CLOSED_POS = UDim2.fromScale(0.788, 0.55)
 local COOLDOWN_CLOSED_SIZE = UDim2.fromScale(0.13, 0.51)
 local COOLDOWN_OPEN_COLOR = Color3.fromRGB(255, 255, 255)
-local COOLDOWN_CLOSED_COLOR = Color3.fromRGB(184, 184, 184)
+-- BLANC AUSSI QUAND LA NOTIF EST FERMEE. Il etait gris pour se faire discret, mais ferme il est le SEUL chiffre
+-- a l'ecran, sur un fond sombre et en petit : le gris le rendait a peine lisible, et un compte a rebours qu'on
+-- ne lit pas ne sert a rien. La discretion se joue sur sa TAILLE et sa PLACE, pas sur son contraste.
+local COOLDOWN_CLOSED_COLOR = Color3.fromRGB(255, 255, 255)
 
 -- Pile : on garde MAX_VISIBLE notifs. Au-dela, la plus vieille se replie a 0 et disparait. Baisser = pile plus courte.
 local MAX_VISIBLE = 6
@@ -231,7 +234,8 @@ local function apply(frame: GuiObject, open: boolean, instant: boolean)
 		warnIcon.Visible = open
 	end
 
-	-- Compte a rebours : toujours visible, il se DEPLACE et change de COULEUR selon l'etat (blanc ouvert, gris ferme).
+	-- Compte a rebours : toujours visible, et il se DEPLACE selon l'etat. Sa couleur, elle, reste BLANCHE dans les
+	-- deux (le chemin de teinte reste branche : les deux constantes sont juste egales).
 	moveChild(frame, "CooldownClearNotification", open, instant, COOLDOWN_OPEN_POS, COOLDOWN_OPEN_SIZE, COOLDOWN_CLOSED_POS, COOLDOWN_CLOSED_SIZE)
 	local cooldown = frame:FindFirstChild("CooldownClearNotification")
 	if cooldown and cooldown:IsA("TextLabel") then
