@@ -105,6 +105,15 @@ local TruckConfigs = {
 	-- IL TOURNE EN VOLANT, en tours complets. Un objet qui garde son orientation pendant tout le trajet a l'air
 	-- tire par une ficelle ; un tour sur lui-meme dit qu'il a ete LANCE.
 	FLY_SPINS = 1,
+	-- LE SIFFLEMENT DU DEPART, et le choc de la pose. Deux moments, deux sons : un seul bruit pour les deux
+	-- raconterait un objet qui glisse d'un bout a l'autre, alors qu'il est LANCE puis POSE.
+	--
+	-- SPATIAUX, portes par l'objet lui-meme : ils viennent donc du camion au depart et du sol a l'arrivee, en
+	-- suivant le vol entre les deux. Mixes en 2D, ils sonneraient dans la tete du joueur alors que la chose se
+	-- passe a dix metres.
+	FLY_SOUND = { "Sounds", "UI", "PassingSound" },
+	DROP_SOUND = { "Sounds", "Game", "GlobalSounds", "DropSound" },
+
 	-- ET IL ARRIVE DROIT : sur la fin du vol, sa rotation revient vers celle du point d'arrivee. Sans ca il se
 	-- poserait a l'angle ou le hasard du tour l'a laisse.
 	FLY_SETTLE_FROM = 0.75,

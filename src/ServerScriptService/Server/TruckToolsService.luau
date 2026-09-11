@@ -19,6 +19,7 @@ local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
@@ -121,9 +122,25 @@ end
 --- IL EST ANCRE PENDANT TOUT LE VOL, et repose ancre a l'arrivee : un modele desancre tombe, rebondit, et finit
 --- ou la physique veut -- alors qu'on lui a choisi une place. Les objets qu'on PORTE seront desancres par leur
 --- propre systeme quand on les prendra.
+--- UNE PART DE L'OBJET, pour y accrocher un son. Sa PrimaryPart si elle existe, sinon n'importe laquelle : le
+--- bruit doit venir de l'objet, et a cette distance le joueur n'entend pas de quelle piece exactement.
+local function soundHost(model: Model): BasePart?
+	local primary = model.PrimaryPart
+	if primary then
+		return primary
+	end
+	return model:FindFirstChildWhichIsA("BasePart", true)
+end
+
 local function fly(model: Model, landing: CFrame, home: Instance?)
 	flying[model] = true
 	local from = model:GetPivot()
+	local host = soundHost(model)
+	-- IL SIFFLE EN PARTANT. Le son est porte par l'objet, donc il le SUIT : il quitte le camion avec lui et
+	-- arrive avec lui -- alors qu'un son pose sur le camion resterait derriere.
+	if host then
+		SoundUtils.play(TruckConfigs.FLY_SOUND, host)
+	end
 	-- LE SOMMET EST AU MILIEU, REMONTE. C'est lui qui fait l'arc, et le calculer depuis les deux bouts le garde
 	-- juste ou que soit le camion : un sommet ecrit en dur ne vaudrait que pour une seule carte.
 	local middle = (from.Position + landing.Position) * 0.5 + Vector3.new(0, TruckConfigs.FLY_ARC_HEIGHT, 0)
@@ -163,6 +180,11 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 			RunService.Heartbeat:Wait()
 		end
 		model:PivotTo(landing)
+		-- ET IL SE POSE, avec le bruit qui va avec. A la FIN, pas au depart : un choc qui precede l'atterrissage
+		-- se lit comme un autre objet, ailleurs.
+		if host and host.Parent then
+			SoundUtils.play(TruckConfigs.DROP_SOUND, host)
+		end
 		-- ET IL RENTRE DANS LA BENNE, a la FIN du vol seulement. Range avant, il suivrait la carrosserie pendant
 		-- qu'il vole encore -- il arriverait donc a cote de sa place si le camion bouge.
 		if home and home.Parent then

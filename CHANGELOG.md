@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.775 — L'outil siffle en sortant du camion et fait du bruit en se posant
+
+`PassingSound` part avec le vol, `DropSound` au moment ou l'objet touche sa place. Deux moments, deux sons : un
+seul bruit pour les deux raconterait un objet qui glisse d'un bout a l'autre, alors qu'il est LANCE puis POSE.
+
+LES DEUX SONT PORTES PAR L'OBJET, donc spatiaux et mobiles : ils quittent le camion avec lui et arrivent avec
+lui. Mixes en 2D ils sonneraient dans la tete du joueur alors que la chose se passe a dix metres -- contrairement
+aux repliques de la scene du didacticiel, qui sont du cinema et n'ont pas de place dans le monde.
+
+Le choc est joue A LA FIN, pas au depart : un bruit d'atterrissage qui precede l'atterrissage se lit comme un
+autre objet, ailleurs.
+
 ## 0.0.774 — Les outils peuvent retourner dans le camion
 
 Chaque outil garde sa case dans la barre, meme sorti : elle s'efface, et son bouton devient un `PUT BACK` BLEU.
