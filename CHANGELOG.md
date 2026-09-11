@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.749 — Le point d'exclamation du grand-pere monte de 5 studs
+
+`GRANDPA_MARKER_UP` passe de 10.5 a 15.5. A 10.5 il tombait sur son crane : un marqueur pose trop pres de la tete
+se lit comme un chapeau et masque le visage, au lieu d'appeler de loin.
+
+Le badge `TALK`, lui, reste a 7.5 : les deux ne se genent pas.
+
 ## 0.0.748 — Un tap sur le bandeau ne passe plus une replique minutee
 
 Taper sur le dialogue avancait la scene du didacticiel pendant que le grand-pere parlait encore, et tout ce qui
