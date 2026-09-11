@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.728 — Le joueur qui arrive avec le seau se fait reprendre lui aussi
+
+La phrase ne partait plus DU TOUT, et la cause est le garde anti-repetition de la version precedente.
+
+Le joueur prend le seau AVANT que la mission demarre. La memoire "tenait-il le seau ?" etait mise a jour a chaque
+image, donc elle valait deja "oui" a l'ouverture de la fenetre : il n'y avait plus de TRANSITION a voir, et la
+phrase n'avait plus aucun moment pour sortir. Le garde qui devait eviter la repetition avalait le seul cas qui
+compte.
+
+La memoire n'est plus mise a jour QUE dans la fenetre. A son ouverture elle vaut donc encore "les mains vides" :
+un joueur qui arrive avec le seau se fait reprendre, un joueur qui le prend ensuite aussi.
+
+Regle generale : un etat "precedent" qui sert a detecter une transition DANS une fenetre doit vivre dans cette
+fenetre. Tenu en dehors, il enregistre des changements que personne ne regardait, et la transition est deja
+passee quand on commence a l'attendre.
+
 ## 0.0.727 — Il ne sermonne plus depuis l'interieur de sa maison
 
 La phrase du seau partait avant meme que la mission soit lancee : le joueur prenait le seau au spawn, et une voix

@@ -1943,11 +1943,22 @@ local function step(dt: number)
 	-- le sermonner serait faux.
 	local carryingBin = CarryUtils.holds(player, "Bin")
 	local binWrongNow = mowerTaskShown and not lawnTaskDone
-	if carryingBin and not wasCarryingBin and binWrongNow and now >= nextBinScoldAt then
-		nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
-		sayVoice(TutorialConfigs.PUT_BIN_DOWN_SOUND)
+	if binWrongNow then
+		if carryingBin and not wasCarryingBin and now >= nextBinScoldAt then
+			nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
+			sayVoice(TutorialConfigs.PUT_BIN_DOWN_SOUND)
+		end
+		-- ON NE MEMORISE QU'ICI, dans la fenetre, et c'est tout le point.
+		--
+		-- LE BUG QU'ON VIENT DE PAYER : le joueur prenait le seau AVANT que la mission demarre. La memoire, mise a
+		-- jour a chaque image, valait donc deja "il le tient" a l'ouverture de la fenetre -- il n'y avait plus de
+		-- transition a voir, et la phrase ne partait JAMAIS. Le garde qui devait eviter la repetition avalait le
+		-- seul cas qui compte.
+		--
+		-- Ne la mettre a jour que dans la fenetre fait qu'a son ouverture elle vaut encore "les mains vides" :
+		-- un joueur qui arrive avec le seau se fait reprendre, un joueur qui le prend ensuite aussi.
+		wasCarryingBin = carryingBin
 	end
-	wasCarryingBin = carryingBin
 
 	if mowerTaskShown and not mowerTaskDone then
 		-- IL RELANCE, tant que le joueur n'a pas mis la main dessus. On teste ce qu'il TIENT, pas si la machine
