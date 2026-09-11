@@ -1998,14 +1998,30 @@ local function step(dt: number)
 			-- de trois facons -- le bouton, la mort, un respawn -- et un evenement par cas en laisserait toujours
 			-- un dehors. Un etat qui change les couvre tous, y compris ceux qu'on n'a pas prevus.
 			nextGrabAgainAt = now + TutorialConfigs.GRAB_AGAIN_COOLDOWN
-			-- ET ON REPOUSSE L'IMPATIENCE : sans ca, elle peut tomber dans la seconde et lui couper la parole.
+			-- ET ON REPOUSSE L'IMPATIENCE. Elle ne peut plus lui couper la parole -- la grogne attend maintenant
+			-- qu'il ait fini -- mais elle tomberait a la seconde ou il se taira : raler juste apres avoir repris
+			-- le joueur, c'est deux reproches d'affilee pour une seule faute.
 			nextImpatientAt = now + TutorialConfigs.IMPATIENT_EVERY
 			sayVoice(TutorialConfigs.GRAB_AGAIN_SOUND)
 		elseif now >= nextImpatientAt then
-			nextImpatientAt = now
-				+ TutorialConfigs.IMPATIENT_EVERY
-				+ math.random() * TutorialConfigs.IMPATIENT_JITTER
-			playImpatient()
+			-- IL FINIT SA PHRASE AVANT DE RALER. La grogne est un REMPLISSAGE : elle ne repond a rien, elle
+			-- comble un silence. Rien ne justifie donc qu'elle coupe une replique en cours -- et c'est ce
+			-- qu'elle faisait : on lui prenait le seau, il commencait a dire de le reposer, et l'heure de la
+			-- grogne tombait au milieu. `sayVoice` coupe la voix precedente, donc il s'interrompait lui-meme.
+			--
+			-- ON REPORTE, ON N'ANNULE PAS : l'echeance est repoussee a la fin de la replique plus un souffle,
+			-- donc il rale quand meme, juste apres. Sauter le tour ferait taire un grand-pere qu'on veut agace.
+			--
+			-- LE REPORT SE RECALCULE : si une nouvelle replique part entre-temps, `speakingUntil` avance et on
+			-- repousse encore au tour suivant. Aucune date figee a maintenir d'accord avec la voix.
+			if not speechOver() then
+				nextImpatientAt = speakingUntil + TutorialConfigs.IMPATIENT_AFTER_SPEECH
+			else
+				nextImpatientAt = now
+					+ TutorialConfigs.IMPATIENT_EVERY
+					+ math.random() * TutorialConfigs.IMPATIENT_JITTER
+				playImpatient()
+			end
 		end
 		wasCarrying = carrying
 

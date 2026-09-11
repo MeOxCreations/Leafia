@@ -491,6 +491,12 @@ return {
 	-- une cadence reguliere se lit comme une horloge, donc comme un systeme, pas comme quelqu'un qui s'agace.
 	IMPATIENT_EVERY = 16,
 	IMPATIENT_JITTER = 5,
+	-- IL LAISSE FINIR SA PHRASE. Quand l'heure de raler tombe pendant qu'il dit autre chose -- reposer le seau,
+	-- reprendre la corde -- la grogne ATTEND cette duree apres la fin de la replique au lieu de la couper.
+	--
+	-- PAS ZERO : enchainer a la syllabe pres se lit comme une seule phrase bizarre, pas comme deux repliques. Il
+	-- faut le temps de reprendre son souffle.
+	IMPATIENT_AFTER_SPEECH = 2.5,
 	-- LA GERBE D'ECLAIRS qui saute au-dessus de lui pendant qu'il rale. Hauteur au-dessus de sa RootPart, en
 	-- studs : au-dessus de sa tete, jamais devant son visage -- une onomatopee qui couvre le personnage cache
 	-- justement celui dont on veut lire l'humeur.

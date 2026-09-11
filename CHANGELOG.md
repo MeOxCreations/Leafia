@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.734 — Le grand-pere finit sa phrase avant de se mettre a raler
+
+L'heure de la grogne pouvait tomber au milieu d'une autre replique. On lui prenait le seau, il commencait a dire
+de le reposer, et l'impatience partait par-dessus : `sayVoice` coupe la voix precedente, donc il s'interrompait
+lui-meme en pleine phrase.
+
+La grogne attend maintenant qu'il ait fini, plus `IMPATIENT_AFTER_SPEECH` (2.5 s) de souffle. Elle est REPORTEE,
+pas annulee : il rale quand meme, juste apres. Et le report se recalcule a chaque tour, donc une replique qui
+part entre-temps le repousse encore, sans aucune date a tenir d'accord avec la voix.
+
+POURQUOI LA GROGNE ET PAS LES AUTRES. Elle ne repond a rien, elle comble un silence : rien ne justifie qu'elle
+coupe la parole. Les autres repliques -- reposer le seau, tirer la corde, la reprendre, le "parfait" -- repondent
+a un geste que le joueur vient de faire. Une reponse qui arrive six secondes plus tard n'est plus une reponse,
+donc celles-la gardent le droit de couper.
+
+Le report ecrit a la main dans la branche de la reprise reste, mais pour une autre raison : ne pas enchainer deux
+reproches pour une seule faute. Son commentaire le dit maintenant, l'ancien invoquait une cause qui n'existe plus.
+
 ## 0.0.733 — La jauge d'experience se remplit enfin vers le HAUT
 
 La fraction allait dans la LARGEUR de la barre au lieu de sa hauteur : `UDim2.fromScale(amount, 1)` devient
