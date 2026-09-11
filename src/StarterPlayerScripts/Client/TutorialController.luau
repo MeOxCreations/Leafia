@@ -1197,6 +1197,43 @@ local function sayVoice(path: { string }): Sound?
 	return speechSound
 end
 
+-- DEUX REPLIQUES QUI SE SUIVENT SANS TROU.
+--
+-- LA SECONDE PART SUR LA FIN REELLE DE LA PREMIERE (`Ended`), jamais sur une duree ecrite quelque part : une
+-- duree en config se decale au premier reenregistrement, et personne ne fait le lien des mois plus tard.
+--
+-- ET UN FILET. `Ended` ne tire pas si le fichier ne se charge JAMAIS (asset absent, reseau qui rate) : la seconde
+-- replique serait alors perdue pour de bon. Au bout de `SPEECH_CHAIN_TIMEOUT` on la lance quand meme.
+--
+-- Le garde `chained` sert au cas ou les deux chemins tirent : la suite ne part qu'une fois.
+--
+-- Note : la paire d'ouverture de la scene (juste en dessous) garde sa propre version. Sa seconde replique a son
+-- drapeau a elle parce que DEUX chemins peuvent la lancer ; la faire passer par ici lui retirerait ce garde.
+local function sayThen(path: { string }, nextPath: { string })
+	local voice = sayVoice(path)
+	local chained = false
+	local function follow()
+		if chained then
+			return
+		end
+		chained = true
+		sayVoice(nextPath)
+	end
+	if not voice then
+		follow() -- premiere replique introuvable : la consigne compte plus que l'ordre
+		return
+	end
+	local first = voice :: Sound
+	first.Ended:Once(function()
+		task.delay(TutorialConfigs.SPEECH_GAP, follow)
+	end)
+	task.delay(TutorialConfigs.SPEECH_CHAIN_TIMEOUT, function()
+		if not first.IsLoaded then
+			follow()
+		end
+	end)
+end
+
 -- SES DEUX REPLIQUES D'OUVERTURE. Elles se suivent : la premiere part quand le battant s'entrebaille, la seconde
 -- des que la premiere a fini de parler. La porte, elle, continue de s'ouvrir pendant qu'il parle -- son mouvement
 -- ne commande plus rien de la voix.
@@ -2559,7 +2596,9 @@ function TutorialController.init()
 			return
 		end
 		saidTruckOpened = true
-		sayVoice(TutorialConfigs.TRUCK_OPENED_SOUND)
+		-- CE QU'IL VOIT, PUIS LA CONSIGNE. Les deux se suivent sans trou : la seconde attend la fin REELLE de la
+		-- premiere, pas une duree qu'on aurait notee quelque part.
+		sayThen(TutorialConfigs.TRUCK_OPENED_SOUND, TutorialConfigs.EXPLAIN_TOOL_SOUND)
 		-- ET LE MARQUEUR A FINI SON TRAVAIL. Il disait "ce cote-la, celui qui s'ouvre" : une fois ouvert, il ne
 		-- designe plus rien. Il ne revient pas si le joueur referme -- la question a deja eu sa reponse.
 		WorldMarker.remove(truckMarker)

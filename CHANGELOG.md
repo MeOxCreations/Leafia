@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.760 — Il enchaine sur la consigne des outils apres avoir montre le camion
+
+`Oldman_scene_speech_ExplainToolTruck` part des que `AsUCanSeeDoorTruck` a fini de parler : ne pas oublier ses
+outils sur le terrain avant d'aller chez le client.
+
+LA SECONDE ATTEND LA FIN REELLE DE LA PREMIERE (`Ended`), jamais une duree ecrite quelque part -- une duree en
+config se decale au premier reenregistrement, et personne ne fait le lien des mois plus tard.
+
+AVEC UN FILET : `Ended` ne tire pas si le fichier ne se charge jamais, et la consigne serait alors perdue pour de
+bon. Au bout de `SPEECH_CHAIN_TIMEOUT` elle part quand meme. Un garde evite qu'elle sorte deux fois quand les
+deux chemins tirent.
+
+C'est la deuxieme paire de repliques enchainees du didacticiel, donc la regle sort dans `sayThen` au lieu d'etre
+recopiee. La paire d'ouverture de la scene garde sa version : sa seconde replique a son propre drapeau parce que
+DEUX chemins peuvent la lancer, et passer par le helper le lui retirerait.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_ExplainToolTruck` dans `Sounds/Scenes/Scene1/Voices`.
+
 ## 0.0.759 — Il regarde le camion en arrivant, et commente quand le hayon s'ouvre
 
 IL PARLAIT DU HAYON EN REGARDANT AILLEURS. Sa marche le laisse face a sa DIRECTION D'ARRIVEE, qui n'a aucune
