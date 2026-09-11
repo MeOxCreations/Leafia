@@ -1081,6 +1081,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   secondes : si CHANGER un reglage ne change RIEN a l'ecran, ce n'est pas la valeur qui est fausse, c'est que
   personne ne la lit. Aller chercher qui ECRIT la propriete, pas quoi mettre dedans.
 
+- **SUR UN OBJET RIGGE, LE JOINT PORTE LE NOM DE LA PIECE QU'IL PILOTE : chercher par le NOM SEUL ramene le
+  Motor6D, pas la part.** Le camion du tuto a une MeshPart `DoorBack` ET un `Motor6D` `DoorBack` ; un balayage
+  `d.Name == "DoorBack"` rendait le JOINT, qui n'a aucune position -- le marqueur ne se posait donc nulle part,
+  sans erreur. Regle : un nom ne designe pas une chose, il designe une FAMILLE de choses ; on demande toujours
+  ce qu'on veut EN FAIRE (`d:IsA("BasePart") and d.Name == n`). Meme famille que le cache d'animations indexe par
+  nom court, et que "un joint se cherche par ses extremites, jamais par sa place dans l'arbre". Corollaire de
+  methode qui a tranche en une manche : le warn affichait la CLASSE de ce qu'il avait trouve a la place
+  ("trouve : Motor6D"). Un message qui dit seulement "introuvable" aurait envoye verifier la map, qui etait
+  juste.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

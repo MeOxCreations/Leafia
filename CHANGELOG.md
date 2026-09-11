@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.757 — Le marqueur se pose sur la PART du hayon, plus sur son joint
+
+Le camion a une MeshPart `DoorBack` ET un `Motor6D` `DoorBack` -- sur un objet rigge, le joint porte le nom de la
+piece qu'il pilote. Le balayage par nom rendait le JOINT, qui n'a aucune position : le marqueur ne se posait donc
+nulle part, sans la moindre erreur.
+
+La recherche demande maintenant une BasePart ET le nom (`findPart`). Un nom ne designe pas une chose, il designe
+une famille de choses : on demande ce qu'on veut EN FAIRE, ici quelque chose qui a une position.
+
+C'EST LE WARN DE 0.0.756 QUI A TRANCHE, parce qu'il affichait la CLASSE de ce qu'il avait trouve a la place
+("trouve : Motor6D"). Un message qui aurait seulement dit "introuvable" envoyait verifier la map, qui etait juste.
+La lecon est dans le journal de CLAUDE.md.
+
 ## 0.0.756 — Le marqueur du camion ne peut plus echouer en silence
 
 Le marqueur ne se posait pas sur le hayon, et RIEN ne disait pourquoi : ni erreur, ni log. Les deux chemins qui

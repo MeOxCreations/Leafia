@@ -853,6 +853,23 @@ local function endScene()
 	end
 end
 
+-- LA PREMIERE BASEPART QUI PORTE CE NOM, et pas la premiere instance tout court.
+--
+-- CHERCHER PAR LE NOM SEUL NE SUFFIT PAS : sur un objet rigge, le JOINT porte le nom de la piece qu'il pilote.
+-- Le camion a un `Motor6D` nomme "DoorBack" en plus de sa MeshPart "DoorBack", et le balayage tombait sur le
+-- joint -- qui n'a aucune position. Le marqueur ne se posait donc nulle part, en silence.
+--
+-- Regle generale, deja payee ailleurs dans ce projet : un nom ne designe pas une chose, il designe une FAMILLE
+-- de choses. On demande toujours ce qu'on veut EN FAIRE (ici : une part qui a une position).
+local function findPart(name: string): BasePart?
+	for _, d in ipairs(Workspace:GetDescendants()) do
+		if d:IsA("BasePart") and d.Name == name then
+			return d :: BasePart
+		end
+	end
+	return nil
+end
+
 local function findModel(name: string): Model?
 	for _, d in ipairs(Workspace:GetDescendants()) do
 		if d:IsA("Model") and d.Name == name then
@@ -2084,18 +2101,18 @@ local function step(dt: number)
 	-- LE HAYON DU CAMION, une fois qu'il a dit de l'ouvrir. Cherche tant qu'on ne l'a pas : avec le streaming la
 	-- part arrive apres coup, et une seule tentative la manquerait pour toute la session.
 	if truckMarkerWanted and not truckMarker then
-		local door = findByName(TutorialConfigs.TRUCK_DOOR_NAME)
-		if door and door:IsA("BasePart") then
-			truckMarker = WorldMarker.show(door :: BasePart, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
+		local door = findPart(TutorialConfigs.TRUCK_DOOR_NAME)
+		if door then
+			truckMarker = WorldMarker.show(door, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
 			print(`[Tutorial] Marqueur pose sur "{TutorialConfigs.TRUCK_DOOR_NAME}".`)
 		elseif not warnedNoTruckDoor and now - truckWantedAt > TutorialConfigs.TRUCK_DOOR_PATIENCE then
-			-- ON NOMME CE QU'ON N'A PAS TROUVE, et on distingue les deux cas : rien du tout, ou quelque chose qui
-			-- porte le nom sans etre une part. Un compteur ne dirait pas ou regarder.
+			-- ON NOMME CE QU'ON N'A PAS TROUVE. C'est ce message qui a designe la vraie cause la premiere fois :
+			-- il y avait bien un "DoorBack", mais c'etait le Motor6D du hayon, pas sa part.
 			warnedNoTruckDoor = true
 			warn(
-				`[Tutorial] Aucune BasePart nommee "{TutorialConfigs.TRUCK_DOOR_NAME}" dans le Workspace `
-					.. `(trouve : {if door then door.ClassName else "rien"}) : pas de marqueur sur le camion. `
-					.. "Rojo ne synchronise pas le Workspace, elle doit exister dans CETTE place."
+				`[Tutorial] Aucune BasePart nommee "{TutorialConfigs.TRUCK_DOOR_NAME}" dans le Workspace : pas `
+					.. "de marqueur sur le camion. Rojo ne synchronise pas le Workspace, elle doit exister dans "
+					.. "CETTE place."
 			)
 		end
 	end
