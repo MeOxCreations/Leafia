@@ -58,12 +58,24 @@ end
 
 -- LE DOSSIER PEUT DEJA EXISTER : on le reutilise. Le detruire effacerait les places deja reglees a la souris,
 -- et c'est precisement le travail qu'on ne veut pas refaire.
-local folder = Workspace:FindFirstChild(DROP_FOLDER)
+--
+-- ON LE CHERCHE PARTOUT, pas seulement a la racine du Workspace -- exactement comme le fait le service en jeu. Il
+-- peut avoir ete range dans un sous-dossier de la carte, et un `FindFirstChild` a la racine en fabriquerait alors
+-- un SECOND : deux dossiers du meme nom, dont un seul serait servi, et personne ne saurait lequel.
+local folder = nil
+for _, d in Workspace:GetDescendants() do
+	if d:IsA("Folder") and d.Name == DROP_FOLDER then
+		folder = d
+		break
+	end
+end
 if not folder then
 	folder = Instance.new("Folder")
 	folder.Name = DROP_FOLDER
 	folder.Parent = Workspace
-	print(`Dossier "{DROP_FOLDER}" cree.`)
+	print(`Dossier "{DROP_FOLDER}" cree a la racine du Workspace -- range-le ou tu veux, il sera retrouve.`)
+else
+	print(`Dossier "{DROP_FOLDER}" trouve dans {folder.Parent and folder.Parent:GetFullName() or "?"}.`)
 end
 
 -- DERRIERE LE CAMION, ET AU SOL. On part de son pivot et on recule le long de son propre axe : le rang suit donc

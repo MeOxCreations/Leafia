@@ -2219,6 +2219,10 @@ rejouer apres avoir ajoute un sixieme outil dans la benne sans perdre les cinq r
 Les parts sont invisibles, traversables et ancrees : ce sont des REPERES, pas des objets. Solides, elles
 bloqueraient le joueur ; visibles, elles resteraient a l'ecran sous l'outil pose dessus.
 
+IL CHERCHE LE DOSSIER PARTOUT dans le Workspace, comme le service en jeu. Un dossier range dans un sous-dossier de
+la carte serait sinon ignore, et le script en fabriquerait un SECOND a la racine : deux dossiers du meme nom, dont
+un seul servirait, sans que rien ne dise lequel.
+
 ## 0.0.775 — L'outil siffle en sortant du camion et fait du bruit en se posant
 
 `PassingSound` part avec le vol, `DropSound` au moment ou l'objet touche sa place. Deux moments, deux sons : un
