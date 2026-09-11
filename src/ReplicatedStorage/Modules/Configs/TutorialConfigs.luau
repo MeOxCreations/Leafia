@@ -593,22 +593,21 @@ return {
 	-- ET LE MARQUEUR PASSE SUR LE HAYON, a l'instant ou il le dit. La voix nomme la chose, le dessin la DESIGNE :
 	-- un camion a quatre cotes et le joueur n'a aucune raison de deviner lequel s'ouvre.
 	TRUCK_DOOR_NAME = "DoorBack",
-	-- Hauteur au-dessus du hayon, en studs. JUSTE DE QUOI NE PAS ETRE DEDANS : le hayon est une piece etroite, et
-	-- le battement du marqueur ajoute deja jusqu'a 0.45 stud par-dessus. A 4 il flottait loin au-dessus du
-	-- camion, donc il ne designait plus rien de precis.
-	TRUCK_MARKER_UP = 1,
+	-- Hauteur au-dessus du hayon, en studs. Valide a l'ecran.
+	TRUCK_MARKER_UP = 4,
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
 	--
 	-- SA ROOTPART EST BASSE : elle sort du 3D Importer, donc elle est posee au PIED du rig et pas a mi-torse
 	-- comme sur un personnage Roblox. Toutes les hauteurs de ce bloc se comptent donc depuis le SOL sous lui.
 	--
-	-- AU-DESSUS DU BADGE "PARLER" (7.5), qui s'affiche en meme temps : les deux se liraient l'un sur l'autre.
+	-- JUSTE AU-DESSUS DU BADGE "PARLER" (`TALK_PROMPT_OFFSET`, 7.5), qui s'affiche en meme temps. C'est un
+	-- couloir etroit : plus bas les deux se chevauchent, plus haut le marqueur decroche du personnage et flotte
+	-- dans le ciel. Baisser celui-ci oblige donc a baisser le badge d'autant.
 	--
-	-- CE CHIFFRE N'ETAIT PAS LU jusqu'ici -- le balancement du marqueur ecrasait la hauteur demandee (corrige
-	-- dans WorldMarker). Il est donc remis a une valeur SENSEE au lieu des 15.5 auxquels on etait monte en
-	-- cherchant a compenser un reglage qui ne servait a rien.
-	GRANDPA_MARKER_UP = 10.5,
+	-- CE CHIFFRE N'ETAIT PAS LU avant 0.0.751 -- le balancement du marqueur ecrasait la hauteur demandee -- donc
+	-- toutes les valeurs qu'on y a mises en cherchant a compenser (jusqu'a 15.5) n'ont jamais rien montre.
+	GRANDPA_MARKER_UP = 9,
 	-- A quelle distance le badge "PARLER" apparait, en studs. DISTANCE RADIALE, comme celle de la porte : une
 	-- boite orientee laisse des angles morts, et il se promene -- il n'a aucune orientation stable.
 	TALK_RADIUS = 11,

@@ -2204,10 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
-## 0.0.755 — Le marqueur du hayon redescend sur le hayon
+## 0.0.755 — Le marqueur du grand-pere redescend (et celui du hayon reste ou il etait)
 
-`TRUCK_MARKER_UP` passe de 4 a 1 stud. A 4 il flottait loin au-dessus du camion et ne designait plus rien de
-precis. Un stud suffit a ne pas etre DEDANS, et le battement du marqueur ajoute deja jusqu'a 0.45 par-dessus.
+`GRANDPA_MARKER_UP` passe de 10.5 a 9 : a 10.5 il decrochait du personnage et flottait dans le ciel.
+
+C'est un couloir etroit. Le badge `TALK` s'affiche en meme temps a 7.5 : plus bas, les deux se chevauchent ; plus
+haut, le marqueur quitte le personnage. Le baisser encore obligera a baisser le badge d'autant.
+
+`TRUCK_MARKER_UP` avait ete descendu de 4 a 1 dans la foulee, sur un malentendu -- c'est celui du grand-pere qui
+genait, pas celui du hayon. Il revient a 4, la valeur validee a l'ecran.
 
 ## 0.0.754 — Le marqueur passe sur le hayon du camion quand il dit de l'ouvrir
 
