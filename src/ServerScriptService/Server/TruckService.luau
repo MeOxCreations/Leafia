@@ -88,6 +88,10 @@ local function setup(model: Model)
 	end
 
 	local truck: Truck = { model = model, track = nil, open = false, time = 0 }
+	-- L'ETAT DE DEPART EST ECRIT, pas suppose. Un attribut absent se lit `nil`, et chaque lecteur devrait alors
+	-- decider lui-meme si ca veut dire "fermee" ou "on ne sait pas" -- donc deux lecteurs finiraient par ne pas
+	-- repondre pareil.
+	model:SetAttribute(TruckConfigs.OPEN_ATTRIBUTE, false)
 
 	-- L'ANIMATION EST FACULTATIVE : sans elle le prompt marche quand meme, la porte ne bouge simplement pas. On ne
 	-- prive pas le joueur d'une interaction pour un asset manquant.
@@ -130,6 +134,10 @@ local function setup(model: Model)
 		-- UNE BASCULE, et rien de plus : le meme appui ouvre et referme. Aucun etat a valider -- le pire qu'un
 		-- joueur puisse faire est d'ouvrir une porte de camion.
 		truck.open = not truck.open
+		-- ET ON LE DIT AU MONDE. L'interface des outils n'a pas a refaire la detection de proximite ni a suivre
+		-- l'animation : elle demande "est-elle ouverte ?", et l'attribut repond -- chez tout le monde, y compris
+		-- chez un client arrive en retard.
+		model:SetAttribute(TruckConfigs.OPEN_ATTRIBUTE, truck.open)
 		-- LE SON PART A L'APPUI, pas a la fin du mouvement : c'est le geste du joueur qu'il accompagne. Attendre
 		-- que la porte soit ouverte le decalerait d'une seconde et il ne repondrait plus a rien.
 		--

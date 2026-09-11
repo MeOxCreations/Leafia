@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.771 — L'interface du camion : sortir un outil de la benne, qui vole jusqu'au terrain
+
+Le hayon ouvert, une barre s'ouvre en bas de l'ecran avec une case par outil encore range dans `ObjectsTools`.
+Un clic sur `TAKE` ne l'equipe pas : il le SORT. L'objet quitte la benne, vole en arc jusqu'a sa place sur le
+terrain, tourne sur lui-meme en chemin, et se pose droit.
+
+L'APERCU EST LE VRAI MODELE 3D, dans un `ViewportFrame`, et pas une icone. Il n'y a aucune icone a dessiner ni a
+tenir a jour, le joueur voit EXACTEMENT l'objet qu'il va recevoir, et ajouter un outil dans la benne le fait
+apparaitre dans la barre tout seul. La distance de la camera vient de la TAILLE de l'objet : un rateau et un seau
+n'ont pas les memes mesures, et un recul fixe montrerait l'un en entier et l'autre en gros plan.
+
+LE VOL EST UNE COURBE DE BEZIER a trois points -- depart, sommet, arrivee. Une ligne droite ne se lit pas comme un
+objet qu'on SORT, mais comme un objet qui glisse. Le sommet est calcule depuis les deux bouts, donc l'arc reste
+juste ou que soit le camion. Et l'objet se REDRESSE sur la fin (`FLY_SETTLE_FROM`), sinon il se poserait a l'angle
+ou le hasard du tour l'a laisse.
+
+TOUT EST COTE SERVEUR PARCE QUE L'OBJET EST REEL : c'est le modele range dans la benne, pas une copie fabriquee
+pour l'occasion. Un vol joue chez le client le laisserait dans la benne pour les autres, et deux joueurs ne
+verraient pas le meme camion.
+
+LE CLIENT N'ENVOIE QU'UN NOM, et le serveur retrouve le modele lui-meme dans le dossier prevu : un client modifie
+ne peut donc designer que ce qui est dans la benne. Il verifie aussi que le hayon est OUVERT -- on ne fait pas
+confiance a l'affichage pour tenir une regle.
+
+L'INTERFACE NE GARDE AUCUN ETAT A ELLE. Elle lit trois choses -- l'attribut du hayon, le contenu du dossier, la
+presence du camion -- et affiche ce qu'elles disent. C'est ce qui rend le cas a deux joueurs correct sans une
+ligne de plus : celui qui sort un rateau le retire de la benne, donc la case disparait chez les deux.
+
+### A faire dans Studio
+
+Un dossier `ToolsDropPoints` dans le Workspace, avec une PART par outil, nommee exactement comme lui (`Bin`,
+`Shear`, `LeafRake`, `HedgeTrimmer`, `Ladder`). L'objet s'y pose avec l'ORIENTATION de la part. Faute de part il
+se pose devant le joueur, et le service le dit dans la console.
+
 ## 0.0.770 — Un point d'interrogation quand il attend, l'eclair quand il s'enerve
 
 Ses appels au joueur qui ne suit pas ont maintenant leur onomatopee, comme son impatience -- mais un POINT

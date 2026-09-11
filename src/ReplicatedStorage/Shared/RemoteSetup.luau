@@ -24,6 +24,15 @@ local REMOTES: { { any } } = {
 	-- Rien a valider a l'arrivee : c'est le SERVEUR qui emet, vers les clients. Un client ne peut pas s'en servir.
 	{ "PlayDropEffect", E, "Fx" },
 
+	-- [ TRUCK ] --
+	-- LE JOUEUR SORT UN OUTIL DE LA BENNE. Il envoie le NOM de l'outil, et rien d'autre : le serveur retrouve le
+	-- modele lui-meme dans le camion, donc un client modifie ne peut pas designer autre chose qu'un enfant du
+	-- dossier prevu -- ni faire voler la maison du grand-pere jusqu'a la pelouse.
+	--
+	-- IL EST COTE SERVEUR PARCE QUE L'OBJET EST REEL : il quitte le camion et se pose dans le monde, donc tout le
+	-- monde doit le voir bouger. Un vol joue chez le client laisserait l'outil dans la benne pour les autres.
+	{ "TakeTruckTool", E, "Truck" },
+
 	-- [ TUTORIAL ] --
 	-- LE GRAND-PERE SE MET A PARLER. Aucun argument : le client ne fait que DECLENCHER.
 	--

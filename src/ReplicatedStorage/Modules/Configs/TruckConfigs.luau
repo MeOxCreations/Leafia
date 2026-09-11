@@ -52,6 +52,40 @@ local TruckConfigs = {
 	-- moments differents, deux reglages -- un seul aurait force a decaler les deux.
 	DOOR_CLOSE_SOUND_DELAY = 0.5,
 
+	-- ===== L'ETAT DE LA PORTE, LU PAR LE CLIENT =====
+	-- Un ATTRIBUT sur le modele, pas un remote : il se replique tout seul, il arrive avec le camion quand le
+	-- streaming le livre, et un client qui se connecte en retard le lit sans qu'on ait a le lui renvoyer.
+	OPEN_ATTRIBUTE = "LeafiaTruckOpen",
+
+	-- ===== LES OUTILS RANGES DANS LA BENNE =====
+	-- Le dossier qui les contient, dans le modele du camion. Chaque enfant est un outil qu'on peut sortir, POSE
+	-- A LA MAIN dans Studio avec son orientation : le code ne les range pas, il les sort.
+	TOOLS_FOLDER = "ObjectsTools",
+	-- Ou chacun se pose une fois sorti : un dossier de parts, une par outil, NOMMEE COMME LUI.
+	--
+	-- UNE PART PAR OUTIL et pas un point unique : deux outils lances de suite se poseraient l'un dans l'autre. Et
+	-- c'est une part, donc son ORIENTATION compte aussi -- un rateau pose de travers a l'air tombe, pas depose.
+	DROP_FOLDER = "ToolsDropPoints",
+	-- Faute de part, il se pose devant celui qui l'a demande, a cette distance en studs. Un secours, pas le cas
+	-- normal : le service le DIT quand il s'en sert, sinon on croirait que c'est voulu.
+	DROP_FALLBACK_DIST = 6,
+
+	-- ===== LE VOL, DU CAMION AU SOL =====
+	-- Il ne se teleporte pas : il SORT. Une courbe de Bezier a trois points -- depart, sommet, arrivee -- parce
+	-- qu'une ligne droite ne se lit pas comme un objet qu'on sort, mais comme un objet qui glisse.
+	--
+	-- LE SOMMET est place au milieu du trajet, puis remonte : c'est lui qui donne l'arc. Plus haut, l'objet passe
+	-- par-dessus le camion ; a zero, la courbe redevient une droite.
+	FLY_ARC_HEIGHT = 7,
+	-- Duree du vol, en secondes. Assez lent pour qu'on suive l'objet des yeux, assez court pour ne pas attendre.
+	FLY_TIME = 0.85,
+	-- IL TOURNE EN VOLANT, en tours complets. Un objet qui garde son orientation pendant tout le trajet a l'air
+	-- tire par une ficelle ; un tour sur lui-meme dit qu'il a ete LANCE.
+	FLY_SPINS = 1,
+	-- ET IL ARRIVE DROIT : sur la fin du vol, sa rotation revient vers celle du point d'arrivee. Sans ca il se
+	-- poserait a l'angle ou le hasard du tour l'a laisse.
+	FLY_SETTLE_FROM = 0.75,
+
 	-- ===== RECHERCHE =====
 	-- Avec StreamingEnabled le camion peut arriver bien apres le demarrage. On le re-cherche jusqu'a le trouver,
 	-- puis on abandonne en le disant : "absent au demarrage" est un etat NORMAL, "absent pour toujours" ne l'est

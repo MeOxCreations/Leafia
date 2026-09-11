@@ -52,6 +52,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- cas normal finit par etre ignore.
 	-- Necessite le model "Truck" et sa part "DoorBack" dans la MAP (Rojo ne synchronise pas le Workspace).
 	require(script.TruckService).init()
+	-- APRES TruckService : c'est lui qui pose l'etat du hayon, et sortir un outil d'un camion ferme n'a pas de
+	-- sens. L'ordre se lit donc ici, en clair.
+	require(script.TruckToolsService).init()
 	print("[Server] Leafia TUTO demarre")
 	return
 end
