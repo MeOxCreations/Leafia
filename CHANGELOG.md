@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.755 — Le marqueur du hayon redescend sur le hayon
+
+`TRUCK_MARKER_UP` passe de 4 a 1 stud. A 4 il flottait loin au-dessus du camion et ne designait plus rien de
+precis. Un stud suffit a ne pas etre DEDANS, et le battement du marqueur ajoute deja jusqu'a 0.45 par-dessus.
+
 ## 0.0.754 — Le marqueur passe sur le hayon du camion quand il dit de l'ouvrir
 
 A l'instant ou il dit `OpenTruckBack`, le point d'exclamation se pose sur la part `DoorBack` du camion. La voix
