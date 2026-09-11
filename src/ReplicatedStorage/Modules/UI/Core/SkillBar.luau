@@ -25,9 +25,14 @@ local MAX_DISTANCE = 90
 local gui: ScreenGui? = nil
 local frame: Frame? = nil
 local fill: Frame? = nil
+local popScale: UIScale? = nil
 local shown = false
 local fadeTween: Tween? = nil
 local fillTween: Tween? = nil
+local popTween: Tween? = nil
+-- L'OFFSET DEMANDE PAR L'APPELANT, garde tel quel. L'arrivee y ajoute une montee, et sans cette copie on
+-- n'aurait plus de quoi revenir a la valeur voulue -- on lirait l'offset deja modifie.
+local baseOffset = Vector3.zero
 
 local function getGui(): ScreenGui
 	local existing = gui
@@ -66,11 +71,14 @@ local function build(): Frame
 	local back = Instance.new("Frame")
 	back.Name = "SkillBar"
 	back.Size = UDim2.fromOffset(SkillConfigs.BAR_WIDTH, SkillConfigs.BAR_HEIGHT)
+	-- ELLE GRANDIT PAR LE BAS. L'ancre est posee ici et pas par WorldAnchor -- qui centre ce qu'il accroche -- donc
+	-- on la remet apres lui a chaque attache. Par le bas, le depliement se lit comme une jauge qui SORT du sol.
+	back.AnchorPoint = Vector2.new(0.5, 1)
 	back.BackgroundColor3 = SkillConfigs.BAR_BACK
 	back.BackgroundTransparency = 1 -- elle nait invisible : le fondu la revele
 	back.BorderSizePixel = 0
 	back.Parent = holder
-	corner(back, SkillConfigs.BAR_HEIGHT // 2)
+	corner(back, SkillConfigs.BAR_WIDTH // 2)
 
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = SkillConfigs.BAR_STROKE
@@ -80,18 +88,25 @@ local function build(): Frame
 
 	local bar = Instance.new("Frame")
 	bar.Name = "Fill"
-	-- ANCREE A GAUCHE : la jauge se remplit depuis la gauche, donc seule sa LARGEUR change. Centree, elle
-	-- grandirait des deux cotes -- ce qui ne ressemble pas a un remplissage.
-	bar.AnchorPoint = Vector2.new(0, 0.5)
-	bar.Position = UDim2.fromScale(0, 0.5)
-	bar.Size = UDim2.fromScale(0, 1)
+	-- ANCREE EN BAS : la jauge se remplit vers le HAUT, donc seule sa HAUTEUR change. Centree, elle grandirait des
+	-- deux cotes -- ce qui ne ressemble pas a un remplissage, et le bas se decollerait du fond.
+	bar.AnchorPoint = Vector2.new(0.5, 1)
+	bar.Position = UDim2.fromScale(0.5, 1)
+	bar.Size = UDim2.fromScale(1, 0)
 	bar.BackgroundColor3 = SkillConfigs.BAR_COLOR
 	bar.BackgroundTransparency = 1
 	bar.BorderSizePixel = 0
 	bar.Parent = back
-	corner(bar, SkillConfigs.BAR_HEIGHT // 2)
+	corner(bar, SkillConfigs.BAR_WIDTH // 2)
 
-	frame, fill = back, bar
+	-- L'ECHELLE DE L'ARRIVEE, sur le cadre entier : le fond, le remplissage et le contour grandissent ensemble.
+	-- Un `UIScale` est UNIFORME, donc rien ne se deforme -- animer la taille aurait etire le dessin et epaissi le
+	-- trait du contour.
+	local scale = Instance.new("UIScale")
+	scale.Scale = 1
+	scale.Parent = back
+
+	frame, fill, popScale = back, bar, scale
 	return back
 end
 
@@ -115,6 +130,50 @@ local function fadeTo(value: number)
 	end
 end
 
+-- SON ARRIVEE : elle se deplie en depassant sa taille, puis se pose. Et elle MONTE de quelques studs pendant ce
+-- temps, en bougeant le point VISE dans le monde -- elle continue donc de suivre le joueur en arrivant.
+--
+-- Un simple fondu se lirait comme une interface qui s'allume. Un depliement se lit comme quelque chose qui
+-- ARRIVE, et c'est ce qui fait remarquer la premiere touffe coupee.
+local function playPop(back: Frame)
+	local scale = popScale
+	if not scale then
+		return
+	end
+	if popTween then
+		popTween:Cancel()
+	end
+	scale.Scale = 0
+	local up = TweenService:Create(
+		scale,
+		TweenInfo.new(SkillConfigs.BAR_POP_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Scale = SkillConfigs.BAR_POP_OVER }
+	)
+	popTween = up
+	up.Completed:Connect(function()
+		if scale.Parent then
+			TweenService
+				:Create(scale, TweenInfo.new(SkillConfigs.BAR_SETTLE_TIME, Enum.EasingStyle.Quad), { Scale = 1 })
+				:Play()
+		end
+	end)
+	up:Play()
+
+	-- LA MONTEE PASSE PAR L'OFFSET MONDE, pas par la position a l'ecran : une position d'ecran figerait la jauge
+	-- pendant qu'elle arrive, et elle decrocherait d'un joueur qui marche.
+	local steps = 10
+	task.spawn(function()
+		for i = 1, steps do
+			if not back.Parent then
+				return
+			end
+			local a = i / steps
+			WorldAnchor.setOffset(back, baseOffset - Vector3.new(0, SkillConfigs.BAR_POP_RISE * (1 - a), 0))
+			task.wait(SkillConfigs.BAR_POP_TIME / steps)
+		end
+	end)
+end
+
 --- Montre la jauge a cote de `target` et la remplit a `amount` (0 a 1).
 ---
 --- A appeler autant de fois qu'on veut : elle ne se recree pas, elle se remplit. Le remplissage est ANIME, donc
@@ -128,14 +187,10 @@ function SkillBar.show(target: WorldAnchor.Target, amount: number)
 
 	-- A COTE de la tete, et le decalage lateral suit la CAMERA : en repere monde, la jauge passerait derriere le
 	-- personnage des qu'on tourne autour de lui. `cameraRelative` la garde toujours du meme cote a l'ecran.
-	WorldAnchor.attach(
-		back,
-		target,
-		Vector3.new(SkillConfigs.BAR_SIDE, SkillConfigs.BAR_UP, 0),
-		MAX_DISTANCE,
-		SCALE,
-		true
-	)
+	baseOffset = Vector3.new(SkillConfigs.BAR_SIDE, SkillConfigs.BAR_UP, 0)
+	WorldAnchor.attach(back, target, baseOffset, MAX_DISTANCE, SCALE, true)
+	-- APRES `attach`, qui centre ce qu'il accroche : la jauge grandit par le bas, donc son ancre y est.
+	back.AnchorPoint = Vector2.new(0.5, 1)
 
 	if fillTween then
 		fillTween:Cancel()
@@ -148,6 +203,7 @@ function SkillBar.show(target: WorldAnchor.Target, amount: number)
 	if not shown then
 		shown = true
 		fadeTo(0)
+		playPop(back)
 	end
 end
 
@@ -185,12 +241,16 @@ function SkillBar.destroy()
 		fillTween:Cancel()
 		fillTween = nil
 	end
+	if popTween then
+		popTween:Cancel()
+		popTween = nil
+	end
 	local back = frame
 	if back then
 		WorldAnchor.detach(back)
 		back:Destroy()
 	end
-	frame, fill = nil, nil
+	frame, fill, popScale = nil, nil, nil
 	shown = false
 end
 

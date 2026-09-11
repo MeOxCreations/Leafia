@@ -42,6 +42,26 @@ local function bodyPart(): BasePart?
 	return if root and root:IsA("BasePart") then root :: BasePart else nil
 end
 
+--- LA MACHINE TOURNE-T-ELLE ? Tant que oui, la jauge reste affichee -- meme si elle ne monte pas.
+---
+--- POURQUOI CE SECOND CHEMIN. Elle n'apparaissait qu'au brin coupe, ce qui la faisait DISPARAITRE des que le
+--- joueur repassait sur une bande deja rase : il reprend sa tondeuse, il roule, et rien ne s'affiche -- ce qui se
+--- lit comme une jauge cassee alors qu'elle repond exactement a ce qu'on lui avait demande.
+---
+--- Une jauge de progression doit etre PREVISIBLE : elle est la quand on travaille, elle monte quand on avance.
+--- Les deux ne sont pas la meme question, et les melanger la rendait intermittente.
+function SkillController.setRunning(on: boolean)
+	if not on then
+		return -- on ne CACHE pas ici : le temps de repos (MOW_LINGER) s'en charge, et il couvre les manoeuvres
+	end
+	lastGainAt = os.clock()
+	local anchor = bodyPart()
+	if anchor then
+		visible = true
+		SkillBar.show(anchor, progress / needFor(level))
+	end
+end
+
 --- A APPELER QUAND LE JOUEUR COUPE VRAIMENT DE L'HERBE. `amount` est ce que rend `GrassZoneController.mowAt` :
 --- une quantite rabattue, pas un temps -- passer la tondeuse sur du beton ne fait donc rien monter.
 ---

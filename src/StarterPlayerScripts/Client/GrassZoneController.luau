@@ -636,10 +636,16 @@ local function cutInstantly(clump: Clump)
 	if clump.gone or clump.mown >= 1 then
 		return
 	end
-	-- LES FLEURS SONT EPARGNEES. La tonte les FAUCHE (elles disparaissent), et une pelouse "deja faite" n'a pas a
-	-- manger le decor que quelqu'un a pose a la main. Elles restent donc, et le joueur les fauchera s'il passe
-	-- dessus -- ce qui est le comportement normal.
+	-- LES FLEURS SONT FAUCHEES ELLES AUSSI. Elles avaient d'abord ete epargnees -- pour ne pas manger un decor
+	-- pose a la main -- mais a l'ecran ca ne tient pas : une pelouse rase parsemee de fleurs hautes ne ressemble
+	-- pas a une pelouse deja faite, elle ressemble a une tonte RATEE.
+	--
+	-- Elles disparaissent d'un coup, sans le retrecissement de la tonte normale : personne ne les a vues tomber,
+	-- il n'y a donc rien a montrer.
 	if clump.flower then
+		clump.mown = 1
+		clump.gone = true
+		clump.part:Destroy()
 		return
 	end
 	clump.mown = 1

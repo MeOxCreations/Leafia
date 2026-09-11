@@ -528,8 +528,8 @@ return {
 	-- LA HAUTEUR SUIT LA DISTANCE. Les deux font l'ANGLE de plongee : rapprocher la camera sans la baisser
 	-- redresse le regard vers le sol, donc on perd le devant de la machine -- ce qu'on voulait justement gagner
 	-- en se rapprochant. Ces deux nombres se tournent ensemble, dans le meme rapport.
-	DRIVE_CAM_DISTANCE = 10,
-	DRIVE_CAM_HEIGHT = 4.2,
+	DRIVE_CAM_DISTANCE = 8,
+	DRIVE_CAM_HEIGHT = 5.5,
 	-- Hauteur du point VISE sur le joueur. Vers le torse : viser les pieds colle l'horizon en haut du cadre.
 	DRIVE_CAM_LOOK_HEIGHT = 2.5,
 	-- VITESSE A LAQUELLE LE CAP DE LA CAMERA RATTRAPE CELUI DE LA MACHINE. C'est LE reglage du ressenti : bas, la

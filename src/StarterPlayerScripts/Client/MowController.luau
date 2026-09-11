@@ -1519,6 +1519,9 @@ local function update(dt: number)
 		-- ET LA COMPETENCE MONTE, sur la MEME mesure. Elle compte donc le TRAVAIL et pas la presence : rouler
 		-- moteur allume sur une allee ne fait rien monter. Le controller ignore les zeros, on l'appelle sans test.
 		SkillController.addMow(cutNow)
+		-- ET LA JAUGE RESTE AFFICHEE TANT QUE LA MACHINE TOURNE, meme quand elle ne monte pas. Sans ce second
+		-- appel, repasser sur une bande deja rase la faisait disparaitre -- ce qui se lit comme une jauge cassee.
+		SkillController.setRunning(true)
 	end
 end
 

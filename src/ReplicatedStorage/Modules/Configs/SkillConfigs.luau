@@ -30,9 +30,14 @@ SkillConfigs.MOW_LINGER = 2.5
 SkillConfigs.BAR_SIDE = 2.2
 SkillConfigs.BAR_UP = 2.6
 
--- Taille de la jauge en pixels a la distance de reference.
-SkillConfigs.BAR_WIDTH = 90
-SkillConfigs.BAR_HEIGHT = 14
+-- Taille de la jauge en pixels a la distance de reference. VERTICALE : plus haute que large.
+--
+-- POURQUOI VERTICALE. Une jauge horizontale posee a cote d'une tete occupe la largeur de l'ecran au lieu de la
+-- hauteur, et c'est la largeur qui est deja prise -- par le personnage, par ce qu'il regarde, par la machine
+-- devant lui. Debout, elle tient dans un couloir vide, et une progression qui MONTE se lit plus vite qu'une
+-- progression qui va vers la droite.
+SkillConfigs.BAR_WIDTH = 16
+SkillConfigs.BAR_HEIGHT = 96
 
 -- LE BLEU. Celui de la competence, comme dans les jeux de vie : une couleur froide pour une progression, gardee
 -- pour ELLE -- le vert appartient deja au vegetal et le dore a l'argent.
@@ -49,6 +54,21 @@ SkillConfigs.BAR_STROKE_THICKNESS = 2
 SkillConfigs.BAR_FILL_TIME = 0.18
 -- Apparition et disparition.
 SkillConfigs.BAR_FADE_TIME = 0.25
+
+-- ===== SON ARRIVEE =====
+-- ELLE SE DEPLIE. Un simple fondu se lit comme une interface qui s'allume ; un depliement se lit comme quelque
+-- chose qui ARRIVE, et c'est ce qui fait remarquer la premiere touffe coupee.
+--
+-- L'echelle passe par un `UIScale`, donc elle est UNIFORME : la jauge grandit sans jamais se deformer, et son
+-- contour garde son epaisseur. Animer la taille aurait etire le dessin et epaissi le trait.
+SkillConfigs.BAR_POP_TIME = 0.34
+-- De combien elle DEPASSE sa taille avant de se poser. C'est ce depassement qui donne le ressort -- une echelle
+-- qui monte tout droit ne se distingue pas d'un fondu.
+SkillConfigs.BAR_POP_OVER = 1.18
+SkillConfigs.BAR_SETTLE_TIME = 0.16
+-- ET ELLE MONTE en arrivant, de quelques studs : elle se pose a sa place au lieu d'y etre deja. Le mouvement est
+-- porte par le point VISE dans le monde, donc elle continue de suivre le joueur pendant qu'elle arrive.
+SkillConfigs.BAR_POP_RISE = 0.7
 
 -- ===== LES ATTRIBUTS =====
 -- Poses sur le joueur. Un attribut se replique tout seul : pas de remote, pas de file a saturer, et n'importe quel

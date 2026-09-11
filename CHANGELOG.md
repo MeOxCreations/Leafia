@@ -2204,6 +2204,52 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.722 — Camera plus pres, jauge verticale, et les fleurs tombent avec l'herbe
+
+### La camera de conduite
+
+`DRIVE_CAM_DISTANCE` 10 -> 8, `DRIVE_CAM_HEIGHT` 4.2 -> 5.5. Plus pres, et un peu plus haut sur l'orbite.
+
+### La jauge de competence passe debout
+
+`BAR_WIDTH` / `BAR_HEIGHT` passent de 90x14 a 16x96, et le remplissage monte depuis le BAS.
+
+Une jauge horizontale posee a cote d'une tete occupe la largeur de l'ecran, et c'est justement la largeur qui est
+deja prise -- par le personnage, par ce qu'il regarde, par la machine devant lui. Debout, elle tient dans un
+couloir vide, et une progression qui MONTE se lit plus vite qu'une progression qui va vers la droite.
+
+Son ancre passe en BAS, et elle est reposee APRES `WorldAnchor` (qui centre ce qu'il accroche) : c'est ce qui fait
+que le remplissage grandit vers le haut sans decoller du fond.
+
+### Son arrivee
+
+Elle se DEPLIE : l'echelle part de zero, DEPASSE sa taille, puis se pose. Et elle monte de quelques studs pendant
+ce temps. Un simple fondu se lit comme une interface qui s'allume ; un depliement se lit comme quelque chose qui
+ARRIVE, et c'est ce qui fait remarquer la premiere touffe coupee.
+
+L'echelle passe par un `UIScale`, donc elle est UNIFORME : rien ne se deforme, et le contour garde son epaisseur.
+Animer la taille aurait etire le dessin et epaissi le trait. La montee passe par l'offset MONDE et pas par la
+position a l'ecran : la jauge continue donc de suivre un joueur qui marche pendant qu'elle arrive.
+
+### Elle ne disparait plus quand on reprend la machine
+
+Ce n'etait pas un bug de la jauge, c'etait sa condition d'affichage : elle n'apparaissait qu'au brin COUPE. Des
+que le joueur repassait sur une bande deja rase, elle s'en allait -- il reprend sa tondeuse, il roule, et rien ne
+s'affiche. Ca se lit comme une jauge cassee alors qu'elle repondait exactement a ce qu'on lui avait demande.
+
+Elle reste maintenant affichee tant que la machine TOURNE, et elle MONTE quand il coupe. Deux questions
+differentes, deux chemins : les melanger la rendait intermittente. Une jauge de progression doit etre previsible
+-- la quand on travaille, qui monte quand on avance.
+
+### Les fleurs hors parcelle sont fauchees
+
+Elles avaient ete epargnees par la pre-coupe, pour ne pas manger un decor pose a la main. A l'ecran ca ne tient
+pas : une pelouse rase parsemee de fleurs hautes ne ressemble pas a une pelouse deja faite, elle ressemble a une
+tonte RATEE.
+
+Elles disparaissent d'un coup, sans le retrecissement de la tonte normale : personne ne les a vues tomber, il n'y
+a donc rien a montrer.
+
 ## 0.0.721 — L'a-coup de camera au demarrage du moteur
 
 Deux causes CUMULEES, et chacune suffisait a le produire.
