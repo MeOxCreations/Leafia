@@ -78,6 +78,10 @@ local mowerMarkerPart: BasePart? = nil
 -- marqueur est accroche a son corps -- un point du monde resterait la ou il etait quand la tonte s'est finie.
 local grandpaMarker: Frame? = nil
 local grandpaMarkerPart: BasePart? = nil
+-- SON CORPS, GARDE. Le balayage qui le trouve parcourt tout le Workspace : le refaire a chaque image coute cher
+-- pour un objet qui ne change pas. On le re-cherche seulement quand on n'a rien, ou quand ce qu'on avait a
+-- disparu -- ce qui couvre aussi le streaming, ou il arrive apres le boot.
+local grandpaPart: BasePart? = nil
 -- SA CIBLE DE BADGE, gardee pour que la touche puisse verifier que la pilule est bien a nous. `E` est partagee :
 -- sans ce test, parler au grand-pere ramasserait aussi un seau pose a ses pieds.
 -- LE MARQUEUR SUR LE HAYON DU CAMION, une fois qu'il a dit de l'ouvrir. `wanted` et la reference sont SEPARES :
@@ -2117,7 +2121,36 @@ local function step(dt: number)
 		end
 	end
 
-	-- QUAND ON A LE DROIT DE LUI PARLER. Trois conditions, et chacune repare quelque chose de vu a l'ecran.
+	-- OU EST LE GRAND-PERE. Cherche seulement quand la fin du didacticiel s'en sert, et GARDE : le balayage
+	-- parcourt tout le Workspace, le refaire a chaque image couterait cher pour un objet qui ne bouge pas de
+	-- place dans l'arbre. On re-cherche quand on n'a rien ou quand ce qu'on avait a disparu, ce qui couvre aussi
+	-- le streaming.
+	if lawnTaskShown and not talkDone then
+		local kept = grandpaPart
+		if not (kept and kept.Parent) then
+			local model = findModel(TutorialConfigs.GRANDPA_NAME)
+			grandpaPart = if model then bodyPart(model) else nil
+		end
+	end
+	local grandpa = grandpaPart
+
+	-- LA BALISE DES QUE LA PELOUSE EST FINIE, mains libres ou pas. C'est elle qui dit "va le voir", et le joueur
+	-- doit l'avoir sous les yeux a l'instant ou il finit -- pas quand il aura pense a lacher la machine. Avant,
+	-- elle etait accrochee aux conditions du BADGE : on finissait de tondre et il ne se passait rien tant qu'on
+	-- poussait encore la tondeuse.
+	--
+	-- ACCROCHEE A SON CORPS et pas a un point : il se promene, donc un point fige resterait la ou il se trouvait
+	-- quand la derniere touffe est tombee. Piege deja paye sur le marqueur de la porte, ne a l'origine de la map.
+	--
+	-- ET PAS AVANT LA FIN : elle veut dire "va la-bas", donc la poser pendant qu'il reste de l'herbe enverrait le
+	-- joueur au mauvais endroit.
+	if grandpa and lawnTaskDone and not talkDone and grandpaMarkerPart ~= grandpa then
+		WorldMarker.remove(grandpaMarker)
+		grandpaMarker = WorldMarker.show(grandpa, Vector3.new(0, TutorialConfigs.GRANDPA_MARKER_UP, 0))
+		grandpaMarkerPart = grandpa
+	end
+
+	-- LE BADGE, LUI, A TROIS CONDITIONS, et chacune repare quelque chose de vu a l'ecran.
 	--
 	-- 1) LES MAINS LIBRES. On ne discute pas en poussant une tondeuse -- et surtout, `E` reposerait la machine EN
 	--    MEME TEMPS que la conversation : deux actions pour un appui, le bug qu'on vient de fermer ailleurs. La
@@ -2128,50 +2161,37 @@ local function step(dt: number)
 	--
 	-- La pelouse FINIE passe devant la condition de progres : a ce moment-la c'est LUI qui rappelle le joueur.
 	--
-	-- LE MARQUEUR N'ARRIVE QU'A LA FIN. Il veut dire "va la-bas" : le poser sur le grand-pere pendant qu'il reste
-	-- de l'herbe a couper enverrait le joueur au mauvais endroit.
-	--
-	-- ACCROCHE A SON CORPS et pas a un point : il se promene, donc un point fige resterait la ou il se trouvait
-	-- quand la derniere touffe est tombee. Piege deja paye sur le marqueur de la porte, ne a l'origine de la map.
+	-- LA BALISE, ELLE, NE DEPEND D'AUCUNE DES TROIS : elle DESIGNE, elle ne propose rien. Les deux n'ont pas le
+	-- meme travail, donc elles n'ont pas les memes conditions -- les melanger est ce qui retardait la balise.
 	local canTalk = lawnTaskShown
 		and not talkDone
 		and CarryUtils.isFree(player)
 		and (lawnTaskDone or lawnFraction >= TutorialConfigs.TALK_MIN_PROGRESS)
-	if not canTalk then
+	local me = getRoot()
+	if not (canTalk and grandpa and me) then
 		hideTalkPrompt()
-	end
-	if canTalk then
-		local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
-		local part = if grandpa then bodyPart(grandpa) else nil
-		local me = getRoot()
-		if part and me then
-			if lawnTaskDone and grandpaMarkerPart ~= part then
-				WorldMarker.remove(grandpaMarker)
-				grandpaMarker = WorldMarker.show(part, Vector3.new(0, TutorialConfigs.GRANDPA_MARKER_UP, 0))
-				grandpaMarkerPart = part
+	else
+		-- DISTANCE RADIALE, a plat : il n'a aucune orientation stable puisqu'il marche, et une boite orientee
+		-- laisserait des angles morts selon le cote par lequel on arrive.
+		local flat = (grandpa.Position - me.Position) * Vector3.new(1, 0, 1)
+		if flat.Magnitude <= TutorialConfigs.TALK_RADIUS then
+			setTalkBound(true)
+			-- On re-demande au CHANGEMENT de cible, mais AUSSI quand la pilule ne nous appartient plus : une
+			-- voisine a pu la prendre. Sans ce second test, la notre ne reviendrait jamais.
+			if talkAnchor ~= grandpa or InteractionPrompt.currentTarget() ~= grandpa then
+				InteractionPrompt.release(talkAnchor)
+				talkAnchor = grandpa
+				InteractionPrompt.show(
+					grandpa,
+					TutorialConfigs.TALK_PROMPT_KEY,
+					TutorialConfigs.TALK_PROMPT_LABEL,
+					TutorialConfigs.TALK_PROMPT_OFFSET,
+					TutorialController.talkToGrandpa,
+					TutorialConfigs.TALK_PROMPT_TITLE
+				)
 			end
-			-- DISTANCE RADIALE, a plat : il n'a aucune orientation stable puisqu'il marche, et une boite orientee
-			-- laisserait des angles morts selon le cote par lequel on arrive.
-			local flat = (part.Position - me.Position) * Vector3.new(1, 0, 1)
-			if flat.Magnitude <= TutorialConfigs.TALK_RADIUS then
-				setTalkBound(true)
-				-- On re-demande au CHANGEMENT de cible, mais AUSSI quand la pilule ne nous appartient plus : une
-				-- voisine a pu la prendre. Sans ce second test, la notre ne reviendrait jamais.
-				if talkAnchor ~= part or InteractionPrompt.currentTarget() ~= part then
-					InteractionPrompt.release(talkAnchor)
-					talkAnchor = part
-					InteractionPrompt.show(
-						part,
-						TutorialConfigs.TALK_PROMPT_KEY,
-						TutorialConfigs.TALK_PROMPT_LABEL,
-						TutorialConfigs.TALK_PROMPT_OFFSET,
-						TutorialController.talkToGrandpa,
-						TutorialConfigs.TALK_PROMPT_TITLE
-					)
-				end
-			else
-				hideTalkPrompt()
-			end
+		else
+			hideTalkPrompt()
 		end
 	end
 
@@ -2568,7 +2588,7 @@ function TutorialController.stop()
 	WorldMarker.remove(mowerMarker)
 	mowerMarker, mowerMarkerPart = nil, nil
 	WorldMarker.remove(grandpaMarker)
-	grandpaMarker, grandpaMarkerPart = nil, nil
+	grandpaMarker, grandpaMarkerPart, grandpaPart = nil, nil, nil
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
 	hideTalkPrompt()

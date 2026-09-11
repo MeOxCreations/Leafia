@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.758 — La balise se pose sur le grand-pere des la derniere touffe
+
+Elle attendait que le joueur LACHE la tondeuse : elle etait accrochee aux conditions du BADGE, dont les mains
+libres. On finissait donc de tondre et il ne se passait rien tant qu'on poussait encore la machine.
+
+LES DEUX N'ONT PAS LE MEME TRAVAIL, donc plus les memes conditions. La balise DESIGNE -- elle doit etre sous les
+yeux du joueur a l'instant ou il finit, pour qu'il se dise "ah oui, faut que j'aille la-bas". Le badge PROPOSE
+une action, et lui garde ses trois conditions (mains libres, un peu de pelouse tondue, pas deja felicite).
+
+Melanger les deux etait la cause : un affichage qui informe n'a pas a attendre qu'une action soit possible.
+
+Au passage, la recherche du grand-pere est GARDEE au lieu d'etre refaite a chaque image. Elle balaye tout le
+Workspace, et il ne change pas de place dans l'arbre : on ne re-cherche que si on n'a rien ou si ce qu'on avait a
+disparu -- ce qui couvre aussi son arrivee par le streaming.
+
 ## 0.0.757 — Le marqueur se pose sur la PART du hayon, plus sur son joint
 
 Le camion a une MeshPart `DoorBack` ET un `Motor6D` `DoorBack` -- sur un objet rigge, le joint porte le nom de la
