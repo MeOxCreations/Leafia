@@ -590,6 +590,9 @@ return {
 	GO_ON_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GoOnTruck" },
 	-- ET CE QU'IL DIT EN ARRIVANT : ouvre l'arriere, les outils sont dedans.
 	OPEN_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_OpenTruckBack" },
+	-- ET QUAND LE JOUEUR OUVRE ENFIN LE HAYON : il commente ce qu'on y voit. Dite a l'OUVERTURE et pas a
+	-- l'arrivee devant : c'est le geste du joueur qu'elle recompense.
+	TRUCK_OPENED_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_AsUCanSeeDoorTruck" },
 	-- ET LE MARQUEUR PASSE SUR LE HAYON, a l'instant ou il le dit. La voix nomme la chose, le dessin la DESIGNE :
 	-- un camion a quatre cotes et le joueur n'a aucune raison de deviner lequel s'ouvre.
 	TRUCK_DOOR_NAME = "DoorBack",

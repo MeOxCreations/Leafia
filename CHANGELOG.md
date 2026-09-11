@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.759 — Il regarde le camion en arrivant, et commente quand le hayon s'ouvre
+
+IL PARLAIT DU HAYON EN REGARDANT AILLEURS. Sa marche le laisse face a sa DIRECTION D'ARRIVEE, qui n'a aucune
+raison de pointer le camion. Il pivote maintenant vers le CENTRE du modele `Truck` des qu'il arrive -- la boite
+englobante, qui est justement son milieu visuel. Le pivot reutilise celui qui le tourne vers le joueur.
+
+ET SA REPLIQUE A L'OUVERTURE : `Oldman_scene_speech_AsUCanSeeDoorTruck`, jouee quand le joueur ouvre enfin le
+hayon. A l'OUVERTURE et pas a l'arrivee devant : c'est le geste du joueur qu'elle recompense.
+
+ON ECOUTE LE PROMPT DU CAMION, on ne refait pas sa detection. C'est un `ProximityPrompt` pose par TruckService, et
+son declenchement arrive tel quel cote client : une seconde detection de notre cote finirait par diverger de la
+sienne, et il faudrait la tenir d'accord a chaque changement de distance ou de touche.
+
+Deux gardes. La replique ne part QUE si le grand-pere a deja demande d'ouvrir -- le joueur peut ouvrir ce camion
+des le debut du didacticiel, et une remarque sur ce qu'il y a dedans n'aurait alors aucun sens. Et elle ne part
+qu'UNE fois : la porte est une bascule, donc elle se rouvre autant qu'on veut.
+
+Le marqueur du hayon disparait a l'ouverture. Il disait "ce cote-la, celui qui s'ouvre" : une fois ouvert il ne
+designe plus rien, et il ne revient pas si le joueur referme -- la question a deja eu sa reponse.
+
+La recherche du camion demande un MODEL et le nom (`findModelByName`), pas la premiere instance : sur un objet
+rigge le joint porte le nom de la piece qu'il pilote, piege paye la veille sur `DoorBack`.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_AsUCanSeeDoorTruck` dans `Sounds/Scenes/Scene1/Voices`.
+
 ## 0.0.758 — La balise se pose sur le grand-pere des la derniere touffe
 
 Elle attendait que le joueur LACHE la tondeuse : elle etait accrochee aux conditions du BADGE, dont les mains

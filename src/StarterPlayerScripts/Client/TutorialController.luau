@@ -13,6 +13,7 @@
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ProximityPromptService = game:GetService("ProximityPromptService")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
@@ -30,6 +31,8 @@ local SideNotificationHandler = require(ReplicatedStorage.Modules.UI.Notificatio
 local AngerBurst = require(ReplicatedStorage.Modules.UI.Core.AngerBurst)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
+-- Pour reconnaitre le prompt du camion : on ECOUTE le sien au lieu de refaire sa detection.
+local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
@@ -94,6 +97,9 @@ local truckMarkerWanted = false
 -- streaming, "pas encore la" est un etat normal.
 local truckWantedAt = 0
 local warnedNoTruckDoor = false
+-- IL N'A QU'UNE PHRASE POUR L'OUVERTURE DU HAYON, et il ne la dit qu'une fois : la porte est une BASCULE, donc
+-- le joueur peut la rouvrir dix fois -- une replique qui repart a chaque fois cesse d'etre une reaction.
+local saidTruckOpened = false
 local talkAnchor: BasePart? = nil
 local talkBound = false
 -- Il a dit ses felicitations : le badge et le marqueur ne reviennent pas. Une recompense qui se rejoue a chaque
@@ -2540,6 +2546,26 @@ function TutorialController.init()
 		truckRemote = r
 	end)
 	-- IL EST ARRIVE AU CAMION : c'est le serveur qui le dit, lui seul calcule sa marche.
+	-- LE JOUEUR OUVRE LE HAYON : le grand-pere commente ce qu'on y voit.
+	--
+	-- ON ECOUTE LE PROMPT DU CAMION, on ne refait pas sa detection. C'est un `ProximityPrompt` pose par
+	-- TruckService, et son declenchement arrive ici tel quel : une seconde detection de notre cote finirait par
+	-- diverger de la sienne, et il faudrait la tenir d'accord a chaque changement de distance ou de touche.
+	--
+	-- GATE SUR `truckMarkerWanted` : le joueur peut ouvrir ce camion des le debut du didacticiel, avant qu'on lui
+	-- ait rien demande. Une remarque sur ce qu'il y a dedans n'aurait alors aucun sens.
+	ProximityPromptService.PromptTriggered:Connect(function(prompt: ProximityPrompt)
+		if prompt.Name ~= TruckConfigs.PROMPT_NAME or saidTruckOpened or not truckMarkerWanted then
+			return
+		end
+		saidTruckOpened = true
+		sayVoice(TutorialConfigs.TRUCK_OPENED_SOUND)
+		-- ET LE MARQUEUR A FINI SON TRAVAIL. Il disait "ce cote-la, celui qui s'ouvre" : une fois ouvert, il ne
+		-- designe plus rien. Il ne revient pas si le joueur referme -- la question a deja eu sa reponse.
+		WorldMarker.remove(truckMarker)
+		truckMarker = nil
+	end)
+
 	resolve("TutorialGrandpaAtTruck", function(r)
 		r.OnClientEvent:Connect(function()
 			print("[Tutorial] Le grand-pere est arrive au camion : le marqueur passe sur le hayon.")
@@ -2654,6 +2680,7 @@ function TutorialController.stop()
 	talkDone = false
 	nextUndoneAt = 0
 	lawnFraction = 0
+	saidTruckOpened = false
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
 	hideTalkPrompt()

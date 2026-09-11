@@ -13,6 +13,7 @@ local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
+local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
 local TutorialService = {}
 
@@ -57,6 +58,20 @@ local function findByName(name: string): Instance?
 	for _, d in Workspace:GetDescendants() do
 		if d.Name == name then
 			return d
+		end
+	end
+	return nil
+end
+
+-- LE PREMIER MODEL QUI PORTE CE NOM, et pas la premiere instance tout court.
+--
+-- UN NOM NE DESIGNE PAS UNE CHOSE, il designe une FAMILLE de choses : sur un objet rigge, le JOINT porte le nom
+-- de la piece qu'il pilote, et un balayage par nom seul le ramene avant la piece. Deja paye sur le hayon du
+-- camion, ou un `Motor6D` nomme "DoorBack" gagnait contre la MeshPart.
+local function findModelByName(name: string): Model?
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d.Name == name then
+			return d :: Model
 		end
 	end
 	return nil
@@ -1117,7 +1132,22 @@ function TutorialService.init()
 			return
 		end
 		-- `walkOldMan` sort tout seul si une marche tourne deja, et il previent nommement si la part manque.
-		walkOldMan(TutorialConfigs.OLDMAN_TRUCK_TARGET, function()
+		walkOldMan(TutorialConfigs.OLDMAN_TRUCK_TARGET, function(model)
+			-- IL SE TOURNE VERS LE CAMION. Sa marche le laisse face a sa DIRECTION D'ARRIVEE, qui n'a aucune
+			-- raison de pointer le camion : il parlait donc du hayon en regardant ailleurs.
+			--
+			-- VERS LE CENTRE DU MODELE et pas vers le point d'arret : c'est l'objet qu'il montre. On prend la
+			-- boite englobante, qui est justement le milieu visuel du camion.
+			local truck = findModelByName(TruckConfigs.MODEL_NAME)
+			if truck then
+				local center = (truck :: Model):GetBoundingBox().Position
+				faceOldManTo(model, center, TutorialConfigs.FACE_PLAYER_TIME)
+			else
+				warn(
+					`[Tutorial] Aucun Model "{TruckConfigs.MODEL_NAME}" : le grand-pere restera face a sa `
+						.. "direction d'arrivee."
+				)
+			end
 			-- ET IL PARLE EN ARRIVANT. On previent le joueur qui a lance la scene : les voix se jouent chez lui,
 			-- et lui seul est concerne -- a deux, l'autre n'a pas a entendre une consigne qu'on ne lui donne pas.
 			if sceneOwner == player and player.Parent then
