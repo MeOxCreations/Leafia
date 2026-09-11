@@ -1740,6 +1740,7 @@ end
 -- "laquelle" ici -- sinon la moindre retouche de cadence obligerait a relire le tirage.
 local nextImpatientAt = math.huge
 local lastImpatient = 0
+local lastBinScold = 0
 -- Il n'a qu'une phrase a dire quand le joueur prend enfin la machine, et il ne la dit qu'une fois.
 local saidPullRope = false
 -- TENAIT-IL LA MACHINE A L'IMAGE PRECEDENTE ? C'est le seul moyen de reperer l'instant ou il la REPOSE : on
@@ -1755,17 +1756,30 @@ local nextRopeAgainAt = 0
 
 -- JAMAIS DEUX FOIS LA MEME D'AFFILEE. Un tirage au hasard pur repete, et une repetition immediate s'entend comme
 -- un bug ("il a bugue, il redit pareil") -- alors que c'est le hasard qui fait son travail.
-local function playImpatient()
-	local sounds = TutorialConfigs.IMPATIENT_SOUNDS
-	local count = #sounds
+-- UNE REPLIQUE AU HASARD DANS UNE LISTE, JAMAIS DEUX FOIS LA MEME D'AFFILEE. Rend l'indice choisi, a garder pour
+-- l'appel suivant ; zero quand la liste est vide.
+--
+-- COMMUN A TOUTES LES LISTES DE REPLIQUES -- la grogne, le seau, et celles qui viendront. La meme regle ecrite
+-- deux fois finit par diverger, et c'est la deuxieme copie qu'on oublie de corriger.
+local function pickLine(lines: { { string } }, last: number): number
+	local count = #lines
 	if count == 0 then
-		return
+		return 0
 	end
 	local i = math.random(1, count)
-	if count > 1 and i == lastImpatient then
+	if count > 1 and i == last then
 		-- On DECALE d'un cran plutot que de retirer : un nouveau tirage peut retomber sur le meme, autant de fois
 		-- qu'il veut. Un decalage donne une reponse en une fois, et sans boucle qui pourrait tourner longtemps.
 		i = 1 + (i % count)
+	end
+	return i
+end
+
+local function playImpatient()
+	local sounds = TutorialConfigs.IMPATIENT_SOUNDS
+	local i = pickLine(sounds, lastImpatient)
+	if i == 0 then
+		return
 	end
 	lastImpatient = i
 
@@ -1951,7 +1965,12 @@ local function step(dt: number)
 	if binWrongNow then
 		if carryingBin and not wasCarryingBin and now >= nextBinScoldAt then
 			nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
-			sayVoice(TutorialConfigs.PUT_BIN_DOWN_SOUND)
+			local lines = TutorialConfigs.PUT_BIN_DOWN_SOUNDS
+			local i = pickLine(lines, lastBinScold)
+			if i > 0 then
+				lastBinScold = i
+				sayVoice(lines[i])
+			end
 		end
 		-- ON NE MEMORISE QU'ICI, dans la fenetre, et c'est tout le point.
 		--

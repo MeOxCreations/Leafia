@@ -548,7 +548,13 @@ return {
 	-- POURQUOI CA COMPTE. Un joueur qui attrape le mauvais outil ne sait pas qu'il s'est trompe : rien ne le lui
 	-- dit, et il peut passer une minute a chercher quoi en faire. Une phrase le remet tout de suite dans le bon
 	-- geste -- et c'est plus fort qu'un texte, parce que ca vient de quelqu'un qui le regarde.
-	PUT_BIN_DOWN_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown" },
+	-- PLUSIEURS FACONS DE LE DIRE, tirees au hasard. Le joueur reprend le seau plus souvent qu'on ne le croit, et
+	-- reentendre mot pour mot la meme phrase transforme un personnage en machine a messages.
+	PUT_BIN_DOWN_SOUNDS = {
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown2" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown3" },
+	},
 	-- Ecart minimum entre deux fois, en secondes. Le joueur peut prendre et reposer le seau en boucle : sans ce
 	-- garde, il se ferait sermonner a chaque aller-retour, et la phrase deviendrait un bruit de porte.
 	PUT_BIN_DOWN_COOLDOWN = 10,

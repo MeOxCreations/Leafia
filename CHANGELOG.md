@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.735 — Trois facons de dire de reposer le seau
+
+`PUT_BIN_DOWN_SOUND` devient `PUT_BIN_DOWN_SOUNDS`, une liste de trois : `Oldman_scene_speech_PutBinDown`, plus
+les deux nouvelles `PutBinDown2` et `PutBinDown3`. Le tirage est au hasard, et jamais deux fois la meme d'affilee.
+
+Le joueur reprend le seau plus souvent qu'on ne le croit, et le garde d'ecart (10 s) ne l'empeche pas de
+l'entendre plusieurs fois par partie. Mot pour mot la meme phrase, le grand-pere redevenait une machine a
+messages.
+
+Le tirage sort dans `pickLine`, partage avec les cinq repliques d'impatience qui avaient deja exactement cette
+regle. La meme logique ecrite deux fois finit par diverger, et c'est la deuxieme copie qu'on oublie de corriger.
+La liste suivante qu'on ajoutera n'aura plus rien a recopier.
+
+### A faire dans Studio
+
+Les deux sons sont des assets, donc Rojo ne les transporte pas : `Oldman_scene_speech_PutBinDown2` et
+`PutBinDown3` doivent etre dans `Sounds/Scenes/Scene1/Voices`, a cote du premier. Absents, le tirage tombe sur un
+son introuvable et il ne dit rien -- sans erreur.
+
 ## 0.0.734 — Le grand-pere finit sa phrase avant de se mettre a raler
 
 L'heure de la grogne pouvait tomber au milieu d'une autre replique. On lui prenait le seau, il commencait a dire
