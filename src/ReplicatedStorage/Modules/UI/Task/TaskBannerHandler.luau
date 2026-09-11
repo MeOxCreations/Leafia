@@ -197,7 +197,18 @@ local function buildRow(parent: Instance): Frame
 		Size = UDim2.fromScale(0, FILL_HEIGHT),
 		ZIndex = 2,
 	}, bar) :: Frame
-	make("UICorner", { CornerRadius = UDim.new(0, 20) }, fill)
+	-- TROIS COINS ARRONDIS, LE HAUT-DROIT CARRE. Les rayons sont poses UN PAR UN et `CornerRadius` disparait :
+	-- des que les rayons individuels existent, il est ignore -- le garder ferait croire a un reglage global qui
+	-- n'a plus aucun effet.
+	--
+	-- Ils passent par `make`, donc par une ecriture dynamique : `Instance.new("UICorner")` n'est pas resolu vers
+	-- le type `UICorner` par luau-lsp ici, et poser un rayon dessus en direct sort en erreur rouge.
+	make("UICorner", {
+		TopLeftRadius = UDim.new(0, 20),
+		BottomLeftRadius = UDim.new(0, 20),
+		BottomRightRadius = UDim.new(0, 20),
+		TopRightRadius = UDim.new(0, 0),
+	}, fill)
 	-- A -90 le degrade va du HAUT vers le BAS de la jauge : elle s'eclaircit sur sa hauteur, ce qui lui donne du
 	-- relief. Sans rotation il irait de gauche a droite, donc la teinte changerait avec le REMPLISSAGE -- une
 	-- barre a moitie pleine n'aurait pas la meme couleur qu'une barre finie.

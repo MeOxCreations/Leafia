@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.746 — Le coin haut-droit de la jauge des taches est carre
+
+Les rayons du remplissage sont maintenant poses UN PAR UN, comme dans Studio : 20 en haut-gauche, bas-gauche et
+bas-droit, ZERO en haut-droit.
+
+`CornerRadius` disparait du meme coup. Des que les rayons individuels sont renseignes, il est ignore : le laisser
+ferait croire a un reglage global qui n'a plus aucun effet, et le prochain qui le changerait ne verrait rien
+bouger.
+
+Ils passent par le helper `make`, donc par une ecriture dynamique de propriete. `Instance.new("UICorner")` n'est
+pas resolu vers le type `UICorner` par luau-lsp ici, et poser un rayon dessus en direct sort en erreur rouge --
+piege deja paye dans ce projet.
+
 ## 0.0.745 — La jauge des taches va bien au bout
 
 `FILL_MAX` passe de 0.98 a 0.997. Elle reste sous 1 pour la meme raison qu'avant -- a 1 pile, les coins arrondis
