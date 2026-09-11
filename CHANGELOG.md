@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.766 — Cinq facons d'appeler le joueur qui ne suit pas
+
+`WAIT_PLAYER_SOUND` devient `WAIT_PLAYER_SOUNDS`, les cinq `Say_wait_player_1` a `_5`. Tirage au hasard, jamais
+deux fois la meme d'affilee, par le meme `pickLine` que son impatience et ses sermons sur le seau.
+
+Il peut attendre longtemps : entendre la meme phrase toutes les neuf secondes transformerait le personnage en
+alarme.
+
+### A faire dans Studio
+
+Les cinq sons dans `Sounds/Scenes/Scene1/Voices`.
+
 ## 0.0.765 — Il EMMENE le joueur au camion au lieu d'y aller tout seul
 
 Il partait devant et le joueur suivait un dos. Il n'avance plus que tant que le joueur reste avec lui : au-dela

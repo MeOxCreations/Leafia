@@ -828,7 +828,15 @@ return {
 
 	-- ET S'IL ATTEND POUR RIEN, IL APPELLE. Le joueur qui ne comprend pas qu'il faut suivre voit un vieux
 	-- monsieur plante au milieu du jardin : sans un mot, rien ne lui dit que c'est LUI qu'on attend.
-	WAIT_PLAYER_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
+	-- CINQ FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
+	-- entendre la meme phrase toutes les neuf secondes transformerait le personnage en alarme.
+	WAIT_PLAYER_SOUNDS = {
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_2" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_3" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_4" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_5" },
+	},
 	-- Combien de temps le joueur doit rester immobile avant qu'il appelle, en secondes.
 	WAIT_PLAYER_AFTER = 2.5,
 	-- De combien il faut avoir bouge pour ne PLUS etre immobile, en studs. Pas zero : un personnage debout

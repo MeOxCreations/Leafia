@@ -113,6 +113,7 @@ local escorting = false
 local lastSpot: Vector3? = nil
 local stillSince = 0
 local nextWaitCallAt = 0
+local lastWaitCall = 0
 -- ===== L'ETAPE DE LA HAIE =====
 -- ELLE DEMARRE QUAND LA CISAILLE EST EN MAIN, pas a l'ouverture du camion : c'est le geste du joueur qui la
 -- declenche. `hedgeModel` est GARDE une fois choisi -- re-choisir la plus proche a chaque image ferait sauter le
@@ -2227,7 +2228,12 @@ local function step(dt: number)
 				and speechOver()
 			then
 				nextWaitCallAt = now + TutorialConfigs.WAIT_PLAYER_COOLDOWN
-				sayVoice(TutorialConfigs.WAIT_PLAYER_SOUND)
+				local lines = TutorialConfigs.WAIT_PLAYER_SOUNDS
+				local i = pickLine(lines, lastWaitCall)
+				if i > 0 then
+					lastWaitCall = i
+					sayVoice(lines[i])
+				end
 			end
 		end
 	end
