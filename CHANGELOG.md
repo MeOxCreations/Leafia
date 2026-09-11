@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.784 — Le grand-pere n'attend plus un joueur qui est deja a cote de lui
+
+Pendant l'escorte vers le camion, se tenir pres de lui ou passer devant le FIGEAIT -- et il demandait qu'on le
+suive, alors qu'on etait la. Il partageait la bulle de son autre mode (`FOLLOW_MIN_PLAYER`, 4.5 studs).
+
+LES DEUX MOMENTS SONT INVERSES, et c'est pour ca qu'ils ne peuvent pas partager un reglage. Quand il va vers la
+TONDEUSE, il SUIT le joueur : s'en approcher trop reviendrait a lui marcher dans le dos. Quand il l'EMMENE au
+camion, c'est LUI qui ouvre la marche -- le joueur colle a lui est exactement le cas normal.
+
+`ESCORT_MIN_PLAYER` vaut 1.5 stud, pas zero : sans bulle du tout il traverserait un joueur plante pile devant lui.
+
+Meme famille que le reste : un reglage qui sert deux moments differents finit toujours par les opposer.
+
 ## 0.0.783 — Le seau fait du bruit en touchant le sol
 
 `DropSound` est joue quand le seau ARRIVE, dans le callback de fin de son glissement -- pas au moment ou le joueur

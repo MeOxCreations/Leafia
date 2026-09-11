@@ -1035,7 +1035,11 @@ startFollow = function(player: Player, model: Model)
 
 		-- IL EST ARRIVE, OU IL EST TROP PRES DU JOUEUR : il s'arrete.
 		local arrived = goal == nil or goalDist <= keepDist or goalDist < 1e-3
-		local crowded = playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER
+		-- SA BULLE DEPEND DE CE QU'IL FAIT. Il SUIT le joueur vers la tondeuse -- s'en approcher trop lui marcherait
+		-- dans le dos -- mais il l'EMMENE au camion : la, le joueur colle a lui ou passe devant est le cas NORMAL,
+		-- et l'arreter pour ca le figeait en demandant qu'on le suive alors qu'on etait a cote.
+		local crowded = playerDist
+			<= (if escorting then TutorialConfigs.ESCORT_MIN_PLAYER else TutorialConfigs.FOLLOW_MIN_PLAYER)
 		-- ET PENDANT UNE ESCORTE, IL ATTEND CELUI QU'IL EMMENE. Sans ca il partirait devant et le joueur suivrait
 		-- un dos : ce n'est plus un accompagnement, c'est une course.
 		local waiting = escorting and playerDist > TutorialConfigs.ESCORT_LEASH

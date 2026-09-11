@@ -831,6 +831,16 @@ return {
 	ESCORT_LEASH = 14,
 	-- Distance au point d'arrivee a laquelle il se considere arrive, en studs.
 	ESCORT_ARRIVE = 2,
+	-- SA BULLE PENDANT L'ESCORTE, en studs -- et elle n'a RIEN a voir avec `FOLLOW_MIN_PLAYER`.
+	--
+	-- LES DEUX MOMENTS SONT INVERSES, c'est pour ca qu'ils ne peuvent pas partager un reglage. Quand il va vers la
+	-- tondeuse, il SUIT le joueur : s'en approcher trop reviendrait a lui marcher dans le dos, donc il s'arrete a
+	-- 4.5 studs. Quand il l'EMMENE, c'est lui qui ouvre la marche : le joueur colle a lui ou passe devant est
+	-- exactement le cas normal, et s'arreter la produisait le bug -- il se figeait en demandant qu'on le suive,
+	-- alors qu'on etait a cote de lui.
+	--
+	-- Elle ne tombe pas a zero pour autant : sans elle, il traverserait le joueur plante pile devant lui.
+	ESCORT_MIN_PLAYER = 1.5,
 	-- AU-DELA DE CET ECART DE CAP (en degres), IL TOURNE SANS AVANCER. Sinon il part de cote en pivotant, ses
 	-- jambes devant lui et son corps ailleurs -- le defaut qu'on a corrige sur sa marche scriptee, qui se
 	-- reformerait ici puisque la boucle tourne et avance dans la meme image.
