@@ -574,6 +574,12 @@ return {
 	-- Ecart minimum entre deux fois, en secondes. Celle-la se REJOUE, contrairement aux felicitations : c'est une
 	-- reponse, pas une recompense. Mais un joueur qui reste plante devant lui ne doit pas l'entendre en boucle.
 	TALK_UNDONE_COOLDOWN = 9,
+	-- COMBIEN DE PELOUSE IL FAUT AVOIR TONDU pour avoir le droit de lui parler, en fraction.
+	--
+	-- SANS CA LE BADGE SORTAIT TOUT DE SUITE : on prenait la machine, on passait devant lui, et on pouvait deja
+	-- lui parler sans avoir coupe un brin. La phrase "tu n'as pas fini" n'a de sens que si on a COMMENCE ; avant,
+	-- elle repond a une question que le joueur ne s'est pas encore posee.
+	TALK_MIN_PROGRESS = 0.15,
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
 	--

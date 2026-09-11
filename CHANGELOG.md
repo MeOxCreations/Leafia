@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.747 — On ne peut plus parler au grand-pere avant d'avoir tondu quelque chose
+
+Le badge `TALK` sortait des la prise de la machine : on passait devant lui et il pouvait deja dire "tu n'as pas
+fini" sans qu'on ait coupe un brin. Trois conditions maintenant, et chacune repare quelque chose de vu a
+l'ecran.
+
+LES MAINS LIBRES. On ne discute pas en poussant une tondeuse, et surtout `E` aurait repose la machine EN MEME
+TEMPS que la conversation : deux actions pour un appui, le bug ferme en 0.0.741. La repose ne passe pas par le
+test d'appartenance du badge -- c'est voulu, personne d'autre ne peut reposer notre machine -- donc elle serait
+partie quand meme. `CarryUtils.isFree` couvre le seau et l'echelle du meme coup.
+
+UN PEU DE PELOUSE TONDUE : `TALK_MIN_PROGRESS`, 15 %. La phrase "tu n'as pas fini" n'a de sens que si on a
+COMMENCE ; avant, elle repond a une question que le joueur ne s'est pas encore posee.
+
+PAS DEJA FELICITE, comme avant. Et la pelouse FINIE passe devant la condition de progres : a ce moment-la c'est
+LUI qui rappelle le joueur, la porte doit etre ouverte.
+
+L'avancement est garde dans une variable au lieu d'etre recalcule : la barre de la tache et le droit de parler
+lisent le meme nombre, plutot que de re-balayer toute la pelouse pour une valeur qu'on a deja.
+
+Le tout repart a zero si la scene est abandonnee (mort, changement de lieu) : sinon une scene rejouee retrouvait
+un grand-pere deja felicite et un badge qui ne revenait jamais.
+
 ## 0.0.746 — Le coin haut-droit de la jauge des taches est carre
 
 Les rayons du remplissage sont maintenant poses UN PAR UN, comme dans Studio : 20 en haut-gauche, bas-gauche et

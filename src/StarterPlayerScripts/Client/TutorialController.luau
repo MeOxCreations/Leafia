@@ -88,6 +88,9 @@ local talkDone = false
 -- SA REPONSE AU JOUEUR QUI N'A PAS FINI, elle, se rejoue -- c'est une reponse, pas une recompense. Juste pas en
 -- boucle : la date du prochain droit de parole.
 local nextUndoneAt = 0
+-- OU EN EST LA TONTE, de 0 a 1. Gardee parce que deux choses la lisent : la barre de la tache, et le droit de
+-- parler au grand-pere. La recalculer pour la seconde re-balayerait toute la pelouse pour un nombre qu'on a deja.
+local lawnFraction = 0
 local missionStarted = false
 local sceneEnded = false
 local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
@@ -2021,6 +2024,7 @@ local function step(dt: number)
 			-- est fait : en calculant une fraction on obtiendrait soit une division par zero, soit "termine".
 			if total > 0 then
 				local fraction = done / total
+				lawnFraction = fraction
 				TaskBannerHandler.setProgress(2, fraction)
 				if fraction >= TutorialConfigs.LAWN_DONE_AT then
 					lawnTaskDone = true
@@ -2042,15 +2046,30 @@ local function step(dt: number)
 		end
 	end
 
-	-- ON PEUT LUI PARLER DES QUE LA TONTE EST DEMANDEE. Le badge sort quand on est assez pres ; ce qu'il repond
-	-- depend de l'avancement, et `talkToGrandpa` en decide.
+	-- QUAND ON A LE DROIT DE LUI PARLER. Trois conditions, et chacune repare quelque chose de vu a l'ecran.
 	--
-	-- LE MARQUEUR, LUI, N'ARRIVE QU'A LA FIN. Il veut dire "va la-bas" : le poser sur le grand-pere pendant qu'il
-	-- reste de l'herbe a couper enverrait le joueur au mauvais endroit.
+	-- 1) LES MAINS LIBRES. On ne discute pas en poussant une tondeuse -- et surtout, `E` reposerait la machine EN
+	--    MEME TEMPS que la conversation : deux actions pour un appui, le bug qu'on vient de fermer ailleurs. La
+	--    repose, elle, ne passe pas par le test d'appartenance du badge, donc elle partirait quand meme.
+	-- 2) UN PEU DE PELOUSE TONDUE. Sans ca le badge sortait des la prise de la machine : on pouvait se faire dire
+	--    "tu n'as pas fini" avant d'avoir coupe un brin.
+	-- 3) PAS DEJA FELICITE. Une recompense qui se rejoue cesse d'en etre une.
+	--
+	-- La pelouse FINIE passe devant la condition de progres : a ce moment-la c'est LUI qui rappelle le joueur.
+	--
+	-- LE MARQUEUR N'ARRIVE QU'A LA FIN. Il veut dire "va la-bas" : le poser sur le grand-pere pendant qu'il reste
+	-- de l'herbe a couper enverrait le joueur au mauvais endroit.
 	--
 	-- ACCROCHE A SON CORPS et pas a un point : il se promene, donc un point fige resterait la ou il se trouvait
 	-- quand la derniere touffe est tombee. Piege deja paye sur le marqueur de la porte, ne a l'origine de la map.
-	if lawnTaskShown and not talkDone then
+	local canTalk = lawnTaskShown
+		and not talkDone
+		and CarryUtils.isFree(player)
+		and (lawnTaskDone or lawnFraction >= TutorialConfigs.TALK_MIN_PROGRESS)
+	if not canTalk then
+		hideTalkPrompt()
+	end
+	if canTalk then
 		local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
 		local part = if grandpa then bodyPart(grandpa) else nil
 		local me = getRoot()
@@ -2496,6 +2515,14 @@ function TutorialController.stop()
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
 	saidPullRope = false
+	-- ET TOUT CE QUI CONCERNE LE RETOUR CHEZ LUI. Une scene rejouee retrouverait sinon un grand-pere deja
+	-- felicite, avec une tonte comptee comme faite : le badge ne reviendrait jamais.
+	talkDone = false
+	nextUndoneAt = 0
+	lawnFraction = 0
+	hideTalkPrompt()
+	WorldMarker.remove(grandpaMarker)
+	grandpaMarker, grandpaMarkerPart = nil, nil
 	-- LE VERROU EST LEVE, quoi qu'il arrive. Une scene abandonnee -- mort, changement de lieu, erreur -- ne doit
 	-- jamais laisser le joueur devant des outils qu'il ne peut plus prendre : c'est une partie bloquee, et rien a
 	-- l'ecran ne lui dirait pourquoi.
