@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.761 — Le marqueur du grand-pere descend de moitie
+
+`GRANDPA_MARKER_UP` passe de 9 a 4.5 : a 9 il decrochait encore du personnage.
+
+Il tombe donc SOUS le badge `TALK` (7.5) quand les deux s'affichent ensemble -- le marqueur sur le buste, le badge
+au-dessus de la tete. Si cet ordre gene a l'ecran, c'est le badge qu'il faudra baisser avec lui.
+
 ## 0.0.760 — Il enchaine sur la consigne des outils apres avoir montre le camion
 
 `Oldman_scene_speech_ExplainToolTruck` part des que `AsUCanSeeDoorTruck` a fini de parler : ne pas oublier ses

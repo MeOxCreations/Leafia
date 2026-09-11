@@ -610,13 +610,13 @@ return {
 	-- SA ROOTPART EST BASSE : elle sort du 3D Importer, donc elle est posee au PIED du rig et pas a mi-torse
 	-- comme sur un personnage Roblox. Toutes les hauteurs de ce bloc se comptent donc depuis le SOL sous lui.
 	--
-	-- JUSTE AU-DESSUS DU BADGE "PARLER" (`TALK_PROMPT_OFFSET`, 7.5), qui s'affiche en meme temps. C'est un
-	-- couloir etroit : plus bas les deux se chevauchent, plus haut le marqueur decroche du personnage et flotte
-	-- dans le ciel. Baisser celui-ci oblige donc a baisser le badge d'autant.
+	-- REGLE A L'OEIL, sur le personnage : a 9 il decrochait encore de lui. Il passe donc SOUS le badge "PARLER"
+	-- (`TALK_PROMPT_OFFSET`, 7.5) quand les deux s'affichent ensemble -- le marqueur sur le buste, le badge
+	-- au-dessus de la tete. Si l'ordre gene a l'ecran, c'est le badge qu'il faudra baisser avec lui.
 	--
 	-- CE CHIFFRE N'ETAIT PAS LU avant 0.0.751 -- le balancement du marqueur ecrasait la hauteur demandee -- donc
 	-- toutes les valeurs qu'on y a mises en cherchant a compenser (jusqu'a 15.5) n'ont jamais rien montre.
-	GRANDPA_MARKER_UP = 9,
+	GRANDPA_MARKER_UP = 4.5,
 	-- A quelle distance le badge "PARLER" apparait, en studs. DISTANCE RADIALE, comme celle de la porte : une
 	-- boite orientee laisse des angles morts, et il se promene -- il n'a aucune orientation stable.
 	TALK_RADIUS = 11,
