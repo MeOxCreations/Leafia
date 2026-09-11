@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.726 — Il fait reposer le seau au joueur qui se trompe d'outil
+
+`Oldman_scene_speech_PutBinDown` part quand le joueur prend le SEAU alors qu'on lui demande de tondre.
+
+Un joueur qui attrape le mauvais outil ne sait pas qu'il s'est trompe : rien ne le lui dit, et il peut passer une
+minute a chercher quoi en faire. Une phrase le remet tout de suite dans le bon geste -- et c'est plus fort qu'un
+texte, parce que ca vient de quelqu'un qui le regarde.
+
+**Seulement tant que la tonte n'est pas finie.** Apres, le seau a un sens -- il y a des tas a ramasser -- et le
+sermonner serait faux.
+
+**On reagit a la PRISE, pas au fait de tenir.** Un test sur l'etat seul ferait repartir la phrase a chaque image
+tant qu'il ne lache pas le seau. Plus un ecart minimum de 10 s : il peut prendre et reposer en boucle, et sans ce
+garde la phrase deviendrait un bruit de porte.
+
+L'etat vient de `CarryUtils` -- la seule question, la seule reponse. Le didacticiel n'a pas besoin de savoir
+comment le portage est fait, ni de chercher un seau dans le Workspace.
+
+DEPEND D'UN ASSET : le son doit exister sous SoundService.Sounds.Scenes.Scene1.Voices dans la place du tuto.
+
 ## 0.0.725 — La camera de conduite ne traverse plus les murs
 
 Reculer contre un mur passait la camera DEDANS : on se retrouvait a l'interieur de la maison, a voir le decor par

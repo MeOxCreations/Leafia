@@ -39,6 +39,7 @@ local ButterflyController = require(script.Parent.ButterflyController)
 -- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
 local MowController = require(script.Parent.MowController)
 local GrassZoneController = require(script.Parent.GrassZoneController)
+local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 
 local player = Players.LocalPlayer
 
@@ -1744,6 +1745,10 @@ local saidPullRope = false
 -- compare deux etats, on n'ecoute pas un evenement -- le joueur peut la lacher de trois facons (le bouton, la
 -- mort, un respawn) et un evenement par cas en laisserait toujours un dehors.
 local wasCarrying = false
+-- TENAIT-IL LE SEAU a l'image precedente ? On reagit a la PRISE, pas au fait de le tenir : sinon la phrase
+-- repartirait a chaque image tant qu'il ne le lache pas.
+local wasCarryingBin = false
+local nextBinScoldAt = 0
 local nextGrabAgainAt = 0
 local nextRopeAgainAt = 0
 
@@ -1926,6 +1931,17 @@ local function step(dt: number)
 			end
 		end
 	end
+
+	-- IL PREND LE SEAU alors qu'on lui demande de tondre. Le grand-pere lui dit de le reposer.
+	--
+	-- TANT QUE LA TONTE N'EST PAS FINIE : apres, le seau a un sens (il y a des tas a ramasser) et le sermonner
+	-- serait faux. Avant, c'est le mauvais outil, et rien d'autre ne le dit au joueur.
+	local carryingBin = CarryUtils.holds(player, "Bin")
+	if carryingBin and not wasCarryingBin and not lawnTaskDone and now >= nextBinScoldAt then
+		nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
+		sayVoice(TutorialConfigs.PUT_BIN_DOWN_SOUND)
+	end
+	wasCarryingBin = carryingBin
 
 	if mowerTaskShown and not mowerTaskDone then
 		-- IL RELANCE, tant que le joueur n'a pas mis la main dessus. On teste ce qu'il TIENT, pas si la machine
@@ -2279,6 +2295,8 @@ function TutorialController.stop()
 	saidPullRope = false
 	lawnTaskShown = false
 	lawnTaskDone = false
+	wasCarryingBin = false
+	nextBinScoldAt = 0
 	nextLawnCountAt = 0
 	wasCarrying = false
 	nextGrabAgainAt = 0

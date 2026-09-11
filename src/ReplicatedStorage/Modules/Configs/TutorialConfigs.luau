@@ -537,6 +537,15 @@ return {
 	-- UNE SEULE FOIS. Le moteur peut caler et repartir ; le feliciter a chaque fois viderait la phrase de ce
 	-- qu'elle dit.
 	PERFECT_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Perfect" },
+	-- ET S'IL PREND LE SEAU alors qu'on lui demande de tondre : le grand-pere lui dit de le reposer.
+	--
+	-- POURQUOI CA COMPTE. Un joueur qui attrape le mauvais outil ne sait pas qu'il s'est trompe : rien ne le lui
+	-- dit, et il peut passer une minute a chercher quoi en faire. Une phrase le remet tout de suite dans le bon
+	-- geste -- et c'est plus fort qu'un texte, parce que ca vient de quelqu'un qui le regarde.
+	PUT_BIN_DOWN_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown" },
+	-- Ecart minimum entre deux fois, en secondes. Le joueur peut prendre et reposer le seau en boucle : sans ce
+	-- garde, il se ferait sermonner a chaque aller-retour, et la phrase deviendrait un bruit de porte.
+	PUT_BIN_DOWN_COOLDOWN = 10,
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,
