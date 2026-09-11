@@ -47,6 +47,12 @@ local REMOTES: { { any } } = {
 	-- LA TONTE EST FINIE. Le compte des touffes vit chez le CLIENT (c'est lui qui affiche l'herbe coupee), et le
 	-- grand-pere marche cote SERVEUR : il faut donc le lui dire pour qu'il s'arrete d'aller flaner et attende.
 	{ "TutorialLawnDone", E, "Tutorial" },
+	-- LE JOUEUR VIENT DE LUI PARLER : il se tourne vers lui. Deux evenements et pas un seul avec une duree,
+	-- parce que la fin de sa replique n'est connue que du CLIENT (c'est lui qui joue la voix) -- lui faire
+	-- envoyer un delai reviendrait a laisser le client decider du moment ou le PNJ se met en marche.
+	{ "TutorialGrandpaFace", E, "Tutorial" },
+	-- ET SA PHRASE EST FINIE : il part vers l'arriere du camion.
+	{ "TutorialGrandpaTruck", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

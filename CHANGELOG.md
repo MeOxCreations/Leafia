@@ -2204,6 +2204,37 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.750 — Il se tourne vers le joueur, puis il part vers l'arriere du camion
+
+Quand le joueur lui parle apres la tonte, deux choses en plus de la replique. Il PIVOTE vers lui pendant qu'il
+parle (0.45 s, pas un demi-tour d'une image qui se lirait comme un bug de rig), et une fois sa phrase finie il
+MARCHE jusqu'a la part `OldManWalkToTruck`, ou sont les outils.
+
+DEUX EVENEMENTS ET PAS UN SEUL AVEC UNE DUREE. La fin de la replique n'est connue que du CLIENT -- c'est lui qui
+joue la voix et qui en lit la longueur REELLE. Lui faire envoyer un delai reviendrait a laisser le client decider
+du moment ou le PNJ se met en marche, et une duree ecrite en config serait a refaire a chaque reenregistrement.
+Les deux evenements ne portent donc AUCUN argument : il n'y a rien a valider, et le pire qu'un client modifie
+obtienne est un grand-pere qui pivote ou qui marche.
+
+LE PIVOT NE PREND QUE LE YAW : la cible est ramenee a sa hauteur avant le `lookAt`. Sinon il se pencherait selon
+que le joueur est en bas d'une marche ou sur le trottoir.
+
+Il reutilise le garde `walking` de sa marche de sortie : une marche en cours ecrit deja sa pose a chaque image, et
+deux ecrivains sur la meme propriete donnent une moyenne des deux, jamais un choix.
+
+Le depart au camion a un filet : si la voix ne se termine jamais (fichier manquant, chargement rate), il part
+quand meme au bout de `SPEECH_WAIT_MAX`. Sans lui, le didacticiel s'arreterait la sans rien dire.
+
+### A faire dans Studio
+
+La part `OldManWalkToTruck`, sous `Worlds/Maps/Scenario/Points`. Rojo ne synchronise pas le Workspace, et le
+service previent nommement si elle manque.
+
+### Reste a faire
+
+Sa replique a l'arrivee -- celle qui dit d'ouvrir l'arriere du camion et de prendre les outils -- n'existe pas
+encore. Il marche jusqu'au point et s'arrete.
+
 ## 0.0.749 — Le point d'exclamation du grand-pere monte de 5 studs
 
 `GRANDPA_MARKER_UP` passe de 10.5 a 15.5. A 10.5 il tombait sur son crane : un marqueur pose trop pres de la tete

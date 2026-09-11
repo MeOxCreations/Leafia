@@ -753,6 +753,15 @@ return {
 	-- OU IL VA : une part posee dans Studio. Pas un point calcule -- le pas exact ou s'arrete un personnage dans
 	-- une scene se decide a l'oeil, pas par une formule, et le deplacer ne doit demander aucun code.
 	OLDMAN_WALK_TARGET = "OldManWalkTo",
+	-- OU IL VA APRES AVOIR FELICITE LE JOUEUR : l'arriere du camion, ou sont les outils. Une part posee dans
+	-- Studio, comme son point de sortie -- deplacer le camion n'oblige alors a toucher aucune ligne de code.
+	OLDMAN_TRUCK_TARGET = "OldManWalkToTruck",
+	-- IL SE TOURNE VERS LE JOUEUR POUR LUI PARLER, en tant de secondes. On ne parle pas de profil a quelqu'un
+	-- qu'on felicite.
+	--
+	-- PAS INSTANTANE : un demi-tour pose en une image se lit comme un bug de rig. Mais pas long non plus, il
+	-- repond a quelqu'un qui vient de l'interpeller.
+	FACE_PLAYER_TIME = 0.45,
 	-- Sa vitesse de marche, en studs/s.
 	-- LENT, et c'est le sujet du plan. C'est un vieux monsieur avec une canne qui sort de chez lui : le voir
 	-- traverser prend du temps, et ce temps EST ce qu'on raconte. L'animation suit cette vitesse toute seule

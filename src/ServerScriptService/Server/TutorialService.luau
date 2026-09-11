@@ -549,6 +549,51 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 end
 
 
+-- IL SE TOURNE VERS UN POINT, sans se deplacer. Sert quand le joueur vient lui parler : on ne repond pas de
+-- profil a quelqu'un qui vient de vous interpeller.
+--
+-- IL NE PREND QUE LE YAW : la cible est ramenee a sa hauteur avant le `lookAt`. Sinon il se pencherait en avant
+-- ou en arriere selon que le joueur est en bas d'une marche ou sur le trottoir.
+--
+-- LE GARDE `walking` VAUT AUSSI POUR LUI : une marche en cours ecrit deja sa pose a chaque image, et deux
+-- ecrivains sur la meme propriete donnent une moyenne des deux, jamais un choix.
+local function faceOldManTo(model: Model, point: Vector3, seconds: number)
+	if walking then
+		return
+	end
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then
+		return
+	end
+	local rootPart = root :: BasePart
+	local from = rootPart.CFrame
+	local flat = Vector3.new(point.X - from.Position.X, 0, point.Z - from.Position.Z)
+	if flat.Magnitude < 0.1 then
+		return -- il lui fait deja face, ou le joueur est pile sur lui : rien a tourner
+	end
+	local to = CFrame.lookAt(from.Position, from.Position + flat.Unit)
+
+	walking = true
+	task.spawn(function()
+		local t0 = os.clock()
+		while true do
+			local e = math.clamp((os.clock() - t0) / math.max(seconds, 0.01), 0, 1)
+			if not model.Parent then
+				break
+			end
+			-- ON APPLIQUE UN ECART MONDE, pas un pivot : `PivotTo` passe par `GetPivot`, qui suit la boite
+			-- englobante -- un accessoire ajoute dans Studio le decalerait.
+			local now = from:Lerp(to, e)
+			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
+			if e >= 1 then
+				break
+			end
+			task.wait()
+		end
+		walking = false
+	end)
+end
+
 -- ===== IL VA VERS LA TONDEUSE, LE JOUEUR AVEC =====
 -- Une boucle par image, cote SERVEUR : le grand-pere est un objet du monde, il doit bouger pour tout le monde.
 --
@@ -1013,6 +1058,34 @@ function TutorialService.init()
 		if sceneOwner == player then
 			stopFollow()
 		end
+	end)
+
+	-- LE JOUEUR VIENT LUI PARLER : il se tourne vers lui. Aucun argument, donc rien a valider -- le pire qu'un
+	-- client modifie obtienne est un PNJ qui pivote.
+	local faceRemote = RemoteSetup.getRemote("TutorialGrandpaFace", "Tutorial") :: RemoteEvent
+	faceRemote.OnServerEvent:Connect(function(player)
+		if sceneOwner ~= player then
+			return
+		end
+		local character = player.Character
+		local hrp = character and character:FindFirstChild("HumanoidRootPart")
+		local model = findByName(TutorialConfigs.GRANDPA_NAME)
+		if hrp and hrp:IsA("BasePart") and model and model:IsA("Model") then
+			-- LA BOUCLE DE PROMENADE EST DEJA MORTE ICI (arretee a la fin de la tonte), donc personne d'autre
+			-- n'ecrit sa pose. On la coupe quand meme : c'est gratuit, et ca survit au jour ou l'ordre changera.
+			stopFollow()
+			faceOldManTo(model :: Model, (hrp :: BasePart).Position, TutorialConfigs.FACE_PLAYER_TIME)
+		end
+	end)
+
+	-- ET SA PHRASE EST FINIE : il part vers l'arriere du camion, ou sont les outils.
+	local truckRemote = RemoteSetup.getRemote("TutorialGrandpaTruck", "Tutorial") :: RemoteEvent
+	truckRemote.OnServerEvent:Connect(function(player)
+		if sceneOwner ~= player then
+			return
+		end
+		-- `walkOldMan` sort tout seul si une marche tourne deja, et il previent nommement si la part manque.
+		walkOldMan(TutorialConfigs.OLDMAN_TRUCK_TARGET)
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur

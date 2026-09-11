@@ -168,6 +168,10 @@ local talkRemote: RemoteEvent? = nil
 -- ON DIT AU SERVEUR QUE LA PELOUSE EST TONDUE : c'est lui qui fait marcher le grand-pere, et il doit s'arreter
 -- pour attendre le joueur qui revient le voir.
 local lawnDoneRemote: RemoteEvent? = nil
+-- IL SE TOURNE VERS LE JOUEUR QUAND CELUI-CI LUI PARLE, puis il part au camion quand sa phrase est finie. Le
+-- grand-pere bouge cote SERVEUR (c'est un objet du monde), mais c'est ICI qu'on sait quand la voix se termine.
+local faceRemote: RemoteEvent? = nil
+local truckRemote: RemoteEvent? = nil
 -- JUSQU'A QUAND IL PARLE, en horloge. Chaque replique la repousse, et la plus lointaine gagne -- meme mecanique
 -- que le geste d'explication cote serveur, et pour la meme raison : deux minuteurs separes laisseraient le
 -- premier a expirer decider a la place des autres.
@@ -1890,6 +1894,24 @@ function TutorialController.talkToGrandpa()
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil
 	sayVoice(TutorialConfigs.TALK_SOUND)
+	-- ET IL LUI FAIT FACE PENDANT QU'IL PARLE. Demande AVANT d'attendre la fin de la voix : on ne repond pas de
+	-- profil a quelqu'un qui vient de vous interpeller.
+	local face = faceRemote
+	if face then
+		face:FireServer()
+	end
+	-- PUIS IL VA AU CAMION, une fois sa phrase terminee. La fin de la voix n'est connue que d'ici : elle joue
+	-- chez ce joueur, et `whenSpeechDone` lit la duree REELLE du fichier -- une duree ecrite en config serait a
+	-- refaire a chaque reenregistrement.
+	--
+	-- Le filet de `whenSpeechDone` le fait partir quand meme si la voix ne se termine jamais (fichier manquant,
+	-- chargement rate) : sans lui, le didacticiel s'arreterait la sans rien dire.
+	whenSpeechDone(function()
+		local truck = truckRemote
+		if truck then
+			truck:FireServer()
+		end
+	end)
 end
 
 local function showMowerTask()
@@ -2418,6 +2440,8 @@ function TutorialController.init()
 	task.spawn(function()
 		talkRemote = RemoteSetup.getRemote("OldManTalk", "Tutorial") :: RemoteEvent
 		lawnDoneRemote = RemoteSetup.getRemote("TutorialLawnDone", "Tutorial") :: RemoteEvent
+		faceRemote = RemoteSetup.getRemote("TutorialGrandpaFace", "Tutorial") :: RemoteEvent
+		truckRemote = RemoteSetup.getRemote("TutorialGrandpaTruck", "Tutorial") :: RemoteEvent
 	end)
 
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres
