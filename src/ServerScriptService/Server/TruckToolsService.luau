@@ -14,7 +14,6 @@
 -- LE VOL EST UNE COURBE DE BEZIER a trois points : depart, sommet, arrivee. Une ligne droite ne se lit pas comme
 -- un objet qu'on SORT mais comme un objet qui glisse ; l'arc dit qu'il a ete souleve et pose.
 
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
@@ -65,12 +64,19 @@ local function landingFor(toolName: string, player: Player): CFrame?
 	if point then
 		return point.CFrame
 	end
-	-- SECOURS, ET ON LE DIT. Sans ce mot, un outil qui se pose devant le joueur au lieu de sa place passerait
-	-- pour un choix -- alors qu'il manque juste une part.
-	warn(
-		`[TruckToolsService] Aucune part "{toolName}" dans un dossier "{TruckConfigs.DROP_FOLDER}" : `
-			.. "il se posera devant le joueur. Rojo ne synchronise pas le Workspace."
-	)
+	-- UN OUTIL EQUIPABLE N'A PAS DE PLACE AU SOL, et c'est normal : il va dans l'inventaire, et son vol finit
+	-- invisible. On le fait donc arriver DEVANT LE JOUEUR -- le geste se lit comme "il vient a moi" -- et on ne
+	-- dit rien, parce qu'il n'y a rien a corriger.
+	--
+	-- POUR LE SEAU ET L'ECHELLE, EN REVANCHE, C'EST UN OUBLI : ils restent sur le terrain, on va les y chercher,
+	-- donc leur place compte. On le DIT, sinon un objet qui atterrit devant le joueur au lieu de sa place
+	-- passerait pour un choix.
+	if not TruckConfigs.TOOL_EQUIP[toolName] then
+		warn(
+			`[TruckToolsService] Aucune part "{toolName}" dans un dossier "{TruckConfigs.DROP_FOLDER}" : `
+				.. "il se posera devant le joueur. Rojo ne synchronise pas le Workspace."
+		)
+	end
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")
 	if not (hrp and hrp:IsA("BasePart")) then
@@ -118,14 +124,15 @@ local function bezier(a: Vector3, b: Vector3, c: Vector3, t: number): Vector3
 	return a * (u * u) + b * (2 * u * t) + c * (t * t)
 end
 
--- ===== L'OUTIL EN MAIN NE RESTE PAS AU SOL =====
--- Un outil sorti du camion se pose sur le terrain. Equipe, ToolService en met un exemplaire dans la main : sans
--- rien faire, le joueur le verrait donc DEUX FOIS -- dans ses mains et par terre.
+-- ===== UN OUTIL QUI S'EQUIPE NE RESTE PAS PAR TERRE =====
+-- Sorti de la benne, un outil equipable entre dans l'INVENTAIRE : c'est le menu en bas a gauche qui le porte, et
+-- ToolService en met un exemplaire dans la main quand on l'equipe. Le laisser visible au sol le montrerait donc
+-- DEUX FOIS -- par terre et dans les mains -- et obligerait a lui trouver une place sur le terrain alors qu'il
+-- n'y en a pas besoin. Seuls le seau et l'echelle, qu'on va CHERCHER et qu'on PORTE, ont une place au sol.
 --
--- ON LE REND INVISIBLE, ON NE LE DEPLACE PAS. Trois raisons. Il garde sa place, donc il RE-APPARAIT exactement la
--- quand on le range. Il garde sa marque, donc le menu des outils continue de le compter comme possede -- range
--- ailleurs, il disparaitrait du menu au moment ou on l'equipe, ce qui est l'inverse de ce qu'on veut dire. Et le
--- camion peut toujours le reprendre.
+-- ON LE REND INVISIBLE, ON NE LE DETRUIT PAS. Trois raisons, et chacune tient a elle seule. Il garde sa MARQUE,
+-- donc le menu continue de savoir qu'on le possede. Le camion peut toujours le REPRENDRE, avec sa pose d'origine
+-- intacte. Et il n'y a aucun etat de possession a tenir ailleurs : l'objet EST la preuve.
 --
 -- LES VALEURS D'ORIGINE SONT GARDEES : une part peut etre deja semi-transparente ou deja traversable, et les
 -- remettre "a zero" les abimerait. On restitue ce qu'on a trouve, pas ce qu'on suppose.
@@ -163,39 +170,6 @@ local function setToolHidden(model: Model, hide: boolean)
 	end
 end
 
---- L'outil que ce personnage tient, ou nil. `LeafiaTool` est pose par ToolService sur le MODELE en main.
-local function heldToolName(character: Model): string?
-	for _, child in character:GetChildren() do
-		local name = child:GetAttribute("LeafiaTool")
-		if typeof(name) == "string" then
-			return name :: string
-		end
-	end
-	return nil
-end
-
---- Cache l'exemplaire au sol de ce qui est en main, et remontre tout le reste.
----
---- ON BALAYE TOUT A CHAQUE FOIS plutot que de suivre les changements un par un : la liste est courte (ce qui est
---- sorti du camion), et un etat reconstruit ne peut pas se desynchroniser -- alors qu'un etat mis a jour par
---- evenements oublie toujours un cas (mort, respawn, outil detruit, second joueur).
-local function syncHidden()
-	local held: { [string]: boolean } = {}
-	for _, player in Players:GetPlayers() do
-		local character = player.Character
-		local name = if character then heldToolName(character) else nil
-		if name then
-			held[name] = true
-		end
-	end
-	for _, d in Workspace:GetDescendants() do
-		if d:IsA("Model") and d:GetAttribute(TruckConfigs.POSE_ATTRIBUTE) ~= nil then
-			local tool = TruckConfigs.TOOL_EQUIP[d.Name]
-			setToolHidden(d :: Model, tool ~= nil and held[tool] == true)
-		end
-	end
-end
-
 --- FAIT SORTIR `model` DU CAMION et le pose a `landing`.
 ---
 --- IL EST ANCRE PENDANT TOUT LE VOL, et repose ancre a l'arrivee : un modele desancre tombe, rebondit, et finit
@@ -215,6 +189,9 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 	flying[model] = true
 	local from = model:GetPivot()
 	local host = soundHost(model)
+	-- VISIBLE PENDANT TOUT LE VOL, quoi qu'il arrive ensuite. Un outil equipable ressorti de l'inventaire part
+	-- invisible sinon : on cliquerait "ranger" et rien ne bougerait a l'ecran.
+	setToolHidden(model, false)
 	-- IL SIFFLE EN PARTANT. Le son est porte par l'objet, donc il le SUIT : il quitte le camion avec lui et
 	-- arrive avec lui -- alors qu'un son pose sur le camion resterait derriere.
 	if host then
@@ -267,13 +244,14 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 		-- ET IL RENTRE DANS LA BENNE, a la FIN du vol seulement. Range avant, il suivrait la carrosserie pendant
 		-- qu'il vole encore -- il arriverait donc a cote de sa place si le camion bouge.
 		if home and home.Parent then
-			-- IL REDEVIENT VISIBLE EN RENTRANT. Range invisible, il resterait un trou dans la benne -- et rien a
-			-- l'ecran ne dirait qu'il est bien revenu.
-			setToolHidden(model, false)
 			model.Parent = home
 			-- LA MARQUE PART AVEC LUI : il n'est plus "sorti", donc l'interface le remontre comme a prendre. C'est
 			-- la meme information qui sert aux deux sens, il n'y a rien a tenir d'accord.
 			model:SetAttribute(TruckConfigs.POSE_ATTRIBUTE, nil)
+		elseif TruckConfigs.TOOL_EQUIP[model.Name] then
+			-- IL DISPARAIT A L'ARRIVEE : il est dans l'inventaire, pas sur la pelouse. Le vol reste VU -- c'est lui
+			-- qui dit "tu viens de le prendre" -- et seule la pose finale s'efface.
+			setToolHidden(model, true)
 		end
 		flying[model] = nil
 	end)
@@ -354,33 +332,9 @@ function TruckToolsService.init()
 
 	-- RIEN A NETTOYER QUAND UN JOUEUR PART : le vol vit dans une tache, pas dans sa session, et il finit tout
 	-- seul. L'outil sorti appartient au MONDE, pas a celui qui l'a sorti.
-	-- ON SUIT CE QUE LES JOUEURS TIENNENT. L'attribut arrive APRES l'enfant -- le modele est parente d'abord, la
-	-- marque posee ensuite -- donc on ecoute les deux : l'ajout, et l'attribut qui apparait dessus.
-	local function watch(character: Model)
-		character.ChildAdded:Connect(function(child)
-			child:GetAttributeChangedSignal("LeafiaTool"):Connect(syncHidden)
-			syncHidden()
-		end)
-		character.ChildRemoved:Connect(syncHidden)
-		syncHidden()
-	end
-
-	local function follow(player: Player)
-		player.CharacterAdded:Connect(watch)
-		if player.Character then
-			watch(player.Character :: Model)
-		end
-	end
-
-	Players.PlayerAdded:Connect(follow)
-	for _, player in Players:GetPlayers() do
-		follow(player)
-	end
-	-- ET AU DEPART D'UN JOUEUR : son outil n'est plus tenu, donc l'exemplaire au sol doit revenir.
-	Players.PlayerRemoving:Connect(function()
-		task.defer(syncHidden)
-	end)
-
+	-- RIEN A SUIVRE SUR LES JOUEURS. La regle ne depend plus de ce qu'ils TIENNENT mais de ce que l'outil EST :
+	-- equipable et sorti de la benne = invisible, point. Un etat qui ne depend de personne ne peut pas se
+	-- desynchroniser -- la version d'avant ecoutait les mains de chacun pour arriver au meme resultat.
 	print("[TruckToolsService] Pret : les outils de la benne peuvent etre sortis.")
 end
 

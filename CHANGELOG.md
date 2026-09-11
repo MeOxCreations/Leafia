@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.780 — Un outil qui s'equipe ne reste plus par terre : il entre dans l'inventaire
+
+Sorti de la benne, un outil equipable (cisaille, taille-haie, rateau) VOLE puis disparait a l'arrivee. Il est dans
+le menu du bas a gauche, et ToolService en met un exemplaire dans la main quand on l'equipe : le laisser au sol le
+montrerait DEUX FOIS.
+
+CA SUPPRIME AUSSI LE BESOIN D'UNE PLACE AU SOL POUR EUX. Seuls le seau et l'echelle en ont une, parce qu'on va les
+CHERCHER et qu'on les PORTE -- ce qui est exactement ce qui a ete garde dans `ToolsDropPoints`. Le warn ne parle
+donc plus que d'eux : pour un equipable, l'absence de part n'est pas un oubli, c'est la regle.
+
+LE VOL RESTE VU, et seule la pose finale s'efface : c'est le vol qui dit "tu viens de le prendre". Un outil
+ressorti de l'inventaire redevient visible AU DEPART de son vol de retour, sinon on cliquerait "ranger" sans rien
+voir bouger.
+
+ET LA REGLE NE DEPEND PLUS DE PERSONNE. La version d'avant cachait l'exemplaire au sol pendant qu'un joueur le
+TENAIT : il fallait donc suivre les mains de chacun, leurs morts, leurs respawns et leurs departs. Maintenant la
+regle tient en une phrase -- equipable et sorti de la benne = invisible -- et un etat qui ne depend de personne ne
+peut pas se desynchroniser. Tout le suivi des personnages disparait.
+
+Il reste invisible mais VIVANT : il garde sa marque, donc le menu sait qu'on le possede, et le camion peut
+toujours le reprendre avec sa pose d'origine intacte.
+
 ## 0.0.779 — L'onomatopee reste au-dessus de la tete, quel que soit l'angle de la camera
 
 Elle glissait sur le cote du crane des qu'on regardait le grand-pere d'en haut. L'offset entier passait par le
