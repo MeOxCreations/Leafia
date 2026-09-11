@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.769 — Le grand-pere finit la parcelle quand le joueur vient le voir presque au bout
+
+Le joueur qui vient lui parler sans avoir fini se fait toujours renvoyer tondre -- et desormais, s'il a deja
+tondu `TALK_RESCUE_AT` (70 %) de la parcelle, le reste est coupe d'un coup. Le grand-pere ronchonne, mais le
+didacticiel avance.
+
+POURQUOI CE SECOURS. Une touffe peut rester hors d'atteinte : sous un massif, derriere un obstacle, sur un bord
+ou la tondeuse ne passe pas. Le joueur reste alors bloque a 90 % sans voir ce qui manque, et chercher la derniere
+touffe d'un jardin n'apprend rien du jeu. Un joueur bloque ne recommence pas.
+
+POURQUOI IL N'EST PAS GRATUIT. A 15 % (le seuil qui ouvre le badge) on irait lui parler tout de suite pour sauter
+la tonte, et la tonte EST le jeu. A 70 % le geste a ete fait et l'avant / apres vu ; ce qui reste est du
+ramassage de miettes.
+
+LA TACHE N'EST PAS TERMINEE A LA MAIN. L'herbe coupee fait monter le compte, et c'est la boucle qui la voit finie
+-- elle joue alors sa phrase et pose le marqueur, exactement comme si le joueur avait fini lui-meme. Deux chemins
+pour terminer la meme tache finiraient par se contredire.
+
+`GrassZoneController.finishArea(area)` porte la coupe, a cote de `mownCount` qui compte la meme parcelle : c'est
+le module de l'herbe qui sait couper une touffe, et il le faisait deja pour le pre-coupe hors parcelle.
+
 ## 0.0.768 — On ne peut plus faire voler le grand-pere en posant la tondeuse sur lui
 
 `OLDMAN_WALK_PROBE_UP` passe de 2.5 a 1.5 stud. Une tondeuse laissee sur sa tete devient du "sol" pour la sonde,

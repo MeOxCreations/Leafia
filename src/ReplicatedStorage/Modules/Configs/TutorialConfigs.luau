@@ -585,6 +585,16 @@ return {
 	-- lui parler sans avoir coupe un brin. La phrase "tu n'as pas fini" n'a de sens que si on a COMMENCE ; avant,
 	-- elle repond a une question que le joueur ne s'est pas encore posee.
 	TALK_MIN_PROGRESS = 0.15,
+	-- A PARTIR DE COMBIEN IL FINIT LE TRAVAIL A SA PLACE, en fraction de la parcelle.
+	--
+	-- POURQUOI CE SECOURS EXISTE : une touffe peut rester hors d'atteinte -- sous un massif, sur un bord ou la
+	-- tondeuse ne passe pas -- et le joueur reste bloque a 90 % sans voir ce qui manque. Chercher la derniere
+	-- touffe d'un jardin n'apprend rien du jeu, et un joueur bloque ne recommence pas.
+	--
+	-- POURQUOI IL N'EST PAS GRATUIT : plus bas, on irait lui parler tout de suite pour sauter la tonte -- et la
+	-- tonte EST le jeu. A ce niveau-la, le joueur a deja fait le geste et vu l'avant / apres ; ce qui reste est du
+	-- ramassage de miettes.
+	TALK_RESCUE_AT = 0.7,
 	-- ET IL L'EMMENE AU CAMION. Dite au moment ou il se met en route : une phrase qui annonce un deplacement doit
 	-- partir AVEC lui, sinon le joueur le voit s'eloigner sans savoir pourquoi.
 	GO_ON_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GoOnTruck" },

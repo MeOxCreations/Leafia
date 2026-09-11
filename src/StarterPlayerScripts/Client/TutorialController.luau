@@ -1984,6 +1984,23 @@ function TutorialController.talkToGrandpa()
 			nextUndoneAt = now + TutorialConfigs.TALK_UNDONE_COOLDOWN
 			sayVoice(TutorialConfigs.TALK_UNDONE_SOUND)
 		end
+		-- ET IL FINIT LE TRAVAIL A SA PLACE. Le grand-pere ronchonne, mais le didacticiel AVANCE : une touffe peut
+		-- rester hors d'atteinte -- sous un massif, sur un bord ou la tondeuse ne passe pas -- et chercher la
+		-- derniere touffe d'un jardin n'apprend rien du jeu. Un joueur bloque a 90 % ne recommence pas.
+		--
+		-- APRES UN MINIMUM DE TRAVAIL (`TALK_RESCUE_AT`), sinon c'est un raccourci : on viendrait lui parler tout
+		-- de suite pour sauter la tonte, et la tonte EST le jeu.
+		--
+		-- ON NE TOUCHE PAS A LA TACHE ICI. L'herbe coupee fait monter le compte, et c'est la boucle qui la voit
+		-- finie -- elle joue alors sa phrase et pose le marqueur, comme si le joueur avait fini lui-meme. Deux
+		-- chemins pour terminer la meme tache finiraient par se contredire.
+		local area = grassArea
+		if area and lawnFraction >= TutorialConfigs.TALK_RESCUE_AT then
+			local cut = GrassZoneController.finishArea(area)
+			if cut > 0 then
+				print(`[Tutorial] Le grand-pere finit la parcelle : {cut} touffes coupees d'un coup.`)
+			end
+		end
 		return
 	end
 	talkDone = true

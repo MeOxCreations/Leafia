@@ -1562,6 +1562,26 @@ function GrassZoneController.mownCount(area: BasePart): (number, number)
 	return done, total
 end
 
+--- FINIT LA PARCELLE D'UN COUP : tout ce qui reste debout dedans est coupe, sans transition.
+---
+--- SERT A DEBLOQUER, PAS A TRICHER. Une touffe peut rester hors d'atteinte -- coincee sous un massif, derriere un
+--- obstacle, sur un bord ou la tondeuse ne passe pas -- et le joueur se retrouve bloque a 90 % sans comprendre ce
+--- qui manque. Chercher la derniere touffe d'un jardin n'apprend rien du jeu.
+---
+--- Rend le nombre de touffes coupees, pour que l'appelant puisse le dire dans ses logs.
+function GrassZoneController.finishArea(area: BasePart): number
+	local cut = 0
+	for _, zone in ipairs(zones) do
+		for _, clump in ipairs(zone.clumps) do
+			if insideBox(area, clump.basePos) and not clump.gone and clump.mown < 1 then
+				cutInstantly(clump)
+				cut += 1
+			end
+		end
+	end
+	return cut
+end
+
 function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number): number
 	local rate = GrassZoneConfigs.MOW_RATE * dt
 	local total = 0
