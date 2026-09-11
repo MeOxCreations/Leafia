@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.778 — Les touches 1 / 2 / 3 ne donnent plus d'outils
+
+Elles equipaient la cisaille, le taille-haie et le rateau, des le spawn, sans rien avoir pris nulle part. Depuis
+que le camion est la source, ca rendait toute sa scene facultative : le joueur n'avait aucune raison d'ouvrir le
+hayon, donc aucune raison d'ecouter ce que le grand-pere lui montre.
+
+ELLES AVAIENT AUSSI UN TROU CONNU, note dans le code de longue date : clavier seulement, donc les outils etaient
+inatteignables sur mobile alors que leur UTILISATION (le clic) marchait deja au doigt. Le menu deroulant en bas a
+gauche est la reponse, et il marche a la souris comme au doigt.
+
+La resolution du remote `SelectTool` part avec elles dans ce fichier -- plus personne ne s'en servait la -- et
+avec elle son `return` anticipe, qui aurait coupe tout le reste du controller le jour ou le remote aurait manque.
+
+### A surveiller
+
+Il reste UN chemin qui equipe un outil sans passer par le camion : l'auto-equip en approchant une haie, dans
+`LadderMoveController`. Il est la pour le confort (plus besoin d'equiper a la main avant de tailler) et je n'y ai
+pas touche -- mais il donne une cisaille a quelqu'un qui n'est jamais alle au camion. A trancher : le retirer, ou
+ne le laisser equiper que ce que le joueur a deja sorti de la benne.
+
 ## 0.0.777 — Un menu d'outils en bas a gauche, deroulant
 
 Un bouton rond en bas a gauche ; on clique, une colonne de cases se deplie au-dessus, une par outil POSSEDE. Un

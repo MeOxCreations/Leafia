@@ -20,18 +20,15 @@ local TOOL_ATTRIBUTE = "LeafiaTool"
 -- Compteur incremente par le serveur a chaque butee de corde. Un compteur et non un booleen : deux tirages
 -- d'affilee ecriraient la meme valeur et l'attribut ne changerait pas.
 local PULL_TICK_ATTRIBUTE = "LeafiaPullTick"
--- Emplacements d'outils facon inventaire : chaque touche equipe SON outil (ou le range si deja en main). 1 = cisaille
--- (outil de depart), 2 = taille-haie, 3 = rateau. Reflexe des joueurs sur la plateforme, et ca laisse E libre pour
--- l'interaction.
+-- LES TOUCHES 1 / 2 / 3 SONT RETIREES, et deux raisons s'additionnent.
 --
--- CLAVIER SEULEMENT, ET C'EST UN TROU CONNU. Sur mobile ces touches n'existent pas : les outils sont donc
--- inatteignables la-bas, alors que leur UTILISATION (le clic) marche deja au doigt. Il faudra une barre d'outils
--- a l'ecran -- un vrai chantier d'UI, pas trois lignes ici, donc on ne le bricole pas en passant.
-local TOOL_SLOTS: { [Enum.KeyCode]: string } = {
-	[Enum.KeyCode.One] = "Shear",
-	[Enum.KeyCode.Two] = "HedgeTrimmer",
-	[Enum.KeyCode.Three] = "Rake",
-}
+-- ELLES DONNAIENT DES OUTILS QU'ON N'A PAS. Depuis que le camion est la source, un outil s'obtient en allant le
+-- sortir de la benne : une touche qui equipe une cisaille au spawn rend toute cette scene facultative, et le
+-- joueur n'a plus aucune raison d'ouvrir le hayon.
+--
+-- ET ELLES ETAIENT CLAVIER SEULEMENT -- un trou note ici de longue date : sur mobile elles n'existent pas, donc
+-- les outils y etaient inatteignables alors que leur UTILISATION (le clic) marchait deja au doigt. Le menu
+-- deroulant en bas a gauche (ToolHudController) est la reponse, et il marche a la souris comme au doigt.
 local ASSET_TIMEOUT = 10
 -- Filet si un emetteur n'a pas de Lifetime exploitable. Les particules vivent rarement plus longtemps.
 local FALLBACK_EFFECT_LIFETIME = 3
@@ -155,14 +152,6 @@ function ToolController.init()
 		watchCharacter(player.Character)
 	end
 
-	-- Le client ne fait qu'AVERTIR quel emplacement a ete presse. Le serveur valide le nom, verifie ce que le joueur
-	-- tient et tranche (equiper / ranger). Le client ne touche jamais a l'outil lui-meme.
-	local selectRemote = RemoteSetup.getRemote("SelectTool", "Tool")
-	if not (selectRemote and selectRemote:IsA("RemoteEvent")) then
-		warn("[ToolController] Remote Tool/SelectTool introuvable")
-		return
-	end
-
 	local activateRemote = RemoteSetup.getRemote("ActivateTool", "Tool")
 	local throttleRemote = RemoteSetup.getRemote("SetThrottle", "Tool")
 
@@ -173,15 +162,12 @@ function ToolController.init()
 
 	UserInputService.InputBegan:Connect(function(input: InputObject, gameProcessed: boolean)
 		-- gameProcessed est vrai quand le joueur tape dans le chat ou clique dans une interface. Sans ce test,
-		-- ecrire "1" a un ami rangerait son taille-haie, et cliquer sur un bouton lancerait le demarrage.
+		-- cliquer sur un bouton lancerait le demarrage de la tondeuse derriere lui.
 		if gameProcessed then
 			return
 		end
 
-		local slotTool = TOOL_SLOTS[input.KeyCode]
-		if slotTool then
-			selectRemote:FireServer(slotTool)
-		elseif isPrimaryClick(input) then
+		if isPrimaryClick(input) then
 			-- Le clic sert a deux choses selon l'etat, mais le CLIENT ne connait pas l'etat : il envoie les
 			-- deux signaux et laisse le serveur trancher. ActivateTool fait avancer le demarrage (tirages) ;
 			-- SetThrottle(true) accelere les lames une fois le moteur en marche. Le serveur ignore celui qui
