@@ -1907,6 +1907,9 @@ function TutorialController.talkToGrandpa()
 	-- Le filet de `whenSpeechDone` le fait partir quand meme si la voix ne se termine jamais (fichier manquant,
 	-- chargement rate) : sans lui, le didacticiel s'arreterait la sans rien dire.
 	whenSpeechDone(function()
+		-- ET IL L'EMMENE. La phrase part AVEC le depart, pas avant et pas apres : le joueur le voit s'ebranler
+		-- pendant qu'il l'entend annoncer le camion, donc il comprend qu'il doit suivre.
+		sayVoice(TutorialConfigs.GO_ON_TRUCK_SOUND)
 		local truck = truckRemote
 		if truck then
 			truck:FireServer()
@@ -2442,6 +2445,12 @@ function TutorialController.init()
 		lawnDoneRemote = RemoteSetup.getRemote("TutorialLawnDone", "Tutorial") :: RemoteEvent
 		faceRemote = RemoteSetup.getRemote("TutorialGrandpaFace", "Tutorial") :: RemoteEvent
 		truckRemote = RemoteSetup.getRemote("TutorialGrandpaTruck", "Tutorial") :: RemoteEvent
+		-- IL EST ARRIVE AU CAMION : c'est le serveur qui le dit, lui seul calcule sa marche. On branche l'ecoute
+		-- ICI, dans la meme tache que la resolution : abonner un remote qu'on n'a pas encore ne veut rien dire.
+		local atTruck = RemoteSetup.getRemote("TutorialGrandpaAtTruck", "Tutorial") :: RemoteEvent
+		atTruck.OnClientEvent:Connect(function()
+			sayVoice(TutorialConfigs.OPEN_TRUCK_SOUND)
+		end)
 	end)
 
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres

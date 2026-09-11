@@ -466,10 +466,24 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 	local startGround = groundAt(from.Position, ignore)
 	local endGround = groundAt(Vector3.new(targetPart.Position.X, from.Position.Y, targetPart.Position.Z), ignore)
 	local endY = if startGround and endGround then from.Position.Y + (endGround - startGround) else from.Position.Y
-	local to = CFrame.lookAt(
-		Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z),
-		Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z) + flat.Unit
-	)
+	local endPos = Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z)
+	local to = CFrame.lookAt(endPos, endPos + flat.Unit)
+	-- LA MEME ORIENTATION, MAIS AU POINT DE DEPART. Le trajet va de `aim` a `to` : les deux ont le meme cap, donc
+	-- c'est une TRANSLATION PURE -- il avance droit devant lui, dans l'axe de ses jambes.
+	--
+	-- AVANT, LE TRAJET PARTAIT DE `from` : la pose interpolait la position ET l'orientation ensemble, donc il
+	-- partait de cote en pivotant lentement pendant tout le chemin. Ses jambes allaient devant, son corps
+	-- ailleurs -- ca se lit comme si quelque chose le forcait dans une autre direction.
+	local aim = CFrame.lookAt(from.Position, from.Position + flat.Unit)
+	-- LE TOUR SUR PLACE D'ABORD, et sa duree suit l'ANGLE : un cap deja bon ne coute rien, un demi-tour prend
+	-- `OLDMAN_TURN_HALF`. Une duree fixe ferait pivoter au ralenti pour trois degres.
+	local look = from.LookVector
+	local lookFlat = Vector3.new(look.X, 0, look.Z)
+	local turnSeconds = 0
+	if lookFlat.Magnitude > 1e-3 then
+		local dot = math.clamp(lookFlat.Unit:Dot(flat.Unit), -1, 1)
+		turnSeconds = TutorialConfigs.OLDMAN_TURN_HALF * (math.acos(dot) / math.pi)
+	end
 
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
@@ -516,6 +530,23 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 	end
 
 	task.spawn(function()
+		-- PHASE 1 : IL SE TOURNE, SANS AVANCER. Ses pieds ne patinent pas -- il n'y a aucun trajet a couvrir -- et
+		-- l'animation de marche tourne deja : un vieux monsieur qui pivote sur sa canne, ce qui est exactement ce
+		-- qu'on veut voir avant qu'il se mette en route.
+		if turnSeconds > 0.01 then
+			local turn0 = os.clock()
+			while model.Parent do
+				local e = math.clamp((os.clock() - turn0) / turnSeconds, 0, 1)
+				local now = from:Lerp(aim, e)
+				model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
+				if e >= 1 then
+					break
+				end
+				task.wait()
+			end
+		end
+
+		-- PHASE 2 : IL AVANCE DROIT DEVANT, de `aim` a `to`.
 		local t0 = os.clock()
 		while true do
 			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
@@ -528,7 +559,7 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 			-- LINEAIRE, sans adoucissement : une marche a vitesse constante est ce qu'on attend d'un personnage
 			-- qui traverse une piece. Une courbe le ferait accelerer puis ralentir, et ses pieds patineraient aux
 			-- deux bouts -- l'animation, elle, tourne a vitesse fixe.
-			local now = from:Lerp(to, e)
+			local now = aim:Lerp(to, e)
 			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
 			if e >= 1 then
 				break
@@ -1080,12 +1111,19 @@ function TutorialService.init()
 
 	-- ET SA PHRASE EST FINIE : il part vers l'arriere du camion, ou sont les outils.
 	local truckRemote = RemoteSetup.getRemote("TutorialGrandpaTruck", "Tutorial") :: RemoteEvent
+	local atTruckRemote = RemoteSetup.getRemote("TutorialGrandpaAtTruck", "Tutorial") :: RemoteEvent
 	truckRemote.OnServerEvent:Connect(function(player)
 		if sceneOwner ~= player then
 			return
 		end
 		-- `walkOldMan` sort tout seul si une marche tourne deja, et il previent nommement si la part manque.
-		walkOldMan(TutorialConfigs.OLDMAN_TRUCK_TARGET)
+		walkOldMan(TutorialConfigs.OLDMAN_TRUCK_TARGET, function()
+			-- ET IL PARLE EN ARRIVANT. On previent le joueur qui a lance la scene : les voix se jouent chez lui,
+			-- et lui seul est concerne -- a deux, l'autre n'a pas a entendre une consigne qu'on ne lui donne pas.
+			if sceneOwner == player and player.Parent then
+				atTruckRemote:FireClient(player)
+			end
+		end)
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur

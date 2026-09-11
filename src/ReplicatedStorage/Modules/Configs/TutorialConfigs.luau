@@ -580,6 +580,11 @@ return {
 	-- lui parler sans avoir coupe un brin. La phrase "tu n'as pas fini" n'a de sens que si on a COMMENCE ; avant,
 	-- elle repond a une question que le joueur ne s'est pas encore posee.
 	TALK_MIN_PROGRESS = 0.15,
+	-- ET IL L'EMMENE AU CAMION. Dite au moment ou il se met en route : une phrase qui annonce un deplacement doit
+	-- partir AVEC lui, sinon le joueur le voit s'eloigner sans savoir pourquoi.
+	GO_ON_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GoOnTruck" },
+	-- ET CE QU'IL DIT EN ARRIVANT : ouvre l'arriere, les outils sont dedans.
+	OPEN_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_OpenTruckBack" },
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
 	--
@@ -759,6 +764,13 @@ return {
 	-- OU IL VA APRES AVOIR FELICITE LE JOUEUR : l'arriere du camion, ou sont les outils. Une part posee dans
 	-- Studio, comme son point de sortie -- deplacer le camion n'oblige alors a toucher aucune ligne de code.
 	OLDMAN_TRUCK_TARGET = "OldManWalkToTruck",
+	-- IL SE TOURNE AVANT DE PARTIR, en secondes pour un DEMI-TOUR -- le temps reel est proportionnel a l'angle,
+	-- donc un quart de tour prend la moitie de ca et un cap deja bon ne coute rien.
+	--
+	-- SANS CETTE ETAPE IL MARCHAIT DE TRAVERS : le trajet interpolait la position ET l'orientation en meme temps,
+	-- donc il partait de cote en pivotant lentement -- ses jambes allaient devant lui, son corps ailleurs. Ca se
+	-- lit exactement comme "quelque chose le force dans une autre direction".
+	OLDMAN_TURN_HALF = 0.7,
 	-- IL SE TOURNE VERS LE JOUEUR POUR LUI PARLER, en tant de secondes. On ne parle pas de profil a quelqu'un
 	-- qu'on felicite.
 	--

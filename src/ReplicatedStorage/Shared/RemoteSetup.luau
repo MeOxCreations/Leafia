@@ -53,6 +53,9 @@ local REMOTES: { { any } } = {
 	{ "TutorialGrandpaFace", E, "Tutorial" },
 	-- ET SA PHRASE EST FINIE : il part vers l'arriere du camion.
 	{ "TutorialGrandpaTruck", E, "Tutorial" },
+	-- IL EST ARRIVE AU CAMION. Dans l'autre sens : sa marche est calculee cote SERVEUR (c'est lui qui la joue
+	-- pour tout le monde), donc lui seul sait quand elle se termine -- et c'est le CLIENT qui joue les voix.
+	{ "TutorialGrandpaAtTruck", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

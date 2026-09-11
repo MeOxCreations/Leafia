@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.752 — Il se tourne avant de marcher, et il parle en partant puis en arrivant
+
+SA MARCHE PARTAIT DE TRAVERS. Le trajet interpolait la position ET l'orientation ensemble, de sa pose actuelle
+jusqu'a la pose d'arrivee : il s'en allait donc de cote en pivotant lentement pendant tout le chemin. Ses jambes
+allaient devant lui, son corps ailleurs -- ce qui se lit exactement comme "quelque chose le force dans une autre
+direction". Ca ne se voyait pas a sa sortie de maison, ou il est deja a peu pres dans l'axe ; ca a saute aux yeux
+vers le camion, ou il doit faire un demi-tour.
+
+Deux phases maintenant. Il PIVOTE sur place, puis il AVANCE droit devant -- le trajet part d'une pose qui a deja
+le bon cap, donc c'est une translation pure. La duree du pivot suit l'ANGLE (`OLDMAN_TURN_HALF` = 0.7 s pour un
+demi-tour) : un cap deja bon ne coute rien, et une duree fixe ferait pivoter au ralenti pour trois degres.
+
+DEUX REPLIQUES EN PLUS. `Oldman_scene_speech_GoOnTruck` part AVEC son depart -- le joueur le voit s'ebranler
+pendant qu'il annonce le camion, donc il comprend qu'il doit suivre. `Oldman_scene_speech_OpenTruckBack` se joue
+a l'arrivee, et ca demande un remote dans l'autre sens (`TutorialGrandpaAtTruck`) : la marche est calculee sur le
+SERVEUR, lui seul sait quand elle finit, mais les voix se jouent chez le joueur.
+
+Elle n'est envoyee qu'au proprietaire de la scene : a deux, l'autre n'a pas a entendre une consigne qu'on ne lui
+donne pas.
+
+### A faire dans Studio
+
+Les deux sons dans `Sounds/Scenes/Scene1/Voices` : `Oldman_scene_speech_GoOnTruck` et
+`Oldman_scene_speech_OpenTruckBack`.
+
 ## 0.0.751 — Les marqueurs rouges se posent enfin a la hauteur demandee
 
 Le balancement du marqueur ecrasait sa hauteur. Il ecrivait `setOffset(frame, (0, rise, 0))` -- soit la valeur du
