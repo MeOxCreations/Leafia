@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.770 — Un point d'interrogation quand il attend, l'eclair quand il s'enerve
+
+Ses appels au joueur qui ne suit pas ont maintenant leur onomatopee, comme son impatience -- mais un POINT
+D'INTERROGATION et pas l'eclair : "je ne comprends pas ce que tu fais" n'est pas "je m'enerve", et le meme dessin
+sur les deux dirait la meme chose deux fois.
+
+L'ECLAIR EST RESERVE A L'ATTENTE QUI DURE. Au bout de `WAIT_PLAYER_ANGRY_AFTER` (22 s d'immobilite), il passe a sa
+cinquieme phrase et a la colere. Cette phrase SORT DU TIRAGE : elle dit "bon, tu viens ?" et perdrait tout en
+sortant au premier appel. Elle se merite, donc elle se garde.
+
+`AngerBurst` DEVIENT `HeadBurst`. Le nom serait devenu faux le jour ou le point d'interrogation est arrive, et un
+nom faux coute plus cher que pas de nom. Le module porte deux "looks" -- image, couleur, inclinaison, etirement --
+parce que la colere CLAQUE et que la question SE BALANCE : meme mouvement mais pas la meme humeur, et un seul jeu
+de valeurs pour les deux aurait force a en trahir une.
+
+Le dessin dit son humeur SANS UN MOT : il marche pour un joueur de dos, loin, ou qui a coupe le son -- et sur
+Roblox ils sont nombreux.
+
+Au passage, la recherche de son corps sort dans `grandpaBody()` : deux endroits en ont besoin maintenant, et la
+meme recherche recopiee finit toujours par diverger.
+
+### A faire dans Studio
+
+Rien de neuf : le point d'interrogation (`rbxassetid://129295622677180`) est un asset en ligne, il n'a pas besoin
+d'etre pose dans la place. Le `ImageLabel` de test dans `StarterGui.ScreenGui` peut etre supprime.
+
 ## 0.0.769 — Le grand-pere finit la parcelle quand le joueur vient le voir presque au bout
 
 Le joueur qui vient lui parler sans avoir fini se fait toujours renvoyer tondre -- et desormais, s'il a deja

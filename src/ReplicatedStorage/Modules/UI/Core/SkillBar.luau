@@ -1,7 +1,7 @@
 --!strict
 -- JAUGE DE COMPETENCE, posee dans le monde a cote de quelqu'un. Elle monte pendant qu'il pratique.
 --
--- PAS UN BillboardGui, pour les memes raisons que WorldMarker et AngerBurst : un Billboard subit l'eclairage,
+-- PAS UN BillboardGui, pour les memes raisons que WorldMarker et HeadBurst : un Billboard subit l'eclairage,
 -- passe derriere le decor, et sa taille depend de la distance. Ici c'est un ScreenGui projete (WorldAnchor) :
 -- pixels constants, couleurs exactes, toujours au-dessus.
 --

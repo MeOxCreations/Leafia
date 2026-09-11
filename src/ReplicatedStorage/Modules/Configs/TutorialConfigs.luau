@@ -518,7 +518,7 @@ return {
 	-- flottait a cote de lui sans rien designer, alors qu'au-dessus de la tete elle se lit tout de suite comme
 	-- SA pensee. C'est la convention de la bande dessinee, et le joueur la connait deja.
 	--
-	-- Lu dans le repere de la CAMERA (voir AngerBurst) : il reste du meme cote de l'ecran quel que soit l'angle
+	-- Lu dans le repere de la CAMERA (voir HeadBurst) : il reste du meme cote de l'ecran quel que soit l'angle
 	-- de vue. Positif = a sa droite a l'ecran.
 	IMPATIENT_BURST_SIDE = 0,
 
@@ -838,15 +838,25 @@ return {
 
 	-- ET S'IL ATTEND POUR RIEN, IL APPELLE. Le joueur qui ne comprend pas qu'il faut suivre voit un vieux
 	-- monsieur plante au milieu du jardin : sans un mot, rien ne lui dit que c'est LUI qu'on attend.
-	-- CINQ FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
+	-- QUATRE FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
 	-- entendre la meme phrase toutes les neuf secondes transformerait le personnage en alarme.
 	WAIT_PLAYER_SOUNDS = {
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_2" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_3" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_4" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_5" },
 	},
+	-- ET LA CINQUIEME, RESERVEE A L'ATTENTE QUI DURE. Elle n'est PAS dans le tirage : une phrase qui dit "bon, tu
+	-- viens ?" perd tout si elle sort au premier appel. Elle se merite, donc elle se garde.
+	WAIT_PLAYER_ANGRY_SOUND = {
+		"Sounds",
+		"Scenes",
+		"Scene1",
+		"Voices",
+		"Oldman_scene_speech_Say_wait_player_5",
+	},
+	-- Au bout de combien de secondes d'immobilite il passe a celle-la, et a la colere en image.
+	WAIT_PLAYER_ANGRY_AFTER = 22,
 	-- Combien de temps le joueur doit rester immobile avant qu'il appelle, en secondes.
 	WAIT_PLAYER_AFTER = 2.5,
 	-- De combien il faut avoir bouge pour ne PLUS etre immobile, en studs. Pas zero : un personnage debout

@@ -28,7 +28,7 @@ local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
 local SideNotificationHandler = require(ReplicatedStorage.Modules.UI.Notification.SideNotificationHandler)
-local AngerBurst = require(ReplicatedStorage.Modules.UI.Core.AngerBurst)
+local HeadBurst = require(ReplicatedStorage.Modules.UI.Core.HeadBurst)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 -- Pour reconnaitre le prompt du camion : on ECOUTE le sien au lieu de refaire sa detection.
@@ -1920,9 +1920,10 @@ local function playImpatient()
 	end
 	local anchor = bodyPart(grandpa)
 	if anchor then
-		AngerBurst.play(
+		HeadBurst.play(
 			anchor,
-			Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0)
+			Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0),
+			"Anger"
 		)
 	end
 	-- ET IL EN FAIT LA TETE. Le visage part avec la voix : une grimace qui arrive apres la phrase se lit comme
@@ -2071,6 +2072,19 @@ local function nearestHedge(from: Vector3): Model?
 		end
 	end
 	return best
+end
+
+-- SON CORPS, cherche seulement quand on en a besoin et GARDE ensuite. Le balayage parcourt tout le Workspace :
+-- le refaire a chaque image couterait cher pour un objet qui ne change pas de place dans l'arbre. On re-cherche
+-- quand on n'a rien ou quand ce qu'on avait a disparu, ce qui couvre aussi son arrivee par le streaming.
+local function grandpaBody(): BasePart?
+	local kept = grandpaPart
+	if kept and kept.Parent then
+		return kept
+	end
+	local model = findModel(TutorialConfigs.GRANDPA_NAME)
+	grandpaPart = if model then bodyPart(model) else nil
+	return grandpaPart
 end
 
 local function showMowerTask()
@@ -2245,11 +2259,27 @@ local function step(dt: number)
 				and speechOver()
 			then
 				nextWaitCallAt = now + TutorialConfigs.WAIT_PLAYER_COOLDOWN
-				local lines = TutorialConfigs.WAIT_PLAYER_SOUNDS
-				local i = pickLine(lines, lastWaitCall)
-				if i > 0 then
-					lastWaitCall = i
-					sayVoice(lines[i])
+				-- APRES UNE LONGUE ATTENTE, IL S'ENERVE VRAIMENT : sa cinquieme phrase, et l'eclair. Avant, il ne
+				-- comprend pas -- c'est le point d'interrogation. Le dessin dit son humeur sans un mot, donc il
+				-- marche pour un joueur de dos, loin, ou qui a coupe le son : et sur Roblox ils sont nombreux.
+				local angry = now - stillSince >= TutorialConfigs.WAIT_PLAYER_ANGRY_AFTER
+				if angry then
+					sayVoice(TutorialConfigs.WAIT_PLAYER_ANGRY_SOUND)
+				else
+					local lines = TutorialConfigs.WAIT_PLAYER_SOUNDS
+					local i = pickLine(lines, lastWaitCall)
+					if i > 0 then
+						lastWaitCall = i
+						sayVoice(lines[i])
+					end
+				end
+				local anchor = grandpaBody()
+				if anchor then
+					HeadBurst.play(
+						anchor,
+						Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0),
+						if angry then "Anger" else "Question"
+					)
 				end
 			end
 		end
@@ -2332,18 +2362,7 @@ local function step(dt: number)
 		end
 	end
 
-	-- OU EST LE GRAND-PERE. Cherche seulement quand la fin du didacticiel s'en sert, et GARDE : le balayage
-	-- parcourt tout le Workspace, le refaire a chaque image couterait cher pour un objet qui ne bouge pas de
-	-- place dans l'arbre. On re-cherche quand on n'a rien ou quand ce qu'on avait a disparu, ce qui couvre aussi
-	-- le streaming.
-	if lawnTaskShown and not talkDone then
-		local kept = grandpaPart
-		if not (kept and kept.Parent) then
-			local model = findModel(TutorialConfigs.GRANDPA_NAME)
-			grandpaPart = if model then bodyPart(model) else nil
-		end
-	end
-	local grandpa = grandpaPart
+	local grandpa = if lawnTaskShown and not talkDone then grandpaBody() else grandpaPart
 
 	-- LA BALISE DES QUE LA PELOUSE EST FINIE, mains libres ou pas. C'est elle qui dit "va le voir", et le joueur
 	-- doit l'avoir sous les yeux a l'instant ou il finit -- pas quand il aura pense a lacher la machine. Avant,

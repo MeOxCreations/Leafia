@@ -1,11 +1,16 @@
 --!strict
--- COLERE EN IMAGE : le triple eclair qui saute au-dessus de quelqu'un qui s'agace, s'etire, et repart.
--- L'onomatopee de bande dessinee, en dessin plutot qu'en mot -- donc rien a traduire, et lisible par un enfant qui
--- ne lit pas encore.
+-- L'ONOMATOPEE AU-DESSUS DE LA TETE : un dessin qui jaillit, s'etire, pulse, et repart. De la bande dessinee, en
+-- DESSIN plutot qu'en mot -- donc rien a traduire, et lisible par un enfant qui ne lit pas encore.
 --
--- UN SEUL DESSIN, ET C'EST UN CHOIX. La premiere version en posait quatre (deux eclairs, le triple, un point
--- d'exclamation) : ca faisait une gerbe, donc un EVENEMENT -- alors qu'un vieux qui rale pour la troisieme fois
--- n'est pas un evenement. Un seul eclair qui pulse dit la meme chose sans prendre toute l'image.
+-- DEUX HUMEURS, DEUX DESSINS. Le triple eclair pour la colere, le point d'interrogation pour l'attente : "je ne
+-- comprends pas ce que tu fais" n'est pas "je m'enerve", et un eclair sur les deux dirait la meme chose deux
+-- fois. Chacun a son inclinaison et son etirement -- la colere claque, la question se balance.
+--
+-- IL S'APPELAIT `AngerBurst` : le nom est devenu faux le jour ou le point d'interrogation est arrive, et un nom
+-- faux coute plus cher que pas de nom.
+--
+-- UN SEUL DESSIN A LA FOIS, ET C'EST UN CHOIX. La premiere version en posait quatre d'un coup : ca faisait une
+-- gerbe, donc un EVENEMENT -- alors qu'un vieux qui rale pour la troisieme fois n'est pas un evenement.
 --
 -- PAS UN BillboardGui, pour les memes raisons que WorldMarker : un Billboard subit l'eclairage, passe derriere le
 -- decor, et change de taille avec la distance. Ici c'est un ScreenGui projete (WorldAnchor) : pixels constants,
@@ -18,21 +23,60 @@ local TweenService = game:GetService("TweenService")
 
 local WorldAnchor = require(script.Parent.WorldAnchor)
 
-local AngerBurst = {}
+local HeadBurst = {}
 
 local player = Players.LocalPlayer
 
--- ===== LE DESSIN =====
--- SA TAILLE NATURELLE, en pixels. Le rapport largeur/hauteur vient du dessin lui-meme : lui en imposer un autre
--- l'APLATIT au repos, et un eclair aplati ne ressemble plus a un eclair. Seul `BURST_SCALE` le redimensionne, et
--- il garde les proportions par construction.
-local IMAGE = "rbxassetid://84029477406959"
-local IMAGE_W, IMAGE_H = 114, 100
-local BURST_SCALE = 0.6
--- ROUGE. `ImageColor3` MULTIPLIE le dessin : ca ne marche que parce que l'eclair est BLANC -- une forme noire
--- resterait noire quelle que soit la teinte, puisque zero multiplie par n'importe quoi fait zero. Son contour
--- sombre, lui, ne bouge pas, et c'est tant mieux : c'est lui qui le detache du decor.
-local IMAGE_COLOR = Color3.fromRGB(255, 62, 48)
+export type Kind = "Anger" | "Question"
+
+type Look = {
+	image: string,
+	-- SA TAILLE NATURELLE, en pixels. Le rapport largeur/hauteur vient du DESSIN : lui en imposer un autre
+	-- l'aplatit au repos, et un eclair aplati ne ressemble plus a un eclair.
+	width: number,
+	height: number,
+	scale: number,
+	-- `ImageColor3` MULTIPLIE le dessin : teinter ne marche que sur une forme BLANCHE -- une forme noire reste
+	-- noire quelle que soit la couleur, puisque zero multiplie par n'importe quoi fait zero. Blanc = le dessin
+	-- tel qu'il a ete fait.
+	color: Color3,
+	-- Son inclinaison de REPOS, et de combien le balancement l'ecarte de part et d'autre.
+	baseTilt: number,
+	tilt: number,
+	-- L'etirement de la pulsation. La largeur passe SOUS 1 : il s'affine en montant, et c'est ca qui fait la
+	-- matiere molle -- grandir sans s'affiner ne s'etire pas, ca GROSSIT.
+	stretchY: number,
+	stretchX: number,
+}
+
+local LOOKS: { [string]: Look } = {
+	-- LA COLERE : le triple eclair, rouge, qui claque. Etirement franc et bonne inclinaison -- il a l'air JETE.
+	Anger = {
+		image = "rbxassetid://84029477406959",
+		width = 114,
+		height = 100,
+		scale = 0.6,
+		color = Color3.fromRGB(255, 62, 48),
+		baseTilt = 15,
+		tilt = 11,
+		stretchY = 1.9,
+		stretchX = 0.66,
+	},
+	-- L'ATTENTE : le point d'interrogation, laisse BLANC (le dessin parle tout seul, et le rouge est la couleur
+	-- de la colere -- les deux se distinguent de loin). Il se balance au lieu de claquer : moins d'inclinaison,
+	-- moins d'etirement. Quelqu'un qui ne comprend pas ne trepigne pas.
+	Question = {
+		image = "rbxassetid://129295622677180",
+		width = 100,
+		height = 100,
+		scale = 0.6,
+		color = Color3.fromRGB(255, 255, 255),
+		baseTilt = 8,
+		tilt = 7,
+		stretchY = 1.35,
+		stretchX = 0.86,
+	},
+}
 
 -- ===== LA DISTANCE =====
 -- Comme WorldMarker : taille bornee pour rester lisible de loin sans devenir enorme colle dessus.
@@ -53,14 +97,11 @@ local POP_TIME = 0.18
 --
 -- ET LA LARGEUR PASSE SOUS 1 : il s'affine en montant, et c'est ca qui fait la matiere molle. Grandir sans
 -- s'affiner ne s'etire pas, ca GROSSIT.
-local STRETCH_Y = 1.9
-local STRETCH_X = 0.66
 -- ET IL SE BALANCE. La rotation alterne d'un cote a l'autre a chaque pulsation, et c'est ce qui fait la
 -- difference entre un objet qui respire et quelqu'un qui s'ENERVE : un mouvement vertical seul est regulier,
 -- donc calme.
 --
 -- Elle pivote autour de l'ANCRE, qui est au pied : il se penche, il ne glisse pas.
-local TILT = 11
 -- SON INCLINAISON DE REPOS, en degres. Le dessin arrive droit, et droit il se lit comme un point d'exclamation
 -- pose la ; penche, il a l'air d'avoir ete JETE. C'est la meme raison qui fait incliner les onomatopees dans une
 -- case de bande dessinee.
@@ -72,7 +113,6 @@ local TILT = 11
 -- IL A ETE COUCHE A -90 UNE VERSION, puis remis debout : l'ecran a tranche. A plat, il s'etire sur le COTE --
 -- l'etirement suit le sens du dessin, pas celui de l'ecran -- et un eclair qui s'allonge a l'horizontale ne
 -- monte plus, donc il ne jaillit plus. C'est la verticale qui porte le geste.
-local BASE_TILT = 15
 -- Montee seche, retour un peu plus long. `Back` en sortie DEPASSE une fois puis se pose ; `Elastic` oscillerait,
 -- ce qui se lit comme un tremblement et pas comme de la souplesse.
 local PULSE_UP = 0.11
@@ -92,7 +132,7 @@ local function getGui(): ScreenGui
 		return existing
 	end
 	local created = Instance.new("ScreenGui")
-	created.Name = "LeafiaAngerBursts"
+	created.Name = "LeafiaHeadBursts"
 	-- `None` EST OBLIGATOIRE : WorldAnchor rend des coordonnees dont l'origine est le coin ABSOLU de l'ecran. Avec
 	-- l'inset par defaut, l'eclair suivrait 36 px trop bas. Piege deja paye dans ce projet.
 	created.ScreenInsets = Enum.ScreenInsets.None
@@ -105,27 +145,29 @@ local function getGui(): ScreenGui
 	return created
 end
 
---- Fait jaillir un eclair au-dessus de `target`, le laisse pulser, puis nettoie tout. Rien a garder chez
+--- Fait jaillir une onomatopee au-dessus de `target`, la laisse pulser, puis nettoie tout. Rien a garder chez
 --- l'appelant.
 ---
---- `offset` decale le point vise, en studs -- typiquement pour le poser au-dessus de la tete.
-function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
+--- `offset` decale le point vise, en studs -- typiquement pour la poser au-dessus de la tete. `kind` choisit le
+--- dessin : la colere par defaut, la question pour quelqu'un qui attend.
+function HeadBurst.play(target: WorldAnchor.Target, offset: Vector3?, kind: Kind?)
 	local holder = getGui()
+	local look = LOOKS[kind or "Anger"] or LOOKS.Anger
 
-	local w, h = IMAGE_W * BURST_SCALE, IMAGE_H * BURST_SCALE
+	local w, h = look.width * look.scale, look.height * look.scale
 	local normal = UDim2.fromOffset(w, h)
 
 	local label = Instance.new("ImageLabel")
-	label.Name = "AngerBurst"
+	label.Name = "HeadBurst"
 	label.BackgroundTransparency = 1
-	label.Image = IMAGE
-	label.ImageColor3 = IMAGE_COLOR
+	label.Image = look.image
+	label.ImageColor3 = look.color
 	label.Size = UDim2.fromOffset(0, 0)
 	-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions et borne l'image par le plus PETIT cote du
 	-- cadre : elle ne sait alors que grossir et rapetisser, jamais s'etirer -- la pulsation la RETRECIRAIT au lieu
 	-- de l'allonger. Piege deja paye sur les feuilles du chargement.
 	label.ScaleType = Enum.ScaleType.Stretch
-	label.Rotation = BASE_TILT
+	label.Rotation = look.baseTilt
 	label.Parent = holder
 
 	-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND L'ETIREMENT POSSIBLE. Avec une ancre au centre, un eclair qu'on
@@ -155,8 +197,8 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 			-- LA TAILLE ET L'ANGLE DANS LE MEME TWEEN : deux tweens separes sur le meme objet finissent toujours
 			-- par se decaler d'une image ou deux, et le balancement ne tomberait plus avec l'etirement.
 			TweenService:Create(label, TweenInfo.new(PULSE_UP, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {
-				Size = UDim2.fromOffset(w * STRETCH_X, h * STRETCH_Y),
-				Rotation = BASE_TILT + TILT * side,
+				Size = UDim2.fromOffset(w * look.stretchX, h * look.stretchY),
+				Rotation = look.baseTilt + look.tilt * side,
 			}):Play()
 			task.wait(PULSE_UP)
 			if not label.Parent then
@@ -164,7 +206,7 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 			end
 			TweenService:Create(label, TweenInfo.new(PULSE_BACK, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
 				Size = normal,
-				Rotation = BASE_TILT,
+				Rotation = look.baseTilt,
 			}):Play()
 			task.wait(PULSE_BACK)
 			-- IL REPART DE L'AUTRE COTE. Toujours du meme cote, ca se lirait comme un tic ; en alternance, comme
@@ -201,4 +243,4 @@ function AngerBurst.play(target: WorldAnchor.Target, offset: Vector3?)
 	end)
 end
 
-return AngerBurst
+return HeadBurst
