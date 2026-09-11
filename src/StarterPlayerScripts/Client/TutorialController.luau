@@ -1890,13 +1890,27 @@ local function step(dt: number)
 	--
 	-- Le repere se cache tout seul en arrivant : le seuil vit dans GroundGuide, pas ici, sinon deux seuils
 	-- finiraient par se contredire.
+	-- LA PARCELLE EST CHERCHEE TANT QU'ON NE L'A PAS, des le boot et SANS attendre la tache de tonte.
+	--
+	-- C'EST LE BUG QU'ON VIENT DE PAYER : elle n'etait re-cherchee que dans le bloc de comptage, donc seulement
+	-- une fois la tache affichee. Avec le streaming, la part arrive quelques secondes apres le boot -- mais
+	-- l'herbe, elle, est semee AVANT. Resultat : toute la pelouse restait a tondre, et la zone n'etait declaree
+	-- qu'a la minute et demie, quand la tache apparaissait enfin. Mesure dans les logs : 100 secondes de retard.
+	--
+	-- Une recherche par nom est instantanee (aucun WaitForChild), donc la refaire toutes les 0.4 s ne coute rien
+	-- -- et elle s'arrete d'elle-meme des qu'on a trouve.
+	if not grassArea and now >= nextLawnCountAt then
+		nextLawnCountAt = now + TutorialConfigs.LAWN_COUNT_INTERVAL
+		ensureGrassArea()
+	end
+
 	-- LA TONTE AVANCE. On compte les touffes coupees DANS la parcelle, et la barre de la tache les suit.
 	--
 	-- PAS A CHAQUE IMAGE : parcourir toutes les touffes de la map soixante fois par seconde, pour une barre qui
 	-- n'avance que d'un cheveu, ne se verrait pas et couterait cher.
 	if lawnTaskShown and not lawnTaskDone and now >= nextLawnCountAt then
 		nextLawnCountAt = now + TutorialConfigs.LAWN_COUNT_INTERVAL
-		local area = ensureGrassArea()
+		local area = grassArea
 		if area then
 			local done, total = GrassZoneController.mownCount(area)
 			-- ON LIT LES DEUX NOMBRES. Un total a zero veut dire que l'herbe n'est pas encore semee, pas que tout

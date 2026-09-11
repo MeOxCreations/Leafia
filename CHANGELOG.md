@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.719 — La parcelle etait trouvee cent secondes trop tard
+
+Mesure dans les logs : boot a 09:44:56, parcelle declaree a 09:46:38. Cent secondes de retard, et l'herbe, elle,
+est semee AVANT. Toute la pelouse restait donc a tondre.
+
+Cause : la part n'etait re-cherchee que dans le bloc de comptage, donc seulement une fois la tache de tonte
+AFFICHEE. Avec le streaming elle arrive quelques secondes apres le boot -- entre les deux, personne ne
+reessayait.
+
+Elle est maintenant cherchee tant qu'on ne l'a pas, des le boot et sans attendre la tache. Une recherche par nom
+est instantanee (aucun `WaitForChild`), donc la refaire toutes les 0.4 s ne coute rien, et elle s'arrete d'elle-
+meme des qu'on a trouve.
+
+**Et la pre-coupe dit ce qu'elle fait**, en trois nombres : combien de touffes DEDANS (a tondre), combien DEHORS,
+et combien viennent d'etre coupees.
+
+    [GrassZone] Parcelle "AreaGrassTutorial" : 412 touffe(s) dedans (a tondre), 1758 dehors dont 1758 coupee(s).
+
+Ces trois chiffres separent les trois pannes possibles, qui se corrigent a trois endroits differents : rien de
+seme (tout a zero), zone mal placee ou mal dimensionnee (tout dedans, ou tout dehors), ou coupe qui ne se voit
+pas (des coupees, et pourtant de l'herbe haute a l'ecran). Un simple "ca ne marche pas" envoie chercher au
+hasard.
+
 ## 0.0.718 — La tonte est comptee, et une seule parcelle est a faire
 
 Deux manques d'un coup : la tache "MOW THE LAWN" ne se terminait JAMAIS -- rien ne comptait ce que le joueur

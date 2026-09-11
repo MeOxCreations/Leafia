@@ -651,16 +651,23 @@ local function cutInstantly(clump: Clump)
 	apply(clump, WIND_ANGLE, 1, 0, 0, 1, 0)
 end
 
--- POSE DEJA COUPE TOUT CE QUI EST HORS DE LA ZONE DU JOUEUR. Sans zone declaree, ne fait rien.
-local function applyPlayerArea(zone: Zone)
+-- POSE DEJA COUPE TOUT CE QUI EST HORS DE LA ZONE DU JOUEUR. Rend (coupees, dedans, dehors).
+--
+-- ELLE REND SES TROIS NOMBRES, et pas un booleen : le jour ou "la pelouse n'est pas coupee", ces trois chiffres
+-- disent LEQUEL des trois cas on a -- aucune touffe (pas encore semee), toutes dedans (zone trop grande ou mal
+-- placee), ou coupees sans que ca se voie (probleme de rendu). Un booleen envoie chercher au hasard.
+local function applyPlayerArea(zone: Zone): (number, number, number)
 	local area = playerArea
 	if not (area and area.Parent) then
-		return
+		return 0, 0, 0
 	end
 	local box = area :: BasePart
-	local cut = 0
+	local cut, inside, outside = 0, 0, 0
 	for _, clump in ipairs(zone.clumps) do
-		if not insideBox(box, clump.basePos) then
+		if insideBox(box, clump.basePos) then
+			inside += 1
+		else
+			outside += 1
 			local before = clump.mown
 			cutInstantly(clump)
 			if clump.mown > before then
@@ -676,6 +683,7 @@ local function applyPlayerArea(zone: Zone)
 			bucket.settling = true
 		end
 	end
+	return cut, inside, outside
 end
 
 local function populate(zone: Zone)
@@ -1507,9 +1515,18 @@ function GrassZoneController.setPlayerArea(area: BasePart?)
 	if not area then
 		return
 	end
+	local cut, inside, outside = 0, 0, 0
 	for _, zone in ipairs(zones) do
-		applyPlayerArea(zone)
+		local c, i, o = applyPlayerArea(zone)
+		cut, inside, outside = cut + c, inside + i, outside + o
 	end
+	-- ON DIT CE QU'ON A TROUVE ET CE QU'ON A FAIT. Trois nombres qui separent les trois pannes possibles : rien
+	-- de seme (tout a zero), zone mal placee (tout dedans, ou tout dehors), ou coupe qui ne se voit pas (des
+	-- coupees, et pourtant de l'herbe haute a l'ecran).
+	print(
+		`[GrassZone] Parcelle "{area.Name}" : {inside} touffe(s) dedans (a tondre), `
+			.. `{outside} dehors dont {cut} coupee(s) maintenant.`
+	)
 end
 
 --- COMBIEN DE TOUFFES SONT TONDUES dans la boite de `area`, et combien il y en a. Rend (tondues, total).
