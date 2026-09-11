@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.745 — La jauge des taches va bien au bout
+
+`FILL_MAX` passe de 0.98 a 0.997. Elle reste sous 1 pour la meme raison qu'avant -- a 1 pile, les coins arrondis
+du remplissage debordent de ceux de la barre -- mais 0.98 laissait un creux visible au bout d'une tache finie.
+
+Valeur relevee dans Studio, jauge pleine a l'ecran.
+
 ## 0.0.744 — Le badge du grand-pere n'est plus a ses pieds
 
 `TALK_PROMPT_OFFSET` passe de 4.4 a 7.5 studs, et `GRANDPA_MARKER_UP` de 6.2 a 10.5 pour rester AU-DESSUS du

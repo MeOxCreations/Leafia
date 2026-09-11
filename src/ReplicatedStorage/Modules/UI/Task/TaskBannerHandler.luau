@@ -87,8 +87,9 @@ local COIN_BOUNCE = TweenInfo.new(0.55, Enum.EasingStyle.Elastic, Enum.EasingDir
 
 -- ===== JAUGE =====
 local FILL_SPEED = 6
--- Un poil sous 1 : a 1 pile, les coins arrondis du remplissage debordent de ceux de la barre.
-local FILL_MAX = 0.98
+-- Un poil sous 1 : a 1 pile, les coins arrondis du remplissage debordent de ceux de la barre. Valeur relevee
+-- dans Studio, jauge pleine a l'ecran -- a 0.98 il restait un creux visible au bout.
+local FILL_MAX = 0.997
 -- Un lerp exponentiel n'atteint jamais sa cible : sans ce clou, une jauge pleine resterait a 99,7 % pour
 -- toujours.
 local FILL_SNAP = 0.004
