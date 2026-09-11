@@ -576,15 +576,19 @@ return {
 	TALK_UNDONE_COOLDOWN = 9,
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
-	GRANDPA_MARKER_UP = 6.2,
+	--
+	-- SA ROOTPART EST BASSE : elle sort du 3D Importer, donc elle est posee au PIED du rig et pas a mi-torse
+	-- comme sur un personnage Roblox. Toutes les hauteurs de ce bloc se comptent donc depuis le SOL sous lui.
+	GRANDPA_MARKER_UP = 10.5,
 	-- A quelle distance le badge "PARLER" apparait, en studs. DISTANCE RADIALE, comme celle de la porte : une
 	-- boite orientee laisse des angles morts, et il se promene -- il n'a aucune orientation stable.
 	TALK_RADIUS = 11,
 	TALK_PROMPT_KEY = "E",
 	TALK_PROMPT_LABEL = "TALK",
 	TALK_PROMPT_TITLE = "GRANDPA",
-	-- Au-dessus de sa tete, mais SOUS le marqueur : les deux se liraient l'un sur l'autre.
-	TALK_PROMPT_OFFSET = Vector3.new(0, 4.4, 0),
+	-- Au-dessus de sa tete, mais SOUS le marqueur : les deux se liraient l'un sur l'autre. A 4.4 le badge tombait
+	-- a ses pieds -- voir la note de GRANDPA_MARKER_UP : la hauteur part du sol, pas de son torse.
+	TALK_PROMPT_OFFSET = Vector3.new(0, 7.5, 0),
 	TALK_ACTION_NAME = "LeafiaTutorialTalk",
 
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.

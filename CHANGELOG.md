@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.744 — Le badge du grand-pere n'est plus a ses pieds
+
+`TALK_PROMPT_OFFSET` passe de 4.4 a 7.5 studs, et `GRANDPA_MARKER_UP` de 6.2 a 10.5 pour rester AU-DESSUS du
+badge -- sinon les deux se liraient l'un sur l'autre quand la pelouse est finie.
+
+Sa RootPart est posee au PIED du rig, pas a mi-torse comme sur un personnage Roblox : elle sort du 3D Importer.
+Les hauteurs de ce bloc se comptent donc depuis le sol sous lui, ce qui est note dans la config -- c'est ce qui
+explique qu'une valeur qui semblait haute tombait a ses chaussures.
+
 ## 0.0.743 — Il renvoie tondre le joueur qui vient le voir sans avoir fini
 
 Le badge `TALK` sort maintenant des que la tonte est DEMANDEE, et plus seulement quand elle est finie. Ce qu'il
