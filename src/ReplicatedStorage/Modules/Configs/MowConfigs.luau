@@ -536,6 +536,13 @@ return {
 	-- camera traine et le joueur glisse dans le cadre pendant le virage ; haut, elle colle et le virage devient
 	-- sec. C'est le meme effet que l'ancien TURN_CAM_LAG, mais obtenu par le cap au lieu d'un decalage lateral.
 	DRIVE_CAM_FOLLOW = 2.5,
+	-- LE MEME, EN MARCHE ARRIERE. Bien plus bas : en reculant, une machine qui braque PIVOTE sur elle-meme, donc
+	-- son cap balaie un grand angle pour quelques centimetres parcourus. A la vitesse de l'avant, la camera partait
+	-- sur le cote et on ne voyait plus ou l'on reculait -- le moment ou l'on a justement besoin de voir.
+	--
+	-- Deux reglages et pas un facteur : l'avant veut du RETARD de virage, l'arriere veut de la STABILITE. Aucune
+	-- valeur unique ne peut satisfaire les deux.
+	DRIVE_CAM_FOLLOW_BACK = 0.5,
 	-- Recul supplementaire a pleine avance. PORTE ICI parce que `SetZoomBoost` deplace les bornes de zoom du
 	-- JOUEUR, une mecanique de la camera Custom : sous une camera scriptee elle ne fait plus rien.
 	-- Baisse avec la distance elle aussi : un recul de 5 studs sur une orbite de 10 la fait grandir de moitie a

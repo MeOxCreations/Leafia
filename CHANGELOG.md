@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.724 — La camera ne part plus sur le cote quand on recule en braquant
+
+En reculant, une machine qui braque PIVOTE sur elle-meme : son cap balaie un grand angle pour quelques
+centimetres parcourus. La camera le suivait a la meme vitesse qu'en marche avant, donc elle partait sur le cote
+-- et on ne voyait plus ou l'on reculait, ce qui est precisement le moment ou l'on a besoin de voir.
+
+`DRIVE_CAM_FOLLOW_BACK` (0.5) remplace `DRIVE_CAM_FOLLOW` (2.5) des que l'avance demandee est negative.
+
+**Deux reglages et pas un facteur de correction.** La marche avant veut du RETARD de virage -- c'est lui qui fait
+glisser le joueur dans le cadre, et c'est le ressenti qu'on cherche. La marche arriere veut de la STABILITE.
+Aucune valeur unique ne peut satisfaire les deux, et compenser l'une par l'autre se serait vu aux deux bouts.
+
+Le test porte sur l'avance DEMANDEE, pas sur la vitesse mesuree : la camera doit repondre a la touche, pas
+attendre que la machine ait fini de reculer.
+
 ## 0.0.723 — La tondeuse se pose sur le sol, et un sol n'efface plus la pelouse
 
 ### Elle ne flotte plus

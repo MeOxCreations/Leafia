@@ -176,6 +176,7 @@ local function driveCamSettings(): DriveCamera.Settings
 		height = MowConfigs.DRIVE_CAM_HEIGHT,
 		lookHeight = MowConfigs.DRIVE_CAM_LOOK_HEIGHT,
 		follow = MowConfigs.DRIVE_CAM_FOLLOW,
+		followBack = MowConfigs.DRIVE_CAM_FOLLOW_BACK,
 		zoom = MowConfigs.DRIVE_CAM_ZOOM,
 		zoomSpeed = MowConfigs.DRIVE_CAM_ZOOM_SPEED,
 		yawLimit = MowConfigs.DRIVE_CAM_YAW_LIMIT,

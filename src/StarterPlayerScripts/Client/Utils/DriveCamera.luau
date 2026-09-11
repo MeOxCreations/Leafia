@@ -41,6 +41,7 @@ export type Settings = {
 	height: number, -- hauteur de la camera au-dessus du point vise
 	lookHeight: number, -- hauteur du point vise sur le sujet
 	follow: number, -- vitesse a laquelle le cap rattrape celui de la machine (le retard de virage)
+	followBack: number, -- la meme, EN MARCHE ARRIERE : bien plus basse, voir l'en-tete
 	zoom: number, -- studs de recul supplementaires a pleine avance
 	zoomSpeed: number,
 	yawLimit: number, -- degres de chaque cote avant la butee
@@ -125,7 +126,16 @@ local function step(dt: number, heading: number, drive: number)
 
 	-- 1) LE CAP RATTRAPE. Par le plus court chemin, et en PARAMETRE : c'est un angle qu'on lisse, jamais une
 	-- position. Un facteur exponentiel garde la meme vitesse quel que soit le framerate.
-	camHeading += shortestAngle(camHeading, heading) * math.min(1, cfg.follow * dt)
+	--
+	-- BEAUCOUP MOINS VITE EN MARCHE ARRIERE. En reculant, une machine qui braque PIVOTE sur elle-meme : son cap
+	-- balaie un grand angle pour quelques centimetres parcourus. La camera qui le suivait a la meme vitesse qu'en
+	-- avant partait donc sur le cote, et on ne voyait plus ou l'on reculait -- ce qui est precisement le moment ou
+	-- l'on a besoin de voir.
+	--
+	-- DEUX REGLAGES ET PAS UN FACTEUR DE CORRECTION : aucune valeur unique ne peut convenir aux deux, parce que
+	-- l'avant veut du retard de virage (le joueur glisse dans le cadre) et l'arriere veut de la STABILITE.
+	local follow = if drive < 0 then cfg.followBack else cfg.follow
+	camHeading += shortestAngle(camHeading, heading) * math.min(1, follow * dt)
 
 	-- 2) LE RESSORT DE BUTEE. Il ne tire que quand le joueur a lache l'orbite : sinon on se battrait avec lui.
 	if orbiting or orbitTouch then
