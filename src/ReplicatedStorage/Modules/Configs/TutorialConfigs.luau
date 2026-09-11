@@ -650,6 +650,25 @@ return {
 	-- comme un remplacement ; separes, on voit d'abord qu'on a REUSSI, ensuite ce qui reste a faire.
 	LAWN_TASK_DELAY = 0.9,
 
+	-- ===== LA PARCELLE A TONDRE =====
+	-- Une PART posee dans Studio, qui delimite le carre que le joueur doit tondre. Tout ce qui pousse dehors est
+	-- pose DEJA COUPE.
+	--
+	-- POURQUOI UNE PART ET PAS UN RAYON. La forme du bout de pelouse a faire se decide a l'oeil, dans la map, en
+	-- la deplacant et en la retaillant. Un rayon autour d'un point obligerait a re-regler un nombre a chaque fois
+	-- qu'on bouge un massif, et ne saurait pas faire un rectangle.
+	--
+	-- Cherchee par son NOM, comme la porte et le point d'arrivee : on ne suppose aucun rangement. Rojo ne
+	-- synchronise pas le Workspace, elle doit exister dans CETTE place.
+	AREA_GRASS_NAME = "AreaGrassTutorial",
+	-- A PARTIR DE QUELLE PART la tonte compte comme finie. JAMAIS 1 : il reste toujours une touffe coincee sous un
+	-- massif ou contre une bordure, et chercher la derniere n'est pas du jeu, c'est de la chasse au pixel. Meme
+	-- raison que l'auto-complete des haies.
+	LAWN_DONE_AT = 0.95,
+	-- A QUELLE FREQUENCE on recompte, en secondes. Compter chaque image parcourrait toutes les touffes de la map
+	-- soixante fois par seconde pour une barre qui n'avance que d'un cheveu : ca ne se verrait pas, et ca coute.
+	LAWN_COUNT_INTERVAL = 0.4,
+
 	-- ===== LE GRAND-PERE SORT DE CHEZ LUI =====
 	-- La scene finie, il ne reste pas plante dans l'embrasure : il marche jusque devant sa porte.
 	--

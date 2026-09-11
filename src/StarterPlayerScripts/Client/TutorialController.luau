@@ -38,6 +38,7 @@ local ButterflyController = require(script.Parent.ButterflyController)
 -- LU, JAMAIS PILOTE : le didacticiel demande seulement si la machine tourne, pour savoir si sa tache est faite.
 -- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
 local MowController = require(script.Parent.MowController)
+local GrassZoneController = require(script.Parent.GrassZoneController)
 
 local player = Players.LocalPlayer
 
@@ -87,6 +88,14 @@ local spokeTwice = false
 -- OU EN EST LA LISTE D'OBJECTIFS. Deux drapeaux et non un compteur : chacun protege un evenement different, et
 -- un compteur obligerait a savoir quel numero correspond a quelle etape.
 local mowerTaskShown = false
+-- LA TACHE DE TONTE : affichee, puis finie. Deux drapeaux et pas un, comme pour la tondeuse : "affichee" decide
+-- si on compte, "finie" decide si on s'arrete.
+local lawnTaskShown = false
+local lawnTaskDone = false
+local nextLawnCountAt = 0
+-- LA PARCELLE, resolue une fois trouvee. Avec le streaming elle peut arriver apres le boot : on re-cherche tant
+-- qu'on ne l'a pas, et jamais plus souvent que l'intervalle de comptage.
+local grassArea: BasePart? = nil
 local mowerTaskDone = false
 
 -- LES SONS DE LA SCENE SONT JOUES EN 2D, pas dans le monde. `nil` en hote = pas de part, donc pas de distance,
@@ -1845,6 +1854,27 @@ startOldManSpeech = function()
 	end)
 end
 
+-- LA PARCELLE QUE LE JOUEUR DOIT TONDRE. Resolue tant qu'on ne l'a pas : avec le streaming, une part posee dans
+-- Studio peut arriver bien apres le boot, et la chercher une seule fois la figerait a nil pour la session.
+--
+-- DES QU'ON LA TROUVE, on la declare a l'herbe : c'est elle qui pose deja coupe tout ce qui est dehors, a la fin
+-- de chaque semis. On ne le fait qu'UNE fois -- la re-declarer a chaque image relancerait un parcours complet
+-- des touffes pour rien.
+local function ensureGrassArea(): BasePart?
+	local found = grassArea
+	if found and found.Parent then
+		return found
+	end
+	local part = findByName(TutorialConfigs.AREA_GRASS_NAME)
+	if not (part and part:IsA("BasePart")) then
+		return nil -- pas encore repliquee : on retentera, sans rien dire (le streaming est un etat normal)
+	end
+	grassArea = part :: BasePart
+	GrassZoneController.setPlayerArea(grassArea)
+	print(`[Tutorial] Parcelle a tondre : "{TutorialConfigs.AREA_GRASS_NAME}", le reste est pose deja coupe.`)
+	return grassArea
+end
+
 local function step(dt: number)
 	local now = os.clock()
 
@@ -1860,6 +1890,29 @@ local function step(dt: number)
 	--
 	-- Le repere se cache tout seul en arrivant : le seuil vit dans GroundGuide, pas ici, sinon deux seuils
 	-- finiraient par se contredire.
+	-- LA TONTE AVANCE. On compte les touffes coupees DANS la parcelle, et la barre de la tache les suit.
+	--
+	-- PAS A CHAQUE IMAGE : parcourir toutes les touffes de la map soixante fois par seconde, pour une barre qui
+	-- n'avance que d'un cheveu, ne se verrait pas et couterait cher.
+	if lawnTaskShown and not lawnTaskDone and now >= nextLawnCountAt then
+		nextLawnCountAt = now + TutorialConfigs.LAWN_COUNT_INTERVAL
+		local area = ensureGrassArea()
+		if area then
+			local done, total = GrassZoneController.mownCount(area)
+			-- ON LIT LES DEUX NOMBRES. Un total a zero veut dire que l'herbe n'est pas encore semee, pas que tout
+			-- est fait : en calculant une fraction on obtiendrait soit une division par zero, soit "termine".
+			if total > 0 then
+				local fraction = done / total
+				TaskBannerHandler.setProgress(2, fraction)
+				if fraction >= TutorialConfigs.LAWN_DONE_AT then
+					lawnTaskDone = true
+					TaskBannerHandler.setDone(2)
+					print(`[Tutorial] Pelouse tondue : {done}/{total} touffes.`)
+				end
+			end
+		end
+	end
+
 	if mowerTaskShown and not mowerTaskDone then
 		-- IL RELANCE, tant que le joueur n'a pas mis la main dessus. On teste ce qu'il TIENT, pas si la machine
 		-- tourne : c'est le geste d'aller la chercher qu'il attend, et une fois qu'elle est dans ses mains,
@@ -1951,6 +2004,9 @@ local function step(dt: number)
 				currency = TaskConfigs.CURRENCIES[TutorialConfigs.LAWN_TASK_CURRENCY],
 				progress = 0,
 			})
+			-- A PARTIR D'ICI ON COMPTE. Le drapeau est pose APRES l'ajout de la ligne : `setProgress` viserait
+			-- sinon une ligne qui n'existe pas encore, et la barre partirait de son premier compte au lieu de zero.
+			lawnTaskShown = true
 		end)
 	end
 
@@ -2134,6 +2190,11 @@ function TutorialController.init()
 			fadePlayer(0)
 		end
 	end)
+	-- LA PARCELLE EST DECLAREE DES LE BOOT, et pas quand la tache arrive : tout ce qui est dehors doit etre pose
+	-- deja coupe AVANT que le joueur voie la pelouse, pas une minute plus tard sous ses yeux. La boucle
+	-- re-essaiera tant qu'elle n'est pas repliquee.
+	ensureGrassArea()
+
 	-- LA BOUCLE PART MEME SI LA PORTE N'EST PAS ENCORE LA. Avec StreamingEnabled elle arrive souvent apres le
 	-- spawn : sortir ici laisserait le guidage mort pour toute la session, sans la moindre erreur pour le dire.
 	-- Elle coute une comparaison de date tant qu'il n'y a rien a animer.
@@ -2202,6 +2263,9 @@ function TutorialController.stop()
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
 	saidPullRope = false
+	lawnTaskShown = false
+	lawnTaskDone = false
+	nextLawnCountAt = 0
 	wasCarrying = false
 	nextGrabAgainAt = 0
 	nextRopeAgainAt = 0

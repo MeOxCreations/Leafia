@@ -177,6 +177,16 @@ type Zone = {
 local queueRebuild: (zone: Zone) -> ()
 
 local zones: { Zone } = {}
+-- LA ZONE QUE LE JOUEUR DOIT TONDRE LUI-MEME. Tout ce qui pousse DEHORS est pose deja coupe.
+--
+-- POURQUOI. Une pelouse entiere a tondre, c'est long, et le tuto doit tenir en une minute : on lui en reserve un
+-- carre et on presente le reste comme deja fait. Le joueur ne voit pas une pelouse tronquee, il voit un JARDIN
+-- dont il reste un bout -- ce qui est exactement ce qu'un paysagiste trouve en arrivant.
+--
+-- Garde ICI et pas dans le didacticiel : c'est le semis qui doit l'appliquer, et lui seul sait quand il finit.
+-- Un appelant exterieur devrait deviner cet instant, et le raterait a chaque re-semis (streaming, obstacle
+-- deplace).
+local playerArea: BasePart? = nil
 local connections: { RBXScriptConnection } = {}
 local template: BasePart? = nil
 -- Meshes de fleurs, resolus au boot. Vide = pas de fleurs, et ce n'est pas une erreur.
@@ -605,6 +615,69 @@ end
 
 -- ETALE SUR PLUSIEURS IMAGES. Fabriquer des milliers de parts d'un coup gele le client (mesure : ~600 ms pour 7 000).
 -- Peut donc YIELD : tous les appelants doivent etre dans un thread a part.
+-- Ce point est-il DANS la boite de cette part ? En repere OBJET, donc une part tournee reste juste.
+--
+-- LA HAUTEUR EST IGNOREE. La zone est une dalle fine posee au sol : tester son Y ne repondrait qu'a "la touffe
+-- est-elle dans les 77 centimetres de la dalle", ce qui depend de son epaisseur et pas de son emprise. Ce qu'on
+-- veut savoir, c'est si la touffe est SOUS la surface dessinee.
+local function insideBox(area: BasePart, pos: Vector3): boolean
+	local p = area.CFrame:PointToObjectSpace(pos)
+	local half = area.Size * 0.5
+	return math.abs(p.X) <= half.X and math.abs(p.Z) <= half.Z
+end
+
+-- COUPE UNE TOUFFE SANS TRANSITION, comme si elle avait toujours ete tondue.
+--
+-- ON RE-UTILISE LA MECANIQUE NORMALE au lieu de la recopier : `apply` fait lui-meme l'echange de maillage quand
+-- `mown` depasse son seuil, et il pose au passage l'etat d'emergence. On l'appelle donc une premiere fois pour
+-- declencher tout ca, on avance l'emergence a sa FIN, et on redessine. Recopier ces quinze lignes ici les aurait
+-- fait diverger a la premiere retouche de la coupe.
+local function cutInstantly(clump: Clump)
+	if clump.gone or clump.mown >= 1 then
+		return
+	end
+	-- LES FLEURS SONT EPARGNEES. La tonte les FAUCHE (elles disparaissent), et une pelouse "deja faite" n'a pas a
+	-- manger le decor que quelqu'un a pose a la main. Elles restent donc, et le joueur les fauchera s'il passe
+	-- dessus -- ce qui est le comportement normal.
+	if clump.flower then
+		return
+	end
+	clump.mown = 1
+	apply(clump, WIND_ANGLE, 1, 0, 0, 1, 0)
+	-- L'EMERGENCE EST DEJA FINIE : la touffe ne doit pas sortir de terre sous les yeux du joueur au boot. Le temps
+	-- mort non plus -- il sert a ce qu'on VOIE la lame passer avant que l'herbe tombe, et ici personne n'a rien vu.
+	clump.cutWait = 0
+	clump.cutT = 1
+	apply(clump, WIND_ANGLE, 1, 0, 0, 1, 0)
+end
+
+-- POSE DEJA COUPE TOUT CE QUI EST HORS DE LA ZONE DU JOUEUR. Sans zone declaree, ne fait rien.
+local function applyPlayerArea(zone: Zone)
+	local area = playerArea
+	if not (area and area.Parent) then
+		return
+	end
+	local box = area :: BasePart
+	local cut = 0
+	for _, clump in ipairs(zone.clumps) do
+		if not insideBox(box, clump.basePos) then
+			local before = clump.mown
+			cutInstantly(clump)
+			if clump.mown > before then
+				cut += 1
+			end
+		end
+	end
+	if cut > 0 then
+		-- LA ZONE DOIT ETRE REDESSINEE AU MOINS UNE FOIS. `apply` a ecrit les tailles, mais les paves gardent leur
+		-- propre drapeau : sans lui, une zone ou personne ne passe resterait figee sur son dernier rendu.
+		zone.settling = true
+		for _, bucket in ipairs(zone.buckets) do
+			bucket.settling = true
+		end
+	end
+end
+
 local function populate(zone: Zone)
 	local grassSource = template
 	if not grassSource then
@@ -923,6 +996,13 @@ local function populate(zone: Zone)
 	local half = size * 0.5
 	zone.radius = math.sqrt(half.X * half.X + half.Z * half.Z)
 	zone.settling = true
+
+	-- ET TOUT CE QUI EST HORS DE LA ZONE DU JOUEUR EST DEJA COUPE. ICI, a la fin du semis, parce que c'est le seul
+	-- instant ou l'on sait que les touffes existent -- et il revient a chaque re-semis (streaming, obstacle
+	-- deplace), donc la pelouse ne repousse jamais derriere notre dos.
+	--
+	-- APRES `buildBuckets` : la coupe marque les paves comme a redessiner, et ils doivent donc exister.
+	applyPlayerArea(zone)
 end
 
 -- SURVEILLE LES OBSTACLES. L'emprise des objets poses est calculee AU SEMIS : sans ces ecoutes, deplacer ou
@@ -1415,6 +1495,45 @@ end
 --
 -- Rend le nombre de touffes REELLEMENT coupees cette image. Zero = la tondeuse tourne dans le vide : de quoi couper le
 -- son de coupe ou faire avancer une jauge sans avoir a recompter derriere.
+--- DECLARE LA ZONE QUE LE JOUEUR DOIT TONDRE LUI-MEME. Tout ce qui pousse dehors est pose deja coupe.
+---
+--- `nil` remet la pelouse entiere a la charge du joueur -- ce qui ne RECOUPE rien de ce qui a deja ete coupe :
+--- l'herbe ne repousse pas, et personne ne le demande.
+---
+--- Appelable a tout moment : les zones deja semees sont traitees dans la foulee, les suivantes le seront a la fin
+--- de leur semis.
+function GrassZoneController.setPlayerArea(area: BasePart?)
+	playerArea = area
+	if not area then
+		return
+	end
+	for _, zone in ipairs(zones) do
+		applyPlayerArea(zone)
+	end
+end
+
+--- COMBIEN DE TOUFFES SONT TONDUES dans la boite de `area`, et combien il y en a. Rend (tondues, total).
+---
+--- LES FLEURS NE COMPTENT PAS. Elles se FAUCHENT au lieu de se raccourcir, et rien n'oblige le joueur a passer
+--- dessus : les compter rendrait la tache impossible a finir sans chercher chaque fleur du jardin.
+---
+--- Total a zero = l'herbe n'est pas encore semee (streaming). L'appelant doit lire les DEUX nombres : une
+--- fraction seule vaudrait 0/0, donc soit une division par zero, soit "tout est fait" -- les deux faux.
+function GrassZoneController.mownCount(area: BasePart): (number, number)
+	local done, total = 0, 0
+	for _, zone in ipairs(zones) do
+		for _, clump in ipairs(zone.clumps) do
+			if not clump.flower and insideBox(area, clump.basePos) then
+				total += 1
+				if clump.mown >= 1 then
+					done += 1
+				end
+			end
+		end
+	end
+	return done, total
+end
+
 function GrassZoneController.mowAt(worldPos: Vector3, radius: number, dt: number): number
 	local rate = GrassZoneConfigs.MOW_RATE * dt
 	local total = 0

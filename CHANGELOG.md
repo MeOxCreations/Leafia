@@ -2204,6 +2204,55 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.718 — La tonte est comptee, et une seule parcelle est a faire
+
+Deux manques d'un coup : la tache "MOW THE LAWN" ne se terminait JAMAIS -- rien ne comptait ce que le joueur
+coupait -- et il n'y avait aucune limite a ce qu'il devait tondre.
+
+### Une parcelle a tondre, le reste deja fait
+
+`AREA_GRASS_NAME` nomme une PART posee dans Studio (`AreaGrassTutorial`) qui delimite le carre a faire. Tout ce
+qui pousse DEHORS est pose **deja coupe**, avant que le joueur voie la pelouse.
+
+Le joueur ne voit donc pas une pelouse tronquee, il voit un JARDIN dont il reste un bout -- ce qui est exactement
+ce qu'un paysagiste trouve en arrivant.
+
+**Une PART et pas un rayon** : la forme du bout a faire se decide a l'oeil, dans la map, en la deplacant et en la
+retaillant. Un rayon autour d'un point obligerait a re-regler un nombre a chaque massif deplace, et ne saurait
+pas faire un rectangle.
+
+**La coupe est posee a la fin de CHAQUE semis**, dans `GrassZoneController` -- le seul endroit qui sache quand les
+touffes existent. Elle revient donc a chaque re-semis (streaming, obstacle deplace) : la pelouse ne repousse
+jamais derriere notre dos. Un appelant exterieur aurait du deviner cet instant, et l'aurait rate.
+
+**On reutilise la mecanique normale de coupe** plutot que de la recopier : `apply` fait lui-meme l'echange de
+maillage quand la coupe depasse son seuil. On l'appelle, on avance l'emergence a sa FIN (personne ne doit voir
+l'herbe sortir de terre au boot), on redessine. Recopier ces quinze lignes les aurait fait diverger a la premiere
+retouche.
+
+**Les fleurs sont epargnees.** La tonte les FAUCHE au lieu de les raccourcir, et une pelouse "deja faite" n'a pas
+a manger le decor pose a la main. Le joueur les fauchera s'il passe dessus, ce qui est le comportement normal.
+
+### La tache se remplit et se termine
+
+La barre suit la part de touffes coupees dans la parcelle, et la tache passe en gris a `LAWN_DONE_AT` (0.95).
+
+**Jamais 1** : il reste toujours une touffe coincee sous un massif ou contre une bordure, et chercher la derniere
+n'est pas du jeu, c'est de la chasse au pixel. Meme raison que l'auto-complete des haies.
+
+**On lit DEUX nombres, pas une fraction** : un total a zero veut dire que l'herbe n'est pas encore semee, pas que
+tout est fait. Une fraction seule donnerait soit une division par zero, soit "termine".
+
+**Les fleurs ne comptent pas** dans le total : rien n'oblige le joueur a passer dessus, et les compter rendrait la
+tache impossible a finir sans chercher chaque fleur du jardin.
+
+Le comptage tourne toutes les 0.4 s. Chaque image parcourrait toutes les touffes de la map soixante fois par
+seconde pour une barre qui n'avance que d'un cheveu.
+
+DEPEND D'UN ASSET : la part `AreaGrassTutorial` doit exister dans le Workspace de la place du tuto. Rojo ne
+synchronise pas le Workspace. Sans elle, rien ne casse -- mais toute la pelouse reste a tondre et la tache ne se
+termine pas.
+
 ## 0.0.717 — Fin des zigzag, il suit de moins pres, et il felicite le joueur
 
 ### Les zigzag : trois causes, toutes de moi
