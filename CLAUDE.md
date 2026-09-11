@@ -1069,6 +1069,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   touche PARTAGEE doit le poser, sinon elle rouvre le trou -- auditer les quatre (seau, tondeuse, echelle, porte)
   et pas seulement celle qui a montre le bug.
 
+- **UN EFFET QUI ANIME UNE VALEUR DOIT S'AJOUTER A ELLE, JAMAIS L'ECRIRE SEUL -- sinon le reglage qu'elle porte
+  n'existe plus, et AUCUN chiffre de config ne repare ca.** Le balancement du marqueur d'exclamation posait
+  `WorldAnchor.setOffset(frame, Vector3.new(0, rise, 0))` : la hauteur passee a `show` etait donc effacee a la
+  PREMIERE image, et tous les marqueurs tombaient au pied de leur cible. Symptome trompeur au possible : on voit
+  un marqueur trop bas, donc on monte sa hauteur dans la config -- et rien ne bouge. J'ai monte celle de la
+  tondeuse, puis DEUX FOIS celle du grand-pere (jusqu'a 15.5 studs, absurde) avant d'aller lire la ligne du
+  battement. Trois corrections a la bonne intention sur la mauvaise grandeur, exactement le motif deja paye sur
+  la vitesse de la tondeuse. Regle : **quand deux ecritures visent le meme champ, la seconde doit COMPOSER avec
+  la premiere** -- garder la valeur de base dans l'etat et ecrire `base + effet`. Et le tell qui tranche en dix
+  secondes : si CHANGER un reglage ne change RIEN a l'ecran, ce n'est pas la valeur qui est fausse, c'est que
+  personne ne la lit. Aller chercher qui ECRIT la propriete, pas quoi mettre dedans.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

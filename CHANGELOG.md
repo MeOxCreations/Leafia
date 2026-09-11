@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.751 — Les marqueurs rouges se posent enfin a la hauteur demandee
+
+Le balancement du marqueur ecrasait sa hauteur. Il ecrivait `setOffset(frame, (0, rise, 0))` -- soit la valeur du
+battement TOUTE SEULE -- donc la hauteur passee a `show` etait effacee a la premiere image et tous les marqueurs
+tombaient au pied de leur cible, a 0.45 stud du sol. Il ecrit maintenant `base + battement`, la base etant gardee
+dans l'etat du marqueur.
+
+CA TOUCHE LES TROIS : celui du grand-pere, celui de la tondeuse et celui de la porte. Leurs hauteurs de config
+(`GRANDPA_MARKER_UP`, `MOWER_MARKER_UP`, `DOOR_MARKER_UP`) n'avaient jamais servi a rien -- elles servent
+maintenant, donc les trois vont se voir differemment et sont a regarder a l'oeil.
+
+`GRANDPA_MARKER_UP` redescend de 15.5 a 10.5, juste au-dessus du badge `TALK` (7.5) qui s'affiche en meme temps.
+15.5 etait une valeur de compensation, cherchee a l'aveugle contre un reglage que personne ne lisait.
+
+LE SYMPTOME NE RESSEMBLAIT PAS A SA CAUSE. Un marqueur trop bas envoie monter son chiffre dans la config, et rien
+ne bouge -- j'ai monte celui de la tondeuse, puis deux fois celui du grand-pere, avant d'aller lire la ligne du
+battement. Le tell est note dans le journal de CLAUDE.md : quand CHANGER un reglage ne change RIEN a l'ecran, ce
+n'est pas la valeur qui est fausse, c'est que personne ne la lit.
+
 ## 0.0.750 — Il se tourne vers le joueur, puis il part vers l'arriere du camion
 
 Quand le joueur lui parle apres la tonte, deux choses en plus de la replique. Il PIVOTE vers lui pendant qu'il

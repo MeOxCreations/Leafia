@@ -86,7 +86,11 @@ local MARK_BACK = 0.38
 local player = Players.LocalPlayer
 
 local gui: ScreenGui? = nil
-local markers: { [Frame]: { born: number, phase: number, mark: ImageLabel, nextPop: number } } = {}
+-- `base` EST LA HAUTEUR DEMANDEE A `show`, gardee. Le balancement s'ecrit dans le MEME champ (l'offset monde de
+-- WorldAnchor) : sans cette copie il n'y a pas de quoi la reconstituer, et le battement la remplace.
+local markers: {
+	[Frame]: { born: number, phase: number, mark: ImageLabel, nextPop: number, base: Vector3 },
+} = {}
 local stepConn: RBXScriptConnection? = nil
 
 local function getGui(): ScreenGui
@@ -152,7 +156,14 @@ local function step()
 		-- verticalement, quelle que soit l'orientation de la camera. Un decalage en pixels partirait de travers
 		-- des qu'on incline la vue.
 		local rise = (math.sin(now * BOB_SPEED + state.phase) * 0.5 + 0.5) * BOB_HEIGHT
-		WorldAnchor.setOffset(frame, Vector3.new(0, rise, 0))
+		-- IL S'AJOUTE A LA HAUTEUR DEMANDEE, il ne la remplace pas -- et c'est un bug qui a coute trois reglages.
+		-- Cette ligne posait `(0, rise, 0)` tout court : la hauteur passee a `show` etait donc effacee a la
+		-- premiere image, et TOUS les marqueurs tombaient au pied de leur cible, a 0.45 stud du sol.
+		--
+		-- Le symptome ne ressemble pas a sa cause : on voit un marqueur trop bas, on monte le chiffre de la
+		-- config... et rien ne bouge, parce que le chiffre n'a jamais ete lu plus d'une image. J'ai monte celui de
+		-- la tondeuse, puis deux fois celui du grand-pere, avant de venir lire CETTE ligne.
+		WorldAnchor.setOffset(frame, state.base + Vector3.new(0, rise, 0))
 
 		-- DE TEMPS EN TEMPS. L'ecart est retire au hasard A CHAQUE fois, pas une seule : deux marqueurs partis
 		-- decales finiraient sinon par se rattraper et sursauter ensemble.
@@ -214,6 +225,7 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 		-- Le PREMIER sursaut est deja decale au hasard : sinon tous les marqueurs poses au meme instant
 		-- sursauteraient ensemble, et seuls les suivants se decaleraient.
 		nextPop = os.clock() + POP_TIME + math.random() * MARK_JITTER,
+		base = offset or Vector3.zero,
 	}
 
 	WorldAnchor.attach(frame, target, offset or Vector3.zero, MAX_DISTANCE, SCALE)

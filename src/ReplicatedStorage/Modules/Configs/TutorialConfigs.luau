@@ -586,9 +586,12 @@ return {
 	-- SA ROOTPART EST BASSE : elle sort du 3D Importer, donc elle est posee au PIED du rig et pas a mi-torse
 	-- comme sur un personnage Roblox. Toutes les hauteurs de ce bloc se comptent donc depuis le SOL sous lui.
 	--
-	-- BIEN AU-DESSUS DE SA TETE, et pas juste au-dessus : le marqueur doit se lire de loin, par-dessus lui. Pose
-	-- trop pres du crane il se lit comme un chapeau, pas comme un appel -- et il masque le visage qu'on regarde.
-	GRANDPA_MARKER_UP = 15.5,
+	-- AU-DESSUS DU BADGE "PARLER" (7.5), qui s'affiche en meme temps : les deux se liraient l'un sur l'autre.
+	--
+	-- CE CHIFFRE N'ETAIT PAS LU jusqu'ici -- le balancement du marqueur ecrasait la hauteur demandee (corrige
+	-- dans WorldMarker). Il est donc remis a une valeur SENSEE au lieu des 15.5 auxquels on etait monte en
+	-- cherchant a compenser un reglage qui ne servait a rien.
+	GRANDPA_MARKER_UP = 10.5,
 	-- A quelle distance le badge "PARLER" apparait, en studs. DISTANCE RADIALE, comme celle de la porte : une
 	-- boite orientee laisse des angles morts, et il se promene -- il n'a aucune orientation stable.
 	TALK_RADIUS = 11,
