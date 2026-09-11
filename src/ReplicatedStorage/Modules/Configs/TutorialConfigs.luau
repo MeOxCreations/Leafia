@@ -1091,12 +1091,17 @@ return {
 	OLDMAN_WALK_GROUND_RAY = 30,
 	-- DE COMBIEN ON REMONTE AVANT DE SONDER LE SOL, en studs.
 	--
-	-- UN RAYON QUI PART DE SA HAUTEUR ACTUELLE NE PEUT PAS VOIR UN SOL PLUS HAUT QUE LUI : il demarre DEJA sous la
-	-- surface du trottoir, donc il le traverse et touche le terrain d'en dessous. Le grand-pere arrivait les pieds
-	-- DANS le trottoir, enfonce de son epaisseur exacte.
+	-- POURQUOI ON REMONTE : un rayon parti de sa hauteur ACTUELLE ne peut pas voir un sol plus HAUT que lui. Il
+	-- demarre deja sous la surface du trottoir, la traverse, et rend le terrain d'en dessous -- le grand-pere
+	-- arrivait les pieds DANS le trottoir, enfonce de son epaisseur exacte.
 	--
-	-- On part donc de plus haut, et on sonde d'autant plus loin vers le bas pour ne rien perdre en descente.
-	OLDMAN_WALK_PROBE_UP = 20,
+	-- ET POURQUOI SI PEU : ce qui est au-dessus de lui compte aussi. A 20 studs, le rayon partait DANS le toit de
+	-- la maison et le trouvait avant le sol -- il sortait de chez lui en marchant dans les airs. La valeur doit
+	-- donc rester au-dessus de la hauteur d'une MARCHE, et sous celle de tout ce qu'on peut passer DESSOUS : un
+	-- pas de porte, un auvent, une branche.
+	--
+	-- Regle : une sonde qui part d'ailleurs que du point mesure recupere tout ce qu'il y a entre les deux.
+	OLDMAN_WALK_PROBE_UP = 2.5,
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,

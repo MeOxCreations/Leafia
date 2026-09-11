@@ -1096,9 +1096,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   enfonce de son epaisseur exacte -- et le calcul etait juste, c'est la MESURE qui etait fausse. Symptome
   trompeur : ca ressemble a un mauvais offset de hauteur (on va chercher un chiffre a corriger) alors que la
   sonde ne pouvait pas repondre. Regle : une sonde doit couvrir les DEUX sens de ce qu'elle mesure -- partir de
-  plus haut que le point vise, et allonger la portee d'autant pour ne rien perdre en descente. Corollaire : le
-  meme rayon sert souvent a plusieurs endroits (arrivee d'une marche, chaque pas d'un suivi, tirage d'un point de
-  promenade) -- les corriger TOUS, sinon le bug reapparait des qu'on emprunte l'autre chemin.
+  plus haut que le point vise, et allonger la portee d'autant pour ne rien perdre en descente. MAIS PAS TROP
+  HAUT, et c'est le piege du tour d'apres : une sonde qui part d'ailleurs que du point mesure recupere tout ce
+  qu'il y a ENTRE LES DEUX. Partie de 20 studs au-dessus, elle trouvait le TOIT de la maison avant le sol, et le
+  grand-pere sortait de chez lui en marchant dans les airs. La marge doit donc rester au-dessus de la hauteur
+  d'une MARCHE et sous celle de tout ce qu'on peut passer DESSOUS (pas de porte, auvent, branche) -- 2.5 studs
+  ici. Corollaire : le meme rayon sert souvent a plusieurs endroits (arrivee d'une marche, chaque pas d'un suivi,
+  tirage d'un point de promenade) -- les corriger TOUS, sinon le bug reapparait des qu'on emprunte l'autre
+  chemin.
 
 ## Design emotionnel
 

@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.767 — Le grand-pere ne sort plus de chez lui en marchant dans les airs
+
+`OLDMAN_WALK_PROBE_UP` passe de 20 a 2.5 studs. La sonde de sol partait de 20 studs au-dessus de lui : sur son
+pas de porte, elle demarrait DANS le toit de la maison et le trouvait avant le sol -- il sortait donc a hauteur de
+toiture.
+
+C'est le piege du tour d'apres. Remonter la sonde repare le trottoir (0.0.762), mais une sonde qui part d'ailleurs
+que du point mesure recupere tout ce qu'il y a ENTRE LES DEUX. La marge doit rester au-dessus de la hauteur d'une
+MARCHE et sous celle de tout ce qu'on peut passer DESSOUS : un pas de porte, un auvent, une branche.
+
+L'entree du journal de CLAUDE.md est completee : elle ne disait que la moitie de la regle.
+
 ## 0.0.766 — Cinq facons d'appeler le joueur qui ne suit pas
 
 `WAIT_PLAYER_SOUND` devient `WAIT_PLAYER_SOUNDS`, les cinq `Say_wait_player_1` a `_5`. Tirage au hasard, jamais
