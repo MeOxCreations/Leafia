@@ -849,8 +849,12 @@ return {
 	-- l'interesse, c'est la MACHINE -- il va la ou le travail va se faire, et le joueur s'y rend en meme temps
 	-- que lui. Une cible FIXE donne un deplacement lisse, sans qu'on ait rien a lisser.
 	--
-	-- Distance a laquelle il s'arrete de la machine, en studs.
-	FOLLOW_MOWER_DIST = 12,
+	-- Distance a laquelle il s'arrete de la machine, en studs. A 12 il restait spectateur a l'autre bout de la
+	-- pelouse : de pres, il DESIGNE la machine -- on comprend ce qu'il montre sans qu'il ait a le dire.
+	--
+	-- IL NE PEUT PAS TOUJOURS Y ARRIVER, et c'est voulu : `FOLLOW_MIN_PLAYER` l'arrete avant s'il devait entrer
+	-- dans le dos du joueur. Le joueur colle a la machine gagne, lui attend a cote.
+	FOLLOW_MOWER_DIST = 7,
 	-- HYSTERESIS : de combien il faut la depasser pour qu'il REPARTE. Sans elle, arrete pile a la distance
 	-- d'arret, il repart au moindre centimetre -- des micro-pas permanents, ce qui est exactement le tic qu'on
 	-- veut eviter.

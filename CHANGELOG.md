@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.739 — Le grand-pere s'approche plus pres de la tondeuse
+
+`FOLLOW_MOWER_DIST` passe de 12 a 7 studs. A 12 il restait spectateur a l'autre bout de la pelouse ; de pres, il
+DESIGNE la machine, et le joueur comprend ce qu'il montre sans qu'il ait a le dire.
+
+Il n'y arrive pas toujours, et c'est voulu : `FOLLOW_MIN_PLAYER` (4.5) l'arrete avant s'il devait entrer dans le
+dos du joueur. Le joueur colle a la machine gagne, le grand-pere attend a cote.
+
 ## 0.0.738 — La pastille rouge reste a l'ecran quand on regarde ailleurs
 
 Hors champ, le marqueur ne disparait plus : il se plaque sur le BORD de l'ecran, du cote de sa cible. Il repond
