@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.773 — La sonde des parts ancrees ne compte plus celles des modeles contenus
+
+Le camion criait que huit de ses parts etaient ancrees a tort. C'etaient les OUTILS ranges dans sa benne : des
+modeles a eux, avec leur propre rig, ancres expres pour rester en place. Leur Motor6D ne regarde pas l'animation
+d'ambiance du camion.
+
+La sonde ne compte plus qu'une part dont le premier Model au-dessus d'elle EST le modele anime. Un modele peut en
+contenir d'autres, et ce qu'ils ont dedans ne le regarde pas.
+
+C'est le meme defaut que celle-ci avait deja eu avec la RootPart : nommer un coupable qui a raison envoie
+chercher un probleme qui n'existe pas, et coute plus cher que pas de sonde du tout.
+
 ## 0.0.772 — Les dessins de la cisaille et du taille-haie
 
 Les cases du camion montrent le DESSIN de l'outil quand il en existe un, et gardent l'apercu 3D sinon. Un dessin

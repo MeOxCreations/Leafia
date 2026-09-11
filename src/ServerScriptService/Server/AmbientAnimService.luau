@@ -86,7 +86,15 @@ local function warnIfAnchored(model: Model)
 	for _, d in ipairs(model:GetDescendants()) do
 		if d:IsA("Motor6D") then
 			local driven = d.Part1
-			if driven and driven.Anchored then
+			-- ET SEULEMENT LES PARTS DE CE MODELE-CI. Un modele peut en CONTENIR d'autres, avec leur propre rig :
+			-- les outils ranges dans la benne du camion sont des modeles a eux, ancres EXPRES pour rester en
+			-- place. Leur Motor6D ne regarde pas l'animation d'ambiance du camion, et les nommer envoie chercher
+			-- un probleme qui n'existe pas -- exactement le defaut que cette sonde avait deja eu avec la RootPart.
+			--
+			-- Le test tient en une ligne : la part appartient a ce modele si le premier Model au-dessus d'elle
+			-- EST ce modele.
+			local owner = if driven then driven:FindFirstAncestorOfClass("Model") else nil
+			if driven and driven.Anchored and owner == model then
 				table.insert(blocked, driven.Name)
 			end
 		end
