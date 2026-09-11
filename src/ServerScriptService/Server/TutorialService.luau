@@ -694,6 +694,12 @@ local strollNextAt = 0
 -- reposer la tondeuse ensuite : le grand-pere n'a plus rien a lui demander, il ne doit pas retourner la chercher.
 local engineStarted = false
 local engineScanAt = 0
+-- OU IL EMMENE LE JOUEUR, quand il l'emmene quelque part. Pose = une escorte est en cours, et elle passe devant
+-- tout le reste dans le choix de destination : c'est le seul moment ou il a un endroit precis a rejoindre.
+local escortTarget: BasePart? = nil
+-- POUR PREVENIR LE CLIENT A L'ARRIVEE. Resolu dans `init`, lu par la boucle : elle tourne bien avant lui, donc
+-- elle ne peut pas le chercher elle-meme.
+local atTruckRemote: RemoteEvent? = nil
 local walkZone: BasePart? = nil
 local warnedZone = false
 
@@ -708,6 +714,7 @@ local function stopFollow()
 	followAnimSpeed = 0
 	strollTarget = nil
 	engineStarted = false
+	escortTarget = nil
 	if track then
 		-- L'idle tourne DESSOUS (priorite Idle contre Movement) : arreter le pas suffit a le remettre au repos,
 		-- il n'y a rien a reposer.
@@ -952,7 +959,20 @@ startFollow = function(player: Player, model: Model)
 		local speed = 0
 		local keepDist = 0
 		local chasing = false
+		local escorting = false
 		local holding = CarryUtils.holds(player, "Mower")
+
+		-- L'ESCORTE PASSE DEVANT TOUT. C'est le seul moment ou il a un endroit PRECIS a rejoindre ; la machine et
+		-- la promenade sont des envies, celle-la est un rendez-vous.
+		local escort = escortTarget
+		if escort then
+			if escort.Parent then
+				goal, speed, keepDist, escorting =
+					escort.Position, TutorialConfigs.FOLLOW_SPEED, TutorialConfigs.ESCORT_ARRIVE, true
+			else
+				escortTarget = nil -- le point a disparu (changement de place) : on ne va plus nulle part
+			end
+		end
 		-- LE MOTEUR EST LA LIMITE ENTRE SES DEUX VIES. Avant, il pousse le joueur vers la machine ; apres, il
 		-- flane. Il ne suffit pas que la tondeuse soit dans ses mains : tant qu'elle n'a pas demarre, le joueur
 		-- est encore en train de tirer la corde, et voir le grand-pere s'eloigner a ce moment-la retire tout son
@@ -966,7 +986,7 @@ startFollow = function(player: Player, model: Model)
 				strollNextAt = now + TutorialConfigs.STROLL_WAIT_MIN
 			end
 		end
-		if not engineStarted and not holding then
+		if not escorting and not engineStarted and not holding then
 			-- LA MACHINE EST CHERCHEE DEPUIS LE JOUEUR, pas depuis lui : c'est celle vers laquelle le JOUEUR se
 			-- dirige qui compte, et c'est aussi celle que son repere a l'ecran lui montre.
 			local mower = currentMower(hrp.Position)
@@ -980,7 +1000,7 @@ startFollow = function(player: Player, model: Model)
 		end
 		-- ET S'IL TIENT LA MACHINE SANS L'AVOIR DEMARREE, rien des deux : il reste ou il est et le regarde
 		-- s'acharner sur la corde. `goal` a nil donne un pas nul, donc le meme calcul en dessous.
-		if not chasing and engineStarted then
+		if not escorting and not chasing and engineStarted then
 			local target = strollTarget
 			-- IL LAISSE TOMBER UNE CIBLE QUI S'ELOIGNE : le joueur marche pendant qu'il marche, et finir un
 			-- trajet vers un coin que le joueur a quitte n'accompagne plus personne.
@@ -1009,10 +1029,31 @@ startFollow = function(player: Player, model: Model)
 		-- IL EST ARRIVE, OU IL EST TROP PRES DU JOUEUR : il s'arrete.
 		local arrived = goal == nil or goalDist <= keepDist or goalDist < 1e-3
 		local crowded = playerDist <= TutorialConfigs.FOLLOW_MIN_PLAYER
+		-- ET PENDANT UNE ESCORTE, IL ATTEND CELUI QU'IL EMMENE. Sans ca il partirait devant et le joueur suivrait
+		-- un dos : ce n'est plus un accompagnement, c'est une course.
+		local waiting = escorting and playerDist > TutorialConfigs.ESCORT_LEASH
 		if chasing then
 			-- L'HYSTERESIS NE SERT QU'A LA MACHINE. Lui faire porter la promenade la ferait repartir avec une
 			-- distance d'arret qui n'est pas la sienne.
 			followStopped = arrived or crowded
+		elseif escorting and arrived then
+			-- ARRIVE AU CAMION. On coupe la boucle : il reste la pour expliquer, il ne repart pas flaner --
+			-- quelqu'un qui s'eloigne pendant qu'il montre quelque chose annule ce qu'il montre.
+			escortTarget = nil
+			setFollowWalking(model, 0)
+			stopFollow()
+			-- IL SE TOURNE VERS LE CAMION. Son cap suit sa marche, donc il arrive face a sa DIRECTION D'ARRIVEE,
+			-- qui n'a aucune raison de pointer le camion.
+			local truck = findModelByName(TruckConfigs.MODEL_NAME)
+			if truck then
+				faceOldManTo(model, (truck :: Model):GetBoundingBox().Position, TutorialConfigs.FACE_PLAYER_TIME)
+			end
+			local remote = atTruckRemote
+			if remote and player.Parent then
+				print(`[Tutorial] Le grand-pere est arrive au camion avec {player.Name}.`)
+				remote:FireClient(player)
+			end
+			return
 		elseif strollTarget and (arrived or crowded) then
 			-- ARRIVE, OU LE JOUEUR LUI EST DANS LES PIEDS : il abandonne ce point et se repose un moment. Sans
 			-- l'abandon, un joueur plante sur lui le figerait sur une cible qu'il ne peut plus atteindre.
@@ -1027,8 +1068,21 @@ startFollow = function(player: Player, model: Model)
 
 		-- OU IL AVANCE, ET DE COMBIEN. Arrete, le pas vaut zero : la suite du calcul est alors la meme, ce qui
 		-- evite d'ecrire la pose a deux endroits differents -- et donc de les voir diverger.
+		-- ET IL TOURNE AVANT D'AVANCER quand la destination est derriere lui. La boucle tourne et avance dans la
+		-- MEME image : sans ce garde il part de cote en pivotant, ses jambes devant lui et son corps ailleurs --
+		-- le defaut qu'on a corrige sur sa marche scriptee, et qui se reformerait ici.
+		local turning = false
+		if goal and goalDist >= 1e-3 then
+			local look = rootPart.CFrame.LookVector
+			local lookFlat = Vector3.new(look.X, 0, look.Z)
+			if lookFlat.Magnitude > 1e-3 then
+				local dot = math.clamp(lookFlat.Unit:Dot(toGoal.Unit), -1, 1)
+				turning = math.deg(math.acos(dot)) > TutorialConfigs.ESCORT_TURN_FIRST
+			end
+		end
+
 		local step = 0
-		if not (arrived or crowded) then
+		if not (arrived or crowded or waiting or turning) then
 			-- `dt` fait que la vitesse est la meme quel que soit le nombre d'images, et on ne depasse jamais la
 			-- distance d'arret.
 			step = math.min(speed * dt, goalDist - keepDist)
@@ -1055,7 +1109,7 @@ startFollow = function(player: Player, model: Model)
 		-- supprime aussi la deuxieme cible, donc l'alternance entre deux caps a la limite de la distance d'arret
 		-- -- le tremblement que `FOLLOW_TURN` servait a moyenner n'a plus de source.
 		local facing = CFrame.new(nextPos) * (rootPart.CFrame - rootPart.CFrame.Position)
-		if step > 0 and goalDist >= 1e-3 then
+		if (step > 0 or turning) and goalDist >= 1e-3 then
 			local wanted = CFrame.lookAt(nextPos, nextPos + toGoal.Unit)
 			-- Un lerp de CFrame interpole la rotation par le plus court chemin : pas besoin de manipuler des
 			-- angles, ni de gerer le passage par 180 degres.
@@ -1146,35 +1200,33 @@ function TutorialService.init()
 
 	-- ET SA PHRASE EST FINIE : il part vers l'arriere du camion, ou sont les outils.
 	local truckRemote = RemoteSetup.getRemote("TutorialGrandpaTruck", "Tutorial") :: RemoteEvent
-	local atTruckRemote = RemoteSetup.getRemote("TutorialGrandpaAtTruck", "Tutorial") :: RemoteEvent
+	atTruckRemote = RemoteSetup.getRemote("TutorialGrandpaAtTruck", "Tutorial") :: RemoteEvent
 	truckRemote.OnServerEvent:Connect(function(player)
 		if sceneOwner ~= player then
 			return
 		end
-		-- `walkOldMan` sort tout seul si une marche tourne deja, et il previent nommement si la part manque.
-		walkOldMan(TutorialConfigs.OLDMAN_TRUCK_TARGET, function(model)
-			-- IL SE TOURNE VERS LE CAMION. Sa marche le laisse face a sa DIRECTION D'ARRIVEE, qui n'a aucune
-			-- raison de pointer le camion : il parlait donc du hayon en regardant ailleurs.
-			--
-			-- VERS LE CENTRE DU MODELE et pas vers le point d'arret : c'est l'objet qu'il montre. On prend la
-			-- boite englobante, qui est justement le milieu visuel du camion.
-			local truck = findModelByName(TruckConfigs.MODEL_NAME)
-			if truck then
-				local center = (truck :: Model):GetBoundingBox().Position
-				faceOldManTo(model, center, TutorialConfigs.FACE_PLAYER_TIME)
-			else
-				warn(
-					`[Tutorial] Aucun Model "{TruckConfigs.MODEL_NAME}" : le grand-pere restera face a sa `
-						.. "direction d'arrivee."
-				)
+		-- IL EMMENE LE JOUEUR, il n'y va pas tout seul. Ce n'est donc plus une marche scriptee d'un point a un
+		-- autre mais une DESTINATION posee dans la boucle de suivi : elle sait deja avancer, s'arreter pres du
+		-- joueur et jouer le pas, et c'est elle qui ecrit sa pose -- deux systemes sur la meme propriete
+		-- donneraient une moyenne des deux, jamais un choix.
+		local point = findByName(TutorialConfigs.OLDMAN_TRUCK_TARGET)
+		if not (point and point:IsA("BasePart")) then
+			warn(
+				`[Tutorial] Aucune part "{TutorialConfigs.OLDMAN_TRUCK_TARGET}" : le grand-pere n'a nulle part ou `
+					.. "emmener le joueur. Rojo ne synchronise pas le Workspace."
+			)
+			return
+		end
+		escortTarget = point :: BasePart
+		local model = findByName(TutorialConfigs.GRANDPA_NAME)
+		if model and model:IsA("Model") then
+			-- LA BOUCLE EST MORTE DEPUIS LA FIN DE LA TONTE : on la relance. Elle sort d'elle-meme si une autre
+			-- tourne encore, donc l'appel est sans risque.
+			local follow = startFollow
+			if follow then
+				follow(player, model :: Model)
 			end
-			-- ET IL PARLE EN ARRIVANT. On previent le joueur qui a lance la scene : les voix se jouent chez lui,
-			-- et lui seul est concerne -- a deux, l'autre n'a pas a entendre une consigne qu'on ne lui donne pas.
-			if sceneOwner == player and player.Parent then
-				print(`[Tutorial] Le grand-pere est arrive au camion : on previent {player.Name}.`)
-				atTruckRemote:FireClient(player)
-			end
-		end)
+		end
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur

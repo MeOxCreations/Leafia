@@ -103,6 +103,16 @@ local warnedNoTruckDoor = false
 -- IL N'A QU'UNE PHRASE POUR L'OUVERTURE DU HAYON, et il ne la dit qu'une fois : la porte est une BASCULE, donc
 -- le joueur peut la rouvrir dix fois -- une replique qui repart a chaque fois cesse d'etre une reaction.
 local saidTruckOpened = false
+-- ===== IL EMMENE LE JOUEUR AU CAMION =====
+-- Vrai entre son depart et son arrivee. C'est la SEULE fenetre ou "le joueur ne bouge pas" veut dire quelque
+-- chose : ailleurs, rester immobile est son droit.
+local escorting = false
+-- OU ETAIT LE JOUEUR, et depuis quand il n'a pas bouge. On compare deux POSITIONS plutot que de lire une vitesse
+-- ou un etat d'Humanoid : ca couvre tout -- clavier, joystick, joueur bloque contre un mur, fenetre en arriere
+-- plan -- alors qu'une vitesse dirait "il marche" d'un personnage qui pousse un obstacle sans avancer.
+local lastSpot: Vector3? = nil
+local stillSince = 0
+local nextWaitCallAt = 0
 -- ===== L'ETAPE DE LA HAIE =====
 -- ELLE DEMARRE QUAND LA CISAILLE EST EN MAIN, pas a l'ouverture du camion : c'est le geste du joueur qui la
 -- declenche. `hedgeModel` est GARDE une fois choisi -- re-choisir la plus proche a chaque image ferait sauter le
@@ -2000,6 +2010,10 @@ function TutorialController.talkToGrandpa()
 		if truck then
 			truck:FireServer()
 		end
+		-- L'ESCORTE COMMENCE. Le compte d'immobilite part d'ICI et pas de la derniere fois que le joueur a bouge :
+		-- sinon il se ferait appeler dans la seconde s'il ecoutait la phrase sans bouger.
+		escorting = true
+		lastSpot, stillSince, nextWaitCallAt = nil, os.clock(), 0
 	end)
 end
 
@@ -2191,6 +2205,29 @@ local function step(dt: number)
 						remote:FireServer()
 					end
 				end
+			end
+		end
+	end
+
+	-- IL ATTEND LE JOUEUR QUI NE SUIT PAS. Mesure par DEPLACEMENT REEL : deux positions comparees couvrent tous
+	-- les cas -- clavier, joystick, joueur coince contre un mur, fenetre en arriere-plan -- alors qu'une vitesse
+	-- dirait "il marche" de quelqu'un qui pousse un obstacle sans avancer d'un stud.
+	if escorting then
+		local me = getRoot()
+		if me then
+			local spot = me.Position * Vector3.new(1, 0, 1)
+			local was = lastSpot
+			if not was or (spot - was).Magnitude > TutorialConfigs.WAIT_PLAYER_EPSILON then
+				lastSpot, stillSince = spot, now
+			elseif
+				now - stillSince >= TutorialConfigs.WAIT_PLAYER_AFTER
+				and now >= nextWaitCallAt
+				-- ET SEULEMENT S'IL NE PARLE PAS DEJA : un appel par-dessus sa propre phrase la couperait, et
+				-- c'est le defaut qu'on a ferme sur son impatience.
+				and speechOver()
+			then
+				nextWaitCallAt = now + TutorialConfigs.WAIT_PLAYER_COOLDOWN
+				sayVoice(TutorialConfigs.WAIT_PLAYER_SOUND)
 			end
 		end
 	end
@@ -2721,6 +2758,7 @@ function TutorialController.init()
 	resolve("TutorialGrandpaAtTruck", function(r)
 		r.OnClientEvent:Connect(function()
 			print("[Tutorial] Le grand-pere est arrive au camion : le marqueur passe sur le hayon.")
+			escorting = false
 			sayVoice(TutorialConfigs.OPEN_TRUCK_SOUND)
 			-- LE MARQUEUR PASSE SUR LE HAYON. On pose l'INTENTION, pas le marqueur : la boucle le fabrique des
 			-- que la part est la. Le camion peut n'etre pas encore replique -- il est loin du joueur au debut du
@@ -2836,6 +2874,7 @@ function TutorialController.stop()
 	lawnFraction = 0
 	saidTruckOpened = false
 	hedgeStepOn, hedgeTaskDone = false, false
+	escorting = false
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
 	WorldMarker.remove(hedgeMarker)

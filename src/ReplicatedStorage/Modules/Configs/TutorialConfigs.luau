@@ -811,6 +811,32 @@ return {
 	-- OU IL VA APRES AVOIR FELICITE LE JOUEUR : l'arriere du camion, ou sont les outils. Une part posee dans
 	-- Studio, comme son point de sortie -- deplacer le camion n'oblige alors a toucher aucune ligne de code.
 	OLDMAN_TRUCK_TARGET = "OldManWalkToTruck",
+	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
+	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
+	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.
+	--
+	-- LA LAISSE, en studs : au-dela de cette distance ENTRE EUX, il s'arrete et patiente. Plus court, il
+	-- s'arreterait tous les trois pas ; plus long, il arriverait avant que le joueur ait compris qu'il fallait
+	-- suivre.
+	ESCORT_LEASH = 14,
+	-- Distance au point d'arrivee a laquelle il se considere arrive, en studs.
+	ESCORT_ARRIVE = 2,
+	-- AU-DELA DE CET ECART DE CAP (en degres), IL TOURNE SANS AVANCER. Sinon il part de cote en pivotant, ses
+	-- jambes devant lui et son corps ailleurs -- le defaut qu'on a corrige sur sa marche scriptee, qui se
+	-- reformerait ici puisque la boucle tourne et avance dans la meme image.
+	ESCORT_TURN_FIRST = 40,
+
+	-- ET S'IL ATTEND POUR RIEN, IL APPELLE. Le joueur qui ne comprend pas qu'il faut suivre voit un vieux
+	-- monsieur plante au milieu du jardin : sans un mot, rien ne lui dit que c'est LUI qu'on attend.
+	WAIT_PLAYER_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
+	-- Combien de temps le joueur doit rester immobile avant qu'il appelle, en secondes.
+	WAIT_PLAYER_AFTER = 2.5,
+	-- De combien il faut avoir bouge pour ne PLUS etre immobile, en studs. Pas zero : un personnage debout
+	-- tremble de quelques centiemes (physique, animation de repos), et un seuil a zero ne tirerait jamais.
+	WAIT_PLAYER_EPSILON = 1.5,
+	-- Ecart minimum entre deux appels. Il patiente peut-etre longtemps, mais il ne harcele pas.
+	WAIT_PLAYER_COOLDOWN = 9,
+
 	-- IL SE TOURNE AVANT DE PARTIR, en secondes pour un DEMI-TOUR -- le temps reel est proportionnel a l'angle,
 	-- donc un quart de tour prend la moitie de ca et un cap deja bon ne coute rien.
 	--

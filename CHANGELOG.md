@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.765 — Il EMMENE le joueur au camion au lieu d'y aller tout seul
+
+Il partait devant et le joueur suivait un dos. Il n'avance plus que tant que le joueur reste avec lui : au-dela
+de `ESCORT_LEASH` (14 studs) entre eux, il s'arrete et patiente. Un PNJ qui part devant transforme une consigne
+en course.
+
+ET S'IL ATTEND POUR RIEN, IL APPELLE : `Oldman_scene_speech_Say_wait_player_1`, apres 2.5 s d'immobilite, avec 9 s
+d'ecart minimum entre deux. Sans un mot, un joueur qui n'a pas compris qu'il fallait suivre voit juste un vieux
+monsieur plante au milieu du jardin.
+
+L'IMMOBILITE SE MESURE PAR DEPLACEMENT REEL, deux positions comparees a 1.5 stud pres. Ca couvre tous les cas --
+clavier, joystick, joueur coince contre un mur, fenetre en arriere-plan -- alors qu'une vitesse dirait "il
+marche" de quelqu'un qui pousse un obstacle sans avancer d'un stud. Le seuil n'est pas a zero : un personnage
+debout tremble de quelques centiemes, et zero ne tirerait jamais.
+
+CE N'EST PLUS UNE MARCHE SCRIPTEE mais une DESTINATION posee dans la boucle de suivi -- celle qui l'emmenait deja
+vers la tondeuse. Elle sait avancer, s'arreter pres du joueur, jouer le pas, et c'est elle qui ecrit sa pose :
+deux systemes sur la meme propriete donneraient une moyenne des deux, jamais un choix.
+
+ET IL TOURNE AVANT D'AVANCER quand la destination est derriere lui (au-dela de `ESCORT_TURN_FIRST`, 40 degres).
+La boucle tourne et avance dans la MEME image : sans ce garde il repartait de cote en pivotant, le defaut corrige
+en 0.0.752 sur sa marche scriptee, qui se serait reforme ici.
+
+L'appel ne part jamais par-dessus sa propre voix : meme regle que son impatience.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_Say_wait_player_1` dans `Sounds/Scenes/Scene1/Voices`.
+
 ## 0.0.764 — L'etape de la haie : cisaille en main, marqueur dessus, un tiers a tailler
 
 Quand le joueur EQUIPE la cisaille apres avoir ouvert le hayon, le grand-pere dit
