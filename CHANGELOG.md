@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.762 — Le grand-pere ne marche plus les pieds dans le trottoir
+
+Le rayon qui mesure le sol d'arrivee partait de sa hauteur COURANTE. Un trottoir est plus haut que la pelouse :
+le rayon demarrait donc deja sous sa surface, la traversait, et rendait le terrain d'en dessous -- il arrivait
+enfonce de l'epaisseur exacte du trottoir. Le calcul de hauteur etait juste, c'est la mesure qui etait fausse.
+
+Les sondes partent maintenant de `OLDMAN_WALK_PROBE_UP` (20 studs) AU-DESSUS du point, avec une portee allongee
+d'autant pour ne rien perdre quand le sol descend.
+
+LES QUATRE SONDES SONT CORRIGEES, pas seulement celle de l'arrivee : la hauteur de depart de sa marche, le sol
+sous chaque pas du suivi et de la promenade, et le tirage d'un point de promenade. Le meme rayon sert a plusieurs
+chemins -- n'en reparer qu'un ferait revenir le bug des que l'autre est emprunte, en particulier en flanant sur
+le trottoir.
+
+La lecon est dans le journal de CLAUDE.md : une sonde doit couvrir les DEUX sens de ce qu'elle mesure.
+
 ## 0.0.761 — Le marqueur du grand-pere descend de moitie
 
 `GRANDPA_MARKER_UP` passe de 9 a 4.5 : a 9 il decrochait encore du personnage.

@@ -1028,6 +1028,14 @@ return {
 	-- sa hauteur au-dessus du sol au depart et on la lui garde a l'arrivee. Sans ca, un sol qui monte ou descend
 	-- entre les deux le ferait s'enfoncer ou leviter.
 	OLDMAN_WALK_GROUND_RAY = 30,
+	-- DE COMBIEN ON REMONTE AVANT DE SONDER LE SOL, en studs.
+	--
+	-- UN RAYON QUI PART DE SA HAUTEUR ACTUELLE NE PEUT PAS VOIR UN SOL PLUS HAUT QUE LUI : il demarre DEJA sous la
+	-- surface du trottoir, donc il le traverse et touche le terrain d'en dessous. Le grand-pere arrivait les pieds
+	-- DANS le trottoir, enfonce de son epaisseur exacte.
+	--
+	-- On part donc de plus haut, et on sonde d'autant plus loin vers le bas pour ne rien perdre en descente.
+	OLDMAN_WALK_PROBE_UP = 20,
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,

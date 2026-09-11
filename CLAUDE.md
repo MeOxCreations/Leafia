@@ -1091,6 +1091,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   ("trouve : Motor6D"). Un message qui dit seulement "introuvable" aurait envoye verifier la map, qui etait
   juste.
 
+- **UN RAYON DE SOL LANCE DEPUIS LA HAUTEUR COURANTE NE PEUT PAS VOIR UN SOL PLUS HAUT : il demarre DEJA sous la
+  surface, la traverse, et rend le terrain d'en dessous.** Le grand-pere arrivait les pieds DANS le trottoir,
+  enfonce de son epaisseur exacte -- et le calcul etait juste, c'est la MESURE qui etait fausse. Symptome
+  trompeur : ca ressemble a un mauvais offset de hauteur (on va chercher un chiffre a corriger) alors que la
+  sonde ne pouvait pas repondre. Regle : une sonde doit couvrir les DEUX sens de ce qu'elle mesure -- partir de
+  plus haut que le point vise, et allonger la portee d'autant pour ne rien perdre en descente. Corollaire : le
+  meme rayon sert souvent a plusieurs endroits (arrivee d'une marche, chaque pas d'un suivi, tirage d'un point de
+  promenade) -- les corriger TOUS, sinon le bug reapparait des qu'on emprunte l'autre chemin.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

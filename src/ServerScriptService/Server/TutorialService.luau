@@ -81,13 +81,29 @@ end
 -- et deux marches en parallele se disputeraient le meme modele.
 local walking = false
 
--- Hauteur du sol sous un point, ou nil si on ne trouve rien.
-local function groundAt(position: Vector3, ignore: { Instance }): number?
+-- Hauteur du sol sous un point, ou nil si on ne trouve rien. `depth` remplace la portee par defaut du rayon.
+local function groundAt(position: Vector3, ignore: { Instance }, depth: number?): number?
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
 	params.FilterDescendantsInstances = ignore
-	local hit = Workspace:Raycast(position, Vector3.new(0, -TutorialConfigs.OLDMAN_WALK_GROUND_RAY, 0), params)
+	local reach = depth or TutorialConfigs.OLDMAN_WALK_GROUND_RAY
+	local hit = Workspace:Raycast(position, Vector3.new(0, -reach, 0), params)
 	return if hit then hit.Position.Y else nil
+end
+
+-- LE SOL PRES D'UN POINT, sonde DEPUIS PLUS HAUT QUE LUI.
+--
+-- UN RAYON LANCE DEPUIS LA HAUTEUR COURANTE NE VOIT PAS UN SOL PLUS HAUT : il demarre deja SOUS la surface du
+-- trottoir, la traverse, et rend le terrain d'en dessous. Le grand-pere arrivait donc les pieds DANS le trottoir,
+-- enfonce de son epaisseur exacte. On remonte avant de sonder, et on allonge la portee d'autant pour ne rien
+-- perdre quand le sol DESCEND.
+--
+-- Regle generale : une sonde doit couvrir les DEUX sens de ce qu'elle mesure, pas seulement celui qu'on avait en
+-- tete en l'ecrivant.
+local function groundNear(position: Vector3, ignore: { Instance }): number?
+	local up = TutorialConfigs.OLDMAN_WALK_PROBE_UP
+	local from = Vector3.new(position.X, position.Y + up, position.Z)
+	return groundAt(from, ignore, up + TutorialConfigs.OLDMAN_WALK_GROUND_RAY)
 end
 
 -- ===== EST-CE QUE L'ANIMATION BOUGE VRAIMENT LE RIG ? =====
@@ -478,8 +494,8 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 	-- SA HAUTEUR AU-DESSUS DU SOL, mesuree et rendue a l'arrivee. Il est ancre, donc rien ne le repose : un sol
 	-- qui monte ou descend entre les deux le ferait s'enfoncer ou leviter.
 	local ignore = { model }
-	local startGround = groundAt(from.Position, ignore)
-	local endGround = groundAt(Vector3.new(targetPart.Position.X, from.Position.Y, targetPart.Position.Z), ignore)
+	local startGround = groundNear(from.Position, ignore)
+	local endGround = groundNear(Vector3.new(targetPart.Position.X, from.Position.Y, targetPart.Position.Z), ignore)
 	local endY = if startGround and endGround then from.Position.Y + (endGround - startGround) else from.Position.Y
 	local endPos = Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z)
 	local to = CFrame.lookAt(endPos, endPos + flat.Unit)
@@ -868,7 +884,9 @@ local function pickStrollPoint(from: Vector3, playerPos: Vector3, ignore: { Inst
 			-- LE SOL DECIDE EN DERNIER, et le rayon part du HAUT de la zone : elle est un volume, pas une surface.
 			-- Un point tire au-dessus d'un trou ou d'un massif le ferait marcher dans le vide.
 			local top = Vector3.new(point.X, zone.Position.Y + half.Y, point.Z)
-			local ground = groundAt(top, ignore)
+			-- LA PORTEE COUVRE TOUTE LA HAUTEUR DE LA ZONE, puisqu'on part de son sommet : reglee sur la valeur
+			-- par defaut, une zone haute laisserait son propre plancher hors d'atteinte.
+			local ground = groundAt(top, ignore, half.Y * 2 + TutorialConfigs.OLDMAN_WALK_GROUND_RAY)
 			if ground then
 				return Vector3.new(point.X, ground + followGroundOffset, point.Z)
 			end
@@ -893,7 +911,7 @@ startFollow = function(player: Player, model: Model)
 	-- SA HAUTEUR AU-DESSUS DU SOL, mesuree UNE FOIS. Il est ancre, donc la physique ne le pose pas : sans cette
 	-- mesure il faudrait deviner de combien lever son rig. Mesuree a chaque image, un sol qui manque (trou, bord
 	-- de dalle) la ferait sauter.
-	local ground = groundAt(rootPart.Position, { model })
+	local ground = groundNear(rootPart.Position, { model })
 	followGroundOffset = if ground then rootPart.Position.Y - ground else 0
 	followStopped = false
 
@@ -1017,7 +1035,9 @@ startFollow = function(player: Player, model: Model)
 		end
 		local nextPos = if step > 0 then here + toGoal.Unit * step else here
 		if step > 0 then
-			local nextGround = groundAt(nextPos, ignore)
+			-- DEPUIS PLUS HAUT QUE LUI : un pas qui monte sur un trottoir ne se verrait pas autrement, et il
+			-- marcherait dedans.
+			local nextGround = groundNear(nextPos, ignore)
 			if nextGround then
 				nextPos = Vector3.new(nextPos.X, nextGround + followGroundOffset, nextPos.Z)
 			end
