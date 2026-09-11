@@ -309,6 +309,13 @@ end
 -- reenregistrer la voix (et rebouger les `hold`) rallonge la piste toute seule. Et elle part au meme instant que
 -- la voix -- SPEECH2_DELAY, le souffle qu'il prend en arrivant -- pour ne pas gesticuler dans le silence.
 local talkTrack: AnimationTrack? = nil
+-- QUEL GESTE ACCOMPAGNE SES PHRASES, en ce moment. Il explique avec les bras par defaut ; arrive au camion, il le
+-- MONTRE DU DOIGT.
+--
+-- UNE SEULE VARIABLE ET UNE SEULE PISTE, pas deux systemes qui jouent chacun le leur : les deux gestes clent les
+-- memes bras a la meme priorite, et Roblox ne choisit pas a priorite egale -- il MELANGE. On obtiendrait un bras
+-- a mi-chemin entre "j'explique" et "c'est la-bas".
+local talkAnimId = TutorialConfigs.OLDMAN_TALK_ANIM
 -- LE MODELE QU'ON ANIME, retenu des qu'on l'a trouve. Les repliques arrivent par remote a n'importe quel moment :
 -- sans lui, il faudrait re-balayer le Workspace a chaque phrase.
 local talkModel: Model? = nil
@@ -349,15 +356,12 @@ local function playTalk(model: Model): boolean
 	end
 
 	local anim = Instance.new("Animation")
-	anim.AnimationId = TutorialConfigs.OLDMAN_TALK_ANIM
+	anim.AnimationId = talkAnimId
 	local ok, result = pcall(function()
 		return (animator :: Animator):LoadAnimation(anim)
 	end)
 	if not (ok and typeof(result) == "Instance") then
-		warn(
-			`[Tutorial] Explication non chargeable ({TutorialConfigs.OLDMAN_TALK_ANIM}). `
-				.. "Il parlera sans bouger les bras."
-		)
+		warn(`[Tutorial] Geste non chargeable ({talkAnimId}). Il parlera sans bouger les bras.`)
 		return false
 	end
 	local track = result :: AnimationTrack
@@ -407,7 +411,7 @@ local function playTalk(model: Model): boolean
 	end)
 
 	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
-	print(`[Tutorial] Explication du grand-pere : {TutorialConfigs.OLDMAN_TALK_ANIM}`)
+	print(`[Tutorial] Geste du grand-pere : {talkAnimId}`)
 	return true
 end
 
@@ -715,6 +719,9 @@ local function stopFollow()
 	strollTarget = nil
 	engineStarted = false
 	escortTarget = nil
+	-- ET SON GESTE REDEVIENT L'EXPLICATION. Sans ca, une scene rejouee le trouverait encore en train de montrer
+	-- du doigt un camion dont il n'a pas encore parle.
+	talkAnimId = TutorialConfigs.OLDMAN_TALK_ANIM
 	if track then
 		-- L'idle tourne DESSOUS (priorite Idle contre Movement) : arreter le pas suffit a le remettre au repos,
 		-- il n'y a rien a reposer.
@@ -1048,6 +1055,13 @@ startFollow = function(player: Player, model: Model)
 			if truck then
 				faceOldManTo(model, (truck :: Model):GetBoundingBox().Position, TutorialConfigs.FACE_PLAYER_TIME)
 			end
+			-- ET A PARTIR D'ICI IL MONTRE DU DOIGT au lieu d'expliquer avec les bras. On change le GESTE, pas le
+			-- mecanisme : la piste, sa duree et son fondu restent ceux de ses repliques -- il n'y a donc aucun
+			-- second systeme qui pourrait jouer en meme temps que le premier.
+			--
+			-- POSE AVANT QUE LE CLIENT NE PARLE : sa phrase d'arrivee part juste apres, et c'est elle qui
+			-- declenche le geste. Pose apres, la premiere replique aurait encore l'ancien.
+			talkAnimId = TutorialConfigs.OLDMAN_POINT_ANIM
 			local remote = atTruckRemote
 			if remote and player.Parent then
 				print(`[Tutorial] Le grand-pere est arrive au camion avec {player.Name}.`)

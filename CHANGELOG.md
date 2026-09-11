@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.781 — Il montre le camion du doigt en arrivant
+
+L'animation `95701919652850` remplace son geste d'explication a partir du moment ou il arrive au camion : il
+MONTRE la camionnette pendant qu'il dit d'ouvrir le hayon, au lieu d'expliquer avec les bras.
+
+ELLE REMPLACE, ELLE NE S'AJOUTE PAS, et c'est la seule chose a comprendre ici. Les deux gestes sont en priorite
+`Action` et clent les memes bras : joues ensemble, Roblox ne choisit pas -- il MELANGE -- et on obtiendrait un bras
+a mi-chemin entre "j'explique" et "c'est la-bas". Le geste du moment prend donc la MEME piste.
+
+CE N'EST PAS UN SECOND SYSTEME : on change une variable, et tout le reste (la duree bornee par la longueur de la
+voix, le fondu, le retour a l'idle) continue de marcher comme avant. Un second mecanisme qui jouerait ses propres
+animations serait un deuxieme ecrivain sur les memes bras.
+
+Il est pose AVANT que le client ne parle : sa phrase d'arrivee part juste apres, et c'est elle qui declenche le
+geste. Pose apres, la premiere replique aurait encore l'ancien.
+
+Et il redevient l'explication quand la scene s'arrete : sans ca, une scene rejouee le trouverait en train de
+montrer du doigt un camion dont il n'a pas encore parle.
+
+### A faire dans Studio
+
+L'animation est chargee par son ID, donc rien a copier. Elle doit juste cler les BRAS et pas les jambes : en
+priorite `Action`, ce qu'elle cle ecrase l'idle -- des jambes clees le figeraient debout.
+
 ## 0.0.780 — Un outil qui s'equipe ne reste plus par terre : il entre dans l'inventaire
 
 Sorti de la benne, un outil equipable (cisaille, taille-haie, rateau) VOLE puis disparait a l'arrivee. Il est dans

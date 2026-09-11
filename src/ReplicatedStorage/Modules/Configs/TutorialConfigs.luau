@@ -977,6 +977,16 @@ return {
 	-- qu'il revienne respirer, sans rien avoir a reposer. En `Action` et pas en `Movement` : Movement est la
 	-- priorite de sa marche, et deux pistes a priorite EGALE ne se choisissent pas -- Roblox les MELANGE.
 	OLDMAN_TALK_PRIORITY = Enum.AnimationPriority.Action,
+	-- ET SON GESTE QUAND IL PARLE DU CAMION : il le MONTRE DU DOIGT.
+	--
+	-- ELLE REMPLACE L'EXPLICATION, elle ne s'ajoute pas. Les deux sont en priorite `Action` et clent les memes
+	-- bras : jouees ensemble, Roblox ne choisit pas -- il MELANGE -- et on obtiendrait une moyenne des deux, un
+	-- bras a mi-chemin entre "j'explique" et "c'est la-bas". Le geste du moment prend donc la MEME piste, et il
+	-- n'y a jamais qu'un seul geste a la fois.
+	--
+	-- ON MONTRE PENDANT QU'ON PARLE, donc elle est bornee par la longueur de la voix comme l'explication : c'est
+	-- le meme mecanisme, avec un autre dessin.
+	OLDMAN_POINT_ANIM = "rbxassetid://95701919652850",
 	-- ELLE JOUE EN ENTIER, UNE FOIS. Donc pas de boucle : la piste se relache a sa derniere image.
 	--
 	-- POURQUOI CE CHOIX. Elle a d'abord ete bouclee et COUPEE quand il finissait de parler -- la duree venait de
