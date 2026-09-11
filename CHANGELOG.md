@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.743 — Il renvoie tondre le joueur qui vient le voir sans avoir fini
+
+Le badge `TALK` sort maintenant des que la tonte est DEMANDEE, et plus seulement quand elle est finie. Ce qu'il
+repond depend de l'avancement : pelouse finie, il felicite ; pas finie, il dit
+`Oldman_scene_speech_DidntFinishItAll` et le joueur repart au travail.
+
+LES DEUX REPONSES NE SE COMPORTENT PAS PAREIL, et c'est la seule chose a retenir. Les felicitations partent UNE
+FOIS, et le badge comme le marqueur s'en vont avec : plus rien ne rappelle le joueur ici. Le renvoi, lui, se
+REJOUE -- c'est une reponse, pas une recompense -- avec un ecart minimum de 9 s pour qu'un joueur plante devant
+lui ne l'entende pas en boucle.
+
+LE MARQUEUR N'ARRIVE TOUJOURS QU'A LA FIN. Il veut dire "va la-bas" : le poser sur le grand-pere tant qu'il reste
+de l'herbe enverrait le joueur au mauvais endroit. Avant la fin, il n'y a que le badge, et il faut s'approcher
+pour le voir.
+
+Sans ce chemin, le joueur qui revenait a mi-parcours voyait un badge qui ne faisait rien -- et une action sans
+effet se lit comme un bug, pas comme un refus.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_DidntFinishItAll` dans `Sounds/Scenes/Scene1/Voices`.
+
 ## 0.0.742 — La pelouse tondue, il rappelle le joueur et le marqueur se pose sur lui
 
 Quand la derniere touffe tombe, trois choses partent ensemble. Il dit `Oldman_scene_speech_PerfectComeSeeMe`, le

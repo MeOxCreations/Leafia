@@ -82,9 +82,12 @@ local grandpaMarkerPart: BasePart? = nil
 -- sans ce test, parler au grand-pere ramasserait aussi un seau pose a ses pieds.
 local talkAnchor: BasePart? = nil
 local talkBound = false
--- Il a dit sa phrase de retour : le badge et le marqueur ne reviennent pas. Une replique de felicitations qui se
--- rejoue a chaque passage cesse d'etre une recompense.
+-- Il a dit ses felicitations : le badge et le marqueur ne reviennent pas. Une recompense qui se rejoue a chaque
+-- passage cesse d'en etre une.
 local talkDone = false
+-- SA REPONSE AU JOUEUR QUI N'A PAS FINI, elle, se rejoue -- c'est une reponse, pas une recompense. Juste pas en
+-- boucle : la date du prochain droit de parole.
+local nextUndoneAt = 0
 local missionStarted = false
 local sceneEnded = false
 local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
@@ -1858,13 +1861,25 @@ local function hideTalkPrompt()
 	setTalkBound(false)
 end
 
---- IL FELICITE LE JOUEUR QUI REVIENT LE VOIR. Appelee par la touche ET par le tap de la pilule.
+--- IL REPOND AU JOUEUR QUI VIENT LE VOIR. Appelee par la touche ET par le tap de la pilule.
 ---
---- UNE SEULE FOIS : le marqueur et le badge partent avec, donc plus rien ne rappelle le joueur ici. Aucune tache
---- ne suit pour le moment -- la suite du scenario n'est pas ecrite, et annoncer une consigne qui n'existe pas
---- serait pire que de n'en annoncer aucune.
+--- DEUX REPONSES, ET ELLES NE SE COMPORTENT PAS PAREIL. La pelouse finie, il felicite -- UNE SEULE FOIS, et le
+--- marqueur comme le badge partent avec : plus rien ne rappelle le joueur ici. Pas finie, il le renvoie tondre --
+--- et celle-la se REJOUE, parce que c'est une reponse et pas une recompense.
+---
+--- Aucune tache ne suit les felicitations pour le moment : la suite du scenario n'est pas ecrite, et annoncer
+--- une consigne qui n'existe pas serait pire que de n'en annoncer aucune.
 function TutorialController.talkToGrandpa()
-	if talkDone or not lawnTaskDone then
+	if talkDone or not lawnTaskShown then
+		return
+	end
+	if not lawnTaskDone then
+		-- IL LE RENVOIE TONDRE. Le badge RESTE : le joueur peut revenir, et lui redemander n'a rien d'anormal.
+		local now = os.clock()
+		if now >= nextUndoneAt then
+			nextUndoneAt = now + TutorialConfigs.TALK_UNDONE_COOLDOWN
+			sayVoice(TutorialConfigs.TALK_UNDONE_SOUND)
+		end
 		return
 	end
 	talkDone = true
@@ -2027,16 +2042,20 @@ local function step(dt: number)
 		end
 	end
 
-	-- IL FAUT ALLER LE REVOIR. Le marqueur se pose sur lui et le badge sort quand on est assez pres.
+	-- ON PEUT LUI PARLER DES QUE LA TONTE EST DEMANDEE. Le badge sort quand on est assez pres ; ce qu'il repond
+	-- depend de l'avancement, et `talkToGrandpa` en decide.
+	--
+	-- LE MARQUEUR, LUI, N'ARRIVE QU'A LA FIN. Il veut dire "va la-bas" : le poser sur le grand-pere pendant qu'il
+	-- reste de l'herbe a couper enverrait le joueur au mauvais endroit.
 	--
 	-- ACCROCHE A SON CORPS et pas a un point : il se promene, donc un point fige resterait la ou il se trouvait
 	-- quand la derniere touffe est tombee. Piege deja paye sur le marqueur de la porte, ne a l'origine de la map.
-	if lawnTaskDone and not talkDone then
+	if lawnTaskShown and not talkDone then
 		local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
 		local part = if grandpa then bodyPart(grandpa) else nil
 		local me = getRoot()
 		if part and me then
-			if grandpaMarkerPart ~= part then
+			if lawnTaskDone and grandpaMarkerPart ~= part then
 				WorldMarker.remove(grandpaMarker)
 				grandpaMarker = WorldMarker.show(part, Vector3.new(0, TutorialConfigs.GRANDPA_MARKER_UP, 0))
 				grandpaMarkerPart = part

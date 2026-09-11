@@ -568,6 +568,12 @@ return {
 	-- ET CE QU'IL DIT QUAND LE JOUEUR ARRIVE. Il n'enchaine sur aucune tache pour le moment : la suite du
 	-- scenario n'est pas ecrite, et donner une consigne qui n'existe pas serait pire que de ne rien donner.
 	TALK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_HeppyForCutGrass" },
+	-- ET S'IL VIENT LE VOIR SANS AVOIR FINI. Le joueur qui abandonne a mi-chemin et revient chercher la suite
+	-- recoit une reponse, au lieu d'un badge qui ne fait rien : une action sans effet se lit comme un bug.
+	TALK_UNDONE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_DidntFinishItAll" },
+	-- Ecart minimum entre deux fois, en secondes. Celle-la se REJOUE, contrairement aux felicitations : c'est une
+	-- reponse, pas une recompense. Mais un joueur qui reste plante devant lui ne doit pas l'entendre en boucle.
+	TALK_UNDONE_COOLDOWN = 9,
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
 	GRANDPA_MARKER_UP = 6.2,
