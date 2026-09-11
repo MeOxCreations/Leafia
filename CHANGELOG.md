@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.720 — La camera de conduite se rapproche
+
+| Reglage | Avant | Apres |
+|---|---|---|
+| `DRIVE_CAM_DISTANCE` | 15 | 10 |
+| `DRIVE_CAM_HEIGHT` | 6 | 4.2 |
+| `DRIVE_CAM_ZOOM` | 5 | 3 |
+
+**La hauteur suit la distance**, et ce n'est pas un detail : les deux font l'ANGLE de plongee. Rapprocher la
+camera sans la baisser redresse le regard vers le sol, donc on perd le devant de la machine -- ce qu'on voulait
+justement gagner en se rapprochant. Ces deux nombres se tournent ensemble, dans le meme rapport.
+
+**Le recul a pleine avance baisse aussi.** A 5 studs sur une orbite de 10, il l'aurait fait grandir de moitie des
+qu'on roule : le rapprochement aurait disparu au premier metre.
+
 ## 0.0.719 — La parcelle etait trouvee cent secondes trop tard
 
 Mesure dans les logs : boot a 09:44:56, parcelle declaree a 09:46:38. Cent secondes de retard, et l'herbe, elle,

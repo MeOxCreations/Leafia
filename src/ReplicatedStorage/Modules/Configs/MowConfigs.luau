@@ -525,8 +525,11 @@ return {
 	DRIVE_CAM_ORBIT = true,
 	-- Rayon de l'orbite au repos, et hauteur au-dessus du point vise. "Un peu du dessus, pas trop" : la hauteur
 	-- fait le plongee, et au-dela de ~8 on passe en vue de dessus et on perd le sol devant la machine.
-	DRIVE_CAM_DISTANCE = 15,
-	DRIVE_CAM_HEIGHT = 6,
+	-- LA HAUTEUR SUIT LA DISTANCE. Les deux font l'ANGLE de plongee : rapprocher la camera sans la baisser
+	-- redresse le regard vers le sol, donc on perd le devant de la machine -- ce qu'on voulait justement gagner
+	-- en se rapprochant. Ces deux nombres se tournent ensemble, dans le meme rapport.
+	DRIVE_CAM_DISTANCE = 10,
+	DRIVE_CAM_HEIGHT = 4.2,
 	-- Hauteur du point VISE sur le joueur. Vers le torse : viser les pieds colle l'horizon en haut du cadre.
 	DRIVE_CAM_LOOK_HEIGHT = 2.5,
 	-- VITESSE A LAQUELLE LE CAP DE LA CAMERA RATTRAPE CELUI DE LA MACHINE. C'est LE reglage du ressenti : bas, la
@@ -535,7 +538,9 @@ return {
 	DRIVE_CAM_FOLLOW = 2.5,
 	-- Recul supplementaire a pleine avance. PORTE ICI parce que `SetZoomBoost` deplace les bornes de zoom du
 	-- JOUEUR, une mecanique de la camera Custom : sous une camera scriptee elle ne fait plus rien.
-	DRIVE_CAM_ZOOM = 5,
+	-- Baisse avec la distance elle aussi : un recul de 5 studs sur une orbite de 10 la fait grandir de moitie a
+	-- pleine avance, ce qui defait le rapprochement des qu'on roule.
+	DRIVE_CAM_ZOOM = 3,
 	DRIVE_CAM_ZOOM_SPEED = 11,
 	-- Butee de chaque cote, en degres. Sans elle on tourne jusqu'a se retrouver face a la machine, et on conduit
 	-- a l'aveugle.
