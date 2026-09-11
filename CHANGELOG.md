@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.763 — La balise du hayon disparait vraiment quand on l'ouvre
+
+Elle etait bien retiree a l'ouverture, et la boucle la REFABRIQUAIT a l'image suivante : elle la pose tant que
+l'intention (`truckMarkerWanted`) est la, et seule la reference avait ete effacee. On la voyait donc disparaitre
+et revenir dans le meme geste.
+
+C'est l'intention qu'on retire maintenant. Meme piege que le balancement qui ecrasait la hauteur : deux choses
+ecrivaient le meme etat, et n'en corriger qu'une ne repare rien.
+
 ## 0.0.762 — Le grand-pere ne marche plus les pieds dans le trottoir
 
 Le rayon qui mesure le sol d'arrivee partait de sa hauteur COURANTE. Un trottoir est plus haut que la pelouse :

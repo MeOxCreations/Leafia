@@ -2601,6 +2601,11 @@ function TutorialController.init()
 		sayThen(TutorialConfigs.TRUCK_OPENED_SOUND, TutorialConfigs.EXPLAIN_TOOL_SOUND)
 		-- ET LE MARQUEUR A FINI SON TRAVAIL. Il disait "ce cote-la, celui qui s'ouvre" : une fois ouvert, il ne
 		-- designe plus rien. Il ne revient pas si le joueur referme -- la question a deja eu sa reponse.
+		--
+		-- ON RETIRE L'INTENTION, PAS SEULEMENT LE MARQUEUR. La boucle le fabrique tant que `truckMarkerWanted`
+		-- est pose : le mettre a `nil` sans ca le faisait REVENIR a l'image suivante -- on le voyait disparaitre
+		-- et reapparaitre dans le meme geste.
+		truckMarkerWanted = false
 		WorldMarker.remove(truckMarker)
 		truckMarker = nil
 	end)
