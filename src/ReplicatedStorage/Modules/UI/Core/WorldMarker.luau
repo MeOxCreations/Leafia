@@ -5,6 +5,9 @@
 -- les objets, et sa taille depend de la distance. Celui-ci est un ScreenGui projete (WorldAnchor) : pixels
 -- constants, couleurs exactes, toujours au-dessus. La primitive existe deja, on ne refait pas sa boucle.
 --
+-- HORS CHAMP, IL NE DISPARAIT PAS : il se plaque sur le bord de l'ecran, du cote de sa cible. Un marqueur qui
+-- s'efface des qu'on tourne la tete ne repond plus a la seule question qu'il pose -- OU.
+--
 -- PLUSIEURS MARQUEURS A LA FOIS. Contrairement au prompt d'interaction, qui est un singleton : deux choses
 -- importantes peuvent l'etre en meme temps, et se les disputer donnerait le meme bug que les prompts qui se
 -- volaient la pilule. Chaque appel rend son propre marqueur, qu'on detruit quand on veut.
@@ -41,6 +44,14 @@ local SIZE = 46
 local SCALE: WorldAnchor.Scale = { ref = 40, min = 0.55, max = 1.3 }
 -- Au-dela, il disparait. Un marqueur visible a l'autre bout de la map n'attire pas l'attention, il l'epuise.
 local MAX_DISTANCE = 160
+-- ET HORS CHAMP, IL RESTE A L'ECRAN, plaque sur le bord du cote de sa cible. Distance au bord, en pixels.
+--
+-- POURQUOI. Un marqueur qui disparait des qu'on tourne la tete ne repond plus a la seule question qu'il pose :
+-- OU. Le joueur qui regarde ailleurs n'a plus rien, et rien ne lui dit qu'il regarde du mauvais cote -- il
+-- cherche, alors que l'information existe. Sur le bord, elle continue de pointer.
+--
+-- La marge tient compte de sa taille (46 px, jusqu'a 1.3 fois de pres) : plus serree, il deborderait de l'ecran.
+local EDGE_MARGIN = 42
 
 -- ===== LE MOUVEMENT =====
 -- Il MONTE ET DESCEND, doucement. C'est ce qui le distingue du decor : l'oeil attrape un mouvement regulier bien
@@ -206,6 +217,7 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 	}
 
 	WorldAnchor.attach(frame, target, offset or Vector3.zero, MAX_DISTANCE, SCALE)
+	WorldAnchor.setEdgeClamp(frame, EDGE_MARGIN)
 
 	if not stepConn then
 		stepConn = RunService.RenderStepped:Connect(step)

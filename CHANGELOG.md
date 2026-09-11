@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.738 — La pastille rouge reste a l'ecran quand on regarde ailleurs
+
+Hors champ, le marqueur ne disparait plus : il se plaque sur le BORD de l'ecran, du cote de sa cible. Il repond
+donc toujours a la seule question qu'il pose, OU. Avant, le joueur qui regardait du mauvais cote n'avait plus
+rien, et rien ne lui disait que c'etait lui qui regardait mal.
+
+`WorldAnchor.setEdgeClamp(gui, margin)` porte le comportement, et `WorldMarker` l'allume a 42 px du bord (sa
+taille va jusqu'a 60 px de pres, plus serre il deborderait).
+
+OPTION SEPAREE ET PAS UN SEPTIEME ARGUMENT d'`attach`. La plupart des elements accroches ne doivent PAS rester a
+l'ecran : un prompt d'interaction plaque au bord designerait un objet qu'on ne peut pas atteindre, et une jauge
+posee a cote de quelqu'un n'a aucun sens loin de lui. Seul ce qui APPELLE le joueur ailleurs en a besoin.
+
+UN SEUL FACTEUR POUR LES DEUX AXES. Borner X puis Y separement colle l'element dans un COIN des qu'il sort en
+diagonale : la direction est perdue, et c'est precisement l'information qu'on voulait garder. En prenant le
+facteur le plus contraignant des deux, il glisse le long du bord et reste aligne avec sa cible.
+
+DERRIERE LA CAMERA, LA PROJECTION EST FAUSSE : `WorldToViewportPoint` rend un point en MIROIR, donc ramene au
+bord il pointerait le cote OPPOSE a la cible. On lit alors la direction dans le repere de la camera, ou elle
+reste juste. Piege de la meme famille que l'inset de 36 pixels : ca marche en regardant vers la cible, et ca
+s'inverse des qu'on tourne le dos -- un bug qui dort tant qu'on teste face a l'objet.
+
 ## 0.0.737 — Il marche moins vite, et il se promene au lieu de rester plante
 
 `FOLLOW_SPEED` passe de 8 a 5.5 studs/s : a 8 il trottait. L'animation de pas est jouee au RAPPORT de cette
