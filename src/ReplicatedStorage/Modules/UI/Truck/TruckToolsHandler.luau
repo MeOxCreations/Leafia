@@ -2,16 +2,23 @@
 -- LA BARRE DES OUTILS DU CAMION, en bas de l'ecran. Une case par outil encore range dans la benne : son dessin,
 -- son nom, et un bouton pour le sortir.
 --
--- L'APERCU EST LE VRAI MODELE 3D, dans un `ViewportFrame`, et pas une icone. Trois raisons. Il n'y a AUCUNE icone
--- a dessiner ni a tenir a jour -- ajouter un outil dans la benne le fait apparaitre ici tout seul. Le joueur voit
--- EXACTEMENT l'objet qu'il va recevoir, pas un symbole a interpreter. Et le jour ou un modele change, l'interface
--- change avec lui sans qu'on y touche.
+-- L'APERCU EST UN DESSIN QUAND IL EN EXISTE UN, et le VRAI MODELE 3D sinon (dans un `ViewportFrame`).
+--
+-- LE DESSIN GAGNE parce qu'il est fait POUR etre lu petit : un modele 3D depend de son angle, de son eclairage et
+-- de sa silhouette, et deux outils sombres se ressemblent dans une case de cent pixels.
+--
+-- MAIS L'APERCU 3D RESTE, et c'est ce qui rend la barre increvable : un outil range dans la benne apparait ici
+-- MEME sans dessin. Exiger une icone le ferait disparaitre de l'interface en attendant qu'on la dessine -- donc
+-- une benne pleine et une barre vide, sans que rien ne le dise.
 --
 -- ELLE NE DECIDE RIEN. On lui donne une liste de modeles et une fonction a appeler ; ce qui est ouvert, ce qui est
 -- deja sorti et ce qui vole est l'affaire du controller et du serveur.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+
+local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
 local TruckToolsHandler = {}
 
@@ -96,6 +103,22 @@ end
 --- LE CLONE EST ANCRE ET SANS SCRIPT : un ViewportFrame ne simule rien, mais un modele qui arrive avec ses joints
 --- et ses parts libres s'y affiche dans la pose ou la physique l'avait laisse.
 local function preview(model: Model, parent: Instance)
+	-- LE DESSIN D'ABORD, s'il existe : fait pour etre lu petit, il gagne contre un rendu 3D dans une case de cent
+	-- pixels. `Fit` et pas `Stretch` -- une icone etiree n'est plus l'objet qu'elle represente.
+	local icon = TruckConfigs.TOOL_ICONS[model.Name]
+	if icon then
+		local image = Instance.new("ImageLabel")
+		image.Name = "Preview"
+		image.BackgroundTransparency = 1
+		image.Image = icon
+		image.ScaleType = Enum.ScaleType.Fit
+		image.Size = UDim2.fromScale(1, 0.62)
+		image.Position = UDim2.fromScale(0.5, 0.04)
+		image.AnchorPoint = Vector2.new(0.5, 0)
+		image.Parent = parent
+		return
+	end
+
 	local view = Instance.new("ViewportFrame")
 	view.Name = "Preview"
 	view.BackgroundTransparency = 1

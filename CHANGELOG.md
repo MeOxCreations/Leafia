@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.772 — Les dessins de la cisaille et du taille-haie
+
+Les cases du camion montrent le DESSIN de l'outil quand il en existe un, et gardent l'apercu 3D sinon. Un dessin
+est fait pour etre lu petit ; un modele 3D depend de son angle et de son eclairage, et deux outils sombres se
+ressemblent dans une case de cent pixels.
+
+L'APERCU 3D RESTE LE SECOURS, et c'est ce qui rend la barre increvable : un outil range dans la benne apparait
+MEME sans dessin. Exiger une icone le ferait disparaitre de l'interface en attendant qu'on la dessine -- donc une
+benne pleine et une barre vide, sans que rien ne le dise. Le seau, l'echelle et le rateau sont dans ce cas.
+
+ET L'ICONE DE TACHE `Shears` EST REMPLACEE. C'etait un secateur "en attendant", avec un commentaire qui demandait
+un vrai dessin de cisaille : c'est fait. La tache de la haie montre donc enfin l'outil qu'on lui demande de
+prendre -- un mauvais dessin fait chercher au joueur un outil qui n'existe pas. Le taille-haie entre dans la meme
+table : un autre outil, un autre dessin.
+
 ## 0.0.771 — L'interface du camion : sortir un outil de la benne, qui vole jusqu'au terrain
 
 Le hayon ouvert, une barre s'ouvre en bas de l'ecran avec une case par outil encore range dans `ObjectsTools`.

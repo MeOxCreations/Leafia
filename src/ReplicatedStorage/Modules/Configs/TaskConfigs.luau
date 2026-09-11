@@ -31,9 +31,12 @@ TaskConfigs.ICONS = {
 	-- Les debris au sol apres la coupe, ceux qu'il faut ramasser.
 	Clippings = "rbxassetid://114282474206845",
 	Leaves = "rbxassetid://107686037709324",
-	-- Nom provisoire : le dessin represente un secateur, l'outil du jeu est une CISAILLE. A remplacer par un
-	-- vrai dessin de cisaille -- garder le mauvais dessin ferait chercher au joueur un outil qui n'existe pas.
-	Shears = "rbxassetid://114272255598885",
+	-- LE VRAI DESSIN DE LA CISAILLE. C'etait un secateur jusqu'ici, faute de mieux -- et un mauvais dessin fait
+	-- chercher au joueur un outil qui n'existe pas.
+	Shears = "rbxassetid://96003986607540",
+	-- Le taille-haie, celui a moteur : un autre outil, un autre dessin. Les confondre dirait au joueur qu'il peut
+	-- faire la meme chose avec les deux, alors que l'un est lent et l'autre non.
+	HedgeTrimmer = "rbxassetid://90444880289298",
 	Trash = "rbxassetid://91058614161927",
 	Settings = "rbxassetid://72145892854726",
 }

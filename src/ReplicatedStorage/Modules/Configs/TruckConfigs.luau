@@ -61,6 +61,19 @@ local TruckConfigs = {
 	-- Le dossier qui les contient, dans le modele du camion. Chaque enfant est un outil qu'on peut sortir, POSE
 	-- A LA MAIN dans Studio avec son orientation : le code ne les range pas, il les sort.
 	TOOLS_FOLDER = "ObjectsTools",
+	-- LE DESSIN D'UN OUTIL, par le nom de son modele dans la benne. Un dessin se lit d'un coup d'oeil a petite
+	-- taille ; un modele 3D montre l'objet exact mais depend de son angle et de son eclairage.
+	--
+	-- CEUX QUI N'EN ONT PAS TOMBENT SUR L'APERCU 3D, et c'est voulu : un outil ajoute dans la benne apparait dans
+	-- la barre tout de suite, meme sans dessin. On en ajoute un ici le jour ou il existe, et rien d'autre ne
+	-- bouge -- alors qu'exiger un dessin ferait disparaitre l'outil de l'interface en attendant.
+	--
+	-- Les cles sont les NOMS DES MODELES, pas des etiquettes libres : c'est la benne qui decide, pas cette table.
+	TOOL_ICONS = {
+		Shear = "rbxassetid://96003986607540",
+		HedgeTrimmer = "rbxassetid://90444880289298",
+	},
+
 	-- Ou chacun se pose une fois sorti : un dossier de parts, une par outil, NOMMEE COMME LUI.
 	--
 	-- UNE PART PAR OUTIL et pas un point unique : deux outils lances de suite se poseraient l'un dans l'autre. Et
