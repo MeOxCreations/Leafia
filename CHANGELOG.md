@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.721 — L'a-coup de camera au demarrage du moteur
+
+Deux causes CUMULEES, et chacune suffisait a le produire.
+
+**Deux boucles ecrivaient `camera.CFrame` en meme temps.** Le plan de tirage de corde et l'orbite de conduite --
+cette derniere ayant pris la main des la PRISE de la machine, bien avant qu'on touche a la corde. Celle qui ecrit
+en DERNIER dans l'image gagne, et l'ordre des boucles n'est pas garanti : la vue alternait donc entre deux
+cadrages d'une image sur l'autre. Ca ne se lit pas comme deux cameras, ca se lit comme un a-coup.
+
+L'orbite se tait maintenant pendant le plan de demarrage. Une propriete, un seul ecrivain -- meme quand les deux
+ecrivains sont a nous. Le plan de demarrage est le plus court des deux : c'est lui qui parle.
+
+**Et a la fin du plan, on reposait `CameraType = Custom`** alors que l'orbite tenait encore la camera. Roblox
+replace alors la vue a sa position par defaut pour une image, avant que l'orbite reprenne a la suivante : un
+BLOCAGE de quelques centiemes, suivi d'un saut derriere le joueur. Exactement le symptome decrit.
+
+On ne rend plus a `Custom` sans verifier que personne d'autre ne tient la camera. Le meme garde est pose sur la
+sortie de secours (personnage disparu) : c'est a l'orbite de s'arreter elle-meme, pas a nous de la couper.
+
+Rien a glisser entre les deux : le retour du plan vise l'etat capture a son ENTREE, qui etait deja celui de
+l'orbite. La vue est donc au bon endroit quand l'orbite reprend, et il n'y a aucune transition a fabriquer.
+
+Symptome trompeur, note au journal : on cherche une transition mal interpolee -- donc des durees, des easings --
+alors que le probleme est un CONFLIT DE PROPRIETAIRE. Aucun reglage de courbe ne peut le corriger.
+
 ## 0.0.720 — La camera de conduite se rapproche
 
 | Reglage | Avant | Apres |

@@ -1040,6 +1040,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   client emettre chez lui, ce qui donne un compte exact. Regle generale : quand un effet visuel doit se voir
   chez tout le monde, se demander si on replique un ETAT (ok) ou une ACTION (a diffuser soi-meme).
 
+- **Deux cameras scriptees qui se relaient ne se voient pas comme deux plans : ca se voit comme un A-COUP.** Vecu
+  au demarrage de la tondeuse. Deux causes CUMULEES, et chacune suffit. (1) Les deux boucles ecrivaient
+  `camera.CFrame` en meme temps -- le plan de tirage de corde et l'orbite de conduite, cette derniere ayant pris
+  la main des la PRISE de la machine, bien avant la corde. Celle qui ecrit en DERNIER dans l'image gagne, et
+  l'ordre des boucles n'est pas garanti : la vue alternait entre deux cadrages d'une image sur l'autre. (2) A la
+  fin du plan court, il reposait `CameraType = Custom` -- alors que l'autre tenait encore la camera. Roblox
+  replace alors la vue a sa position par defaut pour une image, avant que l'orbite reprenne a la suivante : ca se
+  lit comme un BLOCAGE de quelques centiemes suivi d'un saut. Regles : une propriete, un seul ecrivain, meme
+  quand les deux ecrivains sont "a nous" (garder le plus court et taire l'autre) ; et ne JAMAIS rendre a `Custom`
+  sans verifier que personne d'autre ne tient la camera. Symptome trompeur : on cherche une transition mal
+  interpolee (donc des durees, des easings) alors que le probleme est un CONFLIT DE PROPRIETAIRE -- aucun
+  reglage de courbe ne peut le corriger.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

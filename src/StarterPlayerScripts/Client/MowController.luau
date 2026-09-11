@@ -248,7 +248,10 @@ local function stepPullCam(dt: number)
 		pullPhase = nil
 		pullCamBound = false
 		RunService:UnbindFromRenderStep(PULL_CAM_BIND)
-		if camera then
+		-- MEME GARDE QUE LA SORTIE NORMALE : rendre a `Custom` alors que l'orbite tient encore la camera la
+		-- couperait pour une image. Ici le personnage a disparu, donc l'orbite s'arretera d'elle-meme -- mais
+		-- c'est a ELLE de le faire, pas a nous.
+		if camera and not DriveCamera.isActive() then
 			camera.CameraType = Enum.CameraType.Custom
 		end
 		return
@@ -281,7 +284,19 @@ local function stepPullCam(dt: number)
 			pullPhase = nil
 			pullCamBound = false
 			RunService:UnbindFromRenderStep(PULL_CAM_BIND)
-			camera.CameraType = Enum.CameraType.Custom
+			-- ON NE REND A `Custom` QUE SI PERSONNE D'AUTRE NE TIENT LA CAMERA.
+			--
+			-- L'ORBITE DE CONDUITE EST DEJA ACTIVE a cet instant : elle a pris la main a la PRISE de la machine,
+			-- bien avant qu'on tire la corde. Repasser en `Custom` la coupait donc pour une image -- Roblox
+			-- replacait la camera a sa vue par defaut -- avant que l'orbite reprenne la main a la suivante. Ca se
+			-- voit comme un blocage de quelques centiemes, puis un saut derriere le joueur.
+			--
+			-- Rien a glisser non plus : le retour vise l'etat capture a l'ENTREE du plan, qui etait deja celui de
+			-- l'orbite. La vue est donc au bon endroit quand l'orbite reprend, et il n'y a aucune transition a
+			-- fabriquer.
+			if not DriveCamera.isActive() then
+				camera.CameraType = Enum.CameraType.Custom
+			end
 			return
 		end
 	end
@@ -1021,7 +1036,16 @@ local function steer(humanoid: Humanoid, hrp: BasePart, dt: number)
 	-- L'ORBITE, POSEE ICI : c'est le premier endroit ou le cap de l'image est definitif. Plus haut elle suivrait
 	-- le cap de l'image PRECEDENTE et trainerait d'une frame en permanence -- invisible au reglage, sensible a
 	-- l'ecran. On lui donne l'avance DEMANDEE et pas la vitesse mesuree : le recul doit repondre a la touche.
-	DriveCamera.step(dt, yaw, forwardAmount)
+	--
+	-- ELLE SE TAIT PENDANT LE PLAN DE DEMARRAGE, et c'est le bug qu'on vient de payer. Les deux ecrivent
+	-- `camera.CFrame`, chacune dans sa boucle : celle qui ecrit en DERNIER dans l'image gagne, et l'ordre des
+	-- boucles n'est pas garanti. On obtenait donc une vue qui alternait entre deux cadrages d'une image sur
+	-- l'autre -- ce qui ne se lit pas comme deux cameras, mais comme un a-coup.
+	--
+	-- Une propriete, un seul ecrivain. Le plan de demarrage est le plus court des deux : c'est lui qui parle.
+	if not pullCamOn then
+		DriveCamera.step(dt, yaw, forwardAmount)
+	end
 
 	-- LA CAMERA TRAINE. Elle reste un peu en arriere du virage, et le joueur glisse dans le cadre avant qu'elle le
 	-- rattrape.
