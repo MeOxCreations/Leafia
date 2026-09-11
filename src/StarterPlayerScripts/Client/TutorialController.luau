@@ -1934,10 +1934,16 @@ local function step(dt: number)
 
 	-- IL PREND LE SEAU alors qu'on lui demande de tondre. Le grand-pere lui dit de le reposer.
 	--
-	-- TANT QUE LA TONTE N'EST PAS FINIE : apres, le seau a un sens (il y a des tas a ramasser) et le sermonner
-	-- serait faux. Avant, c'est le mauvais outil, et rien d'autre ne le dit au joueur.
+	-- ENTRE DEUX BORNES, et il fallait les deux. `mowerTaskShown` dit que la consigne est DONNEE : le grand-pere
+	-- est sorti, il a parle, il regarde le joueur. Sans cette borne il sermonnait depuis l'interieur de sa maison,
+	-- avant meme d'avoir ouvert sa porte -- une voix qui sort de nulle part pour reprocher quelque chose qu'on
+	-- n'a pas encore demande.
+	--
+	-- Et `not lawnTaskDone` ferme la fenetre : apres la tonte, le seau a un sens (il y a des tas a ramasser), et
+	-- le sermonner serait faux.
 	local carryingBin = CarryUtils.holds(player, "Bin")
-	if carryingBin and not wasCarryingBin and not lawnTaskDone and now >= nextBinScoldAt then
+	local binWrongNow = mowerTaskShown and not lawnTaskDone
+	if carryingBin and not wasCarryingBin and binWrongNow and now >= nextBinScoldAt then
 		nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
 		sayVoice(TutorialConfigs.PUT_BIN_DOWN_SOUND)
 	end

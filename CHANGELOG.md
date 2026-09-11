@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.727 — Il ne sermonne plus depuis l'interieur de sa maison
+
+La phrase du seau partait avant meme que la mission soit lancee : le joueur prenait le seau au spawn, et une voix
+sortait de nulle part pour lui reprocher quelque chose qu'on ne lui avait pas encore demande.
+
+Il fallait DEUX bornes, pas une. `mowerTaskShown` dit que la consigne est DONNEE -- le grand-pere est sorti, il a
+parle, il regarde le joueur. `not lawnTaskDone` ferme la fenetre a la fin de la tonte, quand le seau redevient un
+outil qui a un sens.
+
 ## 0.0.726 — Il fait reposer le seau au joueur qui se trompe d'outil
 
 `Oldman_scene_speech_PutBinDown` part quand le joueur prend le SEAU alors qu'on lui demande de tondre.
