@@ -1096,12 +1096,16 @@ return {
 	-- arrivait les pieds DANS le trottoir, enfonce de son epaisseur exacte.
 	--
 	-- ET POURQUOI SI PEU : ce qui est au-dessus de lui compte aussi. A 20 studs, le rayon partait DANS le toit de
-	-- la maison et le trouvait avant le sol -- il sortait de chez lui en marchant dans les airs. La valeur doit
-	-- donc rester au-dessus de la hauteur d'une MARCHE, et sous celle de tout ce qu'on peut passer DESSOUS : un
-	-- pas de porte, un auvent, une branche.
+	-- la maison et le trouvait avant le sol -- il sortait de chez lui en marchant dans les airs.
 	--
-	-- Regle : une sonde qui part d'ailleurs que du point mesure recupere tout ce qu'il y a entre les deux.
-	OLDMAN_WALK_PROBE_UP = 2.5,
+	-- CETTE VALEUR EST AUSSI LA MARCHE MAXIMALE QU'IL PEUT MONTER, et c'est ce qui le protege de ce qu'on POSE
+	-- sur lui : une tondeuse laissee sur sa tete devient du "sol" pour la sonde, et il grimpe dessus. Elle ne
+	-- peut jamais le lever de plus que ce chiffre, donc il reste au sol a une marche pres au lieu de s'envoler.
+	--
+	-- Elle doit rester au-dessus de la hauteur d'un TROTTOIR, et sous celle de tout ce qu'on peut passer DESSOUS
+	-- ou poser sur lui. Regle : une sonde qui part d'ailleurs que du point mesure recupere tout ce qu'il y a
+	-- entre les deux.
+	OLDMAN_WALK_PROBE_UP = 1.5,
 
 	-- Avec StreamingEnabled la porte peut arriver BIEN apres le spawn : on la re-cherche tant qu'on ne l'a pas.
 	RESCAN_INTERVAL = 2,

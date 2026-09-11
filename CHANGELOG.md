@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.768 — On ne peut plus faire voler le grand-pere en posant la tondeuse sur lui
+
+`OLDMAN_WALK_PROBE_UP` passe de 2.5 a 1.5 stud. Une tondeuse laissee sur sa tete devient du "sol" pour la sonde,
+et il grimpait dessus -- la sonde part de plus haut que lui, donc elle voit tout ce qui s'y trouve.
+
+CETTE VALEUR EST AUSSI SA MARCHE MAXIMALE : elle ne peut jamais le lever de plus. Un objet pose sur lui le decale
+donc au pire d'une marche, au lieu de l'envoyer en altitude. Elle reste au-dessus de la hauteur d'un trottoir,
+qui etait le probleme d'origine.
+
+C'est une borne, pas une interdiction : rien n'empeche encore de POSER une tondeuse sur un PNJ. Si ca gene
+vraiment, la vraie reponse est de refuser la pose sur un personnage, dans le service de la tondeuse -- pas
+d'empiler des gardes dans sa marche.
+
 ## 0.0.767 — Le grand-pere ne sort plus de chez lui en marchant dans les airs
 
 `OLDMAN_WALK_PROBE_UP` passe de 20 a 2.5 studs. La sonde de sol partait de 20 studs au-dessus de lui : sur son
