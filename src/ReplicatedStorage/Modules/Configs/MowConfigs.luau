@@ -549,6 +549,18 @@ return {
 	-- pleine avance, ce qui defait le rapprochement des qu'on roule.
 	DRIVE_CAM_ZOOM = 3,
 	DRIVE_CAM_ZOOM_SPEED = 11,
+	-- ===== ELLE NE TRAVERSE PLUS LES MURS =====
+	-- Un rayon part du joueur vers la place voulue de la camera : s'il touche quelque chose, elle s'arrete avant.
+	-- Sans ca, reculer contre un mur passait la camera DEDANS, et on voyait le decor par l'envers.
+	--
+	-- Studs gardes DEVANT l'obstacle. A zero la camera se pose pile sur le mur, et son plan de coupe le traverse
+	-- quand meme : il faut de quoi loger ce plan.
+	DRIVE_CAM_WALL_MARGIN = 1.2,
+	-- Distance minimale, meme coincee. Sous cette valeur on serait DANS le personnage, ce qui est pire que le mur.
+	DRIVE_CAM_WALL_MIN = 3,
+	-- Vitesse a laquelle elle RESSORT quand l'obstacle s'en va. Le rapprochement, lui, est instantane : le lisser
+	-- ferait traverser le mur pendant la transition. Les deux sens n'ont pas les memes contraintes.
+	DRIVE_CAM_WALL_RETURN = 4,
 	-- Butee de chaque cote, en degres. Sans elle on tourne jusqu'a se retrouver face a la machine, et on conduit
 	-- a l'aveugle.
 	DRIVE_CAM_YAW_LIMIT = 70,

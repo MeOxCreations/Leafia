@@ -42,6 +42,9 @@ export type Settings = {
 	lookHeight: number, -- hauteur du point vise sur le sujet
 	follow: number, -- vitesse a laquelle le cap rattrape celui de la machine (le retard de virage)
 	followBack: number, -- la meme, EN MARCHE ARRIERE : bien plus basse, voir l'en-tete
+	wallMargin: number, -- studs gardes devant l'obstacle : la camera s'arrete AVANT lui, pas dessus
+	wallMin: number, -- distance minimale, meme colle a un mur : sous ca on serait dans le personnage
+	wallReturn: number, -- vitesse a laquelle elle RESSORT quand l'obstacle s'en va
 	zoom: number, -- studs de recul supplementaires a pleine avance
 	zoomSpeed: number,
 	yawLimit: number, -- degres de chaque cote avant la butee
@@ -59,6 +62,10 @@ local player = Players.LocalPlayer
 local TWO_PI = math.pi * 2
 
 local active = false
+-- DISTANCE REELLEMENT AFFICHEE, apres correction par les obstacles. Separee de `distance` -- la distance VOULUE --
+-- parce que les deux ne bougent pas a la meme vitesse : on se rapproche d'un mur d'un coup, on s'en eloigne
+-- doucement. Les confondre ferait perdre la distance de repos des qu'un mur passe.
+local shownDist = 0
 local subject: BasePart? = nil
 local config: Settings? = nil
 
@@ -166,7 +173,38 @@ local function step(dt: number, heading: number, drive: number)
 	local total = camHeading + yaw
 	local focus = part.Position + Vector3.new(0, cfg.lookHeight, 0)
 	local back = Vector3.new(math.sin(total), 0, math.cos(total))
-	local target = CFrame.lookAt(focus + back * distance + Vector3.new(0, cfg.height, 0), focus)
+	local offset = back * distance + Vector3.new(0, cfg.height, 0)
+
+	-- 4bis) ELLE NE TRAVERSE PLUS LES MURS. Un rayon part du point VISE vers la place voulue de la camera : s'il
+	-- touche quelque chose, on s'arrete avant. Sans ca, reculer contre un mur passait la camera DEDANS -- on se
+	-- retrouvait a l'interieur de la maison, a voir le decor par l'envers.
+	--
+	-- LE RAYON PART DU SUJET, jamais de la camera : c'est la LIGNE DE VUE qu'on protege, et un rayon parti de
+	-- l'autre bout traverserait deja le mur avant de commencer.
+	--
+	-- On exclut la machine et le personnage : ils sont sur cette ligne par construction, et s'y arreter collerait
+	-- la camera a leur dos. Les touffes d'herbe, elles, sont deja invisibles aux rayons (`CanQuery` faux).
+	local free = offset.Magnitude
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = { part:FindFirstAncestorOfClass("Model"), player.Character }
+	params.IgnoreWater = true
+	local hit = Workspace:Raycast(focus, offset, params)
+	if hit then
+		free = math.max(cfg.wallMin, (hit.Position - focus).Magnitude - cfg.wallMargin)
+	end
+
+	-- ON SE RAPPROCHE D'UN COUP, ON S'ELOIGNE DOUCEMENT. Lisser le rapprochement ferait traverser le mur pendant
+	-- la transition, ce qui est exactement le bug qu'on repare ; lisser le retour, en revanche, evite le saut
+	-- quand l'obstacle s'en va. Les deux sens n'ont pas les memes contraintes, donc ils n'ont pas la meme vitesse.
+	local wantShown = math.min(offset.Magnitude, free)
+	if wantShown < shownDist or shownDist <= 0 then
+		shownDist = wantShown
+	else
+		shownDist += (wantShown - shownDist) * math.min(1, cfg.wallReturn * dt)
+	end
+
+	local target = CFrame.lookAt(focus + offset.Unit * shownDist, focus)
 
 	-- 5) PLACEE, PAS LISSEE. Voir l'en-tete : lisser une position qui tourne sur un arc coupe la corde.
 	if arrived then
@@ -206,6 +244,9 @@ function DriveCamera.enter(part: BasePart, heading: number, settings: Settings)
 	yawVel = 0
 	distance = settings.distance
 	arrived = false
+	-- LA DISTANCE AFFICHEE REPART DE ZERO, donc du premier calcul : gardee d'un portage precedent, elle
+	-- s'appliquerait a une machine qui n'est plus au meme endroit, contre un mur qui n'existe plus.
+	shownDist = 0
 	orbiting = false
 	orbitTouch = nil
 

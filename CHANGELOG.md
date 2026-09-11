@@ -2204,6 +2204,33 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.725 — La camera de conduite ne traverse plus les murs
+
+Reculer contre un mur passait la camera DEDANS : on se retrouvait a l'interieur de la maison, a voir le decor par
+l'envers. Une camera scriptee n'a aucune collision, rien ne l'arretait.
+
+Un rayon part maintenant du point VISE vers la place voulue de la camera. S'il touche quelque chose, elle
+s'arrete avant.
+
+**Le rayon part du SUJET, jamais de la camera.** C'est la LIGNE DE VUE qu'on protege : un rayon parti de l'autre
+bout aurait deja traverse le mur avant de commencer.
+
+**On se rapproche d'un coup, on s'eloigne doucement.** Lisser le rapprochement ferait traverser le mur PENDANT la
+transition, ce qui est exactement le bug qu'on repare ; lisser le retour, en revanche, evite le saut quand
+l'obstacle s'en va. Les deux sens n'ont pas les memes contraintes, donc ils n'ont pas la meme vitesse.
+
+**La distance affichee est separee de la distance voulue.** Les confondre ferait perdre la distance de repos des
+qu'un mur passe : on ne saurait plus vers quoi revenir.
+
+| Reglage | Valeur | Role |
+|---|---|---|
+| `DRIVE_CAM_WALL_MARGIN` | 1.2 | Studs gardes devant l'obstacle. A zero, le plan de coupe le traverse quand meme |
+| `DRIVE_CAM_WALL_MIN` | 3 | Distance minimale, meme coincee : sous ca on serait DANS le personnage |
+| `DRIVE_CAM_WALL_RETURN` | 4 | Vitesse de sortie quand l'obstacle s'en va |
+
+La machine et le personnage sont exclus du rayon : ils sont sur cette ligne par construction, et s'y arreter
+collerait la camera a leur dos. Les touffes d'herbe, elles, sont deja invisibles aux rayons.
+
 ## 0.0.724 — La camera ne part plus sur le cote quand on recule en braquant
 
 En reculant, une machine qui braque PIVOTE sur elle-meme : son cap balaie un grand angle pour quelques
