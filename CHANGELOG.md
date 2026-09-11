@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.740 — Il ne part se promener qu'une fois le moteur lance
+
+La promenade partait des que la tondeuse etait dans les mains du joueur. Elle attend maintenant que le MOTEUR ait
+demarre : tant que le joueur tire sur la corde, le grand-pere reste ou il est et le regarde faire. Le voir
+s'eloigner a cet instant retirait tout son poids a ce qu'il venait de demander.
+
+TROIS ETATS, plus deux : il pousse le joueur vers la machine, puis il attend pendant qu'on la demarre, puis il
+flane. L'etat du milieu ne demande aucun code -- pas de destination veut dire pas de pas, et le calcul en dessous
+est le meme.
+
+UN VERROU QUI NE SE ROUVRE PAS, comme son impatience qui s'eteint pour de bon au meme instant. Le joueur qui
+repose la tondeuse apres l'avoir demarree ne le renvoie pas la chercher : son travail est fini, il n'a plus rien
+a demander.
+
+L'etat du moteur est lu sur l'attribut que MowService pose deja sur le modele, jamais demande au client : une
+question qui a deja sa reponse n'a pas besoin d'une seconde source. Le balayage ne tourne qu'entre la prise et le
+demarrage, quelques secondes, puis le resultat est garde.
+
+Et il attend `STROLL_WAIT_MIN` (8 s) avant son premier point : il lance son "parfait" en le regardant, pas en
+s'en allant.
+
 ## 0.0.739 — Le grand-pere s'approche plus pres de la tondeuse
 
 `FOLLOW_MOWER_DIST` passe de 12 a 7 studs. A 12 il restait spectateur a l'autre bout de la pelouse ; de pres, il

@@ -580,6 +580,13 @@ local followAnimSpeed = 0
 -- en tirerait une nouvelle soixante fois par seconde et n'irait jamais nulle part.
 local strollTarget: Vector3? = nil
 local strollNextAt = 0
+-- LE MOTEUR A-T-IL DEMARRE UNE FOIS ? Tant que non, il n'a qu'une idee en tete : la machine. Apres, son travail
+-- est fini et il flane.
+--
+-- UN VERROU QUI NE SE ROUVRE PAS, comme son impatience qui s'eteint pour de bon au meme instant. Le joueur peut
+-- reposer la tondeuse ensuite : le grand-pere n'a plus rien a lui demander, il ne doit pas retourner la chercher.
+local engineStarted = false
+local engineScanAt = 0
 local walkZone: BasePart? = nil
 local warnedZone = false
 
@@ -593,6 +600,7 @@ local function stopFollow()
 	followMower = nil
 	followAnimSpeed = 0
 	strollTarget = nil
+	engineStarted = false
 	if track then
 		-- L'idle tourne DESSOUS (priorite Idle contre Movement) : arreter le pas suffit a le remettre au repos,
 		-- il n'y a rien a reposer.
@@ -697,6 +705,28 @@ local function currentMower(from: Vector3): BasePart?
 		end
 	end
 	return followMower
+end
+
+-- A-T-IL DEMARRE LA MACHINE QU'IL TIENT ?
+--
+-- BALAYAGE ET PAS UN REMOTE : l'etat est deja replique -- un attribut pose par MowService sur le modele -- donc
+-- le demander au client serait une deuxieme source pour une question qui a deja sa reponse, et c'est ainsi que
+-- deux verites finissent par se contredire.
+--
+-- ET IL NE TOURNE QUE QUELQUES SECONDES : entre la prise de la machine et le demarrage, a la cadence de
+-- `FOLLOW_RESCAN`. Une fois vrai, la reponse est gardee pour de bon.
+local function startedMower(player: Player): boolean
+	for _, d in Workspace:GetDescendants() do
+		if
+			d:IsA("Model")
+			and d.Name == MowConfigs.MODEL_NAME
+			and d:GetAttribute(MowConfigs.CARRIED_ATTRIBUTE) == player.UserId
+			and d:GetAttribute(MowConfigs.RUNNING_ATTRIBUTE) == true
+		then
+			return true
+		end
+	end
+	return false
 end
 
 -- LA ZONE OU IL A LE DROIT DE SE PROMENER, gardee des qu'on l'a. RE-CHERCHEE tant qu'on ne l'a pas : avec le
@@ -813,7 +843,21 @@ startFollow = function(player: Player, model: Model)
 		local speed = 0
 		local keepDist = 0
 		local chasing = false
-		if not CarryUtils.holds(player, "Mower") then
+		local holding = CarryUtils.holds(player, "Mower")
+		-- LE MOTEUR EST LA LIMITE ENTRE SES DEUX VIES. Avant, il pousse le joueur vers la machine ; apres, il
+		-- flane. Il ne suffit pas que la tondeuse soit dans ses mains : tant qu'elle n'a pas demarre, le joueur
+		-- est encore en train de tirer la corde, et voir le grand-pere s'eloigner a ce moment-la retire tout son
+		-- poids a ce qu'il vient de demander.
+		if not engineStarted and holding and now >= engineScanAt then
+			engineScanAt = now + TutorialConfigs.FOLLOW_RESCAN
+			engineStarted = startedMower(player)
+			if engineStarted then
+				-- IL REGARDE D'ABORD. Sans cette attente il tournerait les talons a la seconde ou le moteur prend,
+				-- pendant qu'il dit "parfait" -- un compliment lance en s'en allant n'en est plus un.
+				strollNextAt = now + TutorialConfigs.STROLL_WAIT_MIN
+			end
+		end
+		if not engineStarted and not holding then
 			-- LA MACHINE EST CHERCHEE DEPUIS LE JOUEUR, pas depuis lui : c'est celle vers laquelle le JOUEUR se
 			-- dirige qui compte, et c'est aussi celle que son repere a l'ecran lui montre.
 			local mower = currentMower(hrp.Position)
@@ -825,7 +869,9 @@ startFollow = function(player: Player, model: Model)
 					+ (if followStopped then TutorialConfigs.FOLLOW_HYST else 0)
 			end
 		end
-		if not chasing then
+		-- ET S'IL TIENT LA MACHINE SANS L'AVOIR DEMARREE, rien des deux : il reste ou il est et le regarde
+		-- s'acharner sur la corde. `goal` a nil donne un pas nul, donc le meme calcul en dessous.
+		if not chasing and engineStarted then
 			local target = strollTarget
 			-- IL LAISSE TOMBER UNE CIBLE QUI S'ELOIGNE : le joueur marche pendant qu'il marche, et finir un
 			-- trajet vers un coin que le joueur a quitte n'accompagne plus personne.
