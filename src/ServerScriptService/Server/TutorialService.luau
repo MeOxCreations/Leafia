@@ -763,23 +763,23 @@ startFollow = function(player: Player, model: Model)
 			end
 		end
 
-		-- SON CAP : la machine quand il avance, le JOUEUR quand il est arrete -- c'est lui qu'il surveille, et un
-		-- PNJ qui garde le dos tourne pendant qu'on tourne autour de lui cesse d'avoir l'air de nous accompagner.
+		-- SON CAP SUIT SA MARCHE, ET RIEN D'AUTRE : il tourne vers la machine pendant qu'il y va, et garde son
+		-- orientation des qu'il est arrete.
 		--
-		-- ET IL Y TOURNE PROGRESSIVEMENT. Pose d'un coup, ce cap alternait entre deux directions a la limite de la
-		-- distance d'arret -- une image sur l'autre, ce qui se voyait exactement comme un tremblement. Un demi-tour
-		-- lent transforme cette alternance en une moyenne stable.
-		local toPlayer = Vector3.new(hrp.Position.X - here.X, 0, hrp.Position.Z - here.Z)
-		local aim = if arrived then toPlayer else toMower
-		local facing = rootPart.CFrame
-		if aim.Magnitude >= 1e-3 then
-			local wanted = CFrame.lookAt(nextPos, nextPos + aim.Unit)
+		-- IL SE TOURNAIT VERS LE JOUEUR A L'ARRET, et ca se voyait au pire moment : a la sortie de la scene, le
+		-- joueur est sur son pas de porte, donc plus pres que `FOLLOW_MIN_PLAYER` -- il etait "arrive" des la
+		-- premiere image et pivotait vers lui d'un coup, juste apres avoir fini de parler. Un vieux monsieur a
+		-- canne ne fait pas volte-face parce qu'on s'approche.
+		--
+		-- ET LA MARCHE EST LE BON DECLENCHEUR, pas la distance : quelqu'un tourne la tete vers OU IL VA. Ca
+		-- supprime aussi la deuxieme cible, donc l'alternance entre deux caps a la limite de la distance d'arret
+		-- -- le tremblement que `FOLLOW_TURN` servait a moyenner n'a plus de source.
+		local facing = CFrame.new(nextPos) * (rootPart.CFrame - rootPart.CFrame.Position)
+		if step > 0 and toMower.Magnitude >= 1e-3 then
+			local wanted = CFrame.lookAt(nextPos, nextPos + toMower.Unit)
 			-- Un lerp de CFrame interpole la rotation par le plus court chemin : pas besoin de manipuler des
 			-- angles, ni de gerer le passage par 180 degres.
-			facing = CFrame.new(nextPos) * (facing - facing.Position)
 			facing = facing:Lerp(wanted, math.clamp(TutorialConfigs.FOLLOW_TURN * dt, 0, 1))
-		else
-			facing = CFrame.new(nextPos) * (facing - facing.Position)
 		end
 
 		-- UNE SEULE ECRITURE DE POSE PAR IMAGE. On applique un ECART MONDE et pas un pivot : `PivotTo` passe par

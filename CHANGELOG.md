@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.736 — Le grand-pere ne pivote plus vers le joueur a la sortie de la scene
+
+Son cap ne suit plus que sa MARCHE : il tourne vers la machine pendant qu'il y va, et garde son orientation des
+qu'il est arrete. La cible "le joueur" disparait.
+
+Il se tournait vers le joueur a l'arret, et ca tombait au pire moment. A la fin de la scene le joueur est sur son
+pas de porte, donc plus pres que `FOLLOW_MIN_PLAYER` (4.5 studs) : la boucle le declarait "arrive" des sa
+premiere image et il faisait volte-face juste apres avoir fini de parler. Un vieux monsieur a canne ne pivote pas
+parce qu'on s'approche.
+
+LA MARCHE EST LE BON DECLENCHEUR, pas la distance. Quelqu'un tourne la tete vers OU IL VA. Et comme il n'a plus
+qu'une seule cible, l'alternance entre deux caps a la limite de la distance d'arret n'a plus de source -- le
+tremblement que `FOLLOW_TURN` servait a moyenner en 0.0.7xx ne peut plus se produire. Le lissage reste : une
+machine reposee ailleurs pendant qu'il avance change sa cible, et un demi-tour instantane se lit comme un bug de
+rig.
+
+Deux commentaires de config decrivaient l'ancien cap a deux cibles. Ils sont remis a jour dans le meme commit :
+un commentaire faux est pire que pas de commentaire.
+
 ## 0.0.735 — Trois facons de dire de reposer le seau
 
 `PUT_BIN_DOWN_SOUND` devient `PUT_BIN_DOWN_SOUNDS`, une liste de trois : `Oldman_scene_speech_PutBinDown`, plus

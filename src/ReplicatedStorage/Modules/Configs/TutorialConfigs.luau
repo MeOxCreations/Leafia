@@ -856,19 +856,19 @@ return {
 	-- veut eviter.
 	FOLLOW_HYST = 1.5,
 	-- ET IL NE COLLE PAS AU JOUEUR. S'approcher plus pres que ca le ferait entrer dans son dos et passer devant
-	-- la camera. Il s'arrete alors, meme s'il n'est pas encore arrive a la machine.
+	-- la camera. Il s'arrete alors, meme s'il n'est pas encore arrive a la machine -- et il s'arrete SANS se
+	-- tourner vers lui : c'est ce pivot qui gachait la sortie de la scene, joueur colle a sa porte.
 	FOLLOW_MIN_PLAYER = 4.5,
 	-- SON TEMPS DE REACTION, en secondes. Il ne s'ebranle pas a la milliseconde ou le joueur bouge : ce petit
 	-- retard est ce qui separe un vieux monsieur d'un chien de garde.
 	FOLLOW_DELAY = 1.2,
 	-- VITESSE A LAQUELLE IL TOURNE, en fraction de l'ecart rattrapee par seconde.
 	--
-	-- IL FAISAIT DES ZIGZAG SANS ELLE. Son cap etait pose d'un coup a chaque image : vers la machine quand il
-	-- avance, vers le joueur quand il s'arrete. A la limite entre les deux, il alternait donc entre deux
-	-- orientations differentes -- une image sur l'autre, ce qui se voit exactement comme un tremblement.
+	-- IL FAISAIT DES ZIGZAG SANS ELLE, du temps ou son cap etait pose d'un coup a chaque image. Il n'a plus
+	-- qu'une cible -- la machine, et seulement pendant qu'il marche -- donc l'alternance n'existe plus.
 	--
-	-- En tournant PROGRESSIVEMENT, un changement de cible devient un demi-tour lent, et deux cibles qui
-	-- s'alternent ne produisent plus qu'une moyenne stable.
+	-- ELLE RESTE UTILE POUR AUTRE CHOSE : une machine reposee ailleurs pendant qu'il avance change sa cible, et
+	-- un demi-tour instantane sur un PNJ qui marche se lit comme un bug de rig.
 	FOLLOW_TURN = 6,
 	-- A QUELLE FREQUENCE il re-cherche la machine, en secondes.
 	--
