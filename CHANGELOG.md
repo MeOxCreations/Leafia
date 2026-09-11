@@ -2204,6 +2204,40 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.764 — L'etape de la haie : cisaille en main, marqueur dessus, un tiers a tailler
+
+Quand le joueur EQUIPE la cisaille apres avoir ouvert le hayon, le grand-pere dit
+`Oldman_scene_speech_SayComeToCutHedge`, le marqueur se pose sur la haie la plus proche, et la tache
+`TRIM THE HEDGE` apparait.
+
+L'EQUIPEMENT EST LE DECLENCHEUR, pas l'ouverture du camion : c'est le geste que le joueur vient de faire. On lit
+l'ETAT (`LeafiaTool` sur le modele en main), jamais un indice observe sur un cas particulier -- meme lecture que
+HedgeController et l'echelle.
+
+UN TIERS DE LA HAIE SUFFIT (`HEDGE_DONE_AT`). Tailler une haie entiere pour un didacticiel, c'est long, et une
+premiere minute qui traine est une premiere minute perdue. La haie reste taillable en entier apres : la tache
+cesse seulement de la demander.
+
+LA FRACTION EST LUE SUR LE MODELE, jamais recomptee ici. Le serveur pose `LeafiaTrimmed` et elle se replique ; un
+second compte de notre cote finirait par contredire le sien, et c'est le sien qui paie.
+
+LA HAIE EST CHOISIE UNE FOIS, la plus proche a l'instant ou l'outil arrive en main, puis GARDEE -- re-choisir a
+chaque image ferait sauter le marqueur d'une haie a l'autre quand le joueur marche entre les deux. Le prefixe des
+noms vient de `HedgeConfigs.AUTO_TAG_PREFIX` : c'est lui qui decide ce qui EST une haie dans ce projet, et deux
+listes finiraient par diverger.
+
+L'icone est `Shears` et la teinte BLEUE : le vert est pris par la tonte, et deux taches de la meme couleur
+cessent de se distinguer d'un coup d'oeil.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_SayComeToCutHedge` dans `Sounds/Scenes/Scene1/Voices`.
+
+### Reste a faire
+
+L'interface pour prendre les outils dans le camion n'existe pas : aujourd'hui l'etape demarre des que la cisaille
+arrive en main, par quelque moyen que ce soit.
+
 ## 0.0.763 — La balise du hayon disparait vraiment quand on l'ouvre
 
 Elle etait bien retiree a l'ouverture, et la boucle la REFABRIQUAIT a l'image suivante : elle la pose tant que

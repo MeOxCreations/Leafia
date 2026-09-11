@@ -596,6 +596,33 @@ return {
 	-- ET IL ENCHAINE SUR LA CONSIGNE : ne pas oublier ses outils sur le terrain avant de partir chez le client.
 	-- Elle part des que la precedente a fini de parler, sans qu'aucune duree soit ecrite nulle part.
 	EXPLAIN_TOOL_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_ExplainToolTruck" },
+
+	-- ===== LA HAIE, AVEC LA CISAILLE EN MAIN =====
+	-- Sa replique part quand le joueur EQUIPE la cisaille, pas quand il ouvre le camion : c'est le geste d'avoir
+	-- l'outil en main qui declenche la suite, et c'est ce que le joueur vient de faire.
+	SHEAR_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_SayComeToCutHedge" },
+	-- L'outil qu'on attend. Le nom est celui de `ToolConfigs`, pose par ToolService sur le modele en main.
+	SHEAR_TOOL_NAME = "Shear",
+	-- COMBIEN DE LA HAIE IL FAUT TAILLER pour que la tache soit finie, en fraction.
+	--
+	-- UN TIERS, PAS TOUT. Assez pour comprendre le geste et voir l'avant / apres ; tailler une haie entiere pour
+	-- un didacticiel, c'est long, et une premiere minute qui traine est une premiere minute perdue. La haie reste
+	-- taillable en entier apres, la tache ne fait que cesser de la demander.
+	HEDGE_DONE_AT = 1 / 3,
+	-- Hauteur du marqueur au-dessus du centre de la haie, en studs.
+	HEDGE_MARKER_UP = 6,
+	-- Le bandeau de tache.
+	HEDGE_TASK_TITLE = "TRIM THE HEDGE",
+	HEDGE_TASK_REWARD = "",
+	HEDGE_TASK_CURRENCY = "Coins",
+	-- `Shears` et pas un dessin de haie : l'icone dit avec QUOI, comme celle de la tondeuse pour la tonte. C'est
+	-- une cle de `TaskConfigs.ICONS` -- une cle inventee ne dessinerait rien du tout.
+	HEDGE_TASK_ICON = "Shears",
+	-- BLEU, pas vert : le vert est pris par la tonte, et deux taches de la meme couleur cessent de se distinguer
+	-- d'un coup d'oeil -- ce qui est tout le travail de la pastille.
+	HEDGE_TASK_TINT = "Blue",
+	-- Souffle avant qu'elle apparaisse, en secondes : elle arrive PENDANT qu'il parle, pas avant lui.
+	HEDGE_TASK_DELAY = 0.9,
 	-- ET LE MARQUEUR PASSE SUR LE HAYON, a l'instant ou il le dit. La voix nomme la chose, le dessin la DESIGNE :
 	-- un camion a quatre cotes et le joueur n'a aucune raison de deviner lequel s'ouvre.
 	TRUCK_DOOR_NAME = "DoorBack",

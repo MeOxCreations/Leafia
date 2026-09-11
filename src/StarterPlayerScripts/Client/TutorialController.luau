@@ -33,6 +33,9 @@ local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 -- Pour reconnaitre le prompt du camion : on ECOUTE le sien au lieu de refaire sa detection.
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
+-- Pour LIRE l'avancement d'une haie : le serveur pose la fraction taillee sur le modele, et elle se replique.
+-- On ne recompte donc rien de notre cote -- deux comptes finiraient par se contredire.
+local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
@@ -100,6 +103,15 @@ local warnedNoTruckDoor = false
 -- IL N'A QU'UNE PHRASE POUR L'OUVERTURE DU HAYON, et il ne la dit qu'une fois : la porte est une BASCULE, donc
 -- le joueur peut la rouvrir dix fois -- une replique qui repart a chaque fois cesse d'etre une reaction.
 local saidTruckOpened = false
+-- ===== L'ETAPE DE LA HAIE =====
+-- ELLE DEMARRE QUAND LA CISAILLE EST EN MAIN, pas a l'ouverture du camion : c'est le geste du joueur qui la
+-- declenche. `hedgeModel` est GARDE une fois choisi -- re-choisir la plus proche a chaque image ferait sauter le
+-- marqueur d'une haie a l'autre des qu'on marche entre les deux.
+local hedgeStepOn = false
+local hedgeTaskDone = false
+local hedgeModel: Model? = nil
+local hedgeMarker: Frame? = nil
+local nextHedgeCountAt = 0
 local talkAnchor: BasePart? = nil
 local talkBound = false
 -- Il a dit ses felicitations : le badge et le marqueur ne reviennent pas. Une recompense qui se rejoue a chaque
@@ -1991,6 +2003,44 @@ function TutorialController.talkToGrandpa()
 	end)
 end
 
+-- L'OUTIL TENU PAR LE PERSONNAGE, ou nil. L'equipement pose `LeafiaTool` sur le MODELE de l'outil et le parente
+-- au personnage : on le retrouve donc en regardant ses enfants. Meme lecture que HedgeController et l'echelle --
+-- on demande l'ETAT, jamais un indice observe sur un cas particulier.
+local function heldToolName(): string?
+	local character = player.Character
+	if not character then
+		return nil
+	end
+	for _, child in ipairs(character:GetChildren()) do
+		local name = child:GetAttribute("LeafiaTool")
+		if typeof(name) == "string" then
+			return name :: string
+		end
+	end
+	return nil
+end
+
+-- LA HAIE LA PLUS PROCHE DU JOUEUR, choisie UNE FOIS au demarrage de l'etape.
+--
+-- LE PREFIXE VIENT DE LA CONFIG DES HAIES, pas d'un nom recopie ici : c'est lui qui decide ce qui EST une haie
+-- dans ce projet, et deux listes finiraient par diverger.
+--
+-- Distance a plat : une haie un etage plus bas n'est pas "proche", elle est ailleurs.
+local function nearestHedge(from: Vector3): Model?
+	local best: Model? = nil
+	local bestDist = math.huge
+	for _, d in ipairs(Workspace:GetDescendants()) do
+		if d:IsA("Model") and string.find(d.Name, HedgeConfigs.AUTO_TAG_PREFIX, 1, true) == 1 then
+			local pivot = (d :: Model):GetPivot().Position
+			local flat = (Vector3.new(pivot.X - from.X, 0, pivot.Z - from.Z)).Magnitude
+			if flat < bestDist then
+				bestDist, best = flat, d :: Model
+			end
+		end
+	end
+	return best
+end
+
 local function showMowerTask()
 	if mowerTaskShown then
 		return
@@ -2140,6 +2190,64 @@ local function step(dt: number)
 					if remote then
 						remote:FireServer()
 					end
+				end
+			end
+		end
+	end
+
+	-- LA CISAILLE EST EN MAIN : il l'envoie sur la haie. Demande apres l'ouverture du hayon (`saidTruckOpened`)
+	-- pour que l'ordre du scenario tienne : le joueur qui sortirait une cisaille avant n'a encore rien a tailler.
+	if saidTruckOpened and not hedgeStepOn and heldToolName() == TutorialConfigs.SHEAR_TOOL_NAME then
+		hedgeStepOn = true
+		sayVoice(TutorialConfigs.SHEAR_SOUND)
+		-- LA HAIE EST CHOISIE ICI, UNE FOIS : celle qui est la plus proche a l'instant ou il prend l'outil. Le
+		-- garder evite que le marqueur saute d'une haie a l'autre quand le joueur marche entre les deux.
+		local me = getRoot()
+		hedgeModel = if me then nearestHedge(me.Position) else nil
+		if not hedgeModel then
+			warn(
+				`[Tutorial] Aucun Model dont le nom commence par "{HedgeConfigs.AUTO_TAG_PREFIX}" : pas de haie a `
+					.. "designer. Rojo ne synchronise pas le Workspace."
+			)
+		end
+		-- LA TACHE ARRIVE PENDANT QU'IL PARLE, pas avant lui : c'est sa phrase qui la justifie.
+		task.delay(TutorialConfigs.HEDGE_TASK_DELAY, function()
+			TaskBannerHandler.add({
+				icon = TutorialConfigs.HEDGE_TASK_ICON,
+				tint = TaskConfigs.TINTS[TutorialConfigs.HEDGE_TASK_TINT],
+				text = TutorialConfigs.HEDGE_TASK_TITLE,
+				reward = TutorialConfigs.HEDGE_TASK_REWARD,
+				currency = TaskConfigs.CURRENCIES[TutorialConfigs.HEDGE_TASK_CURRENCY],
+				progress = 0,
+			})
+		end)
+	end
+
+	-- LA HAIE A TAILLER : le marqueur dessus, et la tache qui suit sa coupe.
+	--
+	-- LA FRACTION EST LUE SUR LE MODELE, jamais recomptee ici : le serveur la pose (`LeafiaTrimmed`) et elle se
+	-- replique. Un second compte de notre cote finirait par contredire le sien, et c'est le sien qui paie.
+	if hedgeStepOn and not hedgeTaskDone then
+		local hedge = hedgeModel
+		if hedge and hedge.Parent then
+			if not hedgeMarker then
+				hedgeMarker = WorldMarker.show(
+					hedge:GetPivot().Position,
+					Vector3.new(0, TutorialConfigs.HEDGE_MARKER_UP, 0)
+				)
+			end
+			if now >= nextHedgeCountAt then
+				nextHedgeCountAt = now + TutorialConfigs.LAWN_COUNT_INTERVAL
+				local raw = hedge:GetAttribute(HedgeConfigs.TRIMMED_ATTRIBUTE)
+				local ratio = if typeof(raw) == "number" then raw :: number else 0
+				local done = TutorialConfigs.HEDGE_DONE_AT
+				TaskBannerHandler.setProgress(3, math.clamp(ratio / done, 0, 1))
+				if ratio >= done then
+					hedgeTaskDone = true
+					TaskBannerHandler.setDone(3)
+					WorldMarker.remove(hedgeMarker)
+					hedgeMarker = nil
+					print(`[Tutorial] Haie taillee a {math.floor(ratio * 100)} % : la tache est finie.`)
 				end
 			end
 		end
@@ -2661,6 +2769,8 @@ function TutorialController.stop()
 	grandpaMarker, grandpaMarkerPart, grandpaPart = nil, nil, nil
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
+	WorldMarker.remove(hedgeMarker)
+	hedgeMarker, hedgeModel = nil, nil
 	hideTalkPrompt()
 	if conn then
 		conn:Disconnect()
@@ -2725,8 +2835,11 @@ function TutorialController.stop()
 	nextUndoneAt = 0
 	lawnFraction = 0
 	saidTruckOpened = false
+	hedgeStepOn, hedgeTaskDone = false, false
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
+	WorldMarker.remove(hedgeMarker)
+	hedgeMarker, hedgeModel = nil, nil
 	hideTalkPrompt()
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil
