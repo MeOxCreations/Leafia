@@ -1121,6 +1121,7 @@ function TutorialService.init()
 			-- ET IL PARLE EN ARRIVANT. On previent le joueur qui a lance la scene : les voix se jouent chez lui,
 			-- et lui seul est concerne -- a deux, l'autre n'a pas a entendre une consigne qu'on ne lui donne pas.
 			if sceneOwner == player and player.Parent then
+				print(`[Tutorial] Le grand-pere est arrive au camion : on previent {player.Name}.`)
 				atTruckRemote:FireClient(player)
 			end
 		end)

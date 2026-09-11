@@ -595,6 +595,9 @@ return {
 	TRUCK_DOOR_NAME = "DoorBack",
 	-- Hauteur au-dessus du hayon, en studs. Valide a l'ecran.
 	TRUCK_MARKER_UP = 4,
+	-- Combien de temps on cherche le hayon en silence avant de prevenir, en secondes. Avec le streaming "pas
+	-- encore la" est un etat NORMAL : crier tout de suite ferait un warn a chaque partie pour rien.
+	TRUCK_DOOR_PATIENCE = 5,
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
 	--

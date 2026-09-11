@@ -85,6 +85,11 @@ local grandpaMarkerPart: BasePart? = nil
 -- trouver -- une reference resolue une seule fois resterait vide pour toute la session.
 local truckMarker: Frame? = nil
 local truckMarkerWanted = false
+-- DEPUIS QUAND ON LE CHERCHE, et si on a deja renonce a voix haute. Une part introuvable est un echec SILENCIEUX
+-- -- le marqueur ne sort pas, et rien ne dit pourquoi. Quelques secondes de patience d'abord : avec le
+-- streaming, "pas encore la" est un etat normal.
+local truckWantedAt = 0
+local warnedNoTruckDoor = false
 local talkAnchor: BasePart? = nil
 local talkBound = false
 -- Il a dit ses felicitations : le badge et le marqueur ne reviennent pas. Une recompense qui se rejoue a chaque
@@ -2082,6 +2087,16 @@ local function step(dt: number)
 		local door = findByName(TutorialConfigs.TRUCK_DOOR_NAME)
 		if door and door:IsA("BasePart") then
 			truckMarker = WorldMarker.show(door :: BasePart, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
+			print(`[Tutorial] Marqueur pose sur "{TutorialConfigs.TRUCK_DOOR_NAME}".`)
+		elseif not warnedNoTruckDoor and now - truckWantedAt > TutorialConfigs.TRUCK_DOOR_PATIENCE then
+			-- ON NOMME CE QU'ON N'A PAS TROUVE, et on distingue les deux cas : rien du tout, ou quelque chose qui
+			-- porte le nom sans etre une part. Un compteur ne dirait pas ou regarder.
+			warnedNoTruckDoor = true
+			warn(
+				`[Tutorial] Aucune BasePart nommee "{TutorialConfigs.TRUCK_DOOR_NAME}" dans le Workspace `
+					.. `(trouve : {if door then door.ClassName else "rien"}) : pas de marqueur sur le camion. `
+					.. "Rojo ne synchronise pas le Workspace, elle doit exister dans CETTE place."
+			)
 		end
 	end
 
@@ -2454,20 +2469,49 @@ function TutorialController.init()
 	-- EN TACHE DE FOND : `getRemote` cache un WaitForChild, et en ligne droite dans un init il gele TOUT le boot
 	-- le temps de son timeout. Tant qu'il n'est pas la, les repliques se jouent -- sans le geste, ce qui est le
 	-- comportement d'avant.
-	task.spawn(function()
-		talkRemote = RemoteSetup.getRemote("OldManTalk", "Tutorial") :: RemoteEvent
-		lawnDoneRemote = RemoteSetup.getRemote("TutorialLawnDone", "Tutorial") :: RemoteEvent
-		faceRemote = RemoteSetup.getRemote("TutorialGrandpaFace", "Tutorial") :: RemoteEvent
-		truckRemote = RemoteSetup.getRemote("TutorialGrandpaTruck", "Tutorial") :: RemoteEvent
-		-- IL EST ARRIVE AU CAMION : c'est le serveur qui le dit, lui seul calcule sa marche. On branche l'ecoute
-		-- ICI, dans la meme tache que la resolution : abonner un remote qu'on n'a pas encore ne veut rien dire.
-		local atTruck = RemoteSetup.getRemote("TutorialGrandpaAtTruck", "Tutorial") :: RemoteEvent
-		atTruck.OnClientEvent:Connect(function()
+	-- UNE TACHE PAR REMOTE, et c'est un piege qu'on a deja paye. `getRemote` cache un `WaitForChild` : enchaines
+	-- dans une seule tache, un seul remote manquant fait attendre son timeout a TOUS ceux d'apres -- et s'il rend
+	-- `nil`, l'appel qui suit jette une erreur qui tue la tache entiere, donc les abonnements suivants ne sont
+	-- jamais poses. Un remote absent ne doit couter que SA feature.
+	--
+	-- ET ON LE DIT. Un remote qui manque est anormal ET actionnable : c'est presque toujours une session lancee
+	-- avant que le serveur ne le declare (il faut relancer le Play), ou un `RemoteSetup` pas synchronise.
+	local function resolve(name: string, use: (RemoteEvent) -> ())
+		task.spawn(function()
+			local remote = RemoteSetup.getRemote(name, "Tutorial")
+			if remote and remote:IsA("RemoteEvent") then
+				use(remote :: RemoteEvent)
+			else
+				warn(
+					`[Tutorial] Remote "{name}" introuvable : la feature qui en depend ne repondra pas. Relance `
+						.. "la session si elle tournait deja quand le remote a ete ajoute."
+				)
+			end
+		end)
+	end
+
+	resolve("OldManTalk", function(r)
+		talkRemote = r
+	end)
+	resolve("TutorialLawnDone", function(r)
+		lawnDoneRemote = r
+	end)
+	resolve("TutorialGrandpaFace", function(r)
+		faceRemote = r
+	end)
+	resolve("TutorialGrandpaTruck", function(r)
+		truckRemote = r
+	end)
+	-- IL EST ARRIVE AU CAMION : c'est le serveur qui le dit, lui seul calcule sa marche.
+	resolve("TutorialGrandpaAtTruck", function(r)
+		r.OnClientEvent:Connect(function()
+			print("[Tutorial] Le grand-pere est arrive au camion : le marqueur passe sur le hayon.")
 			sayVoice(TutorialConfigs.OPEN_TRUCK_SOUND)
 			-- LE MARQUEUR PASSE SUR LE HAYON. On pose l'INTENTION, pas le marqueur : la boucle le fabrique des
 			-- que la part est la. Le camion peut n'etre pas encore replique -- il est loin du joueur au debut du
 			-- didacticiel -- et chercher une seule fois le laisserait introuvable pour de bon.
 			truckMarkerWanted = true
+			truckWantedAt = os.clock()
 		end)
 	end)
 

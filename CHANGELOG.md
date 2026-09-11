@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.756 — Le marqueur du camion ne peut plus echouer en silence
+
+Le marqueur ne se posait pas sur le hayon, et RIEN ne disait pourquoi : ni erreur, ni log. Les deux chemins qui
+pouvaient echouer parlent maintenant.
+
+UNE TACHE PAR REMOTE. Les cinq remotes du didacticiel etaient resolus a la file dans une seule tache, et
+`getRemote` cache un `WaitForChild` : un seul manquant faisait attendre son timeout a tous ceux d'apres, et s'il
+rendait `nil`, l'appel suivant jetait une erreur qui tuait la tache -- donc l'abonnement a l'arrivee au camion,
+pose en DERNIER, n'etait jamais branche. Un remote absent ne doit couter que SA feature. Piege deja paye au boot
+du client, note dans le journal ; il s'etait reforme ici.
+
+ET UN REMOTE MANQUANT SE DIT, avec la cause la plus probable : une session lancee AVANT que le remote existe
+(il faut relancer le Play), ou un `RemoteSetup` pas synchronise.
+
+LE HAYON INTROUVABLE SE DIT AUSSI, au bout de `TRUCK_DOOR_PATIENCE` (5 s) -- pas tout de suite, parce qu'avec le
+streaming "pas encore la" est un etat normal. Le message NOMME ce qu'il a trouve a la place (rien, ou une
+instance qui porte le nom sans etre une part), au lieu de compter.
+
+Plus deux traces : le serveur dit qu'il previent le joueur a l'arrivee, le client dit qu'il pose le marqueur. La
+ligne qui manque dans la console designe le maillon casse.
+
 ## 0.0.755 — Le marqueur du grand-pere redescend (et celui du hayon reste ou il etait)
 
 `GRANDPA_MARKER_UP` passe de 10.5 a 9 : a 10.5 il decrochait du personnage et flottait dans le ciel.
