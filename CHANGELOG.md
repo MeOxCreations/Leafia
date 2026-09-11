@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.733 — La jauge d'experience se remplit enfin vers le HAUT
+
+La fraction allait dans la LARGEUR de la barre au lieu de sa hauteur : `UDim2.fromScale(amount, 1)` devient
+`UDim2.fromScale(1, amount)`, dans le chemin anime ET dans la pose sans animation.
+
+Tout le reste etait deja vertical -- le cadre fait 16 x 96, le remplissage est ancre en bas, et son commentaire
+dit meme que seule sa hauteur change. C'est la ligne qui calcule la cible qui n'avait pas suivi le passage a la
+verticale : la barre restait pleine hauteur et se retrecissait sur le cote.
+
+Les deux chemins sont corriges ENSEMBLE. Corriger le seul chemin anime aurait laisse le premier affichage apres
+un chargement se poser en horizontal, puis basculer a la premiere touffe coupee.
+
 ## 0.0.732 — L'anneau derriere la tete du grand-pere s'en va
 
 L'ImageLabel `LoadRing`, ses quatre reglages et sa rotation sont supprimes de l'ecran de chargement. Le visage

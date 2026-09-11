@@ -195,7 +195,10 @@ function SkillBar.show(target: WorldAnchor.Target, amount: number)
 	if fillTween then
 		fillTween:Cancel()
 	end
-	local goal = UDim2.fromScale(math.clamp(amount, 0, 1), 1)
+	-- LA FRACTION VA DANS LA HAUTEUR, jamais dans la largeur : la barre est VERTICALE, elle se remplit du bas vers
+	-- le haut. En largeur, la jauge restait pleine hauteur et se retrecissait sur le cote -- un remplissage
+	-- horizontal dans une barre verticale, donc illisible.
+	local goal = UDim2.fromScale(1, math.clamp(amount, 0, 1))
 	local tween = TweenService:Create(bar, TweenInfo.new(SkillConfigs.BAR_FILL_TIME), { Size = goal })
 	fillTween = tween
 	tween:Play()
@@ -227,7 +230,7 @@ function SkillBar.setInstant(amount: number)
 		fillTween:Cancel()
 		fillTween = nil
 	end
-	bar.Size = UDim2.fromScale(math.clamp(amount, 0, 1), 1)
+	bar.Size = UDim2.fromScale(1, math.clamp(amount, 0, 1))
 end
 
 --- Detruit tout. Celui qui cree est celui qui nettoie, et il nettoie TOUT : l'entree de WorldAnchor survivrait au
