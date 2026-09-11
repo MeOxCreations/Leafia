@@ -1105,6 +1105,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   tirage d'un point de promenade) -- les corriger TOUS, sinon le bug reapparait des qu'on emprunte l'autre
   chemin.
 
+- **UN OFFSET "AU-DESSUS DE LA TETE" EXPRIME EN REPERE CAMERA DERIVE DES QU'ON REGARDE D'EN HAUT.**
+  `VectorToWorldSpace` applique TOUTE l'orientation de la camera, y compris son tangage : un element cale a
+  "+2 studs" glisse donc sur le cote du crane quand la vue plonge, alors qu'il est parfait quand la camera est a
+  l'horizontale. Symptome trompeur : ca ressemble a un mauvais reglage de hauteur (on va monter le chiffre) et ca
+  "marche presque" -- un bug qui dort tant qu'on teste a hauteur d'homme. Ce qu'on veut est un MELANGE : les axes
+  HORIZONTAUX suivent la camera (sinon un decalage lateral passe derriere le personnage quand on tourne autour de
+  lui), le VERTICAL suit le monde (parce que "au-dessus de la tete" ne veut rien dire d'autre). Et les axes
+  horizontaux doivent etre APLATIS avant usage, sinon un decalage en profondeur se transforme en decalage
+  vertical deguise. Corrige dans `WorldAnchor` pour tous ses clients d'un coup -- la jauge de competence avait le
+  meme defaut sans que personne l'ait remarque.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

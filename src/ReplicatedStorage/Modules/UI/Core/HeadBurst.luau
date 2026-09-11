@@ -47,6 +47,11 @@ type Look = {
 	-- matiere molle -- grandir sans s'affiner ne s'etire pas, ca GROSSIT.
 	stretchY: number,
 	stretchX: number,
+	-- DE COMBIEN CE DESSIN-LA MONTE EN PLUS, en studs. L'appelant donne une hauteur pour "au-dessus de la tete" ;
+	-- ce reglage-ci appartient au DESSIN, parce que deux dessins de tailles differentes ne se posent pas a la meme
+	-- hauteur pour avoir l'air pose au meme endroit. Le faire porter par l'appelant l'obligerait a connaitre les
+	-- dessins.
+	rise: number,
 }
 
 local LOOKS: { [string]: Look } = {
@@ -61,6 +66,7 @@ local LOOKS: { [string]: Look } = {
 		tilt = 11,
 		stretchY = 1.9,
 		stretchX = 0.66,
+		rise = 0,
 	},
 	-- L'ATTENTE : le point d'interrogation, laisse BLANC (le dessin parle tout seul, et le rouge est la couleur
 	-- de la colere -- les deux se distinguent de loin). Il se balance au lieu de claquer : moins d'inclinaison,
@@ -69,12 +75,17 @@ local LOOKS: { [string]: Look } = {
 		image = "rbxassetid://129295622677180",
 		width = 100,
 		height = 100,
-		scale = 0.6,
+		-- PLUS PETIT QUE L'ECLAIR : il n'annonce pas un coup de nerf, il pose une question. Une onomatopee aussi
+		-- grosse qu'une colere dirait la meme urgence.
+		scale = 0.46,
 		color = Color3.fromRGB(255, 255, 255),
 		baseTilt = 8,
 		tilt = 7,
 		stretchY = 1.35,
 		stretchX = 0.86,
+		-- ET UN PEU PLUS HAUT. Il est plus petit, donc a hauteur egale il a l'air POSE sur le crane : il faut le
+		-- decoller pour qu'il flotte au-dessus.
+		rise = 1.4,
 	},
 }
 
@@ -175,11 +186,11 @@ function HeadBurst.play(target: WorldAnchor.Target, offset: Vector3?, kind: Kind
 	-- par le bas, son pied ne bouge pas et il monte.
 	--
 	-- WorldAnchor pose lui aussi une ancre -- il centre ce qu'il accroche -- donc on la remet APRES lui.
-	-- L'OFFSET EST LU DANS LE REPERE DE LA CAMERA (dernier argument), pas dans celui du monde. Un decalage
-	-- lateral en repere monde passerait DERRIERE le personnage des qu'on tourne autour de lui : l'eclair
-	-- disparaitrait, ou se retrouverait du mauvais cote. En repere camera, il reste toujours a cote de sa tete a
-	-- l'ecran, quelle que soit la vue.
-	local base = offset or Vector3.zero
+	-- L'OFFSET EST LU DANS LE REPERE DE LA CAMERA (dernier argument) pour ses axes HORIZONTAUX seulement : un
+	-- decalage lateral en repere monde passerait DERRIERE le personnage des qu'on tourne autour de lui. Sa
+	-- hauteur, elle, reste verticale dans le MONDE -- sinon elle s'inclinerait avec la camera, et le dessin
+	-- glisserait sur le cote du crane des qu'on regarde d'en haut. Voir `WorldAnchor.cameraOffset`.
+	local base = (offset or Vector3.zero) + Vector3.new(0, look.rise, 0)
 	WorldAnchor.attach(label, target, base, MAX_DISTANCE, SCALE, true)
 	label.AnchorPoint = Vector2.new(0.5, 1)
 

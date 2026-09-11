@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.779 — L'onomatopee reste au-dessus de la tete, quel que soit l'angle de la camera
+
+Elle glissait sur le cote du crane des qu'on regardait le grand-pere d'en haut. L'offset entier passait par le
+repere de la CAMERA, tangage compris : un decalage de "2 studs vers le haut" suivait donc l'inclinaison de la vue.
+Parfait camera a l'horizontale, faux des qu'elle plonge -- un bug qui dort tant qu'on teste a hauteur d'homme.
+
+`WorldAnchor` melange maintenant les deux reperes, et c'est ce qu'on voulait depuis le debut : les axes
+HORIZONTAUX suivent la camera -- sinon un decalage lateral passe DERRIERE le personnage quand on tourne autour de
+lui -- et le VERTICAL suit le monde, parce que "au-dessus de la tete" ne veut rien dire d'autre.
+
+Les axes horizontaux sont APLATIS avant usage : une camera qui plonge incline son propre avant, et un decalage en
+profondeur se transformerait sinon en decalage vertical deguise.
+
+CA CORRIGE TOUS SES CLIENTS D'UN COUP. La jauge de competence avait exactement le meme defaut, sans que personne
+l'ait remarque : elle derivait a cote du joueur des que la camera changeait de hauteur.
+
+Et le point d'interrogation est retouche : plus petit (0.6 -> 0.46) et un peu plus haut. La hauteur en plus
+appartient au DESSIN, pas a l'appelant -- deux dessins de tailles differentes ne se posent pas a la meme hauteur
+pour avoir l'air poses au meme endroit, et l'appelant n'a pas a connaitre les dessins.
+
 ## 0.0.778 — Les touches 1 / 2 / 3 ne donnent plus d'outils
 
 Elles equipaient la cisaille, le taille-haie et le rateau, des le spawn, sans rien avoir pris nulle part. Depuis

@@ -34,8 +34,9 @@ type Entry = {
 	gui: GuiObject,
 	target: Target,
 	offset: Vector3,
-	-- Offset exprime dans le repere de la CAMERA (droite / haut / avant a l'ecran) au lieu du monde : l'element reste
-	-- alors du meme cote de l'ecran quand on tourne la camera.
+	-- Offset dont les axes HORIZONTAUX suivent la camera (droite / avant a l'ecran) : l'element reste alors du meme
+	-- cote de l'ecran quand on tourne autour de sa cible. Le Y, lui, reste VERTICAL dans le monde -- voir
+	-- `cameraOffset`.
 	cameraRelative: boolean,
 	-- Au-dela, l'element est cache. 0 = jamais cache par la distance.
 	maxDistance: number,
@@ -57,6 +58,29 @@ local function positionOf(target: Target): Vector3?
 	end
 	-- Parent verifie : une part detruite ou sortie du streaming laisserait l'element fige en plein ecran.
 	return if target.Parent then target.Position else nil
+end
+
+-- L'OFFSET EN REPERE CAMERA -- MAIS LE HAUT RESTE LE HAUT DU MONDE.
+--
+-- C'ETAIT UN BUG, ET IL SE VOYAIT. L'offset entier passait par `VectorToWorldSpace` : le Y suivait donc
+-- l'inclinaison de la camera, et un element cale "2 studs au-dessus de la tete" DERIVAIT des qu'on regardait le
+-- personnage d'en haut ou d'en bas -- il glissait sur le cote du crane au lieu de rester dessus. Vu sur
+-- l'onomatopee du grand-pere, et la jauge de competence avait exactement le meme defaut.
+--
+-- CE QU'ON VEUT VRAIMENT est un melange, et c'est pour ca qu'aucun des deux reperes seuls ne marchait :
+--   - le decalage LATERAL suit la camera, sinon il passe DERRIERE le personnage quand on tourne autour de lui ;
+--   - le decalage VERTICAL suit le MONDE, parce que "au-dessus de la tete" ne veut rien dire d'autre.
+--
+-- Les axes horizontaux sont APLATIS avant d'etre utilises : une camera qui plonge incline son propre avant, et un
+-- decalage en profondeur se transformerait sinon en decalage vertical deguise.
+local function cameraOffset(cf: CFrame, offset: Vector3): Vector3
+	local right = cf.RightVector
+	local flatRight = Vector3.new(right.X, 0, right.Z)
+	flatRight = if flatRight.Magnitude > 1e-3 then flatRight.Unit else Vector3.new(1, 0, 0)
+	local look = cf.LookVector
+	local flatLook = Vector3.new(look.X, 0, look.Z)
+	flatLook = if flatLook.Magnitude > 1e-3 then flatLook.Unit else Vector3.new(0, 0, -1)
+	return flatRight * offset.X + flatLook * offset.Z + Vector3.new(0, offset.Y, 0)
 end
 
 -- RAMENE UN POINT SUR LE BORD DE L'ECRAN, en gardant sa DIRECTION depuis le centre. Rend le point inchange s'il
@@ -102,7 +126,7 @@ local function update()
 			continue
 		end
 		-- Offset repere camera (reste du meme cote de l'ecran quand on tourne) ou repere monde (fixe dans la scene).
-		world += if entry.cameraRelative then camera.CFrame:VectorToWorldSpace(entry.offset) else entry.offset
+		world += if entry.cameraRelative then cameraOffset(camera.CFrame, entry.offset) else entry.offset
 
 		local screen, onScreen = camera:WorldToViewportPoint(world)
 		-- onScreen est faux DERRIERE la camera aussi. Sans ce test, l'element reapparaitrait en miroir de
