@@ -26,6 +26,7 @@ local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionP
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local SkillController = require(script.Parent.SkillController)
 local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
+local ActionGate = require(ReplicatedStorage.Modules.UI.Core.ActionGate)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
@@ -1249,6 +1250,11 @@ end
 
 -- UN SEUL declencheur pour prendre ET reposer : la meme touche, le meme bouton, le meme anti-spam.
 local function toggleCarry()
+	-- VERROUILLEE TANT QUE LE JOUEUR N'EST PAS ALLE TOQUER. Le refus est DIT -- pilule rouge qui tremble, et une
+	-- notification qui rappelle pourquoi -- parce qu'une action qui ne fait rien se lit comme un bug.
+	if ActionGate.denyIfLocked() then
+		return
+	end
 	local mine = myMower()
 	if mine then
 		request(mine, "place")

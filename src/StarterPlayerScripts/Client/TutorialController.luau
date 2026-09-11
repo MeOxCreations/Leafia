@@ -40,6 +40,7 @@ local ButterflyController = require(script.Parent.ButterflyController)
 local MowController = require(script.Parent.MowController)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local ActionGate = require(ReplicatedStorage.Modules.UI.Core.ActionGate)
 
 local player = Players.LocalPlayer
 
@@ -1799,6 +1800,10 @@ local function showMowerTask()
 		return
 	end
 	mowerTaskShown = true
+	-- ET LES OUTILS SE DEVERROUILLENT. C'est ICI et pas a la fin de la scene : la consigne et le droit d'agir
+	-- arrivent ensemble, sinon le joueur peut prendre la machine pendant que le grand-pere marche encore, et la
+	-- moitie de ce qu'il raconte tombe dans le vide.
+	ActionGate.setLocked(false)
 	-- LE COMPTE PART D'ICI, l'instant ou la consigne apparait. Laisse a zero, la premiere phrase tomberait a la
 	-- premiere image de la boucle -- avant meme que le joueur ait lu ce qu'on lui demande.
 	nextImpatientAt = os.clock() + TutorialConfigs.IMPATIENT_FIRST
@@ -2237,6 +2242,14 @@ function TutorialController.init()
 			fadePlayer(0)
 		end
 	end)
+	-- LES OUTILS SONT VERROUILLES AU DEPART. Le joueur spawn devant une tondeuse et un seau : sans verrou, il les
+	-- emporte avant que l'histoire commence, et la scene du grand-pere devient facultative -- il se retrouve avec
+	-- une machine dans les mains sans savoir pourquoi.
+	--
+	-- POSE ICI, dans le didacticiel, et nulle part ailleurs : c'est lui qui sait ou en est l'histoire. Les outils
+	-- ne font que DEMANDER, ils ne decident pas.
+	ActionGate.setLocked(true)
+
 	-- LA PARCELLE EST DECLAREE DES LE BOOT, et pas quand la tache arrive : tout ce qui est dehors doit etre pose
 	-- deja coupe AVANT que le joueur voie la pelouse, pas une minute plus tard sous ses yeux. La boucle
 	-- re-essaiera tant qu'elle n'est pas repliquee.
@@ -2310,6 +2323,10 @@ function TutorialController.stop()
 	-- ET IL ARRETE DE RELANCER : une voix qui s'impatiente pour une consigne qui n'existe plus n'a aucun sens.
 	nextImpatientAt = math.huge
 	saidPullRope = false
+	-- LE VERROU EST LEVE, quoi qu'il arrive. Une scene abandonnee -- mort, changement de lieu, erreur -- ne doit
+	-- jamais laisser le joueur devant des outils qu'il ne peut plus prendre : c'est une partie bloquee, et rien a
+	-- l'ecran ne lui dirait pourquoi.
+	ActionGate.setLocked(false)
 	lawnTaskShown = false
 	lawnTaskDone = false
 	wasCarryingBin = false

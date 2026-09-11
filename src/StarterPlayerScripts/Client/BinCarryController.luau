@@ -34,6 +34,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local ActionGate = require(ReplicatedStorage.Modules.UI.Core.ActionGate)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 
 local player = Players.LocalPlayer
@@ -519,6 +520,12 @@ local function approachThenPickUp(model: Model)
 end
 
 local function toggleCarry()
+	-- MEME VERROU QUE LA TONDEUSE : rien ne se prend avant d'etre alle toquer. Un outil qu'on peut emporter
+	-- avant que l'histoire commence rend la scene facultative, et le joueur se retrouve avec un seau sans savoir
+	-- pourquoi il l'a.
+	if ActionGate.denyIfLocked() then
+		return
+	end
 	local now = os.clock()
 	if now - lastActionAt < BinConfigs.PICKUP_DEBOUNCE then
 		return

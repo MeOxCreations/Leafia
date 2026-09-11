@@ -2204,6 +2204,53 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.729 — Les outils sont verrouilles jusqu'a ce qu'on toque, et le refus se VOIT
+
+Le joueur spawn devant une tondeuse et un seau. Sans verrou, il les emporte avant que l'histoire commence : la
+scene du grand-pere devient facultative, et il se retrouve avec une machine dans les mains sans savoir pourquoi.
+
+### Le refus se dit en deux temps
+
+**La pilule du prompt rougit et TREMBLE.** C'est la reponse a "j'ai appuye et il ne s'est rien passe" : sans elle,
+une action verrouillee ressemble a un bug, et le joueur reappuie de plus en plus vite.
+
+Les deux ensemble, jamais l'un sans l'autre : la couleur seule se remarque a peine sur un prompt deja colore qui
+pulse, la secousse seule ne dit pas que c'est un REFUS.
+
+**La secousse porte sur la ROTATION**, pas sur la position. La position du prompt est reecrite a chaque image par
+WorldAnchor : une secousse posee dessus serait effacee avant d'etre vue.
+
+**Le pulse de la pilule est coupe AVANT de poser le rouge.** Il ecrit la meme propriete en boucle : laisse en
+route, il reposerait sa couleur par-dessus au tour suivant, et le refus clignoterait au lieu de se voir.
+
+**Et une notification dit POURQUOI**, ce qu'une couleur ne peut pas dire :
+
+> **Not Yet** -- Go knock on the door first. The old man is waiting for you.
+
+Elle a son propre ecart minimum (12 s) : la secousse peut se rejouer a chaque appui sans lasser, une notification
+non.
+
+### Un seul endroit qui repond
+
+Nouveau module `Modules/UI/Core/ActionGate.luau`. L'appelant ecrit UNE ligne :
+`if ActionGate.denyIfLocked() then return end`.
+
+Sans lui, chaque outil verrouillable devrait connaitre l'etat du didacticiel, savoir secouer un prompt, et se
+souvenir s'il a deja affiche la notification -- trois choses a recopier par outil, donc trois occasions de les
+faire diverger. Et le quatrieme outil qu'on ajoutera n'en aurait aucune.
+
+**L'etat passe par un ATTRIBUT de joueur, pas par un require.** Le didacticiel require deja la tondeuse et le
+seau : leur faire require le didacticiel en retour fermerait le cycle.
+
+### Quand le verrou tombe
+
+Au moment ou la CONSIGNE arrive, pas a la fin de la scene : les deux vont ensemble, sinon le joueur peut prendre
+la machine pendant que le grand-pere marche encore, et la moitie de ce qu'il raconte tombe dans le vide.
+
+Et il est leve quoi qu'il arrive au nettoyage -- mort, changement de lieu, erreur. Une scene abandonnee ne doit
+jamais laisser le joueur devant des outils qu'il ne peut plus prendre : c'est une partie bloquee, et rien a
+l'ecran ne lui dirait pourquoi.
+
 ## 0.0.728 — Le joueur qui arrive avec le seau se fait reprendre lui aussi
 
 La phrase ne partait plus DU TOUT, et la cause est le garde anti-repetition de la version precedente.

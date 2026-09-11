@@ -35,6 +35,21 @@ local BADGE_TEXT_COLOR = Color3.fromRGB(24, 27, 32)
 local LABEL_COLOR = Color3.fromRGB(255, 255, 255)
 -- Le FOND de la pilule (le TextButton) PULSE entre deux roses (aller-retour en boucle), pour attirer l'oeil.
 local PILL_PULSE_A = Color3.fromRGB(255, 119, 230)
+-- ===== LE REFUS =====
+-- La pilule devient ROUGE et la pastille TREMBLE, un instant. C'est la reponse a "j'ai appuye et il ne s'est rien
+-- passe" : sans elle, une action verrouillee ressemble a un bug, et le joueur reappuie de plus en plus vite.
+--
+-- ROUGE ET SECOUSSE ENSEMBLE, jamais l'un sans l'autre. La couleur seule se remarque a peine sur un prompt deja
+-- colore qui pulse ; la secousse seule ne dit pas que c'est un REFUS. Les deux ensemble ne se lisent que d'une
+-- facon.
+local REFUSE_COLOR = Color3.fromRGB(255, 58, 58)
+-- Combien de temps elle reste rouge avant que le pulse reprenne.
+local REFUSE_HOLD = 0.45
+-- LA SECOUSSE PORTE SUR LA ROTATION, pas sur la position. La position du prompt est reecrite a chaque image par
+-- WorldAnchor : une secousse posee dessus serait effacee avant d'etre vue. La rotation, personne n'y touche.
+local REFUSE_TILT = 7 -- degres de chaque cote
+local REFUSE_STEP = 0.05 -- duree d'un aller
+local REFUSE_SHAKES = 3 -- allers-retours
 local PILL_PULSE_B = Color3.fromRGB(255, 73, 216)
 local PILL_PULSE = TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true)
 local BADGE_SIZE = 34 -- cote du carre de la touche, en pixels
@@ -60,6 +75,11 @@ local keyLabel: TextLabel? = nil
 local actionLabel: TextLabel? = nil
 local titleLabel: TextLabel? = nil -- titre de l'objet, au-dessus de la pilule (ex "MAILBOX")
 local scale: UIScale? = nil
+-- LA PILULE ELLE-MEME et le tween de son pulse. Gardes pour le REFUS : il faut couper le pulse avant de poser le
+-- rouge, sinon les deux ecrivent la meme couleur et c'est le pulse qui gagne une image plus tard.
+local pill: TextButton? = nil
+local pulseTween: Tween? = nil
+local refusing = false
 local onActivateFn: (() -> ())? = nil
 local shown = false
 
@@ -232,7 +252,9 @@ local function build()
 
 	-- PULSE du FOND de la pilule en boucle (aller-retour A <-> B). Une seule fois, joue en continu : ca ne se
 	-- voit que quand le prompt est affiche, et ca ne coute rien sinon.
-	TweenService:Create(btn, PILL_PULSE, { BackgroundColor3 = PILL_PULSE_B }):Play()
+	local pulse = TweenService:Create(btn, PILL_PULSE, { BackgroundColor3 = PILL_PULSE_B })
+	pulse:Play()
+	pill, pulseTween = btn, pulse
 
 	local sc = Instance.new("UIScale")
 	sc.Parent = box
@@ -500,6 +522,55 @@ end
 
 -- La cible AFFICHEE en ce moment, ou nil si le prompt est cache. A tester avant de conclure que "mon prompt
 -- est deja a l'ecran" : le singleton a pu passer a quelqu'un d'autre entre-temps.
+--- REFUSE L'ACTION, VISIBLEMENT : la pilule rougit et la pastille tremble.
+---
+--- A appeler quand le joueur appuie sur une action VERROUILLEE. Sans ce retour, il a appuye et il ne s'est rien
+--- passe -- ce qui se lit comme un bug, et il reappuie de plus en plus vite.
+---
+--- Silencieuse si rien n'est affiche, et ignoree si un refus joue deja : deux refus empiles se battraient pour la
+--- meme couleur et la meme rotation, et on verrait la pilule rester rouge.
+function InteractionPrompt.refuse()
+	local btn, box = pill, container
+	if not (btn and box and shown) or refusing then
+		return
+	end
+	refusing = true
+
+	-- LE PULSE EST COUPE D'ABORD. Il ecrit la meme propriete en boucle : laisse en route, il reposerait sa couleur
+	-- par-dessus le rouge a son tour suivant, et le refus clignoterait au lieu de se voir.
+	local pulse = pulseTween
+	if pulse then
+		pulse:Cancel()
+	end
+	btn.BackgroundColor3 = REFUSE_COLOR
+
+	task.spawn(function()
+		-- LA SECOUSSE : un aller, un retour, plusieurs fois. Sur la ROTATION, que personne d'autre n'ecrit.
+		for i = 1, REFUSE_SHAKES do
+			local side = if i % 2 == 1 then 1 else -1
+			if not box.Parent then
+				break
+			end
+			TweenService:Create(box, TweenInfo.new(REFUSE_STEP), { Rotation = REFUSE_TILT * side }):Play()
+			task.wait(REFUSE_STEP)
+		end
+		if box.Parent then
+			TweenService:Create(box, TweenInfo.new(REFUSE_STEP), { Rotation = 0 }):Play()
+		end
+		task.wait(math.max(0, REFUSE_HOLD - REFUSE_SHAKES * REFUSE_STEP))
+		-- ET LE PULSE REPREND. Recree et pas relance : un tween annule ne repart pas de la ou il en etait, et le
+		-- garder aurait laisse la pilule sur la couleur du refus.
+		refusing = false
+		local current = pill
+		if current and current.Parent then
+			current.BackgroundColor3 = PILL_PULSE_A
+			local again = TweenService:Create(current, PILL_PULSE, { BackgroundColor3 = PILL_PULSE_B })
+			pulseTween = again
+			again:Play()
+		end
+	end)
+end
+
 function InteractionPrompt.currentTarget(): WorldAnchor.Target?
 	local current = displayed
 	return if shown and current then current.target else nil
