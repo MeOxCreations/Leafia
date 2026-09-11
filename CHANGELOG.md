@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.774 — Les outils peuvent retourner dans le camion
+
+Chaque outil garde sa case dans la barre, meme sorti : elle s'efface, et son bouton devient un `PUT BACK` BLEU.
+L'objet revole jusqu'a la benne et se range exactement a sa place, a l'angle pres.
+
+UN SEUL CLIC, DEUX SENS, ET C'EST LA PLACE DE L'OBJET QUI DECIDE. Le client envoie un nom, rien d'autre -- pas
+meme le sens de l'action : dans la benne il sort, dehors il rentre. Le client n'a donc aucun etat a tenir juste,
+et deux joueurs qui cliquent en meme temps ne peuvent pas demander deux choses contradictoires.
+
+SA POSE D'ORIGINE EST GARDEE SUR LUI, en repere du CAMION, au moment ou il sort (`POSE_ATTRIBUTE`). Elle sert a
+deux choses a la fois, et c'est pour ca que c'est un attribut et pas une liste. Elle DIT que cet objet vient de
+la benne -- donc qu'on peut l'y remettre -- et elle dit OU il s'y rangeait. En repere du camion et pas en monde :
+le camion peut bouger entre-temps, et une pose monde le ferait revenir a cote de la benne.
+
+ON NE RANGE PAS UN OUTIL QUE QUELQU'UN PORTE : il partirait en vol en restant soude a son porteur, qui se
+mettrait a courir apres son propre seau. Refuse en silence -- le joueur voit l'objet dans ses mains.
+
+LE BOUTON DIT LE SENS EN MOT ET EN COULEUR. Deux boutons verts cote a cote, l'un qui sort et l'autre qui rentre,
+se cliqueraient l'un pour l'autre. Et les cases sont triees par nom : sans tri, une case changerait de place au
+moment ou son outil passe dedans / dehors, et le joueur cliquerait la ou etait celle d'avant.
+
+Les rafraichissements sont coalesces : le streaming pose des dizaines de modeles d'un coup, et chacun reveillait
+l'abonnement au monde -- meme piege que la reconstruction de l'herbe.
+
 ## 0.0.773 — La sonde des parts ancrees ne compte plus celles des modeles contenus
 
 Le camion criait que huit de ses parts etaient ancrees a tort. C'etaient les OUTILS ranges dans sa benne : des

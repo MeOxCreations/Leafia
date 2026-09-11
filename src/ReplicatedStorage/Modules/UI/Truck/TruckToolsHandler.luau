@@ -11,8 +11,12 @@
 -- MEME sans dessin. Exiger une icone le ferait disparaitre de l'interface en attendant qu'on la dessine -- donc
 -- une benne pleine et une barre vide, sans que rien ne le dise.
 --
--- ELLE NE DECIDE RIEN. On lui donne une liste de modeles et une fonction a appeler ; ce qui est ouvert, ce qui est
--- deja sorti et ce qui vole est l'affaire du controller et du serveur.
+-- UNE CASE PAR OUTIL, DEDANS OU DEHORS. Celui qui est sorti garde sa case, effacee, avec un bouton BLEU qui le
+-- RANGE : le geste inverse se fait au meme endroit que le geste aller, et le joueur voit d'un coup d'oeil ce
+-- qu'il a deja pris. Une barre qui ne montrerait que ce qui reste ne dirait pas ou est le reste.
+--
+-- ELLE NE DECIDE RIEN. On lui donne une liste et une fonction a appeler ; ce qui est ouvert, ce qui est dehors et
+-- ce qui vole est l'affaire du controller et du serveur.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -44,6 +48,12 @@ local TEXT = Color3.fromRGB(255, 255, 255)
 -- LE VERT DU JEU, celui des taches : c'est la meme famille d'action -- avancer, prendre, faire.
 local TAKE = Color3.fromRGB(98, 206, 59)
 local TAKE_HOVER = Color3.fromRGB(126, 226, 88)
+-- ET LE BLEU POUR RANGER. Une autre couleur parce que c'est le geste INVERSE : deux boutons verts cote a cote,
+-- l'un qui sort et l'autre qui rentre, se cliquent l'un pour l'autre. La couleur dit le sens avant qu'on lise.
+local BACK = Color3.fromRGB(64, 150, 226)
+local BACK_HOVER = Color3.fromRGB(96, 178, 245)
+-- ET LA CASE D'UN OUTIL DEJA SORTI S'EFFACE UN PEU : il n'est plus la, et l'interface doit le dire sans un mot.
+local OUT_IMAGE_TRANSPARENCY = 0.45
 
 -- La camera de l'apercu. `FOV` serre = peu de perspective, donc l'objet ne se deforme pas dans le coin du cadre.
 local VIEW_FOV = 28
@@ -57,6 +67,7 @@ local VIEW_PITCH = 18
 -- ===== LES MOTS =====
 -- EN ANGLAIS, comme tout texte vu par le joueur.
 local TAKE_TEXT = "TAKE"
+local BACK_TEXT = "PUT BACK"
 local TITLE_TEXT = "IN THE TRUCK"
 
 local gui: ScreenGui? = nil
@@ -102,7 +113,7 @@ end
 ---
 --- LE CLONE EST ANCRE ET SANS SCRIPT : un ViewportFrame ne simule rien, mais un modele qui arrive avec ses joints
 --- et ses parts libres s'y affiche dans la pose ou la physique l'avait laisse.
-local function preview(model: Model, parent: Instance)
+local function preview(model: Model, parent: Instance, inside: boolean)
 	-- LE DESSIN D'ABORD, s'il existe : fait pour etre lu petit, il gagne contre un rendu 3D dans une case de cent
 	-- pixels. `Fit` et pas `Stretch` -- une icone etiree n'est plus l'objet qu'elle represente.
 	local icon = TruckConfigs.TOOL_ICONS[model.Name]
@@ -111,6 +122,9 @@ local function preview(model: Model, parent: Instance)
 		image.Name = "Preview"
 		image.BackgroundTransparency = 1
 		image.Image = icon
+		-- SORTI, IL S'EFFACE. La case reste -- c'est par elle qu'on le range -- mais elle ne doit pas se lire
+		-- comme un outil disponible : l'oeil compte ce qui reste dans la benne avant de lire les boutons.
+		image.ImageTransparency = if inside then 0 else OUT_IMAGE_TRANSPARENCY
 		image.ScaleType = Enum.ScaleType.Fit
 		image.Size = UDim2.fromScale(1, 0.62)
 		image.Position = UDim2.fromScale(0.5, 0.04)
@@ -125,6 +139,7 @@ local function preview(model: Model, parent: Instance)
 	view.Size = UDim2.fromScale(1, 0.62)
 	view.Position = UDim2.fromScale(0.5, 0.04)
 	view.AnchorPoint = Vector2.new(0.5, 0)
+	view.ImageTransparency = if inside then 0 else OUT_IMAGE_TRANSPARENCY
 	view.Ambient = Color3.fromRGB(190, 190, 190)
 	view.LightColor = Color3.fromRGB(255, 255, 255)
 	view.Parent = parent
@@ -152,8 +167,9 @@ local function preview(model: Model, parent: Instance)
 	camera.CFrame = CFrame.lookAt(pivot.Position + dir.LookVector * -reach, pivot.Position)
 end
 
---- Fabrique une case pour `model`. `onTake` est appele avec son nom quand on clique.
-local function makeSlot(model: Model, onTake: (string) -> (), parent: Instance)
+--- Fabrique une case pour `model`. `inside` dit s'il est encore dans la benne ; `onClick` est appele avec son
+--- nom quand on clique -- dans les deux sens, parce que c'est la PLACE de l'objet qui decide de ce que ca fait.
+local function makeSlot(model: Model, inside: boolean, onClick: (string) -> (), parent: Instance)
 	local slot = Instance.new("Frame")
 	slot.Name = model.Name
 	slot.Size = SLOT_SIZE
@@ -164,7 +180,7 @@ local function makeSlot(model: Model, onTake: (string) -> (), parent: Instance)
 	corner(slot, 14)
 	stroke(slot, 1.5, STROKE_TRANSPARENCY)
 
-	preview(model, slot)
+	preview(model, slot, inside)
 
 	local name = Instance.new("TextLabel")
 	name.Name = "ToolName"
@@ -180,31 +196,36 @@ local function makeSlot(model: Model, onTake: (string) -> (), parent: Instance)
 	name.Text = model.Name
 	name.Parent = slot
 
+	-- LE BOUTON DIT CE QUI VA SE PASSER, en mot ET en couleur. Vert il sort l'outil, bleu il le range : deux
+	-- boutons verts cote a cote, l'un qui sort et l'autre qui rentre, se cliquent l'un pour l'autre.
+	local idle = if inside then TAKE else BACK
+	local over = if inside then TAKE_HOVER else BACK_HOVER
+
 	local take = Instance.new("TextButton")
 	take.Name = "Take"
 	take.Size = UDim2.fromScale(0.84, 0.17)
 	take.Position = UDim2.fromScale(0.5, 0.83)
 	take.AnchorPoint = Vector2.new(0.5, 0)
-	take.BackgroundColor3 = TAKE
+	take.BackgroundColor3 = idle
 	take.BorderSizePixel = 0
 	take.AutoButtonColor = false
 	take.Font = Enum.Font.GothamBold
 	take.TextColor3 = TEXT
 	take.TextScaled = true
-	take.Text = TAKE_TEXT
+	take.Text = if inside then TAKE_TEXT else BACK_TEXT
 	take.Parent = slot
 	corner(take, 8)
 
 	-- LE SURVOL EST UN RETOUR, pas une decoration : sans lui, rien ne dit que la case est cliquable avant d'avoir
 	-- clique. Sur tactile il ne sert a rien et ne coute rien -- le tap declenche directement.
 	take.MouseEnter:Connect(function()
-		take.BackgroundColor3 = TAKE_HOVER
+		take.BackgroundColor3 = over
 	end)
 	take.MouseLeave:Connect(function()
-		take.BackgroundColor3 = TAKE
+		take.BackgroundColor3 = idle
 	end)
 	take.Activated:Connect(function()
-		onTake(model.Name)
+		onClick(model.Name)
 	end)
 end
 
@@ -267,12 +288,14 @@ local function build(): Frame
 	return frame
 end
 
---- REMPLIT LA BARRE avec `models`, et rend le nombre de cases posees.
+export type Entry = { model: Model, inside: boolean }
+
+--- REMPLIT LA BARRE, et rend le nombre de cases posees.
 ---
---- ON REFAIT TOUT A CHAQUE FOIS plutot que de retirer la case de l'outil sorti. La benne est la SOURCE : si elle
---- dit trois outils, la barre en montre trois. Retirer une case a la main serait un second etat a tenir d'accord
---- avec elle, et c'est exactement ainsi que deux verites finissent par se contredire.
-function TruckToolsHandler.fill(models: { Model }, onTake: (string) -> ()): number
+--- ON REFAIT TOUT A CHAQUE FOIS plutot que de modifier la case qui change. Le monde est la SOURCE : ce qui est
+--- dans la benne y est, ce qui est dehors porte sa marque. Corriger une case a la main serait un second etat a
+--- tenir d'accord avec lui, et c'est exactement ainsi que deux verites finissent par se contredire.
+function TruckToolsHandler.fill(entries: { Entry }, onClick: (string) -> ()): number
 	build()
 	local list = row
 	if not list then
@@ -283,10 +306,10 @@ function TruckToolsHandler.fill(models: { Model }, onTake: (string) -> ()): numb
 			child:Destroy()
 		end
 	end
-	for _, model in models do
-		makeSlot(model, onTake, list)
+	for _, entry in entries do
+		makeSlot(entry.model, entry.inside, onClick, list)
 	end
-	return #models
+	return #entries
 end
 
 --- Montre ou cache la barre. Idempotent : appelee deux fois de suite, elle ne rejoue rien.

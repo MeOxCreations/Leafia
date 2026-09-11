@@ -6,8 +6,8 @@
 -- dossier lui-meme, et le vol appartient au serveur. Ce module ne fait que REGARDER ces trois choses et afficher
 -- ce qu'elles disent -- sans jamais garder sa propre idee de ce qui est ouvert ou de ce qui reste.
 --
--- C'est ce qui rend le cas a deux joueurs correct sans une ligne de plus : celui qui sort un rateau le retire de
--- la benne, donc la case disparait CHEZ LES DEUX.
+-- C'est ce qui rend le cas a deux joueurs correct sans une ligne de plus : celui qui sort un rateau le fait
+-- quitter la benne, donc la case passe a "ranger" CHEZ LES DEUX, sans qu'on ait rien a leur envoyer.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -27,26 +27,40 @@ local truck: Model? = nil
 local toolsFolder: Instance? = nil
 local conns: { RBXScriptConnection } = {}
 
---- Les outils encore ranges dans la benne, dans l'ordre du dossier.
-local function toolsInside(): { Model }
+--- TOUS LES OUTILS DU CAMION : ceux qui sont encore dans la benne, et ceux qui en sont sortis.
+---
+--- LES SORTIS SE RECONNAISSENT A LEUR MARQUE (la pose que le serveur leur a posee), pas a une liste tenue ici.
+--- Une liste serait un second etat a garder d'accord avec le monde, et elle mentirait des qu'un outil est
+--- detruit ou deplace autrement -- alors que la marque voyage AVEC l'objet, et vaut pour tous les joueurs.
+local function allTools(): { TruckToolsHandler.Entry }
+	local list: { TruckToolsHandler.Entry } = {}
 	local folder = toolsFolder
-	local list: { Model } = {}
-	if not (folder and folder.Parent) then
-		return list
-	end
-	for _, child in folder:GetChildren() do
-		if child:IsA("Model") then
-			table.insert(list, child :: Model)
+	if folder and folder.Parent then
+		for _, child in folder:GetChildren() do
+			if child:IsA("Model") then
+				table.insert(list, { model = child :: Model, inside = true })
+			end
 		end
 	end
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d:GetAttribute(TruckConfigs.POSE_ATTRIBUTE) ~= nil then
+			table.insert(list, { model = d :: Model, inside = false })
+		end
+	end
+	-- TOUJOURS DANS LE MEME ORDRE. Sans tri, une case changerait de place quand son outil passe dedans / dehors,
+	-- et le joueur cliquerait a l'endroit ou etait celle d'avant.
+	table.sort(list, function(a, b)
+		return a.model.Name < b.model.Name
+	end)
 	return list
 end
 
 local function askFor(toolName: string)
 	local r = remote
 	if r then
-		-- ON ENVOIE LE NOM, RIEN D'AUTRE. Le serveur retrouve le modele lui-meme : c'est ce qui fait qu'un client
-		-- modifie ne peut designer que ce qui est dans la benne.
+		-- ON ENVOIE LE NOM, RIEN D'AUTRE -- pas meme le sens de l'action. C'est la PLACE de l'objet qui decide :
+		-- dans la benne il sort, dehors il rentre. Le client n'a donc aucun etat a tenir juste, et deux joueurs
+		-- qui cliquent en meme temps ne peuvent pas demander deux choses contradictoires.
 		r:FireServer(toolName)
 	end
 end
@@ -55,20 +69,36 @@ end
 ---
 --- UNE SEULE FONCTION POUR LES DEUX QUESTIONS. Separer "faut-il l'ouvrir" de "que contient-elle" laisserait une
 --- barre vide a l'ecran le jour ou le dernier outil sort -- deux etats qui se contredisent a une image pres.
-local function refresh()
+-- ON COALESCE LES RAFRAICHISSEMENTS. Le streaming pose des dizaines de modeles d'un coup, et chacun reveille
+-- l'abonnement au monde : recalculer a chaque fois relirait tout le Workspace autant de fois pour un resultat
+-- identique. Un drapeau et une image d'attente suffisent -- piege deja paye sur la reconstruction de l'herbe.
+local pending = false
+
+local function refreshNow()
 	local model = truck
 	local open = model ~= nil and model:GetAttribute(TruckConfigs.OPEN_ATTRIBUTE) == true
 	if not open then
 		TruckToolsHandler.setShown(false)
 		return
 	end
-	local list = toolsInside()
+	local list = allTools()
 	if #list == 0 then
 		TruckToolsHandler.setShown(false)
 		return
 	end
 	TruckToolsHandler.fill(list, askFor)
 	TruckToolsHandler.setShown(true)
+end
+
+local function refresh()
+	if pending then
+		return
+	end
+	pending = true
+	task.defer(function()
+		pending = false
+		refreshNow()
+	end)
 end
 
 --- Branche tout ce qui doit rafraichir la barre. Rappelable : on coupe l'ancien avant de rebrancher.
@@ -83,6 +113,16 @@ local function watch(model: Model, folder: Instance)
 	table.insert(conns, model:GetAttributeChangedSignal(TruckConfigs.OPEN_ATTRIBUTE):Connect(refresh))
 	table.insert(conns, folder.ChildAdded:Connect(refresh))
 	table.insert(conns, folder.ChildRemoved:Connect(refresh))
+	-- ET LE MONDE, pour les outils SORTIS : ils n'appartiennent plus a la benne, donc ses evenements a elle ne
+	-- disent plus rien d'eux. On ne recalcule que sur ce qui peut etre un outil (un Model), pas sur chaque part
+	-- posee ou retiree de la carte.
+	local function onWorld(inst: Instance)
+		if inst:IsA("Model") then
+			refresh()
+		end
+	end
+	table.insert(conns, Workspace.DescendantAdded:Connect(onWorld))
+	table.insert(conns, Workspace.DescendantRemoving:Connect(onWorld))
 	table.insert(
 		conns,
 		model.AncestryChanged:Connect(function()

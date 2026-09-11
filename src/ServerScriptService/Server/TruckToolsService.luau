@@ -20,6 +20,8 @@ local Workspace = game:GetService("Workspace")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
+local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
+local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 
 local TruckToolsService = {}
 
@@ -84,6 +86,30 @@ local function landingFor(toolName: string, player: Player): CFrame?
 	return CFrame.lookAt(ahead, ahead + flat.Unit)
 end
 
+--- UN OUTIL SORTI DU CAMION, par son nom. On le reconnait a la pose qu'il a gardee : elle dit d'ou il vient.
+---
+--- ON BALAYE PLUTOT QUE DE TENIR UNE LISTE. Une liste serait un second etat a garder d'accord avec le monde, et
+--- elle mentirait le jour ou un outil est detruit, deplace, ou pose par un autre chemin -- alors que la marque,
+--- elle, voyage AVEC l'objet.
+local function findTakenTool(toolName: string): Model?
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d.Name == toolName and d:GetAttribute(TruckConfigs.POSE_ATTRIBUTE) ~= nil then
+			return d :: Model
+		end
+	end
+	return nil
+end
+
+--- Quelqu'un le PORTE-T-IL ? On ne range pas un objet qui est dans les mains de quelqu'un : il partirait en vol
+--- en restant soude au porteur, qui se retrouverait a courir apres son propre seau.
+---
+--- Les deux attributs sont ceux que posent les services de portage. On les LIT depuis leurs configs plutot que
+--- d'ecrire les noms ici : une chaine recopiee finit toujours par diverger de son original.
+local function isHeld(model: Model): boolean
+	return model:GetAttribute(MowConfigs.CARRIED_ATTRIBUTE) ~= nil
+		or model:GetAttribute(BinConfigs.CARRIED_ATTRIBUTE) ~= nil
+end
+
 --- Un point sur la courbe de Bezier quadratique, de `a` a `c` en passant pres de `b`.
 local function bezier(a: Vector3, b: Vector3, c: Vector3, t: number): Vector3
 	local u = 1 - t
@@ -95,7 +121,7 @@ end
 --- IL EST ANCRE PENDANT TOUT LE VOL, et repose ancre a l'arrivee : un modele desancre tombe, rebondit, et finit
 --- ou la physique veut -- alors qu'on lui a choisi une place. Les objets qu'on PORTE seront desancres par leur
 --- propre systeme quand on les prendra.
-local function fly(model: Model, landing: CFrame)
+local function fly(model: Model, landing: CFrame, home: Instance?)
 	flying[model] = true
 	local from = model:GetPivot()
 	-- LE SOMMET EST AU MILIEU, REMONTE. C'est lui qui fait l'arc, et le calculer depuis les deux bouts le garde
@@ -137,6 +163,14 @@ local function fly(model: Model, landing: CFrame)
 			RunService.Heartbeat:Wait()
 		end
 		model:PivotTo(landing)
+		-- ET IL RENTRE DANS LA BENNE, a la FIN du vol seulement. Range avant, il suivrait la carrosserie pendant
+		-- qu'il vole encore -- il arriverait donc a cote de sa place si le camion bouge.
+		if home and home.Parent then
+			model.Parent = home
+			-- LA MARQUE PART AVEC LUI : il n'est plus "sorti", donc l'interface le remontre comme a prendre. C'est
+			-- la meme information qui sert aux deux sens, il n'y a rien a tenir d'accord.
+			model:SetAttribute(TruckConfigs.POSE_ATTRIBUTE, nil)
+		end
 		flying[model] = nil
 	end)
 end
@@ -167,16 +201,51 @@ function TruckToolsService.init()
 			)
 			return
 		end
-		local model = folder:FindFirstChild(toolName :: string)
-		if not (model and model:IsA("Model")) or flying[model :: Model] then
-			return -- deja sorti, deja en vol, ou nom inconnu : rien a faire, et rien a dire
+		-- UN SEUL CLIC, DEUX SENS : c'est la PLACE de l'objet qui decide. S'il est encore dans la benne, on le
+		-- sort ; s'il en est deja sorti, on l'y remet. Le client n'a donc rien a savoir de l'etat des choses -- il
+		-- designe un outil, et le serveur fait ce qui a du sens pour lui.
+		local found = folder:FindFirstChild(toolName :: string)
+		if found and found:IsA("Model") then
+			-- SORTI EN VARIABLE, et pas `(found :: Model)` en debut de ligne : une instruction qui commence par une
+			-- parenthese se lit comme la SUITE de la ligne du dessus, donc comme un appel de fonction. Piege deja
+			-- paye dans ce projet.
+			local inside = found :: Model
+			if flying[inside] then
+				return
+			end
+			local landing = landingFor(toolName :: string, player)
+			if not landing then
+				return -- pas de place connue et pas de personnage : on ne pose pas un objet nulle part
+			end
+			-- ON RETIENT SA POSE AVANT DE LE SORTIR, en repere du camion : c'est elle qui le ramenera exactement
+			-- la, a l'angle pres, et elle reste juste meme si le camion bouge entre-temps.
+			inside:SetAttribute(TruckConfigs.POSE_ATTRIBUTE, truck:GetPivot():ToObjectSpace(inside:GetPivot()))
+			print(`[TruckToolsService] {player.Name} sort "{toolName}" du camion.`)
+			fly(inside, landing :: CFrame)
+			return
 		end
-		local landing = landingFor(toolName :: string, player)
-		if not landing then
-			return -- pas de place connue et pas de personnage : on ne pose pas un objet nulle part
+
+		-- IL EST DEHORS : on le range. Sa pose d'origine est sur lui, en repere du camion.
+		local out = findTakenTool(toolName :: string)
+		if not out then
+			return
 		end
-		print(`[TruckToolsService] {player.Name} sort "{toolName}" du camion.`)
-		fly(model :: Model, landing :: CFrame)
+		local taken = out :: Model
+		if flying[taken] then
+			return
+		end
+		if isHeld(taken) then
+			-- QUELQU'UN LE PORTE. Le faire voler le laisserait soude a lui : le porteur se mettrait a courir apres
+			-- son propre seau. On refuse en silence -- le joueur voit l'objet dans ses mains, il n'a pas besoin
+			-- qu'on le lui dise.
+			return
+		end
+		local pose = taken:GetAttribute(TruckConfigs.POSE_ATTRIBUTE)
+		if typeof(pose) ~= "CFrame" then
+			return
+		end
+		print(`[TruckToolsService] {player.Name} range "{toolName}" dans le camion.`)
+		fly(taken, truck:GetPivot() * (pose :: CFrame), folder)
 	end)
 
 	-- RIEN A NETTOYER QUAND UN JOUEUR PART : le vol vit dans une tache, pas dans sa session, et il finit tout

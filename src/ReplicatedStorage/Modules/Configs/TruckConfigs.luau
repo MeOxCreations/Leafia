@@ -74,6 +74,16 @@ local TruckConfigs = {
 		HedgeTrimmer = "rbxassetid://90444880289298",
 	},
 
+	-- LA MARQUE D'UN OUTIL SORTI DU CAMION : sa pose D'ORIGINE, gardee en repere du camion.
+	--
+	-- ELLE SERT A DEUX CHOSES A LA FOIS, et c'est pour ca qu'elle est un attribut et pas une liste. Elle DIT que
+	-- cet objet vient de la benne -- donc qu'on peut l'y remettre, et le retrouver suffit a le savoir, meme apres
+	-- un rechargement de la carte. Et elle dit OU il s'y rangeait, au centimetre et a l'angle pres.
+	--
+	-- EN REPERE DU CAMION, jamais en monde : le camion peut bouger entre-temps, et une pose monde le ferait
+	-- revenir a cote de la benne au lieu de dedans.
+	POSE_ATTRIBUTE = "LeafiaTruckPose",
+
 	-- Ou chacun se pose une fois sorti : un dossier de parts, une par outil, NOMMEE COMME LUI.
 	--
 	-- UNE PART PAR OUTIL et pas un point unique : deux outils lances de suite se poseraient l'un dans l'autre. Et
