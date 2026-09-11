@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.783 — Le seau fait du bruit en touchant le sol
+
+`DropSound` est joue quand le seau ARRIVE, dans le callback de fin de son glissement -- pas au moment ou le joueur
+le lache. Entre les deux il y a tout le trajet, et un choc qui precede l'image se lit comme un autre objet,
+ailleurs.
+
+Il est SPATIAL, porte par le seau : il vient de la ou il s'est pose, et il baisse quand on s'en eloigne.
+
+La poussiere, elle, garde son avance sur le contact : des particules mettent le temps de naitre et de s'ecarter,
+donc elles doivent partir avant pour etre ouvertes a l'arrivee. Un son n'a pas ce delai -- les deux effets ne
+partent pas au meme instant, et c'est voulu.
+
 ## 0.0.782 — Le champ de vision se referme doucement quand on s'arrete
 
 Il revenait a sa valeur de repos aussi VITE qu'il s'en eloignait : six degres en une demi-seconde, ce qui ne se lit

@@ -91,6 +91,12 @@ return {
 	-- ===== ETAT =====
 	-- Pose par le SERVEUR sur le seau : UserId du porteur. Le client le lit pour ne pas proposer un seau
 	-- deja pris par quelqu'un d'autre.
+	-- LE BRUIT QU'IL FAIT EN TOUCHANT LE SOL. Joue au CONTACT, pas au lacher : entre les deux il y a tout le
+	-- glissement, et un choc qui precede l'image se lit comme un autre objet, ailleurs.
+	--
+	-- La poussiere, elle, part un peu AVANT le contact -- des particules mettent le temps de naitre et de
+	-- s'ecarter. Un son n'a pas ce delai, donc les deux ne partent pas au meme instant.
+	DROP_SOUND = { "Sounds", "Game", "GlobalSounds", "DropSound" },
 	CARRIED_ATTRIBUTE = "LeafiaBinCarriedBy",
 	-- Le drapeau "ce joueur porte quelque chose" ne vit PLUS ici. Il etait cense empecher les autres systemes de
 	-- portage de se declencher par-dessus, mais personne ne le lisait : on pouvait porter le seau ET prendre

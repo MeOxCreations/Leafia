@@ -20,6 +20,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local DropEffectUtils = require(ReplicatedStorage.Modules.Utils.DropEffectUtils)
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 -- WalkSpeed a UN SEUL ecrivain, et c'est lui. On declare une intention, il tranche et il ramene la vitesse en
 -- douceur : ecrire WalkSpeed ici se battrait avec sa rampe d'atterrissage.
 local CharacterService = require(script.Parent.CharacterService)
@@ -415,6 +416,15 @@ local function place(player: Player, model: Model)
 
 	slideToGround(model, startCF, target, token, function()
 		slideTokens[model] = nil
+
+		-- ET IL FAIT DU BRUIT EN TOUCHANT. Ici, dans le callback de fin, et pas au lacher : entre les deux il y a
+		-- tout le glissement, et un choc qui precede l'image se lit comme un autre objet, ailleurs.
+		--
+		-- SPATIAL, porte par le seau : il vient de la ou il s'est pose, et il baisse quand on s'en eloigne.
+		local soundHost = binRoot(model)
+		if soundHost then
+			SoundUtils.play(BinConfigs.DROP_SOUND, soundHost)
+		end
 
 		-- MESURE, pas supposition. Si le seau parait encore penche, ces nombres disent OU est l'angle : dans la
 		-- pose (tangage/roulis non nuls sur la racine) ou dans le MODEL lui-meme (racine a plat mais mesh penche
