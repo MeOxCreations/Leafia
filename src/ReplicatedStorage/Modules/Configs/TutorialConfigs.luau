@@ -590,6 +590,12 @@ return {
 	GO_ON_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GoOnTruck" },
 	-- ET CE QU'IL DIT EN ARRIVANT : ouvre l'arriere, les outils sont dedans.
 	OPEN_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_OpenTruckBack" },
+	-- ET LE MARQUEUR PASSE SUR LE HAYON, a l'instant ou il le dit. La voix nomme la chose, le dessin la DESIGNE :
+	-- un camion a quatre cotes et le joueur n'a aucune raison de deviner lequel s'ouvre.
+	TRUCK_DOOR_NAME = "DoorBack",
+	-- Hauteur au-dessus du hayon, en studs. Il est bas et couche : pose dessus, le marqueur se lirait comme un
+	-- detail du camion.
+	TRUCK_MARKER_UP = 4,
 	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
 	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
 	--

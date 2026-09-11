@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.754 — Le marqueur passe sur le hayon du camion quand il dit de l'ouvrir
+
+A l'instant ou il dit `OpenTruckBack`, le point d'exclamation se pose sur la part `DoorBack` du camion. La voix
+NOMME la chose, le dessin la DESIGNE : un camion a quatre cotes, et le joueur n'a aucune raison de deviner lequel
+s'ouvre.
+
+ON POSE L'INTENTION, PAS LE MARQUEUR. Le camion est loin du joueur au debut du didacticiel, donc avec le
+streaming sa part peut n'etre pas encore repliquee quand la phrase tombe. La boucle cherche le hayon tant qu'elle
+ne l'a pas et fabrique le marqueur des qu'il est la -- chercher une seule fois le laisserait introuvable pour
+toute la session. Piege deja paye sur la porte de la maison et sur la parcelle d'herbe.
+
+Il vit 4 studs au-dessus du hayon : pose dessus, il se lirait comme un detail du camion.
+
+### A faire dans Studio
+
+La part `DoorBack`, sous `Worlds/Maps/Assets/Interactable/Truck`. Elle existe deja.
+
+### Reste a faire
+
+Ouvrir le hayon et prendre les outils : aucune interaction n'existe encore sur le camion. Le marqueur designe,
+mais il n'y a rien a faire une fois devant.
+
 ## 0.0.753 — Le marqueur de la porte redescend a sa place
 
 `DOOR_MARKER_UP` passe de 3.5 a 0. La valeur n'avait jamais servi -- le balancement ecrasait la hauteur demandee

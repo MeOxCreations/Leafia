@@ -80,6 +80,11 @@ local grandpaMarker: Frame? = nil
 local grandpaMarkerPart: BasePart? = nil
 -- SA CIBLE DE BADGE, gardee pour que la touche puisse verifier que la pilule est bien a nous. `E` est partagee :
 -- sans ce test, parler au grand-pere ramasserait aussi un seau pose a ses pieds.
+-- LE MARQUEUR SUR LE HAYON DU CAMION, une fois qu'il a dit de l'ouvrir. `wanted` et la reference sont SEPARES :
+-- avec le streaming la part peut arriver apres sa phrase, donc on garde l'intention et on re-cherche jusqu'a la
+-- trouver -- une reference resolue une seule fois resterait vide pour toute la session.
+local truckMarker: Frame? = nil
+local truckMarkerWanted = false
 local talkAnchor: BasePart? = nil
 local talkBound = false
 -- Il a dit ses felicitations : le badge et le marqueur ne reviennent pas. Une recompense qui se rejoue a chaque
@@ -2071,6 +2076,15 @@ local function step(dt: number)
 		end
 	end
 
+	-- LE HAYON DU CAMION, une fois qu'il a dit de l'ouvrir. Cherche tant qu'on ne l'a pas : avec le streaming la
+	-- part arrive apres coup, et une seule tentative la manquerait pour toute la session.
+	if truckMarkerWanted and not truckMarker then
+		local door = findByName(TutorialConfigs.TRUCK_DOOR_NAME)
+		if door and door:IsA("BasePart") then
+			truckMarker = WorldMarker.show(door :: BasePart, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
+		end
+	end
+
 	-- QUAND ON A LE DROIT DE LUI PARLER. Trois conditions, et chacune repare quelque chose de vu a l'ecran.
 	--
 	-- 1) LES MAINS LIBRES. On ne discute pas en poussant une tondeuse -- et surtout, `E` reposerait la machine EN
@@ -2450,6 +2464,10 @@ function TutorialController.init()
 		local atTruck = RemoteSetup.getRemote("TutorialGrandpaAtTruck", "Tutorial") :: RemoteEvent
 		atTruck.OnClientEvent:Connect(function()
 			sayVoice(TutorialConfigs.OPEN_TRUCK_SOUND)
+			-- LE MARQUEUR PASSE SUR LE HAYON. On pose l'INTENTION, pas le marqueur : la boucle le fabrique des
+			-- que la part est la. Le camion peut n'etre pas encore replique -- il est loin du joueur au debut du
+			-- didacticiel -- et chercher une seule fois le laisserait introuvable pour de bon.
+			truckMarkerWanted = true
 		end)
 	end)
 
@@ -2490,6 +2508,8 @@ function TutorialController.stop()
 	mowerMarker, mowerMarkerPart = nil, nil
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil
+	WorldMarker.remove(truckMarker)
+	truckMarker, truckMarkerWanted = nil, false
 	hideTalkPrompt()
 	if conn then
 		conn:Disconnect()
@@ -2553,6 +2573,8 @@ function TutorialController.stop()
 	talkDone = false
 	nextUndoneAt = 0
 	lawnFraction = 0
+	WorldMarker.remove(truckMarker)
+	truckMarker, truckMarkerWanted = nil, false
 	hideTalkPrompt()
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil
