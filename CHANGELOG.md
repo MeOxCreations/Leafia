@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.776 — Un script Studio qui cree les points de depot des outils
+
+`scripts/studio/CreerPointsDeDepotOutils.lua` fabrique le dossier `ToolsDropPoints` et une part par outil range
+dans la benne, posees en eventail derriere le camion. Il ne reste qu'a les deplacer a la souris.
+
+POURQUOI UN SCRIPT DE BARRE DE COMMANDES ET PAS DU CODE DE JEU. Rojo ne synchronise que `src/` : le Workspace ne
+voyage pas. Un dossier cree par le jeu n'existerait qu'en memoire pendant la partie et disparaitrait a l'arret --
+il faut le creer en mode EDITION pour qu'il soit sauve avec la place.
+
+IL NE DETRUIT RIEN. Il ne cree que ce qui manque et laisse en place ce qui a deja ete deplace, donc on peut le
+rejouer apres avoir ajoute un sixieme outil dans la benne sans perdre les cinq reglages faits a la souris.
+
+Les parts sont invisibles, traversables et ancrees : ce sont des REPERES, pas des objets. Solides, elles
+bloqueraient le joueur ; visibles, elles resteraient a l'ecran sous l'outil pose dessus.
+
 ## 0.0.775 — L'outil siffle en sortant du camion et fait du bruit en se posant
 
 `PassingSound` part avec le vol, `DropSound` au moment ou l'objet touche sa place. Deux moments, deux sons : un
