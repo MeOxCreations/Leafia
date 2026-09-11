@@ -2204,6 +2204,42 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.723 — La tondeuse se pose sur le sol, et un sol n'efface plus la pelouse
+
+### Elle ne flotte plus
+
+Les tondeuses de la map sont posees sur ce qui est REELLEMENT sous elles, au boot et quand le streaming les
+apporte.
+
+**Pourquoi par le code.** Une machine posee a la main dans Studio flotte ou s'enfonce du peu qu'on s'est trompe,
+et elle est ANCREE -- donc la physique ne la rattrape jamais. Le rayon, lui, la pose exactement sur la dalle, la
+pente ou le terrain qui est dessous.
+
+**Le sol se cherche par un RAYON, pas par un nom.** La machine doit se poser sur ce qui est la, qu'on l'ait prevu
+ou non : nommer une part de reference obligerait a en poser une sous chaque endroit ou une tondeuse peut finir.
+
+**Et les touffes d'herbe ne comptent pas** : elles sont invisibles aux rayons (`CanQuery` faux). Sans ca la
+machine se poserait sur la pelouse et flotterait de la hauteur de l'herbe -- exactement le symptome qu'on repare.
+
+Au streaming, la pose est differee d'une image : a `DescendantAdded` le modele est parente mais ses parts n'y sont
+pas toutes, et le rayon partirait d'un point qui n'existe pas encore.
+
+`settleOnGround` (la repose par le joueur) passe par la meme fonction, avec le porteur exclu du rayon en plus.
+Sans lui, le rayon tombe sur ses pieds et la machine se pose a hauteur de cheville.
+
+### Un sol n'est plus pris pour un objet pose sur l'herbe
+
+Nouvelle liste `CLEAR_IGNORE_NAMES` : des noms de parts que le semis ignore quoi qu'il arrive. `GroundHouse` y
+entre.
+
+Le seuil de hauteur existant couvre le cas normal -- un sol dont le dessus affleure la pelouse ne depasse pas,
+donc il ne compte pas. Mais il suffit qu'une dalle depasse d'un demi-stud, parce qu'on l'a posee un peu haut ou
+que la pelouse est un peu basse, pour qu'elle passe pour un objet pose : son emprise efface alors TOUTE l'herbe,
+d'un coup, sans une seule erreur. Deja vecu avec le sol principal.
+
+Une part qui s'appelle "un sol" n'est jamais un objet POSE sur l'herbe. Autant le dire par son nom que de faire
+dependre la pelouse entiere d'un demi-stud de reglage.
+
 ## 0.0.722 — Camera plus pres, jauge verticale, et les fleurs tombent avec l'herbe
 
 ### La camera de conduite

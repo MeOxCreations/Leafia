@@ -209,6 +209,18 @@ local GrassZoneConfigs = {
 	-- Sans ce seuil, le SOL lui-meme (la grosse part verte sous la pelouse, dont le dessus affleure la zone) est vu
 	-- comme un objet pose, et son emprise couvre toute la zone : plus une seule touffe. Vecu.
 	CLEAR_MIN_HEIGHT = 0.5,
+	-- DES SOLS, JAMAIS DES OBSTACLES. Noms de parts que le semis ignore quoi qu'il arrive.
+	--
+	-- POURQUOI EN PLUS DU SEUIL DE HAUTEUR. Le seuil couvre le cas normal -- un sol dont le dessus affleure la
+	-- pelouse ne depasse pas, donc il ne compte pas. Mais il suffit qu'une dalle depasse d'un demi-stud, parce
+	-- qu'on l'a posee un peu haut ou que la pelouse est un peu basse, pour qu'elle passe pour un objet pose : son
+	-- emprise efface alors TOUTE l'herbe, d'un coup, sans une seule erreur. Deja vecu avec le sol principal.
+	--
+	-- Une part qui s'appelle "un sol" n'est jamais un objet POSE sur l'herbe : autant le dire par son nom plutot
+	-- que de faire dependre la pelouse entiere d'un demi-stud de reglage.
+	CLEAR_IGNORE_NAMES = {
+		GroundHouse = true,
+	},
 
 	-- ===== Fleurs =====
 	-- Des fleurs poussent parmi l'herbe. Ce sont des touffes comme les autres, avec un autre mesh : elles heritent

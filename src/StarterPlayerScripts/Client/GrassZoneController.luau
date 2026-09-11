@@ -495,6 +495,11 @@ local function isBlocker(part: BasePart, zonePart: BasePart): boolean
 	if part.Name:sub(1, #GrassZoneConfigs.ZONE_PREFIX) == GrassZoneConfigs.ZONE_PREFIX then
 		return false
 	end
+	-- UN SOL N'EST JAMAIS UN OBJET POSE SUR L'HERBE, meme s'il depasse d'un demi-stud. Sans cette liste, une dalle
+	-- posee un poil trop haut efface la pelouse ENTIERE d'un coup, et rien ne le signale.
+	if GrassZoneConfigs.CLEAR_IGNORE_NAMES[part.Name] then
+		return false
+	end
 	-- Une touffe d'herbe ne se chasse pas elle-meme.
 	local parent = part.Parent
 	if parent and parent.Name == FOLDER_NAME then

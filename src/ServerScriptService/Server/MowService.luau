@@ -803,7 +803,14 @@ end
 --
 -- On ne garde que le CAP : le tangage et le roulis du portage (cabrage, ballant) n'ont aucune raison de survivre
 -- a la repose, et ce sont eux qui font ensuite basculer la machine.
-local function settleOnGround(model: Model, state: CarryState)
+--- POSE LA MACHINE SUR LE SOL QUI EST SOUS ELLE, a plat, en gardant son cap.
+---
+--- `ignore` est ce qu'il faut ecarter du rayon EN PLUS de la machine -- le porteur a la repose, rien au boot.
+---
+--- LE SOL SE CHERCHE PAR UN RAYON, pas par un nom : la machine doit se poser sur ce qui est REELLEMENT dessous,
+--- qu'on l'ait prevu ou non. Les touffes d'herbe, elles, sont invisibles aux rayons (`CanQuery` faux) : sans ca
+--- la machine se poserait dessus et flotterait de la hauteur de l'herbe.
+local function dropToGround(model: Model, ignore: Instance?)
 	local root = rootOf(model)
 	if not root then
 		return
@@ -817,9 +824,9 @@ local function settleOnGround(model: Model, state: CarryState)
 
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
-	-- LA MACHINE ET SON PORTEUR SONT EXCLUS. Sans le porteur, le rayon tombe sur ses pieds et la tondeuse se
-	-- poserait a hauteur de cheville.
-	params.FilterDescendantsInstances = { model, state.owner.Character }
+	-- LA MACHINE EST TOUJOURS EXCLUE, et le porteur quand il y en a un : sans lui, le rayon tombe sur ses pieds et
+	-- la tondeuse se poserait a hauteur de cheville.
+	params.FilterDescendantsInstances = { model, ignore }
 	local hit = Workspace:Raycast(root.Position, Vector3.new(0, -MowConfigs.DROP_RAY, 0), params)
 	if not hit then
 		return -- rien dessous : lachee au-dessus du vide, la physique fait mieux que nous
@@ -835,6 +842,10 @@ local function settleOnGround(model: Model, state: CarryState)
 	-- quand le modele n'a pas de PrimaryPart -- et celle de la tondeuse est decalee par la CutZone et la Hitbox.
 	-- En composant l'ecart de la RACINE, on ne depend d'aucun pivot.
 	model:PivotTo(levelled * root.CFrame:Inverse() * model:GetPivot())
+end
+
+local function settleOnGround(model: Model, state: CarryState)
+	dropToGround(model, state.owner.Character)
 end
 
 -- ===== LES ROUES =====
@@ -1360,6 +1371,37 @@ function MowService.init()
 		pcall(function()
 			ContentProvider:PreloadAsync(assets)
 		end)
+	end)
+
+	-- LES MACHINES DE LA MAP SE POSENT SUR LE SOL, au boot et quand le streaming les apporte.
+	--
+	-- POURQUOI PAR LE CODE. Une tondeuse posee a la main dans Studio flotte ou s'enfonce du peu qu'on s'est
+	-- trompe, et elle est ANCREE -- donc la physique ne la rattrape pas. Le rayon, lui, la pose exactement sur ce
+	-- qui est dessous, quelle que soit la dalle, la pente ou la hauteur du terrain.
+	--
+	-- ET LES TOUFFES D'HERBE NE COMPTENT PAS : elles sont invisibles aux rayons (`CanQuery` faux), donc la machine
+	-- se pose sur le SOL et pas sur la pelouse -- sinon elle flotterait de la hauteur de l'herbe.
+	local function groundAll(root: Instance)
+		for _, d in ipairs(root:GetDescendants()) do
+			local model = isMower(d)
+			if model then
+				dropToGround(model)
+			end
+		end
+	end
+	groundAll(Workspace)
+	-- Le streaming en apporte apres le boot : sans cette ecoute, celles-la resteraient posees comme dans Studio.
+	Workspace.DescendantAdded:Connect(function(inst: Instance)
+		local model = isMower(inst)
+		if model then
+			-- UNE IMAGE PLUS TARD : a `DescendantAdded`, le modele est parente mais ses parts n'y sont pas toutes
+			-- -- la racine peut manquer, et le rayon partirait d'un point qui n'existe pas encore.
+			task.defer(function()
+				if model.Parent then
+					dropToGround(model)
+				end
+			end)
+		end
 	end)
 
 	local remote = RemoteSetup.getRemote("SetMowerCarry", "Mow") :: RemoteEvent
