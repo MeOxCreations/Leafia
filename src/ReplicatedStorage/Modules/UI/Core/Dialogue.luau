@@ -430,7 +430,21 @@ local function build()
 	portrait, portraitScale = portraitImg, imgScale
 	bannerScale = bScale
 
-	b.Activated:Connect(advance)
+	-- UN TAP NE PASSE PAS UNE LIGNE MINUTEE, et c'est la regle entiere : si l'auteur a donne une duree (`hold`),
+	-- c'est qu'elle est calee sur autre chose -- une voix, une animation, un plan de camera. La passer a la main
+	-- desynchronise tout ce qui compte sur elle : dans le didacticiel, un tap sur le bandeau avancait la scene
+	-- pendant que le grand-pere parlait encore, et la suite tombait dans le vide.
+	--
+	-- PAS UN REGLAGE DE PLUS : la donnee repond deja. Une ligne sans duree attend le joueur -- le tap est alors
+	-- le seul moyen d'avancer, et l'indice de continuation le lui dit. Une ligne avec duree ne l'attend pas, donc
+	-- elle ne lui propose rien : `setHintVisible(not autoLine)` cachait deja l'indice, la surface etait juste
+	-- restee cliquable.
+	b.Activated:Connect(function()
+		if autoLine then
+			return
+		end
+		advance()
+	end)
 
 	refreshScale()
 	local camera = workspace.CurrentCamera

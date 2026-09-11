@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.748 — Un tap sur le bandeau ne passe plus une replique minutee
+
+Taper sur le dialogue avancait la scene du didacticiel pendant que le grand-pere parlait encore, et tout ce qui
+suivait tombait dans le vide.
+
+LA DONNEE REPOND DEJA, donc aucun reglage en plus. Une ligne qui porte une duree (`hold`) est calee sur autre
+chose -- une voix, une animation, un plan de camera -- et la passer a la main desynchronise ce qui compte sur
+elle. Une ligne SANS duree, elle, attend le joueur : le tap reste son seul moyen d'avancer.
+
+L'interface le disait deja a moitie : `setHintVisible(not autoLine)` cachait l'indice de continuation sur les
+lignes minutees. Il ne restait plus qu'a rendre la surface non cliquable dans ce cas.
+
+Le passage automatique, lui, continue de passer par la meme fonction : c'est le TAP qui est filtre, pas l'avance.
+
 ## 0.0.747 — On ne peut plus parler au grand-pere avant d'avoir tondu quelque chose
 
 Le badge `TALK` sortait des la prise de la machine : on passait devant lui et il pouvait deja dire "tu n'as pas
