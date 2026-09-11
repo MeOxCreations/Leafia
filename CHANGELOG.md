@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.742 — La pelouse tondue, il rappelle le joueur et le marqueur se pose sur lui
+
+Quand la derniere touffe tombe, trois choses partent ensemble. Il dit `Oldman_scene_speech_PerfectComeSeeMe`, le
+point d'exclamation se pose sur LUI, et il cesse de flaner pour attendre. De pres, un badge `TALK` sort ; a
+l'appui il dit `Oldman_scene_speech_HeppyForCutGrass`, et le marqueur comme le badge disparaissent.
+
+AVANT, LA TACHE PASSAIT EN GRIS ET PLUS RIEN NE SE PASSAIT -- juste apres le premier travail du joueur, soit le
+moment exact ou il decide s'il en fait un deuxieme. La voix dit de venir, le dessin dit ou.
+
+AUCUNE TACHE NE SUIT POUR LE MOMENT. La suite du scenario n'est pas ecrite, et annoncer une consigne qui n'existe
+pas serait pire que de n'en annoncer aucune.
+
+LE MARQUEUR EST ACCROCHE A SON CORPS, pas a un point : il se promene, donc un point fige resterait la ou il se
+trouvait quand la tonte s'est finie. Meme piege que le marqueur de la porte, ne a l'origine de la map.
+
+IL S'ARRETE DE MARCHER, et ca demande un remote (`TutorialLawnDone`) : le compte des touffes vit chez le CLIENT,
+qui affiche l'herbe, et sa marche vit sur le SERVEUR. Un grand-pere qui continue de flaner pendant qu'on marche
+vers lui transforme une recompense en course-poursuite. La garde du proprietaire de scene est la : a deux, celui
+qui tond ne doit pas figer le grand-pere du voisin.
+
+Sa replique de retour ne se joue QU'UNE FOIS. Des felicitations qui se rejouent a chaque passage cessent d'etre
+une recompense. Et la touche porte le test d'appartenance du badge : `E` est partagee, sans lui parler au
+grand-pere ramasserait aussi un seau pose a ses pieds.
+
+### A faire dans Studio
+
+Les deux sons, dans `Sounds/Scenes/Scene1/Voices` : `Oldman_scene_speech_PerfectComeSeeMe` et
+`Oldman_scene_speech_HeppyForCutGrass`. Rojo ne transporte pas les assets.
+
 ## 0.0.741 — Un appui sur E ne declenche plus qu'une seule action
 
 Un seau pose a cote de la tondeuse, un appui sur `E`, et les deux partaient : la machine en main, et le joueur en

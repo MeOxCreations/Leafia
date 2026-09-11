@@ -1002,6 +1002,19 @@ function TutorialService.init()
 		end
 	end)
 
+	-- LA PELOUSE EST TONDUE : IL S'ARRETE ET ATTEND. Le joueur doit revenir le voir, et un grand-pere qui
+	-- continue de flaner pendant qu'on marche vers lui transforme une recompense en course-poursuite.
+	--
+	-- AUCUN ARGUMENT A VALIDER, donc rien que le client puisse falsifier d'utile : le pire qu'un client modifie
+	-- obtienne est un PNJ qui cesse de marcher. Et la garde du proprietaire de scene suffit -- a deux, celui qui
+	-- tond ne doit pas figer le grand-pere du voisin.
+	local lawnDone = RemoteSetup.getRemote("TutorialLawnDone", "Tutorial") :: RemoteEvent
+	lawnDone.OnServerEvent:Connect(function(player)
+		if sceneOwner == player then
+			stopFollow()
+		end
+	end)
+
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur
 	-- RunService, elle survivrait au depart du joueur et continuerait de deplacer le grand-pere vers un
 	-- personnage detruit.

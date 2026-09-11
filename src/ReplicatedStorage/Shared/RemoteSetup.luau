@@ -44,6 +44,9 @@ local REMOTES: { { any } } = {
 	-- SERVEUR VERS CLIENT, parce que le marqueur ne se signale qu'a la machine qui LIT la piste -- et c'est le
 	-- serveur qui la joue, le grand-pere etant un modele du monde. Le client ne le verrait jamais tout seul.
 	{ "TutorialFocusDone", E, "Tutorial" },
+	-- LA TONTE EST FINIE. Le compte des touffes vit chez le CLIENT (c'est lui qui affiche l'herbe coupee), et le
+	-- grand-pere marche cote SERVEUR : il faut donc le lui dire pour qu'il s'arrete d'aller flaner et attende.
+	{ "TutorialLawnDone", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

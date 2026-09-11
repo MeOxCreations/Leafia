@@ -74,6 +74,17 @@ local doorMarker: Frame? = nil
 -- d'une machine a l'autre.
 local mowerMarker: Frame? = nil
 local mowerMarkerPart: BasePart? = nil
+-- LE MARQUEUR SUR LE GRAND-PERE, une fois la pelouse tondue, et la part qu'il designe : il se promene, donc le
+-- marqueur est accroche a son corps -- un point du monde resterait la ou il etait quand la tonte s'est finie.
+local grandpaMarker: Frame? = nil
+local grandpaMarkerPart: BasePart? = nil
+-- SA CIBLE DE BADGE, gardee pour que la touche puisse verifier que la pilule est bien a nous. `E` est partagee :
+-- sans ce test, parler au grand-pere ramasserait aussi un seau pose a ses pieds.
+local talkAnchor: BasePart? = nil
+local talkBound = false
+-- Il a dit sa phrase de retour : le badge et le marqueur ne reviennent pas. Une replique de felicitations qui se
+-- rejoue a chaque passage cesse d'etre une recompense.
+local talkDone = false
 local missionStarted = false
 local sceneEnded = false
 local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
@@ -148,6 +159,9 @@ local trySound: Sound? = nil
 local speechSound: Sound? = nil
 -- Le remote qui dit au serveur combien de temps il parle. Resolu en tache de fond au boot (voir init).
 local talkRemote: RemoteEvent? = nil
+-- ON DIT AU SERVEUR QUE LA PELOUSE EST TONDUE : c'est lui qui fait marcher le grand-pere, et il doit s'arreter
+-- pour attendre le joueur qui revient le voir.
+local lawnDoneRemote: RemoteEvent? = nil
 -- JUSQU'A QUAND IL PARLE, en horloge. Chaque replique la repousse, et la plus lointaine gagne -- meme mecanique
 -- que le geste d'explication cote serveur, et pour la meme raison : deux minuteurs separes laisseraient le
 -- premier a expirer decider a la place des autres.
@@ -1813,6 +1827,53 @@ local function playImpatient()
 	sayVoice(sounds[i])
 end
 
+-- LE BADGE "PARLER" SUR LE GRAND-PERE, et sa touche. Branchee seulement quand l'action a un sens, comme celle de
+-- la porte : une touche qui repond partout finit par repondre a la place d'une autre.
+local function setTalkBound(active: boolean)
+	if active == talkBound then
+		return
+	end
+	talkBound = active
+	if active then
+		ContextActionService:BindAction(TutorialConfigs.TALK_ACTION_NAME, function(_, state: Enum.UserInputState)
+			-- LA TOUCHE SUIT LE BADGE : `Pass` laisse l'appui filer vers tout ce qui est a portee, donc sans ce
+			-- test parler au grand-pere ramasserait aussi ce qui traine a ses pieds.
+			if state == Enum.UserInputState.Begin and InteractionPrompt.owns(talkAnchor) then
+				TutorialController.talkToGrandpa()
+			end
+			return Enum.ContextActionResult.Pass
+		end, true, TutorialConfigs.ACTION_KEY)
+	else
+		ContextActionService:UnbindAction(TutorialConfigs.TALK_ACTION_NAME)
+	end
+end
+
+-- ON RETIRE NOTRE DEMANDE, jamais un `hide()` global : celui-la jetterait les demandes des voisines, et une
+-- feature encore a portee ne reviendrait plus.
+local function hideTalkPrompt()
+	if talkAnchor then
+		InteractionPrompt.release(talkAnchor)
+		talkAnchor = nil
+	end
+	setTalkBound(false)
+end
+
+--- IL FELICITE LE JOUEUR QUI REVIENT LE VOIR. Appelee par la touche ET par le tap de la pilule.
+---
+--- UNE SEULE FOIS : le marqueur et le badge partent avec, donc plus rien ne rappelle le joueur ici. Aucune tache
+--- ne suit pour le moment -- la suite du scenario n'est pas ecrite, et annoncer une consigne qui n'existe pas
+--- serait pire que de n'en annoncer aucune.
+function TutorialController.talkToGrandpa()
+	if talkDone or not lawnTaskDone then
+		return
+	end
+	talkDone = true
+	hideTalkPrompt()
+	WorldMarker.remove(grandpaMarker)
+	grandpaMarker, grandpaMarkerPart = nil, nil
+	sayVoice(TutorialConfigs.TALK_SOUND)
+end
+
 local function showMowerTask()
 	if mowerTaskShown then
 		return
@@ -1950,7 +2011,57 @@ local function step(dt: number)
 					lawnTaskDone = true
 					TaskBannerHandler.setDone(2)
 					print(`[Tutorial] Pelouse tondue : {done}/{total} touffes.`)
+					-- IL RAPPELLE LE JOUEUR, a l'instant ou la derniere touffe tombe. Sans cette phrase la tache
+					-- passait en gris et plus rien ne se passait -- juste apres son premier travail, soit le
+					-- moment exact ou il decide s'il en fait un deuxieme.
+					sayVoice(TutorialConfigs.LAWN_DONE_SOUND)
+					-- ET IL S'ARRETE DE FLANER POUR L'ATTENDRE. Le compte des touffes vit ICI, sa marche vit sur
+					-- le SERVEUR : il faut le lui dire. Un grand-pere qui s'eloigne pendant qu'on vient le voir
+					-- transforme une recompense en course-poursuite.
+					local remote = lawnDoneRemote
+					if remote then
+						remote:FireServer()
+					end
 				end
+			end
+		end
+	end
+
+	-- IL FAUT ALLER LE REVOIR. Le marqueur se pose sur lui et le badge sort quand on est assez pres.
+	--
+	-- ACCROCHE A SON CORPS et pas a un point : il se promene, donc un point fige resterait la ou il se trouvait
+	-- quand la derniere touffe est tombee. Piege deja paye sur le marqueur de la porte, ne a l'origine de la map.
+	if lawnTaskDone and not talkDone then
+		local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
+		local part = if grandpa then bodyPart(grandpa) else nil
+		local me = getRoot()
+		if part and me then
+			if grandpaMarkerPart ~= part then
+				WorldMarker.remove(grandpaMarker)
+				grandpaMarker = WorldMarker.show(part, Vector3.new(0, TutorialConfigs.GRANDPA_MARKER_UP, 0))
+				grandpaMarkerPart = part
+			end
+			-- DISTANCE RADIALE, a plat : il n'a aucune orientation stable puisqu'il marche, et une boite orientee
+			-- laisserait des angles morts selon le cote par lequel on arrive.
+			local flat = (part.Position - me.Position) * Vector3.new(1, 0, 1)
+			if flat.Magnitude <= TutorialConfigs.TALK_RADIUS then
+				setTalkBound(true)
+				-- On re-demande au CHANGEMENT de cible, mais AUSSI quand la pilule ne nous appartient plus : une
+				-- voisine a pu la prendre. Sans ce second test, la notre ne reviendrait jamais.
+				if talkAnchor ~= part or InteractionPrompt.currentTarget() ~= part then
+					InteractionPrompt.release(talkAnchor)
+					talkAnchor = part
+					InteractionPrompt.show(
+						part,
+						TutorialConfigs.TALK_PROMPT_KEY,
+						TutorialConfigs.TALK_PROMPT_LABEL,
+						TutorialConfigs.TALK_PROMPT_OFFSET,
+						TutorialController.talkToGrandpa,
+						TutorialConfigs.TALK_PROMPT_TITLE
+					)
+				end
+			else
+				hideTalkPrompt()
 			end
 		end
 	end
@@ -2268,6 +2379,7 @@ function TutorialController.init()
 	-- comportement d'avant.
 	task.spawn(function()
 		talkRemote = RemoteSetup.getRemote("OldManTalk", "Tutorial") :: RemoteEvent
+		lawnDoneRemote = RemoteSetup.getRemote("TutorialLawnDone", "Tutorial") :: RemoteEvent
 	end)
 
 	-- MORT OU RESPAWN EN PLEINE SCENE. Sans ce filet le joueur ressuscite avec une camera scriptee et des barres
@@ -2305,6 +2417,9 @@ function TutorialController.stop()
 	GroundGuide.destroy()
 	WorldMarker.remove(mowerMarker)
 	mowerMarker, mowerMarkerPart = nil, nil
+	WorldMarker.remove(grandpaMarker)
+	grandpaMarker, grandpaMarkerPart = nil, nil
+	hideTalkPrompt()
 	if conn then
 		conn:Disconnect()
 		conn = nil

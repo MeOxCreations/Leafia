@@ -558,6 +558,29 @@ return {
 	-- Ecart minimum entre deux fois, en secondes. Le joueur peut prendre et reposer le seau en boucle : sans ce
 	-- garde, il se ferait sermonner a chaque aller-retour, et la phrase deviendrait un bruit de porte.
 	PUT_BIN_DOWN_COOLDOWN = 10,
+	-- ===== LA PELOUSE EST TONDUE : IL RAPPELLE LE JOUEUR =====
+	-- La tache se terminait en gris et plus rien ne se passait. Un joueur qui vient de finir son premier travail
+	-- doit savoir OU aller ensuite, tout de suite : c'est le moment ou il decide s'il en fait un deuxieme.
+	--
+	-- Sa replique part a l'instant ou la derniere touffe tombe, et le marqueur se pose sur lui dans le meme
+	-- geste : la voix dit de venir, le dessin dit ou.
+	LAWN_DONE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PerfectComeSeeMe" },
+	-- ET CE QU'IL DIT QUAND LE JOUEUR ARRIVE. Il n'enchaine sur aucune tache pour le moment : la suite du
+	-- scenario n'est pas ecrite, et donner une consigne qui n'existe pas serait pire que de ne rien donner.
+	TALK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_HeppyForCutGrass" },
+	-- Hauteur du marqueur au-dessus de sa RootPart, en studs. Plus haut que celui de la tondeuse : il est DEBOUT,
+	-- et un point d'exclamation pose a hauteur de poitrine se lit comme un badge sur lui, pas comme un appel.
+	GRANDPA_MARKER_UP = 6.2,
+	-- A quelle distance le badge "PARLER" apparait, en studs. DISTANCE RADIALE, comme celle de la porte : une
+	-- boite orientee laisse des angles morts, et il se promene -- il n'a aucune orientation stable.
+	TALK_RADIUS = 11,
+	TALK_PROMPT_KEY = "E",
+	TALK_PROMPT_LABEL = "TALK",
+	TALK_PROMPT_TITLE = "GRANDPA",
+	-- Au-dessus de sa tete, mais SOUS le marqueur : les deux se liraient l'un sur l'autre.
+	TALK_PROMPT_OFFSET = Vector3.new(0, 4.4, 0),
+	TALK_ACTION_NAME = "LeafiaTutorialTalk",
+
 	-- SON VISAGE PENDANT QU'IL RALE. Jouee une fois a chaque replique.
 	--
 	-- EN `Action2`, une priorite AU-DESSUS de son explication (`Action`). A priorite EGALE Roblox ne choisit pas,
