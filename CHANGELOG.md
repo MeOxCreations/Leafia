@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.786 — Une cinquieme facon d'appeler le joueur qui ne suit pas
+
+`Say_wait_player_6` ("Let's go ?") entre dans le tirage des appels patients, pas dans la colere : elle relance,
+elle ne reproche rien. Le numero du fichier ne dit pas son ton -- c'est la liste ou il est range qui le dit, et
+`_5` reste la seule reservee a l'attente qui dure.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_Say_wait_player_6` dans `Sounds/Scenes/Scene1/Voices`.
+
 ## 0.0.785 — Il demande la cisaille, puis ouvre la marche vers la haie en contournant le buisson
 
 `Oldman_scene_speech_GrabTheShear` s'ajoute a la suite de l'ouverture du hayon : `AsUCanSeeDoorTruck`, puis

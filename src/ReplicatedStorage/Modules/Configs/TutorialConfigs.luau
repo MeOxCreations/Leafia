@@ -860,13 +860,17 @@ return {
 
 	-- ET S'IL ATTEND POUR RIEN, IL APPELLE. Le joueur qui ne comprend pas qu'il faut suivre voit un vieux
 	-- monsieur plante au milieu du jardin : sans un mot, rien ne lui dit que c'est LUI qu'on attend.
-	-- QUATRE FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
+	-- CINQ FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
 	-- entendre la meme phrase toutes les neuf secondes transformerait le personnage en alarme.
+	--
+	-- LA SIXIEME EST DANS CE TIRAGE, pas dans la colere : "Let's go ?" relance, il ne reproche rien. Le numero du
+	-- fichier ne dit pas son ton -- c'est la liste ou il est range qui le dit.
 	WAIT_PLAYER_SOUNDS = {
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_2" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_3" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_4" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_6" },
 	},
 	-- ET LA CINQUIEME, RESERVEE A L'ATTENTE QUI DURE. Elle n'est PAS dans le tirage : une phrase qui dit "bon, tu
 	-- viens ?" perd tout si elle sort au premier appel. Elle se merite, donc elle se garde.
