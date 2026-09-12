@@ -730,15 +730,22 @@ local function walkOldMan(
 end
 
 
--- IL S'ASSOIT, ET IL TIENT LA POSE.
+-- IL S'ASSOIT, PUIS IL RESPIRE SUR SON BANC.
 --
--- POUR TENIR LA DERNIERE IMAGE il faut `Looped = true` : sinon la piste se RELACHE en arrivant au bout et il se
--- releve d'un coup. Mais bouclee a vitesse normale elle REPART du debut, et il se rassoit en boucle. On la laisse
--- donc tourner -- c'est ce qui fait tirer son marqueur au bon moment -- et on la FIGE des qu'elle atteint la fin.
+-- DEUX ANIMATIONS QUI SE RELAIENT : le GESTE de s'asseoir, joue une fois, puis l'IDLE ASSIS, boucle. Tenir la
+-- derniere image du geste marcherait aussi, mais un personnage fige a l'air en panne, pas au repos.
 --
--- DEUX CONDITIONS D'ARRET, pas une. "On approche de la fin" rate le cas ou une image longue saute par-dessus ; le
+-- POURQUOI LE GESTE EST QUAND MEME BOUCLE. Sans `Looped = true`, une piste se RELACHE en arrivant au bout : la
+-- pose saute a l'idle debout pendant une image, avant que l'idle assis ne prenne le relais. On la laisse donc
+-- tourner -- c'est aussi ce qui fait tirer son marqueur a l'heure -- et on l'arrete nous-memes a la fin.
+--
+-- DEUX CONDITIONS DE FIN, pas une. "On approche du bout" rate le cas ou une image longue saute par-dessus ; le
 -- test "la position a RECULE" attrape le rebouclage qui vient de se produire. Sans le second, a bas framerate, il
 -- se rassoit.
+--
+-- ACQUERIR, BASCULER, LIBERER -- dans cet ordre. On charge l'idle AVANT de lacher le geste : si le chargement
+-- rate, on tient la derniere image, ce qui est moins bien mais reste un homme assis. L'inverse laisserait un
+-- grand-pere debout au milieu de son banc, et c'est une faute deja payee dans ce projet.
 local function sitOldMan(model: Model, onHup: (() -> ())?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
@@ -746,43 +753,71 @@ local function sitOldMan(model: Model, onHup: (() -> ())?)
 		warn(`[Tutorial] Pas d'Animator sous "{model.Name}" : il restera debout devant son banc.`)
 		return
 	end
-	local anim = Instance.new("Animation")
-	anim.AnimationId = TutorialConfigs.OLDMAN_SIT_ANIM
-	local ok, result = pcall(function()
-		return (animator :: Animator):LoadAnimation(anim)
-	end)
-	if not (ok and typeof(result) == "Instance") then
-		warn(`[Tutorial] Animation d'assise non chargeable ({TutorialConfigs.OLDMAN_SIT_ANIM}).`)
+
+	local function load(id: string): AnimationTrack?
+		local anim = Instance.new("Animation")
+		anim.AnimationId = id
+		local ok, result = pcall(function()
+			return (animator :: Animator):LoadAnimation(anim)
+		end)
+		if ok and typeof(result) == "Instance" then
+			return result :: AnimationTrack
+		end
+		warn(`[Tutorial] Animation non chargeable ({id}).`)
+		return nil
+	end
+
+	local track = load(TutorialConfigs.OLDMAN_SIT_ANIM)
+	if not track then
 		return
 	end
-	local track = result :: AnimationTrack
-	track.Looped = true
-	track.Priority = TutorialConfigs.OLDMAN_SIT_PRIORITY
+	local sit = track :: AnimationTrack
+	sit.Looped = true
+	sit.Priority = TutorialConfigs.OLDMAN_SIT_PRIORITY
 	-- SON EFFORT EN SE POSANT : c'est l'ANIMATION qui dit quand, par son marqueur. Un delai en secondes recopie
 	-- dans la config se decalerait au premier remontage du fichier.
 	if onHup then
-		track:GetMarkerReachedSignal(TutorialConfigs.OLDMAN_HUP_MARKER):Once(onHup)
+		sit:GetMarkerReachedSignal(TutorialConfigs.OLDMAN_HUP_MARKER):Once(onHup)
 	end
-	track:Play(TutorialConfigs.OLDMAN_SIT_FADE)
+	sit:Play(TutorialConfigs.OLDMAN_SIT_FADE)
 
 	local last = 0
+	local settled = false
 	local conn: RBXScriptConnection? = nil
 	conn = RunService.Heartbeat:Connect(function()
-		local length = track.Length
+		local length = sit.Length
 		if length <= 0 then
 			return -- l'asset n'est pas encore arrive : on ne peut pas savoir ou est la fin
 		end
-		local now = track.TimePosition
+		local now = sit.TimePosition
 		if now + 0.03 < length and now >= last then
 			last = now
 			return
 		end
-		track.TimePosition = math.max(length - 0.001, 0)
-		track:AdjustSpeed(0)
 		if conn then
 			conn:Disconnect()
 			conn = nil
 		end
+		if settled then
+			return
+		end
+		settled = true
+		sit.TimePosition = math.max(length - 0.001, 0)
+		sit:AdjustSpeed(0)
+		local idle = load(TutorialConfigs.OLDMAN_SIT_IDLE_ANIM)
+		if not idle then
+			return -- pas d'idle assis : il tient la derniere image, ce qui reste un homme assis
+		end
+		local seated = idle :: AnimationTrack
+		seated.Looped = true
+		seated.Priority = TutorialConfigs.OLDMAN_SIT_PRIORITY
+		seated:Play(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
+		-- ON NE LACHE LE GESTE QU'APRES LE FONDU. Coupe tout de suite, il laisserait un trou le temps que l'idle
+		-- monte en puissance -- et un trou, ici, c'est un grand-pere debout.
+		task.delay(TutorialConfigs.OLDMAN_SIT_IDLE_FADE, function()
+			sit:Stop(0)
+		end)
+		print(`[Tutorial] Le grand-pere est assis sur son banc.`)
 	end)
 end
 

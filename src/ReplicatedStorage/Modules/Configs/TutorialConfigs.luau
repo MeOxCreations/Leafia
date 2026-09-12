@@ -883,6 +883,14 @@ return {
 	-- l'animation qui en decide : un delai en secondes recopie ici se decalerait au premier remontage.
 	OLDMAN_HUP_MARKER = "HupEvenement",
 	HUP_JUMP_SOUND = voice("Oldman_scene_speech_Say_HupJump"),
+	-- ET SON IDLE ASSIS, qui prend le relais quand le geste d'assise est fini. Il respire, il bouge un peu -- un
+	-- personnage fige sur la derniere image d'une animation a l'air en panne, pas au repos.
+	--
+	-- MEME PRIORITE QUE L'ASSISE (`OLDMAN_SIT_PRIORITY`) : c'est la MEME pose, continuee. Le fondu les melange une
+	-- fraction de seconde, ce qui est exactement ce qu'on veut ici -- les deux decrivent un homme assis au meme
+	-- endroit, donc la moyenne des deux est un homme assis.
+	OLDMAN_SIT_IDLE_ANIM = "rbxassetid://86619805469784",
+	OLDMAN_SIT_IDLE_FADE = 0.3,
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.

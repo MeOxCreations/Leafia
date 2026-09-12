@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.822 — Assis sur son banc, le grand-pere respire
+
+L'idle assis (86619805469784) prend le relais quand le geste d'assise est fini. Tenir la derniere image marchait
+aussi, mais un personnage fige a l'air en panne, pas au repos.
+
+ACQUERIR, BASCULER, LIBERER -- dans cet ordre. L'idle est charge AVANT qu'on lache le geste : si le chargement
+rate, il tient la derniere image, ce qui est moins bien mais reste un homme assis. L'inverse laisserait un
+grand-pere DEBOUT au milieu de son banc, et c'est une faute deja payee dans ce projet.
+
+Et le geste n'est lache qu'APRES le fondu. Coupe tout de suite, il laisserait un trou le temps que l'idle monte en
+puissance -- et un trou, ici, c'est un grand-pere debout pendant trois images.
+
+MEME PRIORITE POUR LES DEUX. C'est la meme pose continuee : le fondu les melange une fraction de seconde, et la
+moyenne de deux hommes assis au meme endroit est un homme assis.
+
+DEPEND DES ASSETS : animation 86619805469784.
+
 ## 0.0.821 — Le grand-pere va s'asseoir sur son banc pendant que le joueur taille
 
 Il a montre le travail et donne l'outil : il n'a plus rien a faire. Un personnage qui VIT pendant qu'on travaille
