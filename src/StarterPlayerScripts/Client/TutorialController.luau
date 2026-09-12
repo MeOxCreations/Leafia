@@ -36,6 +36,9 @@ local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 -- Pour LIRE l'avancement d'une haie : le serveur pose la fraction taillee sur le modele, et elle se replique.
 -- On ne recompte donc rien de notre cote -- deux comptes finiraient par se contredire.
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
+-- VOISIN DIRECT : c'est la seule facon de lui dire de se fermer, et le didacticiel est le seul a savoir QUAND.
+local TruckToolsController = require(script.Parent.TruckToolsController)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
@@ -2260,6 +2263,9 @@ local function step(dt: number)
 					if remote then
 						remote:FireServer()
 					end
+					-- ET LA TONDEUSE EST FINIE POUR LUI. La reprendre ne mene nulle part : un joueur qui la
+					-- repousse sur une pelouse deja nette cherche pendant une minute ce qu'il a rate.
+					player:SetAttribute(MowConfigs.DONE_ATTRIBUTE, true)
 				end
 			end
 		end
@@ -2319,6 +2325,9 @@ local function step(dt: number)
 	if saidTruckOpened and not hedgeStepOn and heldToolName() == TutorialConfigs.SHEAR_TOOL_NAME then
 		hedgeStepOn = true
 		sayVoice(TutorialConfigs.SHEAR_SOUND)
+		-- ET LA BARRE DU CAMION SE FERME. Il a pris ce qu'on lui demandait : la laisser ouverte l'obligerait a
+		-- s'ecarter du camion pour voir le jardin, juste au moment ou on lui dit d'aller a la haie.
+		TruckToolsController.close()
 		-- ET IL Y VA. Il ouvre la marche pendant qu'il le dit : une consigne donnee en restant plante au camion
 		-- laisserait le joueur chercher LAQUELLE de haie, alors que le grand-pere est deja en train de lui montrer.
 		local hedge = hedgeRemote

@@ -35,6 +35,12 @@ local doorPart: BasePart? = nil
 -- EST-ON ASSEZ PRES ? Garde, pour ne recalculer la barre que quand la reponse CHANGE -- pas dix fois par seconde
 -- pendant qu'on tourne autour du camion.
 local near = false
+-- ON L'A FERMEE A LA MAIN. Tant que ce drapeau tient, la barre reste cachee meme hayon ouvert et joueur devant.
+--
+-- IL SE LEVE TOUT SEUL, a deux occasions : quand le joueur S'ELOIGNE, et quand la porte CHANGE d'etat. Les deux
+-- disent la meme chose -- il revient au camion, donc il veut de nouveau y prendre quelque chose. Un drapeau qui ne
+-- se leve que par un appel explicite finit toujours par rester coince quelque part.
+local dismissed = false
 
 --- TOUS LES OUTILS DU CAMION : ceux qui sont encore dans la benne, et ceux qui en sont sortis.
 ---
@@ -123,6 +129,9 @@ local function refreshNow()
 		TruckToolsHandler.setShown(false)
 		return
 	end
+	if dismissed then
+		return -- fermee a la main : elle reviendra quand il s'eloignera ou rouvrira le hayon
+	end
 	local list = allTools()
 	if #list == 0 then
 		TruckToolsHandler.setShown(false)
@@ -153,7 +162,13 @@ local function watch(model: Model, folder: Instance)
 	doorPart = nil -- autre camion, autre hayon
 	-- L'ETAT DE LA PORTE, LE CONTENU DE LA BENNE, ET LA DISPARITION DU CAMION. Trois sources, trois abonnements :
 	-- on ne recalcule que quand quelque chose a VRAIMENT change, plutot que de relire tout ca a chaque image.
-	table.insert(conns, model:GetAttributeChangedSignal(TruckConfigs.OPEN_ATTRIBUTE):Connect(refresh))
+	table.insert(
+		conns,
+		model:GetAttributeChangedSignal(TruckConfigs.OPEN_ATTRIBUTE):Connect(function()
+			dismissed = false -- il touche a la porte : il revient chercher quelque chose
+			refresh()
+		end)
+	)
 	table.insert(conns, folder.ChildAdded:Connect(refresh))
 	table.insert(conns, folder.ChildRemoved:Connect(refresh))
 	-- ET LE MONDE, pour les outils SORTIS : ils n'appartiennent plus a la benne, donc ses evenements a elle ne
@@ -229,6 +244,9 @@ function TruckToolsController.init()
 		local close = nearTruck()
 		if close ~= near then
 			near = close
+			if not close then
+				dismissed = false -- il s'en va : la prochaine fois qu'il revient, la barre est la
+			end
 			refresh()
 		end
 	end)
@@ -238,6 +256,20 @@ function TruckToolsController.init()
 	player.CharacterAdded:Connect(refresh)
 
 	print("[TruckToolsController] Pret : la barre s'ouvre avec le hayon, et se cache quand on s'eloigne.")
+end
+
+--- FERME LA BARRE, sans attendre que le joueur s'eloigne.
+---
+--- POUR QUAND IL VIENT DE PRENDRE CE QU'ON LUI DEMANDAIT. La barre a fait son travail : la laisser ouverte
+--- oblige a s'ecarter du camion pour voir le jardin, juste au moment ou on lui dit d'aller ailleurs.
+---
+--- ELLE REVIENDRA TOUTE SEULE : voir `dismissed`.
+function TruckToolsController.close()
+	if dismissed then
+		return
+	end
+	dismissed = true
+	refresh()
 end
 
 return TruckToolsController

@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.831 — La tondeuse se verrouille quand la pelouse est finie, et la barre du camion se ferme apres la cisaille
+
+LA TONDEUSE NE SE REPREND PLUS une fois la pelouse tondue. Le travail est fait : la repousser sur une pelouse deja
+nette fait chercher pendant une minute ce qu'on a rate. Le refus est DIT -- pilule ROUGE qui tremble, et une
+notification "You finished the lawn. Go see the old man." -- parce qu'une action qui ne fait rien se lit comme un
+bug, et parce qu'il faut REORIENTER le joueur.
+
+IL PEUT TOUJOURS LA POSER. Le verrou ne bloque que la PRISE : bloquer la repose collerait le joueur a une machine
+dont on vient de lui dire qu'il n'a plus besoin.
+
+LE VERROU EST SUR LE JOUEUR, pas sur la machine : c'est SA progression. A deux, celui qui n'a pas fini doit
+pouvoir la prendre.
+
+`ActionGate` sait maintenant dire NON AVEC UNE RAISON. Il n'avait qu'un message, celui du verrou de debut de
+partie ; il en prend un en argument, et chaque raison a son propre delai de repetition -- deux refus differents ne
+doivent pas se faire taire l'un l'autre.
+
+ET LA BARRE DU CAMION SE FERME quand le joueur prend la cisaille qu'on lui demandait. Elle a fait son travail : la
+laisser ouverte l'obligerait a s'ecarter du camion pour voir le jardin, juste au moment ou on lui dit d'aller a la
+haie. Elle revient toute seule des qu'il s'eloigne ou qu'il retouche au hayon -- un drapeau qui ne se leve que par
+un appel explicite finit toujours par rester coince quelque part.
+
 ## 0.0.830 — Le demi-tour du banc passe du depart a l'arrivee
 
 L'animation d'assise fait le demi-tour ELLE-MEME : il se retourne et saute en arriere pour se poser. Le pivot

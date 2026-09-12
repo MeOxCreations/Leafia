@@ -38,7 +38,12 @@ local NOTIF: SideNotificationHandler.NotifData = {
 	duration = 10,
 }
 
-local lastNotifyAt = -math.huge
+-- QUAND ON A DIT CHAQUE RAISON POUR LA DERNIERE FOIS, par message.
+--
+-- PAR RAISON ET PAS UNE SEULE DATE : deux refus differents ne doivent pas se faire taire l'un l'autre. Le jour ou
+-- le joueur enchaine "pas encore" et "tu as fini", le second doit pouvoir parler meme si le premier vient de le
+-- faire -- sinon il appuie, rien ne s'explique, et il croit a un bug.
+local lastNotifyAt: { [string]: number } = {}
 
 --- Les outils sont-ils verrouilles ? Ne dit rien au joueur : pour ca, voir `denyIfLocked`.
 function ActionGate.isLocked(): boolean
@@ -59,17 +64,32 @@ end
 ---
 --- Et la notification a son propre ecart minimum : la secousse peut se rejouer a chaque appui sans lasser, une
 --- notification non.
+--- DIT NON, ET DIT POURQUOI. Rend toujours vrai, pour s'ecrire `return ActionGate.deny(...)`.
+---
+--- DEUX RETOURS, PAS UN. La pilule rouge qui tremble repond a "j'ai appuye et rien ne s'est passe" -- sans elle,
+--- un refus se lit comme un bug. La notification, elle, dit POURQUOI, ce qu'une couleur ne peut pas dire.
+---
+--- Et la notification a son propre ecart minimum : la secousse peut se rejouer a chaque appui sans lasser, une
+--- notification non.
+function ActionGate.deny(notif: SideNotificationHandler.NotifData): boolean
+	InteractionPrompt.refuse()
+	local now = os.clock()
+	local key = notif.title or "?"
+	if now - (lastNotifyAt[key] or -math.huge) >= NOTIFY_COOLDOWN then
+		lastNotifyAt[key] = now
+		SideNotificationHandler.spawn(notif)
+	end
+	return true
+end
+
+--- REFUSE L'ACTION SI ELLE EST VERROUILLEE, en le DISANT, et rend vrai dans ce cas.
+---
+--- A appeler en premiere ligne d'une action verrouillable : `if ActionGate.denyIfLocked() then return end`.
 function ActionGate.denyIfLocked(): boolean
 	if not ActionGate.isLocked() then
 		return false
 	end
-	InteractionPrompt.refuse()
-	local now = os.clock()
-	if now - lastNotifyAt >= NOTIFY_COOLDOWN then
-		lastNotifyAt = now
-		SideNotificationHandler.spawn(NOTIF)
-	end
-	return true
+	return ActionGate.deny(NOTIF)
 end
 
 return ActionGate

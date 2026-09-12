@@ -15,6 +15,24 @@ return {
 	-- ===== LA TONDEUSE DANS LE MONDE =====
 	-- Nom du Model pose dans Studio. Toute la detection part de la : pas de tag a maintenir en plus.
 	MODEL_NAME = "Tondeuse",
+	-- LA PELOUSE EST FINIE : on ne reprend plus la machine. Attribut pose sur le JOUEUR.
+	--
+	-- POURQUOI VERROUILLER. Le travail est fait ; reprendre la tondeuse ne mene nulle part, et un joueur qui la
+	-- repousse sur une pelouse deja nette cherche pendant une minute ce qu'il a rate. Le refus le REORIENTE.
+	--
+	-- SUR LE JOUEUR ET PAS SUR LA MACHINE : c'est SA progression, pas l'etat de l'objet. A deux, celui qui n'a pas
+	-- fini doit pouvoir la prendre.
+	--
+	-- IL PEUT TOUJOURS LA POSER. Le verrou ne bloque que la PRISE : bloquer la repose laisserait un joueur collé
+	-- a une machine dont on vient de lui dire qu'il n'a plus besoin.
+	DONE_ATTRIBUTE = "LeafiaMowDone",
+	-- CE QU'ON LUI DIT. En anglais et en mots simples : le public a dix ans.
+	DONE_NOTIF = {
+		kind = "Success",
+		title = "All Done",
+		description = "You finished the lawn. Go see the old man.",
+		duration = 10,
+	},
 	-- Part fixe qui sert de reference de position. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc
 	-- ajouter la moindre part enfant (CutZone...) le decale et tous les calculs partent de travers.
 	ROOT_NAME = "RootPart",

@@ -1260,6 +1260,15 @@ local function toggleCarry()
 		request(mine, "place")
 		return
 	end
+	-- LA PELOUSE EST FINIE : on ne la reprend plus. Le refus est DIT -- pilule rouge et notification -- parce
+	-- qu'une action qui ne fait rien se lit comme un bug, et parce qu'il faut le REORIENTER vers le grand-pere.
+	--
+	-- APRES LA REPOSE, jamais avant : le verrou ne doit bloquer que la PRISE. Teste plus haut, il collerait le
+	-- joueur a une machine dont on vient de lui dire qu'il n'a plus besoin.
+	if player:GetAttribute(MowConfigs.DONE_ATTRIBUTE) == true then
+		ActionGate.deny(MowConfigs.DONE_NOTIF)
+		return
+	end
 	if approaching then
 		return -- deja en train de rejoindre une tondeuse : on ne relance pas la marche par-dessus
 	end
