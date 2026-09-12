@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.812 — Le seau sort du camion en grande cloche
+
+Sa hauteur d'arc passe de 5 a 12 studs, pour lui seul. Il est petit, leger et sans forme fragile : il supporte --
+et demande -- un geste bien plus exagere que l'echelle, qui a la meme hauteur aurait l'air d'etre catapultee.
+
+C'est une TABLE par nom de modele, pas une exception ecrite en dur dans le trajet : le jour ou un autre objet
+merite son propre geste, c'est une ligne a ajouter. Tout ce qui n'y figure pas garde la hauteur commune.
+
 ## 0.0.811 — L'echelle s'ouvre a mi-trajet en sortant du camion
 
 Elle se depliait une fois posee : le joueur voyait un trajet, puis une echelle qui bouge encore, et se demandait

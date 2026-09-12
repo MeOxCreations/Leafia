@@ -154,6 +154,14 @@ local TruckConfigs = {
 	-- passe. Un seul reglage pour les deux forcerait a choisir entre un objet qui frole la carrosserie et un arc
 	-- qui part trop loin derriere.
 	SLIDE_UP = 5,
+	-- SAUF POUR CERTAINS, par nom de modele dans la benne. Le seau est petit, leger et sans forme fragile : il
+	-- supporte -- et demande -- une cloche bien plus haute que l'echelle, qui aurait l'air d'etre catapultee.
+	--
+	-- UNE TABLE, PAS UNE EXCEPTION EN DUR : le jour ou un autre objet merite son geste, c'est une ligne. Les cles
+	-- sont les NOMS DES MODELES, comme partout ailleurs dans ce fichier -- c'est la benne qui decide.
+	SLIDE_UP_BY_TOOL = {
+		Bin = 12,
+	},
 	-- Duree, en secondes. COURTE : le trajet est un enchainement entre deux etats, pas un plan a regarder. Un
 	-- geste d'interface qui traine se ressent comme une attente des la deuxieme fois qu'on le voit.
 	FLY_TIME = 0.45,

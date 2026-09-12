@@ -246,7 +246,8 @@ local function fly(model: Model, landing: CFrame, home: Instance?, openAt: numbe
 	local low = if a.Y >= b.Y then b else a
 	local flat = Vector3.new(low.X - high.X, 0, low.Z - high.Z)
 	local away = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, 1)
-	local middle = high + away * TruckConfigs.SLIDE_OUT + Vector3.new(0, TruckConfigs.SLIDE_UP, 0)
+	local up = TruckConfigs.SLIDE_UP_BY_TOOL[model.Name] or TruckConfigs.SLIDE_UP
+	local middle = high + away * TruckConfigs.SLIDE_OUT + Vector3.new(0, up, 0)
 
 	-- ON LE SORT DU CAMION. Tant qu'il est enfant du modele, il suit la carrosserie -- et il resterait "range"
 	-- pour l'interface, qui lit le contenu du dossier.
