@@ -730,6 +730,62 @@ local function walkOldMan(
 end
 
 
+-- IL S'ASSOIT, ET IL TIENT LA POSE.
+--
+-- POUR TENIR LA DERNIERE IMAGE il faut `Looped = true` : sinon la piste se RELACHE en arrivant au bout et il se
+-- releve d'un coup. Mais bouclee a vitesse normale elle REPART du debut, et il se rassoit en boucle. On la laisse
+-- donc tourner -- c'est ce qui fait tirer son marqueur au bon moment -- et on la FIGE des qu'elle atteint la fin.
+--
+-- DEUX CONDITIONS D'ARRET, pas une. "On approche de la fin" rate le cas ou une image longue saute par-dessus ; le
+-- test "la position a RECULE" attrape le rebouclage qui vient de se produire. Sans le second, a bas framerate, il
+-- se rassoit.
+local function sitOldMan(model: Model, onHup: (() -> ())?)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	if not animator then
+		warn(`[Tutorial] Pas d'Animator sous "{model.Name}" : il restera debout devant son banc.`)
+		return
+	end
+	local anim = Instance.new("Animation")
+	anim.AnimationId = TutorialConfigs.OLDMAN_SIT_ANIM
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(anim)
+	end)
+	if not (ok and typeof(result) == "Instance") then
+		warn(`[Tutorial] Animation d'assise non chargeable ({TutorialConfigs.OLDMAN_SIT_ANIM}).`)
+		return
+	end
+	local track = result :: AnimationTrack
+	track.Looped = true
+	track.Priority = TutorialConfigs.OLDMAN_SIT_PRIORITY
+	-- SON EFFORT EN SE POSANT : c'est l'ANIMATION qui dit quand, par son marqueur. Un delai en secondes recopie
+	-- dans la config se decalerait au premier remontage du fichier.
+	if onHup then
+		track:GetMarkerReachedSignal(TutorialConfigs.OLDMAN_HUP_MARKER):Once(onHup)
+	end
+	track:Play(TutorialConfigs.OLDMAN_SIT_FADE)
+
+	local last = 0
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.Heartbeat:Connect(function()
+		local length = track.Length
+		if length <= 0 then
+			return -- l'asset n'est pas encore arrive : on ne peut pas savoir ou est la fin
+		end
+		local now = track.TimePosition
+		if now + 0.03 < length and now >= last then
+			last = now
+			return
+		end
+		track.TimePosition = math.max(length - 0.001, 0)
+		track:AdjustSpeed(0)
+		if conn then
+			conn:Disconnect()
+			conn = nil
+		end
+	end)
+end
+
 -- IL SE TOURNE VERS UN POINT, sans se deplacer. Sert quand le joueur vient lui parler : on ne repond pas de
 -- profil a quelqu'un qui vient de vous interpeller.
 --
@@ -1367,13 +1423,35 @@ function TutorialService.init()
 	-- UNE MARCHE SCRIPTEE ET PAS UNE ESCORTE, contrairement au camion : la haie est a quelques pas, le joueur a
 	-- l'outil en main et sait ou il va. Le faire attendre a chaque pas ferait trainer la fin du didacticiel.
 	local hedgeRemote = RemoteSetup.getRemote("TutorialGrandpaHedge", "Tutorial") :: RemoteEvent
+	local benchRemote = RemoteSetup.getRemote("TutorialGrandpaBench", "Tutorial") :: RemoteEvent
 	hedgeRemote.OnServerEvent:Connect(function(player)
 		if sceneOwner ~= player then
 			return
 		end
 		-- LE POINT DE CONTROLE PASSE EN DERNIER ARGUMENT : c'est lui qui courbe le trajet autour du buisson. Sans
 		-- lui `walkOldMan` irait tout droit, et le traverserait.
-		walkOldMan(TutorialConfigs.OLDMAN_HEDGE_TARGET, nil, nil, TutorialConfigs.OLDMAN_HEDGE_VIA)
+		--
+		-- ET ARRIVE LA-BAS, IL VA S'ASSEOIR. Il a montre le travail et donne l'outil : il n'a plus rien a faire, et
+		-- un personnage qui VIT pendant qu'on travaille vaut mieux qu'une statue qui attend la fin du script.
+		walkOldMan(TutorialConfigs.OLDMAN_HEDGE_TARGET, function()
+			-- IL LAISSE PASSER UN TEMPS avant de partir : filer a la seconde ou il arrive se lirait comme une
+			-- fuite, juste apres avoir dit de tailler.
+			task.delay(TutorialConfigs.OLDMAN_BENCH_DELAY, function()
+				if sceneOwner ~= player then
+					return -- le joueur est parti : sa scene ne continue pas sans lui
+				end
+				-- SA PHRASE PART AVEC LUI, pendant le trajet : annoncer qu'on va s'asseoir se dit AVANT de
+				-- s'asseoir. Le client la joue, c'est lui qui a les voix.
+				benchRemote:FireClient(player, "walk")
+				walkOldMan(TutorialConfigs.OLDMAN_BENCH_TARGET, function(model)
+					sitOldMan(model, function()
+						if sceneOwner == player then
+							benchRemote:FireClient(player, "hup")
+						end
+					end)
+				end)
+			end)
+		end, nil, TutorialConfigs.OLDMAN_HEDGE_VIA)
 
 		-- UN SEUL COTE A TAILLER. On baisse le seuil d'auto-completion SUR CETTE HAIE : des que le joueur en a
 		-- fait la part demandee, le reste se finit tout seul, avec l'experience et les debris qui vont avec.

@@ -2841,6 +2841,18 @@ function TutorialController.init()
 	resolve("TutorialGrandpaHedge", function(r)
 		hedgeRemote = r
 	end)
+	-- IL VA S'ASSEOIR : une phrase en partant, une autre en se posant. C'est le SERVEUR qui dit quand -- sa marche
+	-- et son animation sont a lui -- et le client qui joue les voix.
+	resolve("TutorialGrandpaBench", function(r)
+		r.OnClientEvent:Connect(function(phase)
+			if phase == "walk" then
+				print("[Tutorial] Le grand-pere part s'asseoir sur son banc.")
+				sayVoice(TutorialConfigs.SEAT_DOWN_SOUND)
+			elseif phase == "hup" then
+				sayVoice(TutorialConfigs.HUP_JUMP_SOUND)
+			end
+		end)
+	end)
 	-- IL EST ARRIVE AU CAMION : c'est le serveur qui le dit, lui seul calcule sa marche.
 	-- LE JOUEUR OUVRE LE HAYON : le grand-pere commente ce qu'on y voit.
 	--

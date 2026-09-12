@@ -859,6 +859,30 @@ return {
 	-- une part tous les trois metres.
 	OLDMAN_HEDGE_VIA = "OldManWalkToHedgeBezierCurveMiddle",
 	OLDMAN_HEDGE_TARGET = "OldManWalkToHedgeFinal",
+
+	-- ===== ET IL VA S'ASSEOIR =====
+	-- Pendant que le joueur taille, le grand-pere ne reste pas plante a le regarder : il va s'asseoir sur son
+	-- banc. Il a montre le travail, il a donne l'outil, il n'a plus rien a faire -- et un personnage qui VIT
+	-- pendant qu'on travaille vaut mieux qu'une statue qui attend la fin du script.
+	OLDMAN_BENCH_TARGET = "OldManWalkToBenchPoint",
+	-- CE QU'IL DIT EN PARTANT, pendant le trajet. Pas a l'arrivee : une phrase qui annonce qu'on va s'asseoir se
+	-- dit AVANT de s'asseoir, sinon elle commente une chose deja faite.
+	SEAT_DOWN_SOUND = voice("Oldman_scene_speech_Say_SeatDown"),
+	-- LE TEMPS QU'IL LAISSE AVANT DE PARTIR, apres etre arrive a la haie. Il vient de montrer le travail : filer
+	-- a la seconde ou il arrive se lirait comme une fuite.
+	OLDMAN_BENCH_DELAY = 2.2,
+
+	-- L'ANIMATION DE L'ASSISE, jouee a l'arrivee sur le banc.
+	OLDMAN_SIT_ANIM = "rbxassetid://127331084245390",
+	-- AU-DESSUS DE TOUT LE RESTE (`Action2`). Elle cle le corps ENTIER -- jambes comprises -- alors que l'idle et
+	-- le geste de parole ne clent que le haut : a priorite egale Roblox ne choisit pas, il MELANGE, et on aurait
+	-- un grand-pere assis debout.
+	OLDMAN_SIT_PRIORITY = Enum.AnimationPriority.Action2,
+	OLDMAN_SIT_FADE = 0.25,
+	-- LE MARQUEUR DE SON EFFORT, pose dans l'animation. C'est a cet instant qu'il grogne en se posant, et c'est
+	-- l'animation qui en decide : un delai en secondes recopie ici se decalerait au premier remontage.
+	OLDMAN_HUP_MARKER = "HupEvenement",
+	HUP_JUMP_SOUND = voice("Oldman_scene_speech_Say_HupJump"),
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.

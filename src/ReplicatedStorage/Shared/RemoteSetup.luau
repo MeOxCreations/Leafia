@@ -68,6 +68,14 @@ local REMOTES: { { any } } = {
 	-- LA CISAILLE EST EN MAIN : il part vers la haie. Le client le sait (c'est lui qui voit l'outil arriver dans
 	-- les mains), le grand-pere marche cote serveur -- il faut donc le lui dire.
 	{ "TutorialGrandpaHedge", E, "Tutorial" },
+	-- IL VA S'ASSEOIR SUR LE BANC pendant que le joueur taille. UN SEUL remote pour les deux instants de la
+	-- scene, avec une phase en argument ("walk" quand il part, "hup" quand il se pose) : deux remotes pour deux
+	-- moments du meme geste seraient deux noms a retenir et deux abonnements a tenir d'accord.
+	--
+	-- DU SERVEUR VERS LE CLIENT, comme les autres moments de sa marche : elle est calculee cote serveur (c'est lui
+	-- qui la joue pour tout le monde), donc lui seul sait quand elle commence et quand il s'assoit -- et c'est le
+	-- CLIENT qui joue les voix.
+	{ "TutorialGrandpaBench", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

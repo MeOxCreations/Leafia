@@ -1380,6 +1380,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   service pose une marque sur ce qu'il gere, tout le reste du jeu lit CETTE marque. Redecrire le critere ailleurs,
   c'est s'engager a le tenir d'accord pour toujours.
 
+- **TENIR LA DERNIERE IMAGE D'UNE ANIM DEMANDE `Looped = true` ET DEUX CONDITIONS D'ARRET, pas une.** Sans la
+  boucle, la piste se RELACHE au bout et la pose saute. Avec la boucle a vitesse normale, elle REPART du debut. On
+  la laisse donc tourner -- c'est ce qui fait tirer ses marqueurs a l'heure -- et on la fige a la fin. Le test
+  "on approche de la fin" rate le cas d'une image longue qui saute par-dessus ; il faut AUSSI tester "la position
+  a RECULE", qui attrape le rebouclage deja produit. Sans le second, a bas framerate, le personnage rejoue son
+  geste. (Complete l'entree plus ancienne sur le pilotage manuel de `TimePosition` : quand on a besoin des
+  MARQUEURS, on ne peut pas mettre la vitesse a zero, donc c'est cette variante qu'il faut.)
+- **UN SEUL REMOTE AVEC UNE PHASE EN ARGUMENT bat deux remotes pour deux instants du MEME geste.** Le grand-pere
+  qui part s'asseoir puis se pose : "walk" puis "hup" sur un remote, plutot que deux noms a retenir, deux
+  declarations et deux abonnements a tenir d'accord. La regle du projet reste de n'ajouter un remote que quand une
+  feature en a REELLEMENT besoin -- une feature, pas un moment.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

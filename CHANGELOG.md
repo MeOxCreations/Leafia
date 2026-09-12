@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.821 — Le grand-pere va s'asseoir sur son banc pendant que le joueur taille
+
+Il a montre le travail et donne l'outil : il n'a plus rien a faire. Un personnage qui VIT pendant qu'on travaille
+vaut mieux qu'une statue qui attend la fin du script.
+
+Deux secondes apres etre arrive a la haie -- filer a la seconde ou il arrive se lirait comme une fuite -- il part
+vers `OldManWalkToBenchPoint` en disant `Say_SeatDown`. Sa phrase part AVEC lui : annoncer qu'on va s'asseoir se
+dit avant de s'asseoir, pas apres.
+
+A L'ARRIVEE IL S'ASSOIT, et il grogne en se posant (`Say_HupJump`) sur le marqueur `HupEvenement` de
+l'animation. C'est l'animation qui decide du moment : un delai en secondes recopie dans la config se decalerait au
+premier remontage du fichier.
+
+DEUX DETAILS TECHNIQUES QUI COMPTENT. L'assise est en priorite `Action2`, au-dessus de tout le reste : elle cle le
+corps entier, jambes comprises, alors que l'idle et le geste de parole ne clent que le haut -- a priorite egale
+Roblox melange, et on aurait un grand-pere assis debout. Et la pose de fin est tenue par une piste bouclee qu'on
+fige au bout, avec DEUX conditions d'arret : "on approche de la fin" rate une image longue qui saute par-dessus, et
+"la position a recule" attrape le rebouclage -- sans le second, a bas framerate, il se rassoit en boucle.
+
+DEPEND DE LA MAP ET DES ASSETS : le point `OldManWalkToBenchPoint`, l'animation 127331084245390 avec son marqueur
+`HupEvenement`, et les voix `Oldman_scene_speech_Say_SeatDown` et `Oldman_scene_speech_Say_HupJump`.
+
 ## 0.0.820 — Le didacticiel retrouve enfin sa haie
 
 Il la cherchait parmi les MODELS. Une haie est une PART -- un MeshPart pose dans la carte -- donc la recherche ne
