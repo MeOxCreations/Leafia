@@ -883,13 +883,19 @@ return {
 	-- l'animation qui en decide : un delai en secondes recopie ici se decalerait au premier remontage.
 	OLDMAN_HUP_MARKER = "HupEvenement",
 	HUP_JUMP_SOUND = voice("Oldman_scene_speech_Say_HupJump"),
-	-- ET SON IDLE ASSIS, qui prend le relais quand le geste d'assise est fini. Il respire, il bouge un peu -- un
-	-- personnage fige sur la derniere image d'une animation a l'air en panne, pas au repos.
+	-- ET SON IDLE ASSIS, qui se joue PAR-DESSUS l'assise figee. Il respire, il bouge un peu -- un personnage
+	-- fige sur une derniere image a l'air en panne, pas au repos.
 	--
-	-- MEME PRIORITE QUE L'ASSISE (`OLDMAN_SIT_PRIORITY`) : c'est la MEME pose, continuee. Le fondu les melange une
-	-- fraction de seconde, ce qui est exactement ce qu'on veut ici -- les deux decrivent un homme assis au meme
-	-- endroit, donc la moyenne des deux est un homme assis.
+	-- L'ASSISE N'EST PAS LACHEE POUR AUTANT, et c'est tout le point. Cet idle ne cle que le HAUT du corps :
+	-- lache la piste d'assise, plus rien ne tient les jambes et le grand-pere SE RELEVE en respirant. On garde
+	-- donc l'assise figee comme socle, et l'idle se superpose.
+	--
+	-- D'OU UNE PRIORITE PLUS HAUTE (`Action3` contre `Action2`). Roblox ne melange qu'a priorite EGALE : au-dessus,
+	-- l'idle gagne sur les joints QU'IL CLE et laisse tous les autres a l'assise. C'est exactement le partage
+	-- voulu -- le haut respire, le bas reste assis. A priorite egale on obtiendrait la moyenne d'un homme assis et
+	-- d'un homme debout, c'est-a-dire un homme accroupi.
 	OLDMAN_SIT_IDLE_ANIM = "rbxassetid://86619805469784",
+	OLDMAN_SIT_IDLE_PRIORITY = Enum.AnimationPriority.Action3,
 	OLDMAN_SIT_IDLE_FADE = 0.3,
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,

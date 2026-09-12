@@ -1392,6 +1392,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   declarations et deux abonnements a tenir d'accord. La regle du projet reste de n'ajouter un remote que quand une
   feature en a REELLEMENT besoin -- une feature, pas un moment.
 
+- **POUR SUPERPOSER UNE ANIM SUR UNE POSE TENUE, IL FAUT DEUX PRIORITES DIFFERENTES -- ET NE JAMAIS LACHER LA
+  POSE.** Le grand-pere assis : le geste d'assise est joue puis FIGE sur sa derniere image, et son idle assis
+  joue PAR-DESSUS. Le premier reflexe -- lacher le geste et laisser l'idle prendre le relais -- le faisait SE
+  RELEVER en respirant, parce que cet idle ne cle que le HAUT du corps : sans socle, plus rien ne tenait les
+  jambes. Et les mettre a priorite EGALE donne la moyenne d'un homme assis et d'un homme debout, c'est-a-dire un
+  homme accroupi. Roblox ne melange qu'a priorite egale : au-dessus, la piste gagne sur les joints QU'ELLE CLE et
+  laisse tous les autres a celle du dessous. C'est le partage qu'on veut -- socle en `Action2`, surcouche en
+  `Action3`. Regle : une animation partielle (respiration, geste des bras) est une SURCOUCHE, pas un
+  remplacement ; elle a besoin d'une base tenue sous elle et d'une priorite au-dessus. Le joueur a trouve ca
+  avant moi : "bloque comme avant, et chevauche l'idle par-dessus".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

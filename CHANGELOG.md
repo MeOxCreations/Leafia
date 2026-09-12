@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.823 — L'idle assis se joue PAR-DESSUS l'assise, qui ne se lache plus
+
+Il s'asseyait, puis il SE RELEVAIT en respirant. Cause : l'idle assis ne cle que le HAUT du corps. En lachant la
+piste d'assise pour lui passer la main, plus rien ne tenait les jambes.
+
+L'assise reste donc figee sur sa derniere image, comme socle, et l'idle joue par-dessus avec une priorite PLUS
+HAUTE. Roblox ne melange qu'a priorite egale : au-dessus, l'idle gagne sur les joints qu'il cle et laisse tous les
+autres au socle. Le haut respire, le bas reste assis.
+
+A PRIORITE EGALE on aurait obtenu la moyenne d'un homme assis et d'un homme debout, c'est-a-dire un homme
+accroupi. C'est l'idee du joueur : "bloque comme avant, et chevauche l'idle par-dessus".
+
+Et si l'idle ne se charge pas, le socle seul fait le travail : il reste assis, immobile.
+
 ## 0.0.822 — Assis sur son banc, le grand-pere respire
 
 L'idle assis (86619805469784) prend le relais quand le geste d'assise est fini. Tenir la derniere image marchait

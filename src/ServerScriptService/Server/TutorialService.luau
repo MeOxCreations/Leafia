@@ -732,8 +732,13 @@ end
 
 -- IL S'ASSOIT, PUIS IL RESPIRE SUR SON BANC.
 --
--- DEUX ANIMATIONS QUI SE RELAIENT : le GESTE de s'asseoir, joue une fois, puis l'IDLE ASSIS, boucle. Tenir la
--- derniere image du geste marcherait aussi, mais un personnage fige a l'air en panne, pas au repos.
+-- DEUX ANIMATIONS QUI SE SUPERPOSENT : le GESTE de s'asseoir, joue une fois puis FIGE sur sa derniere image, et
+-- l'IDLE ASSIS par-dessus. Le geste sert de SOCLE et ne s'arrete jamais.
+--
+-- POURQUOI ON NE LE LACHE PAS. L'idle assis ne cle que le HAUT du corps : sans le socle, plus rien ne tient les
+-- jambes et le grand-pere SE RELEVE en respirant -- vu a l'ecran. La priorite de l'idle est donc PLUS HAUTE que
+-- celle du geste : Roblox ne melange qu'a priorite egale, et au-dessus l'idle gagne sur les joints qu'il cle en
+-- laissant tous les autres au socle. Le haut respire, le bas reste assis.
 --
 -- POURQUOI LE GESTE EST QUAND MEME BOUCLE. Sans `Looped = true`, une piste se RELACHE en arrivant au bout : la
 -- pose saute a l'idle debout pendant une image, avant que l'idle assis ne prenne le relais. On la laisse donc
@@ -743,9 +748,9 @@ end
 -- test "la position a RECULE" attrape le rebouclage qui vient de se produire. Sans le second, a bas framerate, il
 -- se rassoit.
 --
--- ACQUERIR, BASCULER, LIBERER -- dans cet ordre. On charge l'idle AVANT de lacher le geste : si le chargement
--- rate, on tient la derniere image, ce qui est moins bien mais reste un homme assis. L'inverse laisserait un
--- grand-pere debout au milieu de son banc, et c'est une faute deja payee dans ce projet.
+-- ET SI L'IDLE NE SE CHARGE PAS, le socle seul fait le travail : il reste assis, immobile. Moins vivant, mais
+-- juste. On ne detruit jamais l'etat courant avant d'avoir de quoi le remplacer -- faute deja payee sur son idle
+-- debout, ou une piste coupee trop tot l'avait laisse en statue.
 local function sitOldMan(model: Model, onHup: (() -> ())?)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
 	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
@@ -810,14 +815,11 @@ local function sitOldMan(model: Model, onHup: (() -> ())?)
 		end
 		local seated = idle :: AnimationTrack
 		seated.Looped = true
-		seated.Priority = TutorialConfigs.OLDMAN_SIT_PRIORITY
+		seated.Priority = TutorialConfigs.OLDMAN_SIT_IDLE_PRIORITY
 		seated:Play(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
-		-- ON NE LACHE LE GESTE QU'APRES LE FONDU. Coupe tout de suite, il laisserait un trou le temps que l'idle
-		-- monte en puissance -- et un trou, ici, c'est un grand-pere debout.
-		task.delay(TutorialConfigs.OLDMAN_SIT_IDLE_FADE, function()
-			sit:Stop(0)
-		end)
-		print(`[Tutorial] Le grand-pere est assis sur son banc.`)
+		-- LE GESTE N'EST JAMAIS ARRETE : c'est lui qui tient les jambes. Le lacher rendait le grand-pere debout
+		-- en train de respirer, parce que l'idle assis ne cle que le haut du corps.
+		print(`[Tutorial] Le grand-pere est assis sur son banc, l'idle joue par-dessus.`)
 	end)
 end
 
