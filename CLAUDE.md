@@ -1289,6 +1289,22 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   au sol. "La racine ancree et le reste libre" est presque juste et laisse tomber toute part qu'aucun Motor6D ne
   pilote : rien ne la porte, la liberer ne fait que la faire chuter.
 
+- **`Motor6D.Transform` LU DEPUIS UN SCRIPT SERVEUR NE DIT PAS SI L'ANIMATION S'APPLIQUE : il rendait l'identite
+  sur les HUIT joints pendant que l'echelle se pliait pour de vrai a l'ecran.** La valeur lisible depuis un script
+  n'est pas la pose que le moteur de rendu evalue. Cette sonde m'a fait accuser une soudure, puis les noms du rig,
+  alors que l'animation faisait tres bien son travail -- deux correctifs livres pour rien, et deux lancements de
+  perdus pour le joueur. Ce qui se lit vraiment : `WeightCurrent` (une piste de poids zero joue, avance, declenche
+  ses marqueurs A L'HEURE et n'ecrit rien), `IsPlaying`, `TimePosition` / `Length`, et l'etat des parts (ancrees,
+  soudures). Corriger l'entree plus ancienne qui recommande de regarder les `Transform` : ca vaut dans un script
+  de barre de commandes en mode edition, pas comme preuve en jeu. REGLE DE FOND, payee trois fois aujourd'hui :
+  une sonde n'est pas une preuve tant qu'on n'a pas verifie qu'elle dit vrai DANS UN CAS QUI MARCHE. Il suffisait
+  de la faire tourner sur l'echelle portee -- celle qui se plie parfaitement -- pour la voir mentir en une ligne.
+- **QUAND LE DOUTE PORTE SUR LE CONTENU D'UN ASSET, RENDRE LE REGLAGE AU JOUEUR PLUTOT QUE DE DEVINER.** Ou se
+  trouve la pose "fermee" dans une animation, seul son auteur peut le voir -- et il ne peut le voir qu'EN JEU, sur
+  le rig en place, pas dans l'editeur. Un attribut pose sur le modele (ici `LeafiaFoldStop` : un temps, ou -1 pour
+  laisser le geste entier se jouer) lui donne une boucle de trente secondes sans moi. Plus court qu'un aller-retour
+  de diagnostic, et ca le remet sur son terrain.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

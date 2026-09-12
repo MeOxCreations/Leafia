@@ -49,6 +49,18 @@ local OPEN_EVENT = "LadderOpenEndEvent" -- depliee (fin) : on lache
 -- cette image-la ne sont pas encore tous ecrits, et une lecture immediate croit voir un rig fige.
 local REPORT_DELAY = 0.2
 
+-- OU S'ARRETER, REGLABLE DANS STUDIO, en ATTRIBUT sur le modele de l'echelle.
+--
+-- Par defaut on fige au marqueur `FermerEvenement`, la ou l'animation dit que l'echelle est fermee. Si la pose
+-- obtenue n'a pas l'air assez fermee, c'est le marqueur qui est pose trop tot, et ca se regle dans l'editeur
+-- d'animation -- pas ici. En attendant, cet attribut permet de le verifier en trente secondes, sans toucher au
+-- code :
+--   * un nombre POSITIF  -> on continue jusqu'a CETTE seconde de l'animation, puis on fige ;
+--   * -1                 -> on ne fige PAS, le geste entier se joue (fermeture puis reouverture). C'est la facon
+--                           de VOIR ce que l'animation contient vraiment, sur l'echelle reelle et en jeu ;
+--   * absent             -> le marqueur, comme avant.
+local FOLD_STOP_ATTRIBUTE = "LeafiaFoldStop"
+
 -- UNE PISTE PAR ECHELLE, et les marqueurs branches une seule fois. Rebrancher a chaque repli empilerait les
 -- connexions : au dixieme, dix fonctions se declencheraient sur le meme marqueur.
 local tracks: { [Model]: AnimationTrack } = {}
@@ -268,28 +280,29 @@ end
 --- est ANCREE, elle est VERROUILLEE par une soudure (un `Weld` ou un `WeldConstraint` gagne contre un Motor6D,
 --- toujours), ou la piste ne la cle pas du tout. On les NOMME au lieu de les compter : un compteur ne dit pas ou
 --- regarder.
-local function stuckJoints(model: Model): string
-	local stuck = {}
-	local locked = {}
+--- L'ETAT DES PIECES AU MOMENT OU ON FIGE : ancrees, et soudures presentes.
+---
+--- ON NE REGARDE PLUS `Motor6D.Transform` DEPUIS UN SCRIPT SERVEUR. Elle rendait l'identite sur les huit joints
+--- pendant que l'echelle se pliait POUR DE VRAI a l'ecran : la valeur lue la n'est pas la pose evaluee par le
+--- moteur de rendu. Une sonde qui designe un coupable innocent coute plus cher que pas de sonde -- elle m'a fait
+--- accuser une soudure, puis un rig, pendant que l'animation faisait tres bien son travail.
+local function partsState(model: Model): string
+	local anchored = {}
+	local welds = {}
 	for _, d in model:GetDescendants() do
-		if d:IsA("Motor6D") then
-			local joint = d :: Motor6D
-			local part = joint.Part1
-			if part and joint.Transform == CFrame.identity then
-				table.insert(stuck, if part.Anchored then part.Name .. "(ancree)" else part.Name)
+		if d:IsA("BasePart") then
+			if (d :: BasePart).Anchored then
+				table.insert(anchored, d.Name)
 			end
 		elseif d:IsA("WeldConstraint") then
 			local weld = d :: WeldConstraint
 			local a = if weld.Part0 then (weld.Part0 :: BasePart).Name else "?"
 			local b = if weld.Part1 then (weld.Part1 :: BasePart).Name else "?"
-			table.insert(locked, `{a}<->{b}{if weld.Enabled then "" else "(coupee)"}`)
+			table.insert(welds, `{a}<->{b}{if weld.Enabled then "" else "(coupee)"}`)
 		end
 	end
-	if #stuck == 0 and #locked == 0 then
-		return "tous les joints ont bouge, aucune soudure"
-	end
-	return `joints figes = {if #stuck > 0 then table.concat(stuck, " ") else "aucun"} | `
-		.. `soudures = {if #locked > 0 then table.concat(locked, " ") else "aucune"}`
+	return `ancrees = {if #anchored > 0 then table.concat(anchored, " ") else "aucune"} | `
+		.. `soudures = {if #welds > 0 then table.concat(welds, " ") else "aucune"}`
 end
 
 local function wire(model: Model, loaded: AnimationTrack)
@@ -297,29 +310,52 @@ local function wire(model: Model, loaded: AnimationTrack)
 		return
 	end
 	wired[model] = true
-	loaded:GetMarkerReachedSignal(CLOSE_EVENT):Connect(function()
+	local function freeze()
 		loaded:AdjustSpeed(0) -- fige repliee, aussi longtemps qu'il faudra
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
 		-- LES SOUDURES REVIENNENT SUR LA POSE REPLIEE : un WeldConstraint capture l'ecart au moment ou on
 		-- l'active, donc remis maintenant il tient l'echelle FERMEE.
 		LadderFoldUtils.setWelds(model, true)
-		-- ON MESURE APRES COUP, pas dans l'instant du marqueur : le marqueur tire PENDANT le calcul de l'image, et
-		-- les `Transform` de cette image ne sont pas encore tous ecrits. Lu la, le rig a l'air fige meme quand il
-		-- bouge tres bien -- une sonde qui accuse a tort coute plus cher que pas de sonde.
 		task.delay(REPORT_DELAY, function()
 			if model.Parent then
 				print(
 					`[LadderFold] "{model.Name}" figee a {string.format("%.2f", loaded.TimePosition)}s `
-						.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}). `
-						-- LE POIDS : une piste de poids ZERO joue, avance, declenche ses marqueurs A L'HEURE, et
-						-- n'ecrit RIEN. C'est indiscernable a l'oeil d'un rig bloque, et ca se lit ici.
+						.. `sur {string.format("%.2f", loaded.Length)}s. `
 						.. `poids={string.format("%.2f", loaded.WeightCurrent)} `
-						.. `joue={tostring(loaded.IsPlaying)} `
-						.. stuckJoints(model)
+						.. partsState(model)
 				)
 			end
 		end)
+	end
+
+	loaded:GetMarkerReachedSignal(CLOSE_EVENT):Connect(function()
+		local stopAt = model:GetAttribute(FOLD_STOP_ATTRIBUTE)
+		if typeof(stopAt) ~= "number" then
+			freeze() -- le cas normal : l'animation dit elle-meme ou elle est fermee
+			return
+		end
+		if stopAt < 0 then
+			-- MODE OBSERVATION : on laisse le geste ENTIER se jouer. Utile pour voir, en jeu et sur l'echelle
+			-- reelle, ou se trouve vraiment la pose fermee -- l'editeur d'animation ne montre pas le rig en place.
+			print(
+				`[LadderFold] "{model.Name}" : {FOLD_STOP_ATTRIBUTE} = -1, on ne fige pas. `
+					.. `Le marqueur {CLOSE_EVENT} est a {string.format("%.2f", loaded.TimePosition)}s `
+					.. `sur {string.format("%.2f", loaded.Length)}s.`
+			)
+			return
+		end
+		local extra = stopAt - loaded.TimePosition
+		if extra <= 0 then
+			freeze()
+			return
+		end
+		print(
+			`[LadderFold] "{model.Name}" : {FOLD_STOP_ATTRIBUTE} = {stopAt}s, on continue `
+				.. `{string.format("%.2f", extra)}s apres le marqueur.`
+		)
+		task.delay(extra, freeze)
 	end)
+
 	loaded:GetMarkerReachedSignal(OPEN_EVENT):Connect(function()
 		loaded:Stop(0.1)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)

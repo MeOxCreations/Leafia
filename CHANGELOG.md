@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.802 — Le point de gel du repli se regle dans Studio
+
+MA SONDE MENTAIT. Elle lisait `Motor6D.Transform` depuis le serveur et annoncait les huit joints figes pendant que
+l'echelle se pliait pour de vrai a l'ecran. La valeur lisible depuis un script n'est pas la pose que le moteur
+evalue. Elle m'a fait accuser une soudure, puis les noms du rig ; deux correctifs pour rien.
+
+Elle ne parle plus des joints. Elle dit ce qu'elle peut prouver : le poids de la piste, sa position, sa longueur,
+les parts ancrees et les soudures. Le poids valait 1 depuis le debut, donc la piste appliquait bien sa pose.
+
+CE QUI RESTE EST DANS L'ANIMATION, pas dans le code : le marqueur `FermerEvenement` tombe a 0.25s sur 0.73s, et
+c'est LUI qui decide ou l'echelle est "fermee". Un attribut sur le modele permet de le verifier en trente secondes,
+en jeu, sur le rig en place :
+
+    LeafiaFoldStop = -1    -> on ne fige pas, le geste entier se joue (fermeture puis reouverture)
+    LeafiaFoldStop = 0.45  -> on fige a 0.45s au lieu du marqueur
+    attribut absent        -> le marqueur, comme avant
+
 ## 0.0.801 — C'etait une soudure : l'echelle du camion se plie entierement
 
 LA SONDE A TRANCHE. Au marqueur, les HUIT joints du rig etaient restes a l'identite pendant que la piste tournait
