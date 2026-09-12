@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.799 — L'echelle sortie du camion se prend et se grimpe
+
+Deux causes independantes, et la meme racine : l'echelle qui quitte la benne CHANGE DE PARENT sans quitter le
+Workspace, donc tout ce qui ecoute "un objet est apparu" ne tire jamais.
+
+LE CACHE DES ECHELLES, cote client, gardait la liste des echelles UTILISABLES et ne se vidait que sur
+`DescendantAdded` / `DescendantRemoving`. Celle du camion en etait absente au demarrage (elle etait rangee) et
+n'y entrait jamais : posee au sol, bien visible, introuvable pour la prise comme pour la grimpe. Il ne garde plus
+que ce qui porte un NOM d'echelle -- ca ne bouge quasiment jamais -- et "utilisable en ce moment" se reteste a
+chaque lecture. Deux comparaisons, et plus aucun evenement d'invalidation a deviner.
+
+LES ZONES DE PRISE ET DE GRIMPE se placent par un rayon vers le sol, puis se soudent a l'echelle. Elles se
+construisaient au moment ou elle quittait la benne -- c'est-a-dire AVANT le vol, parce que le camion reparente
+l'objet avant de le faire voler. Elles la suivaient donc de travers pour toujours. Elles se refont maintenant a
+l'ATTERRISSAGE, et le camion, qui est le seul a savoir quand le trajet est fini, le dit lui-meme. Rangee dans la
+benne, elle les perd.
+
 ## 0.0.798 — L'echelle du camion se plie ENTIEREMENT
 
 La piste jouait bien, son marqueur tirait a l'heure (0.29s sur 0.73s), et la pose n'etait qu'a moitie faite. Ce

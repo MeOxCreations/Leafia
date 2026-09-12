@@ -71,6 +71,14 @@ local function buildZone(ladder: Model, root: BasePart, name: string, lateralOff
 	weld.Parent = box
 end
 
+local function clearZones(ladder: Model)
+	for _, child in ipairs(ladder:GetChildren()) do
+		if child:IsA("BasePart") and (child.Name == ZONE_BASE_NAME .. "_A" or child.Name == ZONE_BASE_NAME .. "_B") then
+			child:Destroy()
+		end
+	end
+end
+
 local function setupLadder(ladder: Model)
 	local root = ladderRootPart(ladder)
 	if not root then
@@ -78,11 +86,7 @@ local function setupLadder(ladder: Model)
 		return
 	end
 	-- Idempotent : on retire d'anciennes zones generees avant d'en refaire (redemarrage / re-setup).
-	for _, child in ipairs(ladder:GetChildren()) do
-		if child:IsA("BasePart") and (child.Name == ZONE_BASE_NAME .. "_A" or child.Name == ZONE_BASE_NAME .. "_B") then
-			child:Destroy()
-		end
-	end
+	clearZones(ladder)
 	-- Le raycast au sol doit IGNORER l'echelle (sinon il taperait dans ses propres marches).
 	local params = RaycastParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -124,6 +128,21 @@ local function watchLadder(model: Model)
 			task.defer(setupLadder, model)
 		end
 	end)
+end
+
+--- A APPELER QUAND UNE ECHELLE VIENT DE SE POSER, ou de repartir dans le camion.
+---
+--- LA HAUTEUR DES ZONES VIENT D'UN RAYON VERS LE SOL, donc elles ne valent que pour l'endroit ou l'echelle se
+--- trouvait AU MOMENT de leur construction. Une echelle qui quitte la benne change de parent AVANT de voler : les
+--- zones se posaient donc pendant qu'elle etait encore sur le camion, et elles la suivaient ensuite de travers --
+--- l'echelle etait bien la, au sol, et ni la prise ni la grimpe ne la voyaient.
+function LadderZoneService.refresh(ladder: Model)
+	if isLadderModel(ladder) then
+		setupLadder(ladder)
+	else
+		-- Repartie dans le camion : pas de zone de grimpe sur un objet range.
+		clearZones(ladder)
+	end
 end
 
 function LadderZoneService.init()

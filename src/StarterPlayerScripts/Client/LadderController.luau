@@ -383,18 +383,35 @@ end
 workspace.DescendantAdded:Connect(invalidateIfLadder)
 workspace.DescendantRemoving:Connect(invalidateIfLadder)
 
+-- LE CACHE LISTE LES ECHELLES PAR NOM, ET L'UTILISABLE SE DECIDE A LA LECTURE.
+--
+-- Il gardait directement la liste des echelles UTILISABLES, et il ne se vidait que sur `DescendantAdded` /
+-- `DescendantRemoving` du Workspace. Or l'echelle qui sort du camion ne fait que CHANGER DE PARENT a l'interieur
+-- du Workspace, ou elle etait deja : aucun des deux evenements ne tire. Elle restait donc absente du cache POUR
+-- TOUTE LA SESSION -- sortie du camion, posee au sol, et invisible a la prise comme a la grimpe, sans une seule
+-- erreur.
+--
+-- Un cache ne doit contenir que ce qui CHANGE RAREMENT (ici : quelles instances portent un nom d'echelle). Ce qui
+-- change en cours de partie -- rangee dans le camion ou posee au sol -- se recalcule a chaque lecture ; c'est deux
+-- ou trois tests, et ca supprime la classe entiere de bugs d'invalidation.
 local function getLadders(): { Instance }
-	if ladderCache then
-		return ladderCache
+	local known = ladderCache
+	if not known then
+		known = {}
+		for _, d in ipairs(workspace:GetDescendants()) do
+			if d:IsA("Model") and LadderFoldUtils.isLadderName(d.Name) then
+				table.insert(known :: { Instance }, d)
+			end
+		end
+		ladderCache = known
 	end
-	local result: { Instance } = {}
-	for _, d in ipairs(workspace:GetDescendants()) do
-		if LadderFoldUtils.isLadder(d) then
-			table.insert(result, d)
+	local usable: { Instance } = {}
+	for _, d in ipairs(known :: { Instance }) do
+		if d.Parent and LadderFoldUtils.isLadder(d) then
+			table.insert(usable, d)
 		end
 	end
-	ladderCache = result
-	return result
+	return usable
 end
 
 -- La zone (parmi les deux de CHAQUE echelle) au-dessus de laquelle se tient le point, ET l'echelle a laquelle elle

@@ -21,6 +21,10 @@ local Workspace = game:GetService("Workspace")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
+-- VOISIN DIRECT, pas un detour par un remote : c'est le camion qui DEPLACE l'echelle, donc c'est a lui de dire
+-- quand elle s'est posee. Ses zones de grimpe se calculent depuis le sol sous elle, elles ne peuvent pas se faire
+-- avant l'atterrissage.
+local LadderZoneService = require(script.Parent.LadderZoneService)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
@@ -273,6 +277,8 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 			else
 				LadderFoldUtils.unfold(model)
 			end
+			-- SES ZONES SE REFONT ICI, une fois posee. Avant l'atterrissage, le rayon vers le sol tape le camion.
+			LadderZoneService.refresh(model)
 		end
 		flying[model] = nil
 	end)

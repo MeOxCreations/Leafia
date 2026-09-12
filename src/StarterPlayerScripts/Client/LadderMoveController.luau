@@ -592,14 +592,25 @@ local function getLadders(): { Instance }
 	if cached then
 		return cached
 	end
-	local list: { Instance } = {}
-	for _, d in ipairs(workspace:GetDescendants()) do
-		if LadderFoldUtils.isLadder(d) then
-			table.insert(list, d)
+	local known = laddersCache
+	if not known then
+		known = {}
+		for _, d in ipairs(workspace:GetDescendants()) do
+			if d:IsA("Model") and LadderFoldUtils.isLadderName(d.Name) then
+				table.insert(known :: { Instance }, d)
+			end
+		end
+		laddersCache = known
+	end
+	-- FILTRE A LA LECTURE : voir la note du cache dans LadderController. Une echelle qui sort du camion change de
+	-- parent SANS quitter le Workspace, donc aucun evenement ne vide le cache -- elle resterait introuvable.
+	local usable: { Instance } = {}
+	for _, d in ipairs(known :: { Instance }) do
+		if d.Parent and LadderFoldUtils.isLadder(d) then
+			table.insert(usable, d)
 		end
 	end
-	laddersCache = list
-	return list
+	return usable
 end
 
 -- RootPart de l'echelle (PrimaryPart, sinon enfant "RootPart"). Reference FIXE, contrairement a GetPivot qui suit la
@@ -1038,7 +1049,7 @@ function LadderMoveController.init()
 	-- Cache des echelles : invalide des qu'une echelle apparait / disparait (filtre par nom : les carreaux de
 	-- haie qui s'ajoutent ne le touchent pas).
 	local function invalidateIfLadder(inst: Instance)
-		if LadderFoldUtils.isLadder(inst) then
+		if LadderFoldUtils.isLadderName(inst.Name) then
 			laddersCache = nil
 		end
 	end

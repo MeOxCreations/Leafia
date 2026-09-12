@@ -1245,6 +1245,22 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   qu'on lui impose (ancrages, soudures, Humanoid). Ca coupe l'espace de recherche en deux en trente secondes,
   bien mieux qu'une sonde. A proposer AVANT d'instrumenter quand un objet existe en deux exemplaires.
 
+- **UN CACHE NE DOIT CONTENIR QUE CE QUI CHANGE RAREMENT ; CE QUI CHANGE EN JEU SE RECALCULE A LA LECTURE.** Les
+  deux controllers de l'echelle gardaient la liste des echelles UTILISABLES, vidée seulement sur
+  `DescendantAdded` / `DescendantRemoving` du Workspace. L'echelle sortie du camion change de parent SANS quitter
+  le Workspace : aucun des deux evenements ne tire, et elle restait absente du cache POUR TOUTE LA SESSION --
+  posee au sol, bien visible, et introuvable pour la prise comme pour la grimpe, sans une seule erreur. La sortie
+  n'est pas de trouver le bon evenement d'invalidation, c'est de ne plus avoir a en trouver : le cache liste ce
+  qui porte un NOM d'echelle (ca ne bouge quasiment jamais), et "utilisable en ce moment" se reteste a chaque
+  lecture -- deux ou trois comparaisons, et la classe entiere de bugs d'invalidation disparait.
+- **UNE ZONE CALCULEE DEPUIS LE SOL NE VAUT QUE POUR L'ENDROIT OU L'OBJET ETAIT QUAND ON L'A CONSTRUITE.** Les
+  zones de prise / grimpe se placent par un rayon vers le sol puis se soudent a l'echelle. Construites pendant
+  que l'echelle etait encore dans la benne du camion, elles la suivaient ensuite DE TRAVERS : l'echelle etait bien
+  la, au sol, et rien ne la detectait. Piege de timing derriere : le camion reparente l'objet AVANT de le faire
+  voler, donc tout ce qui ecoute ce changement se declenche au DEPART du trajet, pas a l'arrivee. Regle : ce qui
+  se calcule depuis l'environnement se (re)calcule quand l'objet est POSE, et c'est celui qui le deplace qui le
+  dit -- il est le seul a savoir quand le mouvement est fini.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
