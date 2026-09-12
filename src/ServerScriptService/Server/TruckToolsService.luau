@@ -245,7 +245,7 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 	local low = if a.Y >= b.Y then b else a
 	local flat = Vector3.new(low.X - high.X, 0, low.Z - high.Z)
 	local away = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, 1)
-	local middle = high + away * TruckConfigs.SLIDE_OUT
+	local middle = high + away * TruckConfigs.SLIDE_OUT + Vector3.new(0, TruckConfigs.SLIDE_UP, 0)
 
 	-- ON L'ANCRE ET ON LE SORT DU CAMION. Tant qu'il est enfant du modele, il suit la carrosserie -- et il
 	-- resterait "range" pour l'interface, qui lit le contenu du dossier.
@@ -386,7 +386,29 @@ function TruckToolsService.init()
 			return
 		end
 		print(`[TruckToolsService] {player.Name} range "{toolName}" dans le camion.`)
-		fly(taken, truck:GetPivot() * (pose :: CFrame), folder)
+		local home = truck:GetPivot() * (pose :: CFrame)
+		if not LadderFoldUtils.isLadderName(taken.Name) then
+			fly(taken, home, folder)
+			return
+		end
+		-- L'ECHELLE SE FERME AVANT DE PARTIR, pas en arrivant. On range une echelle REPLIEE : la voir se fermer
+		-- PUIS rentrer raconte le geste dans l'ordre ou on le ferait soi-meme. Fermee a l'arrivee, c'est la meme
+		-- image finale, mais la cause arrive apres l'effet.
+		--
+		-- ON MARQUE LE VOL TOUT DE SUITE, avant meme l'attente : sans ca, deux clics pendant le repli lanceraient
+		-- deux trajets sur le meme objet.
+		flying[taken] = true
+		LadderFoldUtils.closeNow(taken)
+		task.delay(TruckConfigs.CLOSE_BEFORE_FLY, function()
+			if not (taken.Parent and folder.Parent) then
+				flying[taken] = nil
+				return
+			end
+			-- ON REPREND LA MAIN AVANT DE LA DEPLACER : la tenue laisse des pieces libres et une part ancree
+			-- posee sur la racine, et le trajet ancre tout. Les deux montages ne doivent pas se chevaucher.
+			LadderFoldUtils.settle(taken)
+			fly(taken, home, folder)
+		end)
 	end)
 
 	-- L'ECHELLE QUI DORT DEJA DANS LA BENNE EST REPLIEE, avant que personne n'y touche. Elle est POSEE ouverte

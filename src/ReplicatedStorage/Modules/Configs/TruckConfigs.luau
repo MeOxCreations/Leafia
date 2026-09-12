@@ -69,6 +69,13 @@ local TruckConfigs = {
 	-- moments differents, deux reglages -- un seul aurait force a decaler les deux.
 	DOOR_CLOSE_SOUND_DELAY = 0.5,
 
+	-- ELLE SE FERME AVANT DE PARTIR, en secondes. On range une echelle REPLIEE : la voir se fermer PUIS rentrer
+	-- raconte le geste dans l'ordre ou on le ferait. Fermee a l'arrivee, c'est la meme image finale mais la
+	-- cause arrive apres l'effet.
+	--
+	-- Assez pour qu'on la voie se fermer, pas assez pour qu'on attende.
+	CLOSE_BEFORE_FLY = 0.35,
+
 	-- ===== L'ETAT DE LA PORTE, LU PAR LE CLIENT =====
 	-- Un ATTRIBUT sur le modele, pas un remote : il se replique tout seul, il arrive avec le camion quand le
 	-- streaming le livre, et un client qui se connecte en retard le lit sans qu'on ait a le lui renvoyer.
@@ -134,6 +141,13 @@ local TruckConfigs = {
 	-- camion a l'HORIZONTALE, comme on le tire vers soi, avant de descendre vers le sol. A zero, la courbe
 	-- redevient une droite et l'objet part en diagonale a travers le hayon.
 	SLIDE_OUT = 4,
+	-- ET IL MONTE, en studs au-dessus de la benne. C'est ce qui redonne un ARC au trajet : sans lui l'objet part
+	-- a plat et descend en biais, ce qui se lit comme une glissade. Avec, il est SOULEVE puis pose.
+	--
+	-- Separe de `SLIDE_OUT` : l'un dit a quelle distance du camion il s'ecarte, l'autre a quelle hauteur il
+	-- passe. Un seul reglage pour les deux forcerait a choisir entre un objet qui frole la carrosserie et un arc
+	-- qui part trop loin derriere.
+	SLIDE_UP = 5,
 	-- Duree, en secondes. COURTE : le trajet est un enchainement entre deux etats, pas un plan a regarder. Un
 	-- geste d'interface qui traine se ressent comme une attente des la deuxieme fois qu'on le voit.
 	FLY_TIME = 0.45,

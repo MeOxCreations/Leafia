@@ -604,6 +604,50 @@ function LadderFoldUtils.holdClosed(model: Model): boolean
 	return true
 end
 
+--- LA FERMER MAINTENANT, sans ceremonie ni mesure : on la voit se replier tout de suite.
+---
+--- SERT AVANT LE TRAJET DE RANGEMENT. `holdClosed` mesure et rend la main une seconde plus tard, ce qui tombe en
+--- plein vol -- il reancrerait des pieces pendant que le modele se deplace. Ici on ferme, et l'appelant reprend la
+--- main quand il veut avec `settle`.
+function LadderFoldUtils.closeNow(model: Model): boolean
+	local animator = animatorOf(model)
+	if not animator then
+		return false
+	end
+	local closed = closedTracks[model]
+	if not closed then
+		local anim = Instance.new("Animation")
+		anim.AnimationId = LadderFoldUtils.CLOSED_ANIM
+		local ok, result = pcall(function()
+			return (animator :: Animator):LoadAnimation(anim)
+		end)
+		if not (ok and typeof(result) == "Instance") then
+			return false
+		end
+		closed = result :: AnimationTrack
+		closed.Looped = true
+		closed.Priority = Enum.AnimationPriority.Action
+		closedTracks[model] = closed
+	end
+	local other = tracks[model]
+	if other then
+		other:Stop(0) -- deux pistes sur le meme rig se melangent
+	end
+	stopRunner(model)
+	LadderFoldUtils.setWelds(model, false)
+	holdInPlace(model)
+	;(closed :: AnimationTrack):Play(0)
+	model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
+	return true
+end
+
+--- FIN DE LA TENUE : on retire la piece qui tenait l'echelle en l'air et on remet ses soudures. A appeler quand on
+--- reprend la main sur le modele -- juste avant de le deplacer, par exemple.
+function LadderFoldUtils.settle(model: Model)
+	releaseHold(model)
+	LadderFoldUtils.setWelds(model, true)
+end
+
 --- L'ECHELLE SORT DU CAMION : on lache la pose fermee, elle reprend sa forme ouverte.
 function LadderFoldUtils.releaseClosed(model: Model)
 	local closed = closedTracks[model]

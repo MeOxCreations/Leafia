@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.810 — L'arc remonte, et l'echelle se ferme AVANT de rentrer dans le camion
+
+LE TRAJET A DE NOUVEAU UN ARC. Le point de controle passe cinq studs au-dessus de la benne : sans hauteur, l'objet
+partait a plat et descendait en biais, ce qui se lit comme une glissade. Avec, il est SOULEVE puis pose. La
+distance dont il s'ecarte du camion (`SLIDE_OUT`) et la hauteur a laquelle il passe (`SLIDE_UP`) sont deux
+reglages separes : un seul aurait force a choisir entre un objet qui frole la carrosserie et un arc qui part trop
+loin derriere.
+
+ET L'ECHELLE SE REPLIE AVANT DE PARTIR, plus en arrivant. On range une echelle FERMEE : la voir se fermer PUIS
+rentrer raconte le geste dans l'ordre ou on le ferait soi-meme. Fermee a l'arrivee, c'est la meme image finale,
+mais la cause arrive apres l'effet.
+
+Deux precautions dans ce changement. Le vol est marque des le clic, avant l'attente du repli, sinon deux clics
+pendant la fermeture lanceraient deux trajets sur le meme objet. Et la tenue qui permet au rig de s'animer est
+relachee juste avant le depart : elle laisse des pieces libres et une part ancree posee sur la racine, alors que
+le trajet ancre tout -- les deux montages ne doivent pas se chevaucher.
+
 ## 0.0.809 — L'outil se met droit en l'air, sans tourner sur lui-meme
 
 Plus de tour complet. Il se redresse dans les airs sur le premier tiers du trajet, puis il descend se poser deja
