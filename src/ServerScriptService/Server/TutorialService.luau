@@ -891,7 +891,20 @@ local function standOldMan()
 		-- debout mais immobile -- une statue, pas un homme qui vient de se lever.
 		local model = findByName(TutorialConfigs.GRANDPA_NAME)
 		if model and model:IsA("Model") then
-			restoreIdle(model :: Model)
+			local body = model :: Model
+			restoreIdle(body)
+			-- ET IL SE RETOURNE, DOS AU BANC. L'animation jouee a l'envers DEFAIT le demi-tour qu'elle contient :
+			-- sans ca il se leve face au dossier, a le contempler.
+			local part = body:FindFirstChild("HumanoidRootPart")
+			if part and part:IsA("BasePart") then
+				local here = part :: BasePart
+				local look = here.CFrame.LookVector
+				local flat = Vector3.new(look.X, 0, look.Z)
+				if flat.Magnitude > 1e-3 then
+					local turned = CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_STAND_TURN), 0) * flat.Unit
+					faceOldManTo(body, here.Position + turned * 10, TutorialConfigs.OLDMAN_STAND_TURN_TIME)
+				end
+			end
 		end
 		print("[Tutorial] La haie est finie : le grand-pere se leve de son banc.")
 		-- ET IL PARLE UNE FOIS DEBOUT, pas pendant qu'il se releve : une replique qui commence sur un homme encore
@@ -1638,50 +1651,21 @@ function TutorialService.init()
 					bench:FireClient(player, "walk")
 				end
 				walkOldMan(TutorialConfigs.OLDMAN_BENCH_TARGET, function(model)
-					-- IL SE MET DOS AU BANC AVANT DE S'ASSEOIR. Il y marche en le regardant : sans ce demi-tour il
-					-- se pose face au dossier, et il se releve en contemplant les lattes.
-					--
-					-- ON PIVOTE DEPUIS SA DIRECTION D'ARRIVEE plutot que vers un point pose dans la carte : rien
-					-- de plus a placer dans Studio, et ca reste juste ou que soit le banc.
-					local root = model:FindFirstChild("HumanoidRootPart")
-					if root and root:IsA("BasePart") then
-						local part = root :: BasePart
-						local look = part.CFrame.LookVector
-						local flat = Vector3.new(look.X, 0, look.Z)
-						if flat.Magnitude > 1e-3 then
-							local turned = CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_SIT_TURN), 0)
-								* flat.Unit
-							faceOldManTo(
-								model,
-								part.Position + turned * 10,
-								TutorialConfigs.OLDMAN_SIT_TURN_TIME
-							)
+					-- AUCUN PIVOT AVANT L'ASSISE : son animation fait le demi-tour elle-meme -- il se retourne et
+					-- saute en arriere pour se poser. Un pivot de notre cote s'ajouterait au sien et le mettrait
+					-- face au dossier. Le retournement manque au RETOUR, pas a l'aller : voir `standOldMan`.
+					sitOldMan(model, function()
+						local bench = benchRemote
+						if sceneOwner == player and bench then
+							bench:FireClient(player, "hup")
 						end
-					end
-					-- ET IL S'ASSOIT UNE FOIS TOURNE : l'assise part de sa pose du moment, donc la jouer pendant le
-					-- pivot la ferait glisser de cote.
-					task.delay(TutorialConfigs.OLDMAN_SIT_TURN_TIME, function()
-						sitOldMan(model, function()
-							local bench = benchRemote
-							if sceneOwner == player and bench then
-								bench:FireClient(player, "hup")
-							end
-						end)
 					end)
 				end)
 			end)
 		end, nil, TutorialConfigs.OLDMAN_HEDGE_VIA)
 
-		-- UN SEUL COTE A TAILLER. On baisse le seuil d'auto-completion SUR CETTE HAIE : des que le joueur en a
-		-- fait la part demandee, le reste se finit tout seul, avec l'experience et les debris qui vont avec.
-		--
-		-- POURQUOI. C'est la premiere haie de sa vie ; lui faire faire le tour complet pour apprendre le geste
-		-- transforme une decouverte en corvee avant meme qu'il ait vu le resultat. Il taille un cote, il voit
-		-- l'avant / apres, il passe a la suite.
-		--
-		-- LA MEME HAIE QUE LA PASTILLE : celle qui est la plus proche du point ou le grand-pere s'arrete. Deux
-		-- regles de choix differentes finiraient par designer deux haies, et le joueur taillerait celle que
-		-- personne ne lui montre.
+		-- LA HAIE, ELLE, EST DEJA PREPAREE depuis le demarrage du serveur (voir `prepareHedgeWhenReady`) : toutes
+		-- ses faces sont nettes sauf celle qu'on vient de lui montrer.
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur

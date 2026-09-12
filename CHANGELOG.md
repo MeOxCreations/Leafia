@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.830 — Le demi-tour du banc passe du depart a l'arrivee
+
+L'animation d'assise fait le demi-tour ELLE-MEME : il se retourne et saute en arriere pour se poser. Le pivot
+ajoute en 0.0.827 s'ajoutait donc au sien, et il finissait face au dossier -- le probleme qu'on voulait regler.
+
+Il est retire de l'assise. Le retournement manque au RETOUR, pas a l'aller : jouee a l'envers, l'animation DEFAIT
+son demi-tour, donc il se leve face au banc a le contempler. On le retourne apres, une fois debout.
+
+`OLDMAN_SIT_TURN` devient `OLDMAN_STAND_TURN`, meme principe : un angle depuis son cap du moment, rien de plus a
+placer dans Studio.
+
+Au passage, un commentaire orphelin de 0.0.825 est remplace -- il decrivait un seuil d'auto-completion que ce
+code ne pose plus.
+
 ## 0.0.829 — Le grand-pere felicite, puis explique les feuilles
 
 En se levant de son banc il enchaine deux repliques : `HappyForCutHedge`, puis `SayHowPickupLeaves` -- le rateau

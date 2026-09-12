@@ -925,17 +925,20 @@ return {
 	-- UN PEU PLUS VITE QUE L'ALLER. S'asseoir est un soupir, se lever est une decision -- il a vu que le travail
 	-- est fini, il y va. A 1, la remontee traine et on attend un vieux monsieur.
 	OLDMAN_STAND_SPEED = 1.25,
-	-- DE COMBIEN IL PIVOTE EN ARRIVANT AU BANC, en degres, avant de s'asseoir.
+	-- DE COMBIEN IL PIVOTE EN SE RELEVANT, en degres, une fois l'animation remontee.
 	--
-	-- ON S'ASSOIT DOS AU BANC. Il y marche en le REGARDANT -- c'est sa direction de marche -- donc sans ce
-	-- demi-tour il se pose face au dossier, et il se releve en contemplant les lattes.
+	-- POURQUOI PAS AVANT DE S'ASSEOIR. Son animation fait le demi-tour ELLE-MEME : il se retourne et saute en
+	-- arriere pour se poser. Un pivot de notre cote avant l'assise s'AJOUTERAIT au sien, et il finirait face au
+	-- dossier -- le probleme qu'on voulait regler.
 	--
-	-- EN DEGRES DEPUIS SA DIRECTION D'ARRIVEE, et pas vers un point pose dans la carte : ca ne demande rien de
-	-- plus dans Studio, et ca reste juste ou que soit le banc. A regler ici si son point d'arrivee est sur le
-	-- COTE du banc plutot que devant.
-	OLDMAN_SIT_TURN = 180,
-	-- Le temps du demi-tour. Assez lent pour se lire comme un geste, assez court pour ne pas retarder l'assise.
-	OLDMAN_SIT_TURN_TIME = 0.5,
+	-- MAIS AU RETOUR, IL MANQUE. Jouee a l'envers, l'animation DEFAIT son demi-tour : il se leve donc face au
+	-- banc, a le contempler. On le retourne apres, une fois debout.
+	--
+	-- EN DEGRES DEPUIS SON CAP DU MOMENT, et pas vers un point pose dans la carte : rien de plus a placer dans
+	-- Studio, et ca reste juste ou que soit le banc.
+	OLDMAN_STAND_TURN = 180,
+	-- Le temps du demi-tour. Assez lent pour se lire comme un geste, assez court pour ne pas retarder sa replique.
+	OLDMAN_STAND_TURN_TIME = 0.5,
 	-- CE QU'IL DIT EN SE LEVANT, dans cet ordre et sans trou : il felicite, PUIS il explique la suite.
 	--
 	-- L'ORDRE N'EST PAS DECORATIF. Le compliment recompense ce qui vient d'etre fait ; la consigne ouvre ce qui
