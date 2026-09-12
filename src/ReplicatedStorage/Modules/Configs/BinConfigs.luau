@@ -32,8 +32,10 @@ return {
 	-- GENEREUSE : le joueur POUSSE les feuilles avec un rateau, il ne vise pas. Trop serree, il rate son tas de
 	-- quelques centimetres et croit que le seau ne marche pas.
 	ABSORB_RADIUS = 6,
-	-- Cadence du controle. Un tas ne se deplace pas tout seul : cinq fois par seconde suffisent largement.
-	ABSORB_INTERVAL = 0.2,
+	-- Cadence du controle. Serree : le tas nait sous le coup de rateau, et le voir clignoter une fraction de
+	-- seconde avant de disparaitre dans le seau se lit comme un rate. A dix par seconde, il n'existe jamais a
+	-- l'ecran quand le seau est a cote.
+	ABSORB_INTERVAL = 0.1,
 	-- Le bruit des feuilles qui tombent dedans, porte par le seau. Facultatif : sans lui le ramassage marche.
 	ABSORB_SOUND = { "Sounds", "Game", "GlobalSounds", "DropSound" },
 
@@ -42,15 +44,25 @@ return {
 	-- synchronise pas : absent d'une place, le compte marche quand meme -- il ne se voit juste pas.
 	LEAF_MODEL_PATH = { "Assets", "Contents", "LeafInBinModel" },
 	LEAF_MODEL_NAME = "LeafInBinModel",
-	-- OU IL SE POSE, vu depuis la part de reference du seau. A regler a l'oeil : le modele a son propre centre, et
-	-- aucun calcul ne devine a quelle hauteur des feuilles "ont l'air" posees au fond d'un seau.
-	LEAF_OFFSET = CFrame.new(0, 0, 0),
+	-- A QUELLE HAUTEUR ELLES SE POSENT DANS LE SEAU, en studs au-dessus de sa part de reference : vide, puis
+	-- plein.
+	--
+	-- ELLES MONTENT AVEC LE REMPLISSAGE, et ce n'est pas de la coquetterie : c'est la MEME information que la
+	-- jauge, dite par l'objet lui-meme. Un joueur qui regarde son seau sait ou il en est sans lire un chiffre, et
+	-- de dos, et le son coupe.
+	--
+	-- DEUX NOMBRES A REGLER A L'OEIL. Aucun calcul ne devine a quelle hauteur des feuilles "ont l'air" posees au
+	-- fond d'un seau : ca depend du centre du modele de feuilles ET de celui du seau, tous deux poses a la main.
+	LEAF_LOW = 0.9,
+	LEAF_HIGH = 1.9,
 
 	-- ===== LA JAUGE AU-DESSUS =====
 	-- Taille en pixels, et hauteur au-dessus du seau en studs.
 	GAUGE_WIDTH = 120,
 	GAUGE_HEIGHT = 26,
-	GAUGE_UP = 2.6,
+	-- BIEN AU-DESSUS DU SEAU MAIS SOUS LA PILULE. Le badge d'interaction flotte plus haut : a 2.6 la jauge lui
+	-- rentrait dedans, et deux interfaces qui se chevauchent ne se lisent ni l'une ni l'autre.
+	GAUGE_UP = 0.4,
 	-- Au-dela, elle ne s'affiche plus : une barre lisible a trente metres encombre la vue pour rien.
 	GAUGE_MAX_DISTANCE = 60,
 	-- Cadence de rafraichissement. Le compte ne change qu'au coup de rateau : dix fois par seconde est deja large.

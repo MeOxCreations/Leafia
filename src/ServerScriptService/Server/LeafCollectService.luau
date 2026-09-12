@@ -41,32 +41,50 @@ local function binRoot(bin: Model): BasePart?
 	return bin.PrimaryPart or bin:FindFirstChildWhichIsA("BasePart")
 end
 
---- LE TAS DE FEUILLES VISIBLE DANS LE SEAU, pose ou retire selon ce qu'il contient.
+--- LE TAS DE FEUILLES VISIBLE DANS LE SEAU. Il MONTE avec le remplissage.
+---
+--- C'EST LA MEME INFORMATION QUE LA JAUGE, dite par l'objet lui-meme : un joueur qui regarde son seau sait ou il
+--- en est sans lire un chiffre, et de dos, et le son coupe.
 ---
 --- SOUDE ET SANS MASSE. Le seau se porte, se lache et retombe : des parts simplement parentees resteraient au sol
 --- pendant que le seau s'en va. Et `Massless` parce qu'un seau qui s'alourdit en se remplissant ferait ramer le
 --- porteur pour une raison qu'aucun joueur ne devinerait.
-local function setLeafVisual(bin: Model, show: boolean)
+---
+--- ON REFAIT LA SOUDURE A CHAQUE MONTEE. Un `WeldConstraint` capture l'ecart entre ses deux parts AU MOMENT OU ON
+--- L'ACTIVE : le laisser en place figerait les feuilles a la hauteur qu'elles avaient a la premiere poignee.
+local function setLeafVisual(bin: Model, leaves: number)
 	local existing = bin:FindFirstChild(BinConfigs.LEAF_MODEL_NAME)
-	if not show then
+	if leaves <= 0 then
 		if existing then
 			existing:Destroy()
 		end
 		return
 	end
-	if existing then
-		return -- deja la : on ne le repose pas a chaque poignee
-	end
-	local source = leafModel()
 	local root = binRoot(bin)
-	if not (source and root) then
-		return -- pas d'asset ou pas de part : le compte marche quand meme, il ne se voit juste pas
+	if not root then
+		return
 	end
-	local clone = (source :: Model):Clone()
-	clone.Name = BinConfigs.LEAF_MODEL_NAME
-	clone:PivotTo((root :: BasePart).CFrame * BinConfigs.LEAF_OFFSET)
-	clone.Parent = bin
-	for _, d in clone:GetDescendants() do
+	local model: Model? = if existing and existing:IsA("Model") then existing :: Model else nil
+	if not model then
+		local source = leafModel()
+		if not source then
+			return -- pas d'asset : le compte marche quand meme, il ne se voit juste pas
+		end
+		local clone = (source :: Model):Clone()
+		clone.Name = BinConfigs.LEAF_MODEL_NAME
+		clone.Parent = bin
+		model = clone
+	end
+	local ratio = math.clamp(leaves / BinConfigs.LEAVES_CAPACITY, 0, 1)
+	local up = BinConfigs.LEAF_LOW + (BinConfigs.LEAF_HIGH - BinConfigs.LEAF_LOW) * ratio
+	local body = model :: Model
+	for _, d in body:GetDescendants() do
+		if d:IsA("WeldConstraint") then
+			d:Destroy()
+		end
+	end
+	body:PivotTo((root :: BasePart).CFrame * CFrame.new(0, up, 0))
+	for _, d in body:GetDescendants() do
 		if d:IsA("BasePart") then
 			local part = d :: BasePart
 			part.Anchored = false
@@ -172,8 +190,9 @@ function LeafCollectService.init()
 						local room = BinConfigs.LEAVES_CAPACITY - contents(held)
 						local taken = math.min(leafCount(pile), room)
 						if taken > 0 then
-							held:SetAttribute(BinConfigs.LEAVES_ATTRIBUTE, contents(held) + taken)
-							setLeafVisual(held, true)
+							local total = contents(held) + taken
+							held:SetAttribute(BinConfigs.LEAVES_ATTRIBUTE, total)
+							setLeafVisual(held, total)
 							SoundUtils.play(BinConfigs.ABSORB_SOUND, root :: BasePart)
 							if taken >= leafCount(pile) then
 								pile:Destroy()

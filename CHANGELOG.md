@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.834 — Les feuilles MONTENT dans le seau, et la jauge descend sous la pilule
+
+LES FEUILLES ETAIENT DANS LE SOL. Leur hauteur est maintenant reglee par deux nombres -- vide et plein -- et le
+modele MONTE avec le remplissage. Ce n'est pas de la coquetterie : c'est la meme information que la jauge, dite par
+l'objet lui-meme. Un joueur qui regarde son seau sait ou il en est sans lire un chiffre, de dos, et le son coupe.
+
+LA SOUDURE EST REFAITE A CHAQUE MONTEE. Un `WeldConstraint` capture l'ecart entre ses deux parts AU MOMENT OU ON
+L'ACTIVE : la laisser en place figerait les feuilles a la hauteur qu'elles avaient a la premiere poignee.
+
+LA JAUGE DESCEND de 2.6 a 0.4 stud au-dessus du seau. Elle rentrait dans la pilule d'interaction, et deux
+interfaces qui se chevauchent ne se lisent ni l'une ni l'autre.
+
+ET L'ABSORPTION PASSE A DIX FOIS PAR SECONDE. Le tas nait sous le coup de rateau : le voir clignoter une fraction
+de seconde avant de disparaitre dans le seau se lit comme un rate. A cette cadence, il n'existe jamais a l'ecran
+quand le seau est a cote.
+
+A REGLER A L'OEIL : `LEAF_LOW` et `LEAF_HIGH` dans BinConfigs. Aucun calcul ne devine a quelle hauteur des feuilles
+ont l'air posees au fond d'un seau -- ca depend du centre du modele de feuilles ET de celui du seau, tous deux
+poses a la main.
+
 ## 0.0.833 — Les feuilles tombent dans le seau toutes seules, et le seau a un fond
 
 LA PASTILLE E DISPARAIT. Le joueur a le rateau en main et il POUSSE les feuilles : lui demander de lacher son
