@@ -42,6 +42,20 @@ function LadderFoldUtils.isLadder(inst: unknown): boolean
 	return instance:IsA("Model") and instance.Name:sub(1, #LadderFoldUtils.PREFIX) == LadderFoldUtils.PREFIX
 end
 
+--- PLIABLE : soit elle porte le nom des echelles de la carte, soit elle en a la FORME.
+---
+--- LE NOM RESTE LA REGLE, mais une copie rangee a la main dans une benne s'appelle ce qu'on veut, et une regle qui
+--- ne marche que si un nom a ete bien tape n'en est pas une. Le secours ne peut pas se tromper de cible : dans une
+--- benne, les outils sont des meshes, et le seul modele a porter un `Humanoid` est un RIG -- c'est justement ce
+--- qui lui permet de se plier.
+function LadderFoldUtils.isFoldable(inst: unknown): boolean
+	if typeof(inst) ~= "Instance" or not (inst :: Instance):IsA("Model") then
+		return false
+	end
+	local model = inst :: Model
+	return LadderFoldUtils.isLadder(model) or model:FindFirstChildOfClass("Humanoid") ~= nil
+end
+
 local function resolveAnim(): Animation?
 	local node: Instance = ReplicatedStorage
 	for _, step in ANIM_FOLDER do
@@ -70,8 +84,39 @@ function LadderFoldUtils.preload()
 	end)
 end
 
+--- LA RACINE DU RIG : la part que tout le reste suit.
+---
+--- ON NE SE FIE PAS A `PrimaryPart`, QUI EST FACULTATIF. Un modele sorti du 3D Importer n'en a normalement pas, et
+--- une copie posee a la main dans une benne encore moins. Une sonde dont le repere est une propriete facultative
+--- accuse tout le monde le jour ou elle est vide -- ici elle aurait renonce en silence, et l'echelle serait restee
+--- grande ouverte sans que rien n'explique pourquoi.
+---
+--- LE VRAI CRITERE EST DANS LES JOINTS : la racine est la part qu'un Motor6D TIRE (elle est `Part0`) sans que
+--- personne ne la tire elle-meme (elle n'est jamais `Part1`). Ca ne suppose ni nom, ni rangement, ni reglage.
 local function rootOf(model: Model): BasePart?
-	return model.PrimaryPart or (model:FindFirstChild("RootPart") :: BasePart?)
+	local named = model.PrimaryPart or (model:FindFirstChild("RootPart") :: BasePart?)
+	if named then
+		return named
+	end
+	local driven: { [BasePart]: boolean } = {}
+	local drivers: { [BasePart]: boolean } = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") then
+			local joint = d :: Motor6D
+			if joint.Part0 then
+				drivers[joint.Part0 :: BasePart] = true
+			end
+			if joint.Part1 then
+				driven[joint.Part1 :: BasePart] = true
+			end
+		end
+	end
+	for part in drivers do
+		if not driven[part] then
+			return part
+		end
+	end
+	return nil
 end
 
 --- RACINE ANCREE, LE RESTE LIBRE. Une part ANCREE ignore son Motor6D quoi qu'on ecrive dedans : une echelle dont
@@ -151,6 +196,22 @@ local function wire(model: Model, loaded: AnimationTrack)
 		loaded:Stop(0.1)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
 	end)
+end
+
+--- CE QUE LE MODULE VOIT DE CE MODELE. A afficher quand un repli ne donne rien : une sonde qui dit seulement
+--- "ca n'a pas marche" ne designe personne, celle-ci nomme la piece qui manque.
+function LadderFoldUtils.describe(model: Model): string
+	local root = rootOf(model)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local joints = 0
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") then
+			joints += 1
+		end
+	end
+	return `racine={if root then root.Name else "AUCUNE"} Humanoid={if humanoid then "oui" else "NON"} `
+		.. `Motor6D={joints} piste={if tracks[model] then "chargee" else "AUCUNE"} `
+		.. `anim={if resolveAnim() then "trouvee" else "INTROUVABLE"}`
 end
 
 --- REPLI : 0 -> `FermerEvenement`, puis on fige. Sans effet si elle est deja fermee ou en train de se fermer.

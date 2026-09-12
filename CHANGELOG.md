@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.795 — L'echelle de la benne se replie meme sans PrimaryPart ni bon nom
+
+Le repli de 0.0.794 pouvait renoncer EN SILENCE de deux facons, et l'echelle restait simplement ouverte.
+
+LA RACINE NE SE CHERCHE PLUS PAR `PrimaryPart`. C'est une propriete FACULTATIVE : un modele sorti du 3D Importer
+n'en a pas, une copie posee a la main dans une benne encore moins. Elle se deduit maintenant des JOINTS -- la part
+qu'un Motor6D tire sans que personne ne la tire elle-meme. Ca ne suppose ni nom, ni rangement, ni reglage. Sans
+racine, le partage "racine ancree, le reste libre" ne pouvait pas se poser, donc rien ne bougeait.
+
+LE NOM N'EST PLUS LA SEULE FACON DE RECONNAITRE L'ECHELLE. Une copie rangee a la main s'appelle ce qu'on veut. Le
+secours ne peut pas se tromper de cible : dans une benne les outils sont des meshes, et le seul modele a porter un
+Humanoid est un rig, ce qui est justement ce qui lui permet de se plier.
+
+ET LE SERVICE MESURE LE RESULTAT au lieu de le supposer. Cinq secondes apres le demarrage, il verifie que
+l'echelle est bien fermee et, sinon, affiche ce qu'il voit d'elle : racine, Humanoid, nombre de Motor6D, piste,
+animation. Un message qui dit seulement "ca n'a pas marche" ne designe personne.
+
 ## 0.0.794 — L'echelle est pliee dans le camion
 
 Elle est posee ouverte dans Studio, parce que la pose fermee n'existe que dans l'animation. On ouvrait donc le

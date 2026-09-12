@@ -32,6 +32,10 @@ local TruckToolsService = {}
 -- encore l'outil en place.
 local flying: { [Model]: boolean } = {}
 
+-- Delai avant de VERIFIER que l'echelle de la benne s'est bien repliee. Large : l'anim dure moins d'un quart de
+-- seconde, mais son telechargement peut trainer au demarrage d'un serveur.
+local LADDER_CHECK_DELAY = 5
+
 --- Le camion, ou nil. Re-cherche a chaque fois plutot que garde : avec le streaming il arrive apres le boot, et
 --- une reference resolue une seule fois resterait vide pour toute la session.
 local function findTruck(): Model?
@@ -260,7 +264,7 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 		--
 		-- APRES LE VOL, pas avant : le trajet ancre toutes ses parts pour que rien ne tombe en route, et une part
 		-- ancree ignore son Motor6D. Repliee pendant le vol, elle arriverait donc figee dans la pose du depart.
-		if LadderFoldUtils.isLadder(model) then
+		if LadderFoldUtils.isFoldable(model) then
 			if home and home.Parent then
 				LadderFoldUtils.fold(model)
 			else
@@ -362,20 +366,38 @@ function TruckToolsService.init()
 			local folder = truck and truck:FindFirstChild(TruckConfigs.TOOLS_FOLDER)
 			if folder then
 				local names = {}
-				local folded = 0
+				local ladders = {}
 				for _, d in (folder :: Instance):GetChildren() do
 					table.insert(names, d.Name)
-					if LadderFoldUtils.isLadder(d) then
-						folded += 1
-						LadderFoldUtils.fold(d :: Model)
+					if LadderFoldUtils.isFoldable(d) then
+						table.insert(ladders, d :: Model)
 					end
 				end
-				if folded == 0 then
-					print(
-						`[TruckToolsService] Aucune echelle repliee dans la benne. Elle doit s'appeler `
-							.. `"{LadderFoldUtils.PREFIX}..." ; il y a : {table.concat(names, ", ")}`
+				if #ladders == 0 then
+					warn(
+						`[TruckToolsService] Rien de pliable dans la benne, l'echelle restera ouverte. `
+							.. `Il faut un modele nomme "{LadderFoldUtils.PREFIX}..." OU un modele avec un Humanoid `
+							.. `(le rig de l'echelle, pas une copie figee). Il y a : {table.concat(names, ", ")}`
 					)
+					return
 				end
+				for _, ladder in ladders do
+					print(`[TruckToolsService] Repli de "{ladder.Name}" : {LadderFoldUtils.describe(ladder)}`)
+					LadderFoldUtils.fold(ladder)
+				end
+				-- ON MESURE LE RESULTAT, on ne suppose pas que ca a marche. Le repli peut echouer EN SILENCE de
+				-- trois facons -- anim pas encore chargee (marqueurs muets), rig sans joints, racine introuvable --
+				-- et dans les trois cas l'echelle reste simplement ouverte, sans la moindre erreur.
+				task.delay(LADDER_CHECK_DELAY, function()
+					for _, ladder in ladders do
+						if ladder.Parent and ladder:GetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE) ~= true then
+							warn(
+								`[TruckToolsService] "{ladder.Name}" n'est PAS repliee apres {LADDER_CHECK_DELAY}s. `
+									.. LadderFoldUtils.describe(ladder)
+							)
+						end
+					end
+				end)
 				return
 			end
 			task.wait(TruckConfigs.FIND_INTERVAL)
