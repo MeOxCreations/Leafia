@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.792 — Le camion ne vole plus le badge d'un objet pose devant soi
+
+Sa portee passe de 12 studs a 8, la meme que le seau, la tondeuse et la boite aux lettres. C'etait la plus grande
+du projet, et elle n'avait jamais bouge depuis la creation du prompt.
+
+POURQUOI CA SE VOYAIT COMME UNE ZONE DEREGLEE. Le badge va au plus proche, mais celui qui l'a deja le garde tant
+qu'un autre n'est pas plus proche de 2 studs -- c'est ce qui empeche deux objets cote a cote de faire clignoter
+l'invite. En portant 4 studs plus loin que tout le monde, le camion prenait le badge EN PREMIER, de loin, puis le
+gardait pendant qu'on se penchait sur un seau. Les deux mecanismes sont bons ; c'est l'ecart de portee qui les met
+en defaut.
+
+Le commentaire qui justifiait les 12 disait "on arrive avec une tondeuse devant soi". La tondeuse se detecte a 8 :
+un objet ne peut pas demander plus de portee que celui qu'on pousse.
+
+RIEN N'A ETE REMIS COMME AVANT. La touche du camion continue de suivre le badge (0.0.787) et le clic ne le
+declenche plus (0.0.791) : ces deux-la etaient des causes reelles, mesurees, et revenir dessus rendrait le bug
+d'origine -- appuyer sur E devant un seau ouvrait le camion.
+
 ## 0.0.791 — N'importe quel clic n'ouvre plus le camion
 
 C'etait `ClickablePrompt`, la propriete du `ProximityPrompt` -- vraie par defaut. En `Style = Custom`, Roblox

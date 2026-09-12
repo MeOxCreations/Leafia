@@ -1144,6 +1144,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   le fait lui-meme. Regle : quand un effet a un declencheur possible de chaque cote du reseau, instrumenter les
   DEUX avant de proposer quoi que ce soit.
 
+- **DANS UN ARBITRAGE "LE PLUS PROCHE GAGNE" AVEC HYSTERESIS, CELUI QUI PORTE LE PLUS LOIN GAGNE TOUT LE TEMPS.**
+  Le camion affichait son badge a 12 studs quand le reste du jeu s'affiche a 8. Il le prenait donc EN PREMIER, de
+  loin, et la marge anti-clignotement (2 studs) le lui laissait ensuite meme avec un seau pose juste devant le
+  joueur. Les deux mecanismes sont corrects pris un par un : c'est l'ECART DE PORTEE qui les met en defaut.
+  Symptome trompeur : ca se lit comme une zone de clic disproportionnee -- le joueur a dit "tu as disproportionne
+  la zone" -- alors que la zone est normale et que c'est la DISTANCE D'ENTREE dans l'arbitrage qui est hors norme.
+  Regle : des pretendants a une meme ressource doivent entrer dans la course a la MEME distance ; sinon le plus
+  genereux s'adjuge la place avant que les autres existent. Corollaire de lecture : un chiffre qui est le PLUS
+  GRAND de tout le projet est suspect par construction -- `grep` des valeurs voisines coute dix secondes et dit
+  tout de suite si on regarde une exception justifiee ou un oubli.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

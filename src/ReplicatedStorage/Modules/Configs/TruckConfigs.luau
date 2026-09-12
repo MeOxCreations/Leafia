@@ -23,8 +23,18 @@ local TruckConfigs = {
 	-- Le nom de l'action liee a la touche. Deux features qui partagent un nom se debranchent l'une l'autre.
 	ACTION_NAME = "LeafiaTruckOpen",
 	PROMPT_OBJECT = "TRUCK",
-	-- Distance d'activation, en studs. Genereuse : on s'approche du camion avec une tondeuse devant soi.
-	PROMPT_DISTANCE = 12,
+	-- Distance d'activation, en studs. LA MEME QUE TOUT LE RESTE DU JEU -- seau, tondeuse, boite aux lettres :
+	-- 8 partout.
+	--
+	-- ELLE ETAIT A 12, LA PLUS GRANDE DU PROJET, et c'est ce qui faisait gagner le camion contre un seau pose
+	-- juste devant le joueur. Le badge va au PLUS PROCHE, mais celui qui l'a deja le GARDE tant qu'un autre n'est
+	-- pas plus proche de 2 studs (l'hysteresis, qui empeche le clignotement). En portant 4 studs plus loin que les
+	-- autres, le camion prenait le badge EN PREMIER, de loin, puis le gardait pendant qu'on se penchait sur autre
+	-- chose. Ca ressemblait a une zone disproportionnee ; c'etait une portee disproportionnee.
+	--
+	-- Le commentaire d'avant justifiait les 12 par "on arrive avec une tondeuse devant soi" -- sauf que la
+	-- tondeuse, elle, se detecte a 8. Un objet ne peut pas demander plus de portee que celui qu'on pousse.
+	PROMPT_DISTANCE = 8,
 	-- Hauteur de la pilule au-dessus de la porte, et son decalage lateral. Le decalage evite qu'elle tombe SUR le
 	-- personnage quand on est pile derriere le camion.
 	PROMPT_HEIGHT = 3,
