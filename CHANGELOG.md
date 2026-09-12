@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.839 — Le seau reprend sa taille en sortant du camion
+
+Il est retreci dans la benne pour tenir dans le chargement -- c'est du rangement, pas sa vraie taille. Sorti, il
+passe a 2 ; range, il revient a 1.7.
+
+UNE TABLE PAR NOM DE MODELE, pas deux nombres en dur dans le trajet : le jour ou l'echelle ou un autre objet a le
+meme besoin, c'est une ligne. Ce qui n'y figure pas garde la meme taille partout.
+
+DES VALEURS ABSOLUES (`Model:ScaleTo`), jamais une multiplication. Appliquees deux fois de suite, elles donnent le
+meme resultat qu'une seule : un aller-retour entre le camion et la pelouse ne fait donc pas grossir l'objet. Un
+`Size * 2` aurait cette derive, et elle ne se verrait qu'au cinquieme aller-retour.
+
+ET AVANT LA POSE FINALE, pas apres : `ScaleTo` conserve le pivot, mais le faire apres laisserait une image ou
+l'objet est a la bonne place et a la mauvaise taille.
+
 ## 0.0.838 — Un seul interrupteur de test, qui baisse TOUS les verrous du didacticiel
 
 Il y en avait deux : celui des outils ("va toquer d'abord") et celui de la benne. On en baisse un, on relance, et

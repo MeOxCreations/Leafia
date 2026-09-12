@@ -174,6 +174,22 @@ local TruckConfigs = {
 	--
 	-- UNE PART PAR OUTIL et pas un point unique : deux outils lances de suite se poseraient l'un dans l'autre. Et
 	-- c'est une part, donc son ORIENTATION compte aussi -- un rateau pose de travers a l'air tombe, pas depose.
+	-- ===== IL NE FAIT PAS LA MEME TAILLE DEDANS ET DEHORS =====
+	-- Par nom de modele : `inside` quand il rentre dans la benne, `out` quand il en sort.
+	--
+	-- POURQUOI. Le seau est retreci dans le camion pour tenir dans le chargement -- c'est du rangement, pas sa
+	-- vraie taille. Sorti, il doit reprendre celle a laquelle le joueur le manipule, sinon il porte un seau de
+	-- poupee.
+	--
+	-- UNE TABLE, PAS DEUX NOMBRES EN DUR : le jour ou l'echelle ou un autre objet a le meme besoin, c'est une
+	-- ligne. Les cles sont les NOMS DES MODELES, comme partout ailleurs dans ce fichier.
+	--
+	-- CE SONT DES VALEURS ABSOLUES (`Model:ScaleTo`), pas des multiplications : les appliquer deux fois de suite
+	-- donne le meme resultat qu'une, donc un aller-retour ne fait pas grossir l'objet a l'infini.
+	TOOL_SCALE = {
+		Bin = { inside = 1.7, out = 2 },
+	},
+
 	DROP_FOLDER = "ToolsDropPoints",
 	-- Faute de part, il se pose devant celui qui l'a demande, a cette distance en studs. Un secours, pas le cas
 	-- normal : le service le DIT quand il s'en sert, sinon on croirait que c'est voulu.

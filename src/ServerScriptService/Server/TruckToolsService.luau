@@ -223,6 +223,24 @@ local function resetInPlace(model: Model, home: Instance)
 	task.wait()
 end
 
+--- SA TAILLE SELON OU IL VA : rangee dans la benne, ou celle a laquelle le joueur le manipule.
+---
+--- `Model:ScaleTo` PREND UNE VALEUR ABSOLUE, pas un facteur a multiplier : l'appliquer deux fois de suite donne le
+--- meme resultat qu'une, donc un aller-retour entre le camion et la pelouse ne fait pas grossir l'objet a chaque
+--- passage. Un `Size * 2` aurait cette derive, et elle ne se verrait qu'au cinquieme aller-retour.
+---
+--- RIEN POUR CE QUI N'EST PAS DANS LA TABLE : la plupart des outils ont la meme taille partout.
+local function applyScale(model: Model, inside: boolean)
+	local scale = TruckConfigs.TOOL_SCALE[model.Name]
+	if not scale then
+		return
+	end
+	local value = if inside then scale.inside else scale.out
+	if typeof(value) == "number" then
+		model:ScaleTo(value :: number)
+	end
+end
+
 --- IL CHANGE D'ETAT, SANS TRAJET. Pour tout ce qui part DANS LES MAINS du joueur.
 ---
 --- POURQUOI CEUX-LA NE VOLENT PAS. Un outil equipable ne se pose pas sur la pelouse : il rejoint l'inventaire, et
@@ -242,6 +260,7 @@ local function moveNow(model: Model, landing: CFrame, home: Instance?)
 		end
 	end
 	model.Parent = if home then home else Workspace
+	applyScale(model, home ~= nil)
 	model:PivotTo(landing)
 	if home then
 		-- IL EST RENTRE : la marque part avec lui, et il redevient visible dans la benne.
@@ -352,6 +371,9 @@ local function fly(model: Model, landing: CFrame, home: Instance?, openAt: numbe
 		if holder then
 			LadderFoldUtils.settle(model)
 		end
+		-- IL REPREND SA TAILLE avant la pose finale : `ScaleTo` conserve le pivot, mais le faire APRES laisserait
+		-- une image ou l'objet est a la bonne place et a la mauvaise taille.
+		applyScale(model, home ~= nil)
 		model:PivotTo(landing)
 		-- ET IL SE POSE, avec le bruit qui va avec. A la FIN, pas au depart : un choc qui precede l'atterrissage
 		-- se lit comme un autre objet, ailleurs.
