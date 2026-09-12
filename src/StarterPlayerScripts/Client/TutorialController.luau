@@ -2381,9 +2381,19 @@ local function step(dt: number)
 				nextHedgeCountAt = now + TutorialConfigs.LAWN_COUNT_INTERVAL
 				local raw = hedge:GetAttribute(HedgeConfigs.TRIMMED_ATTRIBUTE)
 				local ratio = if typeof(raw) == "number" then raw :: number else 0
+				-- LA JAUGE PART DU NIVEAU DE DEPART, pas de zero. La scene a taille d'avance toutes les faces sauf
+				-- une : la haie demarre deja a 70 ou 80 %, et une jauge sur le total serait aux trois quarts
+				-- remplie avant que le joueur ait touche une feuille.
+				--
+				-- LE NIVEAU VIENT DU SERVEUR, qui fait la coupe d'avance. Le mesurer ici reviendrait a le lire une
+				-- fois sur deux AVANT qu'elle se replique.
+				local startRaw = hedge:GetAttribute(TutorialConfigs.HEDGE_START_ATTRIBUTE)
+				local start = if typeof(startRaw) == "number" then startRaw :: number else 0
+				local span = math.max(1 - start, 1e-3)
+				local mine = math.clamp((ratio - start) / span, 0, 1)
 				local done = TutorialConfigs.HEDGE_DONE_AT
-				TaskBannerHandler.setProgress(3, math.clamp(ratio / done, 0, 1))
-				if ratio >= done then
+				TaskBannerHandler.setProgress(3, math.clamp(mine / done, 0, 1))
+				if mine >= done then
 					hedgeTaskDone = true
 					TaskBannerHandler.setDone(3)
 					WorldMarker.remove(hedgeMarker)

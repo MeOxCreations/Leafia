@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.824 — La haie du didacticiel arrive nette partout, sauf la face a tailler
+
+Le joueur ne taille plus qu'UNE face. Toutes les autres -- les trois cotes et le dessus -- sont deja finies quand
+il arrive.
+
+LA FACE GARDEE EST CELLE QUI REGARDE LE GRAND-PERE, donc celle vers laquelle le joueur arrive. N'importe quelle
+autre lui demanderait de faire le tour pour trouver le travail qu'on vient de lui montrer. Le dessus n'est jamais
+choisi : il demande l'echelle, qu'il n'a pas encore.
+
+LA JAUGE MESURE SON TRAVAIL, PAS L'ETAT DE LA HAIE. Elle demarre a 70 ou 80 % apres la preparation : une jauge
+branchee sur le taux brut serait remplie aux trois quarts avant qu'il ait touche une feuille. Le serveur memorise
+le niveau de depart sur la haie, et la jauge affiche la part du RESTE qui a ete faite.
+
+CE NIVEAU NE POUVAIT PAS ETRE MESURE PAR LE CLIENT : il entre dans l'etape au meme instant que la coupe d'avance,
+donc il l'aurait lu une fois sur deux avant qu'elle se replique. Celui qui fait le changement est le seul a savoir
+quand il est fini.
+
+ET LA SCENE POSE LE TAUX ELLE-MEME. C'est normalement `HedgeCutService` qui l'ecrit, en comptant ce qu'il vient de
+couper ; ici personne n'a coupe. Sans ca, la haie serait nette a l'ecran et annoncee a zero pour cent.
+
+Chaque carreau porte desormais sa face en ATTRIBUT. Son nom la contenait deja, mais un nom est fait pour etre lu
+par un humain ; ce qui doit etre teste par du code se demande a l'etat.
+
+Le seuil d'auto-completion par haie de 0.819 n'est plus utilise par le didacticiel -- ce chemin-la est meilleur --
+mais il reste lu, pret pour un chantier de client presse.
+
 ## 0.0.823 — L'idle assis se joue PAR-DESSUS l'assise, qui ne se lache plus
 
 Il s'asseyait, puis il SE RELEVAIT en respirant. Cause : l'idle assis ne cle que le HAUT du corps. En lachant la

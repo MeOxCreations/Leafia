@@ -12,6 +12,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local HedgeCellService = require(script.Parent.HedgeCellService)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
@@ -729,6 +730,42 @@ local function walkOldMan(
 	end)
 end
 
+
+-- LA HAIE EST PREPAREE : TOUTES SES FACES SONT DEJA NETTES, SAUF UNE.
+--
+-- POURQUOI. C'est la premiere haie de sa vie. Faire le tour complet pour apprendre un geste transforme une
+-- decouverte en corvee avant meme qu'il ait vu le resultat -- et le dessus demande l'echelle, qu'il n'a pas
+-- encore. Il taille UNE face, il voit l'avant / apres, il passe a la suite.
+--
+-- LA FACE GARDEE EST CELLE QUI REGARDE LE GRAND-PERE, donc celle vers laquelle le joueur arrive. N'importe quelle
+-- autre lui demanderait de faire le tour pour trouver le travail qu'on vient de lui montrer.
+--
+-- ON POSE LE TAUX NOUS-MEMES. C'est normalement `HedgeCutService` qui l'ecrit, en comptant ce qu'il vient de
+-- couper ; ici personne n'a coupe, donc personne ne l'a mis a jour. Sans cette ligne la haie serait nette a
+-- l'ecran et annoncee a zero pour cent.
+--
+-- ET ON MEMORISE CE NIVEAU DE DEPART sur la haie : c'est lui qui permet a la jauge de la tache de partir de zero
+-- au lieu de partir a 80 %. Le serveur est le seul a savoir quand la preparation est finie.
+local function prepareHedge(hedge: BasePart, from: Vector3)
+	local keep = HedgeCellService.faceTowards(hedge, from)
+	if not keep then
+		warn(`[Tutorial] Impossible de choisir une face sur "{hedge.Name}" : il la taillera en entier.`)
+		return
+	end
+	local total = HedgeCellService.getCount(hedge)
+	if total <= 0 then
+		warn(`[Tutorial] "{hedge.Name}" n'a aucun carreau : rien a preparer.`)
+		return
+	end
+	local done = HedgeCellService.finishAllExcept(hedge, keep :: string)
+	local ratio = math.clamp(done / total, 0, 1)
+	hedge:SetAttribute(HedgeConfigs.TRIMMED_ATTRIBUTE, ratio)
+	hedge:SetAttribute(TutorialConfigs.HEDGE_START_ATTRIBUTE, ratio)
+	print(
+		`[Tutorial] "{hedge.Name}" preparee : {done}/{total} carreaux deja nets `
+			.. `({math.floor(ratio * 100)} %). Il ne reste que la face {keep}.`
+	)
+end
 
 -- IL S'ASSOIT, PUIS IL RESPIRE SUR SON BANC.
 --
@@ -1503,11 +1540,7 @@ function TutorialService.init()
 		local target = findPartByName(TutorialConfigs.OLDMAN_HEDGE_TARGET)
 		local hedge = if target then nearestHedge(target.Position) else nil
 		if hedge then
-			hedge:SetAttribute(HedgeConfigs.AUTO_COMPLETE_ATTRIBUTE, TutorialConfigs.HEDGE_DONE_AT)
-			print(
-				`[Tutorial] "{hedge.Name}" se finira seule a `
-					.. `{math.floor(TutorialConfigs.HEDGE_DONE_AT * 100)} % : un seul cote a tailler.`
-			)
+			prepareHedge(hedge, (target :: BasePart).Position)
 		else
 			warn(
 				`[Tutorial] Aucune haie pres de "{TutorialConfigs.OLDMAN_HEDGE_TARGET}" : le joueur devra la `

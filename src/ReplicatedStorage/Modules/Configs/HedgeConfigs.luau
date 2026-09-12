@@ -532,6 +532,15 @@ local HedgeConfigs = {
 	-- autres ensuite est une ligne ; decouvrir apres coup que cinq faces ne tiennent pas coute une semaine
 	-- d'art.
 	CELL_FACES = { "Z+", "Z-", "X+", "X-", "Y+" },
+	-- LES FACES LATERALES SEULES. Servent quand il faut CHOISIR une face a montrer au joueur : le dessus n'en est
+	-- pas une -- il demande l'echelle, et on ne designe pas un travail en hauteur a quelqu'un qui apprend le geste.
+	CELL_SIDE_FACES = { "Z+", "Z-", "X+", "X-" },
+	-- SUR QUELLE FACE EST CE CARREAU, porte par lui.
+	--
+	-- UN ATTRIBUT ET PAS SON NOM. Le nom la contient deja (`Cell_Z+_3_2`), mais la lire signifierait la
+	-- redecouper a chaque fois, et un nom est fait pour etre lisible -- pas pour etre parse. Demander l'ETAT est
+	-- la regle du projet, et elle a deja coute assez cher ici.
+	CELL_FACE_ATTRIBUTE = "LeafiaCellFace",
 	-- Dossier qui rassemble les cellules, dans Workspace.
 	--
 	-- MEME RAISON QUE HedgeBuffers : elles se posent DEVANT la haie, donc tous les lancers les toucheraient
@@ -936,14 +945,12 @@ local HedgeConfigs = {
 	AUTO_COMPLETE_THRESHOLD = 0.95,
 	-- ET IL SE REGLE PAR HAIE, par un attribut pose sur elle. Absent, c'est la valeur ci-dessus qui vaut.
 	--
-	-- SERT AU DIDACTICIEL : la premiere haie de sa vie, le joueur n'en taille qu'UN COTE, et le reste se finit
-	-- tout seul. Lui faire faire le tour complet d'une haie pour apprendre le geste, c'est transformer une
-	-- decouverte en corvee avant meme qu'il ait vu le resultat.
+	-- PERSONNE NE LE POSE POUR L'INSTANT, et c'est volontaire : le didacticiel a pris un autre chemin (il taille
+	-- d'avance toutes les faces sauf une, ce qui laisse le seuil commun a sa place). Le reglage reste LU ici, pret
+	-- pour un chantier de client presse ou un contrat "vite fait".
 	--
-	-- UN ATTRIBUT SUR L'OBJET, PAS UN CAS PARTICULIER DANS LE CODE DE COUPE. La coupe n'a pas a savoir qu'un
-	-- didacticiel existe : elle lit un reglage porte par la haie, et c'est la scene qui le pose. N'importe quel
-	-- chantier futur pourra s'en servir -- une haie de client presse, un contrat "vite fait" -- sans une ligne de
-	-- plus ici.
+	-- UN ATTRIBUT SUR L'OBJET, PAS UN CAS PARTICULIER DANS LE CODE DE COUPE : la coupe n'a pas a savoir quel
+	-- scenario l'emploie, elle lit un reglage porte par la haie.
 	AUTO_COMPLETE_ATTRIBUTE = "LeafiaAutoCompleteAt",
 	-- Garde "paye une fois" pose sur la HAIE : true des qu'elle a verse son cheque de fin (100%). Sans lui, continuer
 	-- a passer la lame sur une haie deja finie la re-paierait. HedgeCutService le lit / le pose. (Si un jour les haies

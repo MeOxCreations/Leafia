@@ -1403,6 +1403,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   remplacement ; elle a besoin d'une base tenue sous elle et d'une priorite au-dessus. Le joueur a trouve ca
   avant moi : "bloque comme avant, et chevauche l'idle par-dessus".
 
+- **UNE JAUGE DE PROGRESSION DOIT MESURER LE TRAVAIL DU JOUEUR, PAS L'ETAT DE L'OBJET.** La haie du didacticiel
+  demarre deja nette sur toutes ses faces sauf une : une jauge branchee sur le taux brut serait remplie aux trois
+  quarts avant qu'il ait touche une feuille. On memorise le NIVEAU DE DEPART et on affiche
+  `(courant - depart) / (1 - depart)`. Corollaire de reseau, qui est le vrai piege : ce niveau de depart ne peut
+  pas etre mesure par le client, parce qu'il entre dans l'etape au MEME instant que la preparation -- il le
+  lirait une fois sur deux avant que la coupe se replique, et la jauge partirait a 80 %. Celui qui FAIT le
+  changement est le seul a savoir quand il est fini ; c'est donc lui qui publie la valeur.
+- **QUAND UNE SCENE POSE UN ETAT QUE PERSONNE N'A "JOUE", ELLE DOIT AUSSI POSER LE COMPTEUR QUI VA AVEC.** Couper
+  des carreaux a la main sans passer par `HedgeCutService` laissait la haie NETTE a l'ecran et annoncee a ZERO
+  pour cent : c'est ce service qui ecrit le taux, en comptant ce qu'il vient de couper. Regle : tout raccourci qui
+  contourne le chemin normal herite de ses effets de bord -- les chercher avant, pas apres.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

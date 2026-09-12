@@ -189,6 +189,9 @@ local function buildFace(
 
 			local cell = template:Clone()
 			cell.Name = `Cell_{faceName}_{column}_{row}`
+			-- SA FACE, EN ATTRIBUT. Le nom la contient aussi, mais un nom est fait pour etre lu par un humain ;
+			-- ce qui doit etre TESTE par du code se demande a l'etat.
+			cell:SetAttribute(HedgeConfigs.CELL_FACE_ATTRIBUTE, faceName)
 			-- POUSSE PLEINE au depart. Portee par un attribut et non par une table : elle se replique toute
 			-- seule, donc chaque client sait ou poser la feuille sans qu'on envoie quoi que ce soit.
 			cell:SetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE, 1)
@@ -393,6 +396,69 @@ function HedgeCellService.finishRemaining(hedge: BasePart): number
 	end
 	local finished = 0
 	for _, cell in ipairs(folder:GetChildren()) do
+		local growth = cell:GetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE)
+		if typeof(growth) == "number" and growth > 0 then
+			cell:SetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE, 0)
+			finished += 1
+			if HedgeConfigs.CUT_EDGE_CLEAR and cell:GetAttribute(HedgeConfigs.EDGE_ATTRIBUTE) then
+				local leaf = cell:FindFirstChild("Leaf")
+				if leaf then
+					leaf:Destroy()
+				end
+			end
+		end
+	end
+	return finished
+end
+
+--- LA FACE LATERALE QUI REGARDE CE POINT, ou nil si la haie n'a pas de grille.
+---
+--- LES NORMALES SONT LOCALES A LA HAIE, donc on les passe en repere monde avant de comparer -- une haie posee de
+--- biais dans le jardin n'a aucune raison d'avoir ses faces alignees sur les axes du monde.
+---
+--- LES FACES LATERALES SEULEMENT. Le dessus regarde le ciel : il "regarde" tout point plus haut que la haie, et
+--- il demande l'echelle -- on ne designe pas un travail en hauteur a quelqu'un qui apprend le geste.
+function HedgeCellService.faceTowards(hedge: BasePart, point: Vector3): string?
+	local toPoint = point - hedge.Position
+	local flat = Vector3.new(toPoint.X, 0, toPoint.Z)
+	if flat.Magnitude < 1e-3 then
+		return nil -- pile au-dessus ou au centre : aucune face ne le regarde plus qu'une autre
+	end
+	local dir = flat.Unit
+	local best: string? = nil
+	local bestDot = -math.huge
+	for _, faceName in ipairs(HedgeConfigs.CELL_SIDE_FACES) do
+		local face = FACES[faceName]
+		if face then
+			local normal = hedge.CFrame:VectorToWorldSpace(face.normal)
+			local dot = Vector3.new(normal.X, 0, normal.Z).Unit:Dot(dir)
+			if dot > bestDot then
+				bestDot, best = dot, faceName
+			end
+		end
+	end
+	return best
+end
+
+--- FINIT TOUS LES CARREAUX SAUF CEUX D'UNE FACE, et rend combien ont ete finis.
+---
+--- SERT AU DIDACTICIEL : le joueur ne taille qu'UNE face, tout le reste est deja net quand il arrive. Faire le
+--- tour complet d'une haie pour apprendre un geste transforme une decouverte en corvee -- et le dessus demande
+--- l'echelle, qu'il n'a pas encore.
+---
+--- MEME CHEMIN QUE `finishRemaining`, avec un filtre. La coupe d'un carreau -- mise a zero, feuille de bordure
+--- retiree -- doit rester ecrite UNE fois : deux versions du meme geste finiraient par ne plus donner le meme
+--- resultat.
+function HedgeCellService.finishAllExcept(hedge: BasePart, keepFace: string): number
+	local folder = cells[hedge]
+	if not folder then
+		return 0
+	end
+	local finished = 0
+	for _, cell in ipairs(folder:GetChildren()) do
+		if cell:GetAttribute(HedgeConfigs.CELL_FACE_ATTRIBUTE) == keepFace then
+			continue
+		end
 		local growth = cell:GetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE)
 		if typeof(growth) == "number" and growth > 0 then
 			cell:SetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE, 0)

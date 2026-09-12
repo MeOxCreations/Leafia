@@ -647,7 +647,21 @@ return {
 	-- UN TIERS, PAS TOUT. Assez pour comprendre le geste et voir l'avant / apres ; tailler une haie entiere pour
 	-- un didacticiel, c'est long, et une premiere minute qui traine est une premiere minute perdue. La haie reste
 	-- taillable en entier apres, la tache ne fait que cesser de la demander.
-	HEDGE_DONE_AT = 1 / 3,
+	-- QUELLE PART DU TRAVAIL RESTANT il doit faire pour que la tache soit finie.
+	--
+	-- DU TRAVAIL RESTANT, PAS DE LA HAIE ENTIERE. La scene taille d'avance toutes les faces sauf celle qu'on lui
+	-- montre : la haie demarre donc deja a 70 ou 80 %, et un seuil exprime sur le total serait atteint AVANT que
+	-- le joueur ait touche une seule feuille. La jauge part du niveau de depart et va jusqu'a 1.
+	--
+	-- A 1, il finit sa face. Les derniers carreaux perdus, eux, se font tout seuls par l'auto-completion normale
+	-- du jeu -- celle a 95 % -- donc il n'y a pas de chasse aux recoins au bout.
+	HEDGE_DONE_AT = 1,
+	-- OU EN ETAIT LA HAIE QUAND LA SCENE A FINI DE LA PREPARER, pose par le serveur sur la haie.
+	--
+	-- POURQUOI PAS MESURE PAR LE CLIENT. Il entre dans l'etape au meme instant que la coupe d'avance : lire le
+	-- taux lui-meme, c'est le lire une fois sur deux AVANT qu'elle ne se replique -- et la jauge partirait alors
+	-- de 80 % au lieu de zero. Le serveur, qui fait la coupe, est le seul a savoir quand elle est finie.
+	HEDGE_START_ATTRIBUTE = "LeafiaTutorialHedgeStart",
 	-- Hauteur du marqueur au-dessus du centre de la haie, en studs.
 	HEDGE_MARKER_UP = 6,
 	-- Le bandeau de tache.
