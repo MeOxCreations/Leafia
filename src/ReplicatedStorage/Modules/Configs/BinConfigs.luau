@@ -21,6 +21,49 @@ return {
 	-- survit a la repose : un seau pose au sol garde ce qu'il contient, ce qui est la moindre des choses pour un
 	-- seau. Une table cote serveur mentirait des que deux joueurs se passent le meme.
 	LEAVES_ATTRIBUTE = "LeafiaBinLeaves",
+	-- ===== CE QU'IL PEUT CONTENIR =====
+	-- COMBIEN DE FEUILLES AVANT D'ETRE PLEIN.
+	--
+	-- UN SEAU SANS LIMITE N'EST PAS UN SEAU, C'EST UN TROU. La contenance cree la seule decision de cette etape :
+	-- continuer, ou aller le vider. Sans elle la jauge ne dirait rien, et vider ne serait jamais un choix.
+	LEAVES_CAPACITY = 40,
+	-- A QUELLE DISTANCE UN TAS TOMBE DEDANS, en studs, mesuree a plat.
+	--
+	-- GENEREUSE : le joueur POUSSE les feuilles avec un rateau, il ne vise pas. Trop serree, il rate son tas de
+	-- quelques centimetres et croit que le seau ne marche pas.
+	ABSORB_RADIUS = 6,
+	-- Cadence du controle. Un tas ne se deplace pas tout seul : cinq fois par seconde suffisent largement.
+	ABSORB_INTERVAL = 0.2,
+	-- Le bruit des feuilles qui tombent dedans, porte par le seau. Facultatif : sans lui le ramassage marche.
+	ABSORB_SOUND = { "Sounds", "Game", "GlobalSounds", "DropSound" },
+
+	-- ===== LES FEUILLES QU'ON VOIT DEDANS =====
+	-- Le modele a dupliquer DANS le seau des qu'il contient quelque chose. Il vit dans `Assets`, que Rojo ne
+	-- synchronise pas : absent d'une place, le compte marche quand meme -- il ne se voit juste pas.
+	LEAF_MODEL_PATH = { "Assets", "Contents", "LeafInBinModel" },
+	LEAF_MODEL_NAME = "LeafInBinModel",
+	-- OU IL SE POSE, vu depuis la part de reference du seau. A regler a l'oeil : le modele a son propre centre, et
+	-- aucun calcul ne devine a quelle hauteur des feuilles "ont l'air" posees au fond d'un seau.
+	LEAF_OFFSET = CFrame.new(0, 0, 0),
+
+	-- ===== LA JAUGE AU-DESSUS =====
+	-- Taille en pixels, et hauteur au-dessus du seau en studs.
+	GAUGE_WIDTH = 120,
+	GAUGE_HEIGHT = 26,
+	GAUGE_UP = 2.6,
+	-- Au-dela, elle ne s'affiche plus : une barre lisible a trente metres encombre la vue pour rien.
+	GAUGE_MAX_DISTANCE = 60,
+	-- Cadence de rafraichissement. Le compte ne change qu'au coup de rateau : dix fois par seconde est deja large.
+	GAUGE_INTERVAL = 0.1,
+	-- ELLE GLISSE, elle ne saute pas. Une barre qui change d'un bond ne se lit pas : on voit l'etat d'apres,
+	-- jamais le mouvement, donc on ne sent pas qu'on progresse.
+	GAUGE_TWEEN = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+	GAUGE_BACK = Color3.fromRGB(28, 40, 52),
+	GAUGE_FILL = Color3.fromRGB(98, 206, 59),
+	-- PLEIN CHANGE DE COULEUR. Le joueur n'a pas a comparer deux nombres pour comprendre qu'il doit aller vider.
+	GAUGE_FULL = Color3.fromRGB(255, 158, 44),
+	-- EN ANGLAIS, comme tout texte vu par le joueur.
+	GAUGE_FULL_TEXT = "FULL",
 	-- Part fixe de reference. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc ajouter la
 	-- moindre part enfant le decale et tous les calculs partent de travers. On prend la PrimaryPart, sinon
 	-- un enfant portant ce nom.

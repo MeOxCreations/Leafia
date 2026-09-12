@@ -1,41 +1,96 @@
 --!strict
--- LES TAS DE FEUILLES ENTRENT DANS LE SEAU. Autorite SERVEUR : le joueur DEMANDE, le serveur verifie et agit.
+-- LES TAS DE FEUILLES TOMBENT DANS LE SEAU TOUT SEULS. Autorite SERVEUR : les tas et les seaux sont des objets du
+-- MONDE, et deux joueurs doivent voir la meme pelouse.
+--
+-- POURQUOI PAS UNE PASTILLE. Le joueur a deja le rateau en main et il POUSSE les feuilles : lui demander ensuite
+-- de lacher son geste pour appuyer sur une touche coupe le seul mouvement continu de cette etape. On rate vers le
+-- seau, ca rentre. Le geste EST l'action, il n'y a rien a apprendre.
 --
 -- POURQUOI UN SERVICE DE PLUS. Le cycle de la feuille a trois moments et trois fichiers : `HedgeStockService` les
 -- POSE (c'est le dechet de la taille), `RakeService` les RASSEMBLE en gros tas, et celui-ci les EMPORTE. L'entete
 -- de RakeService annoncait ce jour-la en toutes lettres -- "le gros tas ira un jour dans la Bin".
 --
--- CE QU'IL VERIFIE, ET POURQUOI CHACUN. Le client ment toujours : il envoie un MODELE, et rien d'autre.
---   * ce modele est bien un gros tas, et il est bien dans le dossier des tas -- sinon on pourrait faire avaler
---     n'importe quoi au seau, la maison du grand-pere comprise ;
---   * le joueur PORTE un seau -- l'action n'existe pas sans lui ;
---   * il est ASSEZ PRES -- sinon on vide le jardin depuis le trottoir.
---
 -- LE COMPTE VA SUR LE SEAU, en attribut. Il se replique tout seul, il voyage avec l'objet, et il survit a la
 -- repose : un seau pose au sol garde ce qu'il contient, ce qui est la moindre des choses pour un seau.
+--
+-- ET IL A UN FOND. Un seau sans limite n'est pas un seau, c'est un trou : la jauge au-dessus ne dirait rien, et
+-- aller le vider ne serait jamais une decision.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
-local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
-local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
-local BinCarryService = require(script.Parent.BinCarryService)
 
 local LeafCollectService = {}
 
---- Le dossier des gros tas, ou nil. Re-cherche a chaque fois : il est cree par `RakeService` au premier tas, donc
---- il n'existe pas au demarrage -- une reference resolue une seule fois resterait vide pour toute la session.
-local function pileFolder(): Instance?
-	return Workspace:FindFirstChild(RakeConfigs.PILE_FOLDER)
+--- Le modele de feuilles a poser DANS le seau, ou nil. Resolu a chaque fois : il vient de `Assets`, que Rojo ne
+--- synchronise pas -- il peut donc etre absent d'une place sans que ce soit une erreur de code.
+local function leafModel(): Model?
+	local node: Instance? = ReplicatedStorage
+	for _, step in BinConfigs.LEAF_MODEL_PATH do
+		node = node and node:FindFirstChild(step)
+	end
+	return if node and node:IsA("Model") then node :: Model else nil
 end
 
---- La position d'un tas, ou nil s'il n'a aucune part (streaming en cours).
-local function pilePosition(pile: Model): Vector3?
-	local part = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
-	return if part then (part :: BasePart).Position else nil
+--- La part de reference d'un seau : celle qui porte sa position et son angle.
+local function binRoot(bin: Model): BasePart?
+	return bin.PrimaryPart or bin:FindFirstChildWhichIsA("BasePart")
+end
+
+--- LE TAS DE FEUILLES VISIBLE DANS LE SEAU, pose ou retire selon ce qu'il contient.
+---
+--- SOUDE ET SANS MASSE. Le seau se porte, se lache et retombe : des parts simplement parentees resteraient au sol
+--- pendant que le seau s'en va. Et `Massless` parce qu'un seau qui s'alourdit en se remplissant ferait ramer le
+--- porteur pour une raison qu'aucun joueur ne devinerait.
+local function setLeafVisual(bin: Model, show: boolean)
+	local existing = bin:FindFirstChild(BinConfigs.LEAF_MODEL_NAME)
+	if not show then
+		if existing then
+			existing:Destroy()
+		end
+		return
+	end
+	if existing then
+		return -- deja la : on ne le repose pas a chaque poignee
+	end
+	local source = leafModel()
+	local root = binRoot(bin)
+	if not (source and root) then
+		return -- pas d'asset ou pas de part : le compte marche quand meme, il ne se voit juste pas
+	end
+	local clone = (source :: Model):Clone()
+	clone.Name = BinConfigs.LEAF_MODEL_NAME
+	clone:PivotTo((root :: BasePart).CFrame * BinConfigs.LEAF_OFFSET)
+	clone.Parent = bin
+	for _, d in clone:GetDescendants() do
+		if d:IsA("BasePart") then
+			local part = d :: BasePart
+			part.Anchored = false
+			part.CanCollide = false
+			part.CanQuery = false
+			part.Massless = true
+			local weld = Instance.new("WeldConstraint")
+			weld.Part0 = part
+			weld.Part1 = root :: BasePart
+			weld.Parent = part
+		end
+	end
+end
+
+--- Tous les seaux du monde. Re-balaye a chaque passage : un seau sort du camion en cours de partie, et une liste
+--- gardee mentirait le jour ou il arrive.
+local function bins(out: { Model }): { Model }
+	table.clear(out)
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and d.Name:sub(1, #BinConfigs.MODEL_PREFIX) == BinConfigs.MODEL_PREFIX then
+			table.insert(out, d :: Model)
+		end
+	end
+	return out
 end
 
 --- Combien de feuilles ce tas represente. Un tas sans compte vaut UNE feuille : il existe, donc il valait bien
@@ -48,63 +103,94 @@ local function leafCount(pile: Model): number
 	return math.max(math.floor(raw :: number), 1)
 end
 
+local function contents(bin: Model): number
+	local raw = bin:GetAttribute(BinConfigs.LEAVES_ATTRIBUTE)
+	return if typeof(raw) == "number" then math.max(raw :: number, 0) else 0
+end
+
+--- LE SEAU LE PLUS PROCHE DE CE POINT, et qui a encore de la place, ou nil.
+---
+--- UN SEAU PLEIN NE COMPTE PAS. Sinon le tas resterait colle a lui sans jamais y entrer, et le joueur verrait des
+--- feuilles qui refusent d'avancer sans que rien ne lui dise pourquoi -- alors qu'un seau plus loin, vide,
+--- ferait l'affaire.
+local function nearestBin(pool: { Model }, from: Vector3): (Model?, BasePart?)
+	local best: Model? = nil
+	local bestRoot: BasePart? = nil
+	local bestDist = BinConfigs.ABSORB_RADIUS
+	for _, bin in pool do
+		if contents(bin) < BinConfigs.LEAVES_CAPACITY then
+			local root = binRoot(bin)
+			if root then
+				local delta = (root :: BasePart).Position - from
+				local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
+				if flat <= bestDist then
+					bestDist, best, bestRoot = flat, bin, root :: BasePart
+				end
+			end
+		end
+	end
+	return best, bestRoot
+end
+
 function LeafCollectService.init()
-	local remote = RemoteSetup.getRemote("CollectLeafPile", "Rake") :: RemoteEvent
+	local pool: { Model } = {}
+	local nextCheck = 0
 
-	remote.OnServerEvent:Connect(function(player, pile)
-		-- LE CLIENT MENT TOUJOURS. On n'accepte qu'un Model, et on ne s'en sert que comme d'une CLE a retrouver
-		-- dans le dossier des tas : tout le reste -- qui peut, de combien, a quelle distance -- se decide ici.
-		if typeof(pile) ~= "Instance" or not (pile :: Instance):IsA("Model") then
+	RunService.Heartbeat:Connect(function()
+		local now = os.clock()
+		if now < nextCheck then
 			return
 		end
-		local model = pile :: Model
-		if model.Name ~= RakeConfigs.PILE_NAME then
+		nextCheck = now + BinConfigs.ABSORB_INTERVAL
+
+		-- LE DOSSIER DES TAS EST CREE PAR `RakeService` AU PREMIER TAS : il n'existe pas au demarrage. On le
+		-- re-cherche a chaque passage plutot que de le resoudre une fois -- une reference prise trop tot
+		-- resterait vide pour toute la session.
+		local folder = Workspace:FindFirstChild(RakeConfigs.PILE_FOLDER)
+		if not folder then
 			return
 		end
-		local folder = pileFolder()
-		if not (folder and model.Parent == folder) then
-			return -- pas un tas du jeu : on ne fait pas avaler n'importe quoi au seau
-		end
-		if not CarryUtils.holds(player, "Bin") then
-			return -- l'action n'existe pas sans seau dans les mains
-		end
-		local bin = BinCarryService.carriedBy(player)
-		if not bin then
+		local piles = folder:GetChildren()
+		if #piles == 0 then
 			return
 		end
-		local character = player.Character
-		local root = character and character:FindFirstChild("HumanoidRootPart")
-		if not (root and root:IsA("BasePart")) then
+		bins(pool)
+		if #pool == 0 then
 			return
-		end
-		local here = pilePosition(model)
-		if not here then
-			return
-		end
-		local delta = (root :: BasePart).Position - (here :: Vector3)
-		if Vector3.new(delta.X, 0, delta.Z).Magnitude > RakeConfigs.COLLECT_RADIUS then
-			return -- trop loin : on ne vide pas le jardin depuis le trottoir
 		end
 
-		-- LE COMPTE S'AJOUTE AU SEAU, il ne le remplace pas : on y verse plusieurs tas.
-		local held = bin :: Model
-		local before = held:GetAttribute(BinConfigs.LEAVES_ATTRIBUTE)
-		local total = (if typeof(before) == "number" then before :: number else 0) + leafCount(model)
-		held:SetAttribute(BinConfigs.LEAVES_ATTRIBUTE, total)
-
-		-- LE SON EST PORTE PAR LE SEAU et pas par le tas : le tas disparait dans l'instant, et un son pose sur un
-		-- objet detruit se coupe avec lui.
-		local host = held.PrimaryPart or held:FindFirstChildWhichIsA("BasePart")
-		if host then
-			SoundUtils.play(RakeConfigs.COLLECT_SOUND, host :: BasePart)
+		for _, child in piles do
+			if child:IsA("Model") and child.Name == RakeConfigs.PILE_NAME then
+				local pile = child :: Model
+				local part = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
+				if part then
+					local bin, root = nearestBin(pool, (part :: BasePart).Position)
+					if bin and root then
+						local held = bin :: Model
+						-- ON N'EN MET QUE CE QUI RENTRE. Le reste du tas RESTE au sol : il faudra aller vider le
+						-- seau et revenir, ce qui est exactement la decision qu'une contenance sert a creer.
+						local room = BinConfigs.LEAVES_CAPACITY - contents(held)
+						local taken = math.min(leafCount(pile), room)
+						if taken > 0 then
+							held:SetAttribute(BinConfigs.LEAVES_ATTRIBUTE, contents(held) + taken)
+							setLeafVisual(held, true)
+							SoundUtils.play(BinConfigs.ABSORB_SOUND, root :: BasePart)
+							if taken >= leafCount(pile) then
+								pile:Destroy()
+							else
+								pile:SetAttribute(
+									RakeConfigs.PILE_COUNT_ATTRIBUTE,
+									leafCount(pile) - taken
+								)
+							end
+						end
+					end
+				end
+			end
 		end
-		model:Destroy()
-		print(`[LeafCollect] {player.Name} verse un tas dans son seau : {total} feuille(s) dedans.`)
 	end)
 
-	-- RIEN A NETTOYER AU DEPART D'UN JOUEUR : le compte vit sur le SEAU, qui est un objet du monde. Ce qu'il
-	-- contient ne lui appartient pas plus que le seau lui-meme.
-	print("[LeafCollectService] Pret : le seau en main, E verse un tas de feuilles dedans.")
+	print("[LeafCollectService] Pret : un tas de feuilles pres d'un seau tombe dedans tout seul.")
 end
 
 return LeafCollectService

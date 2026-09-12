@@ -71,9 +71,8 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- RATEAU : n'envoie que le clic, tout le ramassage est serveur. Present dans le tuto aussi, sinon la touche 3
 	-- equiperait un outil qui ne ferait rien -- le pire des deux mondes.
 	require(script.RakeController).init()
-	-- ET LA PASTILLE QUI VERSE UN TAS DANS LE SEAU. Cote client : detection et badge, rien de plus -- c'est le
-	-- serveur qui verifie qu'on porte un seau et qu'on est assez pres.
-	require(script.LeafCollectController).init()
+	-- LA JAUGE DE REMPLISSAGE AU-DESSUS DES SEAUX. Affichage seulement : le compte vit sur le seau, en attribut.
+	require(script.BinFillController).init()
 	-- POUSSIERE DE POSE : il ecoute le serveur et joue l'effet chez ce joueur. DANS LES DEUX PLACES -- un effet
 	-- declare d'un seul cote ne fait RIEN dans l'autre, sans la moindre erreur pour le dire.
 	require(script.DropEffectController).init()
@@ -191,10 +190,10 @@ BinCarryController.init()
 local RakeController = require(script.RakeController)
 RakeController.init()
 
--- LA PASTILLE QUI VERSE UN TAS DE FEUILLES DANS LE SEAU. Detection et badge seulement : le serveur verifie qu'on
--- porte un seau et qu'on est assez pres.
-local LeafCollectController = require(script.LeafCollectController)
-LeafCollectController.init()
+-- LA JAUGE DE REMPLISSAGE AU-DESSUS DES SEAUX. Affichage seulement : le compte vit sur le seau, en attribut pose
+-- par le serveur.
+local BinFillController = require(script.BinFillController)
+BinFillController.init()
 
 -- POUSSIERE DE POSE : il ecoute le serveur et joue l'effet chez ce joueur. DANS LES DEUX PLACES -- un effet
 -- declare d'un seul cote ne fait RIEN dans l'autre, sans la moindre erreur pour le dire.

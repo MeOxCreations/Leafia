@@ -2204,6 +2204,31 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.833 — Les feuilles tombent dans le seau toutes seules, et le seau a un fond
+
+LA PASTILLE E DISPARAIT. Le joueur a le rateau en main et il POUSSE les feuilles : lui demander de lacher son
+geste pour appuyer sur une touche coupait le seul mouvement continu de cette etape. On rate vers le seau, ca
+rentre. Le geste EST l'action, il n'y a plus rien a apprendre.
+
+ON VOIT LES FEUILLES DEDANS. `LeafInBinModel` est duplique dans le seau des qu'il contient quelque chose. Soude et
+SANS MASSE : le seau se porte et se lache, donc des parts simplement parentees resteraient au sol quand il s'en
+va -- et un seau qui s'alourdit en se remplissant ferait ramer le porteur pour une raison qu'aucun joueur ne
+devinerait.
+
+ET IL A UNE CONTENANCE. Un seau sans limite n'est pas un seau, c'est un trou : la contenance cree la seule
+decision de cette etape -- continuer, ou aller le vider. Ce qui ne rentre pas RESTE au sol, il faudra revenir.
+
+UNE JAUGE AU-DESSUS. Sans elle, le joueur decouvre la limite en poussant des feuilles qui n'entrent plus, ce qui
+se lit comme une panne et pas comme un choix. Elle glisse au lieu de sauter -- une barre qui change d'un bond ne
+se lit pas, on voit l'etat d'apres et jamais le mouvement -- elle passe a l'orange et affiche "FULL" quand c'est
+plein, et elle n'apparait pas sur un seau vide.
+
+UN `BillboardGui` ET PAS UN MARQUEUR PROJETE : la jauge appartient a l'objet, elle doit le suivre, rapetisser avec
+la distance et disparaitre derriere un mur. C'est ce qu'un billboard fait sans une ligne de code.
+
+DEPEND DES ASSETS : `ReplicatedStorage.Assets.Contents.LeafInBinModel`. Son offset dans le seau (`LEAF_OFFSET`) se
+regle a l'oeil : aucun calcul ne devine a quelle hauteur des feuilles ont l'air posees au fond d'un seau.
+
 ## 0.0.832 — On ne se sert pas dans la benne avant que le grand-pere l'ait dit
 
 Rien n'empechait d'ouvrir le hayon des la premiere minute et de prendre la cisaille. Le grand-pere expliquait
