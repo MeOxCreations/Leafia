@@ -1121,7 +1121,8 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   voyait le badge du SEAU, appuyait sur `E`, et le CAMION s'ouvrait -- parce qu'il etait a portee, sans rien
   afficher. Symptome trompeur : on vient de faire suivre la touche au badge dans les six controllers, donc on
   croit le probleme resolu -- sauf que celui-la ne passe pas par ContextActionService, il est cable dans le
-  moteur. Fix : `KeyboardKeyCode = Enum.KeyCode.None` (et non `Unknown`, renomme), garder le prompt pour ce
+  moteur. Fix : une touche que PERSONNE N'A (`F13`) -- surtout PAS `None` / `Unknown`, voir l'entree suivante,
+  ca a coute une soiree entiere -- garder le prompt pour ce
   qu'il fait bien (la proximite, et le tap mobile qu'on declenche par `InputHoldBegin` / `InputHoldEnd`), et
   binder la touche cote client derriere le meme test d'appartenance que les autres. Regle generale : quand on
   centralise une regle, chercher qui la contourne SANS passer par le chemin qu'on vient de corriger -- ici le
@@ -1154,6 +1155,23 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   genereux s'adjuge la place avant que les autres existent. Corollaire de lecture : un chiffre qui est le PLUS
   GRAND de tout le projet est suspect par construction -- `grep` des valeurs voisines coute dix secondes et dit
   tout de suite si on regarde une exception justifiee ou un oubli.
+
+- **`KeyboardKeyCode = None` (ou `Unknown`) NE COUPE PAS L'ECOUTE D'UN `ProximityPrompt` : ELLE L'OUVRE A TOUTE LA
+  SOURIS.** Les deux valent ZERO, et zero est AUSSI le `KeyCode` que porte tout input qui n'est pas une touche --
+  clic gauche, clic droit, molette, doigt. Le test interne de Roblox (`input.KeyCode == KeyboardKeyCode`) devient
+  donc vrai a chaque action de souris. Vecu sur le camion : le hayon s'ouvrait en tournant la camera au clic
+  droit, et la camera semblait bloquee parce que chaque clic-droit ouvrait puis refermait la porte. Pour qu'un
+  prompt n'ecoute RIEN, il faut une touche REELLE que personne n'a (`F13`), jamais l'absence de touche ; le
+  declenchement maison (`InputHoldBegin`) marche quelle que soit cette valeur.
+  CE QUI A TRANCHE, ET C'EST LA VRAIE LECON : le TEMOIN. La boite aux lettres a EXACTEMENT le meme montage
+  (ProximityPrompt, Style Custom, ClickablePrompt coupe, pilule maison) et n'a jamais eu le moindre probleme ; le
+  joueur l'a dit lui-meme -- "les autres prompts fonctionnent tres bien, il n'y a que le camion". Deux montages
+  identiques dont un seul deraille : la cause est dans le DELTA, et il n'y avait qu'une ligne de delta. Le
+  chercher a coute dix secondes de `grep` ; je ne l'ai fait qu'apres QUATRE diagnostics rates, dont un
+  (`ClickablePrompt`) que j'avais annonce comme "mesure, pas deduction" -- la sonde prouvait que le MOTEUR
+  declenchait, elle ne disait pas PAR QUEL MECANISME, et j'ai comble le trou avec la premiere propriete
+  plausible. Regle : une mesure qui elimine un camp ne designe pas un coupable dans l'autre. Et quand une feature
+  deraille alors que sa jumelle va bien, comparer les deux AVANT tout le reste.
 
 ## Design emotionnel
 

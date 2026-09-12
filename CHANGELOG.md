@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.793 — Le clic droit n'ouvre plus le camion
+
+C'etait `KeyboardKeyCode = Enum.KeyCode.None`, pose en 0.0.787 pour empecher Roblox d'ecouter `E` tout seul.
+
+`None` et `Unknown` valent ZERO. Et zero, c'est AUSSI le KeyCode que porte tout input qui n'est pas une touche :
+clic gauche, clic droit, molette, doigt. Le test interne de Roblox compare le KeyCode recu a celui du prompt, donc
+demander "aucune touche" ne coupe pas l'ecoute -- ca l'ouvre a toute la souris. Tourner la camera au clic droit
+ouvrait et refermait le hayon, ce qui se ressentait comme une camera bloquee.
+
+La touche passe a `F13` : elle n'existe sur aucun clavier de joueur, donc rien ne la presse, et elle ne vaut pas
+zero, donc aucune souris ne lui ressemble. Notre declenchement a nous ne passe pas par la.
+
+LE TEMOIN QUI A TRANCHE. La boite aux lettres a exactement le meme montage et n'a jamais eu ce probleme. Deux
+montages identiques dont un seul deraille : la cause est dans l'ecart, et il n'y avait qu'une ligne d'ecart.
+
+CE QUE 0.0.791 AVAIT ANNONCE ETAIT FAUX. `ClickablePrompt` n'etait pas la cause. La sonde prouvait que le moteur
+declenchait le prompt, elle ne disait pas par quel mecanisme, et j'ai comble le trou avec la premiere propriete
+plausible au lieu de comparer avec la boite aux lettres. La coupure reste en place, elle est saine, mais son
+commentaire ne lui attribue plus ce bug.
+
 ## 0.0.792 — Le camion ne vole plus le badge d'un objet pose devant soi
 
 Sa portee passe de 12 studs a 8, la meme que le seau, la tondeuse et la boite aux lettres. C'etait la plus grande

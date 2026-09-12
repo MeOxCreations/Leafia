@@ -119,28 +119,35 @@ local function setup(model: Model)
 	prompt.Name = TruckConfigs.PROMPT_NAME -- le client le reconnait pour dessiner la pilule a la place
 	prompt.ActionText = TruckConfigs.PROMPT_ACTION
 	prompt.ObjectText = TruckConfigs.PROMPT_OBJECT
-	-- LA TOUCHE N'EST PAS CONFIEE A ROBLOX, et c'est un bug qu'on vient de payer. Un `ProximityPrompt` ecoute sa
-	-- touche LUI-MEME, hors de tout arbitrage : le joueur voyait le badge du SEAU, appuyait sur `E`, et le camion
-	-- s'ouvrait -- parce qu'il etait a portee, meme sans rien afficher.
+	-- UNE TOUCHE QUE PERSONNE N'A, ET SURTOUT PAS "AUCUNE TOUCHE".
 	--
-	-- On garde le prompt pour ce qu'il fait bien (la proximite, et le tap mobile qu'on declenche a la main), et le
-	-- CLIENT branche `E` derriere le test d'appartenance du badge, comme les cinq autres features. Le nom de la
-	-- touche affichee vient d'ici : `PROMPT_KEY`, lu par le client.
-	prompt.KeyboardKeyCode = Enum.KeyCode.None
+	-- Pourquoi on ne laisse pas `E` : un `ProximityPrompt` ecoute sa touche LUI-MEME, hors de tout arbitrage. Le
+	-- joueur voyait le badge du SEAU, appuyait sur `E`, et le camion s'ouvrait -- il etait a portee, ca suffisait.
+	-- C'est le CLIENT qui branche `E`, derriere le test d'appartenance du badge, comme les cinq autres features.
+	--
+	-- POURQUOI PAS `None` / `Unknown`, ET C'EST LE BUG LE PLUS CHER DE LA SEMAINE. Les deux valent ZERO, et c'est
+	-- AUSSI le `KeyCode` que porte tout input qui n'est pas une touche : clic gauche, CLIC DROIT, molette, doigt.
+	-- Le test interne de Roblox (`input.KeyCode == KeyboardKeyCode`) devenait donc vrai a CHAQUE action de souris.
+	-- Demander "aucune touche" ne coupe pas l'ecoute : ca l'ouvre a tout le reste. Le hayon s'ouvrait en tournant
+	-- la camera au clic droit, et la camera semblait bloquee.
+	--
+	-- `F13` n'existe sur aucun clavier de joueur, donc rien ne la presse jamais, et elle ne vaut pas zero : aucune
+	-- souris ne lui ressemble. Notre declenchement a nous ne passe pas par la (`InputHoldBegin`, appele a la main
+	-- depuis la pilule), il marche quelle que soit cette valeur.
+	--
+	-- LE TEMOIN QUI A TRANCHE : la boite aux lettres a le MEME montage (Custom, ClickablePrompt coupe) et n'a
+	-- JAMAIS eu ce probleme. Une seule propriete differait entre les deux.
+	prompt.KeyboardKeyCode = Enum.KeyCode.F13
 	prompt.HoldDuration = 0 -- appui simple, pas de maintien
 	prompt.MaxActivationDistance = TruckConfigs.PROMPT_DISTANCE
 	-- La porte peut etre partiellement masquee par la carrosserie ou un outil pose devant : ne pas exiger la ligne
 	-- de vue, sinon l'invite clignote des qu'un rien passe devant.
 	prompt.RequiresLineOfSight = false
-	-- ET IL NE SE DECLENCHE PLUS AU CLIC. `ClickablePrompt` vaut VRAI par defaut, et en `Style = Custom` Roblox
-	-- n'affiche aucune interface a cliquer : il prend alors N'IMPORTE QUEL clic de l'ecran, ou qu'il soit, tant que
-	-- le prompt est a portee. Le joueur cliquait dans le vide pour tourner sa camera et le hayon s'ouvrait, se
-	-- refermait, se rouvrait.
+	-- PAS DE DECLENCHEMENT AU CLIC NON PLUS. En `Style = Custom` il n'y a aucune interface Roblox a viser, donc
+	-- rien ne borne ce que ce reglage rend cliquable : on le coupe plutot que de decouvrir ou il s'arrete.
 	--
-	-- MESURE, PAS DEDUCTION : une sonde cote serveur disait "declenche" a chaque clic pendant qu'une sonde cote
-	-- client, dans le seul code qui peut le declencher, ne disait RIEN. Deux lignes qui ne tirent pas ensemble ne
-	-- laissent qu'une explication -- le moteur le declenche lui-meme. Trois causes avaient ete supposees avant, et
-	-- aucune n'etait la bonne.
+	-- CE N'ETAIT PAS LUI, LE CLIC QUI OUVRAIT LE CAMION -- c'etait la touche reglee sur "aucune", juste au-dessus.
+	-- On garde quand meme la coupure, mais le commentaire ne lui attribue plus un bug qu'elle n'a pas cause.
 	--
 	-- Le tap mobile ne passe pas par lui : c'est la pilule qu'on tape, et elle appelle `InputHoldBegin` a la main.
 	prompt.ClickablePrompt = false
