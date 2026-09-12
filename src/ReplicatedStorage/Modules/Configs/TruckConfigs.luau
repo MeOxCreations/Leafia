@@ -75,6 +75,12 @@ local TruckConfigs = {
 	--
 	-- Assez pour qu'on la voie se fermer, pas assez pour qu'on attende.
 	CLOSE_BEFORE_FLY = 0.35,
+	-- ET ELLE S'OUVRE EN PLEIN TRAJET quand on la sort, a cette fraction du parcours.
+	--
+	-- PAS A L'ARRIVEE : une echelle qui se deplie une fois posee se lit comme un SECOND evenement, et on se
+	-- demande une seconde de trop ce qu'on regarde. Ouverte en chemin, elle arrive dans son etat final -- le
+	-- trajet et le depliage racontent une seule chose.
+	OPEN_MID_FLY = 0.5,
 
 	-- ===== L'ETAT DE LA PORTE, LU PAR LE CLIENT =====
 	-- Un ATTRIBUT sur le modele, pas un remote : il se replique tout seul, il arrive avec le camion quand le

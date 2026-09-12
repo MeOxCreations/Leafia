@@ -222,7 +222,8 @@ local function resetInPlace(model: Model, home: Instance)
 	task.wait()
 end
 
-local function fly(model: Model, landing: CFrame, home: Instance?)
+--- `openAt` : fraction du trajet a laquelle l'echelle se DEPLIE, en chemin. Absent = rien a animer en route.
+local function fly(model: Model, landing: CFrame, home: Instance?, openAt: number?)
 	flying[model] = true
 	local from = model:GetPivot()
 	local host = soundHost(model)
@@ -247,16 +248,43 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 	local away = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, 1)
 	local middle = high + away * TruckConfigs.SLIDE_OUT + Vector3.new(0, TruckConfigs.SLIDE_UP, 0)
 
-	-- ON L'ANCRE ET ON LE SORT DU CAMION. Tant qu'il est enfant du modele, il suit la carrosserie -- et il
-	-- resterait "range" pour l'interface, qui lit le contenu du dossier.
-	for _, d in model:GetDescendants() do
-		if d:IsA("BasePart") then
-			(d :: BasePart).Anchored = true
+	-- ON LE SORT DU CAMION. Tant qu'il est enfant du modele, il suit la carrosserie -- et il resterait "range"
+	-- pour l'interface, qui lit le contenu du dossier.
+	--
+	-- DEUX FACONS DE LE DEPLACER, et le choix depend d'une seule chose : doit-il S'ANIMER en route ?
+	--
+	-- Le cas normal ancre toutes ses parts et deplace le modele entier. C'est simple et rien ne tombe -- mais une
+	-- part ancree ignore son Motor6D, donc un objet transporte comme ca ne peut plus bouger d'un millimetre.
+	--
+	-- L'echelle, elle, doit s'ouvrir EN PLEIN VOL. On la tient alors par une petite piece ancree soudee a sa
+	-- racine, et c'est CETTE piece qu'on deplace : le reste suit par la soudure et les joints, donc l'animation
+	-- continue de s'appliquer pendant le trajet.
+	local holder: BasePart? = nil
+	local rootOffset: CFrame? = nil
+	if openAt then
+		local held = LadderFoldUtils.hold(model)
+		local root = LadderFoldUtils.rootPart(model)
+		if held and root then
+			holder = held
+			-- L'ECART ENTRE LE PIVOT ET LA RACINE, capture MAINTENANT. Le pivot suit la boite englobante, donc il
+			-- se deplace quand l'echelle s'ouvre : le recalculer en route ferait deriver le trajet. On pilote la
+			-- racine, et la pose exacte est remise a l'arrivee.
+			rootOffset = from:Inverse() * root.CFrame
+		else
+			LadderFoldUtils.settle(model) -- pas tenable : on retombe sur le trajet normal
+		end
+	end
+	if not (holder and rootOffset) then
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") then
+				(d :: BasePart).Anchored = true
+			end
 		end
 	end
 	model.Parent = Workspace
 
 	task.spawn(function()
+		local opened = false
 		local t0 = os.clock()
 		while true do
 			local e = math.clamp((os.clock() - t0) / TruckConfigs.FLY_TIME, 0, 1)
@@ -270,11 +298,28 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 			-- l'un l'autre et on ne voit plus ni le redressement ni la descente.
 			local straight = math.min(e / math.max(TruckConfigs.STRAIGHTEN_BY, 1e-3), 1)
 			local rot = from.Rotation:Lerp(landing.Rotation, straight)
-			model:PivotTo(CFrame.new(pos) * rot)
+			local target = CFrame.new(pos) * rot
+			if holder and rootOffset and holder.Parent then
+				holder.CFrame = target * (rootOffset :: CFrame)
+			else
+				model:PivotTo(target)
+			end
+			-- ELLE S'OUVRE EN CHEMIN. A l'arrivee, le depliage serait un SECOND evenement apres le trajet, et on
+			-- se demanderait une seconde de trop ce qu'on regarde.
+			if openAt and not opened and e >= (openAt :: number) then
+				opened = true
+				LadderFoldUtils.releaseClosed(model)
+			end
 			if e >= 1 then
 				break
 			end
 			RunService.Heartbeat:Wait()
+		end
+		-- ON REND LA MAIN AVANT DE POSER LA DERNIERE IMAGE : la tenue laisse des pieces libres, et la pose exacte
+		-- se donne au modele entier. L'echelle a change de forme en route -- elle s'est ouverte -- donc c'est ce
+		-- dernier `PivotTo` qui la remet au millimetre sur son point de depot.
+		if holder then
+			LadderFoldUtils.settle(model)
 		end
 		model:PivotTo(landing)
 		-- ET IL SE POSE, avec le bruit qui va avec. A la FIN, pas au depart : un choc qui precede l'atterrissage
@@ -358,11 +403,15 @@ function TruckToolsService.init()
 			if not landing then
 				return -- pas de place connue et pas de personnage : on ne pose pas un objet nulle part
 			end
+			-- L'ECHELLE S'OUVRE A MI-CHEMIN ; tout le reste sort tel quel.
+			local openAt = if LadderFoldUtils.isLadderName(inside.Name)
+				then TruckConfigs.OPEN_MID_FLY
+				else nil
 			-- ON RETIENT SA POSE AVANT DE LE SORTIR, en repere du camion : c'est elle qui le ramenera exactement
 			-- la, a l'angle pres, et elle reste juste meme si le camion bouge entre-temps.
 			inside:SetAttribute(TruckConfigs.POSE_ATTRIBUTE, truck:GetPivot():ToObjectSpace(inside:GetPivot()))
 			print(`[TruckToolsService] {player.Name} sort "{toolName}" du camion.`)
-			fly(inside, landing :: CFrame)
+			fly(inside, landing :: CFrame, nil, openAt)
 			return
 		end
 

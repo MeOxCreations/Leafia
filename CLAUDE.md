@@ -1329,6 +1329,21 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   diagnostics bases dessus, trois correctifs livres pour rien. `GetExtentsSize()` avant / apres repond a la seule
   question qui compte, "est-ce que ca a bouge", sans rien supposer du rig ni du moteur.
 
+- **UN OBJET QU'ON ANCRE POUR LE TRANSPORTER NE PEUT PAS S'ANIMER EN ROUTE : LE TENIR PAR UNE PIECE ANCREE, OUI.**
+  Le trajet camion -> sol ancrait toutes les parts du modele pour que rien ne tombe, ce qui est simple et juste --
+  mais une part ancree ignore son Motor6D, donc l'objet devient une statue pendant tout le voyage. Pour qu'il
+  continue de s'animer, on ancre UNE petite piece a part, on y soude la racine, et on deplace CETTE piece : le
+  reste suit par la soudure et les joints, et l'animation s'applique normalement. Le prix a payer est que le
+  PIVOT du modele bouge quand la forme change (l'echelle qui s'ouvre), donc on pilote la RACINE avec un ecart
+  capture au depart, et on redonne la pose exacte au modele entier a l'arrivee. Meme montage que le portage par un
+  joueur, sans le joueur.
+- **UN CHANGEMENT D'ETAT PENDANT UN DEPLACEMENT SE LIT COMME UN SEUL EVENEMENT ; APRES, COMME DEUX.** L'echelle
+  sortie du camion se depliait une fois posee : le joueur voyait un trajet, puis une echelle qui bouge encore, et
+  se demandait une seconde de trop ce qu'il regardait. Depliee A MI-TRAJET, elle arrive dans son etat final et
+  tout le geste raconte une seule chose. Le symetrique vaut aussi : on la REPLIE avant de la ranger, pas en
+  arrivant, sinon la cause arrive apres l'effet. Regle : la transformation va PENDANT le mouvement, jamais a ses
+  bouts.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

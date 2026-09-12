@@ -641,6 +641,21 @@ function LadderFoldUtils.closeNow(model: Model): boolean
 	return true
 end
 
+--- LA TENIR, ET RENDRE LA PIECE QUI LA TIENT.
+---
+--- Deplacer CETTE piece deplace toute l'echelle -- elle y est soudee -- SANS ancrer ses morceaux, donc sans
+--- empecher l'animation de jouer. C'est ce qui permet de l'ouvrir EN PLEIN TRAJET : un modele dont on ancre les
+--- parts pour le transporter ne peut plus s'animer du tout.
+function LadderFoldUtils.hold(model: Model): BasePart?
+	holdInPlace(model)
+	return holders[model]
+end
+
+--- La racine du rig, pour qui a besoin de la piloter lui-meme.
+function LadderFoldUtils.rootPart(model: Model): BasePart?
+	return rootOf(model)
+end
+
 --- FIN DE LA TENUE : on retire la piece qui tenait l'echelle en l'air et on remet ses soudures. A appeler quand on
 --- reprend la main sur le modele -- juste avant de le deplacer, par exemple.
 function LadderFoldUtils.settle(model: Model)

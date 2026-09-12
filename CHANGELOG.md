@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.811 — L'echelle s'ouvre a mi-trajet en sortant du camion
+
+Elle se depliait une fois posee : le joueur voyait un trajet, puis une echelle qui bouge encore, et se demandait
+une seconde de trop ce qu'il regardait. Depliee en chemin, elle arrive dans son etat final et tout le geste
+raconte une seule chose. C'est le symetrique du rangement, ou elle se referme AVANT de partir.
+
+IL A FALLU CHANGER LA FACON DE LA TRANSPORTER. Le trajet ancrait toutes les parts du modele -- simple, et rien ne
+tombe -- mais une part ancree ignore son Motor6D : l'objet devient une statue pendant tout le voyage. L'echelle est
+donc tenue par une petite piece ancree soudee a sa racine, et c'est cette piece qu'on deplace ; le reste suit par
+la soudure et les joints, et l'animation continue de s'appliquer. Meme montage que le portage par un joueur, sans
+le joueur.
+
+Le prix a payer : le PIVOT du modele bouge quand la forme change. On pilote donc la RACINE, avec un ecart capture
+au depart, et la pose exacte est redonnee au modele entier a l'arrivee.
+
+Tout ce qui ne s'anime pas (seau, outils) garde le trajet simple.
+
+`OPEN_MID_FLY` regle le moment du depliage, a la moitie du parcours.
+
 ## 0.0.810 — L'arc remonte, et l'echelle se ferme AVANT de rentrer dans le camion
 
 LE TRAJET A DE NOUVEAU UN ARC. Le point de controle passe cinq studs au-dessus de la benne : sans hauteur, l'objet
