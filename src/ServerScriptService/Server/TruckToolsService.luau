@@ -11,8 +11,9 @@
 -- dossier prevu. Un client modifie ne peut donc designer que ce qui est dans la benne -- pas la maison du
 -- grand-pere.
 --
--- LE VOL EST UNE COURBE DE BEZIER a trois points : depart, sommet, arrivee. Une ligne droite ne se lit pas comme
--- un objet qu'on SORT mais comme un objet qui glisse ; l'arc dit qu'il a ete souleve et pose.
+-- LE TRAJET EST UNE COURBE A TROIS POINTS : depart, un point a cote de la benne, arrivee. Il sert a faire quitter
+-- le camion A L'HORIZONTALE -- comme on tire un objet vers soi -- avant de le laisser descendre. Une ligne droite
+-- le ferait sortir en diagonale a travers le hayon.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -233,10 +234,18 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 	if host then
 		SoundUtils.play(TruckConfigs.FLY_SOUND, host)
 	end
-	-- LE SOMMET EST AU MILIEU, REMONTE. C'est lui qui fait l'arc, et le calculer depuis les deux bouts le garde
-	-- juste ou que soit le camion : un sommet ecrit en dur ne vaudrait que pour une seule carte.
-	local middle = (from.Position + landing.Position) * 0.5 + Vector3.new(0, TruckConfigs.FLY_ARC_HEIGHT, 0)
-	local spin = math.rad(360 * TruckConfigs.FLY_SPINS)
+	-- LE POINT DE CONTROLE SORT DE LA BENNE, A SA HAUTEUR.
+	--
+	-- IL SE CALCULE DEPUIS LE BOUT LE PLUS HAUT DES DEUX, et c'est ce qui le rend juste dans les deux sens sans
+	-- rien savoir du reste : en sortant, le point haut est la benne, donc l'objet en part a l'horizontale puis
+	-- descend ; en rangeant, le point haut est la benne aussi, donc il longe le sol puis remonte dedans. Un seul
+	-- calcul, et le trajet retour est l'aller a l'envers.
+	local a, b = from.Position, landing.Position
+	local high = if a.Y >= b.Y then a else b
+	local low = if a.Y >= b.Y then b else a
+	local flat = Vector3.new(low.X - high.X, 0, low.Z - high.Z)
+	local away = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, 1)
+	local middle = high + away * TruckConfigs.SLIDE_OUT
 
 	-- ON L'ANCRE ET ON LE SORT DU CAMION. Tant qu'il est enfant du modele, il suit la carrosserie -- et il
 	-- resterait "range" pour l'interface, qui lit le contenu du dossier.
@@ -256,16 +265,11 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 				return -- detruit en vol : plus rien a poser
 			end
 			local pos = bezier(from.Position, middle, landing.Position, e)
-			-- IL TOURNE EN VOLANT, PUIS IL SE REDRESSE. Un objet qui garde son angle tout du long a l'air tire
-			-- par une ficelle ; un tour sur lui-meme dit qu'il a ete LANCE. Mais il doit arriver DROIT, sinon il
-			-- se pose a l'angle ou le hasard du tour l'a laisse -- donc sur la fin, sa rotation revient vers
-			-- celle du point d'arrivee.
-			local turned = from.Rotation * CFrame.Angles(0, spin * e, 0)
-			local settle = TruckConfigs.FLY_SETTLE_FROM
-			local rot = if e <= settle
-				then turned
-				else turned:Lerp(landing.Rotation, (e - settle) / math.max(1 - settle, 1e-3))
-			model:PivotTo(CFrame.new(pos) * rot.Rotation)
+			-- IL SE REDRESSE EN CHEMIN, sans tourner sur lui-meme. Son angle glisse de celui du depart vers celui
+			-- du point d'arrivee, tout du long : il arrive donc DROIT, et le trajet ne raconte rien d'autre que
+			-- "on le sort et on le pose".
+			local rot = from.Rotation:Lerp(landing.Rotation, e)
+			model:PivotTo(CFrame.new(pos) * rot)
 			if e >= 1 then
 				break
 			end

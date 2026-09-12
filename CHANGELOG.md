@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.807 — L'outil sort du hayon et se pose, sans arc ni tour sur lui-meme
+
+Il volait en arc a sept studs de haut en faisant un tour complet. Un arc haut raconte un objet LANCE, et le joueur
+ne lance rien : il prend une echelle rangee dans une benne. Sur un objet long, le tour achevait de le transformer
+en pantin.
+
+Le trajet est court et bas maintenant. Le point de controle de la courbe est A COTE de la benne, a sa hauteur : 
+l'objet quitte donc le camion a l'horizontale, comme on le tire vers soi, avant de descendre vers le sol. Et son
+angle glisse du depart vers l'arrivee tout du long, donc il arrive droit.
+
+CE POINT SE CALCULE DEPUIS LE BOUT LE PLUS HAUT DES DEUX, ce qui le rend juste dans les deux sens sans rien savoir
+d'autre : en sortant il part a l'horizontale puis descend, en rangeant il longe le sol puis remonte dans la benne.
+Le retour est l'aller a l'envers, sans second calcul a tenir d'accord.
+
 ## 0.0.806 — Le grand-pere relance tant que le hayon est ferme
 
 `Oldman_scene_speech_Impatient_opentruck_1` revient tant que le joueur n'a pas ouvert le camion. C'est le moment

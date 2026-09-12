@@ -123,18 +123,19 @@ local TruckConfigs = {
 	-- normal : le service le DIT quand il s'en sert, sinon on croirait que c'est voulu.
 	DROP_FALLBACK_DIST = 6,
 
-	-- ===== LE VOL, DU CAMION AU SOL =====
-	-- Il ne se teleporte pas : il SORT. Une courbe de Bezier a trois points -- depart, sommet, arrivee -- parce
-	-- qu'une ligne droite ne se lit pas comme un objet qu'on sort, mais comme un objet qui glisse.
+	-- ===== LA SORTIE, DU CAMION AU SOL =====
+	-- Il ne se teleporte pas : il SORT du hayon et se pose. Trajet COURT ET BAS, aucune acrobatie.
 	--
-	-- LE SOMMET est place au milieu du trajet, puis remonte : c'est lui qui donne l'arc. Plus haut, l'objet passe
-	-- par-dessus le camion ; a zero, la courbe redevient une droite.
-	FLY_ARC_HEIGHT = 7,
-	-- Duree du vol, en secondes. Assez lent pour qu'on suive l'objet des yeux, assez court pour ne pas attendre.
+	-- IL A VOLE EN ARC, AVEC UN TOUR SUR LUI-MEME, et c'etait faux. Un arc haut raconte un objet LANCE ; or le
+	-- joueur ne lance rien, il prend une echelle rangee dans une benne. Sur un objet long, le tour acheve de le
+	-- transformer en pantin. On garde juste ce que fait un bras : ca sort, ca descend, ca se pose.
+	--
+	-- LE POINT DE CONTROLE EST A COTE DE LA BENNE, A SA HAUTEUR -- pas au-dessus du trajet. L'objet quitte donc le
+	-- camion a l'HORIZONTALE, comme on le tire vers soi, avant de descendre vers le sol. A zero, la courbe
+	-- redevient une droite et l'objet part en diagonale a travers le hayon.
+	SLIDE_OUT = 4,
+	-- Duree, en secondes. Assez lent pour qu'on suive l'objet des yeux, assez court pour ne pas attendre.
 	FLY_TIME = 0.85,
-	-- IL TOURNE EN VOLANT, en tours complets. Un objet qui garde son orientation pendant tout le trajet a l'air
-	-- tire par une ficelle ; un tour sur lui-meme dit qu'il a ete LANCE.
-	FLY_SPINS = 1,
 	-- LE SIFFLEMENT DU DEPART, et le choc de la pose. Deux moments, deux sons : un seul bruit pour les deux
 	-- raconterait un objet qui glisse d'un bout a l'autre, alors qu'il est LANCE puis POSE.
 	--
@@ -143,10 +144,6 @@ local TruckConfigs = {
 	-- passe a dix metres.
 	FLY_SOUND = { "Sounds", "UI", "PassingSound" },
 	DROP_SOUND = { "Sounds", "Game", "GlobalSounds", "DropSound" },
-
-	-- ET IL ARRIVE DROIT : sur la fin du vol, sa rotation revient vers celle du point d'arrivee. Sans ca il se
-	-- poserait a l'angle ou le hasard du tour l'a laisse.
-	FLY_SETTLE_FROM = 0.75,
 
 	-- ===== RECHERCHE =====
 	-- Avec StreamingEnabled le camion peut arriver bien apres le demarrage. On le re-cherche jusqu'a le trouver,
