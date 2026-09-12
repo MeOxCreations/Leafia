@@ -1240,11 +1240,16 @@ end
 --
 -- Note : la paire d'ouverture de la scene (juste en dessous) garde sa propre version. Sa seconde replique a son
 -- drapeau a elle parce que DEUX chemins peuvent la lancer ; la faire passer par ici lui retirerait ce garde.
-local function sayChain(paths: { { string } }, index: number?)
+local function sayChain(paths: { { string } }, index: number?, onEach: ((number) -> ())?)
 	local at = index or 1
 	local path = paths[at]
 	if not path then
 		return
+	end
+	-- ON PREVIENT AU DEMARRAGE DE CHAQUE REPLIQUE, pas a la fin. Ce qu'une phrase AUTORISE doit l'etre pendant
+	-- qu'elle se dit : attendre sa fin laisse le joueur cliquer sur un refus alors qu'on vient de lui dire oui.
+	if onEach then
+		onEach(at)
 	end
 	local voice = sayVoice(path)
 	local chained = false
@@ -1253,7 +1258,7 @@ local function sayChain(paths: { { string } }, index: number?)
 			return
 		end
 		chained = true
-		sayChain(paths, at + 1)
+		sayChain(paths, at + 1, onEach)
 	end
 	if not voice then
 		follow() -- replique introuvable : la suivante compte plus que l'ordre
@@ -2903,7 +2908,14 @@ function TutorialController.init()
 			TutorialConfigs.TRUCK_OPENED_SOUND,
 			TutorialConfigs.EXPLAIN_TOOL_SOUND,
 			TutorialConfigs.GRAB_SHEAR_SOUND,
-		})
+		}, nil, function(at)
+			-- LA BENNE S'OUVRE A LUI QUAND LE GRAND-PERE DIT DE PRENDRE LA CISAILLE, c'est-a-dire a la TROISIEME.
+			-- Avant, cliquer refuse : il expliquerait sinon un outil qu'on a deja en main.
+			if at == 3 then
+				player:SetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE, nil)
+				print("[Tutorial] Le grand-pere a dit de se servir : la benne s'ouvre au joueur.")
+			end
+		end)
 		-- ET LE MARQUEUR A FINI SON TRAVAIL. Il disait "ce cote-la, celui qui s'ouvre" : une fois ouvert, il ne
 		-- designe plus rien. Il ne revient pas si le joueur referme -- la question a deja eu sa reponse.
 		--
@@ -2949,6 +2961,9 @@ function TutorialController.init()
 	-- POSE ICI, dans le didacticiel, et nulle part ailleurs : c'est lui qui sait ou en est l'histoire. Les outils
 	-- ne font que DEMANDER, ils ne decident pas.
 	ActionGate.setLocked(true)
+	-- ET LA BENNE EST FERMEE A LUI tant que le grand-pere n'a pas dit de s'y servir. Le hayon peut s'ouvrir des la
+	-- premiere minute : sans ce verrou, il aurait la cisaille en main avant qu'on lui explique a quoi elle sert.
+	player:SetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE, true)
 
 	-- LA PARCELLE EST DECLAREE DES LE BOOT, et pas quand la tache arrive : tout ce qui est dehors doit etre pose
 	-- deja coupe AVANT que le joueur voie la pelouse, pas une minute plus tard sous ses yeux. La boucle

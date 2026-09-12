@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.832 — On ne se sert pas dans la benne avant que le grand-pere l'ait dit
+
+Rien n'empechait d'ouvrir le hayon des la premiere minute et de prendre la cisaille. Le grand-pere expliquait
+ensuite un outil deja en main.
+
+CLIQUER REFUSE, ET LE DIT : pilule rouge qui tremble, et "Wait for the old man. He will tell you what to take."
+Un bouton qui ne fait rien se lit comme un bug ; il faut aussi dire QUOI attendre.
+
+LA BARRE RESTE VISIBLE. On voit ce qu'il y a dans la benne -- c'est ce qui donne envie -- mais on ne se sert pas.
+La cacher repondrait a une question que le joueur ne s'est pas encore posee.
+
+LE VERROU SE LEVE QUAND IL DIT DE PRENDRE LA CISAILLE, c'est-a-dire au DEMARRAGE de cette replique et pas a sa
+fin : ce qu'une phrase autorise doit l'etre pendant qu'elle se dit, sinon le joueur clique sur un refus alors
+qu'on vient de lui dire oui. La chaine de repliques sait donc prevenir a chaque phrase qui commence.
+
+LE VERROU EST SUR LE JOUEUR, pas sur le camion : c'est SA progression. A deux, celui qui a deja ecoute doit
+pouvoir se servir.
+
 ## 0.0.831 — La tondeuse se verrouille quand la pelouse est finie, et la barre du camion se ferme apres la cisaille
 
 LA TONDEUSE NE SE REPREND PLUS une fois la pelouse tondue. Le travail est fait : la repousser sur une pelouse deja

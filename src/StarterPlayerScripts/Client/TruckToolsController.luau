@@ -14,6 +14,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
+local ActionGate = require(ReplicatedStorage.Modules.UI.Core.ActionGate)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 local TruckToolsHandler = require(ReplicatedStorage.Modules.UI.Truck.TruckToolsHandler)
@@ -97,6 +98,12 @@ local function nearTruck(): boolean
 end
 
 local function askFor(toolName: string)
+	-- PAS AVANT QU'ON LUI DISE. Le refus est DIT -- pilule rouge et notification -- parce qu'un bouton qui ne
+	-- fait rien se lit comme un bug, et parce qu'il faut lui dire QUOI attendre.
+	if player:GetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE) == true then
+		ActionGate.deny(TruckConfigs.TOOLS_LOCK_NOTIF)
+		return
+	end
 	local r = remote
 	if r then
 		-- ON ENVOIE LE NOM, RIEN D'AUTRE -- pas meme le sens de l'action. C'est la PLACE de l'objet qui decide :

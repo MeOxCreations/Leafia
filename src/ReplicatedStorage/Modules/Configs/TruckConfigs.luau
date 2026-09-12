@@ -115,6 +115,25 @@ local TruckConfigs = {
 	-- Le dossier qui les contient, dans le modele du camion. Chaque enfant est un outil qu'on peut sortir, POSE
 	-- A LA MAIN dans Studio avec son orientation : le code ne les range pas, il les sort.
 	TOOLS_FOLDER = "ObjectsTools",
+	-- ON NE SE SERT PAS AVANT QU'ON VOUS LE DISE. Attribut pose sur le JOUEUR par le didacticiel, lu ici.
+	--
+	-- POURQUOI. Rien n'empeche d'ouvrir le hayon des la premiere minute : la benne est la, pleine, et se servir
+	-- avant que le grand-pere ait explique casse l'ordre du recit -- il expliquerait un outil qu'on a deja en
+	-- main. Le verrou se leve quand il DIT de prendre la cisaille.
+	--
+	-- SUR LE JOUEUR ET PAS SUR LE CAMION : c'est SA progression dans le didacticiel, pas l'etat du vehicule. A
+	-- deux, celui qui a deja ecoute doit pouvoir se servir.
+	--
+	-- LA BARRE RESTE VISIBLE, elle. On voit ce qu'il y a dedans -- c'est ce qui donne envie -- mais cliquer
+	-- refuse, en le disant. Cacher la barre repondrait a une question que le joueur ne s'est pas encore posee.
+	TOOLS_LOCK_ATTRIBUTE = "LeafiaTruckToolsLocked",
+	-- CE QU'ON LUI DIT. En anglais et en mots simples : le public a dix ans.
+	TOOLS_LOCK_NOTIF = {
+		kind = "Warning",
+		title = "Not Yet",
+		description = "Wait for the old man. He will tell you what to take.",
+		duration = 10,
+	},
 	-- LE DESSIN D'UN OUTIL, par le nom de son modele dans la benne. Un dessin se lit d'un coup d'oeil a petite
 	-- taille ; un modele 3D montre l'objet exact mais depend de son angle et de son eclairage.
 	--
