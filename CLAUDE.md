@@ -1213,6 +1213,23 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   vides. Une question d'IDENTITE se pose sur l'identite (le nom, un attribut pose expres), jamais sur un detail
   qu'on suppose exclusif.
 
+- **`DescendantAdded` NE SE DECLENCHE PAS QUAND UN OBJET CHANGE DE PARENT A L'INTERIEUR DU MEME ANCETRE.** Il
+  signale ce qui ENTRE dans l'arbre, pas ce qui s'y deplace : une echelle qui passe de
+  `workspace.Truck.ObjectsTools` a `workspace` etait DEJA descendante du Workspace, donc elle n'y rentre pas une
+  seconde fois. Tout service branche la-dessus la rate DEFINITIVEMENT -- ici les zones de grimpe, donc une echelle
+  sortie du camion qui ne se prend ni ne se grimpe, sans la moindre erreur. Ce qui bouge vraiment dans ce cas,
+  c'est l'ASCENDANCE DE L'OBJET : `model.AncestryChanged` le voit, lui. Regle : `DescendantAdded` couvre
+  l'APPARITION, `AncestryChanged` couvre le DEPLACEMENT -- et un objet qu'on range puis qu'on ressort a besoin du
+  second. Corollaire : un service qui ecarte un objet parce qu'il n'est "pas encore utilisable" doit S'ABONNER a
+  son changement d'etat au lieu de l'oublier ; meme famille que le `return` pose sur "rien a faire POUR
+  L'INSTANT" qui court-circuitait l'abonnement de l'herbe de zone.
+- **UN NOM QUI SERT A LA FOIS D'IDENTITE ET D'AFFICHAGE : c'est l'AFFICHAGE qui gagne, et l'identite qui
+  s'adapte.** La barre du camion ecrit le nom du modele sur le bouton, donc l'echelle de la benne s'appelle
+  `Ladder` et pas `Escabaut_Truck`. J'ai commence par demander au joueur de renommer -- c'etait lui faire payer
+  une contrainte de code par un texte que SES joueurs verront. La bonne reponse etait d'elargir la regle d'un
+  cote (deux noms admis, declares au meme endroit) plutot que d'abimer ce qui est vu. Regle generale : avant de
+  demander un renommage dans Studio, verifier si ce nom est AFFICHE quelque part.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

@@ -264,7 +264,7 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 		--
 		-- APRES LE VOL, pas avant : le trajet ancre toutes ses parts pour que rien ne tombe en route, et une part
 		-- ancree ignore son Motor6D. Repliee pendant le vol, elle arriverait donc figee dans la pose du depart.
-		if LadderFoldUtils.isLadder(model) then
+		if LadderFoldUtils.isLadderName(model.Name) then
 			-- LE VOL A TOUT ANCRE pour que rien ne tombe en route, et une part ancree ignore son Motor6D. On lui
 			-- rend donc sa pose "posee au sol" AVANT de l'animer, sinon la piste tourne dans le vide.
 			LadderFoldUtils.standAlone(model)
@@ -372,15 +372,15 @@ function TruckToolsService.init()
 				local ladders = {}
 				for _, d in (folder :: Instance):GetChildren() do
 					table.insert(names, d.Name)
-					if LadderFoldUtils.isLadder(d) then
+					if LadderFoldUtils.isLadderName(d.Name) then
 						table.insert(ladders, d :: Model)
 					end
 				end
 				if #ladders == 0 then
 					warn(
 						`[TruckToolsService] Aucune echelle dans la benne : son modele doit s'appeler `
-							.. `"{LadderFoldUtils.PREFIX}..." comme celles de la carte, sinon AUCUN service de `
-							.. `l'echelle ne la reconnait. Il y a : {table.concat(names, ", ")}`
+							.. `"{LadderFoldUtils.TRUCK_NAME}" ou "{LadderFoldUtils.PREFIX}...". `
+							.. `Il y a : {table.concat(names, ", ")}`
 					)
 					return
 				end

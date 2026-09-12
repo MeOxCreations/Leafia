@@ -18,10 +18,10 @@ local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local DropEffectUtils = require(ReplicatedStorage.Modules.Utils.DropEffectUtils)
 
-local LADDER_PREFIX = LadderFoldUtils.PREFIX
 local MAX_DIST = 30 -- distance MAX joueur <-> echelle a la prise (anti-triche)
--- LE REPLI VIT DANS `LadderFoldUtils`, plus ici. Le camion s'en sert aussi (l'echelle est rangee fermee dans la
--- benne) et deux pistes chargees sur le meme Animator se MELANGERAIENT. Une seule piste par echelle, la-bas.
+-- LE REPLI ET LE NOM DES ECHELLES VIVENT DANS `LadderFoldUtils`, plus ici. Le camion s'en sert aussi (l'echelle
+-- est rangee fermee dans la benne) et deux pistes chargees sur le meme Animator se MELANGERAIENT. Une seule piste
+-- par echelle, la-bas.
 -- ROTATION de l'echelle portee (touche R). On tween le C0 du weld -> l'echelle tourne pour TOUS (le weld est
 -- serveur). Toggle entre l'orientation de base et une rotation de 180 degres autour de la VERTICALE (Y du repere
 -- de l'echelle). Si l'echelle tourne autour du mauvais axe, changer l'axe ici (ex : math.pi sur Z).
@@ -56,9 +56,7 @@ local function isLadder(inst: unknown): boolean
 		return false
 	end
 	local instance = inst :: Instance
-	return instance:IsA("Model")
-		and instance:IsDescendantOf(workspace)
-		and instance.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX
+	return instance:IsDescendantOf(workspace) and LadderFoldUtils.isLadder(instance)
 end
 
 local function ladderRootPart(model: Model): BasePart?

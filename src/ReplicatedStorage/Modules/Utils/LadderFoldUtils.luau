@@ -22,14 +22,22 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 
+local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
+
 local LadderFoldUtils = {}
 
--- LE NOM DES ECHELLES, PARTOUT DANS LE JEU. C'est un PREFIXE : plusieurs peuvent coexister, numerotees.
+-- LES DEUX NOMS D'UNE ECHELLE, DECLARES ICI ET NULLE PART AILLEURS.
 --
--- DECLARE ICI ET NULLE PART AILLEURS. Il vivait en copie dans cinq fichiers, et une copie finit toujours par
--- diverger -- la copie rangee dans la benne du camion s'appelait "Ladder", donc AUCUN des services de l'echelle
--- ne la reconnaissait : on pouvait la sortir du camion et rien d'autre. Ni la prendre, ni y monter.
+-- `Escabaut` est un PREFIXE : les echelles de la carte sont numerotees. `Ladder` est le nom EXACT de la copie
+-- rangee dans la benne du camion, et il ne se renomme pas : la barre du camion affiche le nom du modele tel quel,
+-- donc l'appeler "Escabaut_Truck" ecrirait ca sur le bouton. Le nom sert a DEUX choses a la fois -- identifier
+-- l'objet et l'annoncer au joueur -- et c'est l'affichage qui gagne : lui, le joueur le voit.
+--
+-- Le prefixe vivait en copie dans cinq fichiers. Une copie finit toujours par diverger, et c'est arrive : la
+-- copie de la benne s'appelait "Ladder", donc AUCUN service de l'echelle ne la reconnaissait. On pouvait la sortir
+-- du camion et rien d'autre -- ni la prendre, ni y monter, sans une seule erreur en console.
 LadderFoldUtils.PREFIX = "Escabaut"
+LadderFoldUtils.TRUCK_NAME = "Ladder"
 -- REPLIEE OU NON, lu par le client (il coupe la grimpe sur une echelle fermee).
 LadderFoldUtils.CLOSED_ATTRIBUTE = "LeafiaLadderClosed"
 
@@ -43,18 +51,35 @@ local OPEN_EVENT = "LadderOpenEndEvent" -- depliee (fin) : on lache
 local tracks: { [Model]: AnimationTrack } = {}
 local wired: { [Model]: boolean } = {}
 
---- UNE ECHELLE SE RECONNAIT A SON NOM, et a rien d'autre.
+--- CE NOM EST-IL CELUI D'UNE ECHELLE ? Question de NOM SEUL : elle sert aussi pour des instances qui ne sont pas
+--- des Models (invalidation de cache sur DescendantAdded, par exemple).
 ---
 --- ON A ESSAYE DE LA RECONNAITRE A SA FORME -- "le seul modele de la benne qui porte un Humanoid" -- et la console
 --- a montre que c'etait FAUX : le seau, la cisaille, le taille-haie et le rateau en ont un aussi, on leur jouait
 --- donc l'anim de l'echelle. Tester la PRESENCE D'UN DETAIL pour repondre a une question d'IDENTITE attrape tout
 --- ce qui partage ce detail.
+function LadderFoldUtils.isLadderName(name: string): boolean
+	return name:sub(1, #LadderFoldUtils.PREFIX) == LadderFoldUtils.PREFIX or name == LadderFoldUtils.TRUCK_NAME
+end
+
+--- RANGEE DANS LA BENNE, donc pas encore un objet du jardin.
+---
+--- Une echelle posee au sol se prend et se grimpe ; la meme echelle DANS le camion ne doit rien faire de tout ca.
+--- Sans cette distinction, ouvrir le hayon ferait apparaitre une invite "prendre l'echelle" a cote de l'invite du
+--- camion, pour une echelle qu'on n'a pas encore sortie.
+function LadderFoldUtils.isStored(model: Model): boolean
+	local folder = model:FindFirstAncestor(TruckConfigs.TOOLS_FOLDER)
+	return folder ~= nil and folder:IsA("Folder")
+end
+
+--- UNE ECHELLE UTILISABLE : un Model, qui porte un nom d'echelle, et qui n'est pas encore range dans le camion.
+--- C'est la question que se posent la prise, la grimpe et les zones.
 function LadderFoldUtils.isLadder(inst: unknown): boolean
 	if typeof(inst) ~= "Instance" or not (inst :: Instance):IsA("Model") then
 		return false
 	end
-	local name = (inst :: Instance).Name
-	return name:sub(1, #LadderFoldUtils.PREFIX) == LadderFoldUtils.PREFIX
+	local model = inst :: Model
+	return LadderFoldUtils.isLadderName(model.Name) and not LadderFoldUtils.isStored(model)
 end
 
 local function resolveAnim(): Animation?

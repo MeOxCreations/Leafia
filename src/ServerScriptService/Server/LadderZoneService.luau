@@ -13,10 +13,6 @@ local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 
 local LadderZoneService = {}
 
--- LE NOM DES ECHELLES, LU DEPUIS `LadderFoldUtils` -- une seule declaration pour tout le jeu. Il etait recopie
--- dans cinq fichiers, et la copie rangee dans le camion s'appelait "Ladder" : plus aucun service ne la
--- reconnaissait, on pouvait la sortir de la benne et rien d'autre.
-local LADDER_PREFIX = LadderFoldUtils.PREFIX
 local ZONE_BASE_NAME = "box_detecte_For_Move"
 
 -- ===== A REGLER =====
@@ -95,20 +91,51 @@ local function setupLadder(ladder: Model)
 	buildZone(ladder, root, ZONE_BASE_NAME .. "_B", -LATERAL_OFFSET, params)
 end
 
+-- LE NOM DES ECHELLES VIT DANS `LadderFoldUtils`, une seule fois pour tout le jeu -- et le test ecarte aussi
+-- celle qui dort dans la benne du camion : on ne pose pas de zone de grimpe sur un objet pas encore sorti.
+-- LE NOM DES ECHELLES VIT DANS `LadderFoldUtils`, une seule fois pour tout le jeu -- et `isLadder` ecarte aussi
+-- celle qui dort dans la benne du camion : on ne pose pas de zone de grimpe sur un objet pas encore sorti.
 local function isLadderModel(inst: Instance): boolean
-	return inst:IsA("Model") and inst.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX
+	return LadderFoldUtils.isLadder(inst)
+end
+
+-- CELLES QU'ON A DEJA EQUIPEES. Une echelle peut etre vue plusieurs fois (demarrage, sortie du camion, retour) et
+-- lui reposer ses zones a chaque passage en empilerait des copies.
+local zoned: { [Model]: boolean } = {}
+
+--- Pose les zones si l'echelle est utilisable, et SINON attend qu'elle le devienne.
+---
+--- CELLE DU CAMION N'EST PAS UTILISABLE TANT QU'ELLE EST DANS LA BENNE, et quand elle en sort elle ne fait que
+--- CHANGER de parent a l'interieur du Workspace. Or `DescendantAdded` ne se declenche que pour ce qui ENTRE dans
+--- le Workspace : un objet qui y etait deja n'y rentre pas une seconde fois. On l'aurait donc ratee pour toujours,
+--- et une echelle sans zones ne se prend ni ne se grimpe. On ecoute son ascendance A ELLE, qui, elle, bouge.
+local function watchLadder(model: Model)
+	if zoned[model] then
+		return
+	end
+	if isLadderModel(model) then
+		zoned[model] = true
+		setupLadder(model)
+		return
+	end
+	model.AncestryChanged:Connect(function()
+		if not zoned[model] and isLadderModel(model) then
+			zoned[model] = true
+			task.defer(setupLadder, model)
+		end
+	end)
 end
 
 function LadderZoneService.init()
 	for _, inst in ipairs(Workspace:GetDescendants()) do
-		if isLadderModel(inst) then
-			setupLadder(inst :: Model)
+		if inst:IsA("Model") and LadderFoldUtils.isLadderName(inst.Name) then
+			watchLadder(inst :: Model)
 		end
 	end
 	-- Echelle ajoutee apres coup (rare : elles sont posees en Studio). task.defer : laisser le model se peupler.
 	Workspace.DescendantAdded:Connect(function(inst: Instance)
-		if isLadderModel(inst) then
-			task.defer(setupLadder, inst :: Model)
+		if inst:IsA("Model") and LadderFoldUtils.isLadderName(inst.Name) then
+			task.defer(watchLadder, inst :: Model)
 		end
 	end)
 end

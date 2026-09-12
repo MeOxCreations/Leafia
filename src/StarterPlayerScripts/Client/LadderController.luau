@@ -34,10 +34,6 @@ local player = Players.LocalPlayer
 -- Rigs poses a la main dans le Workspace, leurs deux zones, et le dossier des anims (renomme Escabaut -> Ladder).
 -- PREFIXE et non nom exact : on gere PLUSIEURS echelles. Tout enfant du Workspace dont le nom commence par ce
 -- prefixe est une echelle (ex : Escabaut_1a_rig, Escabaut_2a_rig, une copie...).
--- LE NOM DES ECHELLES, LU DEPUIS `LadderFoldUtils` -- une seule declaration pour tout le jeu. Il etait recopie
--- dans cinq fichiers, et la copie rangee dans le camion s'appelait "Ladder" : plus aucun service ne la
--- reconnaissait, on pouvait la sortir de la benne et rien d'autre.
-local LADDER_PREFIX = LadderFoldUtils.PREFIX
 local ZONE_NAMES = { "box_detecte_A", "box_detecte_B" }
 local ANIM_FOLDER = { "Animations", "Tools", "Ladder" }
 local IDLE_ANIM = "IdleDownAnimation" -- pose prete, au sol
@@ -380,7 +376,7 @@ end
 local ladderCache: { Instance }? = nil
 
 local function invalidateIfLadder(inst: Instance)
-	if inst.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
+	if LadderFoldUtils.isLadderName(inst.Name) then
 		ladderCache = nil
 	end
 end
@@ -393,7 +389,7 @@ local function getLadders(): { Instance }
 	end
 	local result: { Instance } = {}
 	for _, d in ipairs(workspace:GetDescendants()) do
-		if d.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
+		if LadderFoldUtils.isLadder(d) then
 			table.insert(result, d)
 		end
 	end

@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.797 — L'echelle de la benne garde son nom, et sert vraiment une fois sortie
+
+PAS DE RENOMMAGE A FAIRE, finalement. Le modele de la benne doit s'appeler `Ladder` : la barre du camion ecrit le
+nom du modele sur le bouton, donc l'appeler `Escabaut_Truck` aurait ecrit ca a l'ecran. Demander ce renommage
+revenait a faire payer une contrainte de code par un texte que les joueurs voient. Les deux noms sont admis
+maintenant, declares au meme endroit.
+
+ET ELLE NE FAIT RIEN TANT QU'ELLE EST DANS LA BENNE. Une echelle posee au sol se prend et se grimpe ; dans le
+camion, elle attend. Sans cette distinction, ouvrir le hayon aurait fait apparaitre une invite "prendre l'echelle"
+a cote de celle du camion, pour un objet pas encore sorti.
+
+LES ZONES DE GRIMPE SE POSENT QUAND ELLE SORT, et c'etait le piege du tour d'apres. Elles se posaient sur
+`DescendantAdded` du Workspace -- or l'echelle qui quitte la benne ne fait que CHANGER de parent a l'interieur du
+Workspace, ou elle etait deja. L'evenement ne tire pas, et une echelle sans zones ne se prend ni ne se grimpe. On
+ecoute maintenant son ascendance a elle, qui bouge vraiment.
+
 ## 0.0.796 — L'echelle sortie du camion s'utilise enfin, et le nom des echelles ne vit plus qu'a un endroit
 
 ELLE SORTAIT DU CAMION MAIS NE SERVAIT A RIEN. Le modele range dans la benne s'appelle `Ladder`, alors que tous

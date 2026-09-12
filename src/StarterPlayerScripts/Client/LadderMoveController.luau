@@ -31,10 +31,6 @@ local LADDER_SOUND_PATH = { "Sounds", "Engins", "Ladder" }
 local player = Players.LocalPlayer
 
 -- Meme prefixe que LadderController : les modeles d'echelle s'appellent Escabaut_xxx.
--- LE NOM DES ECHELLES, LU DEPUIS `LadderFoldUtils` -- une seule declaration pour tout le jeu. Il etait recopie
--- dans cinq fichiers, et la copie rangee dans le camion s'appelait "Ladder" : plus aucun service ne la
--- reconnaissait, on pouvait la sortir de la benne et rien d'autre.
-local LADDER_PREFIX = LadderFoldUtils.PREFIX
 -- Prompt "[F] PRENDRE" affiche quand le joueur est assez PRES d'une echelle. Verifie a intervalle (pas chaque frame :
 -- la detection balaie les echelles). Detection RADIALE (DETECT_RADIUS), pas une box : aucun angle mort. Cf ladderAt.
 local PROMPT_KEY = "F" -- PRENDRE l'echelle sur F (E est reserve a MONTER, cote LadderController)
@@ -598,7 +594,7 @@ local function getLadders(): { Instance }
 	end
 	local list: { Instance } = {}
 	for _, d in ipairs(workspace:GetDescendants()) do
-		if d:IsA("Model") and d.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
+		if LadderFoldUtils.isLadder(d) then
 			table.insert(list, d)
 		end
 	end
@@ -1042,7 +1038,7 @@ function LadderMoveController.init()
 	-- Cache des echelles : invalide des qu'une echelle apparait / disparait (filtre par nom : les carreaux de
 	-- haie qui s'ajoutent ne le touchent pas).
 	local function invalidateIfLadder(inst: Instance)
-		if inst:IsA("Model") and inst.Name:sub(1, #LADDER_PREFIX) == LADDER_PREFIX then
+		if LadderFoldUtils.isLadder(inst) then
 			laddersCache = nil
 		end
 	end
