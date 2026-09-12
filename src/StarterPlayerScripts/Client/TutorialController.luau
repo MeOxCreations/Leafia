@@ -2960,16 +2960,15 @@ function TutorialController.init()
 	--
 	-- POSE ICI, dans le didacticiel, et nulle part ailleurs : c'est lui qui sait ou en est l'histoire. Les outils
 	-- ne font que DEMANDER, ils ne decident pas.
-	ActionGate.setLocked(true)
-	-- ET LA BENNE EST FERMEE A LUI tant que le grand-pere n'a pas dit de s'y servir. Le hayon peut s'ouvrir des la
-	-- premiere minute : sans ce verrou, il aurait la cisaille en main avant qu'on lui explique a quoi elle sert.
+	-- LES DEUX VERROUS DU DEBUT : les outils tant qu'on n'a pas toque, et la benne tant que le grand-pere n'a pas
+	-- dit de s'y servir. Le hayon peut s'ouvrir des la premiere minute -- sans le second, le joueur aurait la
+	-- cisaille en main avant qu'on lui explique a quoi elle sert.
 	--
-	-- SAUF EN MODE TEST : voir `TOOLS_LOCK_ENABLED`, qui existe pour pouvoir regler le ramassage des feuilles sans
-	-- rejouer tout le didacticiel avant chaque essai.
-	player:SetAttribute(
-		TruckConfigs.TOOLS_LOCK_ATTRIBUTE,
-		if TruckConfigs.TOOLS_LOCK_ENABLED then true else nil
-	)
+	-- LES DEUX SAUTENT ENSEMBLE EN MODE TEST : voir `TEST_FREE_TOOLS`. Un seul interrupteur pour les deux, sinon
+	-- on en baisse un, on relance, et l'autre bloque.
+	local free = TutorialConfigs.TEST_FREE_TOOLS
+	ActionGate.setLocked(not free)
+	player:SetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE, if free then nil else true)
 
 	-- LA PARCELLE EST DECLAREE DES LE BOOT, et pas quand la tache arrive : tout ce qui est dehors doit etre pose
 	-- deja coupe AVANT que le joueur voie la pelouse, pas une minute plus tard sous ses yeux. La boucle

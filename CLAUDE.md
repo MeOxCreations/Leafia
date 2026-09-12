@@ -1437,6 +1437,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   deux ; et un singleton d'interface qui accueille une donnee d'appelant doit refaire son test d'appartenance
   (`owns`) a l'ecriture, sinon un objet hors champ ecrit sur le badge d'un autre.
 
+- **UN INTERRUPTEUR DE TEST DOIT COUVRIR TOUTE L'INTENTION, PAS UN VERROU.** "Laisse-moi jouer librement pour
+  regler ce systeme" est UNE intention ; elle traversait deux verrous (les outils, la benne), donc deux
+  interrupteurs -- on en baisse un, on relance, l'autre bloque, et le joueur perd un aller-retour pour rien. Un
+  seul drapeau, lu partout ou un verrou de scenario se pose. Meme famille que "un reglage partage finit par
+  opposer deux besoins", en miroir : ici ce sont deux reglages qui servent UN besoin. Et il se DENONCE : un warn
+  au demarrage tant qu'il est leve, sinon il part en production et plus personne ne comprend pourquoi le scenario
+  ne tient plus.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

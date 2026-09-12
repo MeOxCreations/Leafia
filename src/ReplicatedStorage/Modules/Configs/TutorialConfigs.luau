@@ -513,6 +513,22 @@ return {
 	-- faut le temps de reprendre son souffle.
 	IMPATIENT_AFTER_SPEECH = 2.5,
 
+	-- ===== INTERRUPTEUR DE TEST : TOUS LES VERROUS BAISSES =====
+	-- A `true`, LE DIDACTICIEL NE VERROUILLE RIEN : outils utilisables des le spawn, et benne du camion ouverte.
+	--
+	-- POURQUOI IL EXISTE. Mettre au point le ramassage des feuilles demande le rateau et le seau TOUT DE SUITE.
+	-- Rejouer la scene entiere -- sortir le grand-pere, tondre, tailler -- avant chaque essai rend le reglage
+	-- impossible a faire.
+	--
+	-- UN SEUL POUR LES DEUX VERROUS, et c'est deliberе. Il y en a eu deux pendant dix minutes : on en baisse un,
+	-- on relance, et l'autre bloque -- donc un aller-retour pour rien. Deux reglages qui servent la MEME intention
+	-- finissent toujours par ne pas etre d'accord.
+	--
+	-- A REMETTRE A `false` AVANT DE PUBLIER. Le serveur le RAPPELLE dans la console a chaque demarrage tant qu'il
+	-- est leve : un interrupteur de test qui ne dit pas qu'il l'est finit par partir en production, et personne ne
+	-- comprend ensuite pourquoi le scenario ne tient plus.
+	TEST_FREE_TOOLS = true,
+
 	-- ===== IL S'IMPATIENTE DEVANT LE CAMION =====
 	-- Meme idee que plus haut, mais pour une consigne precise : "ouvre le hayon". Il relance tant que le joueur
 	-- ne l'a pas fait.

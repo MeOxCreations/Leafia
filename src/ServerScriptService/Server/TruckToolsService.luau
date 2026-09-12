@@ -27,6 +27,7 @@ local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 -- avant l'atterrissage.
 local LadderZoneService = require(script.Parent.LadderZoneService)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
+local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 
@@ -576,10 +577,10 @@ function TruckToolsService.init()
 	-- UN INTERRUPTEUR DE TEST QUI NE DIT PAS QU'IL EST BAISSE FINIT EN PRODUCTION. Tant qu'il l'est, le serveur
 	-- le rappelle a chaque demarrage -- c'est la seule chose qui empeche de publier un didacticiel ou l'on se sert
 	-- dans le camion avant que le grand-pere ait ouvert la bouche.
-	if not TruckConfigs.TOOLS_LOCK_ENABLED then
+	if TutorialConfigs.TEST_FREE_TOOLS then
 		warn(
-			"[TruckToolsService] MODE TEST : la benne est ouverte des le depart "
-				.. "(TruckConfigs.TOOLS_LOCK_ENABLED = false). A remettre a true avant de publier."
+			"[TruckToolsService] MODE TEST : aucun verrou du didacticiel. Outils utilisables des le spawn et "
+				.. "benne ouverte (TutorialConfigs.TEST_FREE_TOOLS = true). A remettre a false avant de publier."
 		)
 	end
 	print("[TruckToolsService] Pret : les outils de la benne peuvent etre sortis.")

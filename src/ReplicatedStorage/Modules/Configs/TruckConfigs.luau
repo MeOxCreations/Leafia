@@ -127,17 +127,6 @@ local TruckConfigs = {
 	-- LA BARRE RESTE VISIBLE, elle. On voit ce qu'il y a dedans -- c'est ce qui donne envie -- mais cliquer
 	-- refuse, en le disant. Cacher la barre repondrait a une question que le joueur ne s'est pas encore posee.
 	TOOLS_LOCK_ATTRIBUTE = "LeafiaTruckToolsLocked",
-	-- ===== INTERRUPTEUR DE TEST =====
-	-- A `false`, LE VERROU N'EST JAMAIS POSE : on se sert dans la benne des la premiere seconde.
-	--
-	-- POURQUOI IL EXISTE. Mettre au point le ramassage des feuilles demande le rateau et le seau TOUT DE SUITE ;
-	-- rejouer tout le didacticiel -- sortir le grand-pere, tondre, tailler -- avant chaque essai rendrait le
-	-- reglage impossible a faire.
-	--
-	-- A REMETTRE A `true` AVANT DE PUBLIER. Le serveur le RAPPELLE dans la console a chaque demarrage tant qu'il
-	-- est baisse : un interrupteur de test qui ne dit pas qu'il est baisse finit toujours par partir en
-	-- production, et personne ne comprend pourquoi le scenario ne tient plus.
-	TOOLS_LOCK_ENABLED = false,
 	-- CE QU'ON LUI DIT. En anglais et en mots simples : le public a dix ans.
 	TOOLS_LOCK_NOTIF = {
 		kind = "Warning",

@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.838 — Un seul interrupteur de test, qui baisse TOUS les verrous du didacticiel
+
+Il y en avait deux : celui des outils ("va toquer d'abord") et celui de la benne. On en baisse un, on relance, et
+l'autre bloque -- donc un aller-retour pour rien. Deux reglages qui servent la MEME intention finissent toujours
+par ne pas etre d'accord.
+
+`TutorialConfigs.TEST_FREE_TOOLS = true` : outils utilisables des le spawn, benne ouverte. Il remplace
+`TruckConfigs.TOOLS_LOCK_ENABLED`, qui n'aura vecu qu'une version.
+
+A REMETTRE A `false` AVANT DE PUBLIER, et le serveur le rappelle dans la console a chaque demarrage tant qu'il est
+leve.
+
 ## 0.0.837 — Interrupteur de test : la benne est ouverte des le depart
 
 `TruckConfigs.TOOLS_LOCK_ENABLED = false` -- le verrou de 0.0.832 n'est plus pose.
