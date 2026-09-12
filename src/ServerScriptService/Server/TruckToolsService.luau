@@ -194,6 +194,33 @@ local function soundHost(model: Model): BasePart?
 	return model:FindFirstChildWhichIsA("BasePart", true)
 end
 
+--- SORT L'OBJET DE LA BENNE ET L'Y REMET, sans vol, sans bruit, sans que personne ne le voie.
+---
+--- POURQUOI CETTE BIZARRERIE EXISTE. Au demarrage, le repli de l'echelle rangee dans la benne ne se jouait qu'A
+--- MOITIE. Le MEME repli, sur la MEME echelle, joue entierement des qu'on l'a sortie du camion puis remise -- le
+--- joueur l'a verifie, et c'est la seule mesure qu'on ait. J'ai propose plusieurs causes a ce qui differe entre
+--- les deux chemins (ancrages, soudures, etat du Humanoid) sans reussir a en prouver une seule ; reproduire le
+--- chemin qui MARCHE bat une explication qu'on n'a pas.
+---
+--- CE QUE CA REFAIT, exactement comme le retour d'un vol : tout ancrer, quitter le dossier, y revenir, se reposer
+--- a sa place. Avec une image d'attente a chaque etape -- si la difference tient a ce que le moteur refait
+--- l'assemblage, elle ne peut pas se produire dans la meme image.
+---
+--- YIELD. A appeler dans une tache a part.
+local function resetInPlace(model: Model, home: Instance)
+	local pose = model:GetPivot()
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			(d :: BasePart).Anchored = true
+		end
+	end
+	model.Parent = Workspace
+	task.wait()
+	model.Parent = home
+	model:PivotTo(pose)
+	task.wait()
+end
+
 local function fly(model: Model, landing: CFrame, home: Instance?)
 	flying[model] = true
 	local from = model:GetPivot()
@@ -392,8 +419,14 @@ function TruckToolsService.init()
 				end
 				for _, ladder in ladders do
 					print(`[TruckToolsService] Repli de "{ladder.Name}" : {LadderFoldUtils.describe(ladder)}`)
+					-- LE MEME CHEMIN QUE LE RANGEMENT A LA MAIN, qui lui plie l'echelle entierement. Voir
+					-- `resetInPlace` : on reproduit ce qui marche au lieu d'expliquer ce qui ne marche pas.
+					resetInPlace(ladder, folder :: Instance)
 					LadderFoldUtils.standAlone(ladder)
 					LadderFoldUtils.fold(ladder)
+					-- ET PAS DE ZONE DE GRIMPE SUR UNE ECHELLE RANGEE. L'aller-retour l'a fait passer une image
+					-- hors du camion, ce qui a pu lui en poser.
+					LadderZoneService.refresh(ladder)
 				end
 				-- ON MESURE LE RESULTAT, on ne suppose pas que ca a marche. Le repli peut echouer EN SILENCE de
 				-- trois facons -- anim pas encore chargee (marqueurs muets), rig sans joints, racine introuvable --

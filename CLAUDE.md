@@ -1261,6 +1261,17 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   se calcule depuis l'environnement se (re)calcule quand l'objet est POSE, et c'est celui qui le deplace qui le
   dit -- il est le seul a savoir quand le mouvement est fini.
 
+- **QUAND DEUX CHEMINS MENENT AU MEME ETAT ET QU'UN SEUL MARCHE, REPRODUIRE CELUI QUI MARCHE BAT UNE EXPLICATION
+  QU'ON N'A PAS.** Le repli de l'echelle rangee dans la benne ne jouait qu'a moitie au demarrage, et jouait
+  ENTIEREMENT des qu'on la sortait du camion pour l'y remettre -- meme modele, meme anim, meme marqueur, meme
+  code de repli. J'ai propose plusieurs differences (ancrages, soudures, etat du Humanoid) sans en prouver une
+  seule, et chaque tour coutait un lancement au joueur. C'est LUI qui a propose la sortie : "au demarrage, sors
+  l'echelle et remets-la". Refaire le chemin qui marche -- tout ancrer, quitter le dossier, y revenir, se reposer
+  a sa place, une image d'attente entre chaque -- donne le bon resultat tout de suite, en invisible. Ce n'est pas
+  une explication, et le commentaire du code le dit en toutes lettres pour que le prochain ne croie pas en tenir
+  une. Regle : un contournement HONNETE et documente vaut mieux qu'un cinquieme diagnostic non mesure ; le cout
+  reel d'un diagnostic rate n'est pas le temps, c'est la confiance.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

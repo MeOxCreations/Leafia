@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.800 — L'echelle de la benne se plie entierement, au demarrage aussi
+
+Le repli ne jouait qu'a moitie au demarrage, et jouait ENTIEREMENT des qu'on sortait l'echelle du camion pour l'y
+remettre. Meme modele, meme animation, meme marqueur, meme code de repli.
+
+ON REFAIT DONC LE CHEMIN QUI MARCHE, au demarrage, sans vol ni bruit et sans que personne ne le voie : tout
+ancrer, quitter le dossier de la benne, y revenir, se reposer a sa place, avec une image d'attente entre chaque
+etape. C'est l'idee du joueur, et c'est la seule chose mesuree de toute la journee sur ce bug.
+
+CE N'EST PAS UNE EXPLICATION, et le commentaire du code le dit pour que personne ne croie en tenir une. Plusieurs
+causes ont ete proposees pour ce qui differe entre les deux chemins -- ancrages, soudures, etat du Humanoid -- et
+aucune n'a ete prouvee.
+
 ## 0.0.799 — L'echelle sortie du camion se prend et se grimpe
 
 Deux causes independantes, et la meme racine : l'echelle qui quitte la benne CHANGE DE PARENT sans quitter le
