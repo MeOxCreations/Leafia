@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.798 — L'echelle du camion se plie ENTIEREMENT
+
+La piste jouait bien, son marqueur tirait a l'heure (0.29s sur 0.73s), et la pose n'etait qu'a moitie faite. Ce
+n'etait donc ni l'animation ni le marqueur : une part refusait de bouger.
+
+ON ANCRAIT LA MAUVAISE PART. Pour qu'un rig pose au sol s'anime, il faut exactement une racine ancree et tout le
+reste libre -- une part ancree ignore son Motor6D. La racine se cherchait par `PrimaryPart`, sinon par une part
+nommee `RootPart`. Les deux sont poses A LA MAIN, donc les deux peuvent designer une part qui est elle-meme tiree
+par un joint : on bloquait ce joint et tout ce qui pend dessous. La racine se deduit maintenant des joints -- la
+part qu'un Motor6D tire sans que personne ne la tire elle-meme -- et un nom pose a la main n'est cru qu'apres
+verification, avec un avertissement quand il se trompe.
+
+CE QUI A TRANCHE : le joueur a duplique l'echelle du camion dans le Workspace et l'a prise a la main. Elle se
+pliait entierement. Meme modele, meme anim, meme marqueur -- donc le probleme n'etait pas dans le fichier mais
+dans l'etat qu'on impose a l'objet. Dans les mains, rien n'est ancre.
+
+ET LE REPLI DIT MAINTENANT CE QUI L'A BLOQUE : au moment ou il fige, il nomme les joints restes a l'identite et
+les soudures trouvees sur le modele. Un `Weld` ou un `WeldConstraint` gagne toujours contre un Motor6D.
+
 ## 0.0.797 — L'echelle de la benne garde son nom, et sert vraiment une fois sortie
 
 PAS DE RENOMMAGE A FAIRE, finalement. Le modele de la benne doit s'appeler `Ladder` : la barre du camion ecrit le

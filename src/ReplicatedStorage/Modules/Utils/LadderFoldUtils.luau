@@ -110,17 +110,18 @@ function LadderFoldUtils.preload()
 	end)
 end
 
---- LA RACINE DU RIG : la part que tout le reste suit.
+--- LA RACINE DU RIG : la SEULE part qu'on a le droit d'ancrer, parce qu'aucun joint ne la tire.
 ---
---- ON NE SE FIE PAS A `PrimaryPart`, QUI EST FACULTATIF. Un modele sorti du 3D Importer n'en a normalement pas, et
---- une copie posee a la main dans une benne encore moins. Le vrai critere est dans les JOINTS : la racine est la
---- part qu'un Motor6D TIRE (elle est `Part0`) sans que personne ne la tire elle-meme (jamais `Part1`). Ca ne
---- suppose ni nom, ni rangement, ni reglage.
+--- LE CRITERE EST DANS LES JOINTS, ET NULLE PART AILLEURS : la racine est la part qu'un Motor6D tire (elle est
+--- `Part0`) sans que personne ne la tire elle-meme (jamais `Part1`). Ca ne suppose ni nom, ni rangement, ni
+--- reglage.
+---
+--- `PrimaryPart` ET LE NOM "RootPart" NE SONT QUE DES INDICES, et on les VERIFIE avant de les croire. Les deux
+--- sont poses a la main, donc les deux peuvent designer une part qui est, elle aussi, tiree par un joint. L'ancrer
+--- bloque alors CE joint et tout ce qui pend dessous : l'anim joue, les marqueurs tirent a l'heure, et l'echelle
+--- ne se ferme qu'a moitie -- exactement le symptome qu'on cherchait. Le meme modele porte a la main se fermait
+--- entierement, parce que la rien n'est ancre.
 local function rootOf(model: Model): BasePart?
-	local named = model.PrimaryPart or (model:FindFirstChild("RootPart") :: BasePart?)
-	if named then
-		return named
-	end
 	local driven: { [BasePart]: boolean } = {}
 	local drivers: { [BasePart]: boolean } = {}
 	for _, d in model:GetDescendants() do
@@ -133,6 +134,16 @@ local function rootOf(model: Model): BasePart?
 				driven[joint.Part1 :: BasePart] = true
 			end
 		end
+	end
+	local named = model.PrimaryPart or (model:FindFirstChild("RootPart") :: BasePart?)
+	if named and not driven[named] then
+		return named
+	end
+	if named then
+		warn(
+			`[LadderFold] "{model.Name}" : "{named.Name}" est TIREE par un joint, ce n'est pas la racine. `
+				.. "L'ancrer bloquerait une partie du pliage ; je prends la vraie racine."
+		)
 	end
 	for part in drivers do
 		if not driven[part] then
@@ -219,6 +230,33 @@ function LadderFoldUtils.track(model: Model): AnimationTrack?
 	return loaded
 end
 
+--- QUELS JOINTS N'ONT PAS BOUGE, et qu'est-ce qui les retient.
+---
+--- L'animation ecrit dans `Motor6D.Transform`. Un joint reste a l'identite pour exactement trois raisons : sa part
+--- est ANCREE, elle est VERROUILLEE par une soudure (un `Weld` ou un `WeldConstraint` gagne contre un Motor6D,
+--- toujours), ou la piste ne la cle pas du tout. On les NOMME au lieu de les compter : un compteur ne dit pas ou
+--- regarder.
+local function stuckJoints(model: Model): string
+	local stuck = {}
+	local locked = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") then
+			local joint = d :: Motor6D
+			local part = joint.Part1
+			if part and joint.Transform == CFrame.identity then
+				table.insert(stuck, if part.Anchored then part.Name .. "(ancree)" else part.Name)
+			end
+		elseif d:IsA("WeldConstraint") or (d:IsA("Weld") and not d:IsA("Motor6D")) then
+			table.insert(locked, `{d.ClassName}:{d.Name}`)
+		end
+	end
+	if #stuck == 0 and #locked == 0 then
+		return "tous les joints ont bouge, aucune soudure"
+	end
+	return `joints figes = {if #stuck > 0 then table.concat(stuck, " ") else "aucun"} | `
+		.. `soudures = {if #locked > 0 then table.concat(locked, " ") else "aucune"}`
+end
+
 local function wire(model: Model, loaded: AnimationTrack)
 	if wired[model] then
 		return
@@ -232,7 +270,8 @@ local function wire(model: Model, loaded: AnimationTrack)
 		-- de code ne peut le corriger.
 		print(
 			`[LadderFold] "{model.Name}" figee a {string.format("%.2f", loaded.TimePosition)}s `
-				.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}).`
+				.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}). `
+				.. stuckJoints(model)
 		)
 	end)
 	loaded:GetMarkerReachedSignal(OPEN_EVENT):Connect(function()

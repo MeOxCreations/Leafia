@@ -1230,6 +1230,21 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   cote (deux noms admis, declares au meme endroit) plutot que d'abimer ce qui est vu. Regle generale : avant de
   demander un renommage dans Studio, verifier si ce nom est AFFICHE quelque part.
 
+- **`PrimaryPart` ET UNE PART NOMMEE "RootPart" NE SONT QUE DES INDICES : les deux sont poses A LA MAIN, donc les
+  deux peuvent designer une part qui est elle-meme TIREE par un joint.** L'ancrer bloque alors ce joint et tout ce
+  qui pend dessous. Symptome au possible trompeur : l'animation joue, ses marqueurs tirent a l'heure exacte, la
+  duree est la bonne -- et la pose n'est qu'a moitie faite. On va donc chercher dans la piste, dans le marqueur,
+  dans la duree, alors que la piste est parfaite et qu'une PART REFUSE DE BOUGER. Le meme modele porte a la main se
+  pliait entierement, parce que dans les mains rien n'est ancre : c'est le joueur qui a fabrique cette comparaison
+  en dupliquant l'objet, et elle valait dix diagnostics. La vraie racine se DEDUIT (la part qu'un Motor6D tire sans
+  que personne ne la tire elle-meme) ; un indice nomme ne se croit qu'apres verification. Meme famille que "une
+  sonde dont le point de repere est une propriete FACULTATIVE accuse tout le monde le jour ou elle est vide".
+- **DEUX CONTEXTES POUR LE MEME OBJET = DUPLIQUER L'OBJET DANS LE CONTEXTE QUI MARCHE.** Le joueur a copie
+  l'echelle du camion dans le Workspace et l'a prise a la main : elle se pliait entierement. Meme modele, meme
+  anim, meme marqueur -- donc ni le fichier ni le rig n'etaient en cause, et tout ce qui restait etait l'ETAT
+  qu'on lui impose (ancrages, soudures, Humanoid). Ca coupe l'espace de recherche en deux en trente secondes,
+  bien mieux qu'une sonde. A proposer AVANT d'instrumenter quand un objet existe en deux exemplaires.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
