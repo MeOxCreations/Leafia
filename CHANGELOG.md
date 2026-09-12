@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.790 — Une sonde qui nomme l'interface invisible sous le curseur
+
+Cliquer a cote du camion l'ouvre, et la camera ne tourne plus a cet endroit. Les deux symptomes ENSEMBLE ne
+veulent dire qu'une chose : une interface invisible est sous la souris -- elle avale le clic (Roblox le marque
+comme traite par le jeu, donc la camera l'ignore) et elle declenche ce qu'elle porte.
+
+Plutot que de deviner une troisieme fois, un `print` temporaire dans `CursorController` liste ce que
+`GetGuiObjectsAtPosition` trouve sous chaque clic, du dessus vers le dessous. Le fautif se nommera lui-meme.
+
+A RETIRER des que la cause est identifiee.
+
 ## 0.0.789 — Cliquer a cote du camion ne l'ouvre plus
 
 Le bind de la touche pose en 0.0.787 demandait aussi un BOUTON TACTILE automatique (le troisieme argument de

@@ -169,6 +169,28 @@ function CursorController.init()
 			-- On MAINTIENT : la cible du ressort passe a SLIME_PRESSED, le curseur se comprime et y reste tant qu'on
 			-- tient. Le relachement (InputEnded) remet la cible a 0 -> rebond.
 			held = true
+
+			-- SONDE TEMPORAIRE : QU'Y A-T-IL SOUS LE CURSEUR ?
+			--
+			-- Une interface invisible sous la souris fait DEUX choses a la fois : elle avale le clic (donc la
+			-- camera ne tourne plus, Roblox marque l'input comme "traite par le jeu") et elle declenche ce qu'elle
+			-- porte. Les deux symptomes ensemble ne veulent dire que ca.
+			--
+			-- On NOMME les coupables au lieu de raisonner : `GetGuiObjectsAtPosition` rend la liste exacte, du
+			-- dessus vers le dessous. A retirer des que le fautif est identifie.
+			local gui = player:FindFirstChildOfClass("PlayerGui")
+			local mouse = UserInputService:GetMouseLocation()
+			if gui then
+				local names = {}
+				for _, obj in gui:GetGuiObjectsAtPosition(mouse.X, mouse.Y) do
+					table.insert(names, obj:GetFullName())
+				end
+				if #names > 0 then
+					print(`[Cursor] Sous le clic ({mouse.X}, {mouse.Y}) : {table.concat(names, " | ")}`)
+				else
+					print(`[Cursor] Sous le clic ({mouse.X}, {mouse.Y}) : rien.`)
+				end
+			end
 		end
 	end)
 	UserInputService.InputEnded:Connect(function(input: InputObject)
