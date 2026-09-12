@@ -20,6 +20,7 @@ local Workspace = game:GetService("Workspace")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
+local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
@@ -253,6 +254,19 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 			-- qui dit "tu viens de le prendre" -- et seule la pose finale s'efface.
 			setToolHidden(model, true)
 		end
+		-- L'ECHELLE SE PLIE POUR RENTRER, ET S'OUVRE EN ARRIVANT AU SOL. Une echelle se range fermee dans une
+		-- benne, et ne sert a rien fermee sur une pelouse : c'est la MEME regle que le portage, ou elle se referme
+		-- dans les mains et se rouvre des qu'on la pose.
+		--
+		-- APRES LE VOL, pas avant : le trajet ancre toutes ses parts pour que rien ne tombe en route, et une part
+		-- ancree ignore son Motor6D. Repliee pendant le vol, elle arriverait donc figee dans la pose du depart.
+		if LadderFoldUtils.isLadder(model) then
+			if home and home.Parent then
+				LadderFoldUtils.fold(model)
+			else
+				LadderFoldUtils.unfold(model)
+			end
+		end
 		flying[model] = nil
 	end)
 end
@@ -328,6 +342,45 @@ function TruckToolsService.init()
 		end
 		print(`[TruckToolsService] {player.Name} range "{toolName}" dans le camion.`)
 		fly(taken, truck:GetPivot() * (pose :: CFrame), folder)
+	end)
+
+	-- L'ECHELLE QUI DORT DEJA DANS LA BENNE EST REPLIEE, avant que personne n'y touche. Elle est POSEE ouverte
+	-- dans Studio -- c'est sa seule pose editable, la fermeture n'existe que dans l'animation -- donc sans ca le
+	-- joueur ouvre le hayon sur une echelle grande ouverte en travers du chargement.
+	--
+	-- ON PRECHARGE AVANT DE PLIER. Sans ca les marqueurs de l'anim ne tirent pas, la piste va jusqu'au bout, et
+	-- l'echelle se retrouve DEPLIEE -- exactement l'inverse de ce qu'on vient de demander.
+	--
+	-- ET ON ATTEND LE CAMION : avec le streaming il arrive apres le demarrage. "Absent au demarrage" est normal,
+	-- "absent pour toujours" ne l'est pas -- d'ou le delai de garde, et un message qui NOMME ce qu'il y a dans la
+	-- benne quand aucune echelle n'y est reconnue.
+	task.spawn(function()
+		LadderFoldUtils.preload()
+		local deadline = os.clock() + TruckConfigs.FIND_TIMEOUT
+		while os.clock() < deadline do
+			local truck = findTruck()
+			local folder = truck and truck:FindFirstChild(TruckConfigs.TOOLS_FOLDER)
+			if folder then
+				local names = {}
+				local folded = 0
+				for _, d in (folder :: Instance):GetChildren() do
+					table.insert(names, d.Name)
+					if LadderFoldUtils.isLadder(d) then
+						folded += 1
+						LadderFoldUtils.fold(d :: Model)
+					end
+				end
+				if folded == 0 then
+					print(
+						`[TruckToolsService] Aucune echelle repliee dans la benne. Elle doit s'appeler `
+							.. `"{LadderFoldUtils.PREFIX}..." ; il y a : {table.concat(names, ", ")}`
+					)
+				end
+				return
+			end
+			task.wait(TruckConfigs.FIND_INTERVAL)
+		end
+		warn("[TruckToolsService] Camion introuvable : l'echelle de la benne restera ouverte.")
 	end)
 
 	-- RIEN A NETTOYER QUAND UN JOUEUR PART : le vol vit dans une tache, pas dans sa session, et il finit tout

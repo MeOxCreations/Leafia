@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.794 — L'echelle est pliee dans le camion
+
+Elle est posee ouverte dans Studio, parce que la pose fermee n'existe que dans l'animation. On ouvrait donc le
+hayon sur une echelle grande ouverte en travers du chargement. Elle se replie maintenant au demarrage du serveur,
+et elle se replie a nouveau chaque fois qu'on la range.
+
+Sortie de la benne, elle s'ouvre en touchant le sol. C'est la meme regle que le portage : fermee dans les mains,
+ouverte des qu'on la pose. Une echelle fermee sur une pelouse ne sert a rien.
+
+LE REPLI A UN SEUL PROPRIETAIRE MAINTENANT, `LadderFoldUtils`. Le portage et le camion chargeaient chacun leur
+piste sur le meme Animator : deux pistes de la meme animation, a priorite egale, donnent une MOYENNE des deux
+poses. Une seule piste par echelle rend ca impossible. Au passage, les marqueurs ne se rebranchent plus a chaque
+repli.
+
+LE VOL REND SES JOINTS A L'ECHELLE EN ARRIVANT. Le trajet ancre toutes ses parts pour que rien ne tombe en route,
+et une part ancree ignore son Motor6D : sans ca l'animation tournait dans le vide.
+
+DEPEND DE LA MAP : l'echelle doit etre dans `ObjectsTools` du camion et s'appeler `Escabaut...`. Si ce n'est pas
+le cas, la console dit au demarrage ce qu'il y a dans la benne.
+
 ## 0.0.793 — Le clic droit n'ouvre plus le camion
 
 C'etait `KeyboardKeyCode = Enum.KeyCode.None`, pose en 0.0.787 pour empecher Roblox d'ecouter `E` tout seul.

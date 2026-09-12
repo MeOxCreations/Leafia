@@ -15,16 +15,13 @@ local TweenService = game:GetService("TweenService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local DropEffectUtils = require(ReplicatedStorage.Modules.Utils.DropEffectUtils)
 
-local LADDER_PREFIX = "Escabaut"
+local LADDER_PREFIX = LadderFoldUtils.PREFIX
 local MAX_DIST = 30 -- distance MAX joueur <-> echelle a la prise (anti-triche)
--- Anim de l'echelle : une seule piste, deux temps balises par deux marqueurs. Meme chemin que le client.
-local ANIM_FOLDER = { "Animations", "Tools", "Ladder", "ModelAnimate" }
-local MODEL_ANIM = "ActionLadderAnimation"
-local CLOSE_EVENT = "FermerEvenement" -- echelle REPLIEE : on fige la
-local OPEN_EVENT = "LadderOpenEndEvent" -- echelle DEPLIEE (fin) : on stoppe
-local CLOSED_ATTR = "LeafiaLadderClosed" -- true = repliee (le client le lit)
+-- LE REPLI VIT DANS `LadderFoldUtils`, plus ici. Le camion s'en sert aussi (l'echelle est rangee fermee dans la
+-- benne) et deux pistes chargees sur le meme Animator se MELANGERAIENT. Une seule piste par echelle, la-bas.
 -- ROTATION de l'echelle portee (touche R). On tween le C0 du weld -> l'echelle tourne pour TOUS (le weld est
 -- serveur). Toggle entre l'orientation de base et une rotation de 180 degres autour de la VERTICALE (Y du repere
 -- de l'echelle). Si l'echelle tourne autour du mauvais axe, changer l'axe ici (ex : math.pi sur Z).
@@ -43,7 +40,6 @@ type CarryState = {
 	humanoid: Humanoid?,
 	platformStand: boolean,
 	weld: Weld?,
-	foldTrack: AnimationTrack?,
 	-- ROTATION : C0 de base (non tourne), etat retourne courant, et le tween en cours (pour l'annuler a la repose
 	-- ou a un nouveau R). On repart toujours de baseC0 : pas d'accumulation qui deriverait au fil des rotations.
 	baseC0: CFrame,
@@ -67,33 +63,6 @@ end
 
 local function ladderRootPart(model: Model): BasePart?
 	return model.PrimaryPart or (model:FindFirstChild("RootPart") :: BasePart?)
-end
-
-local function resolveModelAnim(): Animation?
-	local node: Instance = ReplicatedStorage
-	for _, part in ipairs(ANIM_FOLDER) do
-		local child = node:FindFirstChild(part)
-		if not child then
-			return nil
-		end
-		node = child
-	end
-	local anim = node:FindFirstChild(MODEL_ANIM)
-	return if anim and anim:IsA("Animation") then anim else nil
-end
-
--- Animator de l'echelle (elle a son propre Humanoid). Cree s'il manque.
-local function getLadderAnimator(model: Model): Animator?
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	if not humanoid then
-		return nil
-	end
-	local animator = humanoid:FindFirstChildOfClass("Animator")
-	if not animator then
-		animator = Instance.new("Animator")
-		animator.Parent = humanoid
-	end
-	return animator
 end
 
 -- Retire le weld, coupe la vitesse, restaure l'etat d'origine (root re-ancre, enfants restaures) et fige la position.
@@ -157,7 +126,6 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 		humanoid = nil,
 		platformStand = false,
 		weld = nil,
-		foldTrack = nil,
 		baseC0 = CFrame.identity,
 		rotated = false,
 		rotateTween = nil,
@@ -208,46 +176,17 @@ local function grab(player: Player, model: Model, c0: CFrame?)
 	-- On CHARGE la piste de repli des la prise (sans la jouer) : au "close" (~0.23s plus tard) elle sera prete,
 	-- marqueurs inclus. Sinon, a la 1re prise de la session, l'asset n'est pas encore charge cote serveur et les
 	-- marqueurs (FermerEvenement) ne tirent pas -> l'anim jouerait EN ENTIER au lieu de se figer repliee.
-	local animator = getLadderAnimator(model)
-	local anim = resolveModelAnim()
-	if animator and anim then
-		state.foldTrack = animator:LoadAnimation(anim)
-	end
+	LadderFoldUtils.track(model)
 end
 
--- REPLI ("close", au marqueur de prise) : on joue la piste (chargee/chauffee au grab) 0 -> CLOSE_EVENT et on la fige.
--- Jouee cote serveur -> se replique a tous.
+-- REPLI ("close", au marqueur de prise). Le geste lui-meme est dans `LadderFoldUtils` : ici on ne fait que
+-- verifier que c'est bien LE porteur qui le demande.
 local function foldClose(player: Player, model: Model)
 	local state = carried[model]
 	if not state or state.owner ~= player then
 		return
 	end
-	local mt = state.foldTrack
-	if not mt then
-		-- Repli : l'Animator n'etait pas pret au grab. On charge maintenant (repli).
-		local animator = getLadderAnimator(model)
-		local anim = resolveModelAnim()
-		if not (animator and anim) then
-			warn(`[LadderMoveService] Repli impossible (animator ou anim absent) : {model.Name}`)
-			return
-		end
-		mt = animator:LoadAnimation(anim)
-		state.foldTrack = mt
-	end
-	if mt.IsPlaying then
-		return -- deja en train de se replier
-	end
-	mt.Looped = false
-	mt:GetMarkerReachedSignal(CLOSE_EVENT):Connect(function()
-		mt:AdjustSpeed(0) -- fige replie
-		model:SetAttribute(CLOSED_ATTR, true)
-	end)
-	mt:GetMarkerReachedSignal(OPEN_EVENT):Connect(function()
-		mt:Stop(0.1) -- deplie : on lache l'anim
-		model:SetAttribute(CLOSED_ATTR, false)
-	end)
-	mt:Play()
-	mt.TimePosition = 0
+	LadderFoldUtils.fold(model)
 end
 
 -- REPOSE ("place") : on retire le weld et on re-ancre SUR PLACE, puis on DEPLIE (l'anim tourne sur l'echelle ancree :
@@ -257,18 +196,13 @@ local function place(player: Player, model: Model)
 	if not state or state.owner ~= player then
 		return
 	end
-	local mt = state.foldTrack
 	unweld(state, model)
 	carried[model] = nil
 	CarryUtils.release(player, "Ladder")
 	-- LA POUSSIERE PART ICI, apres le `unweld` : avant, l'echelle est encore soudee au porteur et sa boite
 	-- englobante est celle qu'elle a DANS SES MAINS -- l'effet sortirait au niveau de son torse.
 	DropEffectUtils.broadcastUnder(model)
-	if mt then
-		mt:AdjustSpeed(1) -- repart de CLOSE_EVENT vers OPEN_EVENT : depli
-	else
-		model:SetAttribute(CLOSED_ATTR, false)
-	end
+	LadderFoldUtils.unfold(model)
 end
 
 -- RELACHE IMMEDIAT ("release") : mort / respawn / depart. On retire le weld et on re-ancre, sans depli.
@@ -277,9 +211,7 @@ local function releaseImmediate(player: Player, model: Model)
 	if not state or state.owner ~= player then
 		return
 	end
-	if state.foldTrack then
-		state.foldTrack:Stop(0)
-	end
+	LadderFoldUtils.stop(model)
 	unweld(state, model)
 	carried[model] = nil
 	CarryUtils.release(player, "Ladder")
@@ -386,14 +318,7 @@ function LadderMoveService.init()
 	-- PRECHARGE l'anim de l'echelle au demarrage : sans ca, la 1re prise de la session trouve l'asset pas encore
 	-- charge cote serveur et ses marqueurs (FermerEvenement) ne tirent pas -> le repli jouerait en entier. On le fait
 	-- dans un thread a part (PreloadAsync yield) : aucune raison de retarder le demarrage du serveur.
-	task.spawn(function()
-		local anim = resolveModelAnim()
-		if anim then
-			pcall(function()
-				game:GetService("ContentProvider"):PreloadAsync({ anim })
-			end)
-		end
-	end)
+	task.spawn(LadderFoldUtils.preload)
 
 	local function releaseAllOf(player: Player)
 		for model, state in pairs(carried) do

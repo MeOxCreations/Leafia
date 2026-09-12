@@ -1173,6 +1173,22 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   plausible. Regle : une mesure qui elimine un camp ne designe pas un coupable dans l'autre. Et quand une feature
   deraille alors que sa jumelle va bien, comparer les deux AVANT tout le reste.
 
+- **UN OBJET QU'ON ANCRE POUR LE TRANSPORTER NE PEUT PLUS S'ANIMER A L'ARRIVEE tant qu'on ne LUI REND PAS ses
+  joints.** Le vol depuis la benne du camion ancre toutes les parts du modele pour que rien ne tombe en route --
+  necessaire -- mais une part ancree ignore son Motor6D, donc l'echelle arrivait figee dans la pose du depart et
+  l'anim de repli tournait dans le vide. Le bon partage pour un rig pose au sol est exactement : RACINE ANCREE,
+  tout le reste LIBRE. Les deux extremes tombent, et pour des raisons opposees -- tout ancre = rien ne bouge, tout
+  libre = le modele s'ecroule. Ce partage doit etre REPOSE a chaque fois qu'un autre systeme a touche aux
+  ancrages, pas suppose acquis.
+- **DEUX SERVICES QUI CHARGENT CHACUN LEUR PISTE SUR LE MEME `Animator` NE SE RELAIENT PAS : ILS SE MELANGENT.**
+  Le portage referme l'echelle, le camion la range fermee : deux `LoadAnimation` de la MEME animation, donc deux
+  pistes a priorite egale, donc une moyenne des deux poses. La sortie n'est pas de coordonner les appels, c'est
+  qu'une seule chose possede la piste -- un module qui garde UNE piste par modele et que les deux services
+  appellent. Meme raison que `CarryUtils` pour les mains : une seule question, une seule reponse. Corollaire
+  utile : une animation qui raconte un geste et son inverse (fermer puis rouvrir) se pilote par la VITESSE d'une
+  piste unique -- on avance jusqu'au marqueur du milieu, on fige a 0, on repart a 1 -- jamais par deux animations
+  qu'il faudrait ensuite empecher de se croiser.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
