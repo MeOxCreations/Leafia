@@ -860,26 +860,26 @@ return {
 
 	-- ET S'IL ATTEND POUR RIEN, IL APPELLE. Le joueur qui ne comprend pas qu'il faut suivre voit un vieux
 	-- monsieur plante au milieu du jardin : sans un mot, rien ne lui dit que c'est LUI qu'on attend.
-	-- CINQ FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
+	-- QUATRE FACONS D'APPELER, tirees au hasard et jamais deux fois la meme d'affilee. Il peut attendre longtemps :
 	-- entendre la meme phrase toutes les neuf secondes transformerait le personnage en alarme.
 	--
-	-- LA SIXIEME EST DANS CE TIRAGE, pas dans la colere : "Let's go ?" relance, il ne reproche rien. Le numero du
-	-- fichier ne dit pas son ton -- c'est la liste ou il est range qui le dit.
+	-- CELLES-CI SONT PATIENTES : il ne comprend pas ce que fait le joueur, il n'est pas encore agace. C'est ce ton
+	-- qui va avec le point d'interrogation au-dessus de sa tete.
 	WAIT_PLAYER_SOUNDS = {
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_2" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_3" },
 		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_4" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_6" },
 	},
-	-- ET LA CINQUIEME, RESERVEE A L'ATTENTE QUI DURE. Elle n'est PAS dans le tirage : une phrase qui dit "bon, tu
-	-- viens ?" perd tout si elle sort au premier appel. Elle se merite, donc elle se garde.
-	WAIT_PLAYER_ANGRY_SOUND = {
-		"Sounds",
-		"Scenes",
-		"Scene1",
-		"Voices",
-		"Oldman_scene_speech_Say_wait_player_5",
+	-- ET LES AGACEES, RESERVEES A L'ATTENTE QUI DURE, avec l'eclair au-dessus de sa tete. Elles ne sont PAS dans
+	-- le tirage d'au-dessus : "bon, tu viens ?" perd tout si ca sort au premier appel. Ca se merite.
+	--
+	-- LE TON DECIDE DE LA LISTE, PAS LE NUMERO DU FICHIER. `_6` dit "Let's go ?" sur un ton impatient : il est donc
+	-- ici, entre `_5` et lui, et pas avec les patientes -- un point d'interrogation au-dessus de quelqu'un qui
+	-- s'agace dirait le contraire de ce qu'on entend.
+	WAIT_PLAYER_ANGRY_SOUNDS = {
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_5" },
+		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_6" },
 	},
 	-- Au bout de combien de secondes d'immobilite il passe a celle-la, et a la colere en image.
 	WAIT_PLAYER_ANGRY_AFTER = 22,

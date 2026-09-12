@@ -114,6 +114,7 @@ local lastSpot: Vector3? = nil
 local stillSince = 0
 local nextWaitCallAt = 0
 local lastWaitCall = 0
+local lastAngryCall = 0
 -- ===== L'ETAPE DE LA HAIE =====
 -- ELLE DEMARRE QUAND LA CISAILLE EST EN MAIN, pas a l'ouverture du camion : c'est le geste du joueur qui la
 -- declenche. `hedgeModel` est GARDE une fois choisi -- re-choisir la plus proche a chaque image ferait sauter le
@@ -2272,15 +2273,20 @@ local function step(dt: number)
 				-- comprend pas -- c'est le point d'interrogation. Le dessin dit son humeur sans un mot, donc il
 				-- marche pour un joueur de dos, loin, ou qui a coupe le son : et sur Roblox ils sont nombreux.
 				local angry = now - stillSince >= TutorialConfigs.WAIT_PLAYER_ANGRY_AFTER
-				if angry then
-					sayVoice(TutorialConfigs.WAIT_PLAYER_ANGRY_SOUND)
-				else
-					local lines = TutorialConfigs.WAIT_PLAYER_SOUNDS
-					local i = pickLine(lines, lastWaitCall)
-					if i > 0 then
+				-- LE MEME TIRAGE POUR LES DEUX TONS, avec sa propre memoire : deux listes, deux "derniere phrase
+				-- dite". Une seule memoire partagee ferait croire a un doublon en passant d'un ton a l'autre.
+				local lines = if angry
+					then TutorialConfigs.WAIT_PLAYER_ANGRY_SOUNDS
+					else TutorialConfigs.WAIT_PLAYER_SOUNDS
+				local last = if angry then lastAngryCall else lastWaitCall
+				local i = pickLine(lines, last)
+				if i > 0 then
+					if angry then
+						lastAngryCall = i
+					else
 						lastWaitCall = i
-						sayVoice(lines[i])
 					end
+					sayVoice(lines[i])
 				end
 				local anchor = grandpaBody()
 				if anchor then

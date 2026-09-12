@@ -2204,11 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
-## 0.0.786 — Une cinquieme facon d'appeler le joueur qui ne suit pas
+## 0.0.786 — Une deuxieme replique agacee quand l'attente dure
 
-`Say_wait_player_6` ("Let's go ?") entre dans le tirage des appels patients, pas dans la colere : elle relance,
-elle ne reproche rien. Le numero du fichier ne dit pas son ton -- c'est la liste ou il est range qui le dit, et
-`_5` reste la seule reservee a l'attente qui dure.
+`Say_wait_player_6` ("Let's go ?") est dite sur un ton impatient : elle rejoint donc `_5` du cote AGACE, avec
+l'eclair, et pas le tirage des appels patients. Un point d'interrogation au-dessus de quelqu'un qui s'agace dirait
+le contraire de ce qu'on entend.
+
+LE TON DECIDE DE LA LISTE, PAS LE NUMERO DU FICHIER. Les deux listes ont maintenant chacune leur tirage et leur
+memoire de "derniere phrase dite" : une memoire partagee ferait croire a un doublon en passant d'un ton a l'autre.
 
 ### A faire dans Studio
 
