@@ -1116,6 +1116,18 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   vertical deguise. Corrige dans `WorldAnchor` pour tous ses clients d'un coup -- la jauge de competence avait le
   meme defaut sans que personne l'ait remarque.
 
+- **UN `ProximityPrompt` ECOUTE SA TOUCHE LUI-MEME : il ignore tout arbitrage, meme celui qu'on a construit.**
+  Le camion en utilise un (en `Style = Custom`, pour qu'on dessine notre propre pilule). Resultat : le joueur
+  voyait le badge du SEAU, appuyait sur `E`, et le CAMION s'ouvrait -- parce qu'il etait a portee, sans rien
+  afficher. Symptome trompeur : on vient de faire suivre la touche au badge dans les six controllers, donc on
+  croit le probleme resolu -- sauf que celui-la ne passe pas par ContextActionService, il est cable dans le
+  moteur. Fix : `KeyboardKeyCode = Enum.KeyCode.None` (et non `Unknown`, renomme), garder le prompt pour ce
+  qu'il fait bien (la proximite, et le tap mobile qu'on declenche par `InputHoldBegin` / `InputHoldEnd`), et
+  binder la touche cote client derriere le meme test d'appartenance que les autres. Regle generale : quand on
+  centralise une regle, chercher qui la contourne SANS passer par le chemin qu'on vient de corriger -- ici le
+  moteur lui-meme. Corollaire : le nom de la touche affichee ne peut plus venir du prompt (il vaut `None`), il
+  passe en config -- afficher "E" en ecoutant autre chose serait un mensonge a l'ecran.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

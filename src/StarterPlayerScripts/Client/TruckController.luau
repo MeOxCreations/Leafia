@@ -6,6 +6,7 @@
 --
 -- La pilule se met du cote de la porte OPPOSE au joueur, pour ne pas tomber sur son personnage.
 
+local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
@@ -17,6 +18,45 @@ local TruckController = {}
 
 local player = Players.LocalPlayer
 local activeAnchor: BasePart? = nil
+-- LE PROMPT COURANT, garde pour pouvoir le declencher A LA MAIN. Roblox n'ecoute plus sa touche : c'est nous qui
+-- la branchons, derriere le test d'appartenance du badge.
+local activePrompt: ProximityPrompt? = nil
+local bound = false
+
+--- Declenche l'ouverture. `InputHoldEnd` JUSTE APRES le `Begin`, sinon le prompt reste "maintenu" et les appuis
+--- suivants tombent dans le vide.
+local function trigger()
+	local prompt = activePrompt
+	if prompt and prompt.Parent then
+		prompt:InputHoldBegin()
+		prompt:InputHoldEnd()
+	end
+end
+
+--- Branche ou debranche la touche. Branchee seulement tant que le camion est a portee : une touche qui repond
+--- partout finit par repondre a la place d'une autre.
+local function setBound(active: boolean)
+	if active == bound then
+		return
+	end
+	bound = active
+	if active then
+		ContextActionService:BindAction(TruckConfigs.ACTION_NAME, function(_, state: Enum.UserInputState)
+			-- LA TOUCHE SUIT LE BADGE. `E` est partagee par le seau, la tondeuse, l'echelle et la porte du
+			-- grand-pere : sans ce test, se tenir pres du camion l'ouvrait meme quand le badge affiche montrait
+			-- un seau -- et c'est exactement ce qui arrivait, parce qu'un ProximityPrompt ecoute sa touche
+			-- lui-meme, sans rien demander a personne.
+			if state == Enum.UserInputState.Begin and InteractionPrompt.owns(activeAnchor) then
+				trigger()
+			end
+			-- `Pass` et pas `Sink` : les voisines doivent recevoir l'appui elles aussi, chacune fera son propre
+			-- test. Avaler l'input ici les casserait.
+			return Enum.ContextActionResult.Pass
+		end, true, TruckConfigs.PROMPT_KEYCODE)
+	else
+		ContextActionService:UnbindAction(TruckConfigs.ACTION_NAME)
+	end
+end
 
 local function getRoot(): BasePart?
 	local character = player.Character
@@ -35,6 +75,8 @@ function TruckController.init()
 			return
 		end
 		activeAnchor = anchor :: BasePart
+		activePrompt = prompt
+		setBound(true)
 
 		-- DU COTE OPPOSE AU JOUEUR. Pile derriere le camion, une pilule centree tombe sur le personnage et on ne
 		-- voit plus ni l'un ni l'autre. On la decale du cote ou il n'est pas.
@@ -52,15 +94,14 @@ function TruckController.init()
 
 		InteractionPrompt.show(
 			anchor :: BasePart,
-			prompt.KeyboardKeyCode.Name,
+			-- LA TOUCHE AFFICHEE VIENT DE LA CONFIG, plus du prompt : il n'en a plus (Roblox ne doit pas
+			-- l'ecouter), et lire `Unknown` ecrirait ca sur la pilule.
+			TruckConfigs.PROMPT_KEY,
 			prompt.ActionText,
 			Vector3.new(side, TruckConfigs.PROMPT_HEIGHT, 0),
-			function()
-				-- Tap / clic : on declenche le ProximityPrompt. `InputHoldEnd` JUSTE APRES, sinon il reste
-				-- "maintenu" et les appuis suivants tombent dans le vide.
-				prompt:InputHoldBegin()
-				prompt:InputHoldEnd()
-			end,
+			-- Tap / clic : le meme chemin que la touche. Le badge est a nous par definition quand on tape dessus,
+			-- donc il n'y a rien a tester ici.
+			trigger,
 			prompt.ObjectText,
 			true -- offset relatif a la camera
 		)
@@ -74,6 +115,8 @@ function TruckController.init()
 		-- features : `hide()` jetterait aussi les leurs, et celles encore a portee ne reviendraient jamais.
 		InteractionPrompt.release(activeAnchor)
 		activeAnchor = nil
+		activePrompt = nil
+		setBound(false)
 	end)
 end
 

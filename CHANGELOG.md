@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.787 — Le camion ne s'ouvre plus quand on appuie sur E devant un seau
+
+Le badge affichait `BUCKET / TAKE`, on appuyait sur `E`, et le CAMION s'ouvrait. Sa pilule passe par notre
+arbitrage, mais sa TOUCHE non : c'est un `ProximityPrompt` Roblox, et un prompt ecoute sa touche LUI-MEME, a
+portee, sans rien demander a personne.
+
+Il n'ecoute plus rien (`KeyboardKeyCode = None`). On garde le prompt pour ce qu'il fait bien -- la detection de
+proximite, et le tap mobile qu'on declenche par `InputHoldBegin` / `InputHoldEnd` -- et le CLIENT branche `E`
+derriere le meme test d'appartenance du badge que les cinq autres features.
+
+C'ETAIT LE TROU RESTANT DE 0.0.741. On avait fait suivre la touche au badge dans tous les controllers, donc le
+probleme semblait clos -- sauf que celui-la ne passe pas par ContextActionService, il est cable dans le moteur.
+Regle notee dans le journal : quand on centralise une regle, chercher qui la contourne SANS emprunter le chemin
+qu'on vient de corriger.
+
+Le nom de la touche affichee vient maintenant de la config : le prompt n'en a plus, et lire `None` l'aurait ecrit
+sur la pilule.
+
 ## 0.0.786 — Une deuxieme replique agacee quand l'attente dure
 
 `Say_wait_player_6` ("Let's go ?") est dite sur un ton impatient : elle rejoint donc `_5` du cote AGACE, avec

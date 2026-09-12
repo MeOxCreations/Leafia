@@ -15,6 +15,13 @@ local TruckConfigs = {
 	PROMPT_NAME = "TruckPrompt",
 	-- EN ANGLAIS, comme tout texte vu par le joueur : le traducteur de Roblox part de l'anglais.
 	PROMPT_ACTION = "OPEN",
+	-- LA TOUCHE, ET SON NOM AFFICHE. Le `ProximityPrompt` ne l'ecoute PLUS (il ouvrait le camion pendant qu'on
+	-- lisait le badge d'un seau) : c'est le client qui la branche, derriere le test d'appartenance du badge.
+	-- Les deux vont ensemble -- afficher "E" en ecoutant autre chose serait un mensonge a l'ecran.
+	PROMPT_KEY = "E",
+	PROMPT_KEYCODE = Enum.KeyCode.E,
+	-- Le nom de l'action liee a la touche. Deux features qui partagent un nom se debranchent l'une l'autre.
+	ACTION_NAME = "LeafiaTruckOpen",
 	PROMPT_OBJECT = "TRUCK",
 	-- Distance d'activation, en studs. Genereuse : on s'approche du camion avec une tondeuse devant soi.
 	PROMPT_DISTANCE = 12,

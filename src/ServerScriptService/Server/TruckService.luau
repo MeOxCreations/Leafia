@@ -119,7 +119,14 @@ local function setup(model: Model)
 	prompt.Name = TruckConfigs.PROMPT_NAME -- le client le reconnait pour dessiner la pilule a la place
 	prompt.ActionText = TruckConfigs.PROMPT_ACTION
 	prompt.ObjectText = TruckConfigs.PROMPT_OBJECT
-	prompt.KeyboardKeyCode = Enum.KeyCode.E
+	-- LA TOUCHE N'EST PAS CONFIEE A ROBLOX, et c'est un bug qu'on vient de payer. Un `ProximityPrompt` ecoute sa
+	-- touche LUI-MEME, hors de tout arbitrage : le joueur voyait le badge du SEAU, appuyait sur `E`, et le camion
+	-- s'ouvrait -- parce qu'il etait a portee, meme sans rien afficher.
+	--
+	-- On garde le prompt pour ce qu'il fait bien (la proximite, et le tap mobile qu'on declenche a la main), et le
+	-- CLIENT branche `E` derriere le test d'appartenance du badge, comme les cinq autres features. Le nom de la
+	-- touche affichee vient d'ici : `PROMPT_KEY`, lu par le client.
+	prompt.KeyboardKeyCode = Enum.KeyCode.None
 	prompt.HoldDuration = 0 -- appui simple, pas de maintien
 	prompt.MaxActivationDistance = TruckConfigs.PROMPT_DISTANCE
 	-- La porte peut etre partiellement masquee par la carrosserie ou un outil pose devant : ne pas exiger la ligne
