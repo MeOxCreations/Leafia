@@ -138,6 +138,10 @@ local function setup(model: Model)
 	prompt.Parent = door
 
 	prompt.Triggered:Connect(function(_player: Player)
+		-- SONDE TEMPORAIRE : le prompt a bien ete declenche, et par qui. Si cette ligne sort SANS la sonde du
+		-- client, c'est que Roblox l'a declenche lui-meme -- donc que quelque chose l'ecoute encore malgre
+		-- `KeyboardKeyCode = None`. A retirer des que la cause est connue.
+		print(`[TruckService] Prompt declenche par {_player.Name}.`)
 		-- UNE BASCULE, et rien de plus : le meme appui ouvre et referme. Aucun etat a valider -- le pire qu'un
 		-- joueur puisse faire est d'ouvrir une porte de camion.
 		truck.open = not truck.open
