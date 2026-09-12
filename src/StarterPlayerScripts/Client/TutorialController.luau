@@ -215,6 +215,8 @@ local lawnDoneRemote: RemoteEvent? = nil
 -- grand-pere bouge cote SERVEUR (c'est un objet du monde), mais c'est ICI qu'on sait quand la voix se termine.
 local faceRemote: RemoteEvent? = nil
 local truckRemote: RemoteEvent? = nil
+-- ET IL OUVRE LA MARCHE VERS LA HAIE quand la cisaille arrive en main.
+local hedgeRemote: RemoteEvent? = nil
 -- JUSQU'A QUAND IL PARLE, en horloge. Chaque replique la repousse, et la plus lointaine gagne -- meme mecanique
 -- que le geste d'explication cote serveur, et pour la meme raison : deux minuteurs separes laisseraient le
 -- premier a expirer decider a la place des autres.
@@ -1220,7 +1222,7 @@ local function sayVoice(path: { string }): Sound?
 	return speechSound
 end
 
--- DEUX REPLIQUES QUI SE SUIVENT SANS TROU.
+-- UNE SUITE DE REPLIQUES QUI S'ENCHAINENT SANS TROU.
 --
 -- LA SECONDE PART SUR LA FIN REELLE DE LA PREMIERE (`Ended`), jamais sur une duree ecrite quelque part : une
 -- duree en config se decale au premier reenregistrement, et personne ne fait le lien des mois plus tard.
@@ -1228,11 +1230,18 @@ end
 -- ET UN FILET. `Ended` ne tire pas si le fichier ne se charge JAMAIS (asset absent, reseau qui rate) : la seconde
 -- replique serait alors perdue pour de bon. Au bout de `SPEECH_CHAIN_TIMEOUT` on la lance quand meme.
 --
--- Le garde `chained` sert au cas ou les deux chemins tirent : la suite ne part qu'une fois.
+-- Le garde `chained` sert au cas ou les deux chemins tirent : la suite ne part qu'une fois. Et la fonction
+-- s'appelle ELLE-MEME pour la suivante : deux repliques ou cinq, c'est le meme code -- une version "paire" aurait
+-- ete a reecrire le jour ou une troisieme est arrivee, ce qui est arrive.
 --
 -- Note : la paire d'ouverture de la scene (juste en dessous) garde sa propre version. Sa seconde replique a son
 -- drapeau a elle parce que DEUX chemins peuvent la lancer ; la faire passer par ici lui retirerait ce garde.
-local function sayThen(path: { string }, nextPath: { string })
+local function sayChain(paths: { { string } }, index: number?)
+	local at = index or 1
+	local path = paths[at]
+	if not path then
+		return
+	end
 	local voice = sayVoice(path)
 	local chained = false
 	local function follow()
@@ -1240,18 +1249,18 @@ local function sayThen(path: { string }, nextPath: { string })
 			return
 		end
 		chained = true
-		sayVoice(nextPath)
+		sayChain(paths, at + 1)
 	end
 	if not voice then
-		follow() -- premiere replique introuvable : la consigne compte plus que l'ordre
+		follow() -- replique introuvable : la suivante compte plus que l'ordre
 		return
 	end
-	local first = voice :: Sound
-	first.Ended:Once(function()
+	local current = voice :: Sound
+	current.Ended:Once(function()
 		task.delay(TutorialConfigs.SPEECH_GAP, follow)
 	end)
 	task.delay(TutorialConfigs.SPEECH_CHAIN_TIMEOUT, function()
-		if not first.IsLoaded then
+		if not current.IsLoaded then
 			follow()
 		end
 	end)
@@ -2290,6 +2299,12 @@ local function step(dt: number)
 	if saidTruckOpened and not hedgeStepOn and heldToolName() == TutorialConfigs.SHEAR_TOOL_NAME then
 		hedgeStepOn = true
 		sayVoice(TutorialConfigs.SHEAR_SOUND)
+		-- ET IL Y VA. Il ouvre la marche pendant qu'il le dit : une consigne donnee en restant plante au camion
+		-- laisserait le joueur chercher LAQUELLE de haie, alors que le grand-pere est deja en train de lui montrer.
+		local hedge = hedgeRemote
+		if hedge then
+			hedge:FireServer()
+		end
 		-- LA HAIE EST CHOISIE ICI, UNE FOIS : celle qui est la plus proche a l'instant ou il prend l'outil. Le
 		-- garder evite que le marqueur saute d'une haie a l'autre quand le joueur marche entre les deux.
 		local me = getRoot()
@@ -2769,6 +2784,9 @@ function TutorialController.init()
 	resolve("TutorialGrandpaTruck", function(r)
 		truckRemote = r
 	end)
+	resolve("TutorialGrandpaHedge", function(r)
+		hedgeRemote = r
+	end)
 	-- IL EST ARRIVE AU CAMION : c'est le serveur qui le dit, lui seul calcule sa marche.
 	-- LE JOUEUR OUVRE LE HAYON : le grand-pere commente ce qu'on y voit.
 	--
@@ -2783,9 +2801,13 @@ function TutorialController.init()
 			return
 		end
 		saidTruckOpened = true
-		-- CE QU'IL VOIT, PUIS LA CONSIGNE. Les deux se suivent sans trou : la seconde attend la fin REELLE de la
-		-- premiere, pas une duree qu'on aurait notee quelque part.
-		sayThen(TutorialConfigs.TRUCK_OPENED_SOUND, TutorialConfigs.EXPLAIN_TOOL_SOUND)
+		-- CE QU'IL VOIT, LA CONSIGNE, PUIS LA DEMANDE. Les trois se suivent sans trou : chacune attend la fin
+		-- REELLE de la precedente, pas une duree qu'on aurait notee quelque part.
+		sayChain({
+			TutorialConfigs.TRUCK_OPENED_SOUND,
+			TutorialConfigs.EXPLAIN_TOOL_SOUND,
+			TutorialConfigs.GRAB_SHEAR_SOUND,
+		})
 		-- ET LE MARQUEUR A FINI SON TRAVAIL. Il disait "ce cote-la, celui qui s'ouvre" : une fois ouvert, il ne
 		-- designe plus rien. Il ne revient pas si le joueur referme -- la question a deja eu sa reponse.
 		--

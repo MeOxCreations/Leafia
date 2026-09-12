@@ -65,6 +65,9 @@ local REMOTES: { { any } } = {
 	-- IL EST ARRIVE AU CAMION. Dans l'autre sens : sa marche est calculee cote SERVEUR (c'est lui qui la joue
 	-- pour tout le monde), donc lui seul sait quand elle se termine -- et c'est le CLIENT qui joue les voix.
 	{ "TutorialGrandpaAtTruck", E, "Tutorial" },
+	-- LA CISAILLE EST EN MAIN : il part vers la haie. Le client le sait (c'est lui qui voit l'outil arriver dans
+	-- les mains), le grand-pere marche cote serveur -- il faut donc le lui dire.
+	{ "TutorialGrandpaHedge", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

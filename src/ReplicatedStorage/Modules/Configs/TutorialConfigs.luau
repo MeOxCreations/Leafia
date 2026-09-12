@@ -606,6 +606,9 @@ return {
 	-- ET IL ENCHAINE SUR LA CONSIGNE : ne pas oublier ses outils sur le terrain avant de partir chez le client.
 	-- Elle part des que la precedente a fini de parler, sans qu'aucune duree soit ecrite nulle part.
 	EXPLAIN_TOOL_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_ExplainToolTruck" },
+	-- PUIS IL DEMANDE LA CISAILLE. Troisieme replique de la meme suite : l'ouverture du hayon en declenche UNE,
+	-- et les trois s'enchainent sur leurs fins reelles -- aucune duree ecrite nulle part.
+	GRAB_SHEAR_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GrabTheShear" },
 
 	-- ===== LA HAIE, AVEC LA CISAILLE EN MAIN =====
 	-- Sa replique part quand le joueur EQUIPE la cisaille, pas quand il ouvre le camion : c'est le geste d'avoir
@@ -821,6 +824,15 @@ return {
 	-- OU IL VA APRES AVOIR FELICITE LE JOUEUR : l'arriere du camion, ou sont les outils. Une part posee dans
 	-- Studio, comme son point de sortie -- deplacer le camion n'oblige alors a toucher aucune ligne de code.
 	OLDMAN_TRUCK_TARGET = "OldManWalkToTruck",
+	-- ET OU IL VA ENSUITE : la haie. Deux parts, parce que le trajet n'est PAS une ligne droite -- un buisson est
+	-- en travers, et il le traverserait.
+	--
+	-- `VIA` N'EST PAS UN POINT DE PASSAGE : c'est le point de CONTROLE d'une courbe de Bezier. Le trajet ne passe
+	-- donc pas dessus, il est TIRE vers lui -- le mettre pile a cote du buisson courbe le chemin autour. C'est
+	-- voulu : une courbe se regle a la souris en tirant un point, alors qu'une suite d'etapes obligerait a poser
+	-- une part tous les trois metres.
+	OLDMAN_HEDGE_VIA = "OldManWalkToHedgeBezierCurveMiddle",
+	OLDMAN_HEDGE_TARGET = "OldManWalkToHedgeFinal",
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.

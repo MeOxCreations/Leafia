@@ -461,7 +461,36 @@ end
 --- `onStart` tire quand il se met REELLEMENT en marche, c'est-a-dire une fois tous les controles passes. Un
 --- appelant qui lancerait son geste avant saurait seulement qu'il l'a DEMANDE : le modele peut etre introuvable,
 --- la cible absente, une marche deja en cours -- et le geste partirait dans le vide.
-local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart: ((Model) -> ())?)
+--- UN POINT DE LA COURBE DE BEZIER QUADRATIQUE, de `a` a `c` en etant TIRE vers `b`.
+---
+--- Le trajet ne passe PAS par `b` : il s'en approche. C'est ce qui permet de contourner un obstacle en posant un
+--- seul point A COTE de lui, au lieu d'une suite d'etapes a poser tous les trois metres.
+local function curveAt(a: Vector3, b: Vector3, c: Vector3, t: number): Vector3
+	local u = 1 - t
+	return a * (u * u) + b * (2 * u * t) + c * (t * t)
+end
+
+--- LA DIRECTION DE LA COURBE a cet instant -- sa derivee, a plat.
+---
+--- C'est ELLE qui donne son cap : un marcheur regarde ou il VA. Prendre la direction du point d'arrivee ferait
+--- avancer de cote pendant tout le virage, exactement le defaut deja corrige sur sa marche droite.
+local function curveDir(a: Vector3, b: Vector3, c: Vector3, t: number): Vector3
+	local d = (b - a) * (2 * (1 - t)) + (c - b) * (2 * t)
+	local flat = Vector3.new(d.X, 0, d.Z)
+	return if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, -1)
+end
+
+--- FAIT MARCHER LE GRAND-PERE jusqu'a la part `targetName`.
+---
+--- `viaName` est FACULTATIF : sans lui il va tout droit, avec lui il suit une courbe TIREE vers cette part. Un
+--- buisson en travers du chemin suffit a rendre la ligne droite impossible, et poser un point de controle a cote
+--- de l'obstacle se regle a la souris -- alors qu'un contournement calcule demanderait de connaitre le decor.
+local function walkOldMan(
+	targetName: string,
+	onDone: ((Model) -> ())?,
+	onStart: ((Model) -> ())?,
+	viaName: string?
+)
 	if walking then
 		return
 	end
@@ -502,21 +531,66 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 	local endGround = groundNear(Vector3.new(targetPart.Position.X, from.Position.Y, targetPart.Position.Z), ignore)
 	local endY = if startGround and endGround then from.Position.Y + (endGround - startGround) else from.Position.Y
 	local endPos = Vector3.new(targetPart.Position.X, endY, targetPart.Position.Z)
-	local to = CFrame.lookAt(endPos, endPos + flat.Unit)
-	-- LA MEME ORIENTATION, MAIS AU POINT DE DEPART. Le trajet va de `aim` a `to` : les deux ont le meme cap, donc
-	-- c'est une TRANSLATION PURE -- il avance droit devant lui, dans l'axe de ses jambes.
-	--
-	-- AVANT, LE TRAJET PARTAIT DE `from` : la pose interpolait la position ET l'orientation ensemble, donc il
-	-- partait de cote en pivotant lentement pendant tout le chemin. Ses jambes allaient devant, son corps
-	-- ailleurs -- ca se lit comme si quelque chose le forcait dans une autre direction.
-	local aim = CFrame.lookAt(from.Position, from.Position + flat.Unit)
+
+	-- LE POINT DE CONTROLE, s'il y en a un. A PLAT comme le reste du trajet : sa hauteur ne compte pas, seule sa
+	-- position au sol courbe le chemin. Absent, on garde la ligne droite.
+	local via: Vector3? = nil
+	if viaName then
+		local part = findByName(viaName)
+		if part and part:IsA("BasePart") then
+			via = Vector3.new((part :: BasePart).Position.X, from.Position.Y, (part :: BasePart).Position.Z)
+		else
+			warn(
+				`[Tutorial] Aucune part "{viaName}" : le grand-pere ira tout droit, et traversera ce qu'il y a `
+					.. "sur le chemin. Rojo ne synchronise pas le Workspace."
+			)
+		end
+	end
+
+	-- OU IL EST A CHAQUE INSTANT, ET DANS QUELLE DIRECTION IL REGARDE. Deux fonctions, une seule pour les deux
+	-- cas : la ligne droite est la meme chose sans courbure, donc la boucle plus bas ne connait qu'un seul chemin.
+	local startFlat = Vector3.new(from.Position.X, from.Position.Y, from.Position.Z)
+	local endFlat = Vector3.new(endPos.X, from.Position.Y, endPos.Z)
+	local function pointAt(t: number): Vector3
+		local control = via
+		if control then
+			return curveAt(startFlat, control, endFlat, t)
+		end
+		return startFlat:Lerp(endFlat, t)
+	end
+	local function dirAt(t: number): Vector3
+		local control = via
+		if control then
+			return curveDir(startFlat, control, endFlat, t)
+		end
+		return flat.Unit
+	end
+
+	-- LA LONGUEUR DU CHEMIN, echantillonnee. Une courbe est PLUS LONGUE que la corde qui la sous-tend : garder la
+	-- distance a vol d'oiseau le ferait marcher plus vite sur un trajet courbe, et ses pieds patineraient.
+	local pathLength = 0
+	do
+		local steps = 24
+		local prev = pointAt(0)
+		for i = 1, steps do
+			local here = pointAt(i / steps)
+			pathLength += (here - prev).Magnitude
+			prev = here
+		end
+	end
+
 	-- LE TOUR SUR PLACE D'ABORD, et sa duree suit l'ANGLE : un cap deja bon ne coute rien, un demi-tour prend
 	-- `OLDMAN_TURN_HALF`. Une duree fixe ferait pivoter au ralenti pour trois degres.
+	--
+	-- VERS LA DIRECTION DE DEPART DE LA COURBE, pas vers l'arrivee : sur un trajet courbe, les deux n'ont rien a
+	-- voir -- il partirait de biais et rattraperait en marchant.
+	local firstDir = dirAt(0)
+	local aim = CFrame.lookAt(from.Position, from.Position + firstDir)
 	local look = from.LookVector
 	local lookFlat = Vector3.new(look.X, 0, look.Z)
 	local turnSeconds = 0
 	if lookFlat.Magnitude > 1e-3 then
-		local dot = math.clamp(lookFlat.Unit:Dot(flat.Unit), -1, 1)
+		local dot = math.clamp(lookFlat.Unit:Dot(firstDir), -1, 1)
 		turnSeconds = TutorialConfigs.OLDMAN_TURN_HALF * (math.acos(dot) / math.pi)
 	end
 
@@ -558,7 +632,7 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 
 	-- LA DUREE VIENT DE LA DISTANCE, jamais d'un chiffre pose a la main : deplacer la part dans Studio suffit
 	-- alors a rallonger le trajet, et ses pieds restent d'accord avec son deplacement quoi qu'on change.
-	local seconds = flat.Magnitude / math.max(TutorialConfigs.OLDMAN_WALK_SPEED, 0.1)
+	local seconds = pathLength / math.max(TutorialConfigs.OLDMAN_WALK_SPEED, 0.1)
 
 	if onStart then
 		onStart(model :: Model)
@@ -594,7 +668,14 @@ local function walkOldMan(targetName: string, onDone: ((Model) -> ())?, onStart:
 			-- LINEAIRE, sans adoucissement : une marche a vitesse constante est ce qu'on attend d'un personnage
 			-- qui traverse une piece. Une courbe le ferait accelerer puis ralentir, et ses pieds patineraient aux
 			-- deux bouts -- l'animation, elle, tourne a vitesse fixe.
-			local now = aim:Lerp(to, e)
+			--
+			-- LA HAUTEUR RESTE INTERPOLEE ENTRE LES DEUX BOUTS : seul le chemin AU SOL est courbe. Sonder le sol a
+			-- chaque pas donnerait des marches d'escalier sur un trottoir, alors qu'une pente reguliere se lit
+			-- comme quelqu'un qui monte.
+			local spot = pointAt(e)
+			local y = from.Position.Y + (endY - from.Position.Y) * e
+			local here = Vector3.new(spot.X, y, spot.Z)
+			local now = CFrame.lookAt(here, here + dirAt(e))
 			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
 			if e >= 1 then
 				break
@@ -1245,6 +1326,20 @@ function TutorialService.init()
 				follow(player, model :: Model)
 			end
 		end
+	end)
+
+	-- LA CISAILLE EST EN MAIN : il ouvre la marche vers la haie.
+	--
+	-- UNE MARCHE SCRIPTEE ET PAS UNE ESCORTE, contrairement au camion : la haie est a quelques pas, le joueur a
+	-- l'outil en main et sait ou il va. Le faire attendre a chaque pas ferait trainer la fin du didacticiel.
+	local hedgeRemote = RemoteSetup.getRemote("TutorialGrandpaHedge", "Tutorial") :: RemoteEvent
+	hedgeRemote.OnServerEvent:Connect(function(player)
+		if sceneOwner ~= player then
+			return
+		end
+		-- LE POINT DE CONTROLE PASSE EN DERNIER ARGUMENT : c'est lui qui courbe le trajet autour du buisson. Sans
+		-- lui `walkOldMan` irait tout droit, et le traverserait.
+		walkOldMan(TutorialConfigs.OLDMAN_HEDGE_TARGET, nil, nil, TutorialConfigs.OLDMAN_HEDGE_VIA)
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur

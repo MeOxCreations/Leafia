@@ -2204,6 +2204,41 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.785 — Il demande la cisaille, puis ouvre la marche vers la haie en contournant le buisson
+
+`Oldman_scene_speech_GrabTheShear` s'ajoute a la suite de l'ouverture du hayon : `AsUCanSeeDoorTruck`, puis
+`ExplainToolTruck`, puis elle. Les trois s'enchainent sur leurs fins REELLES, sans qu'aucune duree soit ecrite
+nulle part.
+
+`sayThen` (deux repliques) devient `sayChain` (autant qu'on veut), et s'appelle elle-meme pour la suivante. La
+version "paire" aurait ete a reecrire le jour ou une troisieme replique arrive -- ce qui vient d'arriver.
+
+ET IL MARCHE VERS LA HAIE EN COURBE. Un buisson est en travers du chemin : en ligne droite il le traverse. Le
+trajet suit donc une courbe de Bezier, tiree vers `OldManWalkToHedgeBezierCurveMiddle`, jusqu'a
+`OldManWalkToHedgeFinal`.
+
+LE POINT DU MILIEU N'EST PAS UN POINT DE PASSAGE, c'est un point de CONTROLE : le chemin ne passe pas dessus, il
+est ATTIRE vers lui. Le poser a cote de l'obstacle courbe le trajet autour, et ca se regle a la souris en tirant
+un point -- alors qu'une suite d'etapes demanderait une part tous les trois metres.
+
+TROIS CHOSES SUIVENT LA COURBE, pas la ligne droite. Son CAP vient de la tangente -- un marcheur regarde ou il VA,
+et viser l'arrivee le ferait avancer de cote pendant tout le virage. Son demi-tour de depart vise la tangente
+INITIALE, pas la destination : sur un trajet courbe les deux n'ont rien a voir. Et la DUREE vient de la longueur
+ECHANTILLONNEE de la courbe -- une courbe est plus longue que sa corde, et garder la distance a vol d'oiseau le
+ferait marcher plus vite en patinant.
+
+La ligne droite reste le cas par defaut : sans point de controle, `walkOldMan` se comporte exactement comme
+avant, avec le meme code.
+
+La hauteur, elle, reste interpolee entre les deux bouts : seul le chemin AU SOL est courbe. Sonder le sol a chaque
+pas donnerait des marches d'escalier sur un trottoir, alors qu'une pente reguliere se lit comme quelqu'un qui
+monte.
+
+### A faire dans Studio
+
+`Oldman_scene_speech_GrabTheShear` dans `Sounds/Scenes/Scene1/Voices`. Les deux parts existent deja sous
+`Worlds/Maps/Scenario/Points`.
+
 ## 0.0.784 — Le grand-pere n'attend plus un joueur qui est deja a cote de lui
 
 Pendant l'escorte vers le camion, se tenir pres de lui ou passer devant le FIGEAIT -- et il demandait qu'on le
