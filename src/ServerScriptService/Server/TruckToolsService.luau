@@ -264,7 +264,10 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 		--
 		-- APRES LE VOL, pas avant : le trajet ancre toutes ses parts pour que rien ne tombe en route, et une part
 		-- ancree ignore son Motor6D. Repliee pendant le vol, elle arriverait donc figee dans la pose du depart.
-		if LadderFoldUtils.isFoldable(model) then
+		if LadderFoldUtils.isLadder(model) then
+			-- LE VOL A TOUT ANCRE pour que rien ne tombe en route, et une part ancree ignore son Motor6D. On lui
+			-- rend donc sa pose "posee au sol" AVANT de l'animer, sinon la piste tourne dans le vide.
+			LadderFoldUtils.standAlone(model)
 			if home and home.Parent then
 				LadderFoldUtils.fold(model)
 			else
@@ -369,20 +372,21 @@ function TruckToolsService.init()
 				local ladders = {}
 				for _, d in (folder :: Instance):GetChildren() do
 					table.insert(names, d.Name)
-					if LadderFoldUtils.isFoldable(d) then
+					if LadderFoldUtils.isLadder(d) then
 						table.insert(ladders, d :: Model)
 					end
 				end
 				if #ladders == 0 then
 					warn(
-						`[TruckToolsService] Rien de pliable dans la benne, l'echelle restera ouverte. `
-							.. `Il faut un modele nomme "{LadderFoldUtils.PREFIX}..." OU un modele avec un Humanoid `
-							.. `(le rig de l'echelle, pas une copie figee). Il y a : {table.concat(names, ", ")}`
+						`[TruckToolsService] Aucune echelle dans la benne : son modele doit s'appeler `
+							.. `"{LadderFoldUtils.PREFIX}..." comme celles de la carte, sinon AUCUN service de `
+							.. `l'echelle ne la reconnait. Il y a : {table.concat(names, ", ")}`
 					)
 					return
 				end
 				for _, ladder in ladders do
 					print(`[TruckToolsService] Repli de "{ladder.Name}" : {LadderFoldUtils.describe(ladder)}`)
+					LadderFoldUtils.standAlone(ladder)
 					LadderFoldUtils.fold(ladder)
 				end
 				-- ON MESURE LE RESULTAT, on ne suppose pas que ca a marche. Le repli peut echouer EN SILENCE de

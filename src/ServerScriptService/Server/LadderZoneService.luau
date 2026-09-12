@@ -6,11 +6,17 @@
 -- COTE SERVEUR : les box sont ainsi repliquees, detectees et vues par tous. La detection (LadderMoveController)
 -- cherche les zones par PREFIXE ZONE_BASE_NAME, donc les deux (_A / _B) comptent.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+
+local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 
 local LadderZoneService = {}
 
-local LADDER_PREFIX = "Escabaut"
+-- LE NOM DES ECHELLES, LU DEPUIS `LadderFoldUtils` -- une seule declaration pour tout le jeu. Il etait recopie
+-- dans cinq fichiers, et la copie rangee dans le camion s'appelait "Ladder" : plus aucun service ne la
+-- reconnaissait, on pouvait la sortir de la benne et rien d'autre.
+local LADDER_PREFIX = LadderFoldUtils.PREFIX
 local ZONE_BASE_NAME = "box_detecte_For_Move"
 
 -- ===== A REGLER =====

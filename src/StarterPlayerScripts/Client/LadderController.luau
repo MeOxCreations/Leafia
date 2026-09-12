@@ -19,6 +19,7 @@ local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 
 local LadderController = {}
@@ -33,7 +34,10 @@ local player = Players.LocalPlayer
 -- Rigs poses a la main dans le Workspace, leurs deux zones, et le dossier des anims (renomme Escabaut -> Ladder).
 -- PREFIXE et non nom exact : on gere PLUSIEURS echelles. Tout enfant du Workspace dont le nom commence par ce
 -- prefixe est une echelle (ex : Escabaut_1a_rig, Escabaut_2a_rig, une copie...).
-local LADDER_PREFIX = "Escabaut"
+-- LE NOM DES ECHELLES, LU DEPUIS `LadderFoldUtils` -- une seule declaration pour tout le jeu. Il etait recopie
+-- dans cinq fichiers, et la copie rangee dans le camion s'appelait "Ladder" : plus aucun service ne la
+-- reconnaissait, on pouvait la sortir de la benne et rien d'autre.
+local LADDER_PREFIX = LadderFoldUtils.PREFIX
 local ZONE_NAMES = { "box_detecte_A", "box_detecte_B" }
 local ANIM_FOLDER = { "Animations", "Tools", "Ladder" }
 local IDLE_ANIM = "IdleDownAnimation" -- pose prete, au sol

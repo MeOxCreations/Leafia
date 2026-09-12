@@ -6,20 +6,29 @@
 -- depli" : on avance dans la MEME piste et on la FIGE (vitesse 0) au marqueur du milieu. C'est ce qui permet de
 -- tenir la pose repliee aussi longtemps qu'on veut.
 --
--- POURQUOI UN MODULE ET PAS UNE FONCTION DANS CHAQUE SERVICE. Deux endroits la replient maintenant : le portage
--- (on la ferme pour marcher avec) et le camion (elle est rangee fermee dans la benne). Deux pistes chargees sur le
--- MEME Animator joueraient EN MEME TEMPS -- a priorite egale Roblox ne choisit pas, il MELANGE -- et on aurait une
+-- POURQUOI UN MODULE ET PAS UNE FONCTION DANS CHAQUE SERVICE. Deux endroits la replient : le portage (on la ferme
+-- pour marcher avec) et le camion (elle est rangee fermee dans la benne). Deux pistes chargees sur le MEME
+-- Animator joueraient EN MEME TEMPS -- a priorite egale Roblox ne choisit pas, il MELANGE -- et on aurait une
 -- echelle a moitie ouverte que personne n'a demandee. Une seule piste par echelle, gardee ici, rend ca impossible.
 --
--- COTE SERVEUR UNIQUEMENT. Une anim jouee par un client sur l'echelle ne se replique PAS aux autres : ce n'est pas
--- son personnage. Jouee par le serveur, elle part a tout le monde.
+-- CE MODULE NE TOUCHE PAS AUX ANCRAGES, et c'est delibere. Portee, l'echelle est soudee au porteur et TOUTES ses
+-- parts sont libres ; posee, sa racine est ancree. Deux etats opposes, tenus par deux services differents. Un
+-- module qui reancrerait la racine "pour bien faire" figerait l'assemblage -- donc le joueur, puisqu'ils partagent
+-- la meme soudure. Celui qui veut la pose "posee au sol" appelle `standAlone` LUI-MEME.
+--
+-- COTE SERVEUR POUR L'ANIMATION. Une anim jouee par un client sur l'echelle ne se replique PAS aux autres : ce
+-- n'est pas son personnage. Le test de NOM, lui, sert aussi aux controllers.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
 
 local LadderFoldUtils = {}
 
--- LE NOM DES ECHELLES DANS LA CARTE. C'est un PREFIXE : plusieurs echelles peuvent coexister, numerotees.
+-- LE NOM DES ECHELLES, PARTOUT DANS LE JEU. C'est un PREFIXE : plusieurs peuvent coexister, numerotees.
+--
+-- DECLARE ICI ET NULLE PART AILLEURS. Il vivait en copie dans cinq fichiers, et une copie finit toujours par
+-- diverger -- la copie rangee dans la benne du camion s'appelait "Ladder", donc AUCUN des services de l'echelle
+-- ne la reconnaissait : on pouvait la sortir du camion et rien d'autre. Ni la prendre, ni y monter.
 LadderFoldUtils.PREFIX = "Escabaut"
 -- REPLIEE OU NON, lu par le client (il coupe la grimpe sur une echelle fermee).
 LadderFoldUtils.CLOSED_ATTRIBUTE = "LeafiaLadderClosed"
@@ -34,26 +43,18 @@ local OPEN_EVENT = "LadderOpenEndEvent" -- depliee (fin) : on lache
 local tracks: { [Model]: AnimationTrack } = {}
 local wired: { [Model]: boolean } = {}
 
-function LadderFoldUtils.isLadder(inst: unknown): boolean
-	if typeof(inst) ~= "Instance" then
-		return false
-	end
-	local instance = inst :: Instance
-	return instance:IsA("Model") and instance.Name:sub(1, #LadderFoldUtils.PREFIX) == LadderFoldUtils.PREFIX
-end
-
---- PLIABLE : soit elle porte le nom des echelles de la carte, soit elle en a la FORME.
+--- UNE ECHELLE SE RECONNAIT A SON NOM, et a rien d'autre.
 ---
---- LE NOM RESTE LA REGLE, mais une copie rangee a la main dans une benne s'appelle ce qu'on veut, et une regle qui
---- ne marche que si un nom a ete bien tape n'en est pas une. Le secours ne peut pas se tromper de cible : dans une
---- benne, les outils sont des meshes, et le seul modele a porter un `Humanoid` est un RIG -- c'est justement ce
---- qui lui permet de se plier.
-function LadderFoldUtils.isFoldable(inst: unknown): boolean
+--- ON A ESSAYE DE LA RECONNAITRE A SA FORME -- "le seul modele de la benne qui porte un Humanoid" -- et la console
+--- a montre que c'etait FAUX : le seau, la cisaille, le taille-haie et le rateau en ont un aussi, on leur jouait
+--- donc l'anim de l'echelle. Tester la PRESENCE D'UN DETAIL pour repondre a une question d'IDENTITE attrape tout
+--- ce qui partage ce detail.
+function LadderFoldUtils.isLadder(inst: unknown): boolean
 	if typeof(inst) ~= "Instance" or not (inst :: Instance):IsA("Model") then
 		return false
 	end
-	local model = inst :: Model
-	return LadderFoldUtils.isLadder(model) or model:FindFirstChildOfClass("Humanoid") ~= nil
+	local name = (inst :: Instance).Name
+	return name:sub(1, #LadderFoldUtils.PREFIX) == LadderFoldUtils.PREFIX
 end
 
 local function resolveAnim(): Animation?
@@ -87,12 +88,9 @@ end
 --- LA RACINE DU RIG : la part que tout le reste suit.
 ---
 --- ON NE SE FIE PAS A `PrimaryPart`, QUI EST FACULTATIF. Un modele sorti du 3D Importer n'en a normalement pas, et
---- une copie posee a la main dans une benne encore moins. Une sonde dont le repere est une propriete facultative
---- accuse tout le monde le jour ou elle est vide -- ici elle aurait renonce en silence, et l'echelle serait restee
---- grande ouverte sans que rien n'explique pourquoi.
----
---- LE VRAI CRITERE EST DANS LES JOINTS : la racine est la part qu'un Motor6D TIRE (elle est `Part0`) sans que
---- personne ne la tire elle-meme (elle n'est jamais `Part1`). Ca ne suppose ni nom, ni rangement, ni reglage.
+--- une copie posee a la main dans une benne encore moins. Le vrai critere est dans les JOINTS : la racine est la
+--- part qu'un Motor6D TIRE (elle est `Part0`) sans que personne ne la tire elle-meme (jamais `Part1`). Ca ne
+--- suppose ni nom, ni rangement, ni reglage.
 local function rootOf(model: Model): BasePart?
 	local named = model.PrimaryPart or (model:FindFirstChild("RootPart") :: BasePart?)
 	if named then
@@ -119,20 +117,33 @@ local function rootOf(model: Model): BasePart?
 	return nil
 end
 
---- RACINE ANCREE, LE RESTE LIBRE. Une part ANCREE ignore son Motor6D quoi qu'on ecrive dedans : une echelle dont
---- tous les morceaux sont ancres ne bougera pas d'un millimetre, sans la moindre erreur. Et l'inverse tombe --
---- racine libre = l'echelle s'ecroule. Il faut donc exactement ce partage, et il doit etre REPOSE a chaque fois :
---- le vol depuis le camion ancre TOUT pour que rien ne tombe en route.
-function LadderFoldUtils.freeJoints(model: Model)
+--- LA POSE "POSEE AU SOL" : racine ancree, tout le reste libre, et le Humanoid mis au repos.
+---
+--- LES DEUX EXTREMES TOMBENT, pour des raisons opposees. Tout ancre : une part ancree ignore son Motor6D, donc
+--- l'anim tourne dans le vide et rien ne bouge. Tout libre : l'echelle s'ecroule. Il faut exactement ce partage.
+---
+--- LE HUMANOID EST MIS AU REPOS parce que le portage le fait deja, et que le portage MARCHE. Laisse dans son etat
+--- normal, il fait tourner sa machine d'etat par-dessus l'anim : il essaie de tenir debout, et il repose des
+--- `Transform` que la piste vient d'ecrire.
+---
+--- A N'APPELER QUE SUR UNE ECHELLE POSEE. Portee, elle est soudee au porteur et toutes ses parts sont libres :
+--- reancrer la racine figerait l'assemblage entier, donc le joueur avec.
+function LadderFoldUtils.standAlone(model: Model)
 	local root = rootOf(model)
 	if not root then
-		warn(`[LadderFold] Ni PrimaryPart ni RootPart sur "{model.Name}" : je ne touche a rien, elle tomberait.`)
+		warn(`[LadderFold] Aucune racine trouvee sur "{model.Name}" : je ne touche a rien, elle tomberait.`)
 		return
 	end
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			local part = d :: BasePart
 			part.Anchored = part == root
+		elseif d:IsA("Humanoid") then
+			local humanoid = d :: Humanoid
+			humanoid.PlatformStand = true
+			pcall(function()
+				humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+			end)
 		end
 	end
 end
@@ -191,6 +202,13 @@ local function wire(model: Model, loaded: AnimationTrack)
 	loaded:GetMarkerReachedSignal(CLOSE_EVENT):Connect(function()
 		loaded:AdjustSpeed(0) -- fige repliee, aussi longtemps qu'il faudra
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
+		-- OU EXACTEMENT ON S'ARRETE, et sur quelle longueur. Si la pose figee n'a pas l'air assez fermee, c'est le
+		-- MARQUEUR qui est pose trop tot dans l'editeur d'animation -- ces deux nombres le disent, et aucun reglage
+		-- de code ne peut le corriger.
+		print(
+			`[LadderFold] "{model.Name}" figee a {string.format("%.2f", loaded.TimePosition)}s `
+				.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}).`
+		)
 	end)
 	loaded:GetMarkerReachedSignal(OPEN_EVENT):Connect(function()
 		loaded:Stop(0.1)
@@ -198,8 +216,8 @@ local function wire(model: Model, loaded: AnimationTrack)
 	end)
 end
 
---- CE QUE LE MODULE VOIT DE CE MODELE. A afficher quand un repli ne donne rien : une sonde qui dit seulement
---- "ca n'a pas marche" ne designe personne, celle-ci nomme la piece qui manque.
+--- CE QUE LE MODULE VOIT DE CE MODELE. A afficher quand un repli ne donne rien : une sonde qui dit seulement "ca
+--- n'a pas marche" ne designe personne, celle-ci nomme la piece qui manque.
 function LadderFoldUtils.describe(model: Model): string
 	local root = rootOf(model)
 	local humanoid = model:FindFirstChildOfClass("Humanoid")
@@ -224,7 +242,6 @@ function LadderFoldUtils.fold(model: Model): boolean
 	if loaded.IsPlaying then
 		return true -- deja repliee (figee au marqueur) ou en route : on ne repart pas de zero
 	end
-	LadderFoldUtils.freeJoints(model)
 	loaded:Play(0)
 	loaded.TimePosition = 0
 	loaded:AdjustSpeed(1)
@@ -239,7 +256,6 @@ function LadderFoldUtils.unfold(model: Model)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
 		return
 	end
-	LadderFoldUtils.freeJoints(model)
 	loaded:AdjustSpeed(1)
 end
 

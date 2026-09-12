@@ -20,6 +20,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 
@@ -30,7 +31,10 @@ local LADDER_SOUND_PATH = { "Sounds", "Engins", "Ladder" }
 local player = Players.LocalPlayer
 
 -- Meme prefixe que LadderController : les modeles d'echelle s'appellent Escabaut_xxx.
-local LADDER_PREFIX = "Escabaut"
+-- LE NOM DES ECHELLES, LU DEPUIS `LadderFoldUtils` -- une seule declaration pour tout le jeu. Il etait recopie
+-- dans cinq fichiers, et la copie rangee dans le camion s'appelait "Ladder" : plus aucun service ne la
+-- reconnaissait, on pouvait la sortir de la benne et rien d'autre.
+local LADDER_PREFIX = LadderFoldUtils.PREFIX
 -- Prompt "[F] PRENDRE" affiche quand le joueur est assez PRES d'une echelle. Verifie a intervalle (pas chaque frame :
 -- la detection balaie les echelles). Detection RADIALE (DETECT_RADIUS), pas une box : aucun angle mort. Cf ladderAt.
 local PROMPT_KEY = "F" -- PRENDRE l'echelle sur F (E est reserve a MONTER, cote LadderController)

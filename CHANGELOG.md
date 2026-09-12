@@ -2204,6 +2204,35 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.796 — L'echelle sortie du camion s'utilise enfin, et le nom des echelles ne vit plus qu'a un endroit
+
+ELLE SORTAIT DU CAMION MAIS NE SERVAIT A RIEN. Le modele range dans la benne s'appelle `Ladder`, alors que tous
+les services de l'echelle cherchent un nom commence par `Escabaut`. Elle volait donc tres bien -- ce chemin passe
+par le dossier, pas par le nom -- et une fois au sol, plus rien ne la reconnaissait : ni la prise, ni la grimpe,
+ni les zones. Aucune erreur en console, evidemment.
+
+LE PREFIXE EST DECLARE UNE SEULE FOIS, dans `LadderFoldUtils`, et les quatre autres modules le lisent. Il etait
+recopie en dur dans cinq fichiers.
+
+A FAIRE DANS STUDIO : renommer le modele de la benne en `Escabaut_Truck` (n'importe quoi qui commence par
+`Escabaut` fait l'affaire). Rojo ne synchronise pas la map. Sans ce renommage la console le dit au demarrage et
+liste ce qu'il y a dans la benne.
+
+DEUX BUGS QUE 0.0.795 AVAIT INTRODUITS, corriges avant qu'ils ne se voient.
+
+Le module commun reancrait la racine de l'echelle avant de l'animer. Vrai pour une echelle posee, CATASTROPHIQUE
+pour une echelle portee : toutes ses parts sont alors libres et soudees au joueur, donc reancrer la racine aurait
+fige l'assemblage entier, joueur compris. Le partage "racine ancree, le reste libre" est ressorti dans une
+fonction a part, que seul le camion appelle.
+
+Et on reconnaissait l'echelle a "c'est le seul modele de la benne avec un Humanoid". La console a montre que le
+seau, la cisaille, le taille-haie et le rateau en ont un aussi : on jouait l'anim de l'echelle a toute la benne.
+C'est le nom qui decide, point.
+
+LE REPLI DIT MAINTENANT OU IL S'ARRETE, en secondes, sur la longueur totale de l'animation. Si la pose figee n'a
+pas l'air assez fermee, c'est le marqueur `FermerEvenement` qui est pose trop tot dans l'editeur d'animation, et
+aucun reglage de code ne peut le corriger.
+
 ## 0.0.795 — L'echelle de la benne se replie meme sans PrimaryPart ni bon nom
 
 Le repli de 0.0.794 pouvait renoncer EN SILENCE de deux facons, et l'echelle restait simplement ouverte.

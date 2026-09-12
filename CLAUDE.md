@@ -1189,6 +1189,30 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   piste unique -- on avance jusqu'au marqueur du milieu, on fige a 0, on repart a 1 -- jamais par deux animations
   qu'il faudrait ensuite empecher de se croiser.
 
+- **UN MODULE PARTAGE NE DOIT PAS IMPOSER UN ETAT QUE SES DEUX APPELANTS VEULENT OPPOSE.** En sortant le repli de
+  l'echelle dans un module commun, j'y avais mis "racine ancree, le reste libre" -- vrai pour une echelle POSEE,
+  catastrophique pour une echelle PORTEE, ou toutes ses parts sont libres et soudees au joueur. Reancrer la racine
+  y aurait fige l'assemblage entier, donc le JOUEUR, sur un geste qui marchait tres bien avant. Ce n'est pas le
+  bug d'une valeur, c'est un bug de FRONTIERE : le module a pris une decision qui appartenait a l'appelant. Regle :
+  quand on centralise, ne deplacer QUE ce que les appelants font pareil ; ce sur quoi ils different reste chez eux,
+  offert en fonction separee qu'ils appellent s'ils veulent (`standAlone` ici). Corollaire de relecture : un
+  refactor qui deplace du code qui MARCHAIT doit se relire en se demandant, pour chaque ligne deplacee, "les DEUX
+  appelants veulent-ils vraiment ca ?" -- pas seulement "est-ce que ca compile".
+- **UN NOM RECOPIE DANS CINQ FICHIERS EST UN NOM QUI SERA UN JOUR MAL TAPE, ET L'OBJET DEVIENT INVISIBLE A TOUT LE
+  SYSTEME.** `LADDER_PREFIX = "Escabaut"` vivait en dur dans cinq modules. La copie de l'echelle rangee dans la
+  benne du camion s'appelait `Ladder` : elle sortait du camion tres bien -- ce chemin-la va par le dossier, pas par
+  le nom -- mais plus AUCUN service de l'echelle ne la reconnaissait. On ne pouvait ni la prendre, ni monter
+  dessus, sans une seule erreur en console. Symptome trompeur : la moitie de la feature marche, donc on cherche
+  dans l'autre moitie. Le prefixe est maintenant declare une fois et lu par les quatre autres. Et ce que la
+  console a fini par dire, elle le disait parce qu'on lui avait demande de NOMMER ce qu'elle voyait -- un log qui
+  compte ne l'aurait jamais montre.
+- **"Le seul modele qui porte un Humanoid" NE DESIGNE PAS L'ECHELLE : tous les outils en ont un.** Devine, pas
+  mesure, pour rattraper un nom qui ne collait pas -- et la console l'a dementi en une ligne (`Repli de
+  "HedgeTrimmer" ... Humanoid=oui`, idem pour la cisaille et le rateau) : on jouait l'anim de l'echelle a tout le
+  contenu de la benne. Meme famille que l'auto-equip qui cherchait une LAME pour savoir si les mains etaient
+  vides. Une question d'IDENTITE se pose sur l'identite (le nom, un attribut pose expres), jamais sur un detail
+  qu'on suppose exclusif.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
