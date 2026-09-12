@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.826 — Le grand-pere se leve de son banc quand la haie est finie
+
+On rejoue la MEME animation a l'envers, en vitesse negative et un peu plus vite qu'a l'aller : s'asseoir est un
+soupir, se lever est une decision. Un second fichier serait un second geste a garder d'accord avec le premier, et
+le jour ou le banc bouge il faudrait refaire les deux.
+
+L'IDLE ASSIS EST LACHE D'ABORD, et l'ordre compte : c'est une surcouche au-dessus du socle. Le laisser tourner
+pendant la remontee ferait rester le buste assis pendant que les jambes se deplient -- il gagne sur les joints
+qu'il cle. Et il reprend son idle DEBOUT en arrivant, sinon il resterait sur la premiere image du geste : debout,
+mais immobile.
+
+LE SERVEUR LE SAIT TOUT SEUL. Le taux de coupe est un attribut qu'il ecrit lui-meme : il l'ecoute, au lieu
+d'attendre un remote du client qui dirait "j'ai fini". Un remote de moins, et une occasion de moins que les deux
+cotes ne soient pas d'accord. Il teste aussi tout de suite, parce qu'un joueur rapide peut finir sa face pendant
+qu'il marche vers le banc -- un abonnement seul ne verrait alors plus jamais rien changer.
+
 ## 0.0.825 — La haie arrive deja a moitie faite, des le demarrage du serveur
 
 Elle etait preparee quand le joueur equipait la cisaille. Elle perdait donc des centaines de feuilles D'UN COUP

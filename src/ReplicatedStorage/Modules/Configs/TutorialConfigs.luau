@@ -916,6 +916,15 @@ return {
 	OLDMAN_SIT_IDLE_ANIM = "rbxassetid://86619805469784",
 	OLDMAN_SIT_IDLE_PRIORITY = Enum.AnimationPriority.Action3,
 	OLDMAN_SIT_IDLE_FADE = 0.3,
+	-- IL SE RELEVE QUAND LA HAIE EST FINIE : on rejoue la MEME animation A L'ENVERS, vitesse negative.
+	--
+	-- PAS UNE SECONDE ANIMATION. Se relever d'un banc est exactement s'y asseoir a l'envers : un fichier separe
+	-- serait un second geste a garder d'accord avec le premier, et le jour ou le banc bouge il faudrait refaire
+	-- les deux.
+	--
+	-- UN PEU PLUS VITE QUE L'ALLER. S'asseoir est un soupir, se lever est une decision -- il a vu que le travail
+	-- est fini, il y va. A 1, la remontee traine et on attend un vieux monsieur.
+	OLDMAN_STAND_SPEED = 1.25,
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.

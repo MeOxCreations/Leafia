@@ -731,6 +731,13 @@ local function walkOldMan(
 end
 
 
+-- LA HAIE DU DIDACTICIEL, gardee : c'est la sienne qu'on surveille pour savoir quand il peut se relever. Une
+-- seule par place -- si un jour il y en a plusieurs, ce sera une table.
+local tutorialHedge: BasePart? = nil
+-- SES DEUX PISTES D'ASSISE : le geste (socle, fige) et l'idle par-dessus. Gardees pour pouvoir les DEFAIRE.
+local sitTrack: AnimationTrack? = nil
+local sitIdleTrack: AnimationTrack? = nil
+
 -- LA HAIE EST PREPAREE : TOUTES SES FACES SONT DEJA NETTES, SAUF UNE.
 --
 -- POURQUOI. C'est la premiere haie de sa vie. Faire le tour complet pour apprendre un geste transforme une
@@ -760,6 +767,7 @@ local function prepareHedge(hedge: BasePart, from: Vector3): boolean
 	local ratio = math.clamp(done / total, 0, 1)
 	hedge:SetAttribute(HedgeConfigs.TRIMMED_ATTRIBUTE, ratio)
 	hedge:SetAttribute(TutorialConfigs.HEDGE_START_ATTRIBUTE, ratio)
+	tutorialHedge = hedge
 	print(
 		`[Tutorial] "{hedge.Name}" preparee : {done}/{total} carreaux deja nets `
 			.. `({math.floor(ratio * 100)} %). Il ne reste que la face {keep}.`
@@ -794,6 +802,51 @@ local function prepareHedgeWhenReady()
 		`[Tutorial] Haie jamais prete pres de "{TutorialConfigs.OLDMAN_HEDGE_TARGET}" : le joueur devra la `
 			.. "tailler en entier. Rojo ne synchronise pas le Workspace."
 	)
+end
+
+-- IL SE RELEVE : LA MEME ANIMATION, A L'ENVERS.
+--
+-- Se lever d'un banc est exactement s'y asseoir a l'envers. Un fichier separe serait un second geste a garder
+-- d'accord avec le premier, et le jour ou le banc bouge il faudrait refaire les deux.
+--
+-- ON LACHE L'IDLE D'ABORD, et c'est l'ordre qui compte : c'est une SURCOUCHE au-dessus du socle (voir
+-- `sitOldMan`). Le laisser tourner pendant la remontee ferait respirer le haut du corps sur une pose qui bouge --
+-- il gagne sur les joints qu'il cle, donc le buste resterait assis pendant que les jambes se deplient.
+--
+-- ET ON SURVEILLE LA FIN A LA MAIN plutot que d'attendre `Stopped`. Une piste bouclee ne s'arrete jamais toute
+-- seule, et la debouclee pour l'occasion nous ferait dependre d'un evenement dont le declenchement en marche
+-- arriere n'est pas garanti. Un test sur la position, lui, est vrai ou faux.
+local function standOldMan()
+	local sit = sitTrack
+	if not (sit and sit.IsPlaying) then
+		return
+	end
+	sitTrack = nil
+	local track = sit :: AnimationTrack
+	local idle = sitIdleTrack
+	if idle then
+		(idle :: AnimationTrack):Stop(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
+		sitIdleTrack = nil
+	end
+	track:AdjustSpeed(-TutorialConfigs.OLDMAN_STAND_SPEED)
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.Heartbeat:Connect(function()
+		if track.TimePosition > 0.02 and track.IsPlaying then
+			return
+		end
+		if conn then
+			conn:Disconnect()
+			conn = nil
+		end
+		track:Stop(0)
+		-- ET IL REPREND SON IDLE DEBOUT. Sans ca il resterait sur la premiere image du geste d'assise, c'est-a-dire
+		-- debout mais immobile -- une statue, pas un homme qui vient de se lever.
+		local model = findByName(TutorialConfigs.GRANDPA_NAME)
+		if model and model:IsA("Model") then
+			restoreIdle(model :: Model)
+		end
+		print("[Tutorial] La haie est finie : le grand-pere se leve de son banc.")
+	end)
 end
 
 -- IL S'ASSOIT, PUIS IL RESPIRE SUR SON BANC.
@@ -843,6 +896,7 @@ local function sitOldMan(model: Model, onHup: (() -> ())?)
 		return
 	end
 	local sit = track :: AnimationTrack
+	sitTrack = sit
 	sit.Looped = true
 	sit.Priority = TutorialConfigs.OLDMAN_SIT_PRIORITY
 	-- SON EFFORT EN SE POSANT : c'est l'ANIMATION qui dit quand, par son marqueur. Un delai en secondes recopie
@@ -883,6 +937,26 @@ local function sitOldMan(model: Model, onHup: (() -> ())?)
 		seated.Looped = true
 		seated.Priority = TutorialConfigs.OLDMAN_SIT_IDLE_PRIORITY
 		seated:Play(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
+		sitIdleTrack = seated
+		-- ET ON SURVEILLE SA HAIE : quand elle est finie, il se leve.
+		--
+		-- LE SERVEUR N'A BESOIN DE PERSONNE POUR LE SAVOIR. Le taux de coupe est un attribut qu'il ecrit lui-meme :
+		-- faire remonter l'information par le client serait un remote de plus, et une occasion de plus que les deux
+		-- cotes ne soient pas d'accord.
+		--
+		-- ON TESTE AUSSI TOUT DE SUITE : un joueur rapide peut finir sa face pendant qu'il marche vers le banc, et
+		-- un abonnement seul ne verrait alors plus jamais rien changer.
+		local hedge = tutorialHedge
+		if hedge then
+			local function check()
+				local raw = hedge:GetAttribute(HedgeConfigs.TRIMMED_ATTRIBUTE)
+				if typeof(raw) == "number" and (raw :: number) >= 1 then
+					standOldMan()
+				end
+			end
+			hedge:GetAttributeChangedSignal(HedgeConfigs.TRIMMED_ATTRIBUTE):Connect(check)
+			check()
+		end
 		-- LE GESTE N'EST JAMAIS ARRETE : c'est lui qui tient les jambes. Le lacher rendait le grand-pere debout
 		-- en train de respirer, parce que l'idle assis ne cle que le haut du corps.
 		print(`[Tutorial] Le grand-pere est assis sur son banc, l'idle joue par-dessus.`)

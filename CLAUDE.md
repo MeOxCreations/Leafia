@@ -1415,6 +1415,19 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   pour cent : c'est ce service qui ecrit le taux, en comptant ce qu'il vient de couper. Regle : tout raccourci qui
   contourne le chemin normal herite de ses effets de bord -- les chercher avant, pas apres.
 
+- **UN GESTE ET SON INVERSE SONT LA MEME ANIMATION, LUE A L'ENVERS.** Se lever d'un banc, c'est s'y asseoir a
+  vitesse negative. Un second fichier serait un second geste a garder d'accord avec le premier, et le jour ou le
+  banc bouge il faudrait refaire les deux. Deux precautions : la SURCOUCHE (l'idle assis) se lache AVANT de
+  remonter -- elle gagne sur les joints qu'elle cle, donc le buste resterait assis pendant que les jambes se
+  deplient -- et la fin se surveille A LA MAIN sur `TimePosition`, parce qu'une piste bouclee ne s'arrete jamais
+  seule et qu'un `Stopped` en marche arriere n'est pas garanti. Un test sur la position est vrai ou faux.
+- **LE SERVEUR N'A PAS BESOIN DU CLIENT POUR SAVOIR CE QU'IL A LUI-MEME ECRIT.** Pour declencher le lever quand la
+  haie est finie, le reflexe est un remote client -> serveur "j'ai fini". Or le taux de coupe est un ATTRIBUT que
+  le serveur ecrit : il suffit de l'ecouter. Un remote de moins, et une occasion de moins que les deux cotes ne
+  soient pas d'accord. Corollaire : un abonnement seul ne suffit pas -- il faut TESTER tout de suite en plus,
+  sinon un etat deja atteint avant l'abonnement ne changera plus jamais et ne declenchera rien. Meme famille que
+  le `return` pose sur "rien a faire POUR L'INSTANT".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
