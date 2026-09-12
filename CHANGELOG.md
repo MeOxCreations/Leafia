@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.806 — Le grand-pere relance tant que le hayon est ferme
+
+`Oldman_scene_speech_Impatient_opentruck_1` revient tant que le joueur n'a pas ouvert le camion. C'est le moment
+ou le didacticiel se tait : la consigne est donnee, le marqueur est pose, et si on reste plante devant on se
+demande si on a rate quelque chose.
+
+IL FINIT SA PHRASE D'ABORD, comme l'autre grogne. La remarque comble un silence, rien ne justifie qu'elle coupe
+une replique en cours. On la REPORTE, on ne l'annule pas.
+
+SES PROPRES REGLAGES, pas ceux de la grogne generale. Celle-la comble un silence pendant qu'on cherche une
+tondeuse dans un jardin ; celle-ci porte sur un bouton qui est sous le nez du joueur, donc elle peut revenir plus
+vite sans devenir du harcelement. Un reglage partage aurait fini par opposer les deux.
+
+La grogne prend maintenant sa serie de repliques en argument : memes eclairs, meme tete, phrases differentes.
+
 ## 0.0.805 — Une animation dediee tient l'echelle fermee dans le camion, et le seau a son dessin
 
 L'ANIMATION DU GESTE COMPLET NE POUVAIT PAS REPONDRE. `ActionLadderAnimation` ferme PUIS rouvre : sa derniere

@@ -1875,6 +1875,10 @@ end
 -- "laquelle" ici -- sinon la moindre retouche de cadence obligerait a relire le tirage.
 local nextImpatientAt = math.huge
 local lastImpatient = 0
+-- ET LA GROGNE DU CAMION, avec sa propre echeance. Deux consignes peuvent etre en attente en meme temps -- il
+-- reste des touffes a tondre ET le hayon est ferme -- donc deux comptes a rebours, jamais un seul partage.
+local nextTruckImpatientAt = math.huge
+local lastTruckImpatient = 0
 local lastBinScold = 0
 -- Il n'a qu'une phrase a dire quand le joueur prend enfin la machine, et il ne la dit qu'une fois.
 local saidPullRope = false
@@ -1910,13 +1914,14 @@ local function pickLine(lines: { { string } }, last: number): number
 	return i
 end
 
-local function playImpatient()
-	local sounds = TutorialConfigs.IMPATIENT_SOUNDS
-	local i = pickLine(sounds, lastImpatient)
+--- IL RALE. La SERIE de repliques est passee en argument : il s'impatiente pour la tondeuse comme pour le hayon
+--- du camion, avec les memes eclairs et la meme tete, mais ce ne sont pas les memes phrases. Rend l'index joue,
+--- que l'appelant garde pour ne pas repeter deux fois la meme d'affilee.
+local function playImpatient(sounds: { { string } }, last: number): number
+	local i = pickLine(sounds, last)
 	if i == 0 then
-		return
+		return last
 	end
-	lastImpatient = i
 
 	-- ET ON LE VOIT RALER. La voix seule ne suffit pas : elle ne dit rien a un joueur de dos, loin, ou qui a
 	-- coupe le son -- et sur Roblox ils sont nombreux. Une gerbe d'eclairs au-dessus de sa tete se lit sans un
@@ -1926,7 +1931,7 @@ local function playImpatient()
 	-- instantane -- le jour ou il fait un pas, la colere resterait en l'air derriere lui.
 	local grandpa = findModel(TutorialConfigs.GRANDPA_NAME)
 	if not grandpa then
-		return
+		return last
 	end
 	local anchor = bodyPart(grandpa)
 	if anchor then
@@ -1943,6 +1948,7 @@ local function playImpatient()
 	-- point de la carte. Spatialisee, elle baisserait quand il s'eloigne pour chercher la machine -- soit
 	-- exactement quand elle a quelque chose a dire.
 	sayVoice(sounds[i])
+	return i
 end
 
 -- LE BADGE "PARLER" SUR LE GRAND-PERE, et sa touche. Branchee seulement quand l'action a un sens, comme celle de
@@ -2383,6 +2389,24 @@ local function step(dt: number)
 		end
 	end
 
+	-- ET IL RELANCE TANT QUE LE HAYON EST FERME. La consigne est donnee, le marqueur est pose, et le joueur peut
+	-- tres bien rester planté devant -- c'est le moment ou le didacticiel se tait et ou l'on se demande si on a
+	-- rate quelque chose.
+	--
+	-- IL FINIT SA PHRASE D'ABORD, comme l'autre grogne : la remarque comble un silence, rien ne justifie qu'elle
+	-- coupe une replique en cours. On REPORTE, on n'annule pas -- sauter le tour ferait taire un grand-pere qu'on
+	-- veut agace.
+	if truckMarkerWanted and not saidTruckOpened and now >= nextTruckImpatientAt then
+		if not speechOver() then
+			nextTruckImpatientAt = speakingUntil + TutorialConfigs.IMPATIENT_AFTER_SPEECH
+		else
+			nextTruckImpatientAt = now
+				+ TutorialConfigs.TRUCK_IMPATIENT_EVERY
+				+ math.random() * TutorialConfigs.TRUCK_IMPATIENT_JITTER
+			lastTruckImpatient = playImpatient(TutorialConfigs.TRUCK_IMPATIENT_SOUNDS, lastTruckImpatient)
+		end
+	end
+
 	local grandpa = if lawnTaskShown and not talkDone then grandpaBody() else grandpaPart
 
 	-- LA BALISE DES QUE LA PELOUSE EST FINIE, mains libres ou pas. C'est elle qui dit "va le voir", et le joueur
@@ -2534,7 +2558,7 @@ local function step(dt: number)
 				nextImpatientAt = now
 					+ TutorialConfigs.IMPATIENT_EVERY
 					+ math.random() * TutorialConfigs.IMPATIENT_JITTER
-				playImpatient()
+				lastImpatient = playImpatient(TutorialConfigs.IMPATIENT_SOUNDS, lastImpatient)
 			end
 		end
 		wasCarrying = carrying
@@ -2807,6 +2831,8 @@ function TutorialController.init()
 			return
 		end
 		saidTruckOpened = true
+		-- IL N'A PLUS RIEN A RECLAMER : le hayon est ouvert.
+		nextTruckImpatientAt = math.huge
 		-- CE QU'IL VOIT, LA CONSIGNE, PUIS LA DEMANDE. Les trois se suivent sans trou : chacune attend la fin
 		-- REELLE de la precedente, pas une duree qu'on aurait notee quelque part.
 		sayChain({
@@ -2835,6 +2861,9 @@ function TutorialController.init()
 			-- didacticiel -- et chercher une seule fois le laisserait introuvable pour de bon.
 			truckMarkerWanted = true
 			truckWantedAt = os.clock()
+			-- LE COMPTE A REBOURS PART D'ICI, pas du debut de sa marche : la consigne vient d'etre donnee, et
+			-- relancer quelqu'un qui n'a pas eu le temps de faire trois pas n'est pas de l'impatience.
+			nextTruckImpatientAt = os.clock() + TutorialConfigs.TRUCK_IMPATIENT_FIRST
 		end)
 	end)
 
@@ -2877,6 +2906,7 @@ function TutorialController.stop()
 	grandpaMarker, grandpaMarkerPart, grandpaPart = nil, nil, nil
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
+	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
 	hideTalkPrompt()
@@ -2947,6 +2977,7 @@ function TutorialController.stop()
 	escorting = false
 	WorldMarker.remove(truckMarker)
 	truckMarker, truckMarkerWanted = nil, false
+	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
 	hideTalkPrompt()

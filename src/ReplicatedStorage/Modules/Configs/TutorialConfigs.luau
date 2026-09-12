@@ -512,6 +512,22 @@ return {
 	-- PAS ZERO : enchainer a la syllabe pres se lit comme une seule phrase bizarre, pas comme deux repliques. Il
 	-- faut le temps de reprendre son souffle.
 	IMPATIENT_AFTER_SPEECH = 2.5,
+
+	-- ===== IL S'IMPATIENTE DEVANT LE CAMION =====
+	-- Meme idee que plus haut, mais pour une consigne precise : "ouvre le hayon". Il relance tant que le joueur
+	-- ne l'a pas fait.
+	--
+	-- SES PROPRES REGLAGES, et pas ceux de la grogne generale. Celle-la comble un silence pendant que le joueur
+	-- cherche une tondeuse dans un jardin ; celle-ci porte sur un bouton qui est SOUS SON NEZ. Elle peut donc
+	-- revenir plus vite sans devenir du harcelement -- et un jour ou l'on voudra changer l'une, l'autre ne
+	-- bougera pas.
+	TRUCK_IMPATIENT_SOUNDS = {
+		voice("Oldman_scene_speech_Impatient_opentruck_1"),
+	},
+	TRUCK_IMPATIENT_FIRST = 10,
+	TRUCK_IMPATIENT_EVERY = 12,
+	TRUCK_IMPATIENT_JITTER = 4,
+
 	-- LA GERBE D'ECLAIRS qui saute au-dessus de lui pendant qu'il rale. Hauteur au-dessus de sa RootPart, en
 	-- studs : au-dessus de sa tete, jamais devant son visage -- une onomatopee qui couvre le personnage cache
 	-- justement celui dont on veut lire l'humeur.
