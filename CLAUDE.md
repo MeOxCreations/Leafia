@@ -1315,6 +1315,20 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   entre deux usages finira par en trahir un. Meme famille que "un reglage qui sert deux moments differents finira
   par les opposer".
 
+- **QUAND UNE POSE PRECISE DANS UNE ANIMATION EST INTROUVABLE PAR UN REPERE, LA CHERCHER PAR UNE MESURE
+  PHYSIQUE.** Ou se trouve la pose "echelle fermee" ? Pas a la fin du fichier (l'anim ferme PUIS rouvre, donc la
+  fin est la pose ouverte), pas au marqueur `FermerEvenement` (pose pour le PORTAGE, quelques centiemes avant la
+  fermeture complete). Deux reperes, deux reponses fausses, et trois allers-retours avec le joueur. La bonne
+  reponse ne se lit nulle part : elle se MESURE. On balaye la piste image par image et on garde celle ou
+  `GetExtentsSize()` est le plus petit -- un objet replie occupe moins de place, par construction. Ca ne suppose
+  rien du fichier, ca se recalcule tout seul s'il est remonte, et ca bat n'importe quel nombre tape a la main.
+  Regle generale : une grandeur PHYSIQUE observable (encombrement, distance, angle) bat un repere DECLARATIF
+  (marqueur, constante, nom) des que le repere sert deja a autre chose.
+- **L'ENCOMBREMENT D'UN MODELE EST LA SEULE SONDE D'ANIMATION QUI NE MENT PAS.** `Motor6D.Transform` lu depuis un
+  script serveur rendait l'identite sur les huit joints d'une echelle qui se pliait pour de vrai -- trois
+  diagnostics bases dessus, trois correctifs livres pour rien. `GetExtentsSize()` avant / apres repond a la seule
+  question qui compte, "est-ce que ca a bouge", sans rien supposer du rig ni du moteur.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

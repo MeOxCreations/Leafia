@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.804 — On CHERCHE l'image ou l'echelle est la plus fermee, au lieu de la deviner
+
+L'animation raconte tout le geste d'un bloc : elle FERME, puis elle ROUVRE. Sa derniere image est donc la pose
+OUVERTE. S'arreter au bout refermait puis rouvrait l'echelle sous les yeux du joueur, ce qu'il a vu en la rangeant.
+Et le marqueur `FermerEvenement` ne vaut pas mieux ici : il est pose pour le PORTAGE, ou il doit tomber pile sur le
+geste du personnage, quelques centiemes avant la fermeture complete. Deux reperes, et aucun des deux ne repond a
+la question "quand est-elle le plus fermee".
+
+ALORS ON MESURE. Le service parcourt la piste en soixante images et garde celle ou l'ENCOMBREMENT du modele est le
+plus petit : une echelle repliee occupe forcement moins de place qu'une echelle ouverte. Ca ne suppose rien de
+l'animation, ca se refait tout seul si elle est remontee, et ca ne peut pas se tromper de quelques centiemes comme
+un marqueur pose a la main. Le balayage ne tourne qu'au demarrage et au rangement.
+
+ET ON LA TIENT COMME LE PORTEUR LA TIENT. Portee a la main, l'echelle se plie parfaitement ; dans la benne, on
+ancrait sa racine. Une part ancree ignore son Motor6D, et c'etait la derniere difference entre les deux
+situations. Pendant le geste, une petite part invisible ancree tient la racine par une soudure, exactement comme
+le porteur -- rien n'est ancre dans l'echelle elle-meme, et rien ne tombe.
+
+LE LOG DIT MAINTENANT SI ELLE A BOUGE, en comparant son encombrement avant et apres. C'est la seule mesure de
+toute cette affaire qui ne puisse pas mentir : les `Motor6D.Transform` lus depuis un script m'ont trompe trois
+fois de suite.
+
 ## 0.0.803 — Le repli du camion joue l'animation jusqu'au bout et tient la derniere image
 
 C'est ce qu'il fallait faire depuis le debut, et c'est plus simple que ce que je faisais. Une seule animation, on

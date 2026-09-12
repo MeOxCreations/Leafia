@@ -69,8 +69,17 @@ local wired: { [Model]: boolean } = {}
 -- LA BOUCLE QUI POUSSE LA LECTURE A LA MAIN, par echelle. Une seule a la fois : en relancer une sans couper la
 -- precedente ferait avancer la piste deux fois plus vite, dans deux directions si elles s'opposent.
 local runners: { [Model]: RBXScriptConnection } = {}
+-- LA PIECE QUI TIENT L'ECHELLE EN L'AIR PENDANT LE GESTE, par echelle. Voir `holdInPlace`.
+local holders: { [Model]: BasePart } = {}
+local collide: { [Model]: { [BasePart]: boolean } } = {}
+local HOLDER_NAME = "LeafiaFoldHolder"
 -- On s'arrete un cheveu AVANT la fin : pile sur `Length`, la lecture reboucle.
 local END_EPSILON = 0.001
+-- COMBIEN D'IMAGES ON ESSAIE pour trouver la plus fermee. 60 sur une anim de 0.7s = une tous les centiemes, bien
+-- plus fin que l'oeil. Le balayage ne tourne qu'au demarrage et au rangement, jamais en continu.
+local SWEEP_STEPS = 60
+-- Combien de temps on attend que l'animation soit telechargee avant d'abandonner.
+local LENGTH_TIMEOUT = 10
 
 --- CE NOM EST-IL CELUI D'UNE ECHELLE ? Question de NOM SEUL : elle sert aussi pour des instances qui ne sont pas
 --- des Models (invalidation de cache sur DescendantAdded, par exemple).
@@ -408,6 +417,92 @@ function LadderFoldUtils.rigParts(model: Model): string
 	return table.concat(names, " ")
 end
 
+--- TENIR L'ECHELLE EXACTEMENT COMME LE PORTEUR LA TIENT, le temps du geste.
+---
+--- POURQUOI. Portee a la main, l'echelle se plie PARFAITEMENT ; rangee dans la benne, la meme animation sur le
+--- meme modele ne fait rien. Il ne reste qu'une difference entre les deux situations : dans les mains, AUCUNE part
+--- n'est ancree -- l'echelle est tenue par une soudure au porteur. Dans la benne, on ancrait sa racine.
+---
+--- On reproduit donc le montage qui marche, sans porteur : une petite part ANCREE, invisible, posee sur la racine,
+--- et une soudure entre les deux. Tout le reste de l'echelle est libre, exactement comme dans les mains, et rien
+--- ne tombe puisque l'assemblage pend a une part ancree.
+local function holdInPlace(model: Model)
+	if holders[model] then
+		return
+	end
+	local root = rootOf(model)
+	if not root then
+		warn(`[LadderFold] Aucune racine sur "{model.Name}" : je ne peux pas la tenir pour l'animer.`)
+		return
+	end
+	local holder = Instance.new("Part")
+	holder.Name = HOLDER_NAME
+	holder.Size = Vector3.new(0.2, 0.2, 0.2)
+	holder.Transparency = 1
+	holder.CanCollide = false
+	holder.CanQuery = false
+	holder.CanTouch = false
+	holder.CastShadow = false
+	holder.Anchored = true
+	holder.CFrame = root.CFrame
+	holder.Parent = model
+
+	local weld = Instance.new("Weld")
+	weld.Part0 = holder
+	weld.Part1 = root
+	weld.Parent = holder
+
+	-- SEULES LES PIECES QU'UN JOINT TIRE SONT LIBEREES, plus la racine (tenue par notre soudure). Tout le reste --
+	-- une zone de detection, un decor -- n'a rien a bouger : le liberer ne ferait que le faire tomber pendant qu'on
+	-- coupe les soudures.
+	local driven: { [BasePart]: boolean } = { [root] = true }
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") then
+			local part = (d :: Motor6D).Part1
+			if part then
+				driven[part] = true
+			end
+		end
+	end
+	local saved: { [BasePart]: boolean } = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") and d ~= holder and driven[d :: BasePart] then
+			local part = d :: BasePart
+			saved[part] = part.CanCollide
+			part.Anchored = false
+			part.CanCollide = false
+		elseif d:IsA("Humanoid") then
+			local humanoid = d :: Humanoid
+			humanoid.PlatformStand = true
+			pcall(function()
+				humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+			end)
+		end
+	end
+	holders[model] = holder
+	collide[model] = saved
+end
+
+--- Fin du geste : on retire la piece qui tenait, on rend les collisions, on re-ancre ce qu'aucun joint ne tire.
+local function releaseHold(model: Model)
+	local holder = holders[model]
+	if not holder then
+		return
+	end
+	holders[model] = nil
+	holder:Destroy() -- emporte la soudure, qui est son enfant
+	local saved = collide[model]
+	collide[model] = nil
+	if saved then
+		for part, value in saved do
+			if part.Parent then
+				part.CanCollide = value
+			end
+		end
+	end
+	LadderFoldUtils.standAlone(model)
+end
+
 local function stopRunner(model: Model)
 	local run = runners[model]
 	if run then
@@ -416,17 +511,23 @@ local function stopRunner(model: Model)
 	end
 end
 
---- REPLI JUSQU'A LA DERNIERE IMAGE, et on la TIENT. C'est le repli du camion : l'echelle rangee doit rester
---- fermee indefiniment, et la pose fermee est la FIN de l'animation.
+--- REPLI : ON CHERCHE L'IMAGE OU L'ECHELLE EST LA PLUS FERMEE, ET ON LA TIENT.
 ---
---- POURQUOI ON PILOTE LA LECTURE A LA MAIN. Pour tenir la derniere image, il faut `Looped = true` -- sinon la
---- piste se RELACHE en arrivant au bout et la pose saute d'un coup. Mais laisser tourner a vitesse 1 avec
---- `Looped = true` REBOUCLE au debut, et l'echelle se rouvrirait en boucle. Les deux ensemble : vitesse ZERO, et
---- on avance la `TimePosition` de `dt` a chaque image jusqu'a un cheveu avant la fin. Ca joue une fois, ca tient
---- la pose, ca ne reboucle jamais.
+--- POURQUOI ON LA CHERCHE AU LIEU DE LA CONNAITRE. L'animation raconte tout le geste d'un bloc : elle FERME, puis
+--- elle ROUVRE. Sa derniere image est donc la pose OUVERTE -- s'arreter au bout referme puis rouvre l'echelle sous
+--- les yeux du joueur, ce qui est exactement ce qu'on a vu. Et le marqueur `FermerEvenement` ne vaut pas mieux ici :
+--- il est pose pour le PORTAGE, ou il doit tomber pile sur le geste du personnage, quelques centiemes avant la
+--- fermeture complete. Deux reperes, aucun des deux ne repond a la question "quand est-elle le plus fermee".
 ---
---- L'ATTRIBUT `LeafiaFoldStop` permet de tenir une AUTRE image que la derniere, sans toucher au code.
-function LadderFoldUtils.foldToEnd(model: Model): boolean
+--- ALORS ON MESURE. On parcourt la piste image par image et on garde celle ou l'ENCOMBREMENT du modele est le plus
+--- petit : une echelle repliee occupe forcement moins de place qu'une echelle ouverte. Ca ne suppose rien de
+--- l'animation, ca se refait tout seul si elle est remontee, et ca ne peut pas se tromper de quelques centiemes
+--- comme un marqueur pose a la main.
+---
+--- `LeafiaFoldStop` sur le modele force un temps precis, si jamais on veut autre chose que le plus ferme.
+---
+--- YIELD (le balayage prend une image par echantillon). Lance dans sa propre tache.
+function LadderFoldUtils.foldTightest(model: Model): boolean
 	local loaded = LadderFoldUtils.track(model)
 	if not loaded then
 		return false
@@ -434,37 +535,62 @@ function LadderFoldUtils.foldToEnd(model: Model): boolean
 	stopRunner(model)
 	-- LES SOUDURES SAUTENT LE TEMPS DU GESTE : une soudure gagne contre un Motor6D, l'echelle ne bougerait pas.
 	LadderFoldUtils.setWelds(model, false)
-	loaded.Looped = true
+	holdInPlace(model)
+	loaded.Looped = true -- sinon la piste se RELACHE au bout et la pose tenue saute
 	loaded:Play(0)
-	loaded:AdjustSpeed(0)
-	loaded.TimePosition = 0
-	runners[model] = RunService.Heartbeat:Connect(function(dt: number)
-		if not model.Parent then
-			stopRunner(model)
-			return
+	loaded:AdjustSpeed(0) -- on pilote la lecture a la main : aucune chance de reboucler
+
+	task.spawn(function()
+		-- La longueur n'est connue qu'une fois l'asset arrive.
+		local deadline = os.clock() + LENGTH_TIMEOUT
+		while loaded.Length <= 0 and os.clock() < deadline do
+			RunService.Heartbeat:Wait()
 		end
-		-- La longueur n'est connue qu'une fois l'asset arrive. Tant qu'elle vaut zero, on patiente.
 		local length = loaded.Length
-		if length <= 0 then
+		if length <= 0 or not model.Parent then
+			warn(`[LadderFold] "{model.Name}" : animation jamais chargee, elle restera ouverte.`)
+			releaseHold(model)
+			LadderFoldUtils.setWelds(model, true)
 			return
 		end
-		local stopAt = model:GetAttribute(FOLD_STOP_ATTRIBUTE)
-		local last = if typeof(stopAt) == "number" and stopAt > 0
-			then math.min(stopAt, length - END_EPSILON)
-			else length - END_EPSILON
-		local next = math.min(loaded.TimePosition + dt, last)
-		loaded.TimePosition = next
-		if next < last then
-			return
+
+		local before = model:GetExtentsSize()
+		local best = 0
+		local override = model:GetAttribute(FOLD_STOP_ATTRIBUTE)
+		if typeof(override) == "number" and override >= 0 then
+			best = math.min(override, length - END_EPSILON)
+		else
+			local smallest = math.huge
+			for i = 0, SWEEP_STEPS do
+				loaded.TimePosition = (i / SWEEP_STEPS) * (length - END_EPSILON)
+				RunService.Heartbeat:Wait() -- laisser le moteur poser la pose avant de la mesurer
+				if not model.Parent then
+					return
+				end
+				local size = model:GetExtentsSize().Magnitude
+				if size < smallest then
+					smallest = size
+					best = loaded.TimePosition
+				end
+			end
 		end
-		stopRunner(model)
+
+		loaded.TimePosition = best
+		RunService.Heartbeat:Wait()
+		local after = model:GetExtentsSize()
+		releaseHold(model)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
 		-- LES SOUDURES REVIENNENT SUR LA POSE FERMEE : un WeldConstraint capture l'ecart entre ses deux parts au
 		-- moment ou on l'active, donc remis maintenant il tient l'echelle repliee.
 		LadderFoldUtils.setWelds(model, true)
+		local shrunk = before.Magnitude - after.Magnitude
 		print(
-			`[LadderFold] "{model.Name}" tenue a {string.format("%.2f", next)}s `
-				.. `sur {string.format("%.2f", length)}s. {partsState(model)}`
+			`[LadderFold] "{model.Name}" tenue a {string.format("%.2f", best)}s sur `
+				.. `{string.format("%.2f", length)}s. encombrement `
+				.. `{string.format("%.1f/%.1f/%.1f", before.X, before.Y, before.Z)} -> `
+				.. `{string.format("%.1f/%.1f/%.1f", after.X, after.Y, after.Z)} `
+				.. `({if shrunk < 0.05 then "RIEN N'A BOUGE" else `elle a rapetisse de {string.format("%.1f", shrunk)}`}). `
+				.. partsState(model)
 		)
 	end)
 	return true
@@ -480,9 +606,11 @@ function LadderFoldUtils.unfoldFromEnd(model: Model)
 	end
 	stopRunner(model)
 	LadderFoldUtils.setWelds(model, false)
+	holdInPlace(model)
 	runners[model] = RunService.Heartbeat:Connect(function(dt: number)
 		if not model.Parent then
 			stopRunner(model)
+			releaseHold(model)
 			return
 		end
 		local next = math.max(loaded.TimePosition - dt, 0)
@@ -492,6 +620,7 @@ function LadderFoldUtils.unfoldFromEnd(model: Model)
 		end
 		stopRunner(model)
 		loaded:Stop(0)
+		releaseHold(model)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
 		LadderFoldUtils.setWelds(model, true)
 	end)
