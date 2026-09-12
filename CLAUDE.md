@@ -1344,6 +1344,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   arrivant, sinon la cause arrive apres l'effet. Regle : la transformation va PENDANT le mouvement, jamais a ses
   bouts.
 
+- **UN GESTE QUI ANNONCE UNE CHOSE ET EN FAIT UNE AUTRE SE LIT COMME UN BUG, meme quand tout marche.** Les outils
+  sortis du camion volaient tous en arc jusqu'a un point du terrain -- sauf que ceux qui s'equipent rejoignent
+  l'INVENTAIRE et DISPARAISSENT en arrivant. Le trajet disait donc "regarde ou je me pose", et l'objet s'escamotait
+  au dernier moment. Rien n'etait casse ; c'est le RECIT qui etait faux. Regle : une animation de transport ne se
+  justifie que si son point d'arrivee est quelque chose que le joueur voit. Quand l'objet part ailleurs (un sac,
+  un menu, un compteur), le changement d'etat doit etre immediat -- avec un son pour que le clic reponde, mais
+  sans trajet qui promette une destination visible.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

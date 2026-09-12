@@ -222,6 +222,35 @@ local function resetInPlace(model: Model, home: Instance)
 	task.wait()
 end
 
+--- IL CHANGE D'ETAT, SANS TRAJET. Pour tout ce qui part DANS LES MAINS du joueur.
+---
+--- POURQUOI CEUX-LA NE VOLENT PAS. Un outil equipable ne se pose pas sur la pelouse : il rejoint l'inventaire, et
+--- il DISPARAIT en arrivant. Le faire voler raconte donc un objet qu'on sort et qu'on pose... avant de l'escamoter
+--- au dernier moment. Le geste annonce une chose et en fait une autre, et c'est precisement ce qui se lit comme un
+--- bug. Le seau et l'echelle, eux, restent sur le terrain : leur trajet finit par quelque chose qu'on voit.
+---
+--- LE SIFFLEMENT RESTE. Le clic doit repondre, meme quand il n'y a rien a regarder.
+local function moveNow(model: Model, landing: CFrame, home: Instance?)
+	local host = soundHost(model)
+	if host then
+		SoundUtils.play(TruckConfigs.FLY_SOUND, host)
+	end
+	for _, d in model:GetDescendants() do
+		if d:IsA("BasePart") then
+			(d :: BasePart).Anchored = true
+		end
+	end
+	model.Parent = if home then home else Workspace
+	model:PivotTo(landing)
+	if home then
+		-- IL EST RENTRE : la marque part avec lui, et il redevient visible dans la benne.
+		model:SetAttribute(TruckConfigs.POSE_ATTRIBUTE, nil)
+		setToolHidden(model, false)
+	else
+		setToolHidden(model, true) -- il est dans l'inventaire, pas sur la pelouse
+	end
+end
+
 --- `openAt` : fraction du trajet a laquelle l'echelle se DEPLIE, en chemin. Absent = rien a animer en route.
 local function fly(model: Model, landing: CFrame, home: Instance?, openAt: number?)
 	flying[model] = true
@@ -408,6 +437,17 @@ function TruckToolsService.init()
 			local openAt = if LadderFoldUtils.isLadderName(inside.Name)
 				then TruckConfigs.OPEN_MID_FLY
 				else nil
+			-- CE QUI VA DANS LES MAINS NE VOLE PAS. Voir `moveNow` : un objet qui disparait a l'arrivee ne doit
+			-- pas etre annonce par un trajet qui dit "regarde ou je me pose".
+			if TruckConfigs.TOOL_EQUIP[toolName :: string] then
+				print(`[TruckToolsService] {player.Name} prend "{toolName}" en main.`)
+				inside:SetAttribute(
+					TruckConfigs.POSE_ATTRIBUTE,
+					truck:GetPivot():ToObjectSpace(inside:GetPivot())
+				)
+				moveNow(inside, landing :: CFrame, nil)
+				return
+			end
 			-- ON RETIENT SA POSE AVANT DE LE SORTIR, en repere du camion : c'est elle qui le ramenera exactement
 			-- la, a l'angle pres, et elle reste juste meme si le camion bouge entre-temps.
 			inside:SetAttribute(TruckConfigs.POSE_ATTRIBUTE, truck:GetPivot():ToObjectSpace(inside:GetPivot()))
@@ -437,6 +477,10 @@ function TruckToolsService.init()
 		end
 		print(`[TruckToolsService] {player.Name} range "{toolName}" dans le camion.`)
 		local home = truck:GetPivot() * (pose :: CFrame)
+		if TruckConfigs.TOOL_EQUIP[toolName :: string] then
+			moveNow(taken, home, folder) -- meme raison qu'a la sortie : il vient des mains, pas du terrain
+			return
+		end
 		if not LadderFoldUtils.isLadderName(taken.Name) then
 			fly(taken, home, folder)
 			return

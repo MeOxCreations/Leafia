@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.814 — La cisaille, le rateau et le taille-haie ne volent plus
+
+Ils rejoignent l'INVENTAIRE et disparaissent en arrivant. Le trajet disait donc "regarde ou je me pose", et l'objet
+s'escamotait au dernier moment : le geste annoncait une chose et en faisait une autre, ce qui se lit comme un bug
+meme quand tout fonctionne.
+
+Ils changent d'etat tout de suite maintenant, dans les deux sens. Le sifflement reste, parce que le clic doit
+repondre meme quand il n'y a rien a regarder.
+
+Le seau et l'echelle gardent leur trajet : eux restent sur le terrain, leur vol finit par quelque chose qu'on voit.
+
 ## 0.0.813 — La barre du camion se cache quand on s'eloigne
 
 Le hayon reste ouvert quand le joueur s'en va -- c'est normal, une porte ne se referme pas toute seule -- mais la
