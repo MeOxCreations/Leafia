@@ -236,7 +236,13 @@ local function cutWith(
 		-- AUTO-COMPLETION : des qu'on franchit le seuil (les derniers % chiants : dessus, recoins), on finit le reste
 		-- tout seul. Les carreaux finis d'office s'ajoutent a `finished` -> l'appelant leur donne XP / combo / debris
 		-- comme s'ils avaient ete tailles a la main (le joueur a fait le gros du travail, il touche tout).
-		if ratio >= HedgeConfigs.AUTO_COMPLETE_THRESHOLD and ratio < 1 then
+		-- LE SEUIL PEUT ETRE POSE SUR LA HAIE : le didacticiel n'en fait tailler qu'un cote et laisse le reste se
+		-- finir tout seul. Absent, c'est le seuil commun qui vaut.
+		local raw = hedge:GetAttribute(HedgeConfigs.AUTO_COMPLETE_ATTRIBUTE)
+		local threshold = if typeof(raw) == "number"
+			then math.clamp(raw :: number, 0.05, 1)
+			else HedgeConfigs.AUTO_COMPLETE_THRESHOLD
+		if ratio >= threshold and ratio < 1 then
 			finished += HedgeCellService.finishRemaining(hedge)
 			ratio = 1
 		end

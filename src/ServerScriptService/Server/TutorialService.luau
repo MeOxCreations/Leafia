@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
+local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
@@ -75,6 +76,35 @@ local function findModelByName(name: string): Model?
 		end
 	end
 	return nil
+end
+
+-- LA PREMIERE BasePart QUI PORTE CE NOM. Meme raison que `findModelByName` : un nom designe une FAMILLE, et sur
+-- un objet rigge le joint gagne contre la piece si on ne dit pas ce qu'on veut.
+local function findPartByName(name: string): BasePart?
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("BasePart") and d.Name == name then
+			return d :: BasePart
+		end
+	end
+	return nil
+end
+
+-- LA HAIE LA PLUS PROCHE D'UN POINT, a plat. Meme regle de nom que le reste du jeu (`AUTO_TAG_PREFIX`), et meme
+-- regle de choix que la pastille du didacticiel : deux facons de choisir finiraient par designer deux haies, et
+-- le joueur taillerait celle que personne ne lui montre.
+local function nearestHedge(from: Vector3): Model?
+	local best: Model? = nil
+	local bestDist = math.huge
+	for _, d in Workspace:GetDescendants() do
+		if d:IsA("Model") and string.find(d.Name, HedgeConfigs.AUTO_TAG_PREFIX, 1, true) == 1 then
+			local pivot = (d :: Model):GetPivot().Position
+			local flat = Vector3.new(pivot.X - from.X, 0, pivot.Z - from.Z).Magnitude
+			if flat < bestDist then
+				bestDist, best = flat, d :: Model
+			end
+		end
+	end
+	return best
 end
 
 -- Vrai tant que le grand-pere marche : la scene peut se terminer plusieurs fois (rejouee, ou un second joueur),
@@ -1340,6 +1370,31 @@ function TutorialService.init()
 		-- LE POINT DE CONTROLE PASSE EN DERNIER ARGUMENT : c'est lui qui courbe le trajet autour du buisson. Sans
 		-- lui `walkOldMan` irait tout droit, et le traverserait.
 		walkOldMan(TutorialConfigs.OLDMAN_HEDGE_TARGET, nil, nil, TutorialConfigs.OLDMAN_HEDGE_VIA)
+
+		-- UN SEUL COTE A TAILLER. On baisse le seuil d'auto-completion SUR CETTE HAIE : des que le joueur en a
+		-- fait la part demandee, le reste se finit tout seul, avec l'experience et les debris qui vont avec.
+		--
+		-- POURQUOI. C'est la premiere haie de sa vie ; lui faire faire le tour complet pour apprendre le geste
+		-- transforme une decouverte en corvee avant meme qu'il ait vu le resultat. Il taille un cote, il voit
+		-- l'avant / apres, il passe a la suite.
+		--
+		-- LA MEME HAIE QUE LA PASTILLE : celle qui est la plus proche du point ou le grand-pere s'arrete. Deux
+		-- regles de choix differentes finiraient par designer deux haies, et le joueur taillerait celle que
+		-- personne ne lui montre.
+		local target = findPartByName(TutorialConfigs.OLDMAN_HEDGE_TARGET)
+		local hedge = if target then nearestHedge(target.Position) else nil
+		if hedge then
+			hedge:SetAttribute(HedgeConfigs.AUTO_COMPLETE_ATTRIBUTE, TutorialConfigs.HEDGE_DONE_AT)
+			print(
+				`[Tutorial] "{hedge.Name}" se finira seule a `
+					.. `{math.floor(TutorialConfigs.HEDGE_DONE_AT * 100)} % : un seul cote a tailler.`
+			)
+		else
+			warn(
+				`[Tutorial] Aucune haie pres de "{TutorialConfigs.OLDMAN_HEDGE_TARGET}" : le joueur devra la `
+					.. "tailler en entier. Rojo ne synchronise pas le Workspace."
+			)
+		end
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur

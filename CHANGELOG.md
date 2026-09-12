@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.819 — Dans le didacticiel, un seul cote de haie a tailler
+
+Le reste se finit tout seul des que le joueur a fait la part demandee, avec l'experience et les debris qui vont
+avec -- il a appris le geste, il touche tout.
+
+POURQUOI. C'est la premiere haie de sa vie. Lui faire faire le tour complet pour apprendre le geste transforme une
+decouverte en corvee avant meme qu'il ait vu le resultat. Il taille un cote, il voit l'avant / apres, il passe a
+la suite.
+
+LE JEU SAVAIT DEJA FAIRE CA. Toute haie se finit seule au-dela de 95 % -- les derniers pourcents chiants, le
+dessus, les recoins. Ce seuil devient reglable PAR HAIE, par un attribut pose sur elle, et la scene du didacticiel
+le baisse sur la sienne. La coupe n'a donc pas a savoir qu'un didacticiel existe : elle lit un reglage porte par
+l'objet. N'importe quel chantier futur pourra s'en servir -- une haie de client presse, un contrat "vite fait" --
+sans une ligne de plus.
+
+LA MEME HAIE QUE LA PASTILLE : celle qui est la plus proche du point ou le grand-pere s'arrete. Deux regles de
+choix differentes finiraient par designer deux haies, et le joueur taillerait celle que personne ne lui montre.
+
 ## 0.0.818 — La pastille de la haie se pose sur CELLE que le grand-pere va montrer
 
 Elle visait la haie la plus proche DU JOUEUR a l'instant ou il equipe la cisaille -- c'est-a-dire depuis le

@@ -934,6 +934,17 @@ local HedgeConfigs = {
 	-- patient / impatient). Sur une haie HAUTE, atteindre ce seuil exige deja l'echelle (le dessus fait plus que ca) ->
 	-- l'echelle reste necessaire, l'auto-completion ne mange que la derniere frange.
 	AUTO_COMPLETE_THRESHOLD = 0.95,
+	-- ET IL SE REGLE PAR HAIE, par un attribut pose sur elle. Absent, c'est la valeur ci-dessus qui vaut.
+	--
+	-- SERT AU DIDACTICIEL : la premiere haie de sa vie, le joueur n'en taille qu'UN COTE, et le reste se finit
+	-- tout seul. Lui faire faire le tour complet d'une haie pour apprendre le geste, c'est transformer une
+	-- decouverte en corvee avant meme qu'il ait vu le resultat.
+	--
+	-- UN ATTRIBUT SUR L'OBJET, PAS UN CAS PARTICULIER DANS LE CODE DE COUPE. La coupe n'a pas a savoir qu'un
+	-- didacticiel existe : elle lit un reglage porte par la haie, et c'est la scene qui le pose. N'importe quel
+	-- chantier futur pourra s'en servir -- une haie de client presse, un contrat "vite fait" -- sans une ligne de
+	-- plus ici.
+	AUTO_COMPLETE_ATTRIBUTE = "LeafiaAutoCompleteAt",
 	-- Garde "paye une fois" pose sur la HAIE : true des qu'elle a verse son cheque de fin (100%). Sans lui, continuer
 	-- a passer la lame sur une haie deja finie la re-paierait. HedgeCutService le lit / le pose. (Si un jour les haies
 	-- repoussent et doivent re-payer, c'est ici qu'on remettra l'attribut a nil au moment de la repousse.)
