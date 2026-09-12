@@ -9,6 +9,14 @@ local TruckConfigs = {
 	-- La part qui porte le prompt. UNE PART PRECISE et pas le modele entier : sinon l'invite s'affiche des qu'on
 	-- longe la carrosserie, y compris a l'avant ou l'action n'a aucun sens.
 	DOOR_PART = "DoorBack",
+	-- ET LA PART QUI PORTE LE PROMPT, posee par le code a l'endroit du hayon FERME.
+	--
+	-- POURQUOI PAS LE HAYON LUI-MEME. Il PIVOTE en s'ouvrant, et la pilule le suivait : on appuyait sur E et
+	-- l'invite descendait avec la porte, comme si elle tombait. Une invite doit rester ou le joueur l'a lue.
+	--
+	-- Elle est creee une fois et reste dans le modele. La retrouver plutot que la recreer garde la place que tu
+	-- lui aurais donnee a la main dans Studio.
+	PROMPT_ANCHOR = "TruckPromptAnchor",
 
 	-- ===== LE PROMPT =====
 	-- Le client le reconnait par ce nom pour dessiner notre pilule a la place de l'interface Roblox par defaut.

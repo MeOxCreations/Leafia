@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.815 — L'invite du camion ne descend plus avec le hayon
+
+Le prompt etait pose SUR la porte, qui pivote en s'ouvrant : l'invite la suivait, comme si on l'avait fait
+tomber. Elle appartient a l'ACTION, pas a la piece qui bouge.
+
+Le code pose maintenant une part fixe et invisible a l'endroit du hayon FERME -- son etat au demarrage du serveur
+-- et le prompt vit dessus. Elle reste dans le modele, donc la deplacer a la main dans Studio suffit a regler ou
+l'invite s'affiche.
+
+Bonus gratuit : la detection de proximite part d'elle aussi, donc la zone ou l'action a un sens ne se deplace plus
+quand la porte s'ouvre.
+
 ## 0.0.814 — La cisaille, le rateau et le taille-haie ne volent plus
 
 Ils rejoignent l'INVENTAIRE et disparaissent en arrivant. Le trajet disait donc "regarde ou je me pose", et l'objet

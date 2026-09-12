@@ -1352,6 +1352,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   un menu, un compteur), le changement d'etat doit etre immediat -- avec un son pour que le clic reponde, mais
   sans trajet qui promette une destination visible.
 
+- **UNE INVITE ACCROCHEE A UNE PIECE MOBILE PART AVEC ELLE.** Le prompt du camion etait pose sur le HAYON, donc il
+  descendait avec la porte a l'ouverture : on appuyait sur E et l'invite tombait, comme si on l'avait fait chuter.
+  Une invite doit rester la ou le joueur vient de la lire -- elle appartient a l'ACTION, pas a la piece qui bouge.
+  La reponse est une part fixe posee par le code a l'endroit de repos de la piece, et le prompt vit dessus. Bonus
+  gratuit : la zone de detection cesse elle aussi de se deplacer quand la porte s'ouvre, ce qui la rend plus
+  juste. Se verifie d'un coup d'oeil : tout ce qu'un joueur LIT (badge, marqueur, jauge) doit etre accroche a
+  quelque chose d'immobile, ou suivre exprès un sujet qui bouge -- jamais suivre par accident.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

@@ -115,6 +115,28 @@ local function setup(model: Model)
 		warn(`[TruckService] Pas d'Animator sous "{model.Name}" : la porte ne bougera pas.`)
 	end
 
+	-- LA PILULE NE SUIT PAS LA PORTE. Le prompt etait pose SUR le hayon, qui pivote en s'ouvrant : l'invite
+	-- descendait avec lui, comme si elle tombait. Une invite doit rester la ou le joueur vient de la lire.
+	--
+	-- ON POSE DONC UNE PART FIXE a l'endroit du hayon FERME -- c'est son etat au demarrage du serveur -- et le
+	-- prompt vit dessus. La detection de proximite part d'elle aussi, ce qui est plus juste : la zone ou l'action
+	-- a un sens ne bouge pas quand la porte s'ouvre.
+	local anchor = model:FindFirstChild(TruckConfigs.PROMPT_ANCHOR)
+	if not (anchor and anchor:IsA("BasePart")) then
+		local fixed = Instance.new("Part")
+		fixed.Name = TruckConfigs.PROMPT_ANCHOR
+		fixed.Size = Vector3.new(0.2, 0.2, 0.2)
+		fixed.Transparency = 1
+		fixed.CanCollide = false
+		fixed.CanQuery = false
+		fixed.CanTouch = false
+		fixed.CastShadow = false
+		fixed.Anchored = true
+		fixed.CFrame = (door :: BasePart).CFrame
+		fixed.Parent = model
+		anchor = fixed
+	end
+
 	local prompt = Instance.new("ProximityPrompt")
 	prompt.Name = TruckConfigs.PROMPT_NAME -- le client le reconnait pour dessiner la pilule a la place
 	prompt.ActionText = TruckConfigs.PROMPT_ACTION
@@ -154,7 +176,7 @@ local function setup(model: Model)
 	-- CUSTOM : Roblox garde la proximite, la touche E et le tap mobile, mais n'affiche rien. La pilule est
 	-- dessinee cote client.
 	prompt.Style = Enum.ProximityPromptStyle.Custom
-	prompt.Parent = door
+	prompt.Parent = anchor
 
 	prompt.Triggered:Connect(function(_player: Player)
 		-- UNE BASCULE, et rien de plus : le meme appui ouvre et referme. Aucun etat a valider -- le pire qu'un
