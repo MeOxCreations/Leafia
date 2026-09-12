@@ -39,6 +39,20 @@ type CarryState = {
 
 local carried: { [Model]: CarryState } = {}
 
+--- LE SEAU QUE CE JOUEUR PORTE, ou nil.
+---
+--- ON DEMANDE A CELUI QUI TIENT LE REGISTRE. `CarryUtils` dit qu'on porte "un seau" -- c'est ce qui bloque les
+--- mains -- mais pas LEQUEL. Une seconde table ailleurs pour retenir l'objet finirait par ne plus etre d'accord
+--- avec celle-ci, et c'est celle-ci qui porte la soudure.
+function BinCarryService.carriedBy(player: Player): Model?
+	for model, state in carried do
+		if state.owner == player and model.Parent then
+			return model
+		end
+	end
+	return nil
+end
+
 -- UN SEAU MONTE SUR UN RIG N'EST PAS UN SEAU DU JEU. Les rigs d'ANIMATION vivent dans le Workspace avec leur
 -- seau accroche dans la main : sans ce filtre, le jeu propose de "prendre" un objet soude a un mannequin, et il
 -- pollue la detection (vecu : "Workspace.Rig.Bintest" compte comme un 3e seau). Un rig se reconnait a son

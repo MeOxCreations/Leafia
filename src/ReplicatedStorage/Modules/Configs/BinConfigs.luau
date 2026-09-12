@@ -15,6 +15,12 @@ return {
 	-- ATTENTION : un model de TEST nomme "Bintest" serait vu comme un vrai seau. Les objets de travail (rigs
 	-- d'animation) doivent donc vivre hors du Workspace, ou porter un autre nom.
 	MODEL_PREFIX = "Bin",
+	-- COMBIEN DE FEUILLES IL CONTIENT, pose sur le modele du seau.
+	--
+	-- UN ATTRIBUT SUR L'OBJET, pas une table par joueur. Il se replique tout seul, il voyage AVEC le seau, et il
+	-- survit a la repose : un seau pose au sol garde ce qu'il contient, ce qui est la moindre des choses pour un
+	-- seau. Une table cote serveur mentirait des que deux joueurs se passent le meme.
+	LEAVES_ATTRIBUTE = "LeafiaBinLeaves",
 	-- Part fixe de reference. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc ajouter la
 	-- moindre part enfant le decale et tous les calculs partent de travers. On prend la PrimaryPart, sinon
 	-- un enfant portant ce nom.

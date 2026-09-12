@@ -180,6 +180,10 @@ local REMOTES: { { any } } = {
 	-- tient et ou il regarde, donc il n'y a rien a valider et rien a falsifier -- il choisit lui-meme les tas
 	-- attrapes. Anti-spam borne cote serveur (RakeConfigs.COOLDOWN) : envoyer mille clics ne ratisse pas plus vite.
 	{ "RakeSweep", E, "Rake" },
+	-- ON VERSE UN TAS DANS LE SEAU. Le client envoie LE TAS, rien d'autre : le serveur sait deja ce que le joueur
+	-- porte et ou il se trouve, donc il n'y a que cet argument a valider -- et il le valide en le cherchant dans
+	-- le dossier des tas, pas en le croyant.
+	{ "CollectLeafPile", E, "Rake" },
 
 	-- [ MOW ] --
 	-- PRISE / REPOSE de la tondeuse. Deux arguments : la tondeuse (Instance) et une PHASE ("grab" ou "place").

@@ -2204,6 +2204,29 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.828 — Les tas de feuilles entrent dans le seau
+
+Troisieme et dernier moment du cycle de la feuille, et il manquait depuis le debut : `HedgeStockService` les pose,
+`RakeService` les rassemble en gros tas, et maintenant le seau les emporte. L'entete de RakeService l'annoncait en
+toutes lettres -- "le gros tas ira un jour dans la Bin".
+
+LE GESTE : le seau en main, une pastille `PICK UP` apparait sur le tas le plus proche, et E le verse dedans. Le
+compte de feuilles s'ajoute sur le SEAU, en attribut : il se replique tout seul, il voyage avec l'objet, et un
+seau pose au sol garde ce qu'il contient.
+
+DETECTION RADIALE, pas une boite. Un tas est rond et pose a plat : une distance a son centre n'a aucun angle mort
+et ne depend de l'orientation de rien. Piege deja paye sur la prise de l'echelle, ou deux boites laterales
+laissaient des trous aux extremites.
+
+LE MEME NOMBRE SERT A L'AFFICHAGE ET AU CONTROLE. La pastille apparait a 7 studs et le serveur refuse au-dela de
+7 : deux valeurs finiraient par ne plus etre d'accord, et le joueur verrait une invite qui refuse de repondre.
+
+LE SERVEUR VERIFIE TOUT. Le client envoie un tas, rien d'autre -- il ne dit ni qui il est, ni ou il est, ni
+combien ca vaut. Le serveur retrouve le tas dans SON dossier (sinon on ferait avaler n'importe quoi au seau),
+verifie que le joueur en porte un, et mesure la distance lui-meme.
+
+Et la touche suit le badge, comme les six autres features qui partagent `E`.
+
 ## 0.0.827 — Le grand-pere s'assoit DOS au banc
 
 Il y marchait en le regardant -- c'est sa direction de marche -- donc il se posait face au dossier, et il se

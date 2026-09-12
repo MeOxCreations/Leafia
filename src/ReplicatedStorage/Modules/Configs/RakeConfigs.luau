@@ -70,6 +70,32 @@ local RakeConfigs = {
 	-- Attribut qui retient COMBIEN de petits tas il a avale. C'est lui qui donne la taille, et plus tard ce
 	-- qu'il vaut une fois vide dans la Bin.
 	PILE_COUNT_ATTRIBUTE = "LeafiaLeafCount",
+
+	-- ===== ON VERSE LE TAS DANS LE SEAU =====
+	-- Troisieme et dernier moment du cycle de la feuille : `HedgeStockService` les pose, ce service les
+	-- rassemble, et le seau les emporte.
+	--
+	-- DISTANCE RADIALE, en studs, mesuree a plat. Un tas est rond et pose au sol : une distance a son centre n'a
+	-- aucun angle mort et ne depend de l'orientation de rien. Le meme nombre sert a l'affichage de la pastille ET
+	-- au controle du serveur -- deux valeurs finiraient par ne plus etre d'accord, et le joueur verrait une
+	-- invite qui refuse de repondre.
+	COLLECT_RADIUS = 7,
+	-- Cadence de la recherche du tas le plus proche. Un tas ne bouge pas : six fois par seconde suffisent, et ca
+	-- evite de balayer le dossier soixante fois pour un resultat identique.
+	COLLECT_CHECK_EVERY = 0.15,
+	-- LA TOUCHE, ET SON NOM AFFICHE. Les deux vont ensemble : afficher "E" en ecoutant autre chose serait un
+	-- mensonge a l'ecran.
+	COLLECT_KEY = "E",
+	COLLECT_KEYCODE = Enum.KeyCode.E,
+	-- Le nom de l'action liee a la touche. Deux features qui partagent un nom se debranchent l'une l'autre.
+	COLLECT_ACTION = "LeafiaCollectLeafPile",
+	-- EN ANGLAIS, comme tout texte vu par le joueur, et avec des mots simples : le public a huit ans.
+	COLLECT_ACTION_TEXT = "PICK UP",
+	COLLECT_OBJECT_TEXT = "LEAVES",
+	-- Hauteur de la pastille au-dessus du tas, en studs.
+	COLLECT_PROMPT_UP = 3,
+	-- Le bruit du versement, porte par le SEAU. Facultatif : sans lui le ramassage marche quand meme.
+	COLLECT_SOUND = { "Sounds", "Game", "GlobalSounds", "DropSound" },
 	-- Distance sous laquelle un coup de rateau REJOINT un gros tas existant au lieu d'en creer un deuxieme.
 	-- Sans elle, chaque coup ferait son propre tas et on obtiendrait une trainee, pas un tas.
 	MERGE_RADIUS = 5,
