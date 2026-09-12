@@ -2204,6 +2204,10 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.816 — La barre du camion se cache a 13 studs, pas 22
+
+Reglage a l'ecran. A 22 elle restait affichee alors qu'on etait deja parti travailler.
+
 ## 0.0.815 — L'invite du camion ne descend plus avec le hayon
 
 Le prompt etait pose SUR la porte, qui pivote en s'ouvrant : l'invite la suivait, comme si on l'avait fait

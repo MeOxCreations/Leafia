@@ -48,13 +48,16 @@ local TruckConfigs = {
 	-- JUSQU'OU LA BARRE D'OUTILS RESTE A L'ECRAN, en studs autour du hayon. Au-dela elle se cache, meme si la
 	-- porte est restee ouverte.
 	--
-	-- PLUS LARGE QUE LE PROMPT, et c'est voulu : sortir un outil le pose a quelques pas derriere le camion, et on
-	-- va le chercher. Une barre qui disparait pendant ce pas-la obligerait a revenir coller la carrosserie pour en
-	-- sortir un deuxieme. Elle doit couvrir le camion ET ses points de depot.
+	-- PLUS LARGE QUE LE PROMPT (8 studs) : sortir un outil le pose a quelques pas derriere le camion, et on va le
+	-- chercher. Une barre qui disparaitrait pendant ce pas-la obligerait a revenir coller la carrosserie pour en
+	-- sortir un deuxieme.
+	--
+	-- MAIS PAS TRES LARGE. Essaye a 22, ramene a 13 : au-dela, la barre reste a l'ecran alors qu'on est deja parti
+	-- travailler, et elle occupe le bas de l'ecran pour un camion dont on ne s'occupe plus.
 	--
 	-- MESUREE A PLAT (X/Z) : une porte plus haute ou plus basse que le joueur ne change rien a "est-il devant le
 	-- camion".
-	HUD_DISTANCE = 22,
+	HUD_DISTANCE = 13,
 	-- Cadence de la verification. Ce n'est pas une image par image : une barre qui apparait un dixieme de seconde
 	-- apres le pas ne se remarque pas, et relire la distance a 60 Hz pour ca n'a aucun interet.
 	HUD_CHECK_EVERY = 0.15,
