@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.789 — Cliquer a cote du camion ne l'ouvre plus
+
+Le bind de la touche pose en 0.0.787 demandait aussi un BOUTON TACTILE automatique (le troisieme argument de
+`BindAction`). Roblox le pose a l'ecran des que la machine se declare tactile -- un PC a ecran tactile compris --
+vers le bas a droite, et il se clique A LA SOURIS. Cliquer dans le vide a cote du camion ouvrait donc la porte.
+
+IL NE MANQUE A PERSONNE : la PILULE est deja le bouton mobile de cette action, et elle n'est la que quand l'action
+a un sens. Les autres features gardent le leur, parce que leur geste n'a PAS de pilule -- reposer la tondeuse
+qu'on pousse, par exemple : le badge a disparu, la machine est en main, et il n'y a rien a taper.
+
 ## 0.0.788 — Les repliques suivent le dossier `Voices`, deplace dans Studio
 
 Le dossier est passe de `Sounds/Scenes/Scene1/Voices` a `Sounds/Scenes/Voices`. Les trente chemins du didacticiel

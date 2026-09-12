@@ -52,7 +52,15 @@ local function setBound(active: boolean)
 			-- `Pass` et pas `Sink` : les voisines doivent recevoir l'appui elles aussi, chacune fera son propre
 			-- test. Avaler l'input ici les casserait.
 			return Enum.ContextActionResult.Pass
-		end, true, TruckConfigs.PROMPT_KEYCODE)
+			-- PAS DE BOUTON TACTILE AUTOMATIQUE (le `false`), et c'est un bug qu'on vient de payer. Ce troisieme
+			-- argument demande a Roblox de poser un bouton A L'ECRAN : il apparait des que la machine se declare
+			-- TACTILE -- un PC a ecran tactile compris -- quelque part vers le bas a droite, et il se CLIQUE A LA
+			-- SOURIS. Le joueur cliquait dans le vide a cote du camion et la porte s'ouvrait.
+			--
+			-- Il ne manque a personne : la PILULE est deja le bouton mobile de cette action, et elle n'est la que
+			-- quand l'action a un sens. Les features qui gardent ce bouton sont celles dont le geste n'a PAS de
+			-- pilule -- reposer la tondeuse qu'on pousse, par exemple.
+		end, false, TruckConfigs.PROMPT_KEYCODE)
 	else
 		ContextActionService:UnbindAction(TruckConfigs.ACTION_NAME)
 	end
