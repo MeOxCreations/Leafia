@@ -132,16 +132,24 @@ local function setup(model: Model)
 	-- La porte peut etre partiellement masquee par la carrosserie ou un outil pose devant : ne pas exiger la ligne
 	-- de vue, sinon l'invite clignote des qu'un rien passe devant.
 	prompt.RequiresLineOfSight = false
+	-- ET IL NE SE DECLENCHE PLUS AU CLIC. `ClickablePrompt` vaut VRAI par defaut, et en `Style = Custom` Roblox
+	-- n'affiche aucune interface a cliquer : il prend alors N'IMPORTE QUEL clic de l'ecran, ou qu'il soit, tant que
+	-- le prompt est a portee. Le joueur cliquait dans le vide pour tourner sa camera et le hayon s'ouvrait, se
+	-- refermait, se rouvrait.
+	--
+	-- MESURE, PAS DEDUCTION : une sonde cote serveur disait "declenche" a chaque clic pendant qu'une sonde cote
+	-- client, dans le seul code qui peut le declencher, ne disait RIEN. Deux lignes qui ne tirent pas ensemble ne
+	-- laissent qu'une explication -- le moteur le declenche lui-meme. Trois causes avaient ete supposees avant, et
+	-- aucune n'etait la bonne.
+	--
+	-- Le tap mobile ne passe pas par lui : c'est la pilule qu'on tape, et elle appelle `InputHoldBegin` a la main.
+	prompt.ClickablePrompt = false
 	-- CUSTOM : Roblox garde la proximite, la touche E et le tap mobile, mais n'affiche rien. La pilule est
 	-- dessinee cote client.
 	prompt.Style = Enum.ProximityPromptStyle.Custom
 	prompt.Parent = door
 
 	prompt.Triggered:Connect(function(_player: Player)
-		-- SONDE TEMPORAIRE : le prompt a bien ete declenche, et par qui. Si cette ligne sort SANS la sonde du
-		-- client, c'est que Roblox l'a declenche lui-meme -- donc que quelque chose l'ecoute encore malgre
-		-- `KeyboardKeyCode = None`. A retirer des que la cause est connue.
-		print(`[TruckService] Prompt declenche par {_player.Name}.`)
 		-- UNE BASCULE, et rien de plus : le meme appui ouvre et referme. Aucun etat a valider -- le pire qu'un
 		-- joueur puisse faire est d'ouvrir une porte de camion.
 		truck.open = not truck.open

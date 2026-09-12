@@ -2204,6 +2204,30 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.791 — N'importe quel clic n'ouvre plus le camion
+
+C'etait `ClickablePrompt`, la propriete du `ProximityPrompt` -- vraie par defaut. En `Style = Custom`, Roblox
+n'affiche AUCUNE interface a cliquer : plus rien ne borne alors la zone cliquable, et tout clic de l'ecran
+declenche le prompt tant qu'on est a portee. Cliquer dans le ciel ouvrait le hayon ; tourner la camera le faisait
+s'ouvrir et se refermer ; taper a cote d'un seau prenait le camion.
+
+`prompt.ClickablePrompt = false` sur le camion ET sur la boite aux lettres, qui a le meme montage -- on coupe
+avant de le decouvrir a l'usage. Le tap mobile ne passe pas par lui : c'est la pilule qu'on tape, et elle
+declenche le prompt a la main.
+
+UN PROMPT CUSTOM DEMANDE DEUX COUPURES, pas une : `KeyboardKeyCode = None` pour la touche (0.0.787) et
+`ClickablePrompt = false` pour le clic. N'en couper qu'une laisse le bug entier.
+
+CE QUI A TRANCHE : une sonde de chaque cote de la frontiere -- un print serveur dans `prompt.Triggered`, un print
+client dans le seul code capable de le declencher. Le serveur parlait a chaque clic, le client se taisait. Deux
+lignes qui ne tirent pas ensemble ne laissent qu'une explication.
+
+TROIS CAUSES AVAIENT ETE PROPOSEES AVANT, aucune mesuree, aucune bonne. La lecon est dans le journal de
+CLAUDE.md, et elle porte sur la methode : quand un effet a un declencheur possible de chaque cote du reseau,
+instrumenter les DEUX avant de proposer quoi que ce soit.
+
+Les trois sondes temporaires sont retirees.
+
 ## 0.0.790 — Une sonde qui nomme l'interface invisible sous le curseur
 
 Cliquer a cote du camion l'ouvre, et la camera ne tourne plus a cet endroit. Les deux symptomes ENSEMBLE ne

@@ -220,6 +220,10 @@ local function setup(model: Model, slotName: string?)
 	-- La boite peut etre partiellement masquee (pied fin, decor) : ne pas exiger la ligne de vue, sinon l'invite
 	-- clignote quand un rien passe devant.
 	prompt.RequiresLineOfSight = false
+	-- MEME MONTAGE QUE LE CAMION, DONC MEME PIEGE : en `Style = Custom`, un `ClickablePrompt` prend n'importe quel
+	-- clic de l'ecran des qu'on est a portee -- il n'y a aucune interface Roblox a viser. On coupe avant de le
+	-- decouvrir a l'usage.
+	prompt.ClickablePrompt = false
 	-- Style CUSTOM : on n'affiche PAS l'UI Roblox par defaut (moche). Le prompt garde la detection de proximite,
 	-- l'input clavier E et le Triggered ; l'AFFICHAGE est dessine cote client (MailboxController via InteractionPrompt).
 	prompt.Style = Enum.ProximityPromptStyle.Custom

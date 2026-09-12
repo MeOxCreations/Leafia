@@ -28,9 +28,6 @@ local bound = false
 local function trigger()
 	local prompt = activePrompt
 	if prompt and prompt.Parent then
-		-- SONDE TEMPORAIRE : QUI DEMANDE L'OUVERTURE ? La pile d'appels nomme le chemin exact -- la pilule, la
-		-- touche, ou autre chose. A retirer des que la cause est connue.
-		print("[Truck] Ouverture demandee par : " .. debug.traceback())
 		prompt:InputHoldBegin()
 		prompt:InputHoldEnd()
 	end

@@ -1128,6 +1128,22 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   moteur lui-meme. Corollaire : le nom de la touche affichee ne peut plus venir du prompt (il vaut `None`), il
   passe en config -- afficher "E" en ecoutant autre chose serait un mensonge a l'ecran.
 
+- **UN `ProximityPrompt` EN `Style = Custom` AVEC `ClickablePrompt` (le defaut) SE DECLENCHE A N'IMPORTE QUEL
+  CLIC DE L'ECRAN.** Il n'y a aucune interface Roblox a viser -- on la dessine soi-meme -- donc plus rien ne
+  borne la zone cliquable : tant qu'on est A PORTEE, un clic dans le ciel ouvre le camion. Symptomes vecus :
+  cliquer dans le vide ouvrait la porte, la caméra semblait "ne plus tourner" (chaque clic-droit de rotation
+  rouvrait/refermait le hayon), et taper a cote d'un seau prenait le camion. Fix : `prompt.ClickablePrompt =
+  false`, et declencher a la main (`InputHoldBegin` / `InputHoldEnd`) depuis notre propre pilule. Corollaire
+  d'API : un prompt Custom demande DEUX coupures, pas une -- `KeyboardKeyCode = None` pour la touche, et
+  `ClickablePrompt = false` pour le clic ; couper la premiere seule laisse le bug entier.
+  LECON DE METHODE, plus chere que le bug : j'ai propose TROIS causes (bouton tactile de ContextActionService,
+  vignette plein ecran, arbitrage du badge) sans en mesurer aucune, et le joueur a perdu une demi-heure bloque.
+  Ce qui a tranche en une manche : une sonde de chaque cote de la frontiere -- un print serveur dans
+  `prompt.Triggered`, un print client dans le SEUL code capable de le declencher. Le serveur parlait a chaque
+  clic, le client se taisait : deux lignes qui ne tirent pas ensemble ne laissent qu'une explication, le moteur
+  le fait lui-meme. Regle : quand un effet a un declencheur possible de chaque cote du reseau, instrumenter les
+  DEUX avant de proposer quoi que ce soit.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
