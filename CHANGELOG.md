@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.808 — L'outil refait son tour sur lui-meme, et deux fois plus vite
+
+Le tour complet revient : c'est lui qui donne le peps, l'objet ne se contente pas de se deplacer, il TOURNE, et le
+geste redevient un evenement au lieu d'un transport. Sur la verticale, pas sur son axe long -- une echelle qui
+roule sur elle-meme aurait l'air de tomber.
+
+Le trajet passe de 0.85 s a 0.45 s. C'est un enchainement entre deux etats, pas un plan a regarder : un geste
+d'interface qui traine se ressent comme une attente des la deuxieme fois qu'on le voit.
+
+Ce qui reste de 0.0.807 : plus d'arc en cloche. L'objet quitte le hayon a l'horizontale et descend, au lieu d'etre
+lance par-dessus le camion. Et il se redresse sur la fin pour arriver droit -- d'autant plus necessaire sur un
+trajet court, ou l'angle du hasard se voit davantage.
+
 ## 0.0.807 — L'outil sort du hayon et se pose, sans arc ni tour sur lui-meme
 
 Il volait en arc a sept studs de haut en faisant un tour complet. Un arc haut raconte un objet LANCE, et le joueur
