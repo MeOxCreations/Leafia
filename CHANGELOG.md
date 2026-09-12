@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.825 — La haie arrive deja a moitie faite, des le demarrage du serveur
+
+Elle etait preparee quand le joueur equipait la cisaille. Elle perdait donc des centaines de feuilles D'UN COUP
+sous ses yeux -- un clignotement que rien n'explique, au moment precis ou on lui demande de regarder ailleurs.
+
+Preparee avant qu'il arrive, c'est simplement UNE HAIE A MOITIE FAITE : il croit que quelqu'un a commence le
+travail, ce qui est exactement l'histoire qu'on raconte.
+
+UNE FOIS POUR LE SERVEUR, PAS PAR JOUEUR. La haie est dans le monde, elle n'appartient a personne : la preparer a
+chaque arrivee la remettrait a moitie faite alors qu'un autre est peut-etre en train de la finir.
+
+ET ON REESSAYE TANT QUE SA GRILLE DE CARREAUX N'EST PAS LA. `HedgeCellService` la pave juste avant nous, mais
+"juste avant" n'est pas "deja fait", et avec le streaming la haie peut arriver bien apres le demarrage. Abandonner
+au premier essai la raterait pour toute la session.
+
+Les trois lignes de sonde sur le rig de l'echelle sont retirees : le repli marche, son encombrement passe de 9.0 a
+3.6 studs, et la ligne de mesure suffit maintenant.
+
 ## 0.0.824 — La haie du didacticiel arrive nette partout, sauf la face a tailler
 
 Le joueur ne taille plus qu'UNE face. Toutes les autres -- les trois cotes et le dessus -- sont deja finies quand

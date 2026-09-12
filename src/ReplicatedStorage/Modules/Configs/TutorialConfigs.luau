@@ -662,6 +662,11 @@ return {
 	-- taux lui-meme, c'est le lire une fois sur deux AVANT qu'elle ne se replique -- et la jauge partirait alors
 	-- de 80 % au lieu de zero. Le serveur, qui fait la coupe, est le seul a savoir quand elle est finie.
 	HEDGE_START_ATTRIBUTE = "LeafiaTutorialHedgeStart",
+	-- COMBIEN DE TEMPS ON ATTEND SA GRILLE DE CARREAUX, au demarrage du serveur. Elle est pavee par
+	-- `HedgeCellService` juste avant nous, mais "juste avant" n'est pas "deja fait" : la haie peut arriver par le
+	-- streaming, et un service qui abandonne au premier essai la raterait pour toute la session.
+	HEDGE_PREPARE_TIMEOUT = 60,
+	HEDGE_PREPARE_INTERVAL = 1,
 	-- Hauteur du marqueur au-dessus du centre de la haie, en studs.
 	HEDGE_MARKER_UP = 6,
 	-- Le bandeau de tache.

@@ -746,16 +746,15 @@ end
 --
 -- ET ON MEMORISE CE NIVEAU DE DEPART sur la haie : c'est lui qui permet a la jauge de la tache de partir de zero
 -- au lieu de partir a 80 %. Le serveur est le seul a savoir quand la preparation est finie.
-local function prepareHedge(hedge: BasePart, from: Vector3)
+local function prepareHedge(hedge: BasePart, from: Vector3): boolean
 	local keep = HedgeCellService.faceTowards(hedge, from)
 	if not keep then
 		warn(`[Tutorial] Impossible de choisir une face sur "{hedge.Name}" : il la taillera en entier.`)
-		return
+		return true -- ce n'est pas un probleme de timing : reessayer n'y changerait rien
 	end
 	local total = HedgeCellService.getCount(hedge)
 	if total <= 0 then
-		warn(`[Tutorial] "{hedge.Name}" n'a aucun carreau : rien a preparer.`)
-		return
+		return false -- la grille n'est pas encore pavee : a reessayer
 	end
 	local done = HedgeCellService.finishAllExcept(hedge, keep :: string)
 	local ratio = math.clamp(done / total, 0, 1)
@@ -764,6 +763,36 @@ local function prepareHedge(hedge: BasePart, from: Vector3)
 	print(
 		`[Tutorial] "{hedge.Name}" preparee : {done}/{total} carreaux deja nets `
 			.. `({math.floor(ratio * 100)} %). Il ne reste que la face {keep}.`
+	)
+	return true
+end
+
+-- ON LA PREPARE AU DEMARRAGE DU SERVEUR, pas quand le joueur prend la cisaille.
+--
+-- POURQUOI SI TOT. Preparee en cours de partie, la haie perdrait des centaines de feuilles D'UN COUP sous les
+-- yeux du joueur -- un clignotement que rien n'explique, au moment precis ou on lui demande de regarder ailleurs.
+-- Preparee avant qu'il arrive, elle est simplement UNE HAIE A MOITIE FAITE : il croit que quelqu'un a commence le
+-- travail, ce qui est exactement l'histoire qu'on raconte.
+--
+-- UNE FOIS POUR LE SERVEUR, PAS PAR JOUEUR : la haie est dans le monde, elle n'appartient a personne. La preparer
+-- a chaque arrivee la remettrait a moitie faite alors qu'un joueur est peut-etre en train de la finir.
+--
+-- ET ON REESSAYE TANT QUE SA GRILLE N'EST PAS LA. `HedgeCellService` la pave juste avant nous, mais "juste avant"
+-- n'est pas "deja fait" -- et avec le streaming la haie peut arriver bien apres le demarrage. Abandonner au
+-- premier essai la raterait pour toute la session.
+local function prepareHedgeWhenReady()
+	local deadline = os.clock() + TutorialConfigs.HEDGE_PREPARE_TIMEOUT
+	while os.clock() < deadline do
+		local target = findPartByName(TutorialConfigs.OLDMAN_HEDGE_TARGET)
+		local hedge = if target then nearestHedge((target :: BasePart).Position) else nil
+		if hedge and prepareHedge(hedge, (target :: BasePart).Position) then
+			return
+		end
+		task.wait(TutorialConfigs.HEDGE_PREPARE_INTERVAL)
+	end
+	warn(
+		`[Tutorial] Haie jamais prete pres de "{TutorialConfigs.OLDMAN_HEDGE_TARGET}" : le joueur devra la `
+			.. "tailler en entier. Rojo ne synchronise pas le Workspace."
 	)
 end
 
@@ -1395,6 +1424,10 @@ local function onPlayerAdded(player: Player)
 end
 
 function TutorialService.init()
+	-- LA HAIE DU DIDACTICIEL EST PREPAREE TOUT DE SUITE : toutes ses faces nettes sauf celle qu'on montrera. En
+	-- tache de fond parce qu'elle attend la grille de carreaux, et qu'un init de boot n'attend jamais.
+	task.spawn(prepareHedgeWhenReady)
+
 	local done = RemoteSetup.getRemote("TutorialSceneDone", "Tutorial") :: RemoteEvent
 	focusRemote = RemoteSetup.getRemote("TutorialFocusDone", "Tutorial") :: RemoteEvent
 
@@ -1537,16 +1570,6 @@ function TutorialService.init()
 		-- LA MEME HAIE QUE LA PASTILLE : celle qui est la plus proche du point ou le grand-pere s'arrete. Deux
 		-- regles de choix differentes finiraient par designer deux haies, et le joueur taillerait celle que
 		-- personne ne lui montre.
-		local target = findPartByName(TutorialConfigs.OLDMAN_HEDGE_TARGET)
-		local hedge = if target then nearestHedge(target.Position) else nil
-		if hedge then
-			prepareHedge(hedge, (target :: BasePart).Position)
-		else
-			warn(
-				`[Tutorial] Aucune haie pres de "{TutorialConfigs.OLDMAN_HEDGE_TARGET}" : le joueur devra la `
-					.. "tailler en entier. Rojo ne synchronise pas le Workspace."
-			)
-		end
 	end)
 
 	-- IL ARRETE DE SUIVRE QUELQU'UN QUI N'EST PLUS LA. Celui qui cree est celui qui nettoie : la boucle vit sur
