@@ -45,6 +45,9 @@ local ANIM_FOLDER = { "Animations", "Tools", "Ladder", "ModelAnimate" }
 local MODEL_ANIM = "ActionLadderAnimation"
 local CLOSE_EVENT = "FermerEvenement" -- repliee : on fige la
 local OPEN_EVENT = "LadderOpenEndEvent" -- depliee (fin) : on lache
+-- Delai avant de RELIRE l'etat des joints. Le marqueur tire pendant le calcul de l'image : les `Transform` de
+-- cette image-la ne sont pas encore tous ecrits, et une lecture immediate croit voir un rig fige.
+local REPORT_DELAY = 0.2
 
 -- UNE PISTE PAR ECHELLE, et les marqueurs branches une seule fois. Rebrancher a chaque repli empilerait les
 -- connexions : au dixieme, dix fonctions se declencheraient sur le meme marqueur.
@@ -156,7 +159,9 @@ end
 --- LA POSE "POSEE AU SOL" : racine ancree, tout le reste libre, et le Humanoid mis au repos.
 ---
 --- LES DEUX EXTREMES TOMBENT, pour des raisons opposees. Tout ancre : une part ancree ignore son Motor6D, donc
---- l'anim tourne dans le vide et rien ne bouge. Tout libre : l'echelle s'ecroule. Il faut exactement ce partage.
+--- l'anim tourne dans le vide et rien ne bouge. Tout libre : ce qu'aucun joint ne tient s'ecroule. La regle exacte
+--- est donc : EST LIBRE CE QU'UN MOTOR6D TIRE, est ancre tout le reste. Pas "la racine et le reste libre" -- une
+--- part qu'aucun joint ne pilote n'a rien pour la porter, la liberer ne fait que la faire tomber.
 ---
 --- LE HUMANOID EST MIS AU REPOS parce que le portage le fait deja, et que le portage MARCHE. Laisse dans son etat
 --- normal, il fait tourner sa machine d'etat par-dessus l'anim : il essaie de tenir debout, et il repose des
@@ -170,16 +175,43 @@ function LadderFoldUtils.standAlone(model: Model)
 		warn(`[LadderFold] Aucune racine trouvee sur "{model.Name}" : je ne touche a rien, elle tomberait.`)
 		return
 	end
+	local driven: { [BasePart]: boolean } = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") then
+			local part = (d :: Motor6D).Part1
+			if part then
+				driven[part] = true
+			end
+		end
+	end
 	for _, d in model:GetDescendants() do
 		if d:IsA("BasePart") then
 			local part = d :: BasePart
-			part.Anchored = part == root
+			part.Anchored = not driven[part]
 		elseif d:IsA("Humanoid") then
 			local humanoid = d :: Humanoid
 			humanoid.PlatformStand = true
 			pcall(function()
 				humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 			end)
+		end
+	end
+end
+
+--- COUPE (ou remet) LES SOUDURES DU MODELE, EN GARDANT CELLES QU'ON A TROUVEES DEJA COUPEES.
+---
+--- UNE SOUDURE GAGNE TOUJOURS CONTRE UN MOTOR6D. Deux parts reliees par un `WeldConstraint` forment un bloc
+--- rigide : l'animation ecrit dans les joints, et il ne se passe RIEN -- pas d'erreur, pas de ralenti, juste une
+--- echelle qui reste ouverte. Mesure a l'appui : les huit joints du rig etaient restes a l'identite pendant que la
+--- piste tournait normalement jusqu'a son marqueur.
+---
+--- ON LES REMET APRES LE PLIAGE, et c'est le point delicat : un `WeldConstraint` capture l'ecart entre ses deux
+--- parts AU MOMENT OU ON L'ACTIVE. Remise apres, la soudure tient donc la pose REPLIEE -- ce qu'on veut. Remise
+--- avant, elle tiendrait l'ancienne.
+function LadderFoldUtils.setWelds(model: Model, enabled: boolean)
+	for _, d in model:GetDescendants() do
+		if d:IsA("WeldConstraint") then
+			(d :: WeldConstraint).Enabled = enabled
 		end
 	end
 end
@@ -246,8 +278,11 @@ local function stuckJoints(model: Model): string
 			if part and joint.Transform == CFrame.identity then
 				table.insert(stuck, if part.Anchored then part.Name .. "(ancree)" else part.Name)
 			end
-		elseif d:IsA("WeldConstraint") or (d:IsA("Weld") and not d:IsA("Motor6D")) then
-			table.insert(locked, `{d.ClassName}:{d.Name}`)
+		elseif d:IsA("WeldConstraint") then
+			local weld = d :: WeldConstraint
+			local a = if weld.Part0 then (weld.Part0 :: BasePart).Name else "?"
+			local b = if weld.Part1 then (weld.Part1 :: BasePart).Name else "?"
+			table.insert(locked, `{a}<->{b}{if weld.Enabled then "" else "(coupee)"}`)
 		end
 	end
 	if #stuck == 0 and #locked == 0 then
@@ -265,18 +300,26 @@ local function wire(model: Model, loaded: AnimationTrack)
 	loaded:GetMarkerReachedSignal(CLOSE_EVENT):Connect(function()
 		loaded:AdjustSpeed(0) -- fige repliee, aussi longtemps qu'il faudra
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
-		-- OU EXACTEMENT ON S'ARRETE, et sur quelle longueur. Si la pose figee n'a pas l'air assez fermee, c'est le
-		-- MARQUEUR qui est pose trop tot dans l'editeur d'animation -- ces deux nombres le disent, et aucun reglage
-		-- de code ne peut le corriger.
-		print(
-			`[LadderFold] "{model.Name}" figee a {string.format("%.2f", loaded.TimePosition)}s `
-				.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}). `
-				.. stuckJoints(model)
-		)
+		-- LES SOUDURES REVIENNENT SUR LA POSE REPLIEE : un WeldConstraint capture l'ecart au moment ou on
+		-- l'active, donc remis maintenant il tient l'echelle FERMEE.
+		LadderFoldUtils.setWelds(model, true)
+		-- ON MESURE APRES COUP, pas dans l'instant du marqueur : le marqueur tire PENDANT le calcul de l'image, et
+		-- les `Transform` de cette image ne sont pas encore tous ecrits. Lu la, le rig a l'air fige meme quand il
+		-- bouge tres bien -- une sonde qui accuse a tort coute plus cher que pas de sonde.
+		task.delay(REPORT_DELAY, function()
+			if model.Parent then
+				print(
+					`[LadderFold] "{model.Name}" figee a {string.format("%.2f", loaded.TimePosition)}s `
+						.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}). `
+						.. stuckJoints(model)
+				)
+			end
+		end)
 	end)
 	loaded:GetMarkerReachedSignal(OPEN_EVENT):Connect(function()
 		loaded:Stop(0.1)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
+		LadderFoldUtils.setWelds(model, true) -- rouverte : la soudure tient la pose ouverte
 	end)
 end
 
@@ -306,6 +349,9 @@ function LadderFoldUtils.fold(model: Model): boolean
 	if loaded.IsPlaying then
 		return true -- deja repliee (figee au marqueur) ou en route : on ne repart pas de zero
 	end
+	-- LES SOUDURES SAUTENT LE TEMPS DU GESTE. Elles gagnent contre les Motor6D : tant qu'elles tiennent, la piste
+	-- joue et le rig ne bouge pas d'un millimetre. Elles reviennent au marqueur, sur la pose fermee.
+	LadderFoldUtils.setWelds(model, false)
 	loaded:Play(0)
 	loaded.TimePosition = 0
 	loaded:AdjustSpeed(1)
@@ -320,6 +366,7 @@ function LadderFoldUtils.unfold(model: Model)
 		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
 		return
 	end
+	LadderFoldUtils.setWelds(model, false)
 	loaded:AdjustSpeed(1)
 end
 

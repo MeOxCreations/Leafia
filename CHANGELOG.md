@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.801 — C'etait une soudure : l'echelle du camion se plie entierement
+
+LA SONDE A TRANCHE. Au marqueur, les HUIT joints du rig etaient restes a l'identite pendant que la piste tournait
+normalement jusqu'au bout de son geste. L'animation ne jouait pas "a moitie" : elle n'ecrivait rien du tout. Et le
+modele porte un `WeldConstraint`, pose a la main pour que l'echelle ne bouge pas dans la benne.
+
+UNE SOUDURE GAGNE TOUJOURS CONTRE UN MOTOR6D. Deux parts soudees forment un bloc rigide, l'animation ecrit dans
+les joints et il ne se passe rien. Pas d'erreur, pas de ralenti, juste une echelle qui reste ouverte.
+
+ON LA COUPE LE TEMPS DU GESTE ET ON LA REMET APRES. Le detail qui compte : un `WeldConstraint` capture l'ecart
+entre ses deux parts AU MOMENT OU ON L'ACTIVE. Remise apres le pliage, elle tient donc la pose FERMEE -- c'est
+exactement ce qu'on veut, et l'echelle reste tenue dans la benne.
+
+DEUX CORRECTIONS DE METHODE au passage.
+
+La sonde lisait les joints DANS l'instant du marqueur. Or le marqueur tire pendant le calcul de l'image, et les
+`Transform` de cette image ne sont pas tous ecrits : un rig qui bouge tres bien peut y paraitre fige. Elle mesure
+maintenant deux dixiemes plus tard. Ici elle disait vrai, mais par chance.
+
+Et le partage des ancrages devient "est libre ce qu'un joint tire, est ancre tout le reste". "La racine ancree et
+le reste libre" laissait tomber toute part qu'aucun Motor6D ne pilote.
+
 ## 0.0.800 — L'echelle de la benne se plie entierement, au demarrage aussi
 
 Le repli ne jouait qu'a moitie au demarrage, et jouait ENTIEREMENT des qu'on sortait l'echelle du camion pour l'y

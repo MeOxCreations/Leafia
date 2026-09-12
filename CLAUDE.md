@@ -1272,6 +1272,23 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   une. Regle : un contournement HONNETE et documente vaut mieux qu'un cinquieme diagnostic non mesure ; le cout
   reel d'un diagnostic rate n'est pas le temps, c'est la confiance.
 
+- **UNE SOUDURE POSEE DANS STUDIO SUR UN OBJET ANIME LE FIGE ENTIEREMENT, ET RIEN NE LE SIGNALE.** L'echelle
+  rangee dans la benne du camion portait UN `WeldConstraint` -- pose a la main pour qu'elle ne bouge pas. Une
+  soudure gagne toujours contre un Motor6D : les huit joints du rig sont restes a l'identite pendant que la piste
+  tournait normalement jusqu'a son marqueur, a l'heure exacte. Pas d'erreur, pas de ralenti, juste une echelle qui
+  reste ouverte. On peut la couper le temps du geste (`WeldConstraint.Enabled = false`) et la remettre apres --
+  attention, elle capture l'ecart entre ses deux parts AU MOMENT OU ON L'ACTIVE, donc remise APRES le pliage elle
+  tient la pose fermee, ce qu'on veut. Le projet savait deja que "un WeldConstraint VERROUILLE" (roues de la
+  tondeuse) : la note existait, je ne l'ai pas relue en ecrivant le code voisin. C'est la deuxieme fois.
+- **UNE SONDE BRANCHEE SUR UN MARQUEUR D'ANIMATION LIT UNE IMAGE A MOITIE CALCULEE.** Le marqueur tire PENDANT le
+  calcul de l'image, et les `Transform` de cette image ne sont pas tous ecrits : les joints ont l'air figes meme
+  quand ils bougent tres bien. Mesurer quelques dixiemes APRES. Ici la sonde disait vrai par chance, mais elle
+  aurait aussi bien pu accuser un rig parfaitement sain -- et un diagnostic qui designe le mauvais coupable coute
+  plus cher que pas de diagnostic du tout.
+- **"EST LIBRE CE QU'UN JOINT TIRE, EST ANCRE TOUT LE RESTE."** Formule exacte du partage a poser sur un rig anime
+  au sol. "La racine ancree et le reste libre" est presque juste et laisse tomber toute part qu'aucun Motor6D ne
+  pilote : rien ne la porte, la liberer ne fait que la faire chuter.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
