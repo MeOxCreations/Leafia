@@ -311,6 +311,10 @@ local function wire(model: Model, loaded: AnimationTrack)
 				print(
 					`[LadderFold] "{model.Name}" figee a {string.format("%.2f", loaded.TimePosition)}s `
 						.. `sur {string.format("%.2f", loaded.Length)}s (marqueur {CLOSE_EVENT}). `
+						-- LE POIDS : une piste de poids ZERO joue, avance, declenche ses marqueurs A L'HEURE, et
+						-- n'ecrit RIEN. C'est indiscernable a l'oeil d'un rig bloque, et ca se lit ici.
+						.. `poids={string.format("%.2f", loaded.WeightCurrent)} `
+						.. `joue={tostring(loaded.IsPlaying)} `
 						.. stuckJoints(model)
 				)
 			end
@@ -337,6 +341,24 @@ function LadderFoldUtils.describe(model: Model): string
 	return `racine={if root then root.Name else "AUCUNE"} Humanoid={if humanoid then "oui" else "NON"} `
 		.. `Motor6D={joints} piste={if tracks[model] then "chargee" else "AUCUNE"} `
 		.. `anim={if resolveAnim() then "trouvee" else "INTROUVABLE"}`
+end
+
+--- LES NOMS DES PIECES QUE L'ANIMATION VA CHERCHER, dans l'ordre du rig.
+---
+--- UNE ANIMATION RETROUVE LES MEMBRES PAR LE NOM DE LA `Part1` DE CHAQUE JOINT. Si aucun nom ne correspond, elle
+--- joue avec un poids de 1, avance normalement, declenche ses marqueurs a l'heure -- et n'ecrit RIEN, sans la
+--- moindre erreur. C'est exactement ce qu'on observe. Comparer les noms de DEUX rigs qui devraient etre identiques
+--- repond en une ligne, et sans appel reseau (lire la KeyframeSequence en demande un, et il rate souvent au boot).
+function LadderFoldUtils.rigParts(model: Model): string
+	local names = {}
+	for _, d in model:GetDescendants() do
+		if d:IsA("Motor6D") then
+			local part = (d :: Motor6D).Part1
+			table.insert(names, if part then part.Name else "?")
+		end
+	end
+	table.sort(names)
+	return table.concat(names, " ")
 end
 
 --- REPLI : 0 -> `FermerEvenement`, puis on fige. Sans effet si elle est deja fermee ou en train de se fermer.

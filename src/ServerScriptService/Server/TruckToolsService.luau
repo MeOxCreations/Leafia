@@ -417,8 +417,28 @@ function TruckToolsService.init()
 					)
 					return
 				end
+				-- L'ECHELLE DE LA CARTE SERT DE TEMOIN. Son repli marche (c'est celle qu'on porte a la main), donc
+				-- si les deux rigs n'ont pas les MEMES noms de pieces, l'anim ne peut rien ecrire sur celle de la
+				-- benne -- elle chercherait des membres qui n'existent pas chez elle.
+				local witness: Model? = nil
+				for _, d in Workspace:GetDescendants() do
+					if d:IsA("Model") and d.Name:sub(1, #LadderFoldUtils.PREFIX) == LadderFoldUtils.PREFIX then
+						witness = d :: Model
+						break
+					end
+				end
+
 				for _, ladder in ladders do
 					print(`[TruckToolsService] Repli de "{ladder.Name}" : {LadderFoldUtils.describe(ladder)}`)
+					print(`[TruckToolsService] Pieces benne  : {LadderFoldUtils.rigParts(ladder)}`)
+					if witness then
+						print(
+							`[TruckToolsService] Pieces carte "{(witness :: Model).Name}" : `
+								.. LadderFoldUtils.rigParts(witness :: Model)
+						)
+					else
+						print("[TruckToolsService] Aucune echelle de carte pour comparer les noms de pieces.")
+					end
 					-- LE MEME CHEMIN QUE LE RANGEMENT A LA MAIN, qui lui plie l'echelle entierement. Voir
 					-- `resetInPlace` : on reproduit ce qui marche au lieu d'expliquer ce qui ne marche pas.
 					resetInPlace(ladder, folder :: Instance)
