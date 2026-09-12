@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.835 — On peut tenir un outil en portant le seau
+
+Le rateau et le seau vont ENSEMBLE : ramasser des feuilles demande les deux, et faire des allers-retours entre
+l'un et l'autre pour chaque poignee serait une corvee.
+
+CA NE TOUCHE QUE LE SEAU. L'echelle et la tondeuse restent a deux mains : elles se poussent ou se portent devant
+soi, il n'y a pas de main libre a trouver. C'est cette regle-la qui evite un taille-haie qui flotte a cote d'un
+guidon.
+
+UN SEUL INTERRUPTEUR POUR LES DEUX COTES. Il y avait deux barrieres opposees -- `ToolService` refusait de sortir un
+outil pendant qu'on porte, `BinCarryService` rangeait l'outil en prenant le seau -- et elles lisent maintenant la
+MEME valeur. Deux reglages pour une seule regle finiraient par se contredire : on autoriserait d'un cote pendant
+que l'autre range.
+
+`BinConfigs.ALLOW_TOOL_WHILE_CARRIED`, a repasser a `false` si le rendu ne tient pas la route. C'est un choix de
+gameplay, pas une correction.
+
 ## 0.0.834 — Les feuilles MONTENT dans le seau, et la jauge descend sous la pilule
 
 LES FEUILLES ETAIENT DANS LE SOL. Leur hauteur est maintenant reglee par deux nombres -- vide et plein -- et le

@@ -15,6 +15,7 @@ local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
 local ToolConfigs = require(ReplicatedStorage.Modules.Configs.ToolConfigs)
+local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 
@@ -387,7 +388,11 @@ function ToolService.equip(player: Player, toolName: string): boolean
 	-- Verifie ICI, dans la seule porte d'entree de l'equipement (toggle et selection y passent tous les deux) :
 	-- le refus tient donc quel que soit le chemin. Avant, ce test ne connaissait QUE la tondeuse -- on pouvait
 	-- sortir un outil en portant l'echelle ou le seau.
-	if not CarryUtils.isFree(player) then
+	-- SAUF LE SEAU, si on l'autorise. Ramasser des feuilles demande un rateau ET un seau : faire des
+	-- allers-retours entre les deux pour chaque poignee serait une corvee. Voir `BinConfigs`, l'interrupteur y
+	-- est isole avec la raison.
+	local carrying = CarryUtils.get(player)
+	if carrying ~= nil and not (BinConfigs.ALLOW_TOOL_WHILE_CARRIED and carrying == "Bin") then
 		return false
 	end
 

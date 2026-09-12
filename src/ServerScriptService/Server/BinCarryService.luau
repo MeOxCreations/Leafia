@@ -309,7 +309,12 @@ local function grab(player: Player, model: Model)
 	-- ON PORTE A DEUX MAINS : plus d'outil pendant ce temps. On le RANGE au lieu de refuser la prise -- refuser
 	-- laisserait le joueur appuyer sur E sans que rien ne se passe et sans savoir pourquoi. La reciproque
 	-- (sortir un outil pendant qu'on porte) est refusee, elle, dans ToolService.
-	ToolService.unequip(player)
+	--
+	-- SAUF SI LE SEAU A LE DROIT DE COHABITER : ranger ici defairait l'autorisation a l'autre bout. Les deux
+	-- lignes lisent le MEME interrupteur -- deux reglages pour une seule regle finiraient par se contredire.
+	if not BinConfigs.ALLOW_TOOL_WHILE_CARRIED then
+		ToolService.unequip(player)
+	end
 end
 
 -- REPOSE : on detache, on oriente sur le YAW du joueur (jamais son tangage, sinon le seau se pose penche) et

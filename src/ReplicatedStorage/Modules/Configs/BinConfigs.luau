@@ -21,6 +21,18 @@ return {
 	-- survit a la repose : un seau pose au sol garde ce qu'il contient, ce qui est la moindre des choses pour un
 	-- seau. Une table cote serveur mentirait des que deux joueurs se passent le meme.
 	LEAVES_ATTRIBUTE = "LeafiaBinLeaves",
+	-- ===== ON PEUT TENIR UN OUTIL EN PORTANT LE SEAU =====
+	-- INTERRUPTEUR, ET IL EST VOLONTAIREMENT ISOLE ICI. La regle du jeu est "on porte a deux mains, donc pas
+	-- d'outil en meme temps" -- c'est ce qui evite un taille-haie qui flotte a cote d'un guidon. Le SEAU est le
+	-- seul cas ou la question se pose vraiment : ramasser des feuilles demande un rateau ET un seau, et faire des
+	-- allers-retours entre les deux pour chaque poignee serait une corvee.
+	--
+	-- CA NE TOUCHE QUE LE SEAU. L'echelle et la tondeuse restent a deux mains : elles se POUSSENT ou se PORTENT
+	-- devant soi, il n'y a pas de main libre a trouver.
+	--
+	-- A REPASSER A `false` si le rendu ne tient pas la route -- c'est un choix de gameplay, pas une correction, et
+	-- il se defait en un mot.
+	ALLOW_TOOL_WHILE_CARRIED = true,
 	-- ===== CE QU'IL PEUT CONTENIR =====
 	-- COMBIEN DE FEUILLES AVANT D'ETRE PLEIN.
 	--
