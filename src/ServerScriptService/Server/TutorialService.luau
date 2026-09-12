@@ -360,6 +360,9 @@ local talkModel: Model? = nil
 -- envoyer a tout le monde ferait apparaitre la consigne chez quelqu'un qui n'a pas encore vu la scene.
 local sceneOwner: Player? = nil
 local focusRemote: RemoteEvent? = nil
+-- LE REMOTE DU BANC, au niveau du module : il sert depuis `standOldMan`, qui est defini bien avant `init`. Un
+-- local dans `init` l'aurait rendu invisible a la fonction qui en a besoin.
+local benchRemote: RemoteEvent? = nil
 -- DECLAREE ICI, DEFINIE PLUS BAS. Le marqueur de son animation la declenche, et cette ecoute se branche dans
 -- `playTalk` -- tout en haut du fichier -- alors que le suivi a besoin de `groundAt` et de la config de marche,
 -- donc il ne peut pas etre ecrit avant. On ne cite jamais une fonction avant sa definition.
@@ -891,6 +894,13 @@ local function standOldMan()
 			restoreIdle(model :: Model)
 		end
 		print("[Tutorial] La haie est finie : le grand-pere se leve de son banc.")
+		-- ET IL PARLE UNE FOIS DEBOUT, pas pendant qu'il se releve : une replique qui commence sur un homme encore
+		-- assis se lit comme si elle etait declenchee par autre chose. Le client joue les voix.
+		local owner = sceneOwner
+		local bench = benchRemote
+		if owner and bench then
+			bench:FireClient(owner, "stand")
+		end
 	end)
 end
 
@@ -1604,7 +1614,7 @@ function TutorialService.init()
 	-- UNE MARCHE SCRIPTEE ET PAS UNE ESCORTE, contrairement au camion : la haie est a quelques pas, le joueur a
 	-- l'outil en main et sait ou il va. Le faire attendre a chaque pas ferait trainer la fin du didacticiel.
 	local hedgeRemote = RemoteSetup.getRemote("TutorialGrandpaHedge", "Tutorial") :: RemoteEvent
-	local benchRemote = RemoteSetup.getRemote("TutorialGrandpaBench", "Tutorial") :: RemoteEvent
+	benchRemote = RemoteSetup.getRemote("TutorialGrandpaBench", "Tutorial") :: RemoteEvent
 	hedgeRemote.OnServerEvent:Connect(function(player)
 		if sceneOwner ~= player then
 			return
@@ -1623,7 +1633,10 @@ function TutorialService.init()
 				end
 				-- SA PHRASE PART AVEC LUI, pendant le trajet : annoncer qu'on va s'asseoir se dit AVANT de
 				-- s'asseoir. Le client la joue, c'est lui qui a les voix.
-				benchRemote:FireClient(player, "walk")
+				local bench = benchRemote
+				if bench then
+					bench:FireClient(player, "walk")
+				end
 				walkOldMan(TutorialConfigs.OLDMAN_BENCH_TARGET, function(model)
 					-- IL SE MET DOS AU BANC AVANT DE S'ASSEOIR. Il y marche en le regardant : sans ce demi-tour il
 					-- se pose face au dossier, et il se releve en contemplant les lattes.
@@ -1649,8 +1662,9 @@ function TutorialService.init()
 					-- pivot la ferait glisser de cote.
 					task.delay(TutorialConfigs.OLDMAN_SIT_TURN_TIME, function()
 						sitOldMan(model, function()
-							if sceneOwner == player then
-								benchRemote:FireClient(player, "hup")
+							local bench = benchRemote
+							if sceneOwner == player and bench then
+								bench:FireClient(player, "hup")
 							end
 						end)
 					end)

@@ -2860,6 +2860,15 @@ function TutorialController.init()
 				sayVoice(TutorialConfigs.SEAT_DOWN_SOUND)
 			elseif phase == "hup" then
 				sayVoice(TutorialConfigs.HUP_JUMP_SOUND)
+			elseif phase == "stand" then
+				print("[Tutorial] Le grand-pere se leve : il felicite, puis il explique les feuilles.")
+				-- LE COMPLIMENT PUIS LA CONSIGNE, sans trou : la seconde attend la fin REELLE de la premiere, pas
+				-- une duree qu'on aurait notee quelque part. Et dans cet ordre -- une consigne qui tombe avant le
+				-- compliment s'adresse a quelqu'un qui attend encore de savoir s'il a bien travaille.
+				sayChain({
+					TutorialConfigs.HAPPY_HEDGE_SOUND,
+					TutorialConfigs.PICKUP_LEAVES_SOUND,
+				})
 			end
 		end)
 	end)

@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.829 — Le grand-pere felicite, puis explique les feuilles
+
+En se levant de son banc il enchaine deux repliques : `HappyForCutHedge`, puis `SayHowPickupLeaves` -- le rateau
+et le seau.
+
+L'ORDRE N'EST PAS DECORATIF. Le compliment recompense ce qui vient d'etre fait, la consigne ouvre ce qui vient.
+Inversees, la consigne tomberait sur un joueur qui attend encore de savoir s'il a bien travaille, et il ne
+l'ecouterait pas.
+
+Les deux se suivent sans trou : la seconde attend la fin REELLE de la premiere, pas une duree notee quelque part.
+
+ET IL PARLE UNE FOIS DEBOUT, pas pendant qu'il se releve. Une replique qui commence sur un homme encore assis se
+lit comme si elle etait declenchee par autre chose.
+
+DEPEND DES ASSETS : les voix `Oldman_scene_speech_HappyForCutHedge` et `Oldman_scene_speech_SayHowPickupLeaves`.
+
 ## 0.0.828 — Les tas de feuilles entrent dans le seau
 
 Troisieme et dernier moment du cycle de la feuille, et il manquait depuis le debut : `HedgeStockService` les pose,

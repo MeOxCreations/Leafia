@@ -936,6 +936,13 @@ return {
 	OLDMAN_SIT_TURN = 180,
 	-- Le temps du demi-tour. Assez lent pour se lire comme un geste, assez court pour ne pas retarder l'assise.
 	OLDMAN_SIT_TURN_TIME = 0.5,
+	-- CE QU'IL DIT EN SE LEVANT, dans cet ordre et sans trou : il felicite, PUIS il explique la suite.
+	--
+	-- L'ORDRE N'EST PAS DECORATIF. Le compliment recompense ce qui vient d'etre fait ; la consigne ouvre ce qui
+	-- vient. Inversees, la consigne tomberait sur un joueur qui attend encore de savoir s'il a bien travaille, et
+	-- il ne l'ecouterait pas.
+	HAPPY_HEDGE_SOUND = voice("Oldman_scene_speech_HappyForCutHedge"),
+	PICKUP_LEAVES_SOUND = voice("Oldman_scene_speech_SayHowPickupLeaves"),
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.
