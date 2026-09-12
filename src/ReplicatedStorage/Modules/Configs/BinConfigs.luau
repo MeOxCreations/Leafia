@@ -68,25 +68,15 @@ return {
 	LEAF_LOW = 0.9,
 	LEAF_HIGH = 1.9,
 
-	-- ===== LA JAUGE AU-DESSUS =====
-	-- Taille en pixels, et hauteur au-dessus du seau en studs.
-	GAUGE_WIDTH = 120,
-	GAUGE_HEIGHT = 26,
-	-- BIEN AU-DESSUS DU SEAU MAIS SOUS LA PILULE. Le badge d'interaction flotte plus haut : a 2.6 la jauge lui
-	-- rentrait dedans, et deux interfaces qui se chevauchent ne se lisent ni l'une ni l'autre.
-	GAUGE_UP = 0.4,
-	-- Au-dela, elle ne s'affiche plus : une barre lisible a trente metres encombre la vue pour rien.
-	GAUGE_MAX_DISTANCE = 60,
-	-- Cadence de rafraichissement. Le compte ne change qu'au coup de rateau : dix fois par seconde est deja large.
+	-- ===== LA JAUGE, DANS LE PROMPT DU SEAU =====
+	-- ELLE A ETE UN PANNEAU A PART, FLOTTANT SOUS LA PILULE, et c'etait une erreur : deux choses a lire au meme
+	-- endroit, dont la seconde recouvrait la premiere. Elle vit maintenant DANS le badge -- son dessin et son
+	-- glissement appartiennent donc a `InteractionPrompt`, et il ne reste ici que ce qui parle du SEAU.
+	--
+	-- Cadence de rafraichissement. Le compte ne change qu'au coup de rateau : dix fois par seconde est large.
 	GAUGE_INTERVAL = 0.1,
-	-- ELLE GLISSE, elle ne saute pas. Une barre qui change d'un bond ne se lit pas : on voit l'etat d'apres,
-	-- jamais le mouvement, donc on ne sent pas qu'on progresse.
-	GAUGE_TWEEN = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-	GAUGE_BACK = Color3.fromRGB(28, 40, 52),
-	GAUGE_FILL = Color3.fromRGB(98, 206, 59),
-	-- PLEIN CHANGE DE COULEUR. Le joueur n'a pas a comparer deux nombres pour comprendre qu'il doit aller vider.
-	GAUGE_FULL = Color3.fromRGB(255, 158, 44),
-	-- EN ANGLAIS, comme tout texte vu par le joueur.
+	-- PLEIN SE DIT AVEC UN MOT, pas avec deux nombres egaux : le joueur n'a pas a les comparer pour comprendre
+	-- qu'il doit aller vider. EN ANGLAIS, comme tout texte vu par le joueur.
 	GAUGE_FULL_TEXT = "FULL",
 	-- Part fixe de reference. JAMAIS GetPivot : le pivot d'un Model suit sa bounding box, donc ajouter la
 	-- moindre part enfant le decale et tous les calculs partent de travers. On prend la PrimaryPart, sinon

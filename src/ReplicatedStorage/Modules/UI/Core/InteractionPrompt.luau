@@ -78,6 +78,27 @@ local scale: UIScale? = nil
 -- LA PILULE ELLE-MEME et le tween de son pulse. Gardes pour le REFUS : il faut couper le pulse avant de poser le
 -- rouge, sinon les deux ecrivent la meme couleur et c'est le pulse qui gagne une image plus tard.
 local pill: TextButton? = nil
+-- ===== LA JAUGE, SOUS LA PILULE =====
+-- CERTAINS OBJETS ONT UN ETAT CHIFFRE que le joueur doit voir AVANT d'agir : un seau a moitie plein, un reservoir
+-- qui se vide. L'afficher a cote, dans son propre panneau, fait DEUX choses a lire au meme endroit -- et la
+-- seconde finit toujours par recouvrir la premiere.
+--
+-- ELLE VIT DONC DANS LE PROMPT, sous la pilule et dans le meme conteneur : elle suit l'objet, elle pope avec, elle
+-- s'en va avec. Aucun appelant n'a a la placer ni a la nettoyer.
+--
+-- CACHEE PAR DEFAUT : seul un appelant qui APPELLE `setGauge` en a une. Les cinq autres features ne changent pas
+-- d'un pixel.
+local gaugeBox: Frame? = nil
+local gaugeFill: Frame? = nil
+local gaugeLabel: TextLabel? = nil
+local GAUGE_BACK = Color3.fromRGB(24, 32, 42)
+local GAUGE_FILL = Color3.fromRGB(98, 206, 59)
+-- PLEIN CHANGE DE COULEUR : le joueur n'a pas a comparer deux nombres pour comprendre qu'il doit aller vider.
+local GAUGE_FULL = Color3.fromRGB(255, 158, 44)
+-- ELLE GLISSE, elle ne saute pas. Une barre qui change d'un bond ne se lit pas : on voit l'etat d'apres, jamais le
+-- mouvement, donc on ne sent pas qu'on progresse.
+local GAUGE_TWEEN = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local gaugeTween: Tween? = nil
 local pulseTween: Tween? = nil
 local refusing = false
 local onActivateFn: (() -> ())? = nil
@@ -179,6 +200,59 @@ local function build()
 	ttl.Text = ""
 	ttl.Visible = false
 	ttl.Parent = box
+
+	-- LA JAUGE, sous la pilule. Meme conteneur, donc meme pop et meme sortie : il n'y a rien a synchroniser.
+	local bar = Instance.new("Frame")
+	bar.Name = "Gauge"
+	bar.LayoutOrder = 3
+	bar.Size = UDim2.fromOffset(96, 16)
+	bar.BackgroundColor3 = GAUGE_BACK
+	bar.BackgroundTransparency = 0.1
+	bar.BorderSizePixel = 0
+	bar.Visible = false
+	bar.Parent = box
+
+	local barCorner = Instance.new("UICorner") :: UICorner
+	barCorner.CornerRadius = UDim.new(1, 0)
+	barCorner.Parent = bar
+
+	local barStroke = Instance.new("UIStroke")
+	barStroke.Color = Color3.fromRGB(255, 255, 255)
+	barStroke.Thickness = 1.5
+	barStroke.Transparency = 0.55
+	barStroke.Parent = bar
+
+	local barPad = Instance.new("UIPadding")
+	local barGap = UDim.new(0, 2)
+	barPad.PaddingTop, barPad.PaddingBottom = barGap, barGap
+	barPad.PaddingLeft, barPad.PaddingRight = barGap, barGap
+	barPad.Parent = bar
+
+	local fill = Instance.new("Frame")
+	fill.Name = "Fill"
+	fill.Size = UDim2.fromScale(0, 1)
+	fill.BackgroundColor3 = GAUGE_FILL
+	fill.BorderSizePixel = 0
+	fill.Parent = bar
+
+	local fillCorner = Instance.new("UICorner") :: UICorner
+	fillCorner.CornerRadius = UDim.new(1, 0)
+	fillCorner.Parent = fill
+
+	local amount = Instance.new("TextLabel")
+	amount.Name = "Amount"
+	amount.BackgroundTransparency = 1
+	amount.Size = UDim2.fromScale(1, 1)
+	amount.Font = FONT
+	amount.TextColor3 = Color3.new(1, 1, 1)
+	amount.TextScaled = true
+	amount.TextStrokeColor3 = Color3.new(0, 0, 0)
+	amount.TextStrokeTransparency = 0.4
+	amount.ZIndex = 2
+	amount.Text = ""
+	amount.Parent = bar
+
+	gaugeBox, gaugeFill, gaugeLabel = bar, fill, amount
 
 	-- La PILULE ENTIERE est un bouton : cliquer / taper n'importe ou dessus declenche l'action.
 	local btn = Instance.new("TextButton")
@@ -358,8 +432,25 @@ end
 
 -- Met la pilule sur une demande. LE POP ET SON SON NE REPARTENT QUE SI LA CIBLE CHANGE : toutes les features
 -- redemandent leur place a chaque image, et rejouer l'apparition a chaque appel etait exactement le "POPOPOPOP".
+--- Cache la jauge et coupe son glissement. Appele a chaque changement de cible : la jauge appartient a l'objet
+--- qu'on quitte, et la laisser afficherait le remplissage d'un seau sur le badge d'autre chose.
+local function clearGauge()
+	if gaugeTween then
+		gaugeTween:Cancel()
+		gaugeTween = nil
+	end
+	local bar, fill = gaugeBox, gaugeFill
+	if bar then
+		bar.Visible = false
+	end
+	if fill then
+		fill.Size = UDim2.fromScale(0, 1)
+	end
+end
+
 local function applyClaim(claim: Claim?)
 	if not claim then
+		clearGauge()
 		hideVisual()
 		return
 	end
@@ -381,6 +472,10 @@ local function applyClaim(claim: Claim?)
 	shown = true
 
 	if isNew then
+		-- NOUVELLE CIBLE, NOUVELLE JAUGE. Elle appartient a l'objet qu'on quitte : la laisser afficherait le
+		-- remplissage d'un seau sur le badge d'une tondeuse, pendant le temps qu'il faut a son proprietaire pour
+		-- la reposer -- et ce temps se voit.
+		clearGauge()
 		box.Visible = true
 		WorldAnchor.attach(box, claim.target, claim.offset, nil, nil, claim.cameraRelative)
 		-- APPARITION "slime" : on repart de 0 et on rebondit jusqu'a l'echelle cible (Elastic), + le son de pop.
@@ -569,6 +664,32 @@ function InteractionPrompt.refuse()
 			again:Play()
 		end
 	end)
+end
+
+--- LA JAUGE DE L'OBJET AFFICHE. `ratio` a `nil` la cache ; sinon elle va de 0 a 1, avec son texte au milieu.
+---
+--- ELLE NE S'AFFICHE QUE SI LE PROMPT EST A `target`. Sans ce test, un seau pose a dix metres ecrirait sa jauge
+--- sur le badge d'une tondeuse -- le prompt est un SINGLETON, et tout ce qui s'y ecrit doit passer par la meme
+--- question : est-ce que c'est encore a moi ?
+function InteractionPrompt.setGauge(target: WorldAnchor.Target?, ratio: number?, label: string?)
+	local bar, fill, amount = gaugeBox, gaugeFill, gaugeLabel
+	if not (bar and fill and amount) then
+		return
+	end
+	if ratio == nil or not InteractionPrompt.owns(target) then
+		bar.Visible = false
+		return
+	end
+	local value = math.clamp(ratio :: number, 0, 1)
+	bar.Visible = true
+	amount.Text = label or ""
+	fill.BackgroundColor3 = if value >= 1 then GAUGE_FULL else GAUGE_FILL
+	if gaugeTween then
+		gaugeTween:Cancel()
+	end
+	local tween = TweenService:Create(fill, GAUGE_TWEEN, { Size = UDim2.fromScale(value, 1) })
+	gaugeTween = tween
+	tween:Play()
 end
 
 function InteractionPrompt.currentTarget(): WorldAnchor.Target?

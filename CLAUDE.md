@@ -1428,6 +1428,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   sinon un etat deja atteint avant l'abonnement ne changera plus jamais et ne declenchera rien. Meme famille que
   le `return` pose sur "rien a faire POUR L'INSTANT".
 
+- **DEUX INTERFACES QUI PARLENT DU MEME OBJET AU MEME ENDROIT FINISSENT PAR SE RECOUVRIR : il n'en faut qu'UNE.**
+  Le remplissage du seau a d'abord ete un `BillboardGui` a lui, flottant sous la pilule d'interaction -- deux
+  panneaux, deux tailles, deux hauteurs a tenir d'accord, et ils se sont chevauches des le premier essai. Baisser
+  l'un ne fait que deplacer la collision : l'autre bouge le jour ou son texte s'allonge. La sortie est de les
+  FUSIONNER -- la jauge vit DANS le badge, meme conteneur, donc meme apparition, meme sortie, meme echelle, et
+  plus rien a synchroniser. Regle : quand deux elements doivent toujours etre vus ensemble, ils n'ont pas a etre
+  deux ; et un singleton d'interface qui accueille une donnee d'appelant doit refaire son test d'appartenance
+  (`owns`) a l'ecriture, sinon un objet hors champ ecrit sur le badge d'un autre.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

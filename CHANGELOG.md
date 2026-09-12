@@ -2204,6 +2204,23 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.836 — La jauge du seau passe DANS son prompt
+
+Elle etait un panneau a elle, flottant sous la pilule. Deux choses a lire au meme endroit, deux tailles et deux
+hauteurs a tenir d'accord -- et elles se sont chevauchees des le premier essai. Baisser l'une n'aurait fait que
+deplacer la collision : l'autre bouge le jour ou son texte s'allonge.
+
+ELLE VIT MAINTENANT DANS LE BADGE, sous la pilule et dans le meme conteneur : elle suit l'objet, elle pope avec,
+elle s'en va avec. Il n'y a plus rien a synchroniser, et plus qu'une seule chose a lire la ou le joueur regarde
+deja.
+
+`InteractionPrompt` sait donc porter une jauge, et il refait son test d'appartenance a l'ecriture : un seau pose a
+dix metres ne peut pas ecrire son remplissage sur le badge d'une tondeuse. Les cinq autres features qui s'en
+servent ne changent pas d'un pixel -- la jauge n'existe que pour qui l'appelle.
+
+Elle garde ce qu'elle avait : elle glisse au lieu de sauter, elle passe a l'orange et affiche "FULL" quand c'est
+plein, et un seau vide n'affiche rien du tout.
+
 ## 0.0.835 — On peut tenir un outil en portant le seau
 
 Le rateau et le seau vont ENSEMBLE : ramasser des feuilles demande les deux, et faire des allers-retours entre
