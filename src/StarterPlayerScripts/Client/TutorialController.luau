@@ -2963,7 +2963,13 @@ function TutorialController.init()
 	ActionGate.setLocked(true)
 	-- ET LA BENNE EST FERMEE A LUI tant que le grand-pere n'a pas dit de s'y servir. Le hayon peut s'ouvrir des la
 	-- premiere minute : sans ce verrou, il aurait la cisaille en main avant qu'on lui explique a quoi elle sert.
-	player:SetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE, true)
+	--
+	-- SAUF EN MODE TEST : voir `TOOLS_LOCK_ENABLED`, qui existe pour pouvoir regler le ramassage des feuilles sans
+	-- rejouer tout le didacticiel avant chaque essai.
+	player:SetAttribute(
+		TruckConfigs.TOOLS_LOCK_ATTRIBUTE,
+		if TruckConfigs.TOOLS_LOCK_ENABLED then true else nil
+	)
 
 	-- LA PARCELLE EST DECLAREE DES LE BOOT, et pas quand la tache arrive : tout ce qui est dehors doit etre pose
 	-- deja coupe AVANT que le joueur voie la pelouse, pas une minute plus tard sous ses yeux. La boucle

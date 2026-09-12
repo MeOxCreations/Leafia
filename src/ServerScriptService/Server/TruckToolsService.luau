@@ -573,6 +573,15 @@ function TruckToolsService.init()
 	-- RIEN A SUIVRE SUR LES JOUEURS. La regle ne depend plus de ce qu'ils TIENNENT mais de ce que l'outil EST :
 	-- equipable et sorti de la benne = invisible, point. Un etat qui ne depend de personne ne peut pas se
 	-- desynchroniser -- la version d'avant ecoutait les mains de chacun pour arriver au meme resultat.
+	-- UN INTERRUPTEUR DE TEST QUI NE DIT PAS QU'IL EST BAISSE FINIT EN PRODUCTION. Tant qu'il l'est, le serveur
+	-- le rappelle a chaque demarrage -- c'est la seule chose qui empeche de publier un didacticiel ou l'on se sert
+	-- dans le camion avant que le grand-pere ait ouvert la bouche.
+	if not TruckConfigs.TOOLS_LOCK_ENABLED then
+		warn(
+			"[TruckToolsService] MODE TEST : la benne est ouverte des le depart "
+				.. "(TruckConfigs.TOOLS_LOCK_ENABLED = false). A remettre a true avant de publier."
+		)
+	end
 	print("[TruckToolsService] Pret : les outils de la benne peuvent etre sortis.")
 end
 

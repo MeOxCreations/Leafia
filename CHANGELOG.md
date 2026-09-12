@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.837 — Interrupteur de test : la benne est ouverte des le depart
+
+`TruckConfigs.TOOLS_LOCK_ENABLED = false` -- le verrou de 0.0.832 n'est plus pose.
+
+POURQUOI. Mettre au point le ramassage des feuilles demande le rateau et le seau TOUT DE SUITE. Rejouer tout le
+didacticiel -- sortir le grand-pere, tondre, tailler -- avant chaque essai rend le reglage impossible a faire.
+
+A REMETTRE A `true` AVANT DE PUBLIER, et le serveur le RAPPELLE dans la console a chaque demarrage tant qu'il est
+baisse. Un interrupteur de test qui ne dit pas qu'il est baisse finit toujours par partir en production, et
+personne ne comprend ensuite pourquoi le scenario ne tient plus.
+
 ## 0.0.836 — La jauge du seau passe DANS son prompt
 
 Elle etait un panneau a elle, flottant sous la pilule. Deux choses a lire au meme endroit, deux tailles et deux
