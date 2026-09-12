@@ -2204,6 +2204,28 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.817 — La barre du camion devient des cartes blanches qui montent une par une
+
+LE PANNEAU SOMBRE A DISPARU. Il posait un rectangle opaque en bas de l'ecran pour ne rien dire de plus que les
+cases qu'il contenait. Les cartes sont blanches : sur un jeu vert et colore, elles se detachent toutes seules.
+
+ELLES ARRIVENT L'UNE APRES L'AUTRE, decalees de cinq centiemes. Un panneau qui glisse d'un bloc annonce "voici une
+interface" ; des cartes qui montent a la suite annoncent "voici tes outils", et l'oeil les compte pendant qu'elles
+arrivent. A la fermeture elles repartent dans l'autre sens, pour que le rang se vide du meme cote qu'il s'est
+rempli.
+
+Chaque carte a sa vignette claire sous l'objet, son nom en sombre, et son bouton pleine largeur. Le survol souleve
+la CARTE entiere, pas seulement le bouton.
+
+DEUX CADRES PAR CARTE, et c'est ce qui rend l'animation possible : le porteur prend sa place dans le rang -- c'est
+lui que le layout range -- et la carte bouge librement a l'interieur. Animer directement ce qu'un layout positionne
+revient a se battre contre lui a chaque image.
+
+ET LE MENU DES OUTILS APPARAIT ENFIN quand on sort une cisaille. Il n'ecoutait que l'arrivee d'un modele dans le
+Workspace ; or un outil sorti du camion passe de la benne au Workspace, ou il etait DEJA -- l'evenement ne tire
+jamais. Il ecoute maintenant la benne, qui perd vraiment un enfant. Meme piege que les zones de grimpe de
+l'echelle.
+
 ## 0.0.816 — La barre du camion se cache a 13 studs, pas 22
 
 Reglage a l'ecran. A 22 elle restait affichee alors qu'on etait deja parti travailler.

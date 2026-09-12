@@ -1,6 +1,12 @@
 --!strict
--- LA BARRE DES OUTILS DU CAMION, en bas de l'ecran. Une case par outil encore range dans la benne : son dessin,
--- son nom, et un bouton pour le sortir.
+-- LA BARRE DES OUTILS DU CAMION : une CARTE BLANCHE par outil, en bas de l'ecran, qui monte depuis le bord.
+--
+-- LES CARTES ARRIVENT UNE PAR UNE. Un panneau entier qui glisse d'un bloc annonce "voici une interface" ; des
+-- cartes qui montent l'une apres l'autre annoncent "voici TES outils, les voila", et l'oeil les compte pendant
+-- qu'elles arrivent. Le decalage est court -- assez pour se lire, pas assez pour qu'on attende la derniere.
+--
+-- BLANCHES SUR UN JEU VERT ET COLORE : elles se detachent sans avoir besoin d'un cadre sombre par-dessus la scene.
+-- Le fond opaque qui entourait tout l'ensemble a disparu, et avec lui le rectangle qui mangeait le bas de l'ecran.
 --
 -- L'APERCU EST UN DESSIN QUAND IL EN EXISTE UN, et le VRAI MODELE 3D sinon (dans un `ViewportFrame`).
 --
@@ -11,7 +17,7 @@
 -- MEME sans dessin. Exiger une icone le ferait disparaitre de l'interface en attendant qu'on la dessine -- donc
 -- une benne pleine et une barre vide, sans que rien ne le dise.
 --
--- UNE CASE PAR OUTIL, DEDANS OU DEHORS. Celui qui est sorti garde sa case, effacee, avec un bouton BLEU qui le
+-- UNE CARTE PAR OUTIL, DEDANS OU DEHORS. Celui qui est sorti garde sa carte, effacee, avec un bouton BLEU qui le
 -- RANGE : le geste inverse se fait au meme endroit que le geste aller, et le joueur voit d'un coup d'oeil ce
 -- qu'il a deja pris. Une barre qui ne montrerait que ce qui reste ne dirait pas ou est le reste.
 --
@@ -28,23 +34,37 @@ local TruckToolsHandler = {}
 
 local player = Players.LocalPlayer
 
--- ===== LA BARRE =====
+-- ===== LA RANGEE =====
 -- EN BAS, CENTREE. C'est la place des interfaces qu'on utilise sans quitter le jeu des yeux : le regard y descend
 -- et remonte. Au milieu de l'ecran, elle cacherait le camion dont elle parle.
-local BAR_POS = UDim2.fromScale(0.5, 0.955)
-local SLOT_SIZE = UDim2.fromOffset(118, 142)
-local SLOT_GAP = 10
--- SA PLACE CACHEE : sous le bord bas. Elle GLISSE depuis le bas plutot que d'apparaitre -- un panneau qui surgit
--- se remarque moins qu'un panneau qui ARRIVE, et le mouvement dit d'ou il vient.
-local HIDDEN_POS = UDim2.fromScale(0.5, 1.35)
-local SLIDE_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local SLIDE_OUT = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local ROW_POS = UDim2.fromScale(0.5, 0.97)
+local CARD_SIZE = UDim2.fromOffset(120, 152)
+local CARD_GAP = 12
 
-local BG = Color3.fromRGB(28, 40, 52)
-local BG_TRANSPARENCY = 0.15
-local STROKE = Color3.fromRGB(255, 255, 255)
-local STROKE_TRANSPARENCY = 0.65
-local TEXT = Color3.fromRGB(255, 255, 255)
+-- ===== L'ARRIVEE =====
+-- CHAQUE CARTE MONTE DEPUIS SOUS L'ECRAN, a sa place dans le rang. Elle part tres bas -- plus bas que sa propre
+-- hauteur -- pour etre VRAIMENT hors champ au depart : partie du bord, on la verrait deja a moitie.
+local CARD_IN = UDim2.fromScale(0.5, 0.5)
+local CARD_OUT = UDim2.fromScale(0.5, 3.2)
+-- `Back` : elle depasse un peu sa place avant de se poser. C'est ce qui donne le poids -- une carte qui s'arrete
+-- pile a sa place a l'air posee par un tableur.
+local RISE = TweenInfo.new(0.38, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local FALL = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+-- LE DECALAGE ENTRE DEUX CARTES. Court : a 0.12 on attend la derniere, a 0 elles arrivent d'un bloc et l'effet
+-- disparait.
+local STAGGER = 0.055
+
+-- ===== LES COULEURS =====
+local CARD = Color3.fromRGB(255, 255, 255)
+-- LE TEXTE EST SOMBRE, pas gris : sur blanc, un gris clair se lit mal sur un ecran de telephone en plein soleil.
+local CARD_TEXT = Color3.fromRGB(32, 38, 46)
+-- Le fond de la vignette : un blanc casse, juste assez different pour detourer l'objet sans faire une deuxieme
+-- carte dans la carte.
+local WELL = Color3.fromRGB(241, 244, 248)
+local TITLE_COLOR = Color3.fromRGB(255, 255, 255)
+-- LE TITRE PORTE UN CONTOUR SOMBRE. Ecrit en blanc sans contour, il disparait sur une facade claire -- et le
+-- didacticiel se joue justement devant une maison beige.
+local TITLE_STROKE = Color3.fromRGB(20, 26, 34)
 -- LE VERT DU JEU, celui des taches : c'est la meme famille d'action -- avancer, prendre, faire.
 local TAKE = Color3.fromRGB(98, 206, 59)
 local TAKE_HOVER = Color3.fromRGB(126, 226, 88)
@@ -52,8 +72,13 @@ local TAKE_HOVER = Color3.fromRGB(126, 226, 88)
 -- l'un qui sort et l'autre qui rentre, se cliquent l'un pour l'autre. La couleur dit le sens avant qu'on lise.
 local BACK = Color3.fromRGB(64, 150, 226)
 local BACK_HOVER = Color3.fromRGB(96, 178, 245)
--- ET LA CASE D'UN OUTIL DEJA SORTI S'EFFACE UN PEU : il n'est plus la, et l'interface doit le dire sans un mot.
-local OUT_IMAGE_TRANSPARENCY = 0.45
+-- ET LA CARTE D'UN OUTIL DEJA SORTI S'EFFACE UN PEU : il n'est plus la, et l'interface doit le dire sans un mot.
+local OUT_IMAGE_TRANSPARENCY = 0.5
+local OUT_CARD_TRANSPARENCY = 0.25
+
+-- LE SURVOL SOULEVE LA CARTE de quelques pixels. Sans lui, rien ne dit qu'elle est vivante avant d'avoir clique.
+local HOVER_LIFT = 6
+local HOVER_TWEEN = TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 -- La camera de l'apercu. `FOV` serre = peu de perspective, donc l'objet ne se deforme pas dans le coin du cadre.
 local VIEW_FOV = 28
@@ -71,10 +96,14 @@ local BACK_TEXT = "PUT BACK"
 local TITLE_TEXT = "IN THE TRUCK"
 
 local gui: ScreenGui? = nil
-local bar: Frame? = nil
+local root: Frame? = nil
 local row: Frame? = nil
+local titleLabel: TextLabel? = nil
 local shown = false
-local slideTween: Tween? = nil
+-- LES CARTES DANS L'ORDRE DU RANG. Gardees pour les faire monter l'une apres l'autre : le layout donne leur
+-- place, pas leur tour de passage.
+local cards: { Frame } = {}
+local hideToken = 0
 
 local function getGui(): ScreenGui
 	local existing = gui
@@ -101,9 +130,9 @@ local function corner(parent: Instance, radius: number)
 	c.Parent = parent
 end
 
-local function stroke(parent: Instance, thickness: number, transparency: number)
+local function stroke(parent: Instance, color: Color3, thickness: number, transparency: number)
 	local s = Instance.new("UIStroke")
-	s.Color = STROKE
+	s.Color = color
 	s.Thickness = thickness
 	s.Transparency = transparency
 	s.Parent = parent
@@ -122,13 +151,13 @@ local function preview(model: Model, parent: Instance, inside: boolean)
 		image.Name = "Preview"
 		image.BackgroundTransparency = 1
 		image.Image = icon
-		-- SORTI, IL S'EFFACE. La case reste -- c'est par elle qu'on le range -- mais elle ne doit pas se lire
+		-- SORTI, IL S'EFFACE. La carte reste -- c'est par elle qu'on le range -- mais elle ne doit pas se lire
 		-- comme un outil disponible : l'oeil compte ce qui reste dans la benne avant de lire les boutons.
 		image.ImageTransparency = if inside then 0 else OUT_IMAGE_TRANSPARENCY
 		image.ScaleType = Enum.ScaleType.Fit
-		image.Size = UDim2.fromScale(1, 0.62)
-		image.Position = UDim2.fromScale(0.5, 0.04)
-		image.AnchorPoint = Vector2.new(0.5, 0)
+		image.Size = UDim2.fromScale(0.86, 0.86)
+		image.Position = UDim2.fromScale(0.5, 0.5)
+		image.AnchorPoint = Vector2.new(0.5, 0.5)
 		image.Parent = parent
 		return
 	end
@@ -136,9 +165,9 @@ local function preview(model: Model, parent: Instance, inside: boolean)
 	local view = Instance.new("ViewportFrame")
 	view.Name = "Preview"
 	view.BackgroundTransparency = 1
-	view.Size = UDim2.fromScale(1, 0.62)
-	view.Position = UDim2.fromScale(0.5, 0.04)
-	view.AnchorPoint = Vector2.new(0.5, 0)
+	view.Size = UDim2.fromScale(1, 1)
+	view.Position = UDim2.fromScale(0.5, 0.5)
+	view.AnchorPoint = Vector2.new(0.5, 0.5)
 	view.ImageTransparency = if inside then 0 else OUT_IMAGE_TRANSPARENCY
 	view.Ambient = Color3.fromRGB(190, 190, 190)
 	view.LightColor = Color3.fromRGB(255, 255, 255)
@@ -167,34 +196,65 @@ local function preview(model: Model, parent: Instance, inside: boolean)
 	camera.CFrame = CFrame.lookAt(pivot.Position + dir.LookVector * -reach, pivot.Position)
 end
 
---- Fabrique une case pour `model`. `inside` dit s'il est encore dans la benne ; `onClick` est appele avec son
+--- Fabrique une carte pour `model`. `inside` dit s'il est encore dans la benne ; `onClick` est appele avec son
 --- nom quand on clique -- dans les deux sens, parce que c'est la PLACE de l'objet qui decide de ce que ca fait.
-local function makeSlot(model: Model, inside: boolean, onClick: (string) -> (), parent: Instance)
-	local slot = Instance.new("Frame")
-	slot.Name = model.Name
-	slot.Size = SLOT_SIZE
-	slot.BackgroundColor3 = BG
-	slot.BackgroundTransparency = BG_TRANSPARENCY + 0.2
-	slot.BorderSizePixel = 0
-	slot.Parent = parent
-	corner(slot, 14)
-	stroke(slot, 1.5, STROKE_TRANSPARENCY)
+---
+--- DEUX CADRES ET PAS UN : le PORTEUR prend sa place dans le rang (c'est lui que le layout range), et la CARTE
+--- bouge librement a l'interieur. Animer directement ce que le layout positionne, c'est se battre contre lui a
+--- chaque image.
+local function makeCard(model: Model, inside: boolean, onClick: (string) -> (), parent: Instance): Frame
+	local holder = Instance.new("Frame")
+	holder.Name = model.Name
+	holder.Size = CARD_SIZE
+	holder.BackgroundTransparency = 1
+	holder.BorderSizePixel = 0
+	holder.ClipsDescendants = false
+	holder.Parent = parent
 
-	preview(model, slot, inside)
+	local card = Instance.new("Frame")
+	card.Name = "Card"
+	card.Size = UDim2.fromScale(1, 1)
+	card.AnchorPoint = Vector2.new(0.5, 0.5)
+	card.Position = if shown then CARD_IN else CARD_OUT
+	card.BackgroundColor3 = CARD
+	card.BackgroundTransparency = if inside then 0 else OUT_CARD_TRANSPARENCY
+	card.BorderSizePixel = 0
+	card.Parent = holder
+	corner(card, 16)
+	stroke(card, Color3.fromRGB(206, 214, 224), 1.5, 0.35)
+
+	local pad = Instance.new("UIPadding")
+	pad.PaddingTop = UDim.new(0, 9)
+	pad.PaddingBottom = UDim.new(0, 9)
+	pad.PaddingLeft = UDim.new(0, 9)
+	pad.PaddingRight = UDim.new(0, 9)
+	pad.Parent = card
+
+	-- LA VIGNETTE : un creux clair sous l'objet. Il detoure l'apercu sans ajouter un cadre, donc l'outil se lit
+	-- meme quand il est clair ou tres fin.
+	local well = Instance.new("Frame")
+	well.Name = "Well"
+	well.Size = UDim2.new(1, 0, 0, 76)
+	well.BackgroundColor3 = WELL
+	well.BorderSizePixel = 0
+	well.Parent = card
+	corner(well, 12)
+
+	preview(model, well, inside)
 
 	local name = Instance.new("TextLabel")
 	name.Name = "ToolName"
 	name.BackgroundTransparency = 1
-	name.Size = UDim2.fromScale(0.92, 0.14)
-	name.Position = UDim2.fromScale(0.5, 0.66)
-	name.AnchorPoint = Vector2.new(0.5, 0)
+	name.Size = UDim2.new(1, 0, 0, 17)
+	name.Position = UDim2.fromOffset(0, 81)
 	name.Font = Enum.Font.GothamBold
-	name.TextColor3 = TEXT
+	name.TextColor3 = CARD_TEXT
+	name.TextTransparency = if inside then 0 else 0.35
 	name.TextScaled = true
 	-- LE NOM DU MODELE, tel quel. Une table de jolis noms serait une SECONDE source a tenir d'accord avec la
 	-- benne : le jour ou l'un des deux bouge, l'interface annonce un outil qui n'existe plus.
 	name.Text = model.Name
-	name.Parent = slot
+	name.Parent = card
 
 	-- LE BOUTON DIT CE QUI VA SE PASSER, en mot ET en couleur. Vert il sort l'outil, bleu il le range : deux
 	-- boutons verts cote a cote, l'un qui sort et l'autre qui rentre, se cliquent l'un pour l'autre.
@@ -203,77 +263,99 @@ local function makeSlot(model: Model, inside: boolean, onClick: (string) -> (), 
 
 	local take = Instance.new("TextButton")
 	take.Name = "Take"
-	take.Size = UDim2.fromScale(0.84, 0.17)
-	take.Position = UDim2.fromScale(0.5, 0.83)
-	take.AnchorPoint = Vector2.new(0.5, 0)
+	take.Size = UDim2.new(1, 0, 0, 30)
+	take.Position = UDim2.new(0, 0, 1, -30)
 	take.BackgroundColor3 = idle
 	take.BorderSizePixel = 0
 	take.AutoButtonColor = false
 	take.Font = Enum.Font.GothamBold
-	take.TextColor3 = TEXT
+	take.TextColor3 = Color3.fromRGB(255, 255, 255)
 	take.TextScaled = true
 	take.Text = if inside then TAKE_TEXT else BACK_TEXT
-	take.Parent = slot
-	corner(take, 8)
+	take.Parent = card
+	corner(take, 10)
 
-	-- LE SURVOL EST UN RETOUR, pas une decoration : sans lui, rien ne dit que la case est cliquable avant d'avoir
+	local textPad = Instance.new("UIPadding")
+	textPad.PaddingTop = UDim.new(0, 6)
+	textPad.PaddingBottom = UDim.new(0, 6)
+	textPad.Parent = take
+
+	-- LE SURVOL EST UN RETOUR, pas une decoration : sans lui, rien ne dit que la carte est cliquable avant d'avoir
 	-- clique. Sur tactile il ne sert a rien et ne coute rien -- le tap declenche directement.
+	--
+	-- LA CARTE SE SOULEVE, pas seulement le bouton : c'est la carte entiere qui designe l'outil, et un survol qui
+	-- ne touche qu'un rectangle de trente pixels se remarque a peine.
+	local function lift(up: boolean)
+		-- ON NE SOULEVE RIEN PENDANT QUE LA CARTE MONTE : les deux ecriraient la meme position, et le survol
+		-- gagnerait -- la carte se planterait a mi-chemin sous la souris.
+		if not shown then
+			return
+		end
+		TweenService:Create(card, HOVER_TWEEN, {
+			Position = if up then UDim2.new(0.5, 0, 0.5, -HOVER_LIFT) else CARD_IN,
+		}):Play()
+		take.BackgroundColor3 = if up then over else idle
+	end
 	take.MouseEnter:Connect(function()
-		take.BackgroundColor3 = over
+		lift(true)
 	end)
 	take.MouseLeave:Connect(function()
-		take.BackgroundColor3 = idle
+		lift(false)
 	end)
 	take.Activated:Connect(function()
 		onClick(model.Name)
 	end)
+
+	return card
 end
 
 local function build(): Frame
-	local existing = bar
+	local existing = root
 	if existing and existing.Parent then
 		return existing
 	end
 	local holder = getGui()
 
+	-- LE CADRE RACINE N'A PLUS DE FOND. Les cartes se detachent toutes seules : un panneau sombre derriere elles
+	-- ajouterait un rectangle qui mange le bas de l'ecran pour ne rien dire de plus.
 	local frame = Instance.new("Frame")
-	frame.Name = "Bar"
+	frame.Name = "Cards"
 	frame.AnchorPoint = Vector2.new(0.5, 1)
-	frame.Position = HIDDEN_POS
-	frame.AutomaticSize = Enum.AutomaticSize.X
-	frame.Size = UDim2.fromOffset(0, 186)
-	frame.BackgroundColor3 = BG
-	frame.BackgroundTransparency = BG_TRANSPARENCY
+	frame.Position = ROW_POS
+	frame.AutomaticSize = Enum.AutomaticSize.XY
+	frame.Size = UDim2.fromOffset(0, 0)
+	frame.BackgroundTransparency = 1
 	frame.BorderSizePixel = 0
 	frame.Visible = false
+	frame.ClipsDescendants = false
 	frame.Parent = holder
-	corner(frame, 18)
-	stroke(frame, 2, 0.45)
 
-	local pad = Instance.new("UIPadding")
-	pad.PaddingTop = UDim.new(0, 8)
-	pad.PaddingBottom = UDim.new(0, 10)
-	pad.PaddingLeft = UDim.new(0, 12)
-	pad.PaddingRight = UDim.new(0, 12)
-	pad.Parent = frame
+	local stack = Instance.new("UIListLayout")
+	stack.FillDirection = Enum.FillDirection.Vertical
+	stack.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	stack.SortOrder = Enum.SortOrder.LayoutOrder
+	stack.Padding = UDim.new(0, 6)
+	stack.Parent = frame
 
 	local title = Instance.new("TextLabel")
 	title.Name = "Title"
+	title.LayoutOrder = 1
 	title.BackgroundTransparency = 1
-	title.Size = UDim2.new(1, 0, 0, 18)
+	title.Size = UDim2.fromOffset(200, 18)
 	title.Font = Enum.Font.GothamBold
-	title.TextColor3 = TEXT
-	title.TextTransparency = 0.25
+	title.TextColor3 = TITLE_COLOR
 	title.TextScaled = true
 	title.Text = TITLE_TEXT
 	title.Parent = frame
+	stroke(title, TITLE_STROKE, 2, 0.35)
 
 	local list = Instance.new("Frame")
-	list.Name = "Slots"
+	list.Name = "Row"
+	list.LayoutOrder = 2
 	list.BackgroundTransparency = 1
 	list.AutomaticSize = Enum.AutomaticSize.X
-	list.Size = UDim2.new(0, 0, 1, -22)
-	list.Position = UDim2.fromOffset(0, 22)
+	list.Size = UDim2.fromOffset(0, CARD_SIZE.Y.Offset)
+	list.ClipsDescendants = false
 	list.Parent = frame
 
 	local layout = Instance.new("UIListLayout")
@@ -281,19 +363,19 @@ local function build(): Frame
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.Name
-	layout.Padding = UDim.new(0, SLOT_GAP)
+	layout.Padding = UDim.new(0, CARD_GAP)
 	layout.Parent = list
 
-	bar, row = frame, list
+	root, row, titleLabel = frame, list, title
 	return frame
 end
 
 export type Entry = { model: Model, inside: boolean }
 
---- REMPLIT LA BARRE, et rend le nombre de cases posees.
+--- REMPLIT LA BARRE, et rend le nombre de cartes posees.
 ---
---- ON REFAIT TOUT A CHAQUE FOIS plutot que de modifier la case qui change. Le monde est la SOURCE : ce qui est
---- dans la benne y est, ce qui est dehors porte sa marque. Corriger une case a la main serait un second etat a
+--- ON REFAIT TOUT A CHAQUE FOIS plutot que de modifier la carte qui change. Le monde est la SOURCE : ce qui est
+--- dans la benne y est, ce qui est dehors porte sa marque. Corriger une carte a la main serait un second etat a
 --- tenir d'accord avec lui, et c'est exactement ainsi que deux verites finissent par se contredire.
 function TruckToolsHandler.fill(entries: { Entry }, onClick: (string) -> ()): number
 	build()
@@ -306,53 +388,76 @@ function TruckToolsHandler.fill(entries: { Entry }, onClick: (string) -> ()): nu
 			child:Destroy()
 		end
 	end
+	table.clear(cards)
 	for _, entry in entries do
-		makeSlot(entry.model, entry.inside, onClick, list)
+		table.insert(cards, makeCard(entry.model, entry.inside, onClick, list))
 	end
 	return #entries
 end
 
 --- Montre ou cache la barre. Idempotent : appelee deux fois de suite, elle ne rejoue rien.
+---
+--- LES CARTES MONTENT L'UNE APRES L'AUTRE, et redescendent de meme. Le `hideToken` sert au cas ou l'on rouvre
+--- pendant la descente : les montees en retard d'une fermeture annulee ne doivent pas se declencher apres coup.
 function TruckToolsHandler.setShown(on: boolean)
 	if on == shown then
 		return
 	end
 	shown = on
-	local frame = bar
+	local frame = root
 	if not frame then
 		return
 	end
-	if slideTween then
-		slideTween:Cancel()
-	end
+	hideToken += 1
+	local token = hideToken
 	if on then
 		frame.Visible = true
 	end
-	local tween = TweenService:Create(frame, if on then SLIDE_IN else SLIDE_OUT, {
-		Position = if on then BAR_POS else HIDDEN_POS,
-	})
-	slideTween = tween
-	tween.Completed:Connect(function()
-		-- ON NE CACHE QU'A LA FIN, et seulement si personne ne l'a rouverte entre-temps : la masquer tout de
-		-- suite couperait le glissement en plein vol.
-		if not shown and slideTween == tween then
-			frame.Visible = false
+	local title = titleLabel
+	if title then
+		TweenService:Create(title, if on then RISE else FALL, {
+			TextTransparency = if on then 0 else 1,
+		}):Play()
+		local outline = title:FindFirstChildOfClass("UIStroke")
+		if outline then
+			TweenService:Create(outline, if on then RISE else FALL, {
+				Transparency = if on then 0.35 else 1,
+			}):Play()
 		end
-	end)
-	tween:Play()
+	end
+	for i, card in cards do
+		-- A LA FERMETURE, LA DERNIERE PARTIE EN PREMIERE : le rang se vide du meme cote qu'il s'est rempli, ce qui
+		-- se lit comme un retrait et pas comme une panne.
+		local step = if on then i - 1 else #cards - i
+		task.delay(step * STAGGER, function()
+			if token ~= hideToken or not card.Parent then
+				return
+			end
+			TweenService:Create(card, if on then RISE else FALL, {
+				Position = if on then CARD_IN else CARD_OUT,
+			}):Play()
+		end)
+	end
+	if not on then
+		-- ON NE CACHE QU'APRES LA DERNIERE, et seulement si personne ne l'a rouverte entre-temps : masquer tout de
+		-- suite couperait la descente en plein vol.
+		task.delay(#cards * STAGGER + FALL.Time, function()
+			if token == hideToken and not shown then
+				frame.Visible = false
+			end
+		end)
+	end
 end
 
 --- Detruit tout. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 function TruckToolsHandler.destroy()
-	if slideTween then
-		slideTween:Cancel()
-		slideTween = nil
-	end
+	hideToken += 1
 	local holder = gui
 	if holder then
 		holder:Destroy()
 	end
-	gui, bar, row, shown = nil, nil, nil, false
+	table.clear(cards)
+	gui, root, row, titleLabel, shown = nil, nil, nil, nil, false
 end
 
 return TruckToolsHandler

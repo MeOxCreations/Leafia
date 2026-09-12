@@ -122,8 +122,8 @@ function ToolHudController.init()
 		selectRemote = RemoteSetup.getRemote("SelectTool", "Tool") :: RemoteEvent
 	end)
 
-	-- CE QUI PEUT CHANGER LA LISTE : un outil qui sort du camion ou qui y rentre (un Model qui arrive ou part), et
-	-- sa marque de possession. On filtre sur les Models : une part posee dans la carte ne concerne pas ce menu.
+	-- CE QUI PEUT CHANGER LA LISTE : un outil qui apparait ou disparait de la carte. On filtre sur les Models :
+	-- une part posee dans le decor ne concerne pas ce menu.
 	local function onWorld(inst: Instance)
 		if inst:IsA("Model") then
 			refresh()
@@ -131,6 +131,39 @@ function ToolHudController.init()
 	end
 	Workspace.DescendantAdded:Connect(onWorld)
 	Workspace.DescendantRemoving:Connect(onWorld)
+
+	-- ET LA BENNE DU CAMION, qui est la VRAIE source des entrees et des sorties.
+	--
+	-- POURQUOI LES DEUX EVENEMENTS CI-DESSUS NE SUFFISENT PAS. Un outil qu'on sort passe de
+	-- `Truck.ObjectsTools` au Workspace : il etait DEJA descendant du Workspace, donc il n'y "entre" pas, et
+	-- `DescendantAdded` ne tire jamais. Le menu ne voyait donc jamais arriver le premier outil -- on sortait une
+	-- cisaille, elle s'equipait, et aucun menu n'apparaissait. Piege deja paye sur les zones de grimpe de
+	-- l'echelle.
+	--
+	-- Le dossier, lui, PERD vraiment un enfant : `ChildRemoved` tire a coup sur, dans les deux sens.
+	task.spawn(function()
+		local deadline = os.clock() + TruckConfigs.FIND_TIMEOUT
+		while os.clock() < deadline do
+			for _, d in Workspace:GetDescendants() do
+				if d:IsA("Model") and d.Name == TruckConfigs.MODEL_NAME then
+					local folder = d:FindFirstChild(TruckConfigs.TOOLS_FOLDER)
+					if folder then
+						folder.ChildAdded:Connect(refresh)
+						folder.ChildRemoved:Connect(refresh)
+						refresh()
+						return
+					end
+				end
+			end
+			task.wait(TruckConfigs.FIND_INTERVAL)
+		end
+		-- "Pas encore la" est normal avec le streaming ; "jamais la" ne l'est pas, et sans ce mot le menu
+		-- resterait muet sans que rien n'explique pourquoi.
+		warn(
+			`[ToolHudController] Aucune benne "{TruckConfigs.TOOLS_FOLDER}" trouvee : le menu ne se mettra a `
+				.. "jour que sur les outils qui apparaissent ou disparaissent de la carte."
+		)
+	end)
 
 	local character = player.Character
 	if character then

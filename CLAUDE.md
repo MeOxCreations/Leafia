@@ -1360,6 +1360,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   juste. Se verifie d'un coup d'oeil : tout ce qu'un joueur LIT (badge, marqueur, jauge) doit etre accroche a
   quelque chose d'immobile, ou suivre exprès un sujet qui bouge -- jamais suivre par accident.
 
+- **POUR ANIMER UN ELEMENT QU'UN `UIListLayout` POSITIONNE, IL EN FAUT DEUX : un PORTEUR que le layout range, et
+  l'element qui bouge LIBREMENT dedans.** Animer directement ce que le layout positionne, c'est se battre contre
+  lui a chaque image -- il repose la position, l'animation la reecrit, et le resultat depend de qui parle en
+  dernier. Le porteur est transparent et de la taille voulue ; l'enfant part d'ou il veut et revient a
+  `(0.5, 0.5)`. Meme famille que "une propriete, un seul ecrivain".
+- **UN SURVOL QUI ECRIT LA MEME PROPRIETE QU'UNE ANIMATION D'ARRIVEE LA FIGE A MI-CHEMIN.** Les cartes montent en
+  ecrivant leur `Position`, et le survol la soulevait aussi : passer la souris pendant l'arrivee plantait la carte
+  sous le curseur. Le garde est de ne laisser le survol ecrire QUE dans l'etat stable. Se repere en se demandant,
+  pour chaque effet ajoute : qui d'autre ecrit ce champ, et peut-il ecrire EN MEME TEMPS ?
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
