@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.788 — Les repliques suivent le dossier `Voices`, deplace dans Studio
+
+Le dossier est passe de `Sounds/Scenes/Scene1/Voices` a `Sounds/Scenes/Voices`. Les trente chemins du didacticiel
+pointaient donc dans le vide, et la console le disait trente fois.
+
+LE CHEMIN NE VIT PLUS QU'A UN SEUL ENDROIT : une fonction `voice("nom")` qui rend la table complete. Le prochain
+deplacement coutera UNE ligne au lieu de trente, et il n'y aura plus de chemin oublie au fond du fichier.
+
+UNE FONCTION ET PAS UNE CONSTANTE DE PREFIXE : une table de chemin ne se compose pas -- `{ PREFIX, nom }` donnerait
+une table imbriquee, il faudrait la concatener a chaque usage. Un appel rend la table finie, et se lit comme le nom
+du fichier qu'on cherche.
+
+Les sons de la SCENE (les coups, la poignee, la porte) ne bougent pas : ils sont toujours dans `Scene1`, et c'est
+correct -- seul `Voices` a demenage.
+
 ## 0.0.787 — Le camion ne s'ouvre plus quand on appuie sur E devant un seau
 
 Le badge affichait `BUCKET / TAKE`, on appuyait sur `E`, et le CAMION s'ouvrait. Sa pilule passe par notre

@@ -8,6 +8,16 @@
 -- camera revient pile a son point de depart et le mouvement se lit comme une annulation, pas comme un sursaut.
 -- Deux nombres tenus d'accord a la main finissent toujours par se contredire : le vrai reglage, c'est de combien
 -- la camera saute AU-DELA de son point de depart. Baisse SCARE_EXTRA pour un sursaut plus discret.
+-- OU VIVENT SES REPLIQUES, en UN SEUL endroit. Elles etaient ecrites en entier a trente endroits : deplacer le
+-- dossier dans Studio cassait donc trente chemins d'un coup, et la console le disait trente fois.
+--
+-- UNE FONCTION ET PAS UNE CONSTANTE DE PREFIXE : une table de chemin se recopie a chaque usage (`{ PREFIX, nom }`
+-- ne marche pas, il faudrait la concatener), alors qu'un appel rend la table complete et se lit comme le nom du
+-- fichier. Le jour ou le dossier bouge encore, c'est cette ligne-ci qu'on change, et elle seule.
+local function voice(name: string): { string }
+	return { "Sounds", "Scenes", "Voices", name }
+end
+
 local TRY_PUSH = 2.2
 local PRE_OPEN_PUSH = 0.8
 local SCARE_EXTRA = 0.6
@@ -259,10 +269,10 @@ return {
 	--
 	-- LA PORTE NE COMMANDE PLUS LA VOIX : elle finit de s'ouvrir pendant qu'il parle. Caler la seconde replique
 	-- sur la grande ouverture faisait attendre un mouvement qui n'a rien a voir avec ce qu'il raconte.
-	SPEECH0_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_0" },
+	SPEECH0_SOUND = voice("Oldman_scene_speech_0"),
 	-- Delai apres l'entrebaillement. COURT : sa voix doit arriver avec le mouvement du battant, pas apres.
 	SPEECH0_DELAY = 0.15,
-	SPEECH_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_1" },
+	SPEECH_SOUND = voice("Oldman_scene_speech_1"),
 	-- Souffle entre les deux repliques. A ZERO : elles s'enchainent, comme quelqu'un qui parle sans reprendre son
 	-- souffle. Le knob reste, c'est ici qu'on remet du silence si un jour la seconde arrive trop vite.
 	SPEECH_GAP = 0,
@@ -375,7 +385,7 @@ return {
 	-- IL PARLE EN SE BATTANT AVEC SA POIGNEE. Une voix avant meme que la porte bouge : on sait qu'il y a
 	-- quelqu'un derriere, et on l'entend galerer. Le bruit de serrure dit qu'une porte resiste, la voix dit que
 	-- c'est UN VIEUX MONSIEUR qui resiste avec elle.
-	TRY_OPEN_VOICE = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_BeforeOpen" },
+	TRY_OPEN_VOICE = voice("Oldman_scene_speech_BeforeOpen"),
 	-- Apres le debut du geste. COURT, mais pas zero : le bruit de serrure et sa voix partiraient ensemble et se
 	-- masqueraient l'un l'autre. On entend d'abord la porte resister, il repond ensuite.
 	TRY_OPEN_VOICE_DELAY = 0.25,
@@ -483,11 +493,11 @@ return {
 	-- se reordonne, et en ajouter une est UNE ligne -- alors qu'un nom fabrique casse en silence le jour ou
 	-- l'asset s'appelle autrement.
 	IMPATIENT_SOUNDS = {
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_1" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_2" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_3" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_4" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Impatient_5" },
+		voice("Oldman_scene_speech_Impatient_1"),
+		voice("Oldman_scene_speech_Impatient_2"),
+		voice("Oldman_scene_speech_Impatient_3"),
+		voice("Oldman_scene_speech_Impatient_4"),
+		voice("Oldman_scene_speech_Impatient_5"),
 	},
 	-- Avant la PREMIERE. Assez long pour laisser le joueur chercher tout seul : relancer quelqu'un qui vient de
 	-- recevoir sa consigne, ce n'est pas de l'impatience, c'est du harcelement.
@@ -527,10 +537,10 @@ return {
 	--
 	-- UNE SEULE FOIS PAR PARTIE. Lachez la machine, reprenez-la : il ne recommence pas. Une phrase scenarisee qui
 	-- se rejoue a chaque prise cesse d'etre une reaction et devient un bruit de porte.
-	PULL_ROPE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PullTheRope" },
+	PULL_ROPE_SOUND = voice("Oldman_scene_speech_PullTheRope"),
 	-- ET S'IL LA REPOSE juste apres qu'on lui a dit de tirer la corde : il le reprend. C'est ce genre de reaction
 	-- a une BETISE du joueur qui fait qu'un PNJ a l'air de regarder, au lieu de reciter un script.
-	GRAB_AGAIN_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GrabMowerAgain" },
+	GRAB_AGAIN_SOUND = voice("Oldman_scene_speech_GrabMowerAgain"),
 	-- Ecart minimum entre deux fois, en secondes. Celle-la se rejoue -- contrairement a PULL_ROPE, dite une seule
 	-- fois -- parce qu'elle repond a une action REPETABLE. Sans ce garde, prendre et lacher la machine en boucle
 	-- la ferait bafouiller, et une reaction qui se declenche trop vite cesse d'etre une reaction.
@@ -538,7 +548,7 @@ return {
 	-- ET S'IL LA REPREND, toujours sans l'avoir demarree : il redit de tirer la corde, autrement. Une SECONDE
 	-- formulation et pas la premiere rejouee -- reentendre mot pour mot ce qu'on vient d'entendre sonne comme une
 	-- bande qui saute, alors qu'une variante sonne comme quelqu'un qui insiste.
-	PULL_ROPE_AGAIN_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Pulltherope2" },
+	PULL_ROPE_AGAIN_SOUND = voice("Oldman_scene_speech_Pulltherope2"),
 	-- Son propre ecart minimum, separe de celui de la repose. Les deux repliques encadrent le meme aller-retour
 	-- (lacher puis reprendre) : un reglage partage par les deux finirait par en desservir une.
 	PULL_ROPE_AGAIN_COOLDOWN = 9,
@@ -547,7 +557,7 @@ return {
 	--
 	-- UNE SEULE FOIS. Le moteur peut caler et repartir ; le feliciter a chaque fois viderait la phrase de ce
 	-- qu'elle dit.
-	PERFECT_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Perfect" },
+	PERFECT_SOUND = voice("Oldman_scene_speech_Perfect"),
 	-- ET S'IL PREND LE SEAU alors qu'on lui demande de tondre : le grand-pere lui dit de le reposer.
 	--
 	-- POURQUOI CA COMPTE. Un joueur qui attrape le mauvais outil ne sait pas qu'il s'est trompe : rien ne le lui
@@ -556,9 +566,9 @@ return {
 	-- PLUSIEURS FACONS DE LE DIRE, tirees au hasard. Le joueur reprend le seau plus souvent qu'on ne le croit, et
 	-- reentendre mot pour mot la meme phrase transforme un personnage en machine a messages.
 	PUT_BIN_DOWN_SOUNDS = {
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown2" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PutBinDown3" },
+		voice("Oldman_scene_speech_PutBinDown"),
+		voice("Oldman_scene_speech_PutBinDown2"),
+		voice("Oldman_scene_speech_PutBinDown3"),
 	},
 	-- Ecart minimum entre deux fois, en secondes. Le joueur peut prendre et reposer le seau en boucle : sans ce
 	-- garde, il se ferait sermonner a chaque aller-retour, et la phrase deviendrait un bruit de porte.
@@ -569,13 +579,13 @@ return {
 	--
 	-- Sa replique part a l'instant ou la derniere touffe tombe, et le marqueur se pose sur lui dans le meme
 	-- geste : la voix dit de venir, le dessin dit ou.
-	LAWN_DONE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_PerfectComeSeeMe" },
+	LAWN_DONE_SOUND = voice("Oldman_scene_speech_PerfectComeSeeMe"),
 	-- ET CE QU'IL DIT QUAND LE JOUEUR ARRIVE. Il n'enchaine sur aucune tache pour le moment : la suite du
 	-- scenario n'est pas ecrite, et donner une consigne qui n'existe pas serait pire que de ne rien donner.
-	TALK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_HeppyForCutGrass" },
+	TALK_SOUND = voice("Oldman_scene_speech_HeppyForCutGrass"),
 	-- ET S'IL VIENT LE VOIR SANS AVOIR FINI. Le joueur qui abandonne a mi-chemin et revient chercher la suite
 	-- recoit une reponse, au lieu d'un badge qui ne fait rien : une action sans effet se lit comme un bug.
-	TALK_UNDONE_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_DidntFinishItAll" },
+	TALK_UNDONE_SOUND = voice("Oldman_scene_speech_DidntFinishItAll"),
 	-- Ecart minimum entre deux fois, en secondes. Celle-la se REJOUE, contrairement aux felicitations : c'est une
 	-- reponse, pas une recompense. Mais un joueur qui reste plante devant lui ne doit pas l'entendre en boucle.
 	TALK_UNDONE_COOLDOWN = 9,
@@ -597,23 +607,23 @@ return {
 	TALK_RESCUE_AT = 0.7,
 	-- ET IL L'EMMENE AU CAMION. Dite au moment ou il se met en route : une phrase qui annonce un deplacement doit
 	-- partir AVEC lui, sinon le joueur le voit s'eloigner sans savoir pourquoi.
-	GO_ON_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GoOnTruck" },
+	GO_ON_TRUCK_SOUND = voice("Oldman_scene_speech_GoOnTruck"),
 	-- ET CE QU'IL DIT EN ARRIVANT : ouvre l'arriere, les outils sont dedans.
-	OPEN_TRUCK_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_OpenTruckBack" },
+	OPEN_TRUCK_SOUND = voice("Oldman_scene_speech_OpenTruckBack"),
 	-- ET QUAND LE JOUEUR OUVRE ENFIN LE HAYON : il commente ce qu'on y voit. Dite a l'OUVERTURE et pas a
 	-- l'arrivee devant : c'est le geste du joueur qu'elle recompense.
-	TRUCK_OPENED_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_AsUCanSeeDoorTruck" },
+	TRUCK_OPENED_SOUND = voice("Oldman_scene_speech_AsUCanSeeDoorTruck"),
 	-- ET IL ENCHAINE SUR LA CONSIGNE : ne pas oublier ses outils sur le terrain avant de partir chez le client.
 	-- Elle part des que la precedente a fini de parler, sans qu'aucune duree soit ecrite nulle part.
-	EXPLAIN_TOOL_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_ExplainToolTruck" },
+	EXPLAIN_TOOL_SOUND = voice("Oldman_scene_speech_ExplainToolTruck"),
 	-- PUIS IL DEMANDE LA CISAILLE. Troisieme replique de la meme suite : l'ouverture du hayon en declenche UNE,
 	-- et les trois s'enchainent sur leurs fins reelles -- aucune duree ecrite nulle part.
-	GRAB_SHEAR_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_GrabTheShear" },
+	GRAB_SHEAR_SOUND = voice("Oldman_scene_speech_GrabTheShear"),
 
 	-- ===== LA HAIE, AVEC LA CISAILLE EN MAIN =====
 	-- Sa replique part quand le joueur EQUIPE la cisaille, pas quand il ouvre le camion : c'est le geste d'avoir
 	-- l'outil en main qui declenche la suite, et c'est ce que le joueur vient de faire.
-	SHEAR_SOUND = { "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_SayComeToCutHedge" },
+	SHEAR_SOUND = voice("Oldman_scene_speech_SayComeToCutHedge"),
 	-- L'outil qu'on attend. Le nom est celui de `ToolConfigs`, pose par ToolService sur le modele en main.
 	SHEAR_TOOL_NAME = "Shear",
 	-- COMBIEN DE LA HAIE IL FAUT TAILLER pour que la tache soit finie, en fraction.
@@ -866,10 +876,10 @@ return {
 	-- CELLES-CI SONT PATIENTES : il ne comprend pas ce que fait le joueur, il n'est pas encore agace. C'est ce ton
 	-- qui va avec le point d'interrogation au-dessus de sa tete.
 	WAIT_PLAYER_SOUNDS = {
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_1" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_2" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_3" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_4" },
+		voice("Oldman_scene_speech_Say_wait_player_1"),
+		voice("Oldman_scene_speech_Say_wait_player_2"),
+		voice("Oldman_scene_speech_Say_wait_player_3"),
+		voice("Oldman_scene_speech_Say_wait_player_4"),
 	},
 	-- ET LES AGACEES, RESERVEES A L'ATTENTE QUI DURE, avec l'eclair au-dessus de sa tete. Elles ne sont PAS dans
 	-- le tirage d'au-dessus : "bon, tu viens ?" perd tout si ca sort au premier appel. Ca se merite.
@@ -878,8 +888,8 @@ return {
 	-- ici, entre `_5` et lui, et pas avec les patientes -- un point d'interrogation au-dessus de quelqu'un qui
 	-- s'agace dirait le contraire de ce qu'on entend.
 	WAIT_PLAYER_ANGRY_SOUNDS = {
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_5" },
-		{ "Sounds", "Scenes", "Scene1", "Voices", "Oldman_scene_speech_Say_wait_player_6" },
+		voice("Oldman_scene_speech_Say_wait_player_5"),
+		voice("Oldman_scene_speech_Say_wait_player_6"),
 	},
 	-- Au bout de combien de secondes d'immobilite il passe a celle-la, et a la colere en image.
 	WAIT_PLAYER_ANGRY_AFTER = 22,
