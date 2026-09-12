@@ -2317,14 +2317,29 @@ local function step(dt: number)
 		if hedge then
 			hedge:FireServer()
 		end
-		-- LA HAIE EST CHOISIE ICI, UNE FOIS : celle qui est la plus proche a l'instant ou il prend l'outil. Le
-		-- garder evite que le marqueur saute d'une haie a l'autre quand le joueur marche entre les deux.
+		-- LA HAIE EST CHOISIE ICI, UNE FOIS. Le garder evite que le marqueur saute d'une haie a l'autre quand le
+		-- joueur marche entre les deux.
+		--
+		-- ON LA CHOISIT DEPUIS LE POINT OU LE GRAND-PERE VA, pas depuis le joueur. Il y a DEUX haies dans le
+		-- jardin : partir du joueur, qui est au camion a cet instant, pouvait designer celle dont personne ne
+		-- parle -- le grand-pere serait alors parti montrer l'autre, avec la pastille dans son dos. Le point
+		-- d'arrivee de sa marche EST la mise en scene ; c'est lui qui doit decider.
+		--
+		-- A DEFAUT DE CE POINT, on retombe sur le joueur : une pastille a peu pres juste bat une absence de
+		-- pastille, et le warn dit lequel des deux a servi.
+		local anchorPart = findPart(TutorialConfigs.OLDMAN_HEDGE_TARGET)
 		local me = getRoot()
-		hedgeModel = if me then nearestHedge(me.Position) else nil
+		local from = if anchorPart then anchorPart.Position elseif me then me.Position else nil
+		hedgeModel = if from then nearestHedge(from) else nil
 		if not hedgeModel then
 			warn(
 				`[Tutorial] Aucun Model dont le nom commence par "{HedgeConfigs.AUTO_TAG_PREFIX}" : pas de haie a `
 					.. "designer. Rojo ne synchronise pas le Workspace."
+			)
+		else
+			print(
+				`[Tutorial] Haie a tailler : "{(hedgeModel :: Model).Name}", choisie depuis `
+					.. `{if anchorPart then `"{TutorialConfigs.OLDMAN_HEDGE_TARGET}"` else "le joueur"}.`
 			)
 		end
 		-- LA TACHE ARRIVE PENDANT QU'IL PARLE, pas avant lui : c'est sa phrase qui la justifie.
@@ -2348,8 +2363,13 @@ local function step(dt: number)
 		local hedge = hedgeModel
 		if hedge and hedge.Parent then
 			if not hedgeMarker then
+				-- ACCROCHE A UNE PART DE LA HAIE, pas a un point calcule une fois. Un point est un instantane : le
+				-- pivot d'un modele suit sa BOITE ENGLOBANTE, et la haie recoit ses carreaux et ses branches apres
+				-- coup -- le pivot d'avant ne designe alors plus son milieu. Piege deja paye sur le marqueur de la
+				-- porte, ne a l'origine de la carte.
+				local anchorPart = hedge.PrimaryPart or hedge:FindFirstChildWhichIsA("BasePart")
 				hedgeMarker = WorldMarker.show(
-					hedge:GetPivot().Position,
+					if anchorPart then anchorPart else hedge:GetPivot().Position,
 					Vector3.new(0, TutorialConfigs.HEDGE_MARKER_UP, 0)
 				)
 			end

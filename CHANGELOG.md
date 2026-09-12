@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.818 — La pastille de la haie se pose sur CELLE que le grand-pere va montrer
+
+Elle visait la haie la plus proche DU JOUEUR a l'instant ou il equipe la cisaille -- c'est-a-dire depuis le
+camion. Il y a deux haies dans le jardin : le grand-pere pouvait donc partir montrer l'une pendant que la pastille
+designait l'autre, dans son dos.
+
+Elle est choisie depuis `OldManWalkToHedgeFinal`, le point ou sa marche l'amene. C'est la mise en scene qui decide,
+pas la position du joueur. A defaut de ce point on retombe sur le joueur, et la console dit lequel des deux a
+servi.
+
+ET LA PASTILLE EST ACCROCHEE A UNE PART DE LA HAIE, plus a un point calcule une fois. Un point est un instantane,
+et le pivot d'un modele suit sa BOITE ENGLOBANTE : la haie recoit ses carreaux et ses branches apres coup, donc le
+pivot d'avant ne designe plus son milieu. Meme piege que le marqueur de la porte, ne a l'origine de la carte.
+
 ## 0.0.817 — La barre du camion devient des cartes blanches qui montent une par une
 
 LE PANNEAU SOMBRE A DISPARU. Il posait un rectangle opaque en bas de l'ecran pour ne rien dire de plus que les
