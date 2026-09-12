@@ -246,7 +246,6 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 	local flat = Vector3.new(low.X - high.X, 0, low.Z - high.Z)
 	local away = if flat.Magnitude > 1e-3 then flat.Unit else Vector3.new(0, 0, 1)
 	local middle = high + away * TruckConfigs.SLIDE_OUT
-	local spin = math.rad(360 * TruckConfigs.FLY_SPINS)
 
 	-- ON L'ANCRE ET ON LE SORT DU CAMION. Tant qu'il est enfant du modele, il suit la carrosserie -- et il
 	-- resterait "range" pour l'interface, qui lit le contenu du dossier.
@@ -266,14 +265,11 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 				return -- detruit en vol : plus rien a poser
 			end
 			local pos = bezier(from.Position, middle, landing.Position, e)
-			-- IL FAIT UN TOUR SUR LA VERTICALE, PUIS IL SE REDRESSE. Le tour donne le peps -- l'objet ne se
-			-- contente pas de se deplacer, il tourne -- et le redressement de fin lui evite de se poser a
-			-- l'angle ou le hasard l'a laisse.
-			local turned = from.Rotation * CFrame.Angles(0, spin * e, 0)
-			local settle = TruckConfigs.FLY_SETTLE_FROM
-			local rot = if e <= settle
-				then turned
-				else turned:Lerp(landing.Rotation, (e - settle) / math.max(1 - settle, 1e-3))
+			-- IL SE MET DROIT EN L'AIR, TOUT DE SUITE, puis il descend se poser deja dans sa pose d'arrivee.
+			-- Deux mouvements qui se SUIVENT et qu'on lit chacun ; etales sur tout le trajet, ils se masquent
+			-- l'un l'autre et on ne voit plus ni le redressement ni la descente.
+			local straight = math.min(e / math.max(TruckConfigs.STRAIGHTEN_BY, 1e-3), 1)
+			local rot = from.Rotation:Lerp(landing.Rotation, straight)
 			model:PivotTo(CFrame.new(pos) * rot)
 			if e >= 1 then
 				break

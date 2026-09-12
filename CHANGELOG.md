@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.809 — L'outil se met droit en l'air, sans tourner sur lui-meme
+
+Plus de tour complet. Il se redresse dans les airs sur le premier tiers du trajet, puis il descend se poser deja
+dans sa pose d'arrivee.
+
+POURQUOI PAS SUR TOUT LE TRAJET. En etalant la rotation du depart a l'arrivee, l'objet se pose a l'instant PILE ou
+il finit de tourner : les deux mouvements se masquent l'un l'autre et on ne voit ni l'un ni l'autre. En le
+redressant tot, on lit DEUX choses a la suite -- il se met droit, puis il descend. `STRAIGHTEN_BY` regle ce
+partage, a 1 on revient au cas mou.
+
 ## 0.0.808 — L'outil refait son tour sur lui-meme, et deux fois plus vite
 
 Le tour complet revient : c'est lui qui donne le peps, l'objet ne se contente pas de se deplacer, il TOURNE, et le

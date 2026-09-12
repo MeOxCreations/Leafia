@@ -137,15 +137,15 @@ local TruckConfigs = {
 	-- Duree, en secondes. COURTE : le trajet est un enchainement entre deux etats, pas un plan a regarder. Un
 	-- geste d'interface qui traine se ressent comme une attente des la deuxieme fois qu'on le voit.
 	FLY_TIME = 0.45,
-	-- ET IL FAIT UN TOUR SUR LUI-MEME, en tours complets. C'est ce qui donne le peps : l'objet ne se contente pas
-	-- de se deplacer, il TOURNE, et le geste devient un evenement au lieu d'un transport.
+	-- IL SE MET DROIT TOUT DE SUITE, EN L'AIR, et fait le reste du chemin dans sa pose d'arrivee. Fraction du
+	-- trajet au bout de laquelle il a fini de se redresser.
 	--
-	-- IL TOURNE SUR LA VERTICALE, pas sur son axe long : une echelle qui roule sur elle-meme aurait l'air de
-	-- tomber, alors qu'elle pivote comme on la fait pivoter a la main.
-	FLY_SPINS = 1,
-	-- ET IL ARRIVE DROIT : sur la fin, sa rotation revient vers celle du point d'arrivee. Sans ca il se poserait a
-	-- l'angle ou le hasard du tour l'a laisse -- et sur un trajet court, ce hasard se voit d'autant plus.
-	FLY_SETTLE_FROM = 0.7,
+	-- PAS SUR TOUT LE TRAJET : en etalant la rotation du depart a l'arrivee, l'objet se pose a l'instant PILE ou
+	-- il finit de tourner, et les deux mouvements se masquent l'un l'autre -- on ne voit ni l'un ni l'autre. En le
+	-- redressant sur le premier tiers, on lit DEUX choses a la suite : il se met droit, puis il descend se poser.
+	--
+	-- A 1, on revient au cas mou. Plus bas, le redressement claque.
+	STRAIGHTEN_BY = 0.35,
 	-- LE SIFFLEMENT DU DEPART, et le choc de la pose. Deux moments, deux sons : un seul bruit pour les deux
 	-- raconterait un objet qui glisse d'un bout a l'autre, alors qu'il est LANCE puis POSE.
 	--
