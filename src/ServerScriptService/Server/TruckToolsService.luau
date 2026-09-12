@@ -300,9 +300,9 @@ local function fly(model: Model, landing: CFrame, home: Instance?)
 			-- rend donc sa pose "posee au sol" AVANT de l'animer, sinon la piste tourne dans le vide.
 			LadderFoldUtils.standAlone(model)
 			if home and home.Parent then
-				LadderFoldUtils.foldTightest(model)
+				LadderFoldUtils.holdClosed(model)
 			else
-				LadderFoldUtils.unfoldFromEnd(model)
+				LadderFoldUtils.releaseClosed(model)
 			end
 			-- SES ZONES SE REFONT ICI, une fois posee. Avant l'atterrissage, le rayon vers le sol tape le camion.
 			LadderZoneService.refresh(model)
@@ -443,7 +443,7 @@ function TruckToolsService.init()
 					-- `resetInPlace` : on reproduit ce qui marche au lieu d'expliquer ce qui ne marche pas.
 					resetInPlace(ladder, folder :: Instance)
 					LadderFoldUtils.standAlone(ladder)
-					LadderFoldUtils.foldTightest(ladder)
+					LadderFoldUtils.holdClosed(ladder)
 					-- ET PAS DE ZONE DE GRIMPE SUR UNE ECHELLE RANGEE. L'aller-retour l'a fait passer une image
 					-- hors du camion, ce qui a pu lui en poser.
 					LadderZoneService.refresh(ladder)

@@ -64,7 +64,16 @@ local FOLD_STOP_ATTRIBUTE = "LeafiaFoldStop"
 
 -- UNE PISTE PAR ECHELLE, et les marqueurs branches une seule fois. Rebrancher a chaque repli empilerait les
 -- connexions : au dixieme, dix fonctions se declencheraient sur le meme marqueur.
+-- L'ANIMATION QUI TIENT L'ECHELLE FERMEE, une pose et rien d'autre, bouclee.
+--
+-- POURQUOI UNE SECONDE ANIMATION plutot qu'un point d'arret dans la premiere. `ActionLadderAnimation` raconte le
+-- geste ENTIER : elle ferme, puis elle rouvre. Aucun de ses reperes ne repond a "ou est-elle fermee" -- sa
+-- derniere image est la pose OUVERTE, et son marqueur `FermerEvenement` est cale sur le geste du PORTEUR, donc
+-- quelques centiemes avant la fermeture complete. Une animation dediee supprime la question au lieu de l'arbitrer.
+LadderFoldUtils.CLOSED_ANIM = "rbxassetid://140251144922200"
+
 local tracks: { [Model]: AnimationTrack } = {}
+local closedTracks: { [Model]: AnimationTrack } = {}
 local wired: { [Model]: boolean } = {}
 -- LA BOUCLE QUI POUSSE LA LECTURE A LA MAIN, par echelle. Une seule a la fois : en relancer une sans couper la
 -- precedente ferait avancer la piste deux fois plus vite, dans deux directions si elles s'opposent.
@@ -80,6 +89,8 @@ local END_EPSILON = 0.001
 local SWEEP_STEPS = 60
 -- Combien de temps on attend que l'animation soit telechargee avant d'abandonner.
 local LENGTH_TIMEOUT = 10
+-- Temps laisse au moteur pour poser la pose avant de la mesurer. Large : au demarrage, l'asset arrive du reseau.
+local HOLD_SETTLE = 1
 
 --- CE NOM EST-IL CELUI D'UNE ECHELLE ? Question de NOM SEUL : elle sert aussi pour des instances qui ne sont pas
 --- des Models (invalidation de cache sur DescendantAdded, par exemple).
@@ -284,6 +295,7 @@ function LadderFoldUtils.track(model: Model): AnimationTrack?
 	tracks[model] = loaded
 	model.Destroying:Once(function()
 		tracks[model] = nil
+		closedTracks[model] = nil
 		wired[model] = nil
 		local run = runners[model]
 		if run then
@@ -511,6 +523,96 @@ local function stopRunner(model: Model)
 	end
 end
 
+--- TENIR L'ECHELLE FERMEE, INDEFINIMENT, avec l'animation qui ne fait que ca.
+---
+--- C'est le repli du camion : une echelle rangee reste fermee tant qu'on ne la sort pas. La piste est BOUCLEE et
+--- ne contient que la pose fermee, donc il n'y a ni fin a rattraper, ni marqueur a viser, ni image a chercher.
+---
+--- ON MESURE L'ENCOMBREMENT a trois moments : avant, pendant qu'on la tient comme un porteur, et apres l'avoir
+--- reposee sur sa racine ancree. C'est la seule sonde d'animation qui ne mente pas, et elle repond aux deux seules
+--- questions qui restent -- est-ce que l'anim s'applique, et est-ce que la reancrer la casse.
+function LadderFoldUtils.holdClosed(model: Model): boolean
+	local animator = animatorOf(model)
+	if not animator then
+		warn(`[LadderFold] "{model.Name}" n'a pas de Humanoid : rien ne peut l'animer.`)
+		return false
+	end
+	local existing = closedTracks[model]
+	if existing then
+		if not existing.IsPlaying then
+			existing:Play(0)
+		end
+		return true
+	end
+	local anim = Instance.new("Animation")
+	anim.AnimationId = LadderFoldUtils.CLOSED_ANIM
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(anim)
+	end)
+	if not (ok and typeof(result) == "Instance") then
+		warn(`[LadderFold] Animation fermee ({LadderFoldUtils.CLOSED_ANIM}) non chargeable sur "{model.Name}".`)
+		return false
+	end
+	local closed = result :: AnimationTrack
+	closed.Looped = true
+	closed.Priority = Enum.AnimationPriority.Action
+	closedTracks[model] = closed
+
+	-- UNE SEULE PISTE SUR CE RIG. A priorite egale Roblox ne choisit pas, il MELANGE : la piste du geste complet
+	-- et celle de la pose fermee donneraient une echelle a moitie ouverte que personne n'a demandee.
+	local other = tracks[model]
+	if other then
+		other:Stop(0)
+	end
+	stopRunner(model)
+	-- LES SOUDURES SAUTENT : une soudure gagne contre un Motor6D, le rig ne bougerait pas d'un millimetre.
+	LadderFoldUtils.setWelds(model, false)
+	holdInPlace(model)
+
+	local before = model:GetExtentsSize()
+	closed:Play(0)
+	task.delay(HOLD_SETTLE, function()
+		if not model.Parent then
+			return
+		end
+		local held = model:GetExtentsSize()
+		releaseHold(model)
+		LadderFoldUtils.setWelds(model, true)
+		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
+		task.delay(HOLD_SETTLE, function()
+			if not model.Parent then
+				return
+			end
+			local after = model:GetExtentsSize()
+			local function box(v: Vector3): string
+				return string.format("%.1f/%.1f/%.1f", v.X, v.Y, v.Z)
+			end
+			print(
+				`[LadderFold] "{model.Name}" fermee : encombrement {box(before)} -> tenue {box(held)} -> `
+					.. `posee {box(after)}. piste={string.format("%.2f", closed.Length)}s `
+					.. `poids={string.format("%.2f", closed.WeightCurrent)}`
+			)
+			if (held - before).Magnitude < 0.05 then
+				warn(
+					`[LadderFold] "{model.Name}" N'A PAS BOUGE. Une animation retrouve les pieces PAR LEUR NOM : `
+						.. `si les pistes de l'animation ne portent pas les memes noms que les pieces du rig, elle `
+						.. `joue et n'ecrit rien. Pieces de ce rig : {LadderFoldUtils.rigParts(model)}`
+				)
+			end
+		end)
+	end)
+	return true
+end
+
+--- L'ECHELLE SORT DU CAMION : on lache la pose fermee, elle reprend sa forme ouverte.
+function LadderFoldUtils.releaseClosed(model: Model)
+	local closed = closedTracks[model]
+	if closed then
+		closed:Stop(0.15)
+	end
+	model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
+end
+
 --- REPLI : ON CHERCHE L'IMAGE OU L'ECHELLE EST LA PLUS FERMEE, ET ON LA TIENT.
 ---
 --- POURQUOI ON LA CHERCHE AU LIEU DE LA CONNAITRE. L'animation raconte tout le geste d'un bloc : elle FERME, puis
@@ -642,6 +744,10 @@ function LadderFoldUtils.fold(model: Model): boolean
 	-- ON REPREND LA PISTE A NOTRE COMPTE. `foldToEnd` la laisse en `Looped = true` et pilotee a la main : reprendre
 	-- une lecture normale par-dessus la ferait reboucler au debut au lieu de s'arreter.
 	stopRunner(model)
+	local closed = closedTracks[model]
+	if closed then
+		closed:Stop(0) -- deux pistes sur le meme rig se melangent
+	end
 	loaded.Looped = false
 	loaded:Play(0)
 	loaded.TimePosition = 0

@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.805 — Une animation dediee tient l'echelle fermee dans le camion, et le seau a son dessin
+
+L'ANIMATION DU GESTE COMPLET NE POUVAIT PAS REPONDRE. `ActionLadderAnimation` ferme PUIS rouvre : sa derniere
+image est la pose OUVERTE, et son marqueur `FermerEvenement` est cale sur le geste du PORTEUR, donc quelques
+centiemes avant la fermeture complete. Ni la fin, ni le marqueur, ni l'image la plus compacte ne donnaient une
+echelle franchement fermee.
+
+UNE ANIMATION QUI NE FAIT QUE CA, bouclee, supprime la question au lieu de l'arbitrer. Il n'y a plus ni fin a
+rattraper, ni marqueur a viser. Le portage garde l'animation du geste complet, qui est faite pour lui.
+
+LE LOG MESURE L'ENCOMBREMENT A TROIS MOMENTS : avant, pendant qu'on la tient comme un porteur la tient, et apres
+l'avoir reposee sur sa racine ancree. Ca repond aux deux seules questions qui restent -- est-ce que l'animation
+s'applique, et est-ce que la reancrer la casse. Et si rien ne bouge, le warn rappelle qu'une animation retrouve
+les pieces PAR LEUR NOM et liste les noms du rig.
+
+Le seau a son dessin dans la barre du camion.
+
+DEPEND DES ASSETS : animation 140251144922200, image 127321612230568.
+
 ## 0.0.804 — On CHERCHE l'image ou l'echelle est la plus fermee, au lieu de la deviner
 
 L'animation raconte tout le geste d'un bloc : elle FERME, puis elle ROUVRE. Sa derniere image est donc la pose
