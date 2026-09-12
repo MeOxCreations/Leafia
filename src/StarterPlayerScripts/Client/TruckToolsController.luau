@@ -11,6 +11,7 @@
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
@@ -26,6 +27,14 @@ local remote: RemoteEvent? = nil
 local truck: Model? = nil
 local toolsFolder: Instance? = nil
 local conns: { RBXScriptConnection } = {}
+-- LE HAYON, pour mesurer la distance depuis LUI et pas depuis le milieu du camion : la barre parle de la benne,
+-- et sur un vehicule de cette longueur les deux points sont a plusieurs studs l'un de l'autre.
+--
+-- RE-RESOLU TANT QU'IL MANQUE : avec le streaming, le modele arrive avant ses parts.
+local doorPart: BasePart? = nil
+-- EST-ON ASSEZ PRES ? Garde, pour ne recalculer la barre que quand la reponse CHANGE -- pas dix fois par seconde
+-- pendant qu'on tourne autour du camion.
+local near = false
 
 --- TOUS LES OUTILS DU CAMION : ceux qui sont encore dans la benne, et ceux qui en sont sortis.
 ---
@@ -55,6 +64,32 @@ local function allTools(): { TruckToolsHandler.Entry }
 	return list
 end
 
+local function nearTruck(): boolean
+	local model = truck
+	if not (model and model.Parent) then
+		return false
+	end
+	local character = player.Character
+	local root = character and character:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then
+		return false
+	end
+	if not (doorPart and doorPart.Parent) then
+		doorPart = nil
+		for _, d in model:GetDescendants() do
+			if d:IsA("BasePart") and d.Name == TruckConfigs.DOOR_PART then
+				doorPart = d :: BasePart
+				break
+			end
+		end
+	end
+	-- A DEFAUT DE HAYON, le milieu du camion. Moins juste, mais une barre qui marche a peu pres bat une barre qui
+	-- ne s'affiche pas du tout le temps que la part arrive.
+	local from = if doorPart then (doorPart :: BasePart).Position else model:GetPivot().Position
+	local delta = (root :: BasePart).Position - from
+	return Vector3.new(delta.X, 0, delta.Z).Magnitude <= TruckConfigs.HUD_DISTANCE
+end
+
 local function askFor(toolName: string)
 	local r = remote
 	if r then
@@ -78,6 +113,13 @@ local function refreshNow()
 	local model = truck
 	local open = model ~= nil and model:GetAttribute(TruckConfigs.OPEN_ATTRIBUTE) == true
 	if not open then
+		TruckToolsHandler.setShown(false)
+		return
+	end
+	-- ET ON DOIT ETRE DEVANT. Le hayon reste ouvert quand on s'en va -- c'est normal, une porte ne se referme pas
+	-- toute seule -- mais une barre d'outils qui suit le joueur a l'autre bout du jardin n'a plus de sujet : elle
+	-- occupe le bas de l'ecran pour un camion qu'on ne voit meme plus.
+	if not near then
 		TruckToolsHandler.setShown(false)
 		return
 	end
@@ -108,6 +150,7 @@ local function watch(model: Model, folder: Instance)
 	end
 	table.clear(conns)
 	truck, toolsFolder = model, folder
+	doorPart = nil -- autre camion, autre hayon
 	-- L'ETAT DE LA PORTE, LE CONTENU DE LA BENNE, ET LA DISPARITION DU CAMION. Trois sources, trois abonnements :
 	-- on ne recalcule que quand quelque chose a VRAIMENT change, plutot que de relire tout ca a chaque image.
 	table.insert(conns, model:GetAttributeChangedSignal(TruckConfigs.OPEN_ATTRIBUTE):Connect(refresh))
@@ -171,11 +214,30 @@ function TruckToolsController.init()
 		)
 	end)
 
+	-- ON SUIT LA DISTANCE, mais on ne recalcule la barre QUE quand la reponse change. Un booleen garde, et
+	-- l'immense majorite des passages ne fait rien du tout.
+	--
+	-- PAS A CHAQUE IMAGE : une barre qui apparait un dixieme de seconde apres le pas ne se remarque pas, et
+	-- relire une distance a 60 Hz pour ca n'a aucun interet.
+	local nextCheck = 0
+	RunService.Heartbeat:Connect(function()
+		local now = os.clock()
+		if now < nextCheck then
+			return
+		end
+		nextCheck = now + TruckConfigs.HUD_CHECK_EVERY
+		local close = nearTruck()
+		if close ~= near then
+			near = close
+			refresh()
+		end
+	end)
+
 	-- LA BARRE SURVIT AU RESPAWN (ResetOnSpawn est faux), mais pas nos abonnements si le camion disparait : le
 	-- rescan ci-dessus les repose. Rien a faire ici -- et c'est le but.
 	player.CharacterAdded:Connect(refresh)
 
-	print("[TruckToolsController] Pret : la barre s'ouvre avec le hayon.")
+	print("[TruckToolsController] Pret : la barre s'ouvre avec le hayon, et se cache quand on s'eloigne.")
 end
 
 return TruckToolsController

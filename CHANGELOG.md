@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.813 — La barre du camion se cache quand on s'eloigne
+
+Le hayon reste ouvert quand le joueur s'en va -- c'est normal, une porte ne se referme pas toute seule -- mais la
+barre d'outils le suivait a l'autre bout du jardin. Elle occupait le bas de l'ecran pour un camion qu'on ne voyait
+meme plus.
+
+Elle se cache au-dela de 22 studs autour du HAYON, et pas du milieu du camion : la barre parle de la benne, et sur
+un vehicule de cette longueur les deux points sont a plusieurs studs l'un de l'autre. La distance est mesuree a
+plat, une porte plus haute ou plus basse que le joueur ne change rien a "est-il devant le camion".
+
+PLUS LARGE QUE LE PROMPT (8 studs), et c'est voulu : sortir un outil le pose a quelques pas derriere le camion, et
+on va le chercher. Une barre qui disparaitrait pendant ce pas-la obligerait a revenir coller la carrosserie pour en
+sortir un deuxieme.
+
+La distance est relue six fois par seconde, et la barre n'est recalculee que quand la reponse CHANGE.
+
 ## 0.0.812 — Le seau sort du camion en grande cloche
 
 Sa hauteur d'arc passe de 5 a 12 studs, pour lui seul. Il est petit, leger et sans forme fragile : il supporte --

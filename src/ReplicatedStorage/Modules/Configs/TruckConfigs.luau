@@ -37,6 +37,19 @@ local TruckConfigs = {
 	PROMPT_DISTANCE = 8,
 	-- Hauteur de la pilule au-dessus de la porte, et son decalage lateral. Le decalage evite qu'elle tombe SUR le
 	-- personnage quand on est pile derriere le camion.
+	-- JUSQU'OU LA BARRE D'OUTILS RESTE A L'ECRAN, en studs autour du hayon. Au-dela elle se cache, meme si la
+	-- porte est restee ouverte.
+	--
+	-- PLUS LARGE QUE LE PROMPT, et c'est voulu : sortir un outil le pose a quelques pas derriere le camion, et on
+	-- va le chercher. Une barre qui disparait pendant ce pas-la obligerait a revenir coller la carrosserie pour en
+	-- sortir un deuxieme. Elle doit couvrir le camion ET ses points de depot.
+	--
+	-- MESUREE A PLAT (X/Z) : une porte plus haute ou plus basse que le joueur ne change rien a "est-il devant le
+	-- camion".
+	HUD_DISTANCE = 22,
+	-- Cadence de la verification. Ce n'est pas une image par image : une barre qui apparait un dixieme de seconde
+	-- apres le pas ne se remarque pas, et relire la distance a 60 Hz pour ca n'a aucun interet.
+	HUD_CHECK_EVERY = 0.15,
 	PROMPT_HEIGHT = 3,
 	PROMPT_SIDE = 2.5,
 
