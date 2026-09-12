@@ -121,7 +121,7 @@ local lastAngryCall = 0
 -- marqueur d'une haie a l'autre des qu'on marche entre les deux.
 local hedgeStepOn = false
 local hedgeTaskDone = false
-local hedgeModel: Model? = nil
+local hedgeModel: BasePart? = nil
 local hedgeMarker: Frame? = nil
 local nextHedgeCountAt = 0
 local talkAnchor: BasePart? = nil
@@ -2075,15 +2075,23 @@ end
 -- dans ce projet, et deux listes finiraient par diverger.
 --
 -- Distance a plat : une haie un etage plus bas n'est pas "proche", elle est ailleurs.
-local function nearestHedge(from: Vector3): Model?
-	local best: Model? = nil
+-- LA HAIE LA PLUS PROCHE D'UN POINT, a plat.
+--
+-- UNE HAIE EST UNE PART, pas un Model : un MeshPart pose dans la carte. La version d'avant exigeait un `Model` et
+-- ne trouvait donc JAMAIS rien -- elle annoncait poliment qu'il n'y avait pas de haie a cinq studs de la.
+--
+-- ON LA RECONNAIT A L'ATTRIBUT que `HedgeService` pose sur elle, et pas a son nom. C'est la meme marque que le
+-- curseur de taille utilise deja : un attribut se replique de facon certaine, il vaut pour une haie taguee a la
+-- main qui ne suivrait pas la convention de nom, et il ne peut pas se tromper d'orthographe.
+local function nearestHedge(from: Vector3): BasePart?
+	local best: BasePart? = nil
 	local bestDist = math.huge
 	for _, d in ipairs(Workspace:GetDescendants()) do
-		if d:IsA("Model") and string.find(d.Name, HedgeConfigs.AUTO_TAG_PREFIX, 1, true) == 1 then
-			local pivot = (d :: Model):GetPivot().Position
-			local flat = (Vector3.new(pivot.X - from.X, 0, pivot.Z - from.Z)).Magnitude
+		if d:IsA("BasePart") and d:GetAttribute(HedgeConfigs.HEDGE_MARK_ATTRIBUTE) == true then
+			local part = d :: BasePart
+			local flat = Vector3.new(part.Position.X - from.X, 0, part.Position.Z - from.Z).Magnitude
 			if flat < bestDist then
-				bestDist, best = flat, d :: Model
+				bestDist, best = flat, part
 			end
 		end
 	end
@@ -2333,12 +2341,12 @@ local function step(dt: number)
 		hedgeModel = if from then nearestHedge(from) else nil
 		if not hedgeModel then
 			warn(
-				`[Tutorial] Aucun Model dont le nom commence par "{HedgeConfigs.AUTO_TAG_PREFIX}" : pas de haie a `
+				`[Tutorial] Aucune part portant l'attribut "{HedgeConfigs.HEDGE_MARK_ATTRIBUTE}" : pas de haie a `
 					.. "designer. Rojo ne synchronise pas le Workspace."
 			)
 		else
 			print(
-				`[Tutorial] Haie a tailler : "{(hedgeModel :: Model).Name}", choisie depuis `
+				`[Tutorial] Haie a tailler : "{(hedgeModel :: BasePart).Name}", choisie depuis `
 					.. `{if anchorPart then `"{TutorialConfigs.OLDMAN_HEDGE_TARGET}"` else "le joueur"}.`
 			)
 		end
@@ -2363,15 +2371,11 @@ local function step(dt: number)
 		local hedge = hedgeModel
 		if hedge and hedge.Parent then
 			if not hedgeMarker then
-				-- ACCROCHE A UNE PART DE LA HAIE, pas a un point calcule une fois. Un point est un instantane : le
-				-- pivot d'un modele suit sa BOITE ENGLOBANTE, et la haie recoit ses carreaux et ses branches apres
-				-- coup -- le pivot d'avant ne designe alors plus son milieu. Piege deja paye sur le marqueur de la
-				-- porte, ne a l'origine de la carte.
-				local anchorPart = hedge.PrimaryPart or hedge:FindFirstChildWhichIsA("BasePart")
-				hedgeMarker = WorldMarker.show(
-					if anchorPart then anchorPart else hedge:GetPivot().Position,
-					Vector3.new(0, TutorialConfigs.HEDGE_MARKER_UP, 0)
-				)
+				-- ACCROCHE A LA HAIE ELLE-MEME, pas a un point calcule une fois. Un point est un instantane, et
+				-- la pastille resterait la ou la haie etait au moment du calcul. Piege deja paye sur le marqueur
+				-- de la porte, ne a l'origine de la carte.
+				hedgeMarker =
+					WorldMarker.show(hedge, Vector3.new(0, TutorialConfigs.HEDGE_MARKER_UP, 0))
 			end
 			if now >= nextHedgeCountAt then
 				nextHedgeCountAt = now + TutorialConfigs.LAWN_COUNT_INTERVAL

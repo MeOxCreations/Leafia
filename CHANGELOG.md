@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.820 — Le didacticiel retrouve enfin sa haie
+
+Il la cherchait parmi les MODELS. Une haie est une PART -- un MeshPart pose dans la carte -- donc la recherche ne
+trouvait jamais rien, et elle l'annoncait poliment : "aucune haie pres du point", pendant qu'il y en avait une a
+cinq studs, a l'ecran. Un message precis et faux coute plus cher qu'un silence.
+
+ON DEMANDE MAINTENANT A LA SOURCE DE VERITE. `HedgeService` tague chaque haie et lui pose un attribut. Le serveur
+lit le tag, le client lit l'attribut (un attribut se replique de facon certaine, un tag pas forcement). Ni l'un ni
+l'autre ne peut se tromper de classe ou d'orthographe, et les deux couvrent une haie taguee a la main qui ne
+suivrait pas la convention de nom.
+
+Consequence directe : la pastille se pose enfin sur la haie, et son seuil "un seul cote" est bien applique.
+
 ## 0.0.819 — Dans le didacticiel, un seul cote de haie a tailler
 
 Le reste se finit tout seul des que le joueur a fait la part demandee, avec l'experience et les debris qui vont

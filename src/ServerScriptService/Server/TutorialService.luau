@@ -7,6 +7,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
+local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
@@ -89,18 +90,21 @@ local function findPartByName(name: string): BasePart?
 	return nil
 end
 
--- LA HAIE LA PLUS PROCHE D'UN POINT, a plat. Meme regle de nom que le reste du jeu (`AUTO_TAG_PREFIX`), et meme
--- regle de choix que la pastille du didacticiel : deux facons de choisir finiraient par designer deux haies, et
--- le joueur taillerait celle que personne ne lui montre.
-local function nearestHedge(from: Vector3): Model?
-	local best: Model? = nil
+-- LA HAIE LA PLUS PROCHE D'UN POINT, a plat.
+--
+-- ON DEMANDE A LA SOURCE DE VERITE, le TAG que `HedgeService` pose lui-meme. Un balayage par NOM refait un travail
+-- deja fait, et il se trompe : la version d'avant exigeait un `Model`, or une haie est une PART -- un MeshPart
+-- pose dans la carte. Elle ne trouvait donc jamais rien, en annoncant poliment qu'il n'y avait pas de haie a
+-- cinq studs de la. Le tag, lui, ne peut pas se tromper de classe ni d'orthographe.
+local function nearestHedge(from: Vector3): BasePart?
+	local best: BasePart? = nil
 	local bestDist = math.huge
-	for _, d in Workspace:GetDescendants() do
-		if d:IsA("Model") and string.find(d.Name, HedgeConfigs.AUTO_TAG_PREFIX, 1, true) == 1 then
-			local pivot = (d :: Model):GetPivot().Position
-			local flat = Vector3.new(pivot.X - from.X, 0, pivot.Z - from.Z).Magnitude
+	for _, inst in CollectionService:GetTagged(HedgeConfigs.TAG) do
+		if inst:IsA("BasePart") and inst:IsDescendantOf(Workspace) then
+			local part = inst :: BasePart
+			local flat = Vector3.new(part.Position.X - from.X, 0, part.Position.Z - from.Z).Magnitude
 			if flat < bestDist then
-				bestDist, best = flat, d :: Model
+				bestDist, best = flat, part
 			end
 		end
 	end

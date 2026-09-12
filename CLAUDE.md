@@ -1370,6 +1370,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   sous le curseur. Le garde est de ne laisser le survol ecrire QUE dans l'etat stable. Se repere en se demandant,
   pour chaque effet ajoute : qui d'autre ecrit ce champ, et peut-il ecrire EN MEME TEMPS ?
 
+- **CHERCHER UN OBJET DU JEU PAR SON NOM QUAND LE JEU LE MARQUE DEJA, C'EST REFAIRE UN TRAVAIL DEJA FAIT -- ET SE
+  TROMPER.** Le didacticiel cherchait sa haie par `d:IsA("Model") and nom commence par "hedge_"`. Une haie est une
+  PART (un MeshPart pose dans la carte) : la recherche ne trouvait donc JAMAIS rien, et elle l'annoncait poliment
+  -- "aucune haie pres du point" -- pendant qu'il y en avait une a cinq studs, a l'ecran, sous le nez du joueur.
+  Un message precis et faux coute plus cher qu'un silence. `HedgeService` TAGUE chaque haie et lui pose un
+  attribut ; demander au tag (serveur) ou a l'attribut (client) ne peut se tromper ni de classe, ni
+  d'orthographe, et couvre les haies taguees a la main qui ne suivent pas la convention de nom. Regle : quand un
+  service pose une marque sur ce qu'il gere, tout le reste du jeu lit CETTE marque. Redecrire le critere ailleurs,
+  c'est s'engager a le tenir d'accord pour toujours.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
