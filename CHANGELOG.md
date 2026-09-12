@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.803 — Le repli du camion joue l'animation jusqu'au bout et tient la derniere image
+
+C'est ce qu'il fallait faire depuis le debut, et c'est plus simple que ce que je faisais. Une seule animation, on
+la joue en entier, on s'arrete sur sa derniere image et on y reste. L'echelle rangee dans la benne est fermee tant
+qu'on ne la sort pas.
+
+ON NE S'ARRETE PLUS AU MARQUEUR DU MILIEU. `FermerEvenement` tombe a 0.25s sur 0.73s : il sert au PORTAGE, ou le
+repli doit tomber pile sur le geste du personnage. Pour un objet range, la pose voulue est la fin du geste. Deux
+besoins differents, deux facons de lire la meme piste -- et plus aucun reglage a arbitrer entre les deux.
+
+LE DETAIL QUI FAIT TOUT : pour tenir la derniere image, il faut `Looped = true`, sinon la piste se RELACHE en
+arrivant au bout et la pose saute. Mais a vitesse 1 avec `Looped = true`, elle REBOUCLE au debut et l'echelle se
+rouvre en boucle. Les deux ensemble : vitesse ZERO, et on avance la position de la lecture a la main, image par
+image, jusqu'a un cheveu avant la fin.
+
+La reouverture REMONTE la meme piste jusqu'a sa premiere image. Le geste inverse, c'est le meme geste a l'envers,
+pas une seconde animation.
+
+`LeafiaFoldStop` sur le modele permet toujours de tenir une autre image que la derniere.
+
 ## 0.0.802 — Le point de gel du repli se regle dans Studio
 
 MA SONDE MENTAIT. Elle lisait `Motor6D.Transform` depuis le serveur et annoncait les huit joints figes pendant que

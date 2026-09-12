@@ -1305,6 +1305,16 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   laisser le geste entier se jouer) lui donne une boucle de trente secondes sans moi. Plus court qu'un aller-retour
   de diagnostic, et ca le remet sur son terrain.
 
+- **UN MARQUEUR D'ANIMATION EST POSE POUR UN USAGE PRECIS ; UN AUTRE USAGE N'A PAS A LE SUBIR.** Le marqueur
+  `FermerEvenement` de l'echelle tombe au tiers du fichier parce qu'il doit coincider avec le geste de PRISE du
+  personnage. Pour une echelle RANGEE, la pose voulue est la fin du geste, tout simplement. J'ai passe une heure a
+  chercher pourquoi "l'animation ne se joue pas completement" alors qu'elle se jouait exactement comme on le lui
+  demandait -- jusqu'a un marqueur qui n'avait rien a voir avec ce besoin-la. Le joueur l'a dit en une phrase :
+  "une seule animation, tu la joues jusqu'au bout et tu t'arretes a la fin". Regle : avant de debugger un geste qui
+  "s'arrete trop tot", verifier que le point d'arret qu'on utilise a bien ete pose POUR CE cas ; un repere partage
+  entre deux usages finira par en trahir un. Meme famille que "un reglage qui sert deux moments differents finira
+  par les opposer".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia

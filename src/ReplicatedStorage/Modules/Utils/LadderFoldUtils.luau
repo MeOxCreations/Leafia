@@ -21,6 +21,7 @@
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContentProvider = game:GetService("ContentProvider")
+local RunService = game:GetService("RunService")
 
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
@@ -65,6 +66,11 @@ local FOLD_STOP_ATTRIBUTE = "LeafiaFoldStop"
 -- connexions : au dixieme, dix fonctions se declencheraient sur le meme marqueur.
 local tracks: { [Model]: AnimationTrack } = {}
 local wired: { [Model]: boolean } = {}
+-- LA BOUCLE QUI POUSSE LA LECTURE A LA MAIN, par echelle. Une seule a la fois : en relancer une sans couper la
+-- precedente ferait avancer la piste deux fois plus vite, dans deux directions si elles s'opposent.
+local runners: { [Model]: RBXScriptConnection } = {}
+-- On s'arrete un cheveu AVANT la fin : pile sur `Length`, la lecture reboucle.
+local END_EPSILON = 0.001
 
 --- CE NOM EST-IL CELUI D'UNE ECHELLE ? Question de NOM SEUL : elle sert aussi pour des instances qui ne sont pas
 --- des Models (invalidation de cache sur DescendantAdded, par exemple).
@@ -270,6 +276,11 @@ function LadderFoldUtils.track(model: Model): AnimationTrack?
 	model.Destroying:Once(function()
 		tracks[model] = nil
 		wired[model] = nil
+		local run = runners[model]
+		if run then
+			run:Disconnect()
+			runners[model] = nil
+		end
 	end)
 	return loaded
 end
@@ -397,6 +408,95 @@ function LadderFoldUtils.rigParts(model: Model): string
 	return table.concat(names, " ")
 end
 
+local function stopRunner(model: Model)
+	local run = runners[model]
+	if run then
+		run:Disconnect()
+		runners[model] = nil
+	end
+end
+
+--- REPLI JUSQU'A LA DERNIERE IMAGE, et on la TIENT. C'est le repli du camion : l'echelle rangee doit rester
+--- fermee indefiniment, et la pose fermee est la FIN de l'animation.
+---
+--- POURQUOI ON PILOTE LA LECTURE A LA MAIN. Pour tenir la derniere image, il faut `Looped = true` -- sinon la
+--- piste se RELACHE en arrivant au bout et la pose saute d'un coup. Mais laisser tourner a vitesse 1 avec
+--- `Looped = true` REBOUCLE au debut, et l'echelle se rouvrirait en boucle. Les deux ensemble : vitesse ZERO, et
+--- on avance la `TimePosition` de `dt` a chaque image jusqu'a un cheveu avant la fin. Ca joue une fois, ca tient
+--- la pose, ca ne reboucle jamais.
+---
+--- L'ATTRIBUT `LeafiaFoldStop` permet de tenir une AUTRE image que la derniere, sans toucher au code.
+function LadderFoldUtils.foldToEnd(model: Model): boolean
+	local loaded = LadderFoldUtils.track(model)
+	if not loaded then
+		return false
+	end
+	stopRunner(model)
+	-- LES SOUDURES SAUTENT LE TEMPS DU GESTE : une soudure gagne contre un Motor6D, l'echelle ne bougerait pas.
+	LadderFoldUtils.setWelds(model, false)
+	loaded.Looped = true
+	loaded:Play(0)
+	loaded:AdjustSpeed(0)
+	loaded.TimePosition = 0
+	runners[model] = RunService.Heartbeat:Connect(function(dt: number)
+		if not model.Parent then
+			stopRunner(model)
+			return
+		end
+		-- La longueur n'est connue qu'une fois l'asset arrive. Tant qu'elle vaut zero, on patiente.
+		local length = loaded.Length
+		if length <= 0 then
+			return
+		end
+		local stopAt = model:GetAttribute(FOLD_STOP_ATTRIBUTE)
+		local last = if typeof(stopAt) == "number" and stopAt > 0
+			then math.min(stopAt, length - END_EPSILON)
+			else length - END_EPSILON
+		local next = math.min(loaded.TimePosition + dt, last)
+		loaded.TimePosition = next
+		if next < last then
+			return
+		end
+		stopRunner(model)
+		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, true)
+		-- LES SOUDURES REVIENNENT SUR LA POSE FERMEE : un WeldConstraint capture l'ecart entre ses deux parts au
+		-- moment ou on l'active, donc remis maintenant il tient l'echelle repliee.
+		LadderFoldUtils.setWelds(model, true)
+		print(
+			`[LadderFold] "{model.Name}" tenue a {string.format("%.2f", next)}s `
+				.. `sur {string.format("%.2f", length)}s. {partsState(model)}`
+		)
+	end)
+	return true
+end
+
+--- REOUVERTURE : on REMONTE la meme piste jusqu'a sa premiere image, puis on la lache. Pas une seconde animation
+--- et pas un saut : le geste inverse, c'est le meme geste a l'envers.
+function LadderFoldUtils.unfoldFromEnd(model: Model)
+	local loaded = tracks[model]
+	if not (loaded and loaded.IsPlaying) then
+		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
+		return
+	end
+	stopRunner(model)
+	LadderFoldUtils.setWelds(model, false)
+	runners[model] = RunService.Heartbeat:Connect(function(dt: number)
+		if not model.Parent then
+			stopRunner(model)
+			return
+		end
+		local next = math.max(loaded.TimePosition - dt, 0)
+		loaded.TimePosition = next
+		if next > 0 then
+			return
+		end
+		stopRunner(model)
+		loaded:Stop(0)
+		model:SetAttribute(LadderFoldUtils.CLOSED_ATTRIBUTE, false)
+		LadderFoldUtils.setWelds(model, true)
+	end)
+end
+
 --- REPLI : 0 -> `FermerEvenement`, puis on fige. Sans effet si elle est deja fermee ou en train de se fermer.
 function LadderFoldUtils.fold(model: Model): boolean
 	local loaded = LadderFoldUtils.track(model)
@@ -410,6 +510,10 @@ function LadderFoldUtils.fold(model: Model): boolean
 	-- LES SOUDURES SAUTENT LE TEMPS DU GESTE. Elles gagnent contre les Motor6D : tant qu'elles tiennent, la piste
 	-- joue et le rig ne bouge pas d'un millimetre. Elles reviennent au marqueur, sur la pose fermee.
 	LadderFoldUtils.setWelds(model, false)
+	-- ON REPREND LA PISTE A NOTRE COMPTE. `foldToEnd` la laisse en `Looped = true` et pilotee a la main : reprendre
+	-- une lecture normale par-dessus la ferait reboucler au debut au lieu de s'arreter.
+	stopRunner(model)
+	loaded.Looped = false
 	loaded:Play(0)
 	loaded.TimePosition = 0
 	loaded:AdjustSpeed(1)
