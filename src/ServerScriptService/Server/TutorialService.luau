@@ -804,6 +804,51 @@ local function prepareHedgeWhenReady()
 	)
 end
 
+-- IL SE TOURNE VERS UN POINT, sans se deplacer. Sert quand le joueur vient lui parler : on ne repond pas de
+-- profil a quelqu'un qui vient de vous interpeller.
+--
+-- IL NE PREND QUE LE YAW : la cible est ramenee a sa hauteur avant le `lookAt`. Sinon il se pencherait en avant
+-- ou en arriere selon que le joueur est en bas d'une marche ou sur le trottoir.
+--
+-- LE GARDE `walking` VAUT AUSSI POUR LUI : une marche en cours ecrit deja sa pose a chaque image, et deux
+-- ecrivains sur la meme propriete donnent une moyenne des deux, jamais un choix.
+local function faceOldManTo(model: Model, point: Vector3, seconds: number)
+	if walking then
+		return
+	end
+	local root = model:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart")) then
+		return
+	end
+	local rootPart = root :: BasePart
+	local from = rootPart.CFrame
+	local flat = Vector3.new(point.X - from.Position.X, 0, point.Z - from.Position.Z)
+	if flat.Magnitude < 0.1 then
+		return -- il lui fait deja face, ou le joueur est pile sur lui : rien a tourner
+	end
+	local to = CFrame.lookAt(from.Position, from.Position + flat.Unit)
+
+	walking = true
+	task.spawn(function()
+		local t0 = os.clock()
+		while true do
+			local e = math.clamp((os.clock() - t0) / math.max(seconds, 0.01), 0, 1)
+			if not model.Parent then
+				break
+			end
+			-- ON APPLIQUE UN ECART MONDE, pas un pivot : `PivotTo` passe par `GetPivot`, qui suit la boite
+			-- englobante -- un accessoire ajoute dans Studio le decalerait.
+			local now = from:Lerp(to, e)
+			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
+			if e >= 1 then
+				break
+			end
+			task.wait()
+		end
+		walking = false
+	end)
+end
+
 -- IL SE RELEVE : LA MEME ANIMATION, A L'ENVERS.
 --
 -- Se lever d'un banc est exactement s'y asseoir a l'envers. Un fichier separe serait un second geste a garder
@@ -960,51 +1005,6 @@ local function sitOldMan(model: Model, onHup: (() -> ())?)
 		-- LE GESTE N'EST JAMAIS ARRETE : c'est lui qui tient les jambes. Le lacher rendait le grand-pere debout
 		-- en train de respirer, parce que l'idle assis ne cle que le haut du corps.
 		print(`[Tutorial] Le grand-pere est assis sur son banc, l'idle joue par-dessus.`)
-	end)
-end
-
--- IL SE TOURNE VERS UN POINT, sans se deplacer. Sert quand le joueur vient lui parler : on ne repond pas de
--- profil a quelqu'un qui vient de vous interpeller.
---
--- IL NE PREND QUE LE YAW : la cible est ramenee a sa hauteur avant le `lookAt`. Sinon il se pencherait en avant
--- ou en arriere selon que le joueur est en bas d'une marche ou sur le trottoir.
---
--- LE GARDE `walking` VAUT AUSSI POUR LUI : une marche en cours ecrit deja sa pose a chaque image, et deux
--- ecrivains sur la meme propriete donnent une moyenne des deux, jamais un choix.
-local function faceOldManTo(model: Model, point: Vector3, seconds: number)
-	if walking then
-		return
-	end
-	local root = model:FindFirstChild("HumanoidRootPart")
-	if not (root and root:IsA("BasePart")) then
-		return
-	end
-	local rootPart = root :: BasePart
-	local from = rootPart.CFrame
-	local flat = Vector3.new(point.X - from.Position.X, 0, point.Z - from.Position.Z)
-	if flat.Magnitude < 0.1 then
-		return -- il lui fait deja face, ou le joueur est pile sur lui : rien a tourner
-	end
-	local to = CFrame.lookAt(from.Position, from.Position + flat.Unit)
-
-	walking = true
-	task.spawn(function()
-		local t0 = os.clock()
-		while true do
-			local e = math.clamp((os.clock() - t0) / math.max(seconds, 0.01), 0, 1)
-			if not model.Parent then
-				break
-			end
-			-- ON APPLIQUE UN ECART MONDE, pas un pivot : `PivotTo` passe par `GetPivot`, qui suit la boite
-			-- englobante -- un accessoire ajoute dans Studio le decalerait.
-			local now = from:Lerp(to, e)
-			model:PivotTo(now * rootPart.CFrame:Inverse() * model:GetPivot())
-			if e >= 1 then
-				break
-			end
-			task.wait()
-		end
-		walking = false
 	end)
 end
 
@@ -1625,10 +1625,34 @@ function TutorialService.init()
 				-- s'asseoir. Le client la joue, c'est lui qui a les voix.
 				benchRemote:FireClient(player, "walk")
 				walkOldMan(TutorialConfigs.OLDMAN_BENCH_TARGET, function(model)
-					sitOldMan(model, function()
-						if sceneOwner == player then
-							benchRemote:FireClient(player, "hup")
+					-- IL SE MET DOS AU BANC AVANT DE S'ASSEOIR. Il y marche en le regardant : sans ce demi-tour il
+					-- se pose face au dossier, et il se releve en contemplant les lattes.
+					--
+					-- ON PIVOTE DEPUIS SA DIRECTION D'ARRIVEE plutot que vers un point pose dans la carte : rien
+					-- de plus a placer dans Studio, et ca reste juste ou que soit le banc.
+					local root = model:FindFirstChild("HumanoidRootPart")
+					if root and root:IsA("BasePart") then
+						local part = root :: BasePart
+						local look = part.CFrame.LookVector
+						local flat = Vector3.new(look.X, 0, look.Z)
+						if flat.Magnitude > 1e-3 then
+							local turned = CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_SIT_TURN), 0)
+								* flat.Unit
+							faceOldManTo(
+								model,
+								part.Position + turned * 10,
+								TutorialConfigs.OLDMAN_SIT_TURN_TIME
+							)
 						end
+					end
+					-- ET IL S'ASSOIT UNE FOIS TOURNE : l'assise part de sa pose du moment, donc la jouer pendant le
+					-- pivot la ferait glisser de cote.
+					task.delay(TutorialConfigs.OLDMAN_SIT_TURN_TIME, function()
+						sitOldMan(model, function()
+							if sceneOwner == player then
+								benchRemote:FireClient(player, "hup")
+							end
+						end)
 					end)
 				end)
 			end)

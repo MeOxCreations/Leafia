@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.827 — Le grand-pere s'assoit DOS au banc
+
+Il y marchait en le regardant -- c'est sa direction de marche -- donc il se posait face au dossier, et il se
+relevait en contemplant les lattes.
+
+Il pivote maintenant avant de s'asseoir, d'un angle regle dans la config depuis sa DIRECTION D'ARRIVEE. Pas vers
+un point pose dans la carte : ca ne demande rien de plus dans Studio, et ca reste juste ou que soit le banc. Si
+son point d'arrivee finit sur le COTE du banc, il suffira de passer l'angle de 180 a 90.
+
+ET IL NE S'ASSOIT QU'UNE FOIS TOURNE. L'assise part de sa pose du moment : jouee pendant le pivot, elle le ferait
+glisser de cote.
+
 ## 0.0.826 — Le grand-pere se leve de son banc quand la haie est finie
 
 On rejoue la MEME animation a l'envers, en vitesse negative et un peu plus vite qu'a l'aller : s'asseoir est un

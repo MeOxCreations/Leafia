@@ -925,6 +925,17 @@ return {
 	-- UN PEU PLUS VITE QUE L'ALLER. S'asseoir est un soupir, se lever est une decision -- il a vu que le travail
 	-- est fini, il y va. A 1, la remontee traine et on attend un vieux monsieur.
 	OLDMAN_STAND_SPEED = 1.25,
+	-- DE COMBIEN IL PIVOTE EN ARRIVANT AU BANC, en degres, avant de s'asseoir.
+	--
+	-- ON S'ASSOIT DOS AU BANC. Il y marche en le REGARDANT -- c'est sa direction de marche -- donc sans ce
+	-- demi-tour il se pose face au dossier, et il se releve en contemplant les lattes.
+	--
+	-- EN DEGRES DEPUIS SA DIRECTION D'ARRIVEE, et pas vers un point pose dans la carte : ca ne demande rien de
+	-- plus dans Studio, et ca reste juste ou que soit le banc. A regler ici si son point d'arrivee est sur le
+	-- COTE du banc plutot que devant.
+	OLDMAN_SIT_TURN = 180,
+	-- Le temps du demi-tour. Assez lent pour se lire comme un geste, assez court pour ne pas retarder l'assise.
+	OLDMAN_SIT_TURN_TIME = 0.5,
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.
