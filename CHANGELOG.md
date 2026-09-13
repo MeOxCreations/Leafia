@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.846 — Le menu des outils passe en blanc
+
+Le menu deroulant des outils (bas gauche) est refait en blanc, dans la famille des cartes du camion.
+
+- LE BOUTON MONTRE L'OUTIL EN MAIN : son dessin, son nom dessous, et un contour vert. Plus besoin d'ouvrir le
+  menu pour savoir ce qu'on tient. Un "+" en coin dit qu'il s'ouvre, et devient une croix une fois ouvert.
+- UNE LIGNE PAR OUTIL au lieu de cases carrees : le dessin dans son creux, le NOM, et a droite l'etat -- une
+  pastille verte "IN HAND" ou le verbe "EQUIP". Un outil sans dessin (le rateau) montre son initiale.
+- LIGNES DE 52 PIXELS, jouables au pouce.
+- LE MENU SE FERME TOUT SEUL apres un choix, ou sur un clic dans le monde.
+- Il sort du bouton en grandissant, les lignes arrivent l'une apres l'autre.
+
 ## 0.0.845 — Le grand-pere envoie tondre apres le "Perfect"
 
 Quand la tondeuse demarre, le grand-pere dit "Perfect" puis enchaine sur `Oldman_scene_speech_MowThatLawn` ("va
