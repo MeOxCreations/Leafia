@@ -30,9 +30,11 @@ return {
 	-- CA NE TOUCHE QUE LE SEAU. L'echelle et la tondeuse restent a deux mains : elles se POUSSENT ou se PORTENT
 	-- devant soi, il n'y a pas de main libre a trouver.
 	--
-	-- A REPASSER A `false` si le rendu ne tient pas la route -- c'est un choix de gameplay, pas une correction, et
-	-- il se defait en un mot.
-	ALLOW_TOOL_WHILE_CARRIED = true,
+	-- A `false` DEPUIS QUE LES FEUILLES TOMBENT SEULES DANS LE SEAU. La raison ci-dessus ne tient plus : on POSE le
+	-- seau pres du tas et on ratisse, les feuilles y vont toutes seules (LeafCollectService). Plus aucun
+	-- aller-retour a economiser -- et un seau porte avec un rateau dans la meme main se lisait comme un bug. Prendre
+	-- le seau RANGE donc l'outil en main.
+	ALLOW_TOOL_WHILE_CARRIED = false,
 	-- ===== CE QU'IL PEUT CONTENIR =====
 	-- COMBIEN DE FEUILLES AVANT D'ETRE PLEIN.
 	--
@@ -106,6 +108,16 @@ return {
 	-- l'oeil : c'est le placement fait dans l'editeur qui est la source de verite, et toute retouche a la main
 	-- eloigne le jeu de l'animation. Z negatif = devant le corps.
 	CARRY_C0 = CFrame.new(0, 0.2, -2.6) * CFrame.Angles(0, math.rad(90), 0),
+	-- L'ECHELLE DU SEAU QUAND SON ANIMATION DE PORTAGE A ETE FAITE (`Model:GetScale()` sur le rig d'animation).
+	--
+	-- POURQUOI CA COMPTE. L'animation place la RACINE du seau, en studs. Un seau agrandi (echelle 2 en dehors du
+	-- camion) grandit AUTOUR de cette racine : elle reste a sa place, et tout le reste du seau s'en eloigne -- il
+	-- monte plus haut que dans l'editeur. On recale donc la racine pour que le CENTRE du seau tombe la ou il etait
+	-- a cette echelle-ci. Aucune retouche de l'animation, et ca reste juste si la taille change encore.
+	--
+	-- A REGLER A L'OEIL si besoin : seau porte trop BAS -> monter vers 2 (a 2, plus aucune correction) ; encore
+	-- trop HAUT -> descendre.
+	CARRY_AUTHORED_SCALE = 1,
 	-- Nom du Motor6D cree. Sert a le RETROUVER et a le lire dans l'Explorer, RIEN D'AUTRE.
 	--
 	-- Il ne joue AUCUN role dans l'animation, contrairement a ce que disaient les versions 0.0.430 / 0.0.431. Une

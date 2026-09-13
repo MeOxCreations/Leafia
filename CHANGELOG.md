@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.852 — Le seau se porte seul, et a la bonne hauteur
+
+- PLUS DE RATEAU EN PORTANT LE SEAU. `BinConfigs.ALLOW_TOOL_WHILE_CARRIED` repasse a `false` : prendre le seau
+  range l'outil en main. L'autorisation servait a eviter des allers-retours pour chaque poignee de feuilles ; depuis
+  que les feuilles tombent seules dans un seau pose a cote, elle ne sert plus, et un rateau tenu avec le seau se
+  lisait comme un bug.
+- LE SEAU NE MONTE PLUS TROP HAUT. L'animation de portage place la RACINE du seau ; a l'echelle 2 (hors du camion)
+  le seau grandit autour d'elle et depasse au-dessus des mains. Un `C1` sur le joint recale la racine pour que le
+  centre du seau tombe ou il etait a l'echelle de l'animation (`BinConfigs.CARRY_AUTHORED_SCALE`, 1 par defaut).
+  La console dit de combien : `[BinCarryService] Seau a l'echelle 2.00 (anim faite a 1) : racine recalee de X studs`.
+
 ## 0.0.851 — Le grand-pere ne bondit plus en se relevant
 
 A la fin du lever, le grand-pere se teleportait de quelques studs. Assis, son corps n'est plus sur sa RootPart :

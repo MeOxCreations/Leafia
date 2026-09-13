@@ -274,6 +274,27 @@ local function grab(player: Player, model: Model)
 	joint.Part0 = anchorPart
 	joint.Part1 = root
 	joint.C0 = BinConfigs.CARRY_C0
+	-- LE SEAU AGRANDI NE DOIT PAS MONTER PLUS HAUT. L'animation pose la RACINE du seau ; a une autre echelle que
+	-- celle du rig d'animation, le reste du seau est plus loin (ou plus pres) de cette racine, et il flotte au-dessus
+	-- des mains. `C1` decale la racine pour que le CENTRE du seau tombe exactement la ou il etait a l'echelle de
+	-- l'animation : la position vaut `Part0 * C0 * anim * C1^-1`, donc le centre `r` (en repere de la racine) finit
+	-- a `r - d` ; avec `d = r * (1 - echelleAnim / echelle)` il arrive a `r * echelleAnim / echelle`, sa place
+	-- d'origine.
+	--
+	-- MESURE AVANT DE SOUDER, seau encore pose : la boite englobante est celle de l'objet au repos, pas d'une pose
+	-- en plein geste.
+	local scaleNow = model:GetScale()
+	local authored = BinConfigs.CARRY_AUTHORED_SCALE
+	if authored > 0 and math.abs(scaleNow - authored) > 1e-3 then
+		local center = model:GetBoundingBox().Position
+		local r = root.CFrame:PointToObjectSpace(center)
+		local shift = r * (1 - authored / scaleNow)
+		joint.C1 = CFrame.new(shift)
+		print(
+			`[BinCarryService] Seau a l'echelle {string.format("%.2f", scaleNow)} (anim faite a {authored}) : `
+				.. `racine recalee de {string.format("%.2f", shift.Magnitude)} studs.`
+		)
+	end
 	joint.Parent = anchorPart
 	state.joint = joint
 
