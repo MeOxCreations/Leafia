@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.844 — Le camion reste ferme tant que le grand-pere explique
+
+Les boutons TAKE etaient verts pendant la replique du grand-pere : l'interrupteur de test `TEST_FREE_TOOLS`,
+leve pour regler le seau, etait reste a `true`. Il baisse TOUS les verrous du didacticiel d'un coup. Remis a
+`false` : les boutons restent gris jusqu'a ce qu'il dise de prendre la cisaille.
+
+Pour reprendre les reglages du seau, le repasser a `true` le temps du test.
+
 ## 0.0.843 — Le halo de la tondeuse respire en blanc
 
 Le `Highlight` pose dans Studio sous la tondeuse bat maintenant sur son remplissage : blanc, de 0.5 a 1 de
