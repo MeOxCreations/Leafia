@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.840 — La premiere replique du grand-pere ne passe plus avant sa voix
+
+"As you can see, I'm too old for this. My back's giving out, I can't mow the lawn anymore." restait 6.2 s a
+l'ecran : la ligne suivante arrivait pendant que la voix disait encore "I can't mow the lawn anymore", et le
+joueur n'avait pas le temps de la lire.
+
+Les deux durees faisaient 8.8 s pour une voix de 14.68 s, donc le texte courait six secondes devant elle. Elles
+sont reparties au prorata de la longueur des deux phrases (10.5 s et 4.2 s) pour retomber sur la duree du
+fichier. A regler a l'oreille si une ligne arrive encore trop tot.
+
 ## 0.0.839 — Le seau reprend sa taille en sortant du camion
 
 Il est retreci dans la benne pour tenir dans le chargement -- c'est du rangement, pas sa vraie taille. Sorti, il

@@ -778,11 +778,15 @@ return {
 			-- et le traducteur automatique de Roblox le rend n'importe comment.
 			text = "As you can see, I'm too old for this. My back's giving out, I can't mow the lawn anymore.",
 			emotion = "sad",
-			hold = 6.2,
+			-- ELLE PASSAIT TROP VITE : a 6.2 s la ligne suivante arrivait pendant que la voix disait encore "I can't
+			-- mow the lawn anymore", et le joueur n'avait pas le temps de la lire. Les deux durees faisaient 8.8 s
+			-- pour une voix de 14.68 s -- le texte courait six secondes devant elle. Reparti au prorata de la
+			-- longueur des deux phrases (87 et 35 lettres) pour retomber sur la duree du fichier.
+			hold = 10.5,
 		},
 		-- IL ANNONCE SON CARACTERE LUI-MEME, et c'est la meilleure place pour le dire : ses coups de gueule
 		-- deviennent une blague qu'il a faite d'avance, au lieu d'une surprise qui ressemble a une faute du joueur.
-		{ text = "Watch out, I shout sometimes. Haha!", emotion = "happy", hold = 2.6 },
+		{ text = "Watch out, I shout sometimes. Haha!", emotion = "happy", hold = 4.2 },
 	},
 
 	-- ===== LES OBJECTIFS =====
