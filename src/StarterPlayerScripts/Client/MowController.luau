@@ -1412,9 +1412,46 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 	end
 end
 
+-- ===== LE HALO QUI RESPIRE =====
+-- Horloge du battement, commune a toutes les tondeuses : deux machines cote a cote respirent ensemble au lieu de
+-- clignoter chacune a son rythme.
+local pulseClock = 0
+
+--- FAIT RESPIRER LE HALO DES TONDEUSES LIBRES, et l'eteint sur celles qu'on pousse.
+---
+--- ETEINT QUAND ELLE EST PORTEE. Le halo dit "cet objet est a prendre" ; une fois dans les mains, il ferait
+--- briller la machine pendant toute la tonte, et le blanc couvrirait justement ce qu'on regarde. Meme regle que
+--- le seau.
+---
+--- SINUS, pas un aller-retour lineaire. Une respiration n'a ni depart ni arrivee : le cosinus repart de lui-meme,
+--- donc aucune saccade au bouclage. Meme formule que le halo de la porte du didacticiel.
+---
+--- COTE CLIENT : c'est un effet visuel, et un battement replique depuis le serveur arriverait par a-coups.
+local function pulseHighlights(dt: number)
+	pulseClock += dt
+	local wave = 0.5 - 0.5 * math.cos(pulseClock * math.pi * 2 / MowConfigs.HIGHLIGHT_PULSE_PERIOD)
+	local fill = MowConfigs.HIGHLIGHT_FILL_MIN + (MowConfigs.HIGHLIGHT_FILL_MAX - MowConfigs.HIGHLIGHT_FILL_MIN) * wave
+	for _, model in ipairs(mowers) do
+		local halo = model:FindFirstChild(MowConfigs.HIGHLIGHT_NAME)
+		if halo and halo:IsA("Highlight") then
+			local free = model:GetAttribute(CARRIED_ATTRIBUTE) == nil
+			if halo.Enabled ~= free then
+				halo.Enabled = free
+			end
+			if free then
+				if halo.FillColor ~= MowConfigs.HIGHLIGHT_FILL then
+					halo.FillColor = MowConfigs.HIGHLIGHT_FILL
+				end
+				halo.FillTransparency = fill -- ecrit a chaque image : c'est le battement lui-meme
+			end
+		end
+	end
+end
+
 local function update(dt: number)
 	local now = os.clock()
 	refreshMowers(now)
+	pulseHighlights(dt)
 
 	local character = player.Character
 	local hrp = character and character:FindFirstChild("HumanoidRootPart")

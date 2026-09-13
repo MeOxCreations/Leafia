@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.843 — Le halo de la tondeuse respire en blanc
+
+Le `Highlight` pose dans Studio sous la tondeuse bat maintenant sur son remplissage : blanc, de 0.5 a 1 de
+transparence, un aller-retour toutes les 1.6 secondes -- le meme rythme que la porte du didacticiel.
+
+BLANC, parce qu'un remplissage colore teinte la machine entiere ; le blanc l'eclaire sans changer sa couleur. Et
+jamais jusqu'a 0 : a 0 le blanc recouvre toute la machine et on ne voit plus ce que c'est.
+
+ETEINT QUAND ON LA POUSSE. Le halo dit "cet objet est a prendre" ; dans les mains, il ferait briller la machine
+pendant toute la tonte. Meme regle que le seau.
+
+Le code ne pilote que le remplissage : le contour, sa couleur et le DepthMode restent ceux reglees dans l'editeur.
+
 ## 0.0.842 — Les boutons TAKE du camion sont gris tant que le grand-pere n'a pas dit de se servir
 
 Ils etaient VERTS et refusaient le clic. Un vert qui refuse se lit comme un bug ; un gris qui refuse se lit comme

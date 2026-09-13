@@ -43,6 +43,19 @@ return {
 	-- finit toujours par diverger, et le jour ou l'un des quatre change, les trois autres cessent de voir le
 	-- portage sans une seule erreur pour le dire.
 	CARRIED_ATTRIBUTE = "LeafiaCarriedBy",
+	-- ===== LE HALO DE LA TONDEUSE =====
+	-- Le `Highlight` est POSE DANS STUDIO sous le modele, et il se cherche par ce nom. Le code ne pilote que le
+	-- REMPLISSAGE (couleur et battement) : le contour, sa couleur et le DepthMode restent ceux de l'editeur.
+	HIGHLIGHT_NAME = "Highlight",
+	-- BLANC. Un remplissage colore teinte la machine entiere ; le blanc l'eclaire sans changer sa couleur.
+	HIGHLIGHT_FILL = Color3.fromRGB(255, 255, 255),
+	-- IL RESPIRE, du plus visible au plus discret. Pas jusqu'a 0 : a 0 le blanc recouvre toute la machine et on
+	-- ne voit plus ce que c'est -- un halo doit montrer l'objet, pas le cacher.
+	HIGHLIGHT_FILL_MIN = 0.5,
+	HIGHLIGHT_FILL_MAX = 1,
+	-- Un aller-retour complet, en secondes. Meme rythme que la porte du didacticiel : lent, il se lit comme
+	-- "viens par ici" ; rapide, comme une alerte.
+	HIGHLIGHT_PULSE_PERIOD = 1.6,
 	-- Part posee sous le carter, creee par scripts/studio/CreerZoneDeCoupeTondeuse.lua. Sa POSITION dit ou on coupe,
 	-- sa largeur donne le rayon. Absente, on retombe sur FALLBACK_* ci-dessous (le jeu tourne quand meme).
 	CUT_ZONE_NAME = "CutZone",
