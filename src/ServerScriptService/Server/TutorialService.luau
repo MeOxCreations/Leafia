@@ -852,57 +852,85 @@ local function faceOldManTo(model: Model, point: Vector3, seconds: number)
 	end)
 end
 
--- IL SE RELEVE : LA MEME ANIMATION, A L'ENVERS.
+-- IL SE RELEVE : SON ANIMATION A LUI, JOUEE DE LA FIN VERS LE DEBUT.
 --
--- Se lever d'un banc est exactement s'y asseoir a l'envers. Un fichier separe serait un second geste a garder
--- d'accord avec le premier, et le jour ou le banc bouge il faudrait refaire les deux.
+-- PAS L'ASSISE A L'ENVERS, et c'est tout le sujet. L'assise contient un DEMI-TOUR (il se retourne pour sauter en
+-- arriere sur le banc) : rejouee a l'envers, elle le defaisait -- il se relevait face au dossier, et il fallait
+-- ensuite le faire pivoter vers le joueur. Un tour, puis un retour : ca se voyait. L'animation de lever n'a pas ce
+-- demi-tour, donc il se leve deja dos au banc.
 --
--- ON LACHE L'IDLE D'ABORD, et c'est l'ordre qui compte : c'est une SURCOUCHE au-dessus du socle (voir
--- `sitOldMan`). Le laisser tourner pendant la remontee ferait respirer le haut du corps sur une pose qui bouge --
--- il gagne sur les joints qu'il cle, donc le buste resterait assis pendant que les jambes se deplient.
+-- A L'ENVERS OBLIGATOIREMENT : le fichier commence debout et finit assis. On part donc de sa derniere image (la
+-- pose assise, la meme que celle ou l'assise l'a laisse) et on remonte a zero.
 --
--- ET ON SURVEILLE LA FIN A LA MAIN plutot que d'attendre `Stopped`. Une piste bouclee ne s'arrete jamais toute
--- seule, et la debouclee pour l'occasion nous ferait dependre d'un evenement dont le declenchement en marche
--- arriere n'est pas garanti. Un test sur la position, lui, est vrai ou faux.
+-- ACQUERIR PUIS BASCULER PUIS LIBERER. Il reste assis tant que la piste de lever n'est pas chargee : couper
+-- l'assise d'abord et rater le chargement le laisserait debout-fige. Faute deja payee sur son idle.
+--
+-- LA FIN SE SURVEILLE A LA MAIN, deux conditions : la position arrive a zero, OU elle REMONTE (la piste bouclee
+-- vient de repartir de la fin). Sans la seconde, a bas framerate, il se rassoit.
 local function standOldMan()
 	local sit = sitTrack
 	if not (sit and sit.IsPlaying) then
 		return
 	end
 	sitTrack = nil
-	local track = sit :: AnimationTrack
-	local idle = sitIdleTrack
-	if idle then
-		(idle :: AnimationTrack):Stop(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
-		sitIdleTrack = nil
+	local sitting = sit :: AnimationTrack
+
+	local found = findByName(TutorialConfigs.GRANDPA_NAME)
+	local body: Model? = if found and found:IsA("Model") then found :: Model else nil
+	local humanoid = if body then body:FindFirstChildOfClass("Humanoid") else nil
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+
+	local stand: AnimationTrack? = nil
+	if animator then
+		local anim = Instance.new("Animation")
+		anim.AnimationId = TutorialConfigs.OLDMAN_STAND_ANIM
+		local ok, result = pcall(function()
+			return (animator :: Animator):LoadAnimation(anim)
+		end)
+		if ok and typeof(result) == "Instance" then
+			stand = result :: AnimationTrack
+		end
 	end
-	track:AdjustSpeed(-TutorialConfigs.OLDMAN_STAND_SPEED)
-	local conn: RBXScriptConnection? = nil
-	conn = RunService.Heartbeat:Connect(function()
-		if track.TimePosition > 0.02 and track.IsPlaying then
+
+	local finished = false
+	--- IL EST DEBOUT : on le retourne d'un coup, on rend son idle, et il parle.
+	local function finish()
+		if finished then
 			return
 		end
-		if conn then
-			conn:Disconnect()
-			conn = nil
+		finished = true
+		local idle = sitIdleTrack
+		if idle then
+			(idle :: AnimationTrack):Stop(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
+			sitIdleTrack = nil
 		end
-		track:Stop(0)
-		-- ET IL REPREND SON IDLE DEBOUT. Sans ca il resterait sur la premiere image du geste d'assise, c'est-a-dire
-		-- debout mais immobile -- une statue, pas un homme qui vient de se lever.
-		local model = findByName(TutorialConfigs.GRANDPA_NAME)
-		if model and model:IsA("Model") then
-			local body = model :: Model
-			restoreIdle(body)
-			-- ET IL SE RETOURNE, DOS AU BANC. L'animation jouee a l'envers DEFAIT le demi-tour qu'elle contient :
-			-- sans ca il se leve face au dossier, a le contempler.
-			local part = body:FindFirstChild("HumanoidRootPart")
-			if part and part:IsA("BasePart") then
-				local here = part :: BasePart
+		local model = body
+		local root = if model then model:FindFirstChild("HumanoidRootPart") else nil
+		-- LE DEMI-TOUR INVISIBLE, dans la MEME image que l'arret de la piste. Assis, son corps est tourne de 180
+		-- degres par rapport a sa RootPart (c'est l'assise qui l'a fait tourner, pas la part). L'animation de
+		-- lever garde ce decalage jusqu'au bout : l'arreter sans rien faire ramenerait le corps sur la RootPart,
+		-- face au banc, d'un coup. On tourne donc la RootPart du meme angle a l'instant ou la piste lache : le
+		-- corps ne bouge pas a l'ecran, et la part est de nouveau alignee sur lui.
+		if model and root and root:IsA("BasePart") and TutorialConfigs.OLDMAN_STAND_SNAP_TURN ~= 0 then
+			local part = root :: BasePart
+			local turned = part.CFrame * CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_STAND_SNAP_TURN), 0)
+			-- UN ECART MONDE, pas un pivot : `GetPivot` suit la boite englobante (voir `faceOldManTo`).
+			model:PivotTo(turned * part.CFrame:Inverse() * model:GetPivot())
+		end
+		if stand then
+			(stand :: AnimationTrack):Stop(0)
+		end
+		sitting:Stop(0)
+		if model then
+			restoreIdle(model)
+			-- UN PIVOT DOUX EN PLUS, si on en regle un. A zero par defaut : l'animation le leve deja dans le bon sens.
+			if root and root:IsA("BasePart") and TutorialConfigs.OLDMAN_STAND_TURN ~= 0 then
+				local here = root :: BasePart
 				local look = here.CFrame.LookVector
 				local flat = Vector3.new(look.X, 0, look.Z)
 				if flat.Magnitude > 1e-3 then
-					local turned = CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_STAND_TURN), 0) * flat.Unit
-					faceOldManTo(body, here.Position + turned * 10, TutorialConfigs.OLDMAN_STAND_TURN_TIME)
+					local dir = CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_STAND_TURN), 0) * flat.Unit
+					faceOldManTo(model, here.Position + dir * 10, TutorialConfigs.OLDMAN_STAND_TURN_TIME)
 				end
 			end
 		end
@@ -914,6 +942,70 @@ local function standOldMan()
 		if owner and bench then
 			bench:FireClient(owner, "stand")
 		end
+	end
+
+	if not stand then
+		warn(
+			`[Tutorial] Animation de lever non chargeable ({TutorialConfigs.OLDMAN_STAND_ANIM}) : il se remet debout sans geste.`
+		)
+		finish()
+		return
+	end
+	local rising = stand :: AnimationTrack
+	rising.Looped = true
+	rising.Priority = TutorialConfigs.OLDMAN_STAND_PRIORITY
+
+	local started = false
+	local last = 0
+	local waitUntil = os.clock() + TutorialConfigs.OLDMAN_STAND_LOAD_TIMEOUT
+	local conn: RBXScriptConnection? = nil
+	conn = RunService.Heartbeat:Connect(function()
+		if not started then
+			-- ON NE PART PAS TANT QUE LA LONGUEUR EST INCONNUE : sans elle, "la fin" n'existe pas, et il
+			-- partirait de zero -- debout d'un coup, puis assis a la fin.
+			local length = rising.Length
+			if length <= 0 then
+				if os.clock() > waitUntil then
+					if conn then
+						conn:Disconnect()
+						conn = nil
+					end
+					warn("[Tutorial] L'animation de lever ne s'est jamais chargee : il se remet debout sans geste.")
+					finish()
+				end
+				return
+			end
+			started = true
+			-- L'IDLE ASSIS SE LACHE AU MOMENT OU LE LEVER PREND : c'est une surcouche, elle gagnerait sur le buste
+			-- pendant que les jambes se deplient.
+			local idle = sitIdleTrack
+			if idle then
+				(idle :: AnimationTrack):Stop(TutorialConfigs.OLDMAN_SIT_IDLE_FADE)
+				sitIdleTrack = nil
+			end
+			rising:Play(TutorialConfigs.OLDMAN_STAND_FADE)
+			rising.TimePosition = math.max(length - 0.001, 0)
+			rising:AdjustSpeed(-TutorialConfigs.OLDMAN_STAND_SPEED)
+			last = rising.TimePosition
+			-- L'ASSISE RESTE DESSOUS, a priorite plus basse : le lever la couvre des qu'il a son poids, et la
+			-- couper dans la meme image laisserait une image debout entre les deux.
+			task.delay(TutorialConfigs.OLDMAN_STAND_FADE + 0.1, function()
+				if not finished then
+					sitting:Stop(0.1)
+				end
+			end)
+			return
+		end
+		local now = rising.TimePosition
+		if now > 0.02 and now <= last + 0.001 and rising.IsPlaying then
+			last = now
+			return
+		end
+		if conn then
+			conn:Disconnect()
+			conn = nil
+		end
+		finish()
 	end)
 end
 

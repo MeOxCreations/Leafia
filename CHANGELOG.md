@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.849 — Le grand-pere se leve avec sa propre animation
+
+Il ne rejoue plus l'assise a l'envers : il joue `136908373203755` (le lever) de la FIN vers 0. L'assise contient
+le demi-tour qui le met dos au banc ; a l'envers elle le defaisait, et il fallait le refaire pivoter apres, ce
+qui se voyait. Le lever n'a pas ce demi-tour.
+
+- Il reste assis tant que l'animation de lever n'est pas chargee (5 s max, puis il se remet debout sans geste).
+- A la fin, sa RootPart est retournee de 180 degres dans la meme image que l'arret de la piste : le corps ne bouge
+  pas a l'ecran. Reglable : `OLDMAN_STAND_SNAP_TURN`.
+- Plus de pivot doux apres (`OLDMAN_STAND_TURN = 0`).
+
 ## 0.0.848 — La pastille sur les feuilles au sol
 
 En meme temps que le halo blanc, la pastille " ! " se pose sur le tas de feuilles le plus proche du joueur.

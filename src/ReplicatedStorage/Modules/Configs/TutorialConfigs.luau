@@ -964,28 +964,30 @@ return {
 	OLDMAN_SIT_IDLE_ANIM = "rbxassetid://86619805469784",
 	OLDMAN_SIT_IDLE_PRIORITY = Enum.AnimationPriority.Action3,
 	OLDMAN_SIT_IDLE_FADE = 0.3,
-	-- IL SE RELEVE QUAND LA HAIE EST FINIE : on rejoue la MEME animation A L'ENVERS, vitesse negative.
+	-- IL SE RELEVE QUAND LA HAIE EST FINIE, avec SON animation de lever, jouee A L'ENVERS (de la fin vers 0).
 	--
-	-- PAS UNE SECONDE ANIMATION. Se relever d'un banc est exactement s'y asseoir a l'envers : un fichier separe
-	-- serait un second geste a garder d'accord avec le premier, et le jour ou le banc bouge il faudrait refaire
-	-- les deux.
+	-- PAS L'ASSISE A L'ENVERS. L'assise contient le demi-tour qui le met dos au banc : rejouee a l'envers elle le
+	-- defaisait, et il fallait le refaire pivoter apres -- un tour puis un retour, visible. Le lever n'a pas ce
+	-- demi-tour.
+	OLDMAN_STAND_ANIM = "rbxassetid://136908373203755",
+	-- AU-DESSUS DE L'ASSISE (`Action2`) qui tient encore les jambes quand il commence : a priorite egale, Roblox
+	-- ferait la moyenne des deux.
+	OLDMAN_STAND_PRIORITY = Enum.AnimationPriority.Action3,
+	OLDMAN_STAND_FADE = 0.1,
+	-- Vitesse de la remontee. 1 = le rythme de ton animation.
+	OLDMAN_STAND_SPEED = 1,
+	-- Si l'animation n'arrive pas dans ce delai, il se remet debout sans geste plutot que de rester assis a jamais.
+	OLDMAN_STAND_LOAD_TIMEOUT = 5,
+	-- LE DEMI-TOUR INVISIBLE A LA FIN, en degres. Assis, son CORPS est tourne de 180 par rapport a sa RootPart --
+	-- c'est l'assise qui l'a tourne, pas la part. Quand la piste de lever s'arrete, le corps se remettrait sur la
+	-- part, face au banc, d'un coup. On tourne la part du meme angle dans la meme image : a l'ecran rien ne bouge.
 	--
-	-- UN PEU PLUS VITE QUE L'ALLER. S'asseoir est un soupir, se lever est une decision -- il a vu que le travail
-	-- est fini, il y va. A 1, la remontee traine et on attend un vieux monsieur.
-	OLDMAN_STAND_SPEED = 1.25,
-	-- DE COMBIEN IL PIVOTE EN SE RELEVANT, en degres, une fois l'animation remontee.
-	--
-	-- POURQUOI PAS AVANT DE S'ASSEOIR. Son animation fait le demi-tour ELLE-MEME : il se retourne et saute en
-	-- arriere pour se poser. Un pivot de notre cote avant l'assise s'AJOUTERAIT au sien, et il finirait face au
-	-- dossier -- le probleme qu'on voulait regler.
-	--
-	-- MAIS AU RETOUR, IL MANQUE. Jouee a l'envers, l'animation DEFAIT son demi-tour : il se leve donc face au
-	-- banc, a le contempler. On le retourne apres, une fois debout.
-	--
-	-- EN DEGRES DEPUIS SON CAP DU MOMENT, et pas vers un point pose dans la carte : rien de plus a placer dans
-	-- Studio, et ca reste juste ou que soit le banc.
-	OLDMAN_STAND_TURN = 180,
-	-- Le temps du demi-tour. Assez lent pour se lire comme un geste, assez court pour ne pas retarder sa replique.
+	-- A REGLER A L'OEIL : s'il claque face au banc a la fin, mettre 0 ; s'il fait un saut de cote, le dire.
+	OLDMAN_STAND_SNAP_TURN = 180,
+	-- UN PIVOT DOUX EN PLUS, apres s'etre leve, en degres depuis son cap. 0 : l'animation le leve deja dans le bon
+	-- sens (c'etait 180 quand on rejouait l'assise a l'envers).
+	OLDMAN_STAND_TURN = 0,
+	-- Le temps de ce pivot doux, s'il y en a un.
 	OLDMAN_STAND_TURN_TIME = 0.5,
 	-- CE QU'IL DIT EN SE LEVANT, dans cet ordre et sans trou : il felicite, PUIS il explique la suite.
 	--
