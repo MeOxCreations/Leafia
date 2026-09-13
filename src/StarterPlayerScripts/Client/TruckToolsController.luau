@@ -144,7 +144,9 @@ local function refreshNow()
 		TruckToolsHandler.setShown(false)
 		return
 	end
-	TruckToolsHandler.fill(list, askFor)
+	-- LE VERROU SE LIT A CHAQUE REMPLISSAGE, jamais garde ici : c'est un attribut du joueur pose par le didacticiel,
+	-- et une copie locale finirait par ne plus etre d'accord avec lui.
+	TruckToolsHandler.fill(list, askFor, player:GetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE) == true)
 	TruckToolsHandler.setShown(true)
 end
 
@@ -261,6 +263,10 @@ function TruckToolsController.init()
 	-- LA BARRE SURVIT AU RESPAWN (ResetOnSpawn est faux), mais pas nos abonnements si le camion disparait : le
 	-- rescan ci-dessus les repose. Rien a faire ici -- et c'est le but.
 	player.CharacterAdded:Connect(refresh)
+	-- ET LES BOUTONS REPRENNENT LEUR COULEUR A L'INSTANT OU LE GRAND-PERE DIT DE SE SERVIR. Sans cet abonnement, ils
+	-- resteraient gris jusqu'au prochain changement de la benne -- un bouton gris qui accepte le clic ment autant
+	-- qu'un bouton vert qui le refuse.
+	player:GetAttributeChangedSignal(TruckConfigs.TOOLS_LOCK_ATTRIBUTE):Connect(refresh)
 
 	print("[TruckToolsController] Pret : la barre s'ouvre avec le hayon, et se cache quand on s'eloigne.")
 end

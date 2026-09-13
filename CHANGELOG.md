@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.842 — Les boutons TAKE du camion sont gris tant que le grand-pere n'a pas dit de se servir
+
+Ils etaient VERTS et refusaient le clic. Un vert qui refuse se lit comme un bug ; un gris qui refuse se lit comme
+"pas encore". Ils reprennent leur couleur a l'instant ou il dit de prendre la cisaille.
+
+ILS RESTENT CLIQUABLES. Un clic sur un bouton gris garde son refus explique -- pilule rouge et notification --, ce
+qu'un bouton cache ne pourrait pas faire. Et le texte fonce avec eux : du blanc sur un gris clair ne se lit plus.
+
+ILS SE RAFRAICHISSENT SUR LE VERROU LUI-MEME. Sans cet abonnement, ils resteraient gris jusqu'au prochain
+changement de la benne, et un bouton gris qui accepte le clic ment autant qu'un vert qui le refuse.
+
+A NOTER : avec `TutorialConfigs.TEST_FREE_TOOLS = true`, le verrou n'est jamais pose, donc les boutons ne sont jamais
+gris. Pour le voir, remettre l'interrupteur a `false`.
+
 ## 0.0.841 — Le jeu dit ou tondre quand la tondeuse demarre
 
 La touche G allumait deja la pelouse qui reste a couper, mais rien ne le disait. Le moteur demarrait, le

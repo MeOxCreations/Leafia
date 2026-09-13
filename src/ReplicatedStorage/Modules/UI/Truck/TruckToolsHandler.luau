@@ -72,6 +72,13 @@ local TAKE_HOVER = Color3.fromRGB(126, 226, 88)
 -- l'un qui sort et l'autre qui rentre, se cliquent l'un pour l'autre. La couleur dit le sens avant qu'on lise.
 local BACK = Color3.fromRGB(64, 150, 226)
 local BACK_HOVER = Color3.fromRGB(96, 178, 245)
+-- ET LE GRIS QUAND ON N'A PAS ENCORE LE DROIT DE SE SERVIR. Le bouton reste la et reste cliquable -- un clic
+-- dessus explique pourquoi c'est non, ce qu'un bouton cache ne peut pas faire -- mais il ne doit plus avoir l'air
+-- d'une invitation. Un vert qui refuse se lit comme un bug ; un gris qui refuse se lit comme "pas encore".
+--
+-- LE TEXTE FONCE AVEC LUI : du blanc sur un gris clair ne se lit plus.
+local LOCKED = Color3.fromRGB(200, 205, 212)
+local LOCKED_TEXT = Color3.fromRGB(120, 126, 134)
 -- ET LA CARTE D'UN OUTIL DEJA SORTI S'EFFACE UN PEU : il n'est plus la, et l'interface doit le dire sans un mot.
 local OUT_IMAGE_TRANSPARENCY = 0.5
 local OUT_CARD_TRANSPARENCY = 0.25
@@ -202,7 +209,7 @@ end
 --- DEUX CADRES ET PAS UN : le PORTEUR prend sa place dans le rang (c'est lui que le layout range), et la CARTE
 --- bouge librement a l'interieur. Animer directement ce que le layout positionne, c'est se battre contre lui a
 --- chaque image.
-local function makeCard(model: Model, inside: boolean, onClick: (string) -> (), parent: Instance): Frame
+local function makeCard(model: Model, inside: boolean, onClick: (string) -> (), parent: Instance, locked: boolean): Frame
 	local holder = Instance.new("Frame")
 	holder.Name = model.Name
 	holder.Size = CARD_SIZE
@@ -258,8 +265,11 @@ local function makeCard(model: Model, inside: boolean, onClick: (string) -> (), 
 
 	-- LE BOUTON DIT CE QUI VA SE PASSER, en mot ET en couleur. Vert il sort l'outil, bleu il le range : deux
 	-- boutons verts cote a cote, l'un qui sort et l'autre qui rentre, se cliquent l'un pour l'autre.
-	local idle = if inside then TAKE else BACK
-	local over = if inside then TAKE_HOVER else BACK_HOVER
+	-- GRIS SI ON N'A PAS LE DROIT DE LE SORTIR, et pas de couleur de survol : rien ne doit ressembler a une
+	-- invitation. Seuls les boutons TAKE sont concernes -- ce qui est deja dehors n'est pas bloque par ce verrou.
+	local grey = locked and inside
+	local idle = if grey then LOCKED elseif inside then TAKE else BACK
+	local over = if grey then LOCKED elseif inside then TAKE_HOVER else BACK_HOVER
 
 	local take = Instance.new("TextButton")
 	take.Name = "Take"
@@ -269,7 +279,7 @@ local function makeCard(model: Model, inside: boolean, onClick: (string) -> (), 
 	take.BorderSizePixel = 0
 	take.AutoButtonColor = false
 	take.Font = Enum.Font.GothamBold
-	take.TextColor3 = Color3.fromRGB(255, 255, 255)
+	take.TextColor3 = if grey then LOCKED_TEXT else Color3.fromRGB(255, 255, 255)
 	take.TextScaled = true
 	take.Text = if inside then TAKE_TEXT else BACK_TEXT
 	take.Parent = card
@@ -377,7 +387,8 @@ export type Entry = { model: Model, inside: boolean }
 --- ON REFAIT TOUT A CHAQUE FOIS plutot que de modifier la carte qui change. Le monde est la SOURCE : ce qui est
 --- dans la benne y est, ce qui est dehors porte sa marque. Corriger une carte a la main serait un second etat a
 --- tenir d'accord avec lui, et c'est exactement ainsi que deux verites finissent par se contredire.
-function TruckToolsHandler.fill(entries: { Entry }, onClick: (string) -> ()): number
+--- `locked` grise les boutons TAKE : on voit ce qu'il y a dans la benne, mais on n'a pas encore le droit de se servir.
+function TruckToolsHandler.fill(entries: { Entry }, onClick: (string) -> (), locked: boolean?): number
 	build()
 	local list = row
 	if not list then
@@ -390,7 +401,7 @@ function TruckToolsHandler.fill(entries: { Entry }, onClick: (string) -> ()): nu
 	end
 	table.clear(cards)
 	for _, entry in entries do
-		table.insert(cards, makeCard(entry.model, entry.inside, onClick, list))
+		table.insert(cards, makeCard(entry.model, entry.inside, onClick, list, locked == true))
 	end
 	return #entries
 end
