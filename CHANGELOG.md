@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.841 — Le jeu dit ou tondre quand la tondeuse demarre
+
+La touche G allumait deja la pelouse qui reste a couper, mais rien ne le disait. Le moteur demarrait, le
+grand-pere disait "Perfect", et le joueur poussait sa machine sans savoir ou aller.
+
+Une notification bleue arrive maintenant juste apres : "Hold G to see the grass you still need to mow." Apres le
+bandeau de tache et pas en meme temps, parce que deux interfaces qui surgissent dans la meme image se lisent comme
+du bruit. Et "hold", pas "press" : la touche est une vue qu'on tient, pas une bascule.
+
+SANS CLAVIER, le texte ne parle pas de touche. Le bouton tactile existe, mais il n'a pas de libelle : pointer "le
+bouton" sans pouvoir le designer enverrait chercher partout.
+
 ## 0.0.840 — La premiere replique du grand-pere ne passe plus avant sa voix
 
 "As you can see, I'm too old for this. My back's giving out, I can't mow the lawn anymore." restait 6.2 s a

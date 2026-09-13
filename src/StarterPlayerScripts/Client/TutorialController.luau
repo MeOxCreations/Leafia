@@ -12,6 +12,7 @@
 
 local ContextActionService = game:GetService("ContextActionService")
 local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ProximityPromptService = game:GetService("ProximityPromptService")
 local RunService = game:GetService("RunService")
@@ -2645,6 +2646,18 @@ local function step(dt: number)
 		-- IL EST CONTENT, et c'est la seule fois du tuto. On le dit ICI, a l'instant ou le moteur prend : la
 		-- tache passe en gris dans le meme geste, donc l'image et la voix disent la meme chose.
 		sayVoice(TutorialConfigs.PERFECT_SOUND)
+		-- ET ON LUI DIT OU ALLER. La touche G allume l'herbe qui reste a couper, mais rien ne le disait : il pousse
+		-- sa machine sans savoir ou tondre. Apres la tache, pas avec elle -- deux interfaces dans la meme image se
+		-- lisent comme du bruit.
+		--
+		-- LE TEXTE SUIT L'APPAREIL : sans clavier, parler de la touche G enverrait chercher une touche qui n'existe pas.
+		task.delay(TutorialConfigs.MOW_HINT_DELAY, function()
+			SideNotificationHandler.spawn(
+				if UserInputService.KeyboardEnabled
+					then TutorialConfigs.MOW_HINT_NOTIF
+					else TutorialConfigs.MOW_HINT_NOTIF_TOUCH
+			)
+		end)
 		-- ET IL SE TAIT. `math.huge` plutot qu'un drapeau de plus : la boucle compare deja une date, une date
 		-- qui n'arrive jamais est la facon la plus courte de dire "plus jamais".
 		nextImpatientAt = math.huge

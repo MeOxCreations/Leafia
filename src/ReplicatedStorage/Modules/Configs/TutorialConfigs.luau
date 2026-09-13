@@ -845,6 +845,30 @@ return {
 	-- Souffle entre le grisage de la tache finie et l'arrivee de la suivante. Les deux au meme instant se lisent
 	-- comme un remplacement ; separes, on voit d'abord qu'on a REUSSI, ensuite ce qui reste a faire.
 	LAWN_TASK_DELAY = 0.9,
+	-- ===== ON LUI DIT OU EST L'HERBE A TONDRE =====
+	-- La touche G allume deja la pelouse qui reste a couper (MowController), mais RIEN ne le disait : le moteur
+	-- demarre, le grand-pere dit "Perfect", et le joueur pousse sa machine sans savoir ou aller. Une notification
+	-- au moment ou il en a besoin -- juste apres le "Perfect", quand la machine tourne.
+	--
+	-- APRES LA TACHE, PAS EN MEME TEMPS : le bandeau de tache et la notification qui surgissent dans la meme image
+	-- se lisent comme du bruit, et le joueur ne lit ni l'un ni l'autre.
+	MOW_HINT_DELAY = 2.4,
+	-- EN ANGLAIS, mots simples. `Info` : le bleu de l'interface -- c'est un conseil, pas un avertissement.
+	-- MAINTENIR et pas appuyer : la touche est une vue qu'on tient, pas une bascule (voir MowController).
+	MOW_HINT_NOTIF = {
+		kind = "Info",
+		title = "Find The Tall Grass",
+		description = "Hold G to see the grass you still need to mow.",
+		duration = 10,
+	},
+	-- SANS CLAVIER, on ne parle pas d'une touche qui n'existe pas. Le bouton tactile existe, mais il n'a pas de
+	-- libelle : pointer "le bouton" sans pouvoir le designer enverrait chercher partout.
+	MOW_HINT_NOTIF_TOUCH = {
+		kind = "Info",
+		title = "Find The Tall Grass",
+		description = "Mow all the tall grass inside the lines.",
+		duration = 10,
+	},
 
 	-- ===== LA PARCELLE A TONDRE =====
 	-- Une PART posee dans Studio, qui delimite le carre que le joueur doit tondre. Tout ce qui pousse dehors est
