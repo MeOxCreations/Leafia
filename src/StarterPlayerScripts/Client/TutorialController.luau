@@ -37,7 +37,6 @@ local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 -- Pour LIRE l'avancement d'une haie : le serveur pose la fraction taillee sur le modele, et elle se replique.
 -- On ne recompte donc rien de notre cote -- deux comptes finiraient par se contredire.
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
-local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 -- VOISIN DIRECT : c'est la seule facon de lui dire de se fermer, et le didacticiel est le seul a savoir QUAND.
 local TruckToolsController = require(script.Parent.TruckToolsController)
@@ -45,6 +44,7 @@ local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
 local GroundGuide = require(script.Parent.Utils.GroundGuide)
+local TutorialLeaves = require(script.Parent.Utils.TutorialLeaves)
 local ButterflyController = require(script.Parent.ButterflyController)
 -- LU, JAMAIS PILOTE : le didacticiel demande seulement si la machine tourne, pour savoir si sa tache est faite.
 -- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
@@ -68,14 +68,21 @@ local anchorPos = Vector3.zero
 -- a ce moment-la ne marcherait pas : elle porte le flottement de la respiration, et le rapprochement partirait
 -- d'un ecart aleatoire, different a chaque partie.
 local sceneCF: CFrame? = nil
-local lastScanAt = 0
-local lastPromptAt = 0
-local lastDebugAt = 0
+-- LES DERNIERS PASSAGES des boucles espacees. En table pour la limite des 200 locales.
+local scans = {
+	lastScanAt = 0,
+	lastPromptAt = 0,
+	lastDebugAt = 0,
+}
 local startedAt = 0
 -- UN DRAPEAU PAR AVERTISSEMENT, pas un seul pour les deux. Partage, le premier manquant masque le second : la
--- porte absente ferait taire le message du Highlight absent, et on chercherait au mauvais endroit.
-local warnedNoDoor = false
-local warnedNoHighlight = false
+-- porte absente ferait taire le message du Highlight absent, et on chercherait au mauvais endroit. En TABLE et pas
+-- en locales : Luau n'accepte que 200 variables locales au premier niveau d'un fichier.
+local warned = {
+	warnedNoDoor = false,
+	warnedNoHighlight = false,
+	warnedNoTruckDoor = false,
+}
 local elapsed = 0
 local doorHint = true
 -- Le point d'exclamation au-dessus de la porte. `nil` = pas affiche.
@@ -104,7 +111,6 @@ local truckMarkerWanted = false
 -- -- le marqueur ne sort pas, et rien ne dit pourquoi. Quelques secondes de patience d'abord : avec le
 -- streaming, "pas encore la" est un etat normal.
 local truckWantedAt = 0
-local warnedNoTruckDoor = false
 -- IL N'A QU'UNE PHRASE POUR L'OUVERTURE DU HAYON, et il ne la dit qu'une fois : la porte est une BASCULE, donc
 -- le joueur peut la rouvrir dix fois -- une replique qui repart a chaque fois cesse d'etre une reaction.
 local saidTruckOpened = false
@@ -1884,12 +1890,19 @@ end
 -- QUAND ELLE PARLE et QUELLE PHRASE : deux questions separees. Le "quand" vit dans la boucle par image, le
 -- "laquelle" ici -- sinon la moindre retouche de cadence obligerait a relire le tirage.
 local nextImpatientAt = math.huge
-local lastImpatient = 0
+-- LES ECHEANCES ET DERNIERS TIRAGES DE SES GROGNES, dans une table et pas six locales : Luau n'accepte que 200
+-- variables locales au premier niveau d'un fichier, et ce didacticiel les avait atteintes.
+local cooldowns = {
+	lastImpatient = 0,
+	lastTruckImpatient = 0,
+	lastBinScold = 0,
+	nextBinScoldAt = 0,
+	nextGrabAgainAt = 0,
+	nextRopeAgainAt = 0,
+}
 -- ET LA GROGNE DU CAMION, avec sa propre echeance. Deux consignes peuvent etre en attente en meme temps -- il
 -- reste des touffes a tondre ET le hayon est ferme -- donc deux comptes a rebours, jamais un seul partage.
 local nextTruckImpatientAt = math.huge
-local lastTruckImpatient = 0
-local lastBinScold = 0
 -- Il n'a qu'une phrase a dire quand le joueur prend enfin la machine, et il ne la dit qu'une fois.
 local saidPullRope = false
 -- TENAIT-IL LA MACHINE A L'IMAGE PRECEDENTE ? C'est le seul moyen de reperer l'instant ou il la REPOSE : on
@@ -1899,9 +1912,6 @@ local wasCarrying = false
 -- TENAIT-IL LE SEAU a l'image precedente ? On reagit a la PRISE, pas au fait de le tenir : sinon la phrase
 -- repartirait a chaque image tant qu'il ne le lache pas.
 local wasCarryingBin = false
-local nextBinScoldAt = 0
-local nextGrabAgainAt = 0
-local nextRopeAgainAt = 0
 
 -- JAMAIS DEUX FOIS LA MEME D'AFFILEE. Un tirage au hasard pur repete, et une repetition immediate s'entend comme
 -- un bug ("il a bugue, il redit pareil") -- alors que c'est le hasard qui fait son travail.
@@ -2211,113 +2221,11 @@ local function ensureGrassArea(): BasePart?
 	return grassArea
 end
 
--- ===== LES FEUILLES A RAMASSER =====
--- Allume quand le grand-pere commence a expliquer le ramassage, et ne s'eteint plus : une fois les feuilles
--- ramassees, il n'y a simplement plus de tas a faire briller.
-local leavesPulseOn = false
-local leavesPulseClock = 0
-local leafHalos: { Highlight } = {}
-local nextLeafScan = 0
--- La pastille " ! " et la part qu'elle suit. UNE seule, sur un tas a la fois : dix pastilles sur dix tas ne
--- designent plus rien.
-local leavesMarker: Frame? = nil
-local leavesMarkerPart: BasePart? = nil
--- Le nom des petits tas : dernier element du chemin d'asset, lu et pas recopie (meme regle que RakeService).
-local SMALL_LEAVES_NAME = HedgeConfigs.STOCK_DEBRIS_ASSET[#HedgeConfigs.STOCK_DEBRIS_ASSET]
-
---- FAIT RESPIRER LE HALO DE CHAQUE TAS DE FEUILLES AU SOL, petits (poses par la taille) et gros (faits au rateau).
----
---- LA LISTE EST RELUE A INTERVALLE, le battement ecrit a chaque image. Le rateau fait naitre et disparaitre des
---- tas : une liste figee au demarrage raterait tous ceux qui arrivent ensuite.
----
---- AUCUNE LIMITE A GERER ICI, mais une a connaitre : Roblox n'affiche que 31 `Highlight` a la fois. Une face de
---- haie en pose une dizaine, on est loin -- ca compterait le jour ou l'on fait briller une haie entiere.
-local function pulseLeaves(dt: number, now: number)
-	if not leavesPulseOn then
-		return
-	end
-	if now >= nextLeafScan then
-		nextLeafScan = now + TutorialConfigs.LEAVES_RESCAN_INTERVAL
-		table.clear(leafHalos)
-		local piles: { Model } = {}
-		for _, folderName in { HedgeConfigs.STOCK_FOLDER, RakeConfigs.PILE_FOLDER } do
-			local folder = workspace:FindFirstChild(folderName)
-			if folder then
-				for _, d in folder:GetDescendants() do
-					if d:IsA("Highlight") and d.Name == TutorialConfigs.LEAVES_HIGHLIGHT_NAME then
-						table.insert(leafHalos, d)
-					elseif d:IsA("Model") and (d.Name == SMALL_LEAVES_NAME or d.Name == RakeConfigs.PILE_NAME) then
-						table.insert(piles, d)
-					end
-				end
-			end
-		end
-
-		-- LA PASTILLE NE CHANGE DE TAS QUE QUAND LE SIEN A DISPARU. Suivre "le plus proche" a chaque relecture la
-		-- ferait sauter d'un tas a l'autre des que le joueur passe entre deux -- une pastille qui hesite ne
-		-- designe rien. Le tas ramasse (fondu dans un gros tas, avale par le seau), elle passe au plus proche.
-		local current = leavesMarkerPart
-		if not (current and current.Parent) then
-			WorldMarker.remove(leavesMarker)
-			leavesMarker, leavesMarkerPart = nil, nil
-			local character = player.Character
-			local root = character and character:FindFirstChild("HumanoidRootPart")
-			local from = if root and root:IsA("BasePart") then root.Position else nil
-			local best: BasePart? = nil
-			local bestDist = math.huge
-			for _, pile in piles do
-				-- UNE PART, pas le modele : la pastille s'accroche a une part. Les feuilles sont des MeshParts.
-				local part = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart", true)
-				if part then
-					local dist = if from then ((part :: BasePart).Position - from).Magnitude else 0
-					if dist < bestDist then
-						best, bestDist = part, dist
-					end
-				end
-			end
-			if best then
-				leavesMarkerPart = best
-				leavesMarker = WorldMarker.show(best, Vector3.new(0, TutorialConfigs.LEAVES_MARKER_UP, 0))
-			end
-		end
-	end
-	leavesPulseClock += dt
-	-- Meme formule que le halo de la porte : un cosinus repart de lui-meme, donc aucune saccade au bouclage.
-	local a = 0.5 - 0.5 * math.cos(leavesPulseClock * math.pi * 2 / TutorialConfigs.PULSE_PERIOD)
-	local fill = TutorialConfigs.FILL_MAX + (TutorialConfigs.FILL_MIN - TutorialConfigs.FILL_MAX) * a
-	for _, halo in leafHalos do
-		if halo.Parent then
-			-- LE SERVEUR LES POSE ETEINTS : on les rallume chez nous seulement, le reglage ne remonte pas.
-			if not halo.Enabled then
-				halo.Enabled = true
-			end
-			if halo.FillColor ~= TutorialConfigs.LEAVES_HIGHLIGHT_FILL then
-				halo.FillColor = TutorialConfigs.LEAVES_HIGHLIGHT_FILL
-			end
-			halo.FillTransparency = fill
-		end
-	end
-end
-
---- Eteint les feuilles : plus de battement, plus de pastille. Le halo est ECRIT eteint plutot qu'abandonne, sinon
---- il resterait fige a mi-battement.
-local function stopLeaves()
-	leavesPulseOn = false
-	for _, halo in leafHalos do
-		if halo.Parent then
-			halo.FillTransparency = TutorialConfigs.FILL_MAX
-		end
-	end
-	table.clear(leafHalos)
-	WorldMarker.remove(leavesMarker)
-	leavesMarker, leavesMarkerPart = nil, nil
-end
-
 local function step(dt: number)
 	local now = os.clock()
 	-- EN PREMIER, avant les retours anticipes plus bas : ils sortent des que la porte n'est plus a portee, et les
 	-- feuilles sont a l'autre bout du jardin.
-	pulseLeaves(dt, now)
+	TutorialLeaves.step(dt, now)
 
 	-- LA MACHINE A DEMARRE : la tache est faite, elle passe en gris et la tonte prend sa place en dessous.
 	--
@@ -2532,10 +2440,10 @@ local function step(dt: number)
 		if door then
 			truckMarker = WorldMarker.show(door, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
 			print(`[Tutorial] Marqueur pose sur "{TutorialConfigs.TRUCK_DOOR_NAME}".`)
-		elseif not warnedNoTruckDoor and now - truckWantedAt > TutorialConfigs.TRUCK_DOOR_PATIENCE then
+		elseif not warned.warnedNoTruckDoor and now - truckWantedAt > TutorialConfigs.TRUCK_DOOR_PATIENCE then
 			-- ON NOMME CE QU'ON N'A PAS TROUVE. C'est ce message qui a designe la vraie cause la premiere fois :
 			-- il y avait bien un "DoorBack", mais c'etait le Motor6D du hayon, pas sa part.
-			warnedNoTruckDoor = true
+			warned.warnedNoTruckDoor = true
 			warn(
 				`[Tutorial] Aucune BasePart nommee "{TutorialConfigs.TRUCK_DOOR_NAME}" dans le Workspace : pas `
 					.. "de marqueur sur le camion. Rojo ne synchronise pas le Workspace, elle doit exister dans "
@@ -2558,7 +2466,7 @@ local function step(dt: number)
 			nextTruckImpatientAt = now
 				+ TutorialConfigs.TRUCK_IMPATIENT_EVERY
 				+ math.random() * TutorialConfigs.TRUCK_IMPATIENT_JITTER
-			lastTruckImpatient = playImpatient(TutorialConfigs.TRUCK_IMPATIENT_SOUNDS, lastTruckImpatient)
+			cooldowns.lastTruckImpatient = playImpatient(TutorialConfigs.TRUCK_IMPATIENT_SOUNDS, cooldowns.lastTruckImpatient)
 		end
 	end
 
@@ -2637,12 +2545,12 @@ local function step(dt: number)
 	local carryingBin = CarryUtils.holds(player, "Bin")
 	local binWrongNow = mowerTaskShown and not lawnTaskDone
 	if binWrongNow then
-		if carryingBin and not wasCarryingBin and now >= nextBinScoldAt then
-			nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
+		if carryingBin and not wasCarryingBin and now >= cooldowns.nextBinScoldAt then
+			cooldowns.nextBinScoldAt = now + TutorialConfigs.PUT_BIN_DOWN_COOLDOWN
 			local lines = TutorialConfigs.PUT_BIN_DOWN_SOUNDS
-			local i = pickLine(lines, lastBinScold)
+			local i = pickLine(lines, cooldowns.lastBinScold)
 			if i > 0 then
-				lastBinScold = i
+				cooldowns.lastBinScold = i
 				sayVoice(lines[i])
 			end
 		end
@@ -2675,22 +2583,22 @@ local function step(dt: number)
 			if not saidPullRope then
 				saidPullRope = true
 				sayVoice(TutorialConfigs.PULL_ROPE_SOUND)
-			elseif not wasCarrying and now >= nextRopeAgainAt then
+			elseif not wasCarrying and now >= cooldowns.nextRopeAgainAt then
 				-- IL LA REPREND, toujours sans l'avoir demarree. Il redit de tirer la corde, mais AUTREMENT :
 				-- reentendre mot pour mot ce qu'on vient d'entendre sonne comme une bande qui saute.
 				--
 				-- `not wasCarrying` isole l'instant de la REPRISE. Sans lui, le test serait vrai a chaque image ou
 				-- il tient la machine, et la phrase repartirait en boucle tant qu'il ne la lache pas.
-				nextRopeAgainAt = now + TutorialConfigs.PULL_ROPE_AGAIN_COOLDOWN
+				cooldowns.nextRopeAgainAt = now + TutorialConfigs.PULL_ROPE_AGAIN_COOLDOWN
 				sayVoice(TutorialConfigs.PULL_ROPE_AGAIN_SOUND)
 			end
-		elseif wasCarrying and saidPullRope and now >= nextGrabAgainAt then
+		elseif wasCarrying and saidPullRope and now >= cooldowns.nextGrabAgainAt then
 			-- IL VIENT DE LA REPOSER, alors qu'on venait de lui dire de tirer la corde. Le grand-pere le reprend.
 			--
 			-- ON COMPARE DEUX ETATS plutot que d'ecouter un evenement de repose : le joueur peut lacher la machine
 			-- de trois facons -- le bouton, la mort, un respawn -- et un evenement par cas en laisserait toujours
 			-- un dehors. Un etat qui change les couvre tous, y compris ceux qu'on n'a pas prevus.
-			nextGrabAgainAt = now + TutorialConfigs.GRAB_AGAIN_COOLDOWN
+			cooldowns.nextGrabAgainAt = now + TutorialConfigs.GRAB_AGAIN_COOLDOWN
 			-- ET ON REPOUSSE L'IMPATIENCE. Elle ne peut plus lui couper la parole -- la grogne attend maintenant
 			-- qu'il ait fini -- mais elle tomberait a la seconde ou il se taira : raler juste apres avoir repris
 			-- le joueur, c'est deux reproches d'affilee pour une seule faute.
@@ -2713,7 +2621,7 @@ local function step(dt: number)
 				nextImpatientAt = now
 					+ TutorialConfigs.IMPATIENT_EVERY
 					+ math.random() * TutorialConfigs.IMPATIENT_JITTER
-				lastImpatient = playImpatient(TutorialConfigs.IMPATIENT_SOUNDS, lastImpatient)
+				cooldowns.lastImpatient = playImpatient(TutorialConfigs.IMPATIENT_SOUNDS, cooldowns.lastImpatient)
 			end
 		end
 		wasCarrying = carrying
@@ -2790,14 +2698,14 @@ local function step(dt: number)
 	-- donc on cherchait le probleme du cote de la distance ou du prompt, pas du cote de la replication.
 	if not (door and door.Parent and anchor and anchor.Parent) then
 		door, anchor = nil, nil
-		if now - lastScanAt < TutorialConfigs.RESCAN_INTERVAL then
+		if now - scans.lastScanAt < TutorialConfigs.RESCAN_INTERVAL then
 			return
 		end
-		lastScanAt = now
+		scans.lastScanAt = now
 		door, anchor = findDoor()
 		if not door then
-			if not warnedNoDoor and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
-				warnedNoDoor = true
+			if not warned.warnedNoDoor and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
+				warned.warnedNoDoor = true
 				warn(
 					`[Tutorial] Aucun Model "{TutorialConfigs.DOOR_NAME}" utilisable dans le Workspace : ni halo, `
 						.. "ni prompt. Rojo ne synchronise pas le Workspace, la porte doit exister dans CETTE place."
@@ -2811,8 +2719,8 @@ local function step(dt: number)
 	if not (highlight and highlight.Parent) then
 		local halo = (door :: Model):FindFirstChild(TutorialConfigs.HIGHLIGHT_NAME)
 		highlight = if halo and halo:IsA("Highlight") then halo else nil
-		if not highlight and not warnedNoHighlight and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
-			warnedNoHighlight = true
+		if not highlight and not warned.warnedNoHighlight and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
+			warned.warnedNoHighlight = true
 			warn(
 				`[Tutorial] Porte trouvee mais aucun Highlight "{TutorialConfigs.HIGHLIGHT_NAME}" dedans : elle ne `
 					.. "clignotera pas. Ce Highlight se pose A LA MAIN dans Studio, dans chaque place."
@@ -2872,8 +2780,8 @@ local function step(dt: number)
 	local root = getRoot()
 
 	-- Dit ce que la detection VOIT, pas ce qu'on croit qu'elle voit.
-	if TutorialConfigs.DEBUG and now - lastDebugAt >= TutorialConfigs.DEBUG_INTERVAL then
-		lastDebugAt = now
+	if TutorialConfigs.DEBUG and now - scans.lastDebugAt >= TutorialConfigs.DEBUG_INTERVAL then
+		scans.lastDebugAt = now
 		if not root then
 			print("[Tutorial] pas de HumanoidRootPart (personnage pas encore la)")
 		else
@@ -2889,10 +2797,10 @@ local function step(dt: number)
 	if missionStarted then
 		return
 	end
-	if now - lastPromptAt < TutorialConfigs.PROMPT_INTERVAL then
+	if now - scans.lastPromptAt < TutorialConfigs.PROMPT_INTERVAL then
 		return
 	end
-	lastPromptAt = now
+	scans.lastPromptAt = now
 
 	if not root then
 		hideOurs()
@@ -3005,10 +2913,8 @@ function TutorialController.init()
 				}, nil, function(at)
 					-- LES FEUILLES S'ALLUMENT QUAND IL EN PARLE, pas pendant le compliment : le halo montre ce que
 					-- la phrase designe, au moment ou elle le designe.
-					if at == 2 and not leavesPulseOn then
-						leavesPulseOn = true
-						nextLeafScan = 0
-						print("[Tutorial] Le grand-pere explique les feuilles : les tas au sol respirent, pastille sur le plus proche.")
+					if at == 2 then
+						TutorialLeaves.start()
 					end
 				end)
 			end
@@ -3121,7 +3027,7 @@ function TutorialController.stop()
 	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
-	stopLeaves()
+	TutorialLeaves.stop()
 	hideTalkPrompt()
 	if conn then
 		conn:Disconnect()
@@ -3193,7 +3099,7 @@ function TutorialController.stop()
 	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
-	stopLeaves()
+	TutorialLeaves.stop()
 	hideTalkPrompt()
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil
@@ -3204,11 +3110,11 @@ function TutorialController.stop()
 	lawnTaskShown = false
 	lawnTaskDone = false
 	wasCarryingBin = false
-	nextBinScoldAt = 0
+	cooldowns.nextBinScoldAt = 0
 	nextLawnCountAt = 0
 	wasCarrying = false
-	nextGrabAgainAt = 0
-	nextRopeAgainAt = 0
+	cooldowns.nextGrabAgainAt = 0
+	cooldowns.nextRopeAgainAt = 0
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX

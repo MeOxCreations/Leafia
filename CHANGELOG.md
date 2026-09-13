@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.850 — Le client du didacticiel redemarre (limite des 200 locales)
+
+Le client plantait au chargement : `Out of local registers when trying to allocate nextLeafScan: exceeded limit
+200`. Luau n'accepte que 200 variables locales au premier niveau d'un fichier, et `TutorialController` en avait
+207 depuis l'ajout des feuilles.
+
+- Les feuilles a ramasser (halo + pastille) partent dans leur propre module, `Client/Utils/TutorialLeaves`.
+- Trois familles de variables sont regroupees en tables : les delais de grogne (`cooldowns`), les drapeaux
+  d'avertissement (`warned`), les derniers passages des boucles (`scans`).
+- Aucun changement de comportement.
+
 ## 0.0.849 — Le grand-pere se leve avec sa propre animation
 
 Il ne rejoue plus l'assise a l'envers : il joue `136908373203755` (le lever) de la FIN vers 0. L'assise contient

@@ -1445,6 +1445,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   au demarrage tant qu'il est leve, sinon il part en production et plus personne ne comprend pourquoi le scenario
   ne tient plus.
 
+- **LUAU N'ACCEPTE QUE 200 VARIABLES LOCALES AU PREMIER NIVEAU D'UN FICHIER, et le depasser tue le module ENTIER
+  au chargement** : `Out of local registers when trying to allocate X: exceeded limit 200`. Ni selene ni `rojo
+  build` ne le voient -- l'erreur ne sort qu'au lancement, et comme le module est requis par le bootstrap, tout ce
+  qui suit dans le client meurt avec lui. Le nom cite n'est pas le coupable : c'est simplement la 201e locale, la
+  derniere goutte. Vecu sur `TutorialController` (3000+ lignes, chaque etape du tuto y ajoutait son etat). La
+  sortie n'est pas de raccourcir des noms : une fonctionnalite qui a son etat, son debut et sa fin part dans son
+  propre module, et les familles de variables (delais, drapeaux) se regroupent en tables. Compter se fait en une
+  commande : `grep -c "^local " fichier`. Au-dessus de ~180, extraire AVANT d'ajouter.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
