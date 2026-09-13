@@ -55,6 +55,12 @@ local function resolveDebris(): Model?
 			d.CanTouch = false
 			d.CastShadow = false
 			d.Massless = true
+		elseif d:IsA("Highlight") then
+			-- LE HALO POSE DANS STUDIO DORT PAR DEFAUT. Allume, chaque tas brillerait des qu'il tombe, partout et
+			-- tout le temps -- or il ne sert qu'a un moment precis : quand le didacticiel dit de ramasser. C'est
+			-- le client qui l'allume alors (TutorialController). Les gros tas sont clones des petits : ils
+			-- heritent de ce reglage sans rien faire.
+			d.Enabled = false
 		end
 	end
 	return model

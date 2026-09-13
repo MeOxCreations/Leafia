@@ -37,6 +37,7 @@ local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 -- Pour LIRE l'avancement d'une haie : le serveur pose la fraction taillee sur le modele, et elle se replique.
 -- On ne recompte donc rien de notre cote -- deux comptes finiraient par se contredire.
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 -- VOISIN DIRECT : c'est la seule facon de lui dire de se fermer, et le didacticiel est le seul a savoir QUAND.
 local TruckToolsController = require(script.Parent.TruckToolsController)
@@ -2210,8 +2211,62 @@ local function ensureGrassArea(): BasePart?
 	return grassArea
 end
 
+-- ===== LES FEUILLES A RAMASSER =====
+-- Allume quand le grand-pere commence a expliquer le ramassage, et ne s'eteint plus : une fois les feuilles
+-- ramassees, il n'y a simplement plus de tas a faire briller.
+local leavesPulseOn = false
+local leavesPulseClock = 0
+local leafHalos: { Highlight } = {}
+local nextLeafScan = 0
+
+--- FAIT RESPIRER LE HALO DE CHAQUE TAS DE FEUILLES AU SOL, petits (poses par la taille) et gros (faits au rateau).
+---
+--- LA LISTE EST RELUE A INTERVALLE, le battement ecrit a chaque image. Le rateau fait naitre et disparaitre des
+--- tas : une liste figee au demarrage raterait tous ceux qui arrivent ensuite.
+---
+--- AUCUNE LIMITE A GERER ICI, mais une a connaitre : Roblox n'affiche que 31 `Highlight` a la fois. Une face de
+--- haie en pose une dizaine, on est loin -- ca compterait le jour ou l'on fait briller une haie entiere.
+local function pulseLeaves(dt: number, now: number)
+	if not leavesPulseOn then
+		return
+	end
+	if now >= nextLeafScan then
+		nextLeafScan = now + TutorialConfigs.LEAVES_RESCAN_INTERVAL
+		table.clear(leafHalos)
+		for _, folderName in { HedgeConfigs.STOCK_FOLDER, RakeConfigs.PILE_FOLDER } do
+			local folder = workspace:FindFirstChild(folderName)
+			if folder then
+				for _, d in folder:GetDescendants() do
+					if d:IsA("Highlight") and d.Name == TutorialConfigs.LEAVES_HIGHLIGHT_NAME then
+						table.insert(leafHalos, d)
+					end
+				end
+			end
+		end
+	end
+	leavesPulseClock += dt
+	-- Meme formule que le halo de la porte : un cosinus repart de lui-meme, donc aucune saccade au bouclage.
+	local a = 0.5 - 0.5 * math.cos(leavesPulseClock * math.pi * 2 / TutorialConfigs.PULSE_PERIOD)
+	local fill = TutorialConfigs.FILL_MAX + (TutorialConfigs.FILL_MIN - TutorialConfigs.FILL_MAX) * a
+	for _, halo in leafHalos do
+		if halo.Parent then
+			-- LE SERVEUR LES POSE ETEINTS : on les rallume chez nous seulement, le reglage ne remonte pas.
+			if not halo.Enabled then
+				halo.Enabled = true
+			end
+			if halo.FillColor ~= TutorialConfigs.LEAVES_HIGHLIGHT_FILL then
+				halo.FillColor = TutorialConfigs.LEAVES_HIGHLIGHT_FILL
+			end
+			halo.FillTransparency = fill
+		end
+	end
+end
+
 local function step(dt: number)
 	local now = os.clock()
+	-- EN PREMIER, avant les retours anticipes plus bas : ils sortent des que la porte n'est plus a portee, et les
+	-- feuilles sont a l'autre bout du jardin.
+	pulseLeaves(dt, now)
 
 	-- LA MACHINE A DEMARRE : la tache est faite, elle passe en gris et la tonte prend sa place en dessous.
 	--
@@ -2896,7 +2951,15 @@ function TutorialController.init()
 				sayChain({
 					TutorialConfigs.HAPPY_HEDGE_SOUND,
 					TutorialConfigs.PICKUP_LEAVES_SOUND,
-				})
+				}, nil, function(at)
+					-- LES FEUILLES S'ALLUMENT QUAND IL EN PARLE, pas pendant le compliment : le halo montre ce que
+					-- la phrase designe, au moment ou elle le designe.
+					if at == 2 and not leavesPulseOn then
+						leavesPulseOn = true
+						nextLeafScan = 0
+						print("[Tutorial] Le grand-pere explique les feuilles : les tas au sol respirent en blanc.")
+					end
+				end)
 			end
 		end)
 	end)

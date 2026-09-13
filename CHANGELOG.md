@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.847 — Les feuilles a ramasser respirent en blanc
+
+Quand le grand-pere commence a expliquer le ramassage (`SayHowPickupLeaves`), le `Highlight` pose sous
+`LeafsDebrisGroundType1` bat en blanc sur chaque tas au sol, petits et gros, au meme rythme que la porte et la
+tondeuse.
+
+- LE HALO DORT PAR DEFAUT : `HedgeStockService` l'eteint sur le modele de tas, sinon chaque tas brillerait des
+  qu'il tombe, dans le jeu principal aussi. Les gros tas du rateau, clones des petits, en heritent.
+- C'est le client du didacticiel qui l'allume, chez lui seulement.
+- Il s'allume sur la phrase des feuilles, pas pendant le compliment qui la precede.
+
 ## 0.0.846 — Le menu des outils passe en blanc
 
 Le menu deroulant des outils (bas gauche) est refait en blanc, dans la famille des cartes du camion.

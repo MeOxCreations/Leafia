@@ -994,6 +994,17 @@ return {
 	-- il ne l'ecouterait pas.
 	HAPPY_HEDGE_SOUND = voice("Oldman_scene_speech_HappyForCutHedge"),
 	PICKUP_LEAVES_SOUND = voice("Oldman_scene_speech_SayHowPickupLeaves"),
+	-- ===== LES FEUILLES A RAMASSER RESPIRENT EN BLANC =====
+	-- Des qu'il commence a expliquer le ramassage, le `Highlight` pose dans Studio sous `LeafsDebrisGroundType1`
+	-- bat sur chaque tas au sol -- petits et gros. Meme battement que la porte et la tondeuse (FILL_MIN, FILL_MAX,
+	-- PULSE_PERIOD) : un seul langage pour "c'est ca qu'on cherche".
+	--
+	-- BLANC : une couleur teinterait les feuilles, le blanc les eclaire sans changer ce qu'elles sont.
+	LEAVES_HIGHLIGHT_NAME = "Highlight",
+	LEAVES_HIGHLIGHT_FILL = Color3.fromRGB(255, 255, 255),
+	-- On relit la liste des tas a ce rythme, pas a chaque image : le rateau en cree et en detruit, mais pas 60 fois
+	-- par seconde, et balayer deux dossiers par image ne sert a rien.
+	LEAVES_RESCAN_INTERVAL = 0.4,
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.
