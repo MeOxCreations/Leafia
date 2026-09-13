@@ -285,14 +285,20 @@ local function grab(player: Player, model: Model)
 	-- en plein geste.
 	local scaleNow = model:GetScale()
 	local authored = BinConfigs.CARRY_AUTHORED_SCALE
+	local shift = Vector3.zero
 	if authored > 0 and math.abs(scaleNow - authored) > 1e-3 then
 		local center = model:GetBoundingBox().Position
 		local r = root.CFrame:PointToObjectSpace(center)
-		local shift = r * (1 - authored / scaleNow)
+		shift = r * (1 - authored / scaleNow)
+	end
+	-- LA DESCENTE EN PLUS se range dans le meme `C1` : monter la racine dans son propre repere, c'est descendre le
+	-- seau d'autant (la position vaut `... * C1^-1`).
+	shift += Vector3.new(0, BinConfigs.CARRY_DROP, 0)
+	if shift.Magnitude > 1e-3 then
 		joint.C1 = CFrame.new(shift)
 		print(
 			`[BinCarryService] Seau a l'echelle {string.format("%.2f", scaleNow)} (anim faite a {authored}) : `
-				.. `racine recalee de {string.format("%.2f", shift.Magnitude)} studs.`
+				.. `racine recalee de {string.format("%.2f", shift.Magnitude)} studs, dont {BinConfigs.CARRY_DROP} de descente.`
 		)
 	end
 	joint.Parent = anchorPart

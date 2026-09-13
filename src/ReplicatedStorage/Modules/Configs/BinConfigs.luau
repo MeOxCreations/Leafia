@@ -118,6 +118,10 @@ return {
 	-- A REGLER A L'OEIL si besoin : seau porte trop BAS -> monter vers 2 (a 2, plus aucune correction) ; encore
 	-- trop HAUT -> descendre.
 	CARRY_AUTHORED_SCALE = 1,
+	-- ET DE COMBIEN ON LE DESCEND EN PLUS, en studs, le long de l'axe vertical du seau. Le recalage ci-dessus
+	-- remet le CENTRE du seau a sa place ; ce qui reste d'ecart vient de la forme du seau (la ou tombent les mains
+	-- sur le bord), et ca ne se calcule pas -- ca se regle a l'oeil. Positif = plus bas, negatif = plus haut.
+	CARRY_DROP = 0.4,
 	-- Nom du Motor6D cree. Sert a le RETROUVER et a le lire dans l'Explorer, RIEN D'AUTRE.
 	--
 	-- Il ne joue AUCUN role dans l'animation, contrairement a ce que disaient les versions 0.0.430 / 0.0.431. Une

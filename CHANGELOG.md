@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.853 — Le seau porte descend encore un peu
+
+Toujours un peu haut apres le recalage a l'echelle. Nouveau reglage `BinConfigs.CARRY_DROP` (0.4 stud) : une
+descente en plus le long de l'axe du seau, dans le meme `C1`. Le recalage remet le centre du seau a sa place ; ce
+qui reste d'ecart vient de sa forme et se regle a l'oeil. Positif = plus bas.
+
 ## 0.0.852 — Le seau se porte seul, et a la bonne hauteur
 
 - PLUS DE RATEAU EN PORTANT LE SEAU. `BinConfigs.ALLOW_TOOL_WHILE_CARRIED` repasse a `false` : prendre le seau
