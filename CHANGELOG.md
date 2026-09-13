@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.851 — Le grand-pere ne bondit plus en se relevant
+
+A la fin du lever, le grand-pere se teleportait de quelques studs. Assis, son corps n'est plus sur sa RootPart :
+l'assise l'a tourne de 180 degres ET l'a fait sauter en arriere sur le banc. La version d'avant tournait la part
+de 180 degres sur place : le cap etait bon, mais le decalage du saut passait de l'autre cote.
+
+- La RootPart est maintenant replacee SOUS LE CORPS, mesure prise sur le joint racine (`corps * C1 * C0^-1`) :
+  position au sol et cap, dans la meme image que l'arret de l'animation.
+- La mesure n'est crue que si le corps est tourne d'au moins 90 degres (`OLDMAN_STAND_MIN_MEASURED_TURN`) ; sinon
+  retour au demi-tour sur place, avec un warn qui le dit.
+- La console dit ce qui a ete mesure : `[Tutorial] Lever : la RootPart rejoint le corps (tour X deg, deplacement Y studs)`.
+
 ## 0.0.850 — Le client du didacticiel redemarre (limite des 200 locales)
 
 Le client plantait au chargement : `Out of local registers when trying to allocate nextLeafScan: exceeded limit

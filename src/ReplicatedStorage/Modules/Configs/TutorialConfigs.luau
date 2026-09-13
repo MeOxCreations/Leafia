@@ -978,11 +978,14 @@ return {
 	OLDMAN_STAND_SPEED = 1,
 	-- Si l'animation n'arrive pas dans ce delai, il se remet debout sans geste plutot que de rester assis a jamais.
 	OLDMAN_STAND_LOAD_TIMEOUT = 5,
-	-- LE DEMI-TOUR INVISIBLE A LA FIN, en degres. Assis, son CORPS est tourne de 180 par rapport a sa RootPart --
-	-- c'est l'assise qui l'a tourne, pas la part. Quand la piste de lever s'arrete, le corps se remettrait sur la
-	-- part, face au banc, d'un coup. On tourne la part du meme angle dans la meme image : a l'ecran rien ne bouge.
+	-- A LA FIN DU LEVER, LA ROOTPART EST REPLACEE SOUS LE CORPS, mesure prise sur le joint racine (voir
+	-- `standOldMan`) : cap ET position, donc ni demi-tour ni bond a l'ecran.
 	--
-	-- A REGLER A L'OEIL : s'il claque face au banc a la fin, mettre 0 ; s'il fait un saut de cote, le dire.
+	-- LA MESURE N'EST CRUE QU'AU-DELA DE CET ANGLE, en degres. Le corps assis est tourne d'environ 180 par rapport a
+	-- sa part : une mesure sous cet angle veut dire que le serveur a lu la pose de repos, pas la pose animee.
+	OLDMAN_STAND_MIN_MEASURED_TURN = 90,
+	-- LE SECOURS si la mesure est rejetee : un demi-tour sur place, en degres. Le cap est bon, mais le decalage du
+	-- saut sur le banc passe de l'autre cote -- c'est le petit bond de quelques studs vu a la premiere version.
 	OLDMAN_STAND_SNAP_TURN = 180,
 	-- UN PIVOT DOUX EN PLUS, apres s'etre leve, en degres depuis son cap. 0 : l'animation le leve deja dans le bon
 	-- sens (c'etait 180 quand on rejouait l'assise a l'envers).

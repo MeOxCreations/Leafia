@@ -906,16 +906,62 @@ local function standOldMan()
 		end
 		local model = body
 		local root = if model then model:FindFirstChild("HumanoidRootPart") else nil
-		-- LE DEMI-TOUR INVISIBLE, dans la MEME image que l'arret de la piste. Assis, son corps est tourne de 180
-		-- degres par rapport a sa RootPart (c'est l'assise qui l'a fait tourner, pas la part). L'animation de
-		-- lever garde ce decalage jusqu'au bout : l'arreter sans rien faire ramenerait le corps sur la RootPart,
-		-- face au banc, d'un coup. On tourne donc la RootPart du meme angle a l'instant ou la piste lache : le
-		-- corps ne bouge pas a l'ecran, et la part est de nouveau alignee sur lui.
-		if model and root and root:IsA("BasePart") and TutorialConfigs.OLDMAN_STAND_SNAP_TURN ~= 0 then
+		-- LA ROOTPART VIENT SE REMETTRE SOUS LE CORPS, dans la MEME image que l'arret de la piste.
+		--
+		-- POURQUOI. Assis, son corps n'est plus sur sa RootPart : l'assise l'a TOURNE de 180 degres et l'a fait
+		-- SAUTER en arriere sur le banc -- la part, elle, n'a pas bouge. L'animation de lever garde ce decalage
+		-- jusqu'au bout ; l'arreter sans rien faire ramenerait le corps sur la part d'un coup : un demi-tour et un
+		-- bond de quelques studs.
+		--
+		-- ON MESURE AU LIEU DE DEVINER. La premiere version tournait la part de 180 degres SUR PLACE : le demi-tour
+		-- etait juste, mais le decalage du saut passait de l'autre cote, et le joueur voyait le grand-pere se
+		-- teleporter de quelques studs. Le joint racine dit exactement ou le corps est : sa pose de repos est
+		-- `RootPart * C0 * C1^-1`, donc la RootPart qui la ferait tomber sur la pose ANIMEE du moment vaut
+		-- `corps * C1 * C0^-1`. On n'en garde que la position au sol et le cap : un Humanoid tient sa RootPart
+		-- droite, et la hauteur est la sienne.
+		local placed = false
+		if model and root and root:IsA("BasePart") then
 			local part = root :: BasePart
-			local turned = part.CFrame * CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_STAND_SNAP_TURN), 0)
-			-- UN ECART MONDE, pas un pivot : `GetPivot` suit la boite englobante (voir `faceOldManTo`).
-			model:PivotTo(turned * part.CFrame:Inverse() * model:GetPivot())
+			local joint: Motor6D? = nil
+			for _, d in model:GetDescendants() do
+				if d:IsA("Motor6D") and d.Part0 == part and d.Part1 then
+					joint = d
+					break
+				end
+			end
+			if joint then
+				local j = joint :: Motor6D
+				local target = (j.Part1 :: BasePart).CFrame * j.C1 * j.C0:Inverse()
+				local look = Vector3.new(target.LookVector.X, 0, target.LookVector.Z)
+				local was = Vector3.new(part.CFrame.LookVector.X, 0, part.CFrame.LookVector.Z)
+				if look.Magnitude > 1e-3 and was.Magnitude > 1e-3 then
+					local turn = math.deg(math.acos(math.clamp(look.Unit:Dot(was.Unit), -1, 1)))
+					local ground = Vector3.new(target.Position.X, part.Position.Y, target.Position.Z)
+					local shift = (ground - part.Position).Magnitude
+					-- LA MESURE N'EST CRUE QUE SI ELLE A L'AIR VRAIE. Assis puis leve sans demi-tour, le corps DOIT etre
+					-- tourne loin de sa part. Un ecart presque nul veut dire que le serveur a lu la pose de repos et
+					-- pas la pose animee (le journal a deja vu une lecture de joint mentir) : on retombe alors sur le
+					-- demi-tour sur place, qui a au moins le bon cap.
+					if turn >= TutorialConfigs.OLDMAN_STAND_MIN_MEASURED_TURN then
+						local placedAt = CFrame.lookAt(ground, ground + look.Unit)
+						-- UN ECART MONDE, pas un pivot : `GetPivot` suit la boite englobante (voir `faceOldManTo`).
+						model:PivotTo(placedAt * part.CFrame:Inverse() * model:GetPivot())
+						placed = true
+						print(
+							`[Tutorial] Lever : la RootPart rejoint le corps (tour {math.floor(turn)} deg, deplacement {string.format("%.2f", shift)} studs).`
+						)
+					else
+						warn(
+							`[Tutorial] Lever : corps mesure a {math.floor(turn)} deg de sa RootPart, trop peu pour etre la pose animee. `
+								.. `Demi-tour sur place de {TutorialConfigs.OLDMAN_STAND_SNAP_TURN} deg a la place.`
+						)
+					end
+				end
+			end
+			if not placed and TutorialConfigs.OLDMAN_STAND_SNAP_TURN ~= 0 then
+				local turned = part.CFrame * CFrame.Angles(0, math.rad(TutorialConfigs.OLDMAN_STAND_SNAP_TURN), 0)
+				model:PivotTo(turned * part.CFrame:Inverse() * model:GetPivot())
+			end
 		end
 		if stand then
 			(stand :: AnimationTrack):Stop(0)
