@@ -2218,6 +2218,12 @@ local leavesPulseOn = false
 local leavesPulseClock = 0
 local leafHalos: { Highlight } = {}
 local nextLeafScan = 0
+-- La pastille " ! " et la part qu'elle suit. UNE seule, sur un tas a la fois : dix pastilles sur dix tas ne
+-- designent plus rien.
+local leavesMarker: Frame? = nil
+local leavesMarkerPart: BasePart? = nil
+-- Le nom des petits tas : dernier element du chemin d'asset, lu et pas recopie (meme regle que RakeService).
+local SMALL_LEAVES_NAME = HedgeConfigs.STOCK_DEBRIS_ASSET[#HedgeConfigs.STOCK_DEBRIS_ASSET]
 
 --- FAIT RESPIRER LE HALO DE CHAQUE TAS DE FEUILLES AU SOL, petits (poses par la taille) et gros (faits au rateau).
 ---
@@ -2233,14 +2239,45 @@ local function pulseLeaves(dt: number, now: number)
 	if now >= nextLeafScan then
 		nextLeafScan = now + TutorialConfigs.LEAVES_RESCAN_INTERVAL
 		table.clear(leafHalos)
+		local piles: { Model } = {}
 		for _, folderName in { HedgeConfigs.STOCK_FOLDER, RakeConfigs.PILE_FOLDER } do
 			local folder = workspace:FindFirstChild(folderName)
 			if folder then
 				for _, d in folder:GetDescendants() do
 					if d:IsA("Highlight") and d.Name == TutorialConfigs.LEAVES_HIGHLIGHT_NAME then
 						table.insert(leafHalos, d)
+					elseif d:IsA("Model") and (d.Name == SMALL_LEAVES_NAME or d.Name == RakeConfigs.PILE_NAME) then
+						table.insert(piles, d)
 					end
 				end
+			end
+		end
+
+		-- LA PASTILLE NE CHANGE DE TAS QUE QUAND LE SIEN A DISPARU. Suivre "le plus proche" a chaque relecture la
+		-- ferait sauter d'un tas a l'autre des que le joueur passe entre deux -- une pastille qui hesite ne
+		-- designe rien. Le tas ramasse (fondu dans un gros tas, avale par le seau), elle passe au plus proche.
+		local current = leavesMarkerPart
+		if not (current and current.Parent) then
+			WorldMarker.remove(leavesMarker)
+			leavesMarker, leavesMarkerPart = nil, nil
+			local character = player.Character
+			local root = character and character:FindFirstChild("HumanoidRootPart")
+			local from = if root and root:IsA("BasePart") then root.Position else nil
+			local best: BasePart? = nil
+			local bestDist = math.huge
+			for _, pile in piles do
+				-- UNE PART, pas le modele : la pastille s'accroche a une part. Les feuilles sont des MeshParts.
+				local part = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart", true)
+				if part then
+					local dist = if from then ((part :: BasePart).Position - from).Magnitude else 0
+					if dist < bestDist then
+						best, bestDist = part, dist
+					end
+				end
+			end
+			if best then
+				leavesMarkerPart = best
+				leavesMarker = WorldMarker.show(best, Vector3.new(0, TutorialConfigs.LEAVES_MARKER_UP, 0))
 			end
 		end
 	end
@@ -2260,6 +2297,20 @@ local function pulseLeaves(dt: number, now: number)
 			halo.FillTransparency = fill
 		end
 	end
+end
+
+--- Eteint les feuilles : plus de battement, plus de pastille. Le halo est ECRIT eteint plutot qu'abandonne, sinon
+--- il resterait fige a mi-battement.
+local function stopLeaves()
+	leavesPulseOn = false
+	for _, halo in leafHalos do
+		if halo.Parent then
+			halo.FillTransparency = TutorialConfigs.FILL_MAX
+		end
+	end
+	table.clear(leafHalos)
+	WorldMarker.remove(leavesMarker)
+	leavesMarker, leavesMarkerPart = nil, nil
 end
 
 local function step(dt: number)
@@ -2957,7 +3008,7 @@ function TutorialController.init()
 					if at == 2 and not leavesPulseOn then
 						leavesPulseOn = true
 						nextLeafScan = 0
-						print("[Tutorial] Le grand-pere explique les feuilles : les tas au sol respirent en blanc.")
+						print("[Tutorial] Le grand-pere explique les feuilles : les tas au sol respirent, pastille sur le plus proche.")
 					end
 				end)
 			end
@@ -3070,6 +3121,7 @@ function TutorialController.stop()
 	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
+	stopLeaves()
 	hideTalkPrompt()
 	if conn then
 		conn:Disconnect()
@@ -3141,6 +3193,7 @@ function TutorialController.stop()
 	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
+	stopLeaves()
 	hideTalkPrompt()
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil

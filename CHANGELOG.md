@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.848 — La pastille sur les feuilles au sol
+
+En meme temps que le halo blanc, la pastille " ! " se pose sur le tas de feuilles le plus proche du joueur.
+
+- UNE SEULE PASTILLE, sur un tas a la fois : dix pastilles sur dix tas ne designent plus rien.
+- ELLE NE CHANGE DE TAS QUE QUAND LE SIEN DISPARAIT (fondu dans un gros tas, avale par le seau) : suivre le plus
+  proche en continu la ferait sauter d'un tas a l'autre. Plus de tas, plus de pastille.
+- Hauteur reglable : `TutorialConfigs.LEAVES_MARKER_UP` (3 studs, les tas sont au ras du sol).
+
 ## 0.0.847 — Les feuilles a ramasser respirent en blanc
 
 Quand le grand-pere commence a expliquer le ramassage (`SayHowPickupLeaves`), le `Highlight` pose sous

@@ -1005,6 +1005,9 @@ return {
 	-- On relit la liste des tas a ce rythme, pas a chaque image : le rateau en cree et en detruit, mais pas 60 fois
 	-- par seconde, et balayer deux dossiers par image ne sert a rien.
 	LEAVES_RESCAN_INTERVAL = 0.4,
+	-- LA PASTILLE SUR LES FEUILLES, au-dessus du tas le plus proche du joueur. Bas : un tas de feuilles est au ras
+	-- du sol, et une pastille a six studs flotterait sans qu'on voie ce qu'elle designe.
+	LEAVES_MARKER_UP = 3,
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.
