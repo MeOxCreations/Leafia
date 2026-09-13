@@ -590,6 +590,10 @@ return {
 	-- UNE SEULE FOIS. Le moteur peut caler et repartir ; le feliciter a chaque fois viderait la phrase de ce
 	-- qu'elle dit.
 	PERFECT_SOUND = voice("Oldman_scene_speech_Perfect"),
+	-- ET IL L'ENVOIE AU TRAVAIL, juste derriere : "va tondre cette pelouse pour moi". Le "Perfect" dit qu'il a
+	-- reussi, celle-ci dit ce qu'on attend de lui ensuite -- sans elle, le moteur tourne et plus personne ne parle
+	-- du but. Enchainee sur la FIN reelle du "Perfect" (sayChain), jamais sur une duree ecrite.
+	MOW_THAT_LAWN_SOUND = voice("Oldman_scene_speech_MowThatLawn"),
 	-- ET S'IL PREND LE SEAU alors qu'on lui demande de tondre : le grand-pere lui dit de le reposer.
 	--
 	-- POURQUOI CA COMPTE. Un joueur qui attrape le mauvais outil ne sait pas qu'il s'est trompe : rien ne le lui

@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.845 — Le grand-pere envoie tondre apres le "Perfect"
+
+Quand la tondeuse demarre, le grand-pere dit "Perfect" puis enchaine sur `Oldman_scene_speech_MowThatLawn` ("va
+tondre cette pelouse pour moi"). La seconde replique part sur la fin reelle de la premiere, pas sur une duree
+ecrite. Une seule fois, comme le "Perfect".
+
 ## 0.0.844 — Le camion reste ferme tant que le grand-pere explique
 
 Les boutons TAKE etaient verts pendant la replique du grand-pere : l'interrupteur de test `TEST_FREE_TOOLS`,

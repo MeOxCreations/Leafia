@@ -2645,7 +2645,8 @@ local function step(dt: number)
 		mowerMarker, mowerMarkerPart = nil, nil
 		-- IL EST CONTENT, et c'est la seule fois du tuto. On le dit ICI, a l'instant ou le moteur prend : la
 		-- tache passe en gris dans le meme geste, donc l'image et la voix disent la meme chose.
-		sayVoice(TutorialConfigs.PERFECT_SOUND)
+		-- PUIS IL L'ENVOIE TONDRE, a la suite : la seconde replique part sur la fin reelle de la premiere.
+		sayChain({ TutorialConfigs.PERFECT_SOUND, TutorialConfigs.MOW_THAT_LAWN_SOUND })
 		-- ET ON LUI DIT OU ALLER. La touche G allume l'herbe qui reste a couper, mais rien ne le disait : il pousse
 		-- sa machine sans savoir ou tondre. Apres la tache, pas avec elle -- deux interfaces dans la meme image se
 		-- lisent comme du bruit.
