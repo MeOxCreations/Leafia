@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.857 — Interrupteur de test : tous les outils deverrouilles
+
+- `TutorialConfigs.TEST_FREE_TOOLS` repasse a `true` : seau et tondeuse utilisables des le spawn, benne du camion
+  ouverte et boutons TAKE actifs.
+- L'interrupteur couvre aussi la TONDEUSE FINIE : en mode test, finir la pelouse ne la verrouille plus.
+- A REMETTRE A `false` AVANT DE PUBLIER. Le serveur le rappelle dans la console a chaque demarrage.
+
 ## 0.0.856 — Une pastille montre ou sont les outils sur le terrain
 
 Le joueur ne cherche plus ses outils.

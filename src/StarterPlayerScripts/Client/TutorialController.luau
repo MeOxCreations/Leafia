@@ -2287,7 +2287,10 @@ local function step(dt: number)
 					end
 					-- ET LA TONDEUSE EST FINIE POUR LUI. La reprendre ne mene nulle part : un joueur qui la
 					-- repousse sur une pelouse deja nette cherche pendant une minute ce qu'il a rate.
-					player:SetAttribute(MowConfigs.DONE_ATTRIBUTE, true)
+					-- SAUF EN MODE TEST : l'interrupteur promet des outils libres, tondeuse comprise.
+					if not TutorialConfigs.TEST_FREE_TOOLS then
+						player:SetAttribute(MowConfigs.DONE_ATTRIBUTE, true)
+					end
 				end
 			end
 		end
