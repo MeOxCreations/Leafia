@@ -14,6 +14,7 @@ local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local HedgeCellService = require(script.Parent.HedgeCellService)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
+local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
@@ -741,6 +742,79 @@ local tutorialHedge: BasePart? = nil
 local sitTrack: AnimationTrack? = nil
 local sitIdleTrack: AnimationTrack? = nil
 
+-- ===== LES FEUILLES AU SOL =====
+-- Quand il se leve, il demande de ramasser les feuilles. Le SERVEUR les compte et pose le compte sur le joueur :
+-- avec le streaming, un client qui s'eloigne des tas ne les recoit plus et en compterait zero.
+local SMALL_LEAVES = HedgeConfigs.STOCK_DEBRIS_ASSET[#HedgeConfigs.STOCK_DEBRIS_ASSET]
+local leavesConn: RBXScriptConnection? = nil
+
+--- Feuilles encore au sol : un petit tas vaut une feuille, un gros tas vaut son compte.
+---
+--- MEME REGLE QUE LeafCollectService : un gros tas sans compte vaut UNE feuille, jamais zero. Il existe, donc le
+--- seau l'avalera -- le compter zero annoncerait le jardin propre avec un tas encore visible.
+local function leavesOnGround(): number
+	local count = 0
+	local stocks = Workspace:FindFirstChild(HedgeConfigs.STOCK_FOLDER)
+	if stocks then
+		for _, d in stocks:GetDescendants() do
+			if d:IsA("Model") and d.Name == SMALL_LEAVES then
+				count += 1
+			end
+		end
+	end
+	local piles = Workspace:FindFirstChild(RakeConfigs.PILE_FOLDER)
+	if piles then
+		for _, child in piles:GetChildren() do
+			if child:IsA("Model") and child.Name == RakeConfigs.PILE_NAME then
+				local raw = child:GetAttribute(RakeConfigs.PILE_COUNT_ATTRIBUTE)
+				count += if typeof(raw) == "number" then math.max(math.floor(raw :: number), 1) else 1
+			end
+		end
+	end
+	return count
+end
+
+--- Compte les feuilles jusqu'a ce qu'il n'en reste plus, et publie le compte sur le joueur. S'arrete tout seul a
+--- zero, ou quand le joueur part.
+local function watchLeaves(player: Player)
+	if leavesConn then
+		return
+	end
+	local peak = 0
+	local nextAt = 0
+	local function finish()
+		local conn = leavesConn
+		leavesConn = nil
+		if conn then
+			conn:Disconnect()
+		end
+	end
+	leavesConn = RunService.Heartbeat:Connect(function()
+		local now = os.clock()
+		if now < nextAt then
+			return
+		end
+		nextAt = now + TutorialConfigs.LEAVES_RESCAN_INTERVAL
+		if not player.Parent then
+			finish()
+			return
+		end
+		local left = leavesOnGround()
+		peak = math.max(peak, left)
+		if player:GetAttribute(TutorialConfigs.LEAVES_PEAK_ATTRIBUTE) ~= peak then
+			player:SetAttribute(TutorialConfigs.LEAVES_PEAK_ATTRIBUTE, peak)
+		end
+		if player:GetAttribute(TutorialConfigs.LEAVES_LEFT_ATTRIBUTE) ~= left then
+			player:SetAttribute(TutorialConfigs.LEAVES_LEFT_ATTRIBUTE, left)
+		end
+		if left == 0 then
+			finish()
+			print(`[Tutorial] Plus une feuille au sol (jusqu'a {peak}) : le ramassage est fini.`)
+		end
+	end)
+	print(`[Tutorial] On compte les feuilles au sol pour {player.Name}.`)
+end
+
 -- LA HAIE EST PREPAREE : TOUTES SES FACES SONT DEJA NETTES, SAUF UNE.
 --
 -- POURQUOI. C'est la premiere haie de sa vie. Faire le tour complet pour apprendre un geste transforme une
@@ -987,6 +1061,11 @@ local function standOldMan()
 		local bench = benchRemote
 		if owner and bench then
 			bench:FireClient(owner, "stand")
+		end
+		-- ET ON COMMENCE A COMPTER LES FEUILLES : il va demander de les ramasser, et c'est ce compte qui dira quand
+		-- c'est fini. Lance des maintenant, le compte est deja la quand la tache s'affiche.
+		if owner then
+			watchLeaves(owner)
 		end
 	end
 

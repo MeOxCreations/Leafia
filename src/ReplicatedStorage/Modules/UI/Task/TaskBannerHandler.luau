@@ -583,13 +583,19 @@ end
 --- C'est ce qui permet une LISTE qui s'allonge : la tache finie reste en gris au-dessus de la suivante. Passer
 --- par `show` a la place effacerait tout et rejouerait l'arrivee de chaque ligne -- le joueur verrait sa tache
 --- terminee disparaitre puis revenir, ce qui ressemble a un bug.
-function TaskBannerHandler.add(entry: TaskConfigs.Task)
+---
+--- Rend le NUMERO de la ligne, a passer a `setProgress` / `setDone`. Un appelant qui arrive tard dans la liste
+--- n'a pas a deviner combien de taches sont passees avant lui : un numero ecrit en dur se decale des qu'on en
+--- ajoute une plus haut.
+function TaskBannerHandler.add(entry: TaskConfigs.Task): number?
 	if not build() then
 		warn("[TaskBanner] Pas de PlayerGui : aucun objectif ne s'affichera.")
-		return
+		return nil
 	end
-	addRow(entry, #rows + 1, 0)
+	local index = #rows + 1
+	addRow(entry, index, 0)
 	startFill()
+	return index
 end
 
 --- Grise une tache : elle est faite. Sa jauge se remplit, ses couleurs s'eteignent, elle reste a l'ecran.

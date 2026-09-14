@@ -1013,6 +1013,40 @@ return {
 	-- LA PASTILLE SUR LES FEUILLES, au-dessus du tas le plus proche du joueur. Bas : un tas de feuilles est au ras
 	-- du sol, et une pastille a six studs flotterait sans qu'on voie ce qu'elle designe.
 	LEAVES_MARKER_UP = 3,
+	-- LA TACHE DES FEUILLES, ajoutee pendant qu'il en parle. MARRON : la teinte de ce qu'on ramasse dans
+	-- TaskConfigs -- le vert est pris par la tonte, le bleu par les outils.
+	LEAVES_TASK_TITLE = "PICK UP THE LEAVES",
+	LEAVES_TASK_REWARD = "",
+	LEAVES_TASK_CURRENCY = "Coins",
+	LEAVES_TASK_ICON = "Leaves",
+	LEAVES_TASK_TINT = "Brown",
+	LEAVES_TASK_DELAY = 0.9,
+	-- COMBIEN DE FEUILLES RESTENT AU SOL, pose sur le JOUEUR par le serveur.
+	--
+	-- COMPTE PAR LE SERVEUR, jamais par le client. Avec le streaming, un client qui s'eloigne des tas ne les recoit
+	-- plus : il en compterait zero et croirait le jardin propre. Le serveur voit tout, et c'est lui qui les detruit.
+	--
+	-- `PEAK` est le plus haut compte vu : la jauge part de lui. Pas du premier compte -- tailler encore apres coup
+	-- fait tomber de nouveaux tas, et une jauge qui repart en arriere se lit comme un bug.
+	LEAVES_LEFT_ATTRIBUTE = "LeafiaTutorialLeavesLeft",
+	LEAVES_PEAK_ATTRIBUTE = "LeafiaTutorialLeavesPeak",
+
+	-- ===== LE CADEAU : SON ENTREPRISE =====
+	-- Les feuilles ramassees, la pastille passe sur lui et le badge PARLER revient. Le joueur vient le voir : il lui
+	-- fait face et lui donne son entreprise.
+	--
+	-- EN TEXTE SEUL pour l'instant : les voix ne sont pas enregistrees. SANS `hold`, donc le joueur tape pour
+	-- avancer -- sans voix, rien ne dit a quelle vitesse lire, et un enfant lit moins vite qu'une duree devinee.
+	-- Le jour ou les voix existent, on ajoute les `hold` comme dans SPEECH2_LINES.
+	GIFT_LINES = {
+		{ text = "Well done, lad. Now listen... I've got something for you.", emotion = "happy" },
+		{ text = "My business!", emotion = "happy" },
+		{ text = "She's not what she used to be...", emotion = "sad" },
+		{ text = "...but I reckon you'll bring her back.", emotion = "wink" },
+	},
+	-- Duree de son geste d'explication, en secondes. Devinee : sans voix, rien ne mesure combien de temps il parle.
+	GIFT_TALK_SECONDS = 8,
+	GIFT_ACTION_NAME = "LeafiaTutorialGift",
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
 	-- il ne l'accompagne pas. Ici c'est LUI qui attend -- il n'avance que tant que le joueur reste avec lui.

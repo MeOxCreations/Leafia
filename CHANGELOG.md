@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.854 — Les feuilles ramassees, le grand-pere donne son entreprise
+
+La suite du didacticiel apres la haie. Avant, le grand-pere expliquait les feuilles et plus rien ne se passait.
+
+- UNE TACHE "PICK UP THE LEAVES" (icone feuilles, marron) arrive pendant qu'il en parle. Sa jauge suit les
+  feuilles qui restent au sol.
+- LE SERVEUR COMPTE LES FEUILLES (`TutorialService`, des qu'il se leve du banc) : un petit tas vaut 1, un gros tas
+  vaut son compte. Il pose `LeafiaTutorialLeavesLeft` et `LeafiaTutorialLeavesPeak` sur le joueur. Pas le client :
+  avec le streaming, un client loin des tas ne les recoit plus et en compterait zero.
+- A ZERO, la tache passe en gris, les halos s'eteignent, et la pastille passe sur le grand-pere avec le badge
+  TALK (mains libres, comme apres la tonte).
+- IL DONNE SON ENTREPRISE, en texte seul (voix pas encore enregistrees) : 4 lignes dans
+  `TutorialConfigs.GIFT_LINES`, qu'on avance en tapant. Il se tourne vers le joueur et gesticule.
+- Le choix du nom et le depart en ville ne sont PAS branches : la console le dit a la fin du texte.
+- `TaskBannerHandler.add` rend maintenant le numero de la ligne.
+- Nouveau module `Client/Utils/TutorialGift` (le controller du tuto est a 190 variables locales sur 200).
+
+Rien a poser dans Studio.
+
 ## 0.0.853 — Le seau porte descend encore un peu
 
 Toujours un peu haut apres le recalage a l'echelle. Nouveau reglage `BinConfigs.CARRY_DROP` (0.4 stud) : une

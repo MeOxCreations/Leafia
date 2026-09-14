@@ -1,13 +1,13 @@
 --!strict
--- LES FEUILLES A RAMASSER, dans le didacticiel : chaque tas au sol respire en blanc, et une pastille " ! " se pose
--- sur le plus proche du joueur.
+-- LES FEUILLES A RAMASSER, dans le didacticiel : chaque tas au sol respire en blanc, une pastille " ! " se pose
+-- sur le plus proche du joueur, et une tache avec sa jauge dit combien il en reste.
 --
 -- A PART DE TutorialController, et pas par gout du rangement : Luau n'accepte que 200 variables locales au premier
 -- niveau d'un fichier, et le didacticiel les avait atteintes -- le client entier refusait de demarrer. Une
 -- fonctionnalite qui a son etat, son debut et sa fin tient dans son propre module.
 --
--- ALLUME QUAND LE GRAND-PERE EN PARLE (`start`), et ne s'eteint plus seul : une fois les feuilles ramassees, il n'y a
--- simplement plus de tas a faire briller.
+-- ALLUME QUAND LE GRAND-PERE EN PARLE (`start`). FINI quand plus une feuille ne reste au sol : le serveur le compte
+-- et le pose sur le joueur, on ne fait que le lire.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -16,6 +16,8 @@ local Workspace = game:GetService("Workspace")
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
+local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
+local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
 
 local TutorialLeaves = {}
@@ -33,14 +35,41 @@ local nextScan = 0
 -- plus rien.
 local marker: Frame? = nil
 local markerPart: BasePart? = nil
+-- LA TACHE. `taskReady` passe a vrai une fois l'ajout TENTE, meme rate : sans PlayerGui la ligne n'existe pas, et
+-- attendre son numero bloquerait le didacticiel pour toujours.
+local taskIndex: number? = nil
+local taskReady = false
+local onDoneFn: (() -> ())? = nil
+-- Jeton de partie : le delai d'ajout de la tache ne doit rien poser dans une partie arretee entre-temps.
+local token = 0
 
---- Allume les feuilles. Idempotent : le relancer ne remet pas le battement a zero.
-function TutorialLeaves.start()
+--- Allume les feuilles. `onDone` est appele une fois, quand il ne reste plus une feuille au sol.
+---
+--- Idempotent : le relancer ne remet pas le battement a zero et n'ajoute pas une deuxieme tache.
+function TutorialLeaves.start(onDone: (() -> ())?)
 	if on then
 		return
 	end
 	on = true
 	nextScan = 0
+	onDoneFn = onDone
+	token += 1
+	local myToken = token
+	-- LA TACHE ARRIVE PENDANT QU'IL PARLE, pas avant lui : c'est sa phrase qui la justifie.
+	task.delay(TutorialConfigs.LEAVES_TASK_DELAY, function()
+		if token ~= myToken or not on then
+			return
+		end
+		taskIndex = TaskBannerHandler.add({
+			icon = TutorialConfigs.LEAVES_TASK_ICON,
+			tint = TaskConfigs.TINTS[TutorialConfigs.LEAVES_TASK_TINT],
+			text = TutorialConfigs.LEAVES_TASK_TITLE,
+			reward = TutorialConfigs.LEAVES_TASK_REWARD,
+			currency = TaskConfigs.CURRENCIES[TutorialConfigs.LEAVES_TASK_CURRENCY],
+			progress = 0,
+		})
+		taskReady = true
+	end)
 	print("[TutorialLeaves] Le grand-pere explique les feuilles : les tas respirent, pastille sur le plus proche.")
 end
 
@@ -77,6 +106,49 @@ local function updateMarker(piles: { Model })
 	end
 end
 
+--- Eteint halos et pastille. Le halo est ECRIT eteint plutot qu'abandonne, sinon il resterait fige a mi-battement.
+local function lightsOff()
+	on = false
+	for _, halo in halos do
+		if halo.Parent then
+			halo.FillTransparency = TutorialConfigs.FILL_MAX
+		end
+	end
+	table.clear(halos)
+	WorldMarker.remove(marker)
+	marker, markerPart = nil, nil
+end
+
+--- La jauge suit le compte du serveur, et la tache se ferme a zero.
+---
+--- ON ATTEND QUE LA TACHE SOIT LA avant de conclure : un joueur rapide (ou une haie sans debris) arriverait a zero
+--- avant qu'elle s'affiche, et on grisait une ligne qui n'existait pas encore.
+local function readProgress()
+	local left = player:GetAttribute(TutorialConfigs.LEAVES_LEFT_ATTRIBUTE)
+	local peak = player:GetAttribute(TutorialConfigs.LEAVES_PEAK_ATTRIBUTE)
+	if typeof(left) ~= "number" or not taskReady then
+		return
+	end
+	local top = if typeof(peak) == "number" then math.max(peak :: number, left :: number) else left :: number
+	local index = taskIndex
+	if index then
+		TaskBannerHandler.setProgress(index, if top > 0 then 1 - (left :: number) / top else 1)
+	end
+	if (left :: number) > 0 then
+		return
+	end
+	if index then
+		TaskBannerHandler.setDone(index)
+	end
+	lightsOff()
+	print("[TutorialLeaves] Plus une feuille au sol : la tache est finie.")
+	local done = onDoneFn
+	onDoneFn = nil
+	if done then
+		done()
+	end
+end
+
 --- A appeler a chaque image. La liste des tas est relue a intervalle, le battement ecrit a chaque image : le rateau
 --- fait naitre et disparaitre des tas, une liste figee raterait tous ceux qui arrivent ensuite.
 ---
@@ -102,6 +174,10 @@ function TutorialLeaves.step(dt: number, now: number)
 			end
 		end
 		updateMarker(piles)
+		readProgress()
+		if not on then
+			return -- la tache vient de se fermer : plus rien a faire briller
+		end
 	end
 	clock += dt
 	-- Meme formule que le halo de la porte : un cosinus repart de lui-meme, donc aucune saccade au bouclage.
@@ -121,18 +197,12 @@ function TutorialLeaves.step(dt: number, now: number)
 	end
 end
 
---- Eteint tout : plus de battement, plus de pastille. Le halo est ECRIT eteint plutot qu'abandonne, sinon il
---- resterait fige a mi-battement. Celui qui cree est celui qui nettoie.
+--- Eteint tout et oublie la partie : plus de battement, plus de pastille, plus de tache suivie. Celui qui cree est
+--- celui qui nettoie.
 function TutorialLeaves.stop()
-	on = false
-	for _, halo in halos do
-		if halo.Parent then
-			halo.FillTransparency = TutorialConfigs.FILL_MAX
-		end
-	end
-	table.clear(halos)
-	WorldMarker.remove(marker)
-	marker, markerPart = nil, nil
+	lightsOff()
+	token += 1
+	taskIndex, taskReady, onDoneFn = nil, false, nil
 end
 
 return TutorialLeaves

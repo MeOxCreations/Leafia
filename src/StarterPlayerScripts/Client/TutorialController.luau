@@ -45,6 +45,7 @@ local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local SceneCamera = require(script.Parent.Utils.SceneCamera)
 local GroundGuide = require(script.Parent.Utils.GroundGuide)
 local TutorialLeaves = require(script.Parent.Utils.TutorialLeaves)
+local TutorialGift = require(script.Parent.Utils.TutorialGift)
 local ButterflyController = require(script.Parent.ButterflyController)
 -- LU, JAMAIS PILOTE : le didacticiel demande seulement si la machine tourne, pour savoir si sa tache est faite.
 -- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
@@ -2226,6 +2227,7 @@ local function step(dt: number)
 	-- EN PREMIER, avant les retours anticipes plus bas : ils sortent des que la porte n'est plus a portee, et les
 	-- feuilles sont a l'autre bout du jardin.
 	TutorialLeaves.step(dt, now)
+	TutorialGift.step(now)
 
 	-- LA MACHINE A DEMARRE : la tache est faite, elle passe en gris et la tonte prend sa place en dessous.
 	--
@@ -2914,7 +2916,24 @@ function TutorialController.init()
 					-- LES FEUILLES S'ALLUMENT QUAND IL EN PARLE, pas pendant le compliment : le halo montre ce que
 					-- la phrase designe, au moment ou elle le designe.
 					if at == 2 then
-						TutorialLeaves.start()
+						-- ET QUAND IL N'EN RESTE PLUS, IL ATTEND LE JOUEUR POUR LUI DONNER SON ENTREPRISE.
+						TutorialLeaves.start(function()
+							TutorialGift.start({
+								body = grandpaBody,
+								face = function()
+									local face = faceRemote
+									if face then
+										face:FireServer()
+									end
+								end,
+								talk = function(seconds: number)
+									local talk = talkRemote
+									if talk then
+										talk:FireServer(seconds)
+									end
+								end,
+							})
+						end)
 					end
 				end)
 			end
@@ -3028,6 +3047,7 @@ function TutorialController.stop()
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
 	TutorialLeaves.stop()
+	TutorialGift.stop()
 	hideTalkPrompt()
 	if conn then
 		conn:Disconnect()
