@@ -76,6 +76,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- LE CERCLE AUTOUR DU SEAU POSE : ce qu'on ratisse dedans part dans le seau. Dessin seulement, le serveur decide.
 	-- DANS LES DEUX PLACES, et l'asset AreaActionCercle doit exister dans chacune (Rojo ne synchronise pas Assets).
 	require(script.BinZoneController).init()
+	-- PASTILLES DES OUTILS AU SOL (seaux, tondeuses, echelles), quand on est loin. Muettes tant que le didacticiel
+	-- verrouille les actions : au debut, le joueur doit aller toquer, pas chercher ses outils.
+	require(script.ToolMarkerController).init()
 	-- POUSSIERE DE POSE : il ecoute le serveur et joue l'effet chez ce joueur. DANS LES DEUX PLACES -- un effet
 	-- declare d'un seul cote ne fait RIEN dans l'autre, sans la moindre erreur pour le dire.
 	require(script.DropEffectController).init()
@@ -202,6 +205,11 @@ BinFillController.init()
 -- L'asset AreaActionCercle doit exister dans CETTE place (Rojo ne synchronise pas Assets).
 local BinZoneController = require(script.BinZoneController)
 BinZoneController.init()
+
+-- PASTILLES DES OUTILS AU SOL (seaux, tondeuses, echelles), quand on est loin. Ordre indifferent : elles ne font que
+-- lire le Workspace et poser des marqueurs.
+local ToolMarkerController = require(script.ToolMarkerController)
+ToolMarkerController.init()
 
 -- POUSSIERE DE POSE : il ecoute le serveur et joue l'effet chez ce joueur. DANS LES DEUX PLACES -- un effet
 -- declare d'un seul cote ne fait RIEN dans l'autre, sans la moindre erreur pour le dire.

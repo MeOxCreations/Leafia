@@ -2204,6 +2204,24 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.856 — Une pastille montre ou sont les outils sur le terrain
+
+Le joueur ne cherche plus ses outils.
+
+- UNE PASTILLE sur chaque seau, tondeuse et echelle POSES AU SOL, quand le joueur est a plus de 18 studs
+  (`ToolMarkerController`, cote client). Cachee de pres, quand quelqu'un porte l'outil, ou quand il est range dans
+  le camion. Hors de l'ecran, elle se colle au bord, du cote de l'outil.
+- UNE ICONE, PAS LE " ! " : le " ! " du didacticiel veut dire "va la, maintenant". `WorldMarker.show` prend
+  maintenant une icone en 3e argument (carree, centree, sans le sursaut du " ! ").
+- Tondeuse : l'icone de la tache START THE MOWER. SEAU ET ECHELLE N'ONT PAS ENCORE D'ICONE : le " ! " s'affiche a
+  la place, et la console le dit. A remplir dans `ToolMarkerConfigs.ICONS`.
+- Pas de pastille tant que le didacticiel verrouille les actions (avant la consigne de la tondeuse), et pas
+  par-dessus un marqueur deja pose sur le meme objet (`WorldMarker.isMarked`).
+- "Porte" se lit sur l'assemblage de l'outil : s'il est soude a un personnage, quelqu'un le porte. Une seule
+  regle pour les trois outils, sans attribut propre a chacun.
+
+Rien a poser dans Studio.
+
 ## 0.0.855 — On pose le seau, on ratisse dans son cercle, les feuilles vont dedans
 
 Plus simple que de passer le seau porte sur les tas.

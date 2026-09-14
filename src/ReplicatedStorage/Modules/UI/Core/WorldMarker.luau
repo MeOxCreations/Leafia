@@ -1,5 +1,8 @@
 --!strict
--- MARQUEUR D'ATTENTION : un point d'exclamation pose sur un objet du monde. Il dit "ici, maintenant" sans un mot.
+-- MARQUEUR D'ATTENTION : un rond pose sur un objet du monde. Il dit "ici" sans un mot.
+--
+-- DEUX DESSINS DANS LE MEME ROND. Un point d'exclamation par defaut ("va la, maintenant"), ou une ICONE passee a
+-- `show` ("ton outil est ici"). Meme mouvement, meme taille : c'est le dessin qui dit de quoi il s'agit.
 --
 -- PAS UN BillboardGui, et c'est un choix. Un Billboard vit dans le monde : il subit l'eclairage, il passe derriere
 -- les objets, et sa taille depend de la distance. Celui-ci est un ScreenGui projete (WorldAnchor) : pixels
@@ -36,6 +39,9 @@ local MARK_RATIO = 63 / 115
 -- OU SON PIED SE POSE dans le cercle, en fraction. Elle est ancree par le BAS (voir plus loin), donc ce chiffre
 -- descend ou remonte le " ! " entier. A 1 il collerait au bord bas ; ici il tombe au milieu du cercle.
 local MARK_BOTTOM = 0.83
+-- UNE ICONE est carree et centree dans le cercle, en fraction de sa taille. Assez petite pour garder le bord
+-- blanc visible autour : c'est lui qui fait la pastille.
+local ICON_SIZE = 0.62
 
 -- Taille a la distance de reference, en pixels. Le reste suit la distance via WorldAnchor.
 local SIZE = 46
@@ -70,6 +76,8 @@ local POP_TIME = 0.32
 -- De temps en temps, la barre s'etire vers le HAUT puis revient. Le cercle, lui, ne bouge pas : c'est le contraste
 -- entre les deux qui fait le sursaut. Tout etirer d'un bloc donnerait un simple grossissement.
 --
+-- RESERVE AU " ! ". Une icone qui s'etire se deforme, et un dessin d'outil deforme ne se reconnait plus.
+--
 -- Ecart entre deux sursauts, en secondes, plus un peu de hasard. Le hasard evite que deux marqueurs poses en meme
 -- temps sursautent ENSEMBLE -- ce qui se lirait comme une interface qui clignote, pas comme deux objets vivants.
 local MARK_EVERY = 2.6
@@ -88,8 +96,17 @@ local player = Players.LocalPlayer
 local gui: ScreenGui? = nil
 -- `base` EST LA HAUTEUR DEMANDEE A `show`, gardee. Le balancement s'ecrit dans le MEME champ (l'offset monde de
 -- WorldAnchor) : sans cette copie il n'y a pas de quoi la reconstituer, et le battement la remplace.
+-- `target` est garde pour repondre a `isMarked`.
 local markers: {
-	[Frame]: { born: number, phase: number, mark: ImageLabel, nextPop: number, base: Vector3 },
+	[Frame]: {
+		born: number,
+		phase: number,
+		mark: ImageLabel,
+		nextPop: number,
+		base: Vector3,
+		icon: boolean,
+		target: WorldAnchor.Target,
+	},
 } = {}
 local stepConn: RBXScriptConnection? = nil
 
@@ -167,7 +184,7 @@ local function step()
 
 		-- DE TEMPS EN TEMPS. L'ecart est retire au hasard A CHAQUE fois, pas une seule : deux marqueurs partis
 		-- decales finiraient sinon par se rattraper et sursauter ensemble.
-		if now >= state.nextPop then
+		if not state.icon and now >= state.nextPop then
 			state.nextPop = now + MARK_EVERY + math.random() * MARK_JITTER
 			popMark(state.mark)
 		end
@@ -175,8 +192,8 @@ local function step()
 end
 
 -- Pose un marqueur sur une cible. `offset` decale le point vise, en studs -- typiquement pour le mettre au-dessus
--- de la tete. Rend le marqueur, a passer a `remove`.
-function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
+-- de la tete. `icon` (un "rbxassetid://...") remplace le " ! " par ce dessin. Rend le marqueur, a passer a `remove`.
+function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: string?): Frame
 	local holder = getGui()
 
 	local frame = Instance.new("Frame")
@@ -202,15 +219,25 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 	local mark = Instance.new("ImageLabel")
 	mark.Name = "Mark"
 	mark.BackgroundTransparency = 1
-	-- AUX PROPORTIONS DU DESSIN, jamais au cadre entier : le cercle est carre, le " ! " ne l'est pas.
-	mark.Size = UDim2.fromScale(MARK_HEIGHT * MARK_RATIO, MARK_HEIGHT)
-	mark.Image = MARK_IMAGE
-	mark.ScaleType = Enum.ScaleType.Stretch
-	-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND LE SURSAUT POSSIBLE. Avec une ancre au coin, un " ! " qu'on
-	-- etire pousse vers le bas autant que vers le haut et sort du cercle. Ancre par le bas, son pied ne bouge pas
-	-- et il s'allonge VERS LE HAUT -- exactement comme les feuilles du chargement.
-	mark.AnchorPoint = Vector2.new(0.5, 1)
-	mark.Position = UDim2.fromScale(0.5, MARK_BOTTOM)
+	if icon then
+		-- UNE ICONE : carree, centree, en `Fit`. Elle ne sursaute pas, donc rien ne l'oblige a `Stretch` -- et `Fit`
+		-- garde un dessin qui ne serait pas tout a fait carre sans le deformer.
+		mark.Image = icon
+		mark.Size = UDim2.fromScale(ICON_SIZE, ICON_SIZE)
+		mark.ScaleType = Enum.ScaleType.Fit
+		mark.AnchorPoint = Vector2.new(0.5, 0.5)
+		mark.Position = UDim2.fromScale(0.5, 0.5)
+	else
+		-- AUX PROPORTIONS DU DESSIN, jamais au cadre entier : le cercle est carre, le " ! " ne l'est pas.
+		mark.Size = UDim2.fromScale(MARK_HEIGHT * MARK_RATIO, MARK_HEIGHT)
+		mark.Image = MARK_IMAGE
+		mark.ScaleType = Enum.ScaleType.Stretch
+		-- ANCRE EN BAS AU MILIEU, et c'est CE QUI REND LE SURSAUT POSSIBLE. Avec une ancre au coin, un " ! " qu'on
+		-- etire pousse vers le bas autant que vers le haut et sort du cercle. Ancre par le bas, son pied ne bouge
+		-- pas et il s'allonge VERS LE HAUT -- exactement comme les feuilles du chargement.
+		mark.AnchorPoint = Vector2.new(0.5, 1)
+		mark.Position = UDim2.fromScale(0.5, MARK_BOTTOM)
+	end
 	-- ENFANT DU CERCLE, pas pose a cote : il herite de sa taille et de sa place, donc les deux ne peuvent pas se
 	-- decaler. Deux images placees separement finissent toujours par diverger d'un reglage.
 	mark.ZIndex = 2
@@ -226,6 +253,8 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 		-- sursauteraient ensemble, et seuls les suivants se decaleraient.
 		nextPop = os.clock() + POP_TIME + math.random() * MARK_JITTER,
 		base = offset or Vector3.zero,
+		icon = icon ~= nil,
+		target = target,
 	}
 
 	WorldAnchor.attach(frame, target, offset or Vector3.zero, MAX_DISTANCE, SCALE)
@@ -235,6 +264,23 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?): Frame
 		stepConn = RunService.RenderStepped:Connect(step)
 	end
 	return frame
+end
+
+--- UN MARQUEUR EST-IL DEJA POSE SUR CET OBJET (ou sur une de ses parts) ? `ignore` ecarte les marqueurs de
+--- l'appelant, qui ne doit pas se voir lui-meme.
+---
+--- Sert a ne pas empiler deux pastilles sur le meme objet quand deux features le designent en meme temps : le
+--- didacticiel qui dit "demarre CETTE tondeuse", et les pastilles des outils qui disent "une tondeuse est ici".
+function WorldMarker.isMarked(container: Instance, ignore: { [Frame]: boolean }?): boolean
+	for frame, state in markers do
+		if not (ignore and ignore[frame]) and typeof(state.target) == "Instance" then
+			local target = state.target :: Instance
+			if target == container or target:IsDescendantOf(container) then
+				return true
+			end
+		end
+	end
+	return false
 end
 
 function WorldMarker.remove(frame: Frame?)
