@@ -41,11 +41,30 @@ return {
 	-- UN SEAU SANS LIMITE N'EST PAS UN SEAU, C'EST UN TROU. La contenance cree la seule decision de cette etape :
 	-- continuer, ou aller le vider. Sans elle la jauge ne dirait rien, et vider ne serait jamais un choix.
 	LEAVES_CAPACITY = 40,
-	-- A QUELLE DISTANCE UN TAS TOMBE DEDANS, en studs, mesuree a plat.
+	-- ===== LA ZONE AUTOUR DU SEAU POSE =====
+	-- Un seau POSE AU SOL dessine un cercle autour de lui. Ce qu'on ratisse DANS le cercle part direct dans le
+	-- seau ; dehors, le rateau fait un gros tas comme avant. Un seau PORTE n'avale plus rien : on pose le seau, on
+	-- ratisse vers lui, c'est tout ce qu'il y a a comprendre.
 	--
-	-- GENEREUSE : le joueur POUSSE les feuilles avec un rateau, il ne vise pas. Trop serree, il rate son tas de
-	-- quelques centimetres et croit que le seau ne marche pas.
-	ABSORB_RADIUS = 6,
+	-- RAYON DU CERCLE, en studs, mesure a plat depuis la racine du seau. LE MEME CHIFFRE pour le dessin (client) et
+	-- pour le ramassage (serveur) : le cercle est mis a cette taille, donc ce qu'on voit dedans EST dedans.
+	-- GENEREUX : le joueur pousse les feuilles, il ne vise pas.
+	ZONE_RADIUS = 8,
+	-- LE DESSIN DU CERCLE, clone sous chaque seau pose. Il vit dans `Assets`, que Rojo ne synchronise pas : a
+	-- copier a la main dans CHAQUE place (tuto et jeu). Absent, le ramassage marche quand meme, il ne se voit pas.
+	ZONE_ASSET_PATH = { "Assets", "Contents", "AreaActionCercle" },
+	-- La part qui porte le cercle : c'est SA taille qui est mise au rayon, et SON centre qui se pose sous le seau.
+	ZONE_ROOT_NAME = "Root",
+	-- Le rond qui grandit avec le remplissage, et le texte du pourcentage. Cherches par NOM dans le clone.
+	ZONE_PROGRESS_FRAME = "GroundColorFrameProgress",
+	ZONE_PROGRESS_TEXT = "ProgressPourcentageText",
+	-- Hauteur au-dessus du sol, en studs. Pas zero : pose pile sur le sol, le cercle clignote avec lui.
+	ZONE_LIFT = 0.05,
+	-- Duree du grossissement du rond quand le seau se remplit.
+	ZONE_FILL_TIME = 0.25,
+	-- D'OU LA FEUILLE TOMBE DANS LE SEAU, en studs au-dessus de sa racine : elle vole jusque-la, puis disparait
+	-- dedans. A regler a l'oeil selon la hauteur du seau.
+	ZONE_DROP_UP = 1.5,
 	-- Cadence du controle. Serree : le tas nait sous le coup de rateau, et le voir clignoter une fraction de
 	-- seconde avant de disparaitre dans le seau se lit comme un rate. A dix par seconde, il n'existe jamais a
 	-- l'ecran quand le seau est a cote.

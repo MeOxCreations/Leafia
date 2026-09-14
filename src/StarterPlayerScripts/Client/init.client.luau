@@ -73,6 +73,9 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	require(script.RakeController).init()
 	-- LA JAUGE DE REMPLISSAGE AU-DESSUS DES SEAUX. Affichage seulement : le compte vit sur le seau, en attribut.
 	require(script.BinFillController).init()
+	-- LE CERCLE AUTOUR DU SEAU POSE : ce qu'on ratisse dedans part dans le seau. Dessin seulement, le serveur decide.
+	-- DANS LES DEUX PLACES, et l'asset AreaActionCercle doit exister dans chacune (Rojo ne synchronise pas Assets).
+	require(script.BinZoneController).init()
 	-- POUSSIERE DE POSE : il ecoute le serveur et joue l'effet chez ce joueur. DANS LES DEUX PLACES -- un effet
 	-- declare d'un seul cote ne fait RIEN dans l'autre, sans la moindre erreur pour le dire.
 	require(script.DropEffectController).init()
@@ -194,6 +197,11 @@ RakeController.init()
 -- par le serveur.
 local BinFillController = require(script.BinFillController)
 BinFillController.init()
+
+-- LE CERCLE AUTOUR DU SEAU POSE : ce qu'on ratisse dedans part dans le seau. Dessin seulement, le serveur decide.
+-- L'asset AreaActionCercle doit exister dans CETTE place (Rojo ne synchronise pas Assets).
+local BinZoneController = require(script.BinZoneController)
+BinZoneController.init()
 
 -- POUSSIERE DE POSE : il ecoute le serveur et joue l'effet chez ce joueur. DANS LES DEUX PLACES -- un effet
 -- declare d'un seul cote ne fait RIEN dans l'autre, sans la moindre erreur pour le dire.

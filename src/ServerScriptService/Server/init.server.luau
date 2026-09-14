@@ -47,8 +47,8 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	-- RATEAU : il ramasse les tas que la taille laisse au sol. Present dans le tuto AUSSI, parce que c'est ici
 	-- qu'on apprend la taille, donc ici que les premiers tas apparaissent. APRES HedgeStockService, qui les pose.
 	require(script.RakeService).init()
-	-- ET LE SEAU LES EMPORTE : le seau en main, une pastille E sur le tas le plus proche le verse dedans. APRES
-	-- RakeService, qui est celui qui FAIT les gros tas -- sans lui il n'y a rien a verser.
+	-- ET LE SEAU LES EMPORTE : un gros tas dans la zone d'un seau pose tombe dedans. Le rateau, lui, envoie direct
+	-- dans le seau ce qu'il ratisse dans sa zone (il appelle LeafCollectService.addLeaves).
 	require(script.LeafCollectService).init()
 	-- CAMION : un prompt E a l'arriere ouvre sa porte. TUTO UNIQUEMENT tant que le camion n'existe que dans cette
 	-- map -- le declarer ailleurs ferait crier un avertissement pour un objet absent A RAISON, et un warn sur un
@@ -166,8 +166,8 @@ BinCarryService.init()
 local RakeService = require(script.RakeService)
 RakeService.init()
 
--- ET LE SEAU LES EMPORTE : le seau en main, une pastille E sur le tas le plus proche le verse dedans.
--- APRES RakeService, qui est celui qui FAIT les gros tas -- sans lui il n'y a rien a verser.
+-- ET LE SEAU LES EMPORTE : un gros tas dans la zone d'un seau pose tombe dedans. Le rateau, lui, envoie direct
+-- dans le seau ce qu'il ratisse dans sa zone (il appelle LeafCollectService.addLeaves).
 local LeafCollectService = require(script.LeafCollectService)
 LeafCollectService.init()
 

@@ -2204,6 +2204,25 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.855 — On pose le seau, on ratisse dans son cercle, les feuilles vont dedans
+
+Plus simple que de passer le seau porte sur les tas.
+
+- UN CERCLE AU SOL autour de chaque seau POSE (`BinZoneController`, cote client). C'est l'asset
+  `Assets.Contents.AreaActionCercle`, clone et mis au rayon `BinConfigs.ZONE_RADIUS` (8 studs). Le rond
+  `GroundColorFrameProgress` grandit depuis le centre avec le remplissage, `ProgressPourcentageText` affiche le %
+  (FULL quand il est plein). Il disparait quand on prend le seau.
+- LE RATEAU envoie DIRECT dans le seau les feuilles ratissees DANS le cercle : elles volent jusqu'au seau et
+  entrent dedans (`LeafCollectService.addLeaves`). Hors du cercle, gros tas comme avant.
+- Un gros tas qui se trouve dans le cercle d'un seau pose tombe dedans. UN SEAU PORTE N'AVALE PLUS RIEN.
+- Le seau a toujours un fond (40) : une feuille qui arrive dans un seau plein repart d'ou elle venait.
+- Nouveau `Modules/Utils/BinUtils` : la meme regle (seau pose, place restante, zone) pour le dessin et le serveur.
+- `BinConfigs.ABSORB_RADIUS` devient `ZONE_RADIUS`.
+
+**A faire dans Studio** : copier `AreaActionCercle` dans `ReplicatedStorage.Assets.Contents` de la place du TUTO
+et de la place principale (Rojo ne synchronise pas Assets). Sans lui, le ramassage marche mais aucun cercle ne
+s'affiche (un warn le dit).
+
 ## 0.0.854 — Les feuilles ramassees, le grand-pere donne son entreprise
 
 La suite du didacticiel apres la haie. Avant, le grand-pere expliquait les feuilles et plus rien ne se passait.

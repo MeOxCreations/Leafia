@@ -19,21 +19,25 @@ local RunService = game:GetService("RunService")
 local SoundService = game:GetService("SoundService")
 local TweenService = game:GetService("TweenService")
 
+local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
+local BinUtils = require(ReplicatedStorage.Modules.Utils.BinUtils)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
+local LeafCollectService = require(script.Parent.LeafCollectService)
 local ToolService = require(script.Parent.ToolService)
 
 local RakeService = {}
 
--- Un petit tas EN TRAIN d'etre tire vers son gros tas. On garde le depart et l'arrivee plutot que de recalculer :
--- la cible peut grossir pendant le trajet, le point d'arrivee, lui, ne doit pas bouger.
+-- Un petit tas EN TRAIN d'etre tire vers son gros tas, ou vers un seau. On garde le depart et l'arrivee plutot que
+-- de recalculer : la cible peut grossir pendant le trajet, le point d'arrivee, lui, ne doit pas bouger.
 type Pull = {
 	pile: Model,
 	from: CFrame,
 	to: CFrame,
-	target: Model, -- le gros tas qui l'avale a l'arrivee
+	target: Model, -- le gros tas qui l'avale a l'arrivee, ou le seau
+	bin: boolean, -- vrai : la cible est un seau, la feuille entre dedans au lieu de faire grossir un tas
 	started: number,
 }
 
@@ -45,6 +49,9 @@ local SMALL_NAME = HedgeConfigs.STOCK_DEBRIS_ASSET[#HedgeConfigs.STOCK_DEBRIS_AS
 local lastSweep: { [Player]: number } = {}
 local pulls: { Pull } = {}
 local pullConn: RBXScriptConnection? = nil
+-- Les seaux du jeu, relus a chaque coup de rateau. Une seule table reutilisee : un coup toutes les demi-secondes
+-- n'a pas a fabriquer une liste neuve.
+local binPool: { Model } = {}
 -- Marqueurs branches sur les pistes EN COURS, par joueur. Les pistes sortent du cache de ToolService (toujours le
 -- meme objet), donc sans ce nettoyage on empilerait une connexion par coup de rateau, pour toujours.
 --
@@ -255,9 +262,19 @@ local function stepPulls()
 			local base = pull.from:Lerp(pull.to, ratio)
 			pull.pile:PivotTo(base * CFrame.new(0, lift, 0) * CFrame.Angles(0, spin, 0))
 			if ratio >= 1 then
-				-- ARRIVE : le petit disparait et le gros grossit, dans la meme image.
-				pull.pile:Destroy()
-				growPile(pull.target)
+				if pull.bin then
+					-- ARRIVE AU SEAU : la feuille entre dedans. Un seau rempli entre-temps (un gros tas avale pendant le
+					-- vol) la refuse : elle RETOMBE d'ou elle venait, au sol, au lieu de flotter au-dessus du seau.
+					if LeafCollectService.addLeaves(pull.target, 1) > 0 then
+						pull.pile:Destroy()
+					else
+						pull.pile:PivotTo(pull.from)
+					end
+				else
+					-- ARRIVE : le petit disparait et le gros grossit, dans la meme image.
+					pull.pile:Destroy()
+					growPile(pull.target)
+				end
 				table.remove(pulls, i)
 			end
 		end
@@ -283,12 +300,13 @@ local function playSweepSound(host: BasePart)
 	SoundUtils.play(path, host)
 end
 
-local function startPull(pile: Model, target: Model, to: CFrame)
+local function startPull(pile: Model, target: Model, to: CFrame, toBin: boolean)
 	table.insert(pulls, {
 		pile = pile,
 		from = pile:GetPivot(),
 		to = to,
 		target = target,
+		bin = toBin,
 		started = os.clock(),
 	})
 	if not pullConn then
@@ -334,6 +352,36 @@ local function sweep(player: Player)
 		return a.dist < b.dist
 	end)
 
+	-- LES FEUILLES DANS LE CERCLE D'UN SEAU POSE PARTENT DIRECT DEDANS. Jugees une par une, a LEUR position et pas
+	-- a celle du joueur : c'est la feuille que le joueur voit dans le cercle, pas ses pieds.
+	--
+	-- LA PLACE SE RESERVE AU DEPART. Les feuilles deja en vol comptent : sans ca, quatre feuilles partiraient vers
+	-- un seau a qui il reste une place, et trois retomberaient.
+	local taken = math.min(#found, RakeConfigs.MAX_PER_SWEEP)
+	BinUtils.collect(binPool)
+	local reserved: { [Model]: number } = {}
+	for _, pull in pulls do
+		if pull.bin then
+			reserved[pull.target] = (reserved[pull.target] or 0) + 1
+		end
+	end
+	local toPile: { Model } = {}
+	for index = 1, taken do
+		local small = found[index].pile
+		local bin, binRoot = BinUtils.zoneBinAt(binPool, small:GetPivot().Position, reserved)
+		if bin and binRoot then
+			reserved[bin] = (reserved[bin] or 0) + 1
+			startPull(small, bin, CFrame.new(binRoot.Position + Vector3.new(0, BinConfigs.ZONE_DROP_UP, 0)), true)
+		else
+			table.insert(toPile, small)
+		end
+	end
+	-- TOUT EST PARTI DANS UN SEAU : aucun gros tas a fabriquer.
+	if #toPile == 0 then
+		playSweepSound(root)
+		return
+	end
+
 	-- POINT DE RASSEMBLEMENT : devant le joueur, entre lui et ce qu'il vient de ratisser. Le sol est CHERCHE par
 	-- un rayon et non devine a partir du HRP : sur une pente ou un talus, une hauteur deduite du joueur poserait
 	-- le tas en l'air ou l'enfoncerait.
@@ -370,13 +418,12 @@ local function sweep(player: Player)
 	else
 		-- On clone le PREMIER petit tas attrape plutot que de re-resoudre l'asset : il a deja le bon modele, la
 		-- bonne couleur et le bon materiau, et ca evite une deuxieme facon de fabriquer la meme chose.
-		target = makeBigPile(found[1].pile, gather)
+		target = makeBigPile(toPile[1], gather)
 	end
 	local pile = target :: Model
 
-	local taken = math.min(#found, RakeConfigs.MAX_PER_SWEEP)
-	for index = 1, taken do
-		startPull(found[index].pile, pile, destination)
+	for _, small in toPile do
+		startPull(small, pile, destination, false)
 	end
 
 	playSweepSound(root)

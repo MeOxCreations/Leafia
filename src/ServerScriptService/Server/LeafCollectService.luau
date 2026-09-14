@@ -1,26 +1,26 @@
 --!strict
--- LES TAS DE FEUILLES TOMBENT DANS LE SEAU TOUT SEULS. Autorite SERVEUR : les tas et les seaux sont des objets du
--- MONDE, et deux joueurs doivent voir la meme pelouse.
+-- LES FEUILLES ENTRENT DANS LE SEAU POSE. Autorite SERVEUR : les tas et les seaux sont des objets du MONDE, et deux
+-- joueurs doivent voir la meme pelouse.
 --
--- POURQUOI PAS UNE PASTILLE. Le joueur a deja le rateau en main et il POUSSE les feuilles : lui demander ensuite
--- de lacher son geste pour appuyer sur une touche coupe le seul mouvement continu de cette etape. On rate vers le
--- seau, ca rentre. Le geste EST l'action, il n'y a rien a apprendre.
+-- DEUX CHEMINS, UNE SEULE PORTE D'ENTREE (`addLeaves`) :
+--   * le rateau (RakeService) envoie direct dans le seau ce qu'il ratisse DANS sa zone ;
+--   * un gros tas qui se trouve dans la zone d'un seau pose y tombe tout seul (la boucle plus bas) -- c'est le cas
+--     du seau qu'on vient poser a cote d'un tas deja fait.
 --
--- POURQUOI UN SERVICE DE PLUS. Le cycle de la feuille a trois moments et trois fichiers : `HedgeStockService` les
--- POSE (c'est le dechet de la taille), `RakeService` les RASSEMBLE en gros tas, et celui-ci les EMPORTE. L'entete
--- de RakeService annoncait ce jour-la en toutes lettres -- "le gros tas ira un jour dans la Bin".
+-- UN SEAU PORTE N'AVALE RIEN. On pose le seau, on ratisse vers lui : une seule regle a comprendre.
 --
 -- LE COMPTE VA SUR LE SEAU, en attribut. Il se replique tout seul, il voyage avec l'objet, et il survit a la
 -- repose : un seau pose au sol garde ce qu'il contient, ce qui est la moindre des choses pour un seau.
 --
--- ET IL A UN FOND. Un seau sans limite n'est pas un seau, c'est un trou : la jauge au-dessus ne dirait rien, et
--- aller le vider ne serait jamais une decision.
+-- ET IL A UN FOND. Un seau sans limite n'est pas un seau, c'est un trou : la jauge ne dirait rien, et aller le
+-- vider ne serait jamais une decision.
 
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
+local BinUtils = require(ReplicatedStorage.Modules.Utils.BinUtils)
 local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 
@@ -34,11 +34,6 @@ local function leafModel(): Model?
 		node = node and node:FindFirstChild(step)
 	end
 	return if node and node:IsA("Model") then node :: Model else nil
-end
-
---- La part de reference d'un seau : celle qui porte sa position et son angle.
-local function binRoot(bin: Model): BasePart?
-	return bin.PrimaryPart or bin:FindFirstChildWhichIsA("BasePart")
 end
 
 --- LE TAS DE FEUILLES VISIBLE DANS LE SEAU. Il MONTE avec le remplissage.
@@ -60,7 +55,7 @@ local function setLeafVisual(bin: Model, leaves: number)
 		end
 		return
 	end
-	local root = binRoot(bin)
+	local root = BinUtils.root(bin)
 	if not root then
 		return
 	end
@@ -99,18 +94,6 @@ local function setLeafVisual(bin: Model, leaves: number)
 	end
 end
 
---- Tous les seaux du monde. Re-balaye a chaque passage : un seau sort du camion en cours de partie, et une liste
---- gardee mentirait le jour ou il arrive.
-local function bins(out: { Model }): { Model }
-	table.clear(out)
-	for _, d in Workspace:GetDescendants() do
-		if d:IsA("Model") and d.Name:sub(1, #BinConfigs.MODEL_PREFIX) == BinConfigs.MODEL_PREFIX then
-			table.insert(out, d :: Model)
-		end
-	end
-	return out
-end
-
 --- Combien de feuilles ce tas represente. Un tas sans compte vaut UNE feuille : il existe, donc il valait bien
 --- quelque chose -- rendre zero le ferait disparaitre sans rien rapporter.
 local function leafCount(pile: Model): number
@@ -121,33 +104,24 @@ local function leafCount(pile: Model): number
 	return math.max(math.floor(raw :: number), 1)
 end
 
-local function contents(bin: Model): number
-	local raw = bin:GetAttribute(BinConfigs.LEAVES_ATTRIBUTE)
-	return if typeof(raw) == "number" then math.max(raw :: number, 0) else 0
-end
-
---- LE SEAU LE PLUS PROCHE DE CE POINT, et qui a encore de la place, ou nil.
+--- MET DES FEUILLES DANS LE SEAU. Rend combien sont vraiment entrees : jamais plus que la place qui reste.
 ---
---- UN SEAU PLEIN NE COMPTE PAS. Sinon le tas resterait colle a lui sans jamais y entrer, et le joueur verrait des
---- feuilles qui refusent d'avancer sans que rien ne lui dise pourquoi -- alors qu'un seau plus loin, vide,
---- ferait l'affaire.
-local function nearestBin(pool: { Model }, from: Vector3): (Model?, BasePart?)
-	local best: Model? = nil
-	local bestRoot: BasePart? = nil
-	local bestDist = BinConfigs.ABSORB_RADIUS
-	for _, bin in pool do
-		if contents(bin) < BinConfigs.LEAVES_CAPACITY then
-			local root = binRoot(bin)
-			if root then
-				local delta = (root :: BasePart).Position - from
-				local flat = Vector3.new(delta.X, 0, delta.Z).Magnitude
-				if flat <= bestDist then
-					bestDist, best, bestRoot = flat, bin, root :: BasePart
-				end
-			end
-		end
+--- LA SEULE FACON DE REMPLIR UN SEAU. Le compte, le tas visible dedans et le bruit vont ensemble : un second
+--- chemin qui ecrirait l'attribut a la main oublierait l'un des deux autres.
+function LeafCollectService.addLeaves(bin: Model, count: number): number
+	local held = BinUtils.contents(bin)
+	local taken = math.min(count, BinConfigs.LEAVES_CAPACITY - held)
+	if taken <= 0 then
+		return 0
 	end
-	return best, bestRoot
+	local total = held + taken
+	bin:SetAttribute(BinConfigs.LEAVES_ATTRIBUTE, total)
+	setLeafVisual(bin, total)
+	local root = BinUtils.root(bin)
+	if root then
+		SoundUtils.play(BinConfigs.ABSORB_SOUND, root)
+	end
+	return taken
 end
 
 function LeafCollectService.init()
@@ -172,7 +146,7 @@ function LeafCollectService.init()
 		if #piles == 0 then
 			return
 		end
-		bins(pool)
+		BinUtils.collect(pool)
 		if #pool == 0 then
 			return
 		end
@@ -182,26 +156,16 @@ function LeafCollectService.init()
 				local pile = child :: Model
 				local part = pile.PrimaryPart or pile:FindFirstChildWhichIsA("BasePart")
 				if part then
-					local bin, root = nearestBin(pool, (part :: BasePart).Position)
-					if bin and root then
-						local held = bin :: Model
+					local bin = BinUtils.zoneBinAt(pool, (part :: BasePart).Position)
+					if bin then
 						-- ON N'EN MET QUE CE QUI RENTRE. Le reste du tas RESTE au sol : il faudra aller vider le
 						-- seau et revenir, ce qui est exactement la decision qu'une contenance sert a creer.
-						local room = BinConfigs.LEAVES_CAPACITY - contents(held)
-						local taken = math.min(leafCount(pile), room)
-						if taken > 0 then
-							local total = contents(held) + taken
-							held:SetAttribute(BinConfigs.LEAVES_ATTRIBUTE, total)
-							setLeafVisual(held, total)
-							SoundUtils.play(BinConfigs.ABSORB_SOUND, root :: BasePart)
-							if taken >= leafCount(pile) then
-								pile:Destroy()
-							else
-								pile:SetAttribute(
-									RakeConfigs.PILE_COUNT_ATTRIBUTE,
-									leafCount(pile) - taken
-								)
-							end
+						local count = leafCount(pile)
+						local taken = LeafCollectService.addLeaves(bin, count)
+						if taken >= count then
+							pile:Destroy()
+						elseif taken > 0 then
+							pile:SetAttribute(RakeConfigs.PILE_COUNT_ATTRIBUTE, count - taken)
 						end
 					end
 				end
@@ -209,7 +173,7 @@ function LeafCollectService.init()
 		end
 	end)
 
-	print("[LeafCollectService] Pret : un tas de feuilles pres d'un seau tombe dedans tout seul.")
+	print("[LeafCollectService] Pret : ce qui est dans la zone d'un seau pose tombe dedans.")
 end
 
 return LeafCollectService
