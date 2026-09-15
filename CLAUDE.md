@@ -1445,6 +1445,11 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   au demarrage tant qu'il est leve, sinon il part en production et plus personne ne comprend pourquoi le scenario
   ne tient plus.
 
+- **`AnimationTrack:Play()` REMET LA VITESSE DE LA PISTE A SON 3E ARGUMENT (1 par defaut).** Un `AdjustSpeed`
+  fait AVANT `Play` est donc efface, sans erreur. Piege aggrave par un cache "vitesse deja appliquee" : la valeur
+  n'est plus jamais reposee, et les jambes d'un PNJ tournent a vitesse 1 quelle que soit son allure. Vecu sur la
+  marche de suivi du grand-pere. Regle : passer la vitesse DANS `Play(fade, poids, vitesse)`, ou regler APRES.
+
 - **LUAU N'ACCEPTE QUE 200 VARIABLES LOCALES AU PREMIER NIVEAU D'UN FICHIER, et le depasser tue le module ENTIER
   au chargement** : `Out of local registers when trying to allocate X: exceeded limit 200`. Ni selene ni `rojo
   build` ne le voient -- l'erreur ne sort qu'au lancement, et comme le module est requis par le bootstrap, tout ce

@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
+local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
@@ -1353,13 +1354,95 @@ local function setFollowWalking(model: Model, speed: number)
 	end
 	-- Jouee au RAPPORT des deux vitesses, comme sa sortie : changer son allure ne fait pas patiner ses pieds, et
 	-- il n'y a aucune seconde valeur a garder d'accord avec la premiere.
-	if speed ~= followAnimSpeed then
-		followAnimSpeed = speed
-		track:AdjustSpeed(speed / TutorialConfigs.OLDMAN_WALK_REFERENCE * TutorialConfigs.FOLLOW_ANIM_BOOST)
-	end
+	local animSpeed = speed / TutorialConfigs.OLDMAN_WALK_REFERENCE * TutorialConfigs.FOLLOW_ANIM_BOOST
 	if not track.IsPlaying then
-		track:Play(TutorialConfigs.FOLLOW_ANIM_FADE)
+		-- LA VITESSE PASSE DANS `Play`, ET PAS AVANT. `Play` remet la vitesse de la piste a son 3e argument (1 par
+		-- defaut) : l'ancien code reglait la vitesse PUIS appelait `Play`, qui l'effacait -- et comme la valeur
+		-- etait memorisee, plus rien ne la reposait. Ses jambes ne suivaient jamais son allure.
+		track:Play(TutorialConfigs.FOLLOW_ANIM_FADE, 1, animSpeed)
+		followAnimSpeed = speed
+	elseif speed ~= followAnimSpeed then
+		followAnimSpeed = speed
+		track:AdjustSpeed(animSpeed)
 	end
+end
+
+-- ===== SONDE : QUELLES ANIMATIONS JOUENT SUR LUI =====
+-- Il a ete vu MARCHER en jouant une autre animation en meme temps, les jambes de travers, sur le trajet du camion.
+-- A l'oeil on ne peut pas dire laquelle : ca ne se lit que dans `GetPlayingAnimationTracks`. La sonde imprime la
+-- liste des qu'elle CHANGE (pas a chaque image), avec la priorite, le poids vise et la vitesse de chaque piste.
+local lastTracksLine = ""
+local checkedOverlap = false
+
+local function probeTracks(model: Model, where: string)
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	if not animator then
+		return
+	end
+	local parts: { string } = {}
+	for _, t in (animator :: Animator):GetPlayingAnimationTracks() do
+		local source = t.Animation
+		local id = if source then string.match(source.AnimationId, "%d+") or source.AnimationId else t.Name
+		-- LE POIDS VISE, pas le poids courant : pendant un fondu le courant change a chaque image, et la ligne
+		-- se reimprimerait dix fois pour un seul changement.
+		table.insert(
+			parts,
+			`{id} [{t.Priority.Name}, poids {string.format("%.1f", t.WeightTarget)}, vitesse {string.format("%.2f", t.Speed)}]`
+		)
+	end
+	table.sort(parts)
+	local line = table.concat(parts, " + ")
+	if line ~= lastTracksLine then
+		lastTracksLine = line
+		print(`[Tutorial] Pistes du grand-pere ({where}) : {if line ~= "" then line else "aucune"}`)
+	end
+end
+
+--- Les articulations qu'une animation ECRIT (poses de poids non nul), lues dans le fichier lui-meme.
+local function keyedParts(animId: string): { [string]: boolean }?
+	local ok, sequence = pcall(function()
+		return KeyframeSequenceProvider:GetKeyframeSequenceAsync(animId)
+	end)
+	if not (ok and typeof(sequence) == "Instance") then
+		return nil
+	end
+	local names: { [string]: boolean } = {}
+	for _, d in (sequence :: Instance):GetDescendants() do
+		if d:IsA("Pose") and d.Weight > 0 then
+			names[d.Name] = true
+		end
+	end
+	return names
+end
+
+--- LE GESTE DE PAROLE TOUCHE-T-IL LES MEMES ARTICULATIONS QUE LA MARCHE ? Il est en `Action`, la marche en
+--- `Movement` : sur chaque articulation que les deux ecrivent, c'est le geste qui gagne. S'il ecrit les jambes, il
+--- ecrase le pas des qu'il parle en marchant. Une seule fois par partie, en tache de fond (appel reseau).
+local function checkTalkOverWalk()
+	if checkedOverlap then
+		return
+	end
+	checkedOverlap = true
+	task.spawn(function()
+		local talk = keyedParts(TutorialConfigs.OLDMAN_TALK_ANIM)
+		local walk = keyedParts(TutorialConfigs.OLDMAN_WALK_ANIM)
+		if not (talk and walk) then
+			warn("[Tutorial] Sonde : lecture des animations ratee (appel reseau). Relancer la partie pour reessayer.")
+			return
+		end
+		local both: { string } = {}
+		for name in talk do
+			if walk[name] then
+				table.insert(both, name)
+			end
+		end
+		table.sort(both)
+		print(
+			`[Tutorial] Sonde : le geste de parole ecrit {if #both > 0 then table.concat(both, ", ") else "AUCUNE"} `
+				.. "articulation(s) que la marche ecrit aussi -- sur celles-la, c'est le geste qui gagne."
+		)
+	end)
 end
 
 -- LA TONDEUSE LIBRE LA PLUS PROCHE DU JOUEUR. Meme critere que le repere affiche chez lui : les deux doivent
@@ -1726,6 +1809,10 @@ startFollow = function(player: Player, model: Model)
 		-- `GetPivot`, qui suit la boite englobante -- une part ajoutee au modele dans Studio le decalerait.
 		model:PivotTo(facing * rootPart.CFrame:Inverse() * model:GetPivot())
 		setFollowWalking(model, if step > 0 then speed else 0)
+		-- SONDE : n'imprime que quand les pistes CHANGENT, donc l'appeler a chaque image ne remplit pas la console.
+		if TutorialConfigs.DEBUG_GRANDPA_ANIMS then
+			probeTracks(model, if escorting then "escorte" elseif chasing then "vers la tondeuse" else "promenade")
+		end
 	end)
 	print(`[Tutorial] Le grand-pere accompagne {player.Name} : la tondeuse, puis la promenade.`)
 end
@@ -1828,6 +1915,10 @@ function TutorialService.init()
 			return
 		end
 		escortTarget = point :: BasePart
+		-- SONDE : au depart vers le camion, on regarde une fois si son geste de parole ecrase les jambes de sa marche.
+		if TutorialConfigs.DEBUG_GRANDPA_ANIMS then
+			checkTalkOverWalk()
+		end
 		local model = findByName(TutorialConfigs.GRANDPA_NAME)
 		if model and model:IsA("Model") then
 			-- LA BOUCLE EST MORTE DEPUIS LA FIN DE LA TONTE : on la relance. Elle sort d'elle-meme si une autre

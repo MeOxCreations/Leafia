@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.859 — Les jambes du grand-pere suivent son allure, et une sonde pour ses animations
+
+Il a ete vu marcher en jouant une autre animation en meme temps, jambes de travers, sur le trajet du camion.
+
+- CORRIGE : sa marche de suivi (vers la tondeuse, le camion, la promenade) tournait TOUJOURS a vitesse 1.
+  `AnimationTrack:Play()` remet la vitesse a 1, et le code la reglait juste avant. La vitesse passe maintenant
+  dans `Play`. Ses pieds suivent son allure au lieu de patiner.
+- SONDE (`TutorialConfigs.DEBUG_GRANDPA_ANIMS = true`), cote serveur, pour trouver l'autre animation :
+  - `[Tutorial] Pistes du grand-pere (escorte) : ...` a chaque changement de pistes pendant qu'il marche avec le
+    joueur, avec priorite, poids et vitesse ;
+  - `[Tutorial] Sonde : le geste de parole ecrit ... articulation(s) que la marche ecrit aussi`, une fois, au depart
+    vers le camion. Si des jambes y figurent, c'est le geste de parole qui les ecrase quand il parle en marchant.
+- Pas encore de correctif du "joue une autre animation" : il attend ce que la sonde dit.
+
 ## 0.0.858 — Pastilles a la taille de l'ecran, et cachees pendant l'ouverture du tuto
 
 - LES PASTILLES SUIVENT LA TAILLE DE L'ECRAN (`WorldMarker`). Leur taille (46 px) et leur marge au bord etaient
