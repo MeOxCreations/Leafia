@@ -527,7 +527,7 @@ return {
 	-- A REMETTRE A `false` AVANT DE PUBLIER. Le serveur le RAPPELLE dans la console a chaque demarrage tant qu'il
 	-- est leve : un interrupteur de test qui ne dit pas qu'il l'est finit par partir en production, et personne ne
 	-- comprend ensuite pourquoi le scenario ne tient plus.
-	TEST_FREE_TOOLS = true,
+	TEST_FREE_TOOLS = false,
 
 	-- ===== IL S'IMPATIENTE DEVANT LE CAMION =====
 	-- Meme idee que plus haut, mais pour une consigne precise : "ouvre le hayon". Il relance tant que le joueur

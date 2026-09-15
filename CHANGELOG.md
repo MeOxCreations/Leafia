@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.860 — Les outils du didacticiel sont de nouveau verrouilles
+
+- `TutorialConfigs.TEST_FREE_TOOLS` repasse a `false` : seau et tondeuse bloques jusqu'a la consigne du grand-pere,
+  benne du camion fermee tant qu'il n'a pas dit de se servir, tondeuse verrouillee une fois la pelouse finie.
+
 ## 0.0.859 — Les jambes du grand-pere suivent son allure, et une sonde pour ses animations
 
 Il a ete vu marcher en jouant une autre animation en meme temps, jambes de travers, sur le trajet du camion.
