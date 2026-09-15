@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.858 — Pastilles a la taille de l'ecran, et cachees pendant l'ouverture du tuto
+
+- LES PASTILLES SUIVENT LA TAILLE DE L'ECRAN (`WorldMarker`). Leur taille (46 px) et leur marge au bord etaient
+  reglees pour un ecran de 1080 de haut : sur telephone elles prenaient une grosse part de l'image. Elles sont
+  maintenant multipliees par hauteur d'ecran / 1080, borne entre 0.6 et 1.5, et se retaillent si l'ecran tourne.
+  Vaut pour TOUS les marqueurs (" ! " du tuto compris).
+- PAS DE PASTILLES D'OUTILS PENDANT L'OUVERTURE DU TUTO. Elles etaient cachees par le verrou d'actions, que
+  l'interrupteur de test leve des le spawn : on les voyait pendant la scene du grand-pere. Le didacticiel les
+  cache maintenant lui-meme (`ToolMarkerController.setHidden`) jusqu'a la consigne de la tondeuse, mode test ou non.
+
 ## 0.0.857 — Interrupteur de test : tous les outils deverrouilles
 
 - `TutorialConfigs.TEST_FREE_TOOLS` repasse a `true` : seau et tondeuse utilisables des le spawn, benne du camion

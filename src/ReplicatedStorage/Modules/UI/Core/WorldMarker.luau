@@ -59,6 +59,32 @@ local MAX_DISTANCE = 160
 -- La marge tient compte de sa taille (46 px, jusqu'a 1.3 fois de pres) : plus serree, il deborderait de l'ecran.
 local EDGE_MARGIN = 42
 
+-- ===== LA TAILLE SUIT L'ECRAN =====
+-- SIZE ET EDGE_MARGIN SONT DES PIXELS POUR UN ECRAN DE 1080 DE HAUT. Un telephone n'en a que quelques centaines :
+-- la pastille y prenait une grosse part de l'image et ecrasait ce qu'elle designe. On les multiplie donc par la
+-- hauteur reelle / 1080, borne : lisible sur un petit ecran, pas minuscule sur un grand.
+--
+-- LA HAUTEUR ET PAS LA LARGEUR : un telephone en paysage est tres large et tres bas, c'est la hauteur qui manque.
+local REF_HEIGHT = 1080
+local SCREEN_MIN = 0.6
+local SCREEN_MAX = 1.5
+-- Derniere hauteur d'ecran appliquee : on ne retaille qu'au changement (rotation, fenetre redimensionnee).
+local lastViewHeight = 0
+
+local function screenScale(): number
+	local camera = workspace.CurrentCamera
+	local height = if camera then camera.ViewportSize.Y else REF_HEIGHT
+	return math.clamp(height / REF_HEIGHT, SCREEN_MIN, SCREEN_MAX)
+end
+
+--- Taille et marge au bord d'un marqueur, a l'echelle de l'ecran. Le grossissement selon la distance passe, lui,
+--- par un UIScale (WorldAnchor) : les deux se multiplient sans se gener.
+local function resize(frame: Frame)
+	local s = screenScale()
+	frame.Size = UDim2.fromOffset(SIZE * s, SIZE * s)
+	WorldAnchor.setEdgeClamp(frame, EDGE_MARGIN * s)
+end
+
 -- ===== LE MOUVEMENT =====
 -- Il MONTE ET DESCEND, doucement. C'est ce qui le distingue du decor : l'oeil attrape un mouvement regulier bien
 -- avant une forme, meme vive.
@@ -157,6 +183,16 @@ end
 
 local function step()
 	local now = os.clock()
+	-- L'ECRAN A CHANGE DE TAILLE (telephone qu'on tourne, fenetre redimensionnee) : on retaille tout. Une
+	-- comparaison par image, rien de plus tant qu'il ne bouge pas.
+	local camera = workspace.CurrentCamera
+	local viewHeight = if camera then camera.ViewportSize.Y else 0
+	if viewHeight ~= lastViewHeight then
+		lastViewHeight = viewHeight
+		for frame in markers do
+			resize(frame)
+		end
+	end
 	for frame, state in markers do
 		if not frame.Parent then
 			continue
@@ -258,7 +294,8 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: st
 	}
 
 	WorldAnchor.attach(frame, target, offset or Vector3.zero, MAX_DISTANCE, SCALE)
-	WorldAnchor.setEdgeClamp(frame, EDGE_MARGIN)
+	-- APRES attach : la marge au bord s'ecrit sur l'entree que `attach` vient de creer.
+	resize(frame)
 
 	if not stepConn then
 		stepConn = RunService.RenderStepped:Connect(step)

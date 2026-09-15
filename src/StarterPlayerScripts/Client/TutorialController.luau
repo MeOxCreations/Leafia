@@ -46,6 +46,9 @@ local SceneCamera = require(script.Parent.Utils.SceneCamera)
 local GroundGuide = require(script.Parent.Utils.GroundGuide)
 local TutorialLeaves = require(script.Parent.Utils.TutorialLeaves)
 local TutorialGift = require(script.Parent.Utils.TutorialGift)
+-- VOISIN DIRECT : les pastilles des outils se taisent pendant l'ouverture, et le didacticiel est le seul a savoir
+-- quand elle finit.
+local ToolMarkerController = require(script.Parent.ToolMarkerController)
 local ButterflyController = require(script.Parent.ButterflyController)
 -- LU, JAMAIS PILOTE : le didacticiel demande seulement si la machine tourne, pour savoir si sa tache est faite.
 -- La tondeuse ne connait pas le didacticiel, et c'est ce qui permet de la retirer du tuto sans rien casser.
@@ -2141,6 +2144,8 @@ local function showMowerTask()
 	-- arrivent ensemble, sinon le joueur peut prendre la machine pendant que le grand-pere marche encore, et la
 	-- moitie de ce qu'il raconte tombe dans le vide.
 	ActionGate.setLocked(false)
+	-- ET LES PASTILLES DES OUTILS S'ALLUMENT AVEC : c'est le moment ou il faut les trouver.
+	ToolMarkerController.setHidden("Tutorial", false)
 	-- LE COMPTE PART D'ICI, l'instant ou la consigne apparait. Laisse a zero, la premiere phrase tomberait a la
 	-- premiere image de la boucle -- avant meme que le joueur ait lu ce qu'on lui demande.
 	nextImpatientAt = os.clock() + TutorialConfigs.IMPATIENT_FIRST
@@ -3024,6 +3029,10 @@ function TutorialController.init()
 	-- on en baisse un, on relance, et l'autre bloque.
 	local free = TutorialConfigs.TEST_FREE_TOOLS
 	ActionGate.setLocked(not free)
+	-- LES PASTILLES DES OUTILS SE TAISENT JUSQU'A LA CONSIGNE DE LA TONDEUSE, MODE TEST OU NON. L'interrupteur libere
+	-- les outils, pas l'ecran : pendant la scene du grand-pere, des pastilles sur le terrain enverraient le joueur
+	-- ailleurs que chez lui.
+	ToolMarkerController.setHidden("Tutorial", true)
 	player:SetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE, if free then nil else true)
 
 	-- LA PARCELLE EST DECLAREE DES LE BOOT, et pas quand la tache arrive : tout ce qui est dehors doit etre pose
@@ -3130,6 +3139,8 @@ function TutorialController.stop()
 	-- jamais laisser le joueur devant des outils qu'il ne peut plus prendre : c'est une partie bloquee, et rien a
 	-- l'ecran ne lui dirait pourquoi.
 	ActionGate.setLocked(false)
+	-- Meme regle pour les pastilles : une scene abandonnee ne doit pas les laisser eteintes pour toujours.
+	ToolMarkerController.setHidden("Tutorial", false)
 	lawnTaskShown = false
 	lawnTaskDone = false
 	wasCarryingBin = false

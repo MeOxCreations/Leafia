@@ -40,6 +40,17 @@ local shown: { [Model]: Shown } = {}
 -- NOS marqueurs, a ignorer quand on demande si un objet est deja marque : sinon chaque pastille se cacherait
 -- elle-meme a l'image suivante.
 local own: { [Frame]: boolean } = {}
+-- QUI DEMANDE DE LES CACHER, par raison. Une table et pas un booleen : deux demandeurs qui se chevauchent ne se
+-- rendent pas la main -- le premier qui relache ne rallume pas ce que l'autre cache encore.
+local hiddenBy: { [string]: boolean } = {}
+
+--- CACHE LES PASTILLES tant qu'au moins une raison le demande.
+---
+--- Le didacticiel s'en sert pendant son ouverture : le joueur doit aller toquer chez le grand-pere, pas chercher
+--- ses outils. Le verrou d'actions ne suffit pas pour ca -- l'interrupteur de test le leve des le spawn.
+function ToolMarkerController.setHidden(reason: string, hidden: boolean)
+	hiddenBy[reason] = if hidden then true else nil
+end
 
 --- QUEL OUTIL EST-CE, ou nil. On demande a chaque outil sa propre regle d'identite -- elle sait deja exclure les
 --- rigs d'animation et ce qui est range dans le camion.
@@ -128,7 +139,7 @@ function ToolMarkerController.init()
 		local me = if character then character:FindFirstChild("HumanoidRootPart") else nil
 		local from = if me and me:IsA("BasePart") then me.Position else nil
 		table.clear(seen)
-		if from and not ActionGate.isLocked() then
+		if from and not ActionGate.isLocked() and next(hiddenBy) == nil then
 			for model, kind in tools do
 				local part = rootOf(model)
 				-- L'IDENTITE EST RETESTEE : un outil range dans le camion depuis le dernier balayage n'en est plus un.
