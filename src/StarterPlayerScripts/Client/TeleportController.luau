@@ -1,79 +1,49 @@
 --!strict
--- Ecran de TRANSITION pendant un teleport (vers un chantier / le tuto). Roblox l'affiche a la place de son ecran par
--- defaut pendant le voyage. IMPORTANT : les scripts DANS ce GUI ne tournent PAS pendant le teleport -> il est STATIQUE
--- (aucune anim possible). On le garde donc sobre : fond GRIS + la feuille + 4 boules FIGEES.
+-- ECRAN PENDANT UN TELEPORT (vers le tuto, un chantier). Roblox l'affiche a la place de son ecran par defaut pendant
+-- le voyage.
 --
--- Meme rideau gris que l'ecran d'ARRIVEE (ReplicatedFirst/LoadingScreen quand on vient d'un teleport) : le joueur ne
--- voit jamais le ciel Roblox vide, ca donne une transition propre "on change de lieu". A l'arrivee, les boules, elles,
--- rebondissent (la, du code tourne).
+-- LE MEME DESSIN QUE LE RIDEAU D'ARRIVEE (`ReplicatedFirst.CurtainVisual`) : ciel bleu, tuile, visage du grand-pere.
+-- C'etait un rideau GRIS avec une feuille et quatre boules, reste d'une ancienne version : le joueur passait d'un
+-- ecran a un autre qui ne lui ressemblait pas, en plein milieu d'un chargement.
+--
+-- FIGE : les scripts ne tournent pas pendant un teleport, donc rien ne bouge ici. A l'arrivee, le rideau reprend le
+-- meme dessin et l'anime.
+--
+-- NE SE VOIT PAS EN STUDIO : un teleport n'y part jamais. Seulement dans le jeu publie.
 
+local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local TeleportService = game:GetService("TeleportService")
 
-local BG_COLOR = Color3.fromRGB(31, 31, 31) -- gris fonce (meme que LoadingOverlay / l'ecran d'arrivee)
-local LEAF_IMAGE = "rbxassetid://117703108607506" -- la feuille (logo)
-local LEAF_COLOR = Color3.fromRGB(81, 81, 81)
-local BALL_SIZE = 14
-local BALL_GAP = 12
-local BALL_COUNT = 4
+-- ReplicatedFirst est replique AVANT que les scripts du joueur ne demarrent : le module est deja la.
+local CurtainVisual = require(ReplicatedFirst.CurtainVisual)
 
 local TeleportController = {}
 
 function TeleportController.init()
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "TeleportLoadingGui"
-	gui.IgnoreGuiInset = true
+	-- Plein ecran, bord a bord, comme le rideau d'arrivee : sinon un bandeau reste decouvert en haut.
+	gui.ScreenInsets = Enum.ScreenInsets.None
 	gui.ResetOnSpawn = false
+	gui.DisplayOrder = 1000
 
-	-- Fond gris fonce plein ecran.
-	local bg = Instance.new("Frame")
-	bg.Size = UDim2.fromScale(1, 1)
-	bg.BackgroundColor3 = BG_COLOR
-	bg.BorderSizePixel = 0
-	bg.Parent = gui
+	-- UN FRAME ET PAS UN CanvasGroup comme le rideau : ici rien ne fond, et il n'y a aucune raison d'ajouter une
+	-- couche de rendu a un ecran fige. `ClipsDescendants` borne la tuile, deux fois plus grande que l'ecran.
+	local container = Instance.new("Frame")
+	container.Name = "Curtain"
+	container.BackgroundColor3 = CurtainVisual.BG
+	container.BorderSizePixel = 0
+	container.Size = UDim2.fromScale(1, 1)
+	container.ClipsDescendants = true
+	container.Parent = gui
 
-	-- La feuille (logo) au centre, teintee. STATIQUE (pas d'oscillation : aucun script ne tourne pendant le teleport).
-	local leaf = Instance.new("ImageLabel")
-	leaf.BackgroundTransparency = 1
-	leaf.AnchorPoint = Vector2.new(0.5, 0.5)
-	leaf.Position = UDim2.fromScale(0.5, 0.46)
-	leaf.Size = UDim2.fromScale(0.2, 0.2)
-	leaf.Image = LEAF_IMAGE
-	leaf.ImageColor3 = LEAF_COLOR
-	leaf.ScaleType = Enum.ScaleType.Fit
-	local aspect = Instance.new("UIAspectRatioConstraint")
-	aspect.AspectRatio = 1
-	aspect.Parent = leaf
-	leaf.Parent = bg
+	-- LE NOM DU LIEU NE PEUT PAS ETRE CELUI DE LA DESTINATION : cet ecran est enregistre une fois au demarrage, et le
+	-- client ne sait pas ou le serveur l'enverra. Le rideau d'arrivee affiche le vrai nom.
+	CurtainVisual.build(container, CurtainVisual.DEST_FALLBACK)
 
-	-- 4 boules blanches alignees, FIGEES (pas de rebond possible ici). Juste un repere "chargement".
-	local width = BALL_COUNT * BALL_SIZE + (BALL_COUNT - 1) * BALL_GAP
-	local loader = Instance.new("Frame")
-	loader.BackgroundTransparency = 1
-	loader.AnchorPoint = Vector2.new(0.5, 0.5)
-	loader.Position = UDim2.fromScale(0.5, 0.62)
-	loader.Size = UDim2.fromOffset(width, BALL_SIZE)
-	loader.Parent = bg
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.Padding = UDim.new(0, BALL_GAP)
-	layout.Parent = loader
-	for i = 1, BALL_COUNT do
-		local ball = Instance.new("Frame")
-		ball.Size = UDim2.fromOffset(BALL_SIZE, BALL_SIZE)
-		ball.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-		ball.BorderSizePixel = 0
-		ball.LayoutOrder = i
-		local c = Instance.new("UICorner") :: UICorner
-		c.CornerRadius = UDim.new(1, 0)
-		c.Parent = ball
-		ball.Parent = loader
-	end
-
-	-- Enregistre ce GUI : Roblox le clone et l'affiche pendant TOUT teleport.
+	-- Enregistre ce GUI : Roblox l'affiche pendant TOUT teleport.
 	TeleportService:SetTeleportGui(gui)
-	print("[Teleport] Ecran de transition (gris) pret (SetTeleportGui).")
+	print("[Teleport] Ecran de teleport pret : le meme dessin que le rideau d'arrivee, fige.")
 end
 
 return TeleportController

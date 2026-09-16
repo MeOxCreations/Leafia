@@ -21,6 +21,10 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local TeleportService = game:GetService("TeleportService")
 
+-- LE DESSIN DU RIDEAU, partage avec l'ecran du teleport. Voisin DANS ReplicatedFirst, donc deja la : ce require
+-- n'attend aucune replication, contrairement a un module de ReplicatedStorage.
+local CurtainVisual = require(script.Parent.CurtainVisual)
+
 local player = Players.LocalPlayer
 ReplicatedFirst:RemoveDefaultLoadingScreen()
 
@@ -104,218 +108,35 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Il l'a ete un temps a partir d'une ScreenGui modele posee dans Studio. Abandonne : Rojo ne synchronise pas
 	-- StarterGui, donc le modele n'existait que dans le lieu ou on l'avait dessine, et le tuto tombait sur le
 	-- rideau de secours. Le code, lui, arrive dans TOUS les lieux sans qu'on ait rien a recopier.
-	-- Les valeurs ci-dessous sont celles du dessin fait dans l'editeur.
-	-- COULEUR DE SECOURS DU CANVASGROUP. Elle ne se voit qu'un instant -- celui ou le rideau existe deja mais ou
-	-- son cadre degrade n'est pas encore pose -- et partout ou ce cadre ne couvrirait pas.
 	--
-	-- Un gris fonce y creait un FLASH SOMBRE avant le ciel. On prend donc un bleu DU MEME degrade : le passage
-	-- devient invisible au lieu d'etre un a-coup. Une couleur de secours doit ressembler a ce qu'elle remplace,
-	-- sinon elle se voit precisement parce qu'elle est de secours.
-	local BG = Color3.fromHex("2AC9F7")
+	-- LE DESSIN VIT DANS `CurtainVisual`, a cote de ce fichier. L'ecran PENDANT le teleport (TeleportController)
+	-- dessine exactement le meme, fige. Ici on ne garde que ce qui BOUGE -- la tuile, le visage, la couronne -- et
+	-- la sortie.
 
-	-- FOND TUILE qui defile en diagonale.
-	local TILE_IMAGE_ID = "rbxassetid://80842701479373"
-	-- BLANC PUR, et ce n'est pas cosmetique : un UIGradient MULTIPLIE la couleur de l'objet. Sur un gris, les
-	-- valeurs du degrade sont rabotees en silence et on regle une courbe dont on ne voit jamais le vrai rendu.
-	-- Meme regle que le bandeau.
-	local TILE_TINT = Color3.fromRGB(255, 255, 255)
-	local TILE_CELL = UDim2.fromScale(0.005, 0.01) -- taille d'UNE tuile, en fraction de l'ImageLabel
-	local TILE_DRIFT = 15 -- vitesse de defilement, en pixels par seconde
-	-- FONDU SUR LA TUILE. Le motif ne doit pas etre present partout avec la meme force : plein cadre et uniforme,
-	-- il se lit comme un papier peint et rentre en concurrence avec la feuille du milieu. On le laisse dense d'un
-	-- cote et on le fait disparaitre de l'autre.
-	--
-	-- La courbe part INVISIBLE et se termine PLEINE : le motif n'existe que d'un cote de l'ecran. Le long palier
-	-- du debut evite qu'il commence a poindre des le premier pixel, ce qui donnerait l'air d'une erreur.
-	--
-	-- Une NumberSequence DOIT commencer a 0 et finir a 1, en temps strictement croissant : Roblox refuse la
-	-- sequence entiere sinon, et le degrade disparait sans le moindre message.
-	local TILE_FADE_ROTATION = 50
-	local TILE_FADE = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 1),
-		NumberSequenceKeypoint.new(0.36, 1),
-		NumberSequenceKeypoint.new(0.748, 0.813),
-		NumberSequenceKeypoint.new(1, 0),
-	})
-
-	-- BANDEAU du bas, avec son degrade de transparence.
-	local BANNER_IMAGE_ID = "rbxassetid://129604305857410"
-	-- EN HAUT A DROITE, derriere le nom du lieu. Il servait de socle au texte des conseils en bas ; il sert
-	-- maintenant de fond au titre. Retourne de 180 degres pour que sa pointe parte du bon cote -- l'image a un
-	-- sens, et le sens ne se DEDUIT pas, il se voit.
-	local BANNER_POS = UDim2.fromScale(0.933, 0.068)
-	local BANNER_SIZE = UDim2.fromScale(0.479, 0.176)
-	local BANNER_ROTATION = 180
-	-- Le bandeau n'est PAS plein d'un bout a l'autre : sa transparence monte le long de sa largeur. C'est un
-	-- FONDU, pas un reflet -- il ne s'anime pas. L'avoir promene une fois a suffi a le rendre completement opaque.
-	--
-	-- LA COURBE MONTE EN TROIS TEMPS. Plein au depart, puis un palier a un tiers de transparence sous le titre,
-	-- puis elle s'ouvre progressivement jusqu'a disparaitre.
-	--
-	-- Le palier du debut est ce qui compte : c'est la que le texte est pose, et une densite CONSTANTE sous lui le
-	-- rend lisible d'un bout a l'autre du mot. La rampe ne commence qu'apres, la ou il n'y a plus rien a lire --
-	-- un fondu regulier depuis l'origine rendrait le titre plus pale d'un cote que de l'autre.
-	--
-	-- Elle etait plate jusqu'a 0.897 puis montait SEC : la fin du bandeau se coupait net. La montee progressive
-	-- le fait fondre dans le ciel au lieu de s'arreter sur une arete.
-	local BANNER_FADE = NumberSequence.new({
-		NumberSequenceKeypoint.new(0, 0),
-		NumberSequenceKeypoint.new(0.25, 0.319),
-		NumberSequenceKeypoint.new(0.798, 0.756),
-		NumberSequenceKeypoint.new(1, 1),
-	})
-	-- TEINTE du bandeau : un BLEU TRES CLAIR, uni. Le meme UIGradient porte donc DEUX choses -- la couleur et la
-	-- transparence -- et c'est voulu : elles decrivent le meme voyage le long du bandeau, les separer sur deux
-	-- objets obligerait a les garder d'accord a la main.
-	--
-	-- Ces valeurs rendent EXACTEMENT ce qu'elles disent parce que l'image du bandeau est en blanc pur : un
-	-- UIGradient multiplie la couleur de l'objet, donc toute autre teinte les raboterait en silence.
-	--
-	-- Il etait NOIR quand il servait de socle a du texte clair en bas de l'ecran ; en haut, derriere le titre, un
-	-- bandeau sombre creuse un trou dans le degrade au lieu de l'habiller.
-	--
-	-- Pas blanc PUR non plus : une teinte prise dans la famille du ciel se pose SUR le fond, un blanc pur se
-	-- decoupe dessus. La difference est minuscule et c'est toute la difference.
-	local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(166, 243, 255))
-
-	-- ===== FOND DEGRADE =====
-	-- Pose sur un CADRE dedie, pas sur le CanvasGroup. Un UIGradient sur le groupe teinterait TOUT ce qu'il
-	-- contient -- le texte blanc des conseils virerait au bleu, les feuilles perdraient leur vert. Un cadre au
-	-- fond du tas donne exactement la meme image sans toucher a ce qui est pose dessus.
-	-- CIEL, EN DIAGONALE. Cyan clair dans un coin, bleu profond dans l'autre.
-	--
-	-- QUATRE ETAPES, TOUTES DANS LA MEME FAMILLE. C'est ce qui le rend calme : un degrade qui change de TEINTE en
-	-- route (l'ancien passait par un vert avant de finir noir) attire l'oeil sur la transition elle-meme, et
-	-- l'oeil quitte alors ce qu'on lui demande de regarder. Ici seule la LUMINOSITE voyage -- du cyan clair au
-	-- bleu profond -- donc le fond se lit comme un espace et pas comme un motif.
-	--
-	-- Les etapes ne sont pas regulierement espacees : le clair tient la moitie du trajet puis fonce plus vite.
-	-- Un degrade lineaire parait mou ; celui-ci a une direction.
-	--
-	-- 40 degres : la lumiere vient du haut-gauche, comme dans a peu pres toutes les images qu'on regarde. Le sens
-	-- d'un UIGradient ne se DEDUIT pas -- si la lumiere part du mauvais coin, ce nombre est la premiere chose a
-	-- tourner.
-	local BG_ROTATION = 40
-	local BG_COLOR = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromHex("6BEBFF")),
-		ColorSequenceKeypoint.new(0.38, Color3.fromHex("2AC9F7")),
-		ColorSequenceKeypoint.new(0.74, Color3.fromHex("1E90E2")),
-		ColorSequenceKeypoint.new(1, Color3.fromHex("1567C6")),
-	})
-
-	-- ===== MAISON DU CLIENT =====
-	-- Le dessin de la maison ou l'on va, en plein cadre derriere la tuile. C'est ce qui fait qu'un chargement
-	-- ressemble a un DEPART chez quelqu'un plutot qu'a une barre qui avance.
-	-- ===== LE VISAGE DU GRAND-PERE, AU CENTRE =====
-	-- Il remplace le dessin de maison qui occupait le fond. Une maison dit OU l'on va ; un visage dit CHEZ QUI --
-	-- et c'est lui, le personnage qu'on va rencontrer.
-	--
-	-- DE FACE, ET RIEN D'AUTRE. Les regards de cote existent en asset (gauche, droite, et leurs paupieres
-	-- fermees) et ne sont PAS utilises : le pivot demandait de faire coincider trois dessins au pixel pres, et le
-	-- moindre decalage se voit comme une saccade sur un visage immobile.
-	--
-	-- Trois images suffisent a le rendre vivant. Un clignement bien fait vaut mieux qu'un regard qui se decale --
-	-- et il n'y a plus rien qui puisse mal se poser.
-	local FACE_FRONT = "rbxassetid://116099459878511"
-	local FACE_FRONT_HALF = "rbxassetid://95027481047570"
-	local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
-	-- LES DEUX COTES EN FRACTION DE LA HAUTEUR (voir `RelativeYY` a la construction), comme la couronne de points.
-	-- La largeur etait en fraction de la LARGEUR : sur un telephone (2340 x 1080, bien plus large qu'un ecran PC) la
-	-- tete, en `Stretch`, sortait 22 % plus large que haute -- ecrasee. 0.2365 = l'ancienne largeur (0.133) ramenee
-	-- a la hauteur d'un ecran 16:9 : rien ne change sur PC, et le visage garde ses proportions partout ailleurs.
-	local FACE_SIZE = UDim2.fromScale(0.2365, 0.229)
+	-- La tuile defile en diagonale, en pixels par seconde. Horizontal ou vertical, ca se lit comme un decor qui
+	-- glisse ; en diagonale, comme un mouvement propre.
+	local TILE_DRIFT = 15
 	-- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
 	--
-	-- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement
-	-- qui fait la matiere molle. `Back` depasserait une seule fois (un rebond sec), `Quad` n'irait que jusqu'a la
-	-- cible et ce serait un simple agrandissement.
-	--
-	-- Assez long pour qu'on VOIE les oscillations : sous ~0.4 s, Elastic n'a pas le temps d'osciller et rend la
-	-- meme chose qu'un ease ordinaire, en plus cher.
+	-- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement qui
+	-- fait la matiere molle. Assez long pour qu'on VOIE les oscillations : sous ~0.4 s, Elastic n'a pas le temps
+	-- d'osciller et rend la meme chose qu'un ease ordinaire.
 	local FACE_POP_TIME = 0.75
-	-- Un souffle avant de partir. Le rideau vient d'apparaitre : deplier pile a l'image zero, ca se perd dans son
-	-- propre fondu d'arrivee.
+	-- Un souffle avant de partir : deplier pile a l'image zero, ca se perd dans le fondu d'arrivee du rideau.
 	local FACE_POP_DELAY = 0.15
-	-- IL TANGUE, tres doucement, de gauche a droite. Rien ne bouge sur cet ecran a part l'anneau : une tete
-	-- parfaitement immobile au centre se lit comme une image collee.
-	--
-	-- FAIBLE ET LENT, les deux ensemble. Une amplitude large ferait un metronome ; une amplitude faible mais
-	-- rapide ferait un tremblement. C'est la LENTEUR qui rend le mouvement organique -- on ne doit pas pouvoir
-	-- dire dans quel sens il part, seulement sentir que ca vit.
+	-- IL TANGUE, tres doucement. FAIBLE ET LENT, les deux ensemble : une amplitude large ferait un metronome, une
+	-- amplitude faible mais rapide un tremblement.
 	local FACE_SWAY_ANGLE = 4 -- degres de chaque cote
 	local FACE_SWAY_SPEED = 0.6 -- radians par seconde : un aller-retour complet en une dizaine de secondes
-	-- Ecart entre deux clignements, plus du hasard. Sans hasard, un clignement toutes les N secondes pile se lit
-	-- comme un metronome -- exactement ce qu'un vivant ne fait pas.
+	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 	local FACE_BLINK_EVERY = 3.2
 	local FACE_BLINK_JITTER = 2.4
 	-- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
 	local FACE_BLINK_HALF = 0.05
 	local FACE_BLINK_SHUT = 0.09
-
-	-- L'ANNEAU QUI TOURNAIT AUTOUR DU VISAGE EST RETIRE. Il portait le signal "ca charge" a une epoque ou rien
-	-- d'autre ne le portait ; depuis, la couronne de points le dit plus clairement, et sans rien poser sur le
-	-- grand-pere. Deux signaux qui racontent la meme chose finissent par se gener.
-
-	-- ===== LE HALO =====
-	-- Une lueur derriere le visage. Elle ne dit rien et ne bouge pas : elle DETACHE le grand-pere du ciel, qui a
-	-- pratiquement sa couleur. Sans elle, un dessin blanc sur un fond cyan clair se fond dedans dans le coin le
-	-- plus lumineux de l'ecran.
-	local GLOW_IMAGE_ID = "rbxassetid://108057663284590"
-	local GLOW_COLOR = Color3.fromRGB(99, 221, 255)
-	-- Plus grand que l'anneau : un halo qui s'arrete au bord de ce qu'il eclaire n'est pas un halo, c'est un
-	-- contour.
-	local GLOW_SIZE = UDim2.fromScale(0.34, 0.6)
-	-- ===== DESTINATION =====
-	-- Le lieu ou l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend.
-	-- ReplicatedFirst ne peut pas require PlacesConfig : les identifiants sont donc EN DUR ici, comme
-	-- MAIN_PLACE_ID plus haut. A tenir d'accord a la main -- c'est le prix de tourner aussi tot.
-	local DEST_BY_PLACE = {
-		[84161484719535] = "LEAFIA",
-		[109440527457437] = "TUTORIAL",
-		[124669452423388] = "CLIENT",
-		[77113670151896] = "TEST",
-	}
-	local DEST_FALLBACK = "LOADING"
-	local DEST_POS = UDim2.fromScale(0.988, 0.056)
-	local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
-
-	-- INDICATEUR DE CHARGEMENT : une couronne de points qui tourne, en bas de l'ecran.
-	--
-	-- Les feuilles qui s'allumaient une par une ont ete retirees. Une jauge a CRANS raconte une PROGRESSION -- "il
-	-- en reste deux" -- alors que personne ne sait combien il reste : elle finissait donc par mentir a chaque tour.
-	-- Une couronne qui tourne ne promet rien d'autre que "ca travaille", et c'est la seule chose qu'on sache.
-	local SPIN_POS = UDim2.fromScale(0.5, 0.92)
-	-- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
-	local SPIN_SIZE = 0.08
-	-- Nombre de points. Sous 8 la rotation se lit comme une suite de sauts ; au-dela de 16 ils se touchent et la
-	-- couronne devient un anneau plein.
-	local SPIN_DOTS = 12
-	-- Rayon du cercle, en fraction du cadre. 0.5 poserait les centres pile sur le bord, donc les points
-	-- DEPASSERAIENT de la moitie de leur taille : il faut garder de quoi les loger.
-	local SPIN_RADIUS = 0.38
-	-- Diametre d'un point, meme unite. Trop gros, les voisins se touchent et le trou du milieu disparait.
-	local SPIN_DOT = 0.16
-	-- BLANC sur le rideau sombre. Pas le vert de Leafia : cet indicateur doit se lire comme une piece de
-	-- l'interface, pas comme un element du jeu -- et un accent de couleur ici volerait l'oeil au texte du bas.
-	local SPIN_COLOR = Color3.fromRGB(255, 255, 255)
-	-- Duree d'UN TOUR, en secondes. Plus vite, ca s'agite ; plus lentement, ca a l'air en panne.
+	-- Duree d'UN TOUR de la couronne, en secondes. Plus vite, ca s'agite ; plus lentement, ca a l'air en panne.
 	local SPIN_PERIOD = 1
-	-- Transparence du point de TETE et du plus pale, celui juste devant elle. Le second n'est pas a 1 : les points
-	-- eteints doivent rester VISIBLES, sinon on ne voit plus une couronne qui tourne mais un point qui saute.
-	local SPIN_HEAD_T = 0
-	local SPIN_TAIL_T = 0.78
-	-- De combien le point de tete grossit. Le meme dessin en deux tailles se distingue mieux qu'en deux gris.
-	local SPIN_HEAD_SCALE = 1.35
-	-- APPARITION. Elle depasse sa taille puis revient : c'est ce depassement qui donne le rebond. Une echelle qui
-	-- monte tout droit se lit comme un fondu, pas comme une arrivee.
-	-- ===== LE REBOND DE BALLE =====
-	-- Une balle molle qui tombe fait TROIS choses, et il faut les trois : elle s'ETIRE en tombant, elle
-	-- s'ECRASE en touchant, puis elle se REDRESSE en depassant un peu. Un simple rebond de position sans
-	-- deformation se lit comme un objet rigide qui saute -- ce n'est pas la meme sensation du tout.
-	--
-	-- LA DEFORMATION SE FAIT SUR LA TAILLE, pas sur un UIScale : une echelle est UNIFORME, donc elle ne peut ni
-	-- etirer ni ecraser. Elle ne sait que grossir.
-	--
+
 	-- Son joue quand le rideau apparait. POINTE SUR LE DOSSIER : un echantillon est tire au hasard, donc deux
 	-- chargements de suite ne sonnent pas pareil. Meme dossier que le son de coupe de haie.
 	local LEAF_SOUND = { "Sounds", "Environnement", "Leafs" }
@@ -356,51 +177,15 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- CanvasGroup : le fondu de sortie porte sur LUI, donc tout son contenu s'efface d'un seul mouvement au lieu
 	-- de partir element par element.
 	local curtain = Instance.new("CanvasGroup")
-	-- Couleur de secours seulement : le cadre degrade pose juste apres couvre tout l'ecran. Elle ne se voit que
-	-- l'instant ou le rideau existe sans encore son contenu.
-	curtain.BackgroundColor3 = BG
+	-- Couleur de secours seulement : le cadre degrade pose par CurtainVisual couvre tout l'ecran.
+	curtain.BackgroundColor3 = CurtainVisual.BG
 	curtain.BorderSizePixel = 0
 	curtain.Size = UDim2.fromScale(1, 1)
 	curtain.Active = true -- absorbe les clics tant que le rideau couvre
 	curtain.Parent = sg
 
-	-- ===== FOND DEGRADE =====
-	-- Un cadre au fond du tas, et pas un UIGradient sur le CanvasGroup : sur le groupe il teinterait TOUT son
-	-- contenu -- le texte blanc virerait au bleu, les feuilles perdraient leur vert.
-	local bg = Instance.new("Frame")
-	bg.Name = "Background"
-	bg.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-	bg.BorderSizePixel = 0
-	bg.Size = UDim2.fromScale(1, 1)
-	bg.ZIndex = 0
-	bg.Active = false
-	bg.Parent = curtain
-	local bgGradient = Instance.new("UIGradient")
-	bgGradient.Color = BG_COLOR
-	bgGradient.Rotation = BG_ROTATION
-	bgGradient.Parent = bg
-
-	-- ===== FOND TUILE =====
-	-- Le defilement DIAGONAL n'est pas un caprice : horizontal ou vertical, ca se lit comme un decor qui glisse ;
-	-- en diagonale, ca se lit comme un mouvement propre.
-	local tile = Instance.new("ImageLabel")
-	tile.Name = "Tile"
-	tile.BackgroundTransparency = 1
-	tile.Image = TILE_IMAGE_ID
-	tile.ImageColor3 = TILE_TINT
-	tile.ScaleType = Enum.ScaleType.Tile
-	tile.TileSize = TILE_CELL
-	tile.AnchorPoint = Vector2.new(0.5, 0.5)
-	tile.Position = UDim2.fromScale(0.5, 0.5)
-	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
-	tile.ZIndex = 2 -- au-dessus du degrade, sous tout le reste
-	tile.Parent = curtain
-	-- Le fondu vit sur un UIGradient enfant de la tuile. Il ne s'anime PAS : c'est la tuile qui defile dessous, et
-	-- comme elle ne se deplace que d'une case a la fois, le fondu reste ou il est.
-	local tileFade = Instance.new("UIGradient")
-	tileFade.Transparency = TILE_FADE
-	tileFade.Rotation = TILE_FADE_ROTATION
-	tileFade.Parent = tile
+	local built = CurtainVisual.build(curtain, CurtainVisual.destFor(game.PlaceId))
+	local tile, face, dots = built.tile, built.face, built.dots
 
 	local tileConn: RBXScriptConnection? = nil
 	do
@@ -408,8 +193,8 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		tileConn = RunService.Heartbeat:Connect(function(dt: number)
 			-- Periode de recyclage = la taille PIXEL d'une tuile. Relue a chaque image, donc elle suit l'ecran
 			-- (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
-			local periodX = TILE_CELL.X.Scale * tile.AbsoluteSize.X
-			local periodY = TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
+			local periodX = CurtainVisual.TILE_CELL.X.Scale * tile.AbsoluteSize.X
+			local periodY = CurtainVisual.TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
 			if periodX <= 0 or periodY <= 0 then
 				return
 			end
@@ -419,85 +204,44 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		end)
 	end
 
-	-- ===== L'ANNEAU QUI TOURNE, ET LE VISAGE DEDANS =====
-	-- L'anneau est le SIGNAL DE VIE de l'ecran : une rotation continue est la seule chose qui dise "le jeu n'est
-	-- pas plante" sans avoir a mesurer quoi que ce soit. Il ne represente AUCUNE progression -- c'est le travail
-	-- des feuilles, et deux indicateurs qui racontent la meme chose finiraient par se contredire.
-	-- LE HALO EN PREMIER : pose avant l'anneau et le visage, donc DERRIERE eux. L'ordre de creation ne suffirait
-	-- pas seul (les ZIndex tranchent), mais garder les deux d'accord evite d'avoir a se demander lequel gagne.
-	local glow = Instance.new("ImageLabel")
-	glow.Name = "FaceGlow"
-	glow.BackgroundTransparency = 1
-	glow.Image = GLOW_IMAGE_ID
-	glow.ImageColor3 = GLOW_COLOR
-	glow.ScaleType = Enum.ScaleType.Fit
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.Position = UDim2.fromScale(0.5, 0.5)
-	glow.Size = GLOW_SIZE
-	glow.ZIndex = 3
-	glow.Parent = curtain
+	-- ARRIVE PAR UN TELEPORT : le visage est DEJA a l'ecran, plein, sur l'ecran du voyage. Le replier a plat pour le
+	-- deplier le ferait disparaitre puis revenir pile au moment ou les deux ecrans se relaient -- un saut au lieu
+	-- d'un passage invisible. Il garde donc sa taille, et seul le tangage et le clignement demarrent.
+	local arrivedByTeleport = TeleportService:GetArrivingTeleportGui() ~= nil
+	if not arrivedByTeleport then
+		-- A PLAT AU DEPART, grandi depuis son CENTRE : le haut et le bas s'ecartent ensemble, ce qui se lit comme
+		-- un depliage.
+		face.Size = UDim2.fromScale(CurtainVisual.FACE_SIZE.X.Scale, 0)
+	end
 
-	-- LE VISAGE, pose sur le halo.
-	local face = Instance.new("ImageLabel")
-	face.Name = "OldManFace"
-	face.BackgroundTransparency = 1
-	face.Image = FACE_FRONT
-	-- `Stretch` ET SURTOUT PAS `Fit`. `Fit` conserve les proportions et borne l'image par le PLUS PETIT cote du
-	-- cadre : ecraser sa hauteur ferait RETRECIR la tete entiere au lieu de l'aplatir. Une image en `Fit` ne sait
-	-- que grossir et rapetisser -- elle ne peut pas se deformer, par construction. Piege deja paye deux fois dans
-	-- ce projet, sur les feuilles du chargement puis sur le marqueur du monde.
-	--
-	-- Le prix : la tete prend les proportions de son cadre. D'ou le cadre en `RelativeYY` plus bas -- sans lui,
-	-- elle s'ecrasait sur les telephones, bien plus larges qu'un ecran PC.
-	face.ScaleType = Enum.ScaleType.Stretch
-	face.AnchorPoint = Vector2.new(0.5, 0.5)
-	face.Position = UDim2.fromScale(0.5, 0.5)
-	-- A PLAT AU DEPART : hauteur zero, largeur pleine. Elle s'ouvre juste apres.
-	--
-	-- Elle grandit depuis son CENTRE (son point d'ancrage y est deja) : le haut et le bas s'ecartent ensemble, ce
-	-- qui se lit comme un depliage. Ancree en bas, elle POUSSERAIT vers le haut -- un autre geste, pas celui-la.
-	face.Size = UDim2.fromScale(FACE_SIZE.X.Scale, 0)
-	-- LES DEUX COTES SUR LA HAUTEUR DE L'ECRAN, donc des proportions fixes quel que soit le format. Sans lui, la
-	-- largeur suivait la largeur de l'ecran et la tete s'ecrasait sur les ecrans larges (telephones).
-	face.SizeConstraint = Enum.SizeConstraint.RelativeYY
-	face.ZIndex = 5
-	face.Parent = curtain
-
-	-- LE TANGAGE DE LA TETE. Cette boucle faisait aussi tourner l'anneau, qui est parti : il ne lui reste que ca.
+	-- LE TANGAGE DE LA TETE.
 	local swayConn: RBXScriptConnection? = nil
 	do
 		local swayTime = 0
 		swayConn = RunService.Heartbeat:Connect(function(dt: number)
-			-- Un sinus, donc le mouvement ne s'arrete jamais a un bout : il ralentit en arrivant et repart, ce qui
-			-- est exactement ce que fait une tete qui balance. Un aller-retour lineaire claquerait aux extremites.
+			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux
+			-- extremites.
 			swayTime += dt
 			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE
 		end)
 	end
 
-	-- LE DEPLIAGE. Une seule fois, a l'arrivee.
-	task.delay(FACE_POP_DELAY, function()
-		if not sg.Parent then
-			return
-		end
-		TweenService:Create(
-			face,
-			TweenInfo.new(FACE_POP_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
-			{ Size = FACE_SIZE }
-		):Play()
-	end)
+	-- LE DEPLIAGE. Une seule fois, a l'arrivee -- sauf apres un teleport, ou il est deja deplie.
+	if not arrivedByTeleport then
+		task.delay(FACE_POP_DELAY, function()
+			if not sg.Parent then
+				return
+			end
+			TweenService:Create(
+				face,
+				TweenInfo.new(FACE_POP_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+				{ Size = CurtainVisual.FACE_SIZE }
+			):Play()
+		end)
+	end
 
-	-- IL CLIGNE DES YEUX. Rien d'autre.
-	--
-	-- Le pivot du regard a ete essaye puis retire : faire coincider trois dessins au pixel pres est un pari, et
-	-- le moindre decalage se voit comme une saccade sur un visage par ailleurs immobile. Un clignement bien fait
-	-- vaut mieux qu'un regard qui saute.
-	--
-	-- L'image INTERMEDIAIRE (paupieres a moitie) est jouee a l'aller ET au retour : sans elle l'oeil passe
-	-- d'ouvert a ferme en une image, ce qui claque au lieu de cligner.
-	--
-	-- L'ecart entre deux clignements a du hasard. Toutes les N secondes pile, ca se lit comme un metronome -- et
-	-- un metronome n'est pas vivant.
+	-- IL CLIGNE DES YEUX. L'image INTERMEDIAIRE (paupieres a moitie) est jouee a l'aller ET au retour : sans elle
+	-- l'oeil passe d'ouvert a ferme en une image, ce qui claque au lieu de cligner.
 	task.spawn(function()
 		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
 		-- instance detruite.
@@ -506,143 +250,26 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 			if not sg.Parent then
 				return
 			end
-			face.Image = FACE_FRONT_HALF
+			face.Image = CurtainVisual.FACE_FRONT_HALF
 			task.wait(FACE_BLINK_HALF)
-			face.Image = FACE_FRONT_SHUT
+			face.Image = CurtainVisual.FACE_FRONT_SHUT
 			task.wait(FACE_BLINK_SHUT)
-			face.Image = FACE_FRONT_HALF
+			face.Image = CurtainVisual.FACE_FRONT_HALF
 			task.wait(FACE_BLINK_HALF)
-			face.Image = FACE_FRONT
+			face.Image = CurtainVisual.FACE_FRONT
 		end
 	end)
 
-	-- ===== L'INDICATEUR QUI TOURNE =====
-	-- Une couronne de points, dont l'un apres l'autre s'allume : la forme que tout le monde a deja vue mille fois.
-	-- C'est exactement ce qu'on lui demande -- personne n'a a APPRENDRE que ca veut dire "ca charge".
-	--
-	-- LES POINTS NE BOUGENT PAS. Ils sont poses une fois pour toutes sur le cercle, et seule leur TRANSPARENCE
-	-- tourne. Faire tourner un objet le long d'un cercle demanderait de recalculer sa position a chaque image, et
-	-- une trainee reclamerait alors autant d'objets qu'on veut de tetes -- pour le meme dessin a l'ecran.
-	local spinner = Instance.new("Frame")
-	spinner.Name = "Spinner"
-	spinner.BackgroundTransparency = 1
-	spinner.AnchorPoint = Vector2.new(0.5, 0.5)
-	spinner.Position = SPIN_POS
-	-- CARRE PAR CONSTRUCTION. `RelativeYY` calcule les DEUX cotes sur la HAUTEUR du parent : sans lui, une taille
-	-- en scale suit la largeur d'un cote et la hauteur de l'autre, et la couronne devient un ovale des que l'ecran
-	-- n'est pas carre -- c'est-a-dire toujours.
-	spinner.SizeConstraint = Enum.SizeConstraint.RelativeYY
-	spinner.Size = UDim2.fromScale(SPIN_SIZE, SPIN_SIZE)
-	spinner.ZIndex = 4
-	spinner.Parent = curtain
-
-	local dots: { Frame } = {}
-	for i = 1, SPIN_DOTS do
-		local a = (i - 1) / SPIN_DOTS * math.pi * 2
-		local dot = Instance.new("Frame")
-		dot.Name = `Dot{i}`
-		dot.AnchorPoint = Vector2.new(0.5, 0.5)
-		-- L'ANGLE PART DU HAUT et tourne dans le sens des aiguilles. Le `-cos` sur Y n'est pas une coquette : l'axe
-		-- Y d'une interface DESCEND, a l'envers du repere d'un cercle. Sans lui la trainee tournerait a l'envers.
-		dot.Position = UDim2.fromScale(0.5 + math.sin(a) * SPIN_RADIUS, 0.5 - math.cos(a) * SPIN_RADIUS)
-		dot.Size = UDim2.fromScale(SPIN_DOT, SPIN_DOT)
-		dot.BackgroundColor3 = SPIN_COLOR
-		dot.BorderSizePixel = 0
-		dot.ZIndex = 4
-		-- Un rayon en SCALE (0.5 = la moitie du cote) fait un rond quelle que soit la taille du point. En pixels, il
-		-- faudrait le refaire a chaque fois qu'on touche a SPIN_DOT -- et le point de tete, qui grossit, ne serait
-		-- deja plus rond.
-		--
-		-- Le cast est OBLIGATOIRE : luau-lsp ne resout pas `Instance.new("UICorner")` vers `UICorner`, et poser
-		-- `.CornerRadius` sur ce qu'il croit etre une `Instance` sort en erreur rouge.
-		local corner = Instance.new("UICorner") :: UICorner
-		corner.CornerRadius = UDim.new(0.5, 0)
-		corner.Parent = dot
-		dot.Parent = spinner
-		dots[i] = dot
-	end
-
+	-- LA COURONNE QUI TOURNE. Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentit la
+	-- rotation, alors que l'horloge ne se trompe jamais.
 	task.spawn(function()
-		-- INDICATEUR QUI TOURNE, pas une jauge de progression. Il ne dit pas combien il reste -- personne ne le
-		-- sait -- il dit que ca travaille. Une jauge calee sur une duree devinee finit toujours par mentir.
-		--
-		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
-		-- instance detruite.
 		local t0 = os.clock()
 		while sg.Parent do
-			-- OU EN EST LA TETE sur le cercle, de 0 a 1. Le temps ECOULE et pas un compteur qu'on incremente : a bas
-			-- FPS un compteur par image ralentit la rotation, alors que l'horloge, elle, ne se trompe jamais.
-			local head = ((os.clock() - t0) / SPIN_PERIOD) % 1
-			for i = 1, SPIN_DOTS do
-				local dot = dots[i]
-				if dot.Parent then
-					-- DISTANCE DERRIERE LA TETE, de 0 (c'est elle) a presque 1 (juste devant elle). Le modulo fait le
-					-- tour tout seul : aucun cas particulier a ecrire au passage par zero.
-					local d = (head - (i - 1) / SPIN_DOTS) % 1
-					dot.BackgroundTransparency = SPIN_HEAD_T + (SPIN_TAIL_T - SPIN_HEAD_T) * d
-					-- ET IL GROSSIT UN PEU. La transparence seule se lit mal sur un fond sombre : deux points pales se
-					-- ressemblent, deux tailles non.
-					local s = SPIN_DOT * (1 + (SPIN_HEAD_SCALE - 1) * (1 - d))
-					dot.Size = UDim2.fromScale(s, s)
-				end
-			end
+			CurtainVisual.paintSpinner(dots, ((os.clock() - t0) / SPIN_PERIOD) % 1)
 			task.wait()
 		end
 	end)
 
-	-- ===== BANDEAU DU BAS =====
-	local banner = Instance.new("ImageLabel")
-	banner.Name = "Banner"
-	banner.BackgroundTransparency = 1
-	banner.Image = BANNER_IMAGE_ID
-	-- BLANC PUR, ECRIT EXPLICITEMENT. C'est la valeur par defaut, mais c'est aussi ce qui rend BANNER_COLOR
-	-- LITTERAL : un UIGradient MULTIPLIE la couleur de l'objet. Teinter l'image ici raboterait donc le degrade en
-	-- silence, et on reglerait des couleurs qu'on ne voit jamais vraiment.
-	--
-	-- Autrement dit : la teinte du bandeau se regle dans BANNER_COLOR, jamais ici.
-	banner.ImageColor3 = Color3.fromRGB(255, 255, 255)
-	banner.ScaleType = Enum.ScaleType.Stretch
-	banner.AnchorPoint = Vector2.new(0.5, 0.5)
-	banner.Position = BANNER_POS
-	banner.Size = BANNER_SIZE
-	banner.Rotation = BANNER_ROTATION
-	banner.ZIndex = 3
-	banner.Parent = curtain
-	-- Son degrade est un FONDU FIXE, pas un reflet a promener : sa transparence monte le long de la largeur pour
-	-- que le bandeau ne soit pas plein d'un bout a l'autre. Deplacer son offset pousserait cette rampe HORS du
-	-- bandeau, qui redeviendrait donc completement opaque.
-	local bannerFade = Instance.new("UIGradient")
-	bannerFade.Color = BANNER_COLOR
-	bannerFade.Transparency = BANNER_FADE
-	bannerFade.Parent = banner
-
-	-- ===== DESTINATION =====
-	-- OU l'on va, en haut a droite. Le joueur sait alors ce qu'il attend, pas seulement QU'il attend -- et quand
-	-- il ira chez un client, c'est le nom du client qui s'affichera la.
-	local dest = Instance.new("TextLabel")
-	dest.Name = "ClientName"
-	dest.BackgroundTransparency = 1
-	-- Ancree a DROITE, pas au centre : le texte grandit alors vers la GAUCHE. Un nom long garde donc son bord
-	-- droit aligne sur le reste de l'ecran, au lieu de deborder des deux cotes.
-	dest.AnchorPoint = Vector2.new(1, 0.5)
-	dest.Position = DEST_POS
-	dest.Size = DEST_SIZE
-	dest.Text = DEST_BY_PLACE[game.PlaceId] or DEST_FALLBACK
-	dest.TextColor3 = Color3.fromRGB(255, 255, 255)
-	dest.TextScaled = true
-	dest.TextXAlignment = Enum.TextXAlignment.Right
-	-- MONTSERRAT EN GRAISSE MAXIMALE. LuckiestGuy est une police d'affiche : elle allait pour un mot pose au
-	-- milieu d'un ecran, elle bavarde derriere un bandeau. Montserrat Heavy tient la meme place avec une lettre
-	-- plus nette, et elle porte les accents des langues que Roblox traduit -- ce que LuckiestGuy fait mal.
-	-- `Heavy` EST le "Black" de Montserrat : c'est la graisse 900, la plus epaisse de la famille. Roblox ne
-	-- l'appelle pas Black -- et `FontStyle`, lui, ne connait que Normal et Italic, jamais une graisse.
-	dest.FontFace = Font.new(
-		"rbxasset://fonts/families/Montserrat.json",
-		Enum.FontWeight.Heavy,
-		Enum.FontStyle.Normal
-	)
-	dest.ZIndex = 4
-	dest.Parent = curtain
 	-- ===== SON =====
 	-- POURQUOI UNE BOUCLE DE RECHERCHE et pas un simple FindFirstChild. Ce rideau vit dans ReplicatedFirst : quand
 	-- il s'affiche, SoundService n'a pas forcement encore recu ses dossiers. Un scan unique a cet instant rendrait

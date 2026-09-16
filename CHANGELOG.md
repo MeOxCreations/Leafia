@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.866 — L'ecran du teleport ressemble enfin au rideau de chargement
+
+- PENDANT UN TELEPORT (vers le tuto, un chantier), l'ecran montrait encore l'ancien rideau GRIS avec une feuille et
+  quatre boules. Il montre maintenant le meme dessin que le rideau d'arrivee : ciel degrade, tuile, halo, visage du
+  grand-pere, couronne de points, bandeau. FIGE, parce qu'aucun script ne tourne pendant un teleport ; le rideau
+  d'arrivee reprend le meme dessin et l'anime.
+- LE DESSIN VIT MAINTENANT DANS `ReplicatedFirst/CurtainVisual` (nouveau module), lu par les deux ecrans : ils ne
+  peuvent plus diverger. `LoadingScreenClient` ne garde que les animations et la sortie.
+- EN ARRIVANT D'UN TELEPORT, la tete ne se replie plus a plat pour se redeplier : elle est deja a l'ecran, elle
+  garde sa taille, et seuls le tangage et le clignement demarrent. Pas de saut entre les deux ecrans.
+- Le nom du lieu affiche PENDANT le voyage est "LOADING" : l'ecran est enregistre une fois au demarrage et ne sait
+  pas ou le serveur enverra le joueur. Le rideau d'arrivee affiche le vrai nom.
+- NE SE VOIT PAS EN STUDIO : un teleport n'y part jamais. A tester dans le jeu publie.
+
 ## 0.0.865 — La tete du grand-pere garde ses proportions sur telephone (ecran de chargement)
 
 - Le visage du rideau de chargement etait dimensionne en fraction de la largeur ET de la hauteur, et etire pour
