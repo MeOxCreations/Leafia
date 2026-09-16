@@ -62,16 +62,16 @@ local FORWARD = 4
 -- IL ETAIT A -2.85, soit pose au sol. En l'air il ne peut plus clignoter contre le terrain (z-fighting), mais il
 -- se voit par la TRANCHE quand la camera descend a son niveau : un disque plat n'a pas d'epaisseur.
 local HEIGHT = 0
--- Le repere apparait et disparait en fondu. D'un coup, il attire l'oeil sur son apparition au lieu de la
--- direction qu'il montre.
+-- Duree du fondu de SORTIE. L'entree, elle, est portee par la pulsation (voir plus bas).
 local FADE_TIME = 0.3
--- Transparence quand il est visible. Pas zero : c'est une AIDE posee sur le decor, pas un objet du monde -- plus
--- elle monte, plus il se lit comme une indication et moins comme quelque chose de POSE par terre.
---
--- TRES HAUTE ICI, c'est voulu : a peine un voile au sol. La seule borne reelle est ce qu'on VOIT -- des 0.01 la
--- part est deja dans le rendu transparent de Roblox, il n'y a donc aucun seuil a franchir en montant. Le risque
--- est l'autre bout : trop haut, le repere disparait sur un sol clair et n'indique plus rien.
-local SHOWN_TRANSPARENCY = 0.85
+-- ===== IL PULSE =====
+-- Sa transparence va et vient entre ces deux valeurs, en boucle : un repere qui respire attire l'oeil sans rien
+-- ecrire, comme le halo de la porte. 1 = invisible, 0 = plein.
+local PULSE_MIN = 0.15
+local PULSE_MAX = 1
+-- Duree d'un aller-retour complet, en secondes. Meme battement que le halo de la porte : un seul langage pour
+-- "c'est par la".
+local PULSE_PERIOD = 1.6
 -- SOUS CETTE DISTANCE, il n'a plus rien a dire : le joueur est arrive, il voit la machine. Le laisser tourner sous
 -- ses pieds ferait une girouette.
 local ARRIVE_DIST = 14
@@ -83,6 +83,8 @@ local guide: BasePart? = nil
 local shown = false
 local warned = false
 local fadeTween: Tween? = nil
+-- L'instant ou il est apparu : la pulsation part de la, donc elle commence INVISIBLE et se revele toute seule.
+local shownAt = 0
 -- Dernier cap valable, en direction UNITAIRE horizontale. Garde quand la cible est trop proche pour donner un sens.
 local lastDir: Vector3? = nil
 
@@ -125,7 +127,7 @@ local function ensure(): BasePart?
 	clone.CanQuery = false
 	clone.CastShadow = false
 	clone.Size = source.Size * SCALE
-	-- IL NAIT INVISIBLE : la premiere image le pose a sa place, le fondu le revele ensuite. Cree visible, il
+	-- IL NAIT INVISIBLE : la premiere image le pose a sa place, la pulsation le revele ensuite. Cree visible, il
 	-- apparaitrait une image a l'origine de la map avant de sauter aux pieds du joueur.
 	clone.Transparency = 1
 	clone.Parent = Workspace
@@ -134,17 +136,8 @@ local function ensure(): BasePart?
 	return clone
 end
 
-local function fadeTo(part: BasePart, value: number)
-	if fadeTween then
-		fadeTween:Cancel()
-	end
-	local tween = TweenService:Create(part, TweenInfo.new(FADE_TIME), { Transparency = value })
-	fadeTween = tween
-	tween:Play()
-end
-
 --- Montre le repere aux pieds du joueur, oriente vers `target`. A appeler A CHAQUE IMAGE tant que le guidage a
---- lieu d'etre : il suit le joueur, et sa direction change quand celui-ci se deplace.
+--- lieu d'etre : il suit le joueur, sa direction change quand celui-ci se deplace, et sa pulsation avance.
 ---
 --- Il se cache TOUT SEUL une fois la cible atteinte (`ARRIVE_DIST`) : l'appelant n'a pas a mesurer la distance de
 --- son cote, et il ne peut donc pas y mettre un seuil different de celui qui pilote l'affichage.
@@ -185,8 +178,18 @@ function GroundGuide.point(target: Vector3)
 
 	if not shown then
 		shown = true
-		fadeTo(part, SHOWN_TRANSPARENCY)
+		shownAt = os.clock()
+		-- LA PULSATION DEVIENT LE SEUL ECRIVAIN de sa transparence : un fondu de sortie encore en cours se battrait
+		-- contre elle image par image.
+		if fadeTween then
+			fadeTween:Cancel()
+			fadeTween = nil
+		end
 	end
+	-- COSINUS, pas un aller-retour lineaire : il repart de lui-meme, donc aucune saccade au bouclage. Il part de 1
+	-- (PULSE_MAX, invisible) a l'apparition : l'entree en fondu est gratuite.
+	local wave = 0.5 + 0.5 * math.cos((os.clock() - shownAt) * math.pi * 2 / PULSE_PERIOD)
+	part.Transparency = PULSE_MIN + (PULSE_MAX - PULSE_MIN) * wave
 end
 
 --- Range le repere. Idempotent : appele a chaque image quand il n'y a rien a montrer, il ne relance rien.
@@ -196,7 +199,12 @@ function GroundGuide.hide()
 		return
 	end
 	shown = false
-	fadeTo(part, 1)
+	if fadeTween then
+		fadeTween:Cancel()
+	end
+	local tween = TweenService:Create(part, TweenInfo.new(FADE_TIME), { Transparency = 1 })
+	fadeTween = tween
+	tween:Play()
 end
 
 --- Detruit tout. Celui qui cree est celui qui nettoie.

@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.864 — Le repere de direction pulse
+
+- Le repere de direction du tuto (`MarkerDirectionTutorial`, vers la porte puis vers la tondeuse) pulse en
+  transparence : 1 -> 0.15 -> 1, en boucle, un aller-retour toutes les 1.6 s. Avant il restait fige a 0.85.
+- Reglages en tete de `Client/Utils/GroundGuide` : `PULSE_MIN`, `PULSE_MAX`, `PULSE_PERIOD`.
+
 ## 0.0.863 — Le " ! " de la porte se pose sur la poignee
 
 - Le marqueur rouge de la porte se pose sur l'Attachment `AttachHandle` place dans Studio sous le Model `Door`
