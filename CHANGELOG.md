@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.867 — Le rideau du bouton START est le meme que les autres
+
+- AU CLIC SUR START, le rideau (`LoadingOverlay`) montrait encore un fond gris avec une feuille qui se remplissait.
+  Il montre maintenant le meme rideau que l'arrivee et le teleport : ciel, tuile qui defile, visage du grand-pere
+  qui se deplie, tangue et cligne, couronne de points. Nom du lieu : "LOADING" (au clic, le serveur n'a pas encore
+  dit si on entre dans le jeu ou si on part au tuto).
+- Il s'efface maintenant d'un seul fondu (le CanvasGroup entier), au lieu de la feuille puis du fond.
+- LES ANIMATIONS DU RIDEAU PASSENT AUSSI DANS `ReplicatedFirst/CurtainVisual` (`CurtainVisual.animate`, qui rend
+  la fonction d'arret) : le rideau d'arrivee et celui du START les partagent au lieu de les recopier. Les trois
+  ecrans de chargement (START, teleport, arrivee) viennent maintenant du meme module.
+- API de `LoadingOverlay` inchangee (`show`, `hide(onRevealed)`, `showTime`) : `PlotSelectController` n'a pas bouge.
+
 ## 0.0.866 — L'ecran du teleport ressemble enfin au rideau de chargement
 
 - PENDANT UN TELEPORT (vers le tuto, un chantier), l'ecran montrait encore l'ancien rideau GRIS avec une feuille et

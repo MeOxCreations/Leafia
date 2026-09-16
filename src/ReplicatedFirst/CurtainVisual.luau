@@ -1,15 +1,19 @@
 --!strict
--- LE DESSIN DU RIDEAU DE CHANGEMENT DE LIEU : ciel degrade, tuile, halo, visage du grand-pere, couronne de points,
--- bandeau et nom du lieu. Rien n'est anime ici -- seulement la construction.
+-- LE RIDEAU DE CHARGEMENT DE LEAFIA : ciel degrade, tuile, halo, visage du grand-pere, couronne de points, bandeau et
+-- nom du lieu. Son DESSIN (`build`) et ses ANIMATIONS (`animate`).
 --
--- DEUX ECRANS LE DESSINENT, et c'est pour ca qu'il vit a part :
---   * le rideau d'ARRIVEE (LoadingScreenClient), qui l'anime ;
---   * l'ecran PENDANT le teleport (TeleportController), FIGE -- aucun script ne tourne pendant le voyage.
--- Deux copies du dessin finissent toujours par diverger, et c'est arrive : l'ecran du teleport montrait encore
--- l'ancien rideau gris, avec une feuille et quatre boules, pendant que l'arrivee montrait le ciel et le grand-pere.
+-- TROIS ECRANS LE MONTRENT, et c'est pour ca qu'il vit a part :
+--   * le rideau du bouton START (LoadingOverlay), anime ;
+--   * l'ecran PENDANT le teleport (TeleportController), FIGE -- aucun script ne tourne pendant le voyage ;
+--   * le rideau d'ARRIVEE dans une place (LoadingScreenClient), anime.
+-- Trois copies finissaient par diverger, et c'est arrive : le START montrait une feuille grise qui se remplissait,
+-- le teleport un fond gris a quatre boules, et seule l'arrivee montrait le ciel et le grand-pere.
 --
--- DANS ReplicatedFirst, a cote du rideau : il doit etre lisible avant que le reste du jeu soit replique. Un module de
--- ReplicatedStorage ferait attendre ce que le rideau est justement la pour masquer.
+-- DANS ReplicatedFirst : il doit etre lisible avant que le reste du jeu soit replique. Un module de ReplicatedStorage
+-- ferait attendre ce que le rideau est justement la pour masquer.
+
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 
 local CurtainVisual = {}
 
@@ -28,9 +32,11 @@ local TILE_IMAGE_ID = "rbxassetid://80842701479373"
 -- BLANC PUR, et ce n'est pas cosmetique : un UIGradient MULTIPLIE la couleur de l'objet. Sur un gris, les valeurs du
 -- degrade sont rabotees en silence et on regle une courbe dont on ne voit jamais le vrai rendu.
 local TILE_TINT = Color3.fromRGB(255, 255, 255)
--- Taille d'UNE tuile, en fraction de l'ImageLabel. Lue aussi par le rideau, qui fait defiler la tuile de cette
--- periode exacte.
-CurtainVisual.TILE_CELL = UDim2.fromScale(0.005, 0.01)
+-- Taille d'UNE tuile, en fraction de l'ImageLabel.
+local TILE_CELL = UDim2.fromScale(0.005, 0.01)
+-- Defilement, en pixels par seconde. EN DIAGONALE : horizontal ou vertical, ca se lit comme un decor qui glisse ; en
+-- diagonale, comme un mouvement propre.
+local TILE_DRIFT = 15
 -- FONDU SUR LA TUILE. Plein cadre et uniforme, le motif se lit comme un papier peint et rentre en concurrence avec
 -- le visage du milieu. On le laisse dense d'un cote et on le fait disparaitre de l'autre.
 --
@@ -76,14 +82,32 @@ local BG_COLOR = ColorSequence.new({
 
 -- ===== LE VISAGE DU GRAND-PERE, AU CENTRE =====
 -- Un visage dit CHEZ QUI l'on va -- c'est lui, le personnage qu'on va rencontrer. De face, et trois images pour le
--- clignement (ouvert, a moitie, ferme) : le rideau les alterne.
-CurtainVisual.FACE_FRONT = "rbxassetid://116099459878511"
-CurtainVisual.FACE_FRONT_HALF = "rbxassetid://95027481047570"
-CurtainVisual.FACE_FRONT_SHUT = "rbxassetid://92930536214559"
+-- clignement (ouvert, a moitie, ferme).
+local FACE_FRONT = "rbxassetid://116099459878511"
+local FACE_FRONT_HALF = "rbxassetid://95027481047570"
+local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
 -- LES DEUX COTES EN FRACTION DE LA HAUTEUR (`RelativeYY`), comme la couronne de points. La largeur etait en fraction
 -- de la LARGEUR : sur un telephone (2340 x 1080, bien plus large qu'un ecran PC) la tete, en `Stretch`, sortait 22 %
 -- plus large que haute -- ecrasee. 0.2365 = l'ancienne largeur (0.133) ramenee a la hauteur d'un ecran 16:9.
-CurtainVisual.FACE_SIZE = UDim2.fromScale(0.2365, 0.229)
+local FACE_SIZE = UDim2.fromScale(0.2365, 0.229)
+-- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
+--
+-- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement qui fait
+-- la matiere molle. Assez long pour qu'on VOIE les oscillations : sous ~0.4 s, Elastic n'a pas le temps d'osciller
+-- et rend la meme chose qu'un ease ordinaire.
+local FACE_POP_TIME = 0.75
+-- Un souffle avant de partir : deplier pile a l'image zero, ca se perd dans le fondu d'arrivee du rideau.
+local FACE_POP_DELAY = 0.15
+-- IL TANGUE, tres doucement. FAIBLE ET LENT, les deux ensemble : une amplitude large ferait un metronome, une
+-- amplitude faible mais rapide un tremblement.
+local FACE_SWAY_ANGLE = 4 -- degres de chaque cote
+local FACE_SWAY_SPEED = 0.6 -- radians par seconde : un aller-retour complet en une dizaine de secondes
+-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
+local FACE_BLINK_EVERY = 3.2
+local FACE_BLINK_JITTER = 2.4
+-- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
+local FACE_BLINK_HALF = 0.05
+local FACE_BLINK_SHUT = 0.09
 
 -- ===== LE HALO =====
 -- Il DETACHE le grand-pere du ciel, qui a pratiquement sa couleur. Plus grand que le visage : un halo qui s'arrete au
@@ -101,6 +125,7 @@ local DEST_BY_PLACE: { [number]: string } = {
 	[124669452423388] = "CLIENT",
 	[77113670151896] = "TEST",
 }
+-- QUAND ON NE SAIT PAS ENCORE OU L'ON VA : le START (le serveur n'a pas encore repondu) et l'ecran du teleport.
 CurtainVisual.DEST_FALLBACK = "LOADING"
 local DEST_POS = UDim2.fromScale(0.988, 0.056)
 local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
@@ -122,6 +147,8 @@ local SPIN_HEAD_T = 0
 local SPIN_TAIL_T = 0.78
 -- De combien le point de tete grossit. Le meme dessin en deux tailles se distingue mieux qu'en deux gris.
 local SPIN_HEAD_SCALE = 1.35
+-- Duree d'UN TOUR, en secondes. Plus vite, ca s'agite ; plus lentement, ca a l'air en panne.
+local SPIN_PERIOD = 1
 
 --- Le nom affiche pour ce lieu.
 function CurtainVisual.destFor(placeId: number): string
@@ -131,8 +158,8 @@ end
 --- Allume la couronne pour une tete a la position `head` (de 0 a 1 sur le cercle).
 ---
 --- LES POINTS NE BOUGENT PAS : seule leur transparence et leur taille tournent. La meme fonction sert a l'animation
---- du rideau et a l'image figee du teleport -- les deux ne peuvent donc pas dessiner deux couronnes differentes.
-function CurtainVisual.paintSpinner(dots: { Frame }, head: number)
+--- et a l'image figee du teleport -- les deux ne peuvent donc pas dessiner deux couronnes differentes.
+local function paintSpinner(dots: { Frame }, head: number)
 	for i, dot in dots do
 		if dot.Parent then
 			-- DISTANCE DERRIERE LA TETE, de 0 (c'est elle) a presque 1. Le modulo fait le tour tout seul.
@@ -144,7 +171,7 @@ function CurtainVisual.paintSpinner(dots: { Frame }, head: number)
 	end
 end
 
---- Dessine le rideau dans `container` (plein ecran). Rend ce que l'appelant peut animer.
+--- Dessine le rideau dans `container` (plein ecran). FIGE : rien ne bouge tant qu'on n'appelle pas `animate`.
 function CurtainVisual.build(container: GuiObject, destText: string): Built
 	-- FOND DEGRADE sur un cadre dedie, au fond du tas : un UIGradient pose sur le conteneur teinterait TOUT ce qu'il
 	-- contient -- le texte blanc virerait au bleu.
@@ -167,7 +194,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	tile.Image = TILE_IMAGE_ID
 	tile.ImageColor3 = TILE_TINT
 	tile.ScaleType = Enum.ScaleType.Tile
-	tile.TileSize = CurtainVisual.TILE_CELL
+	tile.TileSize = TILE_CELL
 	tile.AnchorPoint = Vector2.new(0.5, 0.5)
 	tile.Position = UDim2.fromScale(0.5, 0.5)
 	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
@@ -194,16 +221,16 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	local face = Instance.new("ImageLabel")
 	face.Name = "OldManFace"
 	face.BackgroundTransparency = 1
-	face.Image = CurtainVisual.FACE_FRONT
-	-- `Stretch` ET SURTOUT PAS `Fit` : le rideau l'ECRASE a plat puis le deplie. En `Fit`, ecraser sa hauteur ferait
+	face.Image = FACE_FRONT
+	-- `Stretch` ET SURTOUT PAS `Fit` : l'animation l'ECRASE a plat puis le deplie. En `Fit`, ecraser sa hauteur ferait
 	-- RETRECIR la tete entiere au lieu de l'aplatir -- une image en `Fit` ne sait que grossir et rapetisser. Le prix :
 	-- la tete prend les proportions de son cadre, d'ou le `RelativeYY` juste en dessous.
 	face.ScaleType = Enum.ScaleType.Stretch
 	face.AnchorPoint = Vector2.new(0.5, 0.5)
 	face.Position = UDim2.fromScale(0.5, 0.5)
 	face.SizeConstraint = Enum.SizeConstraint.RelativeYY
-	-- POSE A SA TAILLE PLEINE. C'est l'image figee du teleport ; le rideau, lui, la replie a plat avant de la deplier.
-	face.Size = CurtainVisual.FACE_SIZE
+	-- POSE A SA TAILLE PLEINE : c'est l'image figee du teleport. `animate` la replie a plat avant de la deplier.
+	face.Size = FACE_SIZE
 	face.ZIndex = 5
 	face.Parent = container
 
@@ -238,7 +265,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 		dot.Parent = spinner
 		dots[i] = dot
 	end
-	CurtainVisual.paintSpinner(dots, 0)
+	paintSpinner(dots, 0)
 
 	local banner = Instance.new("ImageLabel")
 	banner.Name = "Banner"
@@ -275,6 +302,83 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	dest.Parent = container
 
 	return { tile = tile, face = face, dots = dots }
+end
+
+--- Anime un rideau construit par `build` : la tuile defile, le visage se deplie (si `pop`), tangue et cligne, la
+--- couronne tourne. Rend la fonction qui ARRETE tout -- a appeler AVANT de detruire le rideau, parce que les boucles
+--- vivent sur RunService et survivraient a ses instances.
+---
+--- `pop` a faux : le visage est deja a l'ecran a sa taille (arrivee apres un teleport). Le replier pour le deplier le
+--- ferait disparaitre puis revenir pile au moment ou deux ecrans se relaient.
+function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
+	local tile, face, dots = built.tile, built.face, built.dots
+	local alive = true
+	local conns: { RBXScriptConnection } = {}
+
+	local offX, offY = 0, 0
+	local swayTime = 0
+	local t0 = os.clock()
+	table.insert(
+		conns,
+		RunService.Heartbeat:Connect(function(dt: number)
+			-- Periode de recyclage = la taille PIXEL d'une tuile. Relue a chaque image, donc elle suit l'ecran
+			-- (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
+			local periodX = TILE_CELL.X.Scale * tile.AbsoluteSize.X
+			local periodY = TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
+			if periodX > 0 and periodY > 0 then
+				offX = (offX + TILE_DRIFT * dt) % periodX
+				offY = (offY + TILE_DRIFT * dt) % periodY
+				tile.Position = UDim2.new(0.5, offX, 0.5, offY)
+			end
+			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
+			swayTime += dt
+			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE
+			-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentit la rotation.
+			paintSpinner(dots, ((os.clock() - t0) / SPIN_PERIOD) % 1)
+		end)
+	)
+
+	if pop then
+		-- A PLAT AU DEPART, grandi depuis son CENTRE : le haut et le bas s'ecartent ensemble, ce qui se lit comme un
+		-- depliage.
+		face.Size = UDim2.fromScale(FACE_SIZE.X.Scale, 0)
+		task.delay(FACE_POP_DELAY, function()
+			if not alive then
+				return
+			end
+			TweenService:Create(
+				face,
+				TweenInfo.new(FACE_POP_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
+				{ Size = FACE_SIZE }
+			):Play()
+		end)
+	end
+
+	-- IL CLIGNE DES YEUX. L'image INTERMEDIAIRE (paupieres a moitie) est jouee a l'aller ET au retour : sans elle
+	-- l'oeil passe d'ouvert a ferme en une image, ce qui claque au lieu de cligner.
+	task.spawn(function()
+		while alive do
+			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
+			if not alive then
+				return
+			end
+			face.Image = FACE_FRONT_HALF
+			task.wait(FACE_BLINK_HALF)
+			face.Image = FACE_FRONT_SHUT
+			task.wait(FACE_BLINK_SHUT)
+			face.Image = FACE_FRONT_HALF
+			task.wait(FACE_BLINK_HALF)
+			face.Image = FACE_FRONT
+		end
+	end)
+
+	return function()
+		alive = false
+		for _, conn in conns do
+			conn:Disconnect()
+		end
+		table.clear(conns)
+	end
 end
 
 return CurtainVisual

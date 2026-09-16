@@ -109,33 +109,8 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- StarterGui, donc le modele n'existait que dans le lieu ou on l'avait dessine, et le tuto tombait sur le
 	-- rideau de secours. Le code, lui, arrive dans TOUS les lieux sans qu'on ait rien a recopier.
 	--
-	-- LE DESSIN VIT DANS `CurtainVisual`, a cote de ce fichier. L'ecran PENDANT le teleport (TeleportController)
-	-- dessine exactement le meme, fige. Ici on ne garde que ce qui BOUGE -- la tuile, le visage, la couronne -- et
-	-- la sortie.
-
-	-- La tuile defile en diagonale, en pixels par seconde. Horizontal ou vertical, ca se lit comme un decor qui
-	-- glisse ; en diagonale, comme un mouvement propre.
-	local TILE_DRIFT = 15
-	-- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
-	--
-	-- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement qui
-	-- fait la matiere molle. Assez long pour qu'on VOIE les oscillations : sous ~0.4 s, Elastic n'a pas le temps
-	-- d'osciller et rend la meme chose qu'un ease ordinaire.
-	local FACE_POP_TIME = 0.75
-	-- Un souffle avant de partir : deplier pile a l'image zero, ca se perd dans le fondu d'arrivee du rideau.
-	local FACE_POP_DELAY = 0.15
-	-- IL TANGUE, tres doucement. FAIBLE ET LENT, les deux ensemble : une amplitude large ferait un metronome, une
-	-- amplitude faible mais rapide un tremblement.
-	local FACE_SWAY_ANGLE = 4 -- degres de chaque cote
-	local FACE_SWAY_SPEED = 0.6 -- radians par seconde : un aller-retour complet en une dizaine de secondes
-	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
-	local FACE_BLINK_EVERY = 3.2
-	local FACE_BLINK_JITTER = 2.4
-	-- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
-	local FACE_BLINK_HALF = 0.05
-	local FACE_BLINK_SHUT = 0.09
-	-- Duree d'UN TOUR de la couronne, en secondes. Plus vite, ca s'agite ; plus lentement, ca a l'air en panne.
-	local SPIN_PERIOD = 1
+	-- LE DESSIN ET SES ANIMATIONS VIVENT DANS `CurtainVisual`, a cote de ce fichier : le rideau du bouton START et
+	-- l'ecran du teleport montrent exactement le meme. Ici il ne reste que l'attente et la sortie.
 
 	-- Son joue quand le rideau apparait. POINTE SUR LE DOSSIER : un echantillon est tire au hasard, donc deux
 	-- chargements de suite ne sonnent pas pareil. Meme dossier que le son de coupe de haie.
@@ -185,90 +160,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	curtain.Parent = sg
 
 	local built = CurtainVisual.build(curtain, CurtainVisual.destFor(game.PlaceId))
-	local tile, face, dots = built.tile, built.face, built.dots
-
-	local tileConn: RBXScriptConnection? = nil
-	do
-		local offX, offY = 0, 0
-		tileConn = RunService.Heartbeat:Connect(function(dt: number)
-			-- Periode de recyclage = la taille PIXEL d'une tuile. Relue a chaque image, donc elle suit l'ecran
-			-- (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
-			local periodX = CurtainVisual.TILE_CELL.X.Scale * tile.AbsoluteSize.X
-			local periodY = CurtainVisual.TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
-			if periodX <= 0 or periodY <= 0 then
-				return
-			end
-			offX = (offX + TILE_DRIFT * dt) % periodX
-			offY = (offY + TILE_DRIFT * dt) % periodY
-			tile.Position = UDim2.new(0.5, offX, 0.5, offY)
-		end)
-	end
-
-	-- ARRIVE PAR UN TELEPORT : le visage est DEJA a l'ecran, plein, sur l'ecran du voyage. Le replier a plat pour le
-	-- deplier le ferait disparaitre puis revenir pile au moment ou les deux ecrans se relaient -- un saut au lieu
-	-- d'un passage invisible. Il garde donc sa taille, et seul le tangage et le clignement demarrent.
+	-- ARRIVE PAR UN TELEPORT : le visage est DEJA a l'ecran, plein, sur l'ecran du voyage. Pas de depliage : il le
+	-- ferait disparaitre puis revenir pile au moment ou les deux ecrans se relaient.
 	local arrivedByTeleport = TeleportService:GetArrivingTeleportGui() ~= nil
-	if not arrivedByTeleport then
-		-- A PLAT AU DEPART, grandi depuis son CENTRE : le haut et le bas s'ecartent ensemble, ce qui se lit comme
-		-- un depliage.
-		face.Size = UDim2.fromScale(CurtainVisual.FACE_SIZE.X.Scale, 0)
-	end
-
-	-- LE TANGAGE DE LA TETE.
-	local swayConn: RBXScriptConnection? = nil
-	do
-		local swayTime = 0
-		swayConn = RunService.Heartbeat:Connect(function(dt: number)
-			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux
-			-- extremites.
-			swayTime += dt
-			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE
-		end)
-	end
-
-	-- LE DEPLIAGE. Une seule fois, a l'arrivee -- sauf apres un teleport, ou il est deja deplie.
-	if not arrivedByTeleport then
-		task.delay(FACE_POP_DELAY, function()
-			if not sg.Parent then
-				return
-			end
-			TweenService:Create(
-				face,
-				TweenInfo.new(FACE_POP_TIME, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out),
-				{ Size = CurtainVisual.FACE_SIZE }
-			):Play()
-		end)
-	end
-
-	-- IL CLIGNE DES YEUX. L'image INTERMEDIAIRE (paupieres a moitie) est jouee a l'aller ET au retour : sans elle
-	-- l'oeil passe d'ouvert a ferme en une image, ce qui claque au lieu de cligner.
-	task.spawn(function()
-		-- `sg.Parent` : la boucle meurt avec le rideau. Un `while true` tournerait toute la session sur une
-		-- instance detruite.
-		while sg.Parent do
-			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
-			if not sg.Parent then
-				return
-			end
-			face.Image = CurtainVisual.FACE_FRONT_HALF
-			task.wait(FACE_BLINK_HALF)
-			face.Image = CurtainVisual.FACE_FRONT_SHUT
-			task.wait(FACE_BLINK_SHUT)
-			face.Image = CurtainVisual.FACE_FRONT_HALF
-			task.wait(FACE_BLINK_HALF)
-			face.Image = CurtainVisual.FACE_FRONT
-		end
-	end)
-
-	-- LA COURONNE QUI TOURNE. Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentit la
-	-- rotation, alors que l'horloge ne se trompe jamais.
-	task.spawn(function()
-		local t0 = os.clock()
-		while sg.Parent do
-			CurtainVisual.paintSpinner(dots, ((os.clock() - t0) / SPIN_PERIOD) % 1)
-			task.wait()
-		end
-	end)
+	local stopAnimation = CurtainVisual.animate(built, not arrivedByTeleport)
 
 	-- ===== SON =====
 	-- POURQUOI UNE BOUCLE DE RECHERCHE et pas un simple FindFirstChild. Ce rideau vit dans ReplicatedFirst : quand
@@ -431,14 +326,7 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- COUVERT : on demonte le rideau pendant qu'on ne voit rien. C'est tout l'interet du volet.
 	-- La boucle AVANT le Destroy : elle vit sur RunService, pas sur le GUI, donc detruire le rideau ne la
 	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
-	if swayConn then
-		swayConn:Disconnect()
-		swayConn = nil
-	end
-	if tileConn then
-		tileConn:Disconnect()
-		tileConn = nil
-	end
+	stopAnimation()
 	sg:Destroy()
 	task.wait(WIPE_HOLD)
 
