@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.863 — Le " ! " de la porte se pose sur la poignee
+
+- Le marqueur rouge de la porte se pose sur l'Attachment `AttachHandle` place dans Studio sous le Model `Door`
+  (`TutorialConfigs.DOOR_MARKER_ATTACHMENT`), et plus au centre de la porte.
+- Introuvable apres quelques secondes, il retombe sur le centre, avec un warn qui le dit.
+
 ## 0.0.862 — Au spawn du tuto, le repere de direction montre la porte du grand-pere
 
 - Tant que le joueur n'a pas toque, le repere de direction (`MarkerDirectionTutorial`, porte par le joueur) pointe

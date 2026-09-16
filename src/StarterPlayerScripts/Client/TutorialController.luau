@@ -86,6 +86,7 @@ local warned = {
 	warnedNoDoor = false,
 	warnedNoHighlight = false,
 	warnedNoTruckDoor = false,
+	warnedNoDoorAttach = false,
 }
 local elapsed = 0
 local doorHint = true
@@ -2784,7 +2785,26 @@ local function step(dt: number)
 	--
 	-- Le point vise est le CENTRE de la porte, pas sa PrimaryPart : celle-ci est la charniere, posee sur le cote.
 	if doorHint and not doorMarker then
-		doorMarker = WorldMarker.show(anchorPos, Vector3.new(0, TutorialConfigs.DOOR_MARKER_UP, 0))
+		-- SUR L'ATTACHMENT POSE DANS STUDIO (`AttachHandle`), a la poignee. Pas sur la part `Handle` : c'est la
+		-- charniere, sur le cote de la porte.
+		--
+		-- ON ATTEND UN PEU QU'IL ARRIVE (streaming) avant de retomber sur le centre de la porte : sinon le marqueur
+		-- se poserait au centre une fois pour toutes, un instant avant que l'Attachment soit replique.
+		local handle = (door :: Model):FindFirstChild(TutorialConfigs.DOOR_MARKER_ATTACHMENT, true)
+		local at: Vector3? = if handle and handle:IsA("Attachment") then handle.WorldPosition else nil
+		if not at and now - startedAt > TutorialConfigs.NOT_FOUND_WARN_AFTER then
+			if not warned.warnedNoDoorAttach then
+				warned.warnedNoDoorAttach = true
+				warn(
+					`[Tutorial] Aucun Attachment "{TutorialConfigs.DOOR_MARKER_ATTACHMENT}" sous la porte : le " ! " se `
+						.. "pose au centre. Rojo ne synchronise pas le Workspace, il doit exister dans CETTE place."
+				)
+			end
+			at = anchorPos
+		end
+		if at then
+			doorMarker = WorldMarker.show(at, Vector3.new(0, TutorialConfigs.DOOR_MARKER_UP, 0))
+		end
 	elseif not doorHint and doorMarker then
 		WorldMarker.remove(doorMarker)
 		doorMarker = nil

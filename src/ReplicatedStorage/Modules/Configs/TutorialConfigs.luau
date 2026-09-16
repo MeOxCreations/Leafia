@@ -476,8 +476,10 @@ return {
 	-- Un point d'exclamation flottant au-dessus de la porte, tant qu'on n'a pas toque. Le halo dit "cet objet
 	-- compte" quand on le voit deja ; le marqueur, lui, se voit de LOIN et dit ou aller.
 	--
-	-- Hauteur au-dessus du CENTRE de la porte, en studs. A ZERO : le point vise est deja le milieu du battant,
-	-- soit pile la hauteur ou l'on regarde -- il n'y a rien a corriger.
+	-- OU IL SE POSE : l'Attachment de ce nom, place A LA MAIN dans Studio sous le Model de la porte. Le placement se
+	-- regle a la souris, pas en chiffres. Introuvable, il retombe sur le centre de la porte (et la console le dit).
+	DOOR_MARKER_ATTACHMENT = "AttachHandle",
+	-- Hauteur au-dessus de ce point, en studs. A ZERO : il est pile sur l'Attachment.
 	--
 	-- ELLE VALAIT 3.5 SANS JAMAIS SERVIR : le balancement du marqueur ecrasait la hauteur demandee (corrige en
 	-- 0.0.751). Le jour ou elle s'est mise a compter, le marqueur est parti au-dessus du toit. Seul celui du
