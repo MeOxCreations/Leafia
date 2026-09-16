@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.869 — Pas de tuile animee sur le rideau de chargement, sur mobile
+
+- Sur un appareil tactile (`UserInputService.TouchEnabled`), `CurtainVisual` ne pose plus la tuile qui defile. Le
+  ciel degrade, le visage du grand-pere, le halo, la couronne de points et le bandeau restent. Vaut pour les trois
+  ecrans (START, teleport, arrivee). Rien ne change sur PC.
+
 ## 0.0.868 — Boutons mobiles blancs, et les balises ne sont plus decalees sur telephone
 
 ### Les boutons d'action sur mobile

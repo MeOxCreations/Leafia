@@ -14,10 +14,19 @@
 
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local CurtainVisual = {}
 
-export type Built = { tile: ImageLabel, face: ImageLabel, dots: { Frame } }
+-- `tile` est nil sur mobile : voir SHOW_TILE.
+export type Built = { tile: ImageLabel?, face: ImageLabel, dots: { Frame } }
+
+-- PAS DE TUILE SUR MOBILE, a la demande du joueur apres test sur telephone. Le ciel degrade, le visage et la couronne
+-- restent : seul le motif qui defile disparait.
+--
+-- `TouchEnabled` SEUL : c'est une CAPACITE, vraie sur telephone et dans l'emulateur de Studio (qui garde le clavier du
+-- PC). Deja paye au journal.
+local SHOW_TILE = not UserInputService.TouchEnabled
 
 -- COULEUR DE SECOURS DU CONTENEUR. Elle ne se voit qu'un instant -- celui ou le rideau existe deja mais ou son cadre
 -- degrade n'est pas encore pose -- et partout ou ce cadre ne couvrirait pas.
@@ -188,22 +197,26 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	bgGradient.Rotation = BG_ROTATION
 	bgGradient.Parent = bg
 
-	local tile = Instance.new("ImageLabel")
-	tile.Name = "Tile"
-	tile.BackgroundTransparency = 1
-	tile.Image = TILE_IMAGE_ID
-	tile.ImageColor3 = TILE_TINT
-	tile.ScaleType = Enum.ScaleType.Tile
-	tile.TileSize = TILE_CELL
-	tile.AnchorPoint = Vector2.new(0.5, 0.5)
-	tile.Position = UDim2.fromScale(0.5, 0.5)
-	tile.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
-	tile.ZIndex = 2
-	tile.Parent = container
-	local tileFade = Instance.new("UIGradient")
-	tileFade.Transparency = TILE_FADE
-	tileFade.Rotation = TILE_FADE_ROTATION
-	tileFade.Parent = tile
+	local tile: ImageLabel? = nil
+	if SHOW_TILE then
+		local label = Instance.new("ImageLabel")
+		label.Name = "Tile"
+		label.BackgroundTransparency = 1
+		label.Image = TILE_IMAGE_ID
+		label.ImageColor3 = TILE_TINT
+		label.ScaleType = Enum.ScaleType.Tile
+		label.TileSize = TILE_CELL
+		label.AnchorPoint = Vector2.new(0.5, 0.5)
+		label.Position = UDim2.fromScale(0.5, 0.5)
+		label.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
+		label.ZIndex = 2
+		label.Parent = container
+		local tileFade = Instance.new("UIGradient")
+		tileFade.Transparency = TILE_FADE
+		tileFade.Rotation = TILE_FADE_ROTATION
+		tileFade.Parent = label
+		tile = label
+	end
 
 	-- LE HALO EN PREMIER, donc DERRIERE le visage.
 	local glow = Instance.new("ImageLabel")
@@ -323,12 +336,15 @@ function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
 		RunService.Heartbeat:Connect(function(dt: number)
 			-- Periode de recyclage = la taille PIXEL d'une tuile. Relue a chaque image, donc elle suit l'ecran
 			-- (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
-			local periodX = TILE_CELL.X.Scale * tile.AbsoluteSize.X
-			local periodY = TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
-			if periodX > 0 and periodY > 0 then
-				offX = (offX + TILE_DRIFT * dt) % periodX
-				offY = (offY + TILE_DRIFT * dt) % periodY
-				tile.Position = UDim2.new(0.5, offX, 0.5, offY)
+			-- Pas de tuile sur mobile (voir SHOW_TILE) : rien a faire defiler.
+			if tile then
+				local periodX = TILE_CELL.X.Scale * tile.AbsoluteSize.X
+				local periodY = TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
+				if periodX > 0 and periodY > 0 then
+					offX = (offX + TILE_DRIFT * dt) % periodX
+					offY = (offY + TILE_DRIFT * dt) % periodY
+					tile.Position = UDim2.new(0.5, offX, 0.5, offY)
+				end
 			end
 			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
 			swayTime += dt
