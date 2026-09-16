@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.873 — Le point d'interrogation du grand-pere se pose au milieu de sa tete
+
+- Chaque dessin a son Attachment (`TutorialConfigs.IMPATIENT_BURST_ATTACHMENTS`) : l'eclair sur
+  `AttachmentVisualPopUI` (cote de la tete), le point d'interrogation sur `AttachmentVisualPopUIMiddle` (au milieu).
+- Pose sur un Attachment, le dessin n'ajoute plus son rehaussement propre (`rise`, 1.4 stud pour le point
+  d'interrogation) : le point choisi dans Studio est le bon. Nouveau 4e argument `exact` de `HeadBurst.play`.
+- Depend de l'Attachment `AttachmentVisualPopUIMiddle` pose dans Studio sous `OldmanOriginal` (place du tuto).
+
 ## 0.0.872 — L'onomatopee du grand-pere se pose sur son Attachment, et rapetisse sur telephone
 
 - L'ECLAIR (colere) ET LE POINT D'INTERROGATION (attente) se posent sur l'Attachment `AttachmentVisualPopUI` place

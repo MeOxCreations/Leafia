@@ -1843,15 +1843,18 @@ local function bodyPart(model: Model): BasePart?
 	return model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
 end
 
--- L'ONOMATOPEE AU-DESSUS DE SA TETE, posee sur l'Attachment place dans Studio (`IMPATIENT_BURST_ATTACHMENT`). Le point
--- se regle a la souris, sur le modele, au lieu d'un decalage en studs devine depuis sa RootPart.
+-- L'ONOMATOPEE AU-DESSUS DE SA TETE, posee sur l'Attachment de SON dessin, place dans Studio
+-- (`IMPATIENT_BURST_ATTACHMENTS`). Le point se regle a la souris, sur le modele, au lieu d'un decalage en studs devine
+-- depuis sa RootPart.
 --
 -- ACCROCHEE A L'ATTACHMENT LUI-MEME, pas a sa position : il marche, et un point fige resterait en l'air derriere lui.
--- Sans Attachment, on retombe sur l'ancien reglage (RootPart + decalage) plutot que de ne rien montrer.
+-- `exact` : le point choisi dans Studio est le bon, on n'y ajoute pas le rehaussement propre au dessin. Sans
+-- Attachment, on retombe sur l'ancien reglage (RootPart + decalage) plutot que de ne rien montrer.
 local function burstOn(model: Model, kind: HeadBurst.Kind)
-	local spot = model:FindFirstChild(TutorialConfigs.IMPATIENT_BURST_ATTACHMENT, true)
+	local name = TutorialConfigs.IMPATIENT_BURST_ATTACHMENTS[kind]
+	local spot = if name then model:FindFirstChild(name, true) else nil
 	if spot and spot:IsA("Attachment") then
-		HeadBurst.play(spot, Vector3.zero, kind)
+		HeadBurst.play(spot, Vector3.zero, kind, true)
 		return
 	end
 	local body = bodyPart(model)

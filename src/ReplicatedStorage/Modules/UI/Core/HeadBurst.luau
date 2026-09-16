@@ -165,7 +165,10 @@ end
 ---
 --- `offset` decale le point vise, en studs -- typiquement pour la poser au-dessus de la tete. `kind` choisit le
 --- dessin : la colere par defaut, la question pour quelqu'un qui attend.
-function HeadBurst.play(target: WorldAnchor.Target, offset: Vector3?, kind: Kind?)
+---
+--- `exact` : la cible EST le point voulu (un Attachment pose a la main dans Studio). On n'y ajoute alors pas le
+--- rehaussement propre au dessin (`rise`), qui ne sert qu'a compenser une cible approximative comme une RootPart.
+function HeadBurst.play(target: WorldAnchor.Target, offset: Vector3?, kind: Kind?, exact: boolean?)
 	local holder = getGui()
 	local look = LOOKS[kind or "Anger"] or LOOKS.Anger
 
@@ -198,7 +201,7 @@ function HeadBurst.play(target: WorldAnchor.Target, offset: Vector3?, kind: Kind
 	-- decalage lateral en repere monde passerait DERRIERE le personnage des qu'on tourne autour de lui. Sa
 	-- hauteur, elle, reste verticale dans le MONDE -- sinon elle s'inclinerait avec la camera, et le dessin
 	-- glisserait sur le cote du crane des qu'on regarde d'en haut. Voir `WorldAnchor.cameraOffset`.
-	local base = (offset or Vector3.zero) + Vector3.new(0, look.rise, 0)
+	local base = (offset or Vector3.zero) + Vector3.new(0, if exact then 0 else look.rise, 0)
 	WorldAnchor.attach(label, target, base, MAX_DISTANCE, SCALE, true)
 	label.AnchorPoint = Vector2.new(0.5, 1)
 

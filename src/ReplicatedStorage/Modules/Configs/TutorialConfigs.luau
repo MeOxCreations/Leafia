@@ -553,9 +553,13 @@ return {
 	-- Elle ne remplace pas la voix, elle la DOUBLE : une voix ne s'entend pas quand on est de dos ou loin, et
 	-- elle ne s'entend pas du tout chez un joueur qui a coupe le son -- ce qui est le cas d'une bonne part des
 	-- joueurs Roblox.
-	-- OU ELLE SE POSE : l'Attachment de ce nom, place A LA MAIN dans Studio sous le Model du grand-pere. Le point se
-	-- regle a la souris au-dessus de sa tete, plus besoin de deviner des studs.
-	IMPATIENT_BURST_ATTACHMENT = "AttachmentVisualPopUI",
+	-- OU ELLE SE POSE, PAR DESSIN : un Attachment place A LA MAIN dans Studio sous le Model du grand-pere. Le point se
+	-- regle a la souris, plus besoin de deviner des studs. L'eclair part sur le COTE de la tete ; le point
+	-- d'interrogation se pose au MILIEU, au-dessus du crane.
+	IMPATIENT_BURST_ATTACHMENTS = {
+		Anger = "AttachmentVisualPopUI",
+		Question = "AttachmentVisualPopUIMiddle",
+	} :: { [string]: string },
 	-- SECOURS si l'Attachment manque : hauteur au-dessus de sa RootPart.
 	--
 	-- LE GRAND-PERE EST PETIT, et ces studs se comptent depuis sa RootPart -- pas depuis sa tete. Regle sur un
