@@ -23,6 +23,7 @@ local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local TouchButtons = require(ReplicatedStorage.Modules.UI.Core.TouchButtons)
 local GrassZoneController = require(script.Parent.GrassZoneController)
 local SkillController = require(script.Parent.SkillController)
 local StarBurst = require(ReplicatedStorage.Modules.UI.Core.StarBurst)
@@ -1311,26 +1312,40 @@ local function setPullBound(active: boolean)
 	end
 	pullBound = active
 	if active then
+		local function pull()
+			if not pullRemote then
+				return
+			end
+			pullRemote:FireServer()
+			-- LA GERBE PART TOUT DE SUITE, sans attendre la reponse du serveur. C'est un effet, pas une
+			-- decision : le serveur dira si le moteur prend, mais l'a-coup du bras, lui, a deja eu lieu.
+			-- L'attendre ajouterait un aller-retour reseau entre le clic et ce qu'on voit -- et c'est
+			-- exactement ce qui fait qu'une commande "repond mal".
+			--
+			-- ELLE PART A CHAQUE TIRAGE, y compris celui qui reussit : c'est l'EFFORT qu'elle illustre, pas
+			-- l'echec. Le moteur qui demarre a deja son propre son pour se signaler.
+			local mine = myMower()
+			local root = if mine then rootOf(mine) else nil
+			if root then
+				StarBurst.at(root.Position + Vector3.new(0, MowConfigs.START_BURST_UP, 0))
+			end
+		end
+		-- LE CLIC AU CLAVIER-SOURIS, la pilule blanche PULL sur tactile (`TouchButtons`) -- pas le rond gris
+		-- automatique de ContextActionService (le `false`).
 		ContextActionService:BindAction(MowConfigs.START_ACTION, function(_, state: Enum.UserInputState)
-			if state == Enum.UserInputState.Begin and pullRemote then
-				pullRemote:FireServer()
-				-- LA GERBE PART TOUT DE SUITE, sans attendre la reponse du serveur. C'est un effet, pas une
-				-- decision : le serveur dira si le moteur prend, mais l'a-coup du bras, lui, a deja eu lieu.
-				-- L'attendre ajouterait un aller-retour reseau entre le clic et ce qu'on voit -- et c'est
-				-- exactement ce qui fait qu'une commande "repond mal".
-				--
-				-- ELLE PART A CHAQUE TIRAGE, y compris celui qui reussit : c'est l'EFFORT qu'elle illustre, pas
-				-- l'echec. Le moteur qui demarre a deja son propre son pour se signaler.
-				local mine = myMower()
-				local root = if mine then rootOf(mine) else nil
-				if root then
-					StarBurst.at(root.Position + Vector3.new(0, MowConfigs.START_BURST_UP, 0))
-				end
+			if state == Enum.UserInputState.Begin then
+				pull()
 			end
 			return Enum.ContextActionResult.Pass
-		end, true, Enum.UserInputType.MouseButton1)
+		end, false, Enum.UserInputType.MouseButton1)
+		TouchButtons.show("MowPull", "PULL", function(down: boolean)
+			if down then
+				pull()
+			end
+		end)
 	else
 		ContextActionService:UnbindAction(MowConfigs.START_ACTION)
+		TouchButtons.hide("MowPull")
 	end
 end
 
@@ -1340,24 +1355,46 @@ local function setActionBound(active: boolean)
 	end
 	actionBound = active
 	if active then
+		-- PAS DE BOUTONS TACTILES AUTOMATIQUES (les `false`) : des ronds gris qui "ne ressemblaient a rien" sur
+		-- telephone. Prendre la machine se fait en tapant sa pilule ; la reposer et voir l'herbe passent par les
+		-- pilules blanches de `TouchButtons`, montrees pendant qu'on pousse (voir `setCarryButtons`).
 		ContextActionService:BindAction(ACTION_NAME, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin then
 				toggleCarry()
 			end
 			return Enum.ContextActionResult.Pass
-		end, true, ACTION_KEY)
+		end, false, ACTION_KEY)
 		-- MAINTENUE, pas une bascule : on jette un oeil, on ne joue pas dedans. Un mode qu'on peut laisser allume
 		-- deviendrait le mode NORMAL, et la pelouse ne serait plus jamais regardee pour elle-meme.
 		-- End ET Cancel : perdre le focus (alt-tab, une UI qui s'ouvre) doit eteindre, sinon ca reste allume a vie.
 		ContextActionService:BindAction(MowConfigs.HIGHLIGHT_ACTION, function(_, state: Enum.UserInputState)
 			setReveal(state == Enum.UserInputState.Begin)
 			return Enum.ContextActionResult.Pass
-		end, true, HIGHLIGHT_KEY)
+		end, false, HIGHLIGHT_KEY)
 	else
 		ContextActionService:UnbindAction(ACTION_NAME)
 		ContextActionService:UnbindAction(MowConfigs.HIGHLIGHT_ACTION)
 		-- On s'eloigne la touche enfoncee : sans ca la pelouse resterait allumee pour de bon.
 		setReveal(false)
+	end
+end
+
+-- LES PILULES TACTILES DE LA MACHINE QU'ON POUSSE : la reposer, et voir l'herbe qui reste. Seulement pendant qu'on
+-- pousse -- avant, la pilule d'interaction sert a la prendre. Idempotent, donc appelable a chaque passage.
+--
+-- SHOW GRASS est MAINTENU comme la touche G : `TouchButtons` rend l'appui ET le relachement, et il relache tout seul
+-- si le bouton disparait sous le doigt.
+local function setCarryButtons(on: boolean)
+	if on then
+		TouchButtons.show("MowDrop", "DROP", function(down: boolean)
+			if down then
+				toggleCarry()
+			end
+		end)
+		TouchButtons.show("MowGrass", "SHOW GRASS", setReveal)
+	else
+		TouchButtons.hide("MowDrop")
+		TouchButtons.hide("MowGrass")
 	end
 end
 
@@ -1375,8 +1412,10 @@ local function updatePrompt(hrp: BasePart, carrying: Model?)
 		-- On pousse : plus de badge sur la tondeuse (on est dessus), mais l'action reste branchee pour la reposer.
 		hideOurs()
 		setActionBound(true)
+		setCarryButtons(true)
 		return
 	end
+	setCarryButtons(false)
 	-- LES MAINS SONT PRISES PAR AUTRE CHOSE (seau, echelle). On ne propose pas ce que le serveur refusera, et on
 	-- DEBRANCHE la touche : E est partage avec le seau, la laisser branchee ferait repondre deux actions.
 	if not CarryUtils.isFree(player) then
@@ -1678,6 +1717,7 @@ function MowController.stop()
 	end
 	setActionBound(false)
 	setPullBound(false)
+	setCarryButtons(false)
 	hideOurs()
 	-- On rend la camera : sans ca, arreter le controller laisserait la vue reculee et decalee pour toujours.
 	CameraEffects.SetZoomBoost(0)

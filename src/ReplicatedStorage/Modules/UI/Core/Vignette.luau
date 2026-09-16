@@ -63,7 +63,8 @@ local function build()
 	-- AUCUN INSET : le voile doit couvrir l'ecran ENTIER, barre Roblox comprise. Avec l'inset par defaut, une
 	-- bande claire de la hauteur de la barre resterait en haut.
 	screen.ScreenInsets = Enum.ScreenInsets.None
-	screen.IgnoreGuiInset = true
+	-- Pas de `IgnoreGuiInset = true` apres : il remet `DeviceSafeInsets`, et sur telephone le voile ne couvrirait plus
+	-- la bande de l'encoche (voir WorldMarker).
 	-- Sinon il est recree a chaque mort et la reference gardee ici pointe sur du detruit.
 	screen.ResetOnSpawn = false
 	screen.DisplayOrder = DISPLAY_ORDER

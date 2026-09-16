@@ -80,7 +80,8 @@ local function build(): Frame?
 	-- Sinon il est recree a chaque mort, et les references gardees ici pointeraient sur du detruit.
 	sg.ResetOnSpawn = false
 	sg.DisplayOrder = DISPLAY_ORDER
-	sg.IgnoreGuiInset = true
+	-- Pas de `IgnoreGuiInset = true` ici : il remet `DeviceSafeInsets` par-dessus le `None` ci-dessus, et sur telephone
+	-- la ligne glisserait de la largeur de l'encoche (voir WorldMarker).
 	sg.Parent = gui
 
 	local frame = Instance.new("Frame")

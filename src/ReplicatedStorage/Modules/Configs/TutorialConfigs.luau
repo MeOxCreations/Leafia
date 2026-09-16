@@ -867,12 +867,12 @@ return {
 		description = "Hold G to see the grass you still need to mow.",
 		duration = 10,
 	},
-	-- SANS CLAVIER, on ne parle pas d'une touche qui n'existe pas. Le bouton tactile existe, mais il n'a pas de
-	-- libelle : pointer "le bouton" sans pouvoir le designer enverrait chercher partout.
+	-- SANS CLAVIER, on ne parle pas d'une touche qui n'existe pas : on nomme la pilule blanche SHOW GRASS, qui porte
+	-- ce libelle a l'ecran pendant qu'on pousse la tondeuse (MowController).
 	MOW_HINT_NOTIF_TOUCH = {
 		kind = "Info",
 		title = "Find The Tall Grass",
-		description = "Mow all the tall grass inside the lines.",
+		description = "Hold SHOW GRASS to see the grass you still need to mow.",
 		duration = 10,
 	},
 

@@ -311,7 +311,8 @@ local function setActionBound(active: boolean)
 			end
 			-- Pass et pas Sink : E est partagee avec le seau et la tondeuse. Avaler l'input ici les casserait.
 			return Enum.ContextActionResult.Pass
-		end, true, TutorialConfigs.ACTION_KEY)
+			-- PAS DE BOUTON TACTILE AUTOMATIQUE (le `false`) : la pilule KNOCK se tape deja.
+		end, false, TutorialConfigs.ACTION_KEY)
 	else
 		ContextActionService:UnbindAction(TutorialConfigs.ACTION_NAME)
 	end
@@ -1994,7 +1995,8 @@ local function setTalkBound(active: boolean)
 				TutorialController.talkToGrandpa()
 			end
 			return Enum.ContextActionResult.Pass
-		end, true, TutorialConfigs.ACTION_KEY)
+			-- PAS DE BOUTON TACTILE AUTOMATIQUE (le `false`) : la pilule TALK se tape deja.
+		end, false, TutorialConfigs.ACTION_KEY)
 	else
 		ContextActionService:UnbindAction(TutorialConfigs.TALK_ACTION_NAME)
 	end

@@ -22,6 +22,7 @@ local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local TouchButtons = require(ReplicatedStorage.Modules.UI.Core.TouchButtons)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 
 -- Sons de l'echelle, ranges dans SoundService. On les CLONE au declenchement (SoundUtils), donc leur volume /
@@ -924,80 +925,26 @@ local function tryRotate()
 	rotateCarry()
 end
 
--- Boutons tactiles DROP / TURN du portage (MOBILE uniquement). ScreenGui custom (PAS ContextActionService, dont les
--- boutons ronds plats sont moches et auto-alignes cote a cote) : on maitrise la POSITION (en DIAGONALE, a gauche du
--- bouton de saut, sans le chevaucher) et le STYLE. Crees UNE fois, caches par defaut ; bindCarryButtons les montre le
--- temps du portage, unbindCarryButtons les cache. Le clavier (F / R) reste gere par UserInputService (voir init), donc
--- rien a l'ecran sur PC. La PRISE se fait au tap du prompt d'interaction (updatePrompt), pas ici.
-local IS_TOUCH = UserInputService.TouchEnabled
-local carryButtonsGui: ScreenGui? = nil
-local CARRY_BTN_SIZE = 54 -- diametre d'un bouton (px GUI). Plus petit = moins encombrant
--- Positions : AnchorPoint bas-droite (1,1), offsets en px GUI depuis le coin bas-droite (ou vit le bouton de saut Roblox).
--- ATTENTION : px GUI (points), PAS px physiques -- sur ce type d'ecran l'unite GUI fait ~2.4x le pixel d'une CAPTURE, donc
--- de gros offsets propulsent les boutons au CENTRE. DIAGONALE "/" : TURN en BAS a gauche, DROP en HAUT a droite (vers le
--- pouce / le saut). Valeurs calibrees sur capture, A affiner a l'oeil.
-local DROP_BTN_POS = UDim2.new(1, -93, 1, -148)
-local TURN_BTN_POS = UDim2.new(1, -153, 1, -68)
-local DROP_BTN_COLOR = Color3.fromRGB(255, 146, 237) -- rose (fond du bouton DROP)
-local TURN_BTN_COLOR = Color3.fromRGB(164, 73, 221) -- violet (fond du bouton TURN)
-local CARRY_BTN_FONT = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Heavy) -- Heavy = Black (900)
-
-local function makeCarryButton(name: string, label: string, pos: UDim2, bg: Color3, onPress: () -> ()): TextButton
-	local btn = Instance.new("TextButton")
-	btn.Name = name
-	btn.AnchorPoint = Vector2.new(1, 1)
-	btn.Position = pos
-	btn.Size = UDim2.fromOffset(CARRY_BTN_SIZE, CARRY_BTN_SIZE)
-	btn.BackgroundColor3 = bg
-	btn.BackgroundTransparency = 0
-	btn.Text = label
-	btn.TextColor3 = Color3.new(1, 1, 1)
-	btn.FontFace = CARRY_BTN_FONT
-	btn.TextScaled = true
-	btn.BorderSizePixel = 0
-	local corner = Instance.new("UICorner") :: UICorner
-	corner.CornerRadius = UDim.new(1, 0) -- cercle plein
-	corner.Parent = btn
-	local pad = Instance.new("UIPadding") -- marge interne pour que le texte ne colle pas au bord du rond
-	pad.PaddingTop = UDim.new(0.3, 0)
-	pad.PaddingBottom = UDim.new(0.3, 0)
-	pad.PaddingLeft = UDim.new(0.16, 0)
-	pad.PaddingRight = UDim.new(0.16, 0)
-	pad.Parent = btn
-	btn.Activated:Connect(onPress)
-	return btn
-end
-
-local function ensureCarryButtonsGui()
-	if carryButtonsGui or not IS_TOUCH then
-		return
-	end
-	local sg = Instance.new("ScreenGui")
-	sg.Name = "LeafiaLadderCarry"
-	sg.ResetOnSpawn = false -- survit aux respawns : on ne veut pas la recreer a chaque mort
-	sg.DisplayOrder = 5
-	sg.Enabled = false
-	sg:SetAttribute("LeafiaNoSlime", true) -- pas de slime auto (ButtonSlimeController) sur ces boutons
-	makeCarryButton("Turn", "TURN", TURN_BTN_POS, TURN_BTN_COLOR, tryRotate).Parent = sg
-	makeCarryButton("Drop", "DROP", DROP_BTN_POS, DROP_BTN_COLOR, tryPlace).Parent = sg
-	sg.Parent = player:WaitForChild("PlayerGui")
-	carryButtonsGui = sg
-end
-
+-- Boutons tactiles DROP / TURN du portage (MOBILE uniquement) : les pilules blanches de `TouchButtons`, comme toutes
+-- les actions sans pilule d'interaction. Ils etaient ronds, rose et violet, poses a la main en diagonale : un style a
+-- part que personne d'autre n'avait. Le clavier (F / R) reste gere par UserInputService (voir init), et `TouchButtons`
+-- ne montre rien sur PC. La PRISE se fait au tap du prompt d'interaction (updatePrompt), pas ici.
 bindCarryButtons = function()
-	if not IS_TOUCH then
-		return -- PC : le clavier (F / R) gere tout, aucun bouton a l'ecran
-	end
-	ensureCarryButtonsGui()
-	if carryButtonsGui then
-		carryButtonsGui.Enabled = true
-	end
+	TouchButtons.show("LadderTurn", "TURN", function(down: boolean)
+		if down then
+			tryRotate()
+		end
+	end)
+	TouchButtons.show("LadderDrop", "DROP", function(down: boolean)
+		if down then
+			tryPlace()
+		end
+	end)
 end
 
 unbindCarryButtons = function()
-	if carryButtonsGui then
-		carryButtonsGui.Enabled = false
-	end
+	TouchButtons.hide("LadderTurn")
+	TouchButtons.hide("LadderDrop")
 end
 
 function LadderMoveController.init()

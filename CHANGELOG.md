@@ -2204,6 +2204,32 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.868 — Boutons mobiles blancs, et les balises ne sont plus decalees sur telephone
+
+### Les boutons d'action sur mobile
+- LES RONDS GRIS DE ROBLOX DISPARAISSENT. Toutes les actions passaient par `ContextActionService` avec le bouton
+  tactile automatique : des ronds gris plats (VIEW, et des "E" sans libelle) poses pres du bouton de saut.
+- NOUVEAU `Modules/UI/Core/TouchButtons` : des pilules BLANCHES avec leur libelle, en colonne au-dessus du bouton de
+  saut, tailles en fraction de la hauteur d'ecran. Elles s'enfoncent sous le doigt. Rien sur PC.
+- UN BOUTON SEULEMENT QUAND L'ACTION N'A PAS DE PILULE D'INTERACTION :
+  - `VIEW` (vue subjective) ;
+  - tondeuse : `PULL` tant qu'il y a une corde a tirer, `DROP` et `SHOW GRASS` (maintenu, comme la touche G)
+    pendant qu'on la pousse ;
+  - seau : `DROP` pendant qu'on le porte ;
+  - echelle : `TURN` et `DROP` pendant le portage (ils etaient ronds, rose et violet, poses a part).
+- Toquer, parler au grand-pere, recevoir le cadeau, prendre le seau ou la tondeuse : plus de bouton, leur pilule se
+  tape deja.
+- La notification du tuto sur mobile dit maintenant "Hold SHOW GRASS to see the grass you still need to mow."
+
+### Les balises decalees sur telephone
+- CAUSE PROBABLE : plusieurs ecrans posaient `ScreenInsets = None` PUIS `IgnoreGuiInset = true`. L'ancienne
+  propriete remet `DeviceSafeInsets` (deja observe sur l'ecran de chargement) : zero sur PC, la largeur de l'encoche
+  sur telephone. Tout ce qui suit un point du monde etait donc decale d'autant, et seulement sur mobile.
+- CORRIGE en ne gardant que `ScreenInsets = None` : balises " ! " et d'outils (`WorldMarker`), onomatopee du
+  grand-pere (`HeadBurst`), jauge de competence (`SkillBar`), gerbe d'etoiles (`StarBurst`), vue subjective, et les
+  ecrans plein cadre (`Vignette`, `Letterbox`, `ChapterTitle`).
+- A CONFIRMER SUR TELEPHONE.
+
 ## 0.0.867 — Le rideau du bouton START est le meme que les autres
 
 - AU CLIC SUR START, le rideau (`LoadingOverlay`) montrait encore un fond gris avec une feuille qui se remplissait.

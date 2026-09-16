@@ -60,7 +60,8 @@ local function setBound(active: boolean)
 				TutorialGift.give()
 			end
 			return Enum.ContextActionResult.Pass
-		end, true, TutorialConfigs.ACTION_KEY)
+			-- PAS DE BOUTON TACTILE AUTOMATIQUE (le `false`) : la pilule PARLER se tape deja.
+		end, false, TutorialConfigs.ACTION_KEY)
 	else
 		ContextActionService:UnbindAction(TutorialConfigs.GIFT_ACTION_NAME)
 	end

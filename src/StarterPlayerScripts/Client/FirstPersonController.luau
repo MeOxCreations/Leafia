@@ -24,6 +24,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 
 local PlacesConfig = require(ReplicatedStorage.Modules.Configs.PlacesConfig)
+local TouchButtons = require(ReplicatedStorage.Modules.UI.Core.TouchButtons)
 local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CursorController = require(script.Parent.CursorController)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
@@ -100,7 +101,8 @@ local function ensureDot(): Frame?
 	-- Aucun inset : le point doit tomber au centre exact de l'ECRAN, pas au centre de la zone sous la barre
 	-- Roblox -- sinon il vise 18 pixels trop bas.
 	screen.ScreenInsets = Enum.ScreenInsets.None
-	screen.IgnoreGuiInset = true
+	-- Pas de `IgnoreGuiInset = true` apres : il remet `DeviceSafeInsets`, et sur telephone tout glisse de la largeur
+	-- de l'encoche (voir WorldMarker).
 	screen.DisplayOrder = 5
 	screen.Enabled = false
 	screen.Parent = playerGui
@@ -237,16 +239,22 @@ function FirstPersonController.init()
 		return
 	end
 
-	-- BASCULE. Passe par ContextActionService et pas par UserInputService : `createTouchButton = true` cree un
-	-- bouton a l'ecran UNIQUEMENT sur tactile ET cable la touche sur PC, d'un seul geste. Une bascule qui
-	-- n'existerait qu'au clavier serait inatteignable pour la moitie des joueurs Roblox.
+	-- BASCULE. La touche au CLAVIER, et une pilule blanche sur TACTILE (`TouchButtons`) : une bascule qui n'existerait
+	-- qu'au clavier serait inatteignable pour la moitie des joueurs Roblox.
+	--
+	-- PAS le bouton automatique de ContextActionService (le `false`) : un rond gris plat qui "ne ressemblait a rien"
+	-- sur telephone.
 	ContextActionService:BindAction(TOGGLE_ACTION, function(_, state: Enum.UserInputState)
 		if state == Enum.UserInputState.Begin then
 			setFirstPerson(not firstPerson)
 		end
 		return Enum.ContextActionResult.Pass
-	end, true, TOGGLE_KEY)
-	ContextActionService:SetTitle(TOGGLE_ACTION, "VIEW")
+	end, false, TOGGLE_KEY)
+	TouchButtons.show("View", "VIEW", function(down: boolean)
+		if down then
+			setFirstPerson(not firstPerson)
+		end
+	end)
 
 	-- LE CURSEUR LIBRE N'A PAS DE PENDANT TACTILE, et c'est voulu : sans souris il n'y a rien a liberer, le doigt
 	-- touche directement l'interface. C'est la seule exception a la regle "tout input clavier a son bouton".

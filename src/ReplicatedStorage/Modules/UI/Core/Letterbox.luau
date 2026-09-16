@@ -65,7 +65,8 @@ local function build()
 	-- AUCUN INSET : les bandes doivent toucher les bords ABSOLUS de l'ecran, barre Roblox comprise. Avec l'inset
 	-- par defaut, une bande de jeu resterait visible au-dessus de la barre du haut.
 	screen.ScreenInsets = Enum.ScreenInsets.None
-	screen.IgnoreGuiInset = true
+	-- Pas de `IgnoreGuiInset = true` apres : il remet `DeviceSafeInsets`, et sur telephone les barres s'arreteraient
+	-- avant la bande de l'encoche (voir WorldMarker).
 	-- Sinon elle est recreee a chaque mort et les references gardees ici pointent sur du detruit.
 	screen.ResetOnSpawn = false
 	screen.DisplayOrder = DISPLAY_ORDER

@@ -146,7 +146,9 @@ local function getGui(): ScreenGui
 	-- `None` EST OBLIGATOIRE : WorldAnchor rend des coordonnees dont l'origine est le coin ABSOLU de l'ecran. Avec
 	-- l'inset par defaut, tous les marqueurs suivraient 36 px trop bas. Piege deja paye dans ce projet.
 	created.ScreenInsets = Enum.ScreenInsets.None
-	created.IgnoreGuiInset = true
+	-- ET SURTOUT PAS `IgnoreGuiInset = true` apres : c'est l'ancienne propriete, et la poser REMET `DeviceSafeInsets`.
+	-- Sur PC la zone de securite vaut zero, donc rien ne se voyait. Sur telephone elle vaut la largeur de l'encoche :
+	-- toutes les balises etaient decalees d'autant, "completement a cote" de ce qu'elles designent.
 	created.ResetOnSpawn = false
 	-- Sous le prompt d'interaction : quand les deux sont la, c'est l'action qu'on doit lire, pas le rappel.
 	created.DisplayOrder = 50

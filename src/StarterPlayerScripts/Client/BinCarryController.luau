@@ -34,6 +34,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local TouchButtons = require(ReplicatedStorage.Modules.UI.Core.TouchButtons)
 local ActionGate = require(ReplicatedStorage.Modules.UI.Core.ActionGate)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 
@@ -563,14 +564,30 @@ local function setActionBound(active: boolean)
 	end
 	actionBound = active
 	if active then
+		-- PAS DE BOUTON TACTILE AUTOMATIQUE (le `false`) : prendre le seau se fait en tapant sa pilule, et le reposer
+		-- par la pilule blanche DROP de `TouchButtons` (voir `setDropButton`).
 		ContextActionService:BindAction(BinConfigs.ACTION_NAME, function(_, state: Enum.UserInputState)
 			if state == Enum.UserInputState.Begin then
 				toggleCarry()
 			end
 			return Enum.ContextActionResult.Pass
-		end, true, BinConfigs.ACTION_KEY)
+		end, false, BinConfigs.ACTION_KEY)
 	else
 		ContextActionService:UnbindAction(BinConfigs.ACTION_NAME)
+	end
+end
+
+-- LE BOUTON DROP SUR TACTILE, seulement quand on PORTE le seau : c'est le seul moment ou l'action n'a pas de pilule.
+-- Idempotent, donc appelable a chaque passage de la boucle.
+local function setDropButton(on: boolean)
+	if on then
+		TouchButtons.show("BinDrop", "DROP", function(down: boolean)
+			if down then
+				toggleCarry()
+			end
+		end)
+	else
+		TouchButtons.hide("BinDrop")
 	end
 end
 
@@ -639,8 +656,10 @@ local function updatePrompt(now: number)
 	if carriedBin then
 		hideOurs()
 		setActionBound(true)
+		setDropButton(true)
 		return
 	end
+	setDropButton(false)
 	local root = getRoot()
 	if not root or busyWithSomethingElse() then
 		hideOurs()
@@ -718,6 +737,7 @@ function BinCarryController.stop()
 	stopTracks()
 	hideOurs()
 	setActionBound(false)
+	setDropButton(false)
 	carriedBin = nil
 	approaching = false
 end

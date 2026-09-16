@@ -14,7 +14,8 @@
 --
 -- ATTENTION AU DECALAGE DE 36 PIXELS. WorldToViewportPoint rend des coordonnees VIEWPORT, dont l'origine est le
 -- COIN ABSOLU de l'ecran (l'inset de la barre Roblox est DEDANS). Le ScreenGui qui recoit ces coords doit donc
--- couvrir tout l'ecran : ScreenInsets = None (equivaut a IgnoreGuiInset = true). Avec l'inset par defaut
+-- couvrir tout l'ecran : ScreenInsets = None, et SEULEMENT ca -- poser `IgnoreGuiInset = true` APRES remet
+-- `DeviceSafeInsets`, qui vaut zero sur PC et la largeur de l'encoche sur telephone. Avec l'inset par defaut
 -- (CoreUiSafeInsets), l'origine du GUI est ~36 px plus bas et l'element suit d'autant trop bas. Verifie a l'ecran :
 -- le commentaire d'origine disait l'inverse (IgnoreGuiInset FAUX), c'etait faux. Meme famille de piege que
 -- GetMouseLocation / ViewportPointToRay, deja paye une fois.

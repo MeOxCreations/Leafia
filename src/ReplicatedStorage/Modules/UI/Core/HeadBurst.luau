@@ -147,7 +147,8 @@ local function getGui(): ScreenGui
 	-- `None` EST OBLIGATOIRE : WorldAnchor rend des coordonnees dont l'origine est le coin ABSOLU de l'ecran. Avec
 	-- l'inset par defaut, l'eclair suivrait 36 px trop bas. Piege deja paye dans ce projet.
 	created.ScreenInsets = Enum.ScreenInsets.None
-	created.IgnoreGuiInset = true
+	-- Pas de `IgnoreGuiInset = true` apres : il remet `DeviceSafeInsets`, et sur telephone tout glisse de la largeur
+	-- de l'encoche (voir WorldMarker).
 	created.ResetOnSpawn = false
 	-- Sous le prompt d'interaction, comme les marqueurs : quand les deux sont la, c'est l'action qu'on doit lire.
 	created.DisplayOrder = 50

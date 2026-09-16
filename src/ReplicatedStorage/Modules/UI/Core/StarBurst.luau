@@ -57,7 +57,8 @@ local function getGui(): ScreenGui
 	-- de l'ecran, la barre Roblox comprise dedans. Avec l'inset par defaut, l'origine du GUI est ~36 px plus bas
 	-- et toute la gerbe suit 36 px trop bas.
 	created.ScreenInsets = Enum.ScreenInsets.None
-	created.IgnoreGuiInset = true
+	-- Pas de `IgnoreGuiInset = true` apres : il remet `DeviceSafeInsets`, et sur telephone tout glisse de la largeur
+	-- de l'encoche (voir WorldMarker).
 	created.ResetOnSpawn = false
 	-- Sous les bandes noires du cinemascope (100) : la gerbe est DANS l'image, elle ne passe pas par-dessus le
 	-- cadre.
