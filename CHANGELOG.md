@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.871 — La bulle de dialogue ne mange plus l'ecran des telephones
+
+- `Dialogue` : le plancher d'echelle passe de 0.85 a 0.6. Sur un telephone en paysage (environ 385 unites de haut)
+  l'echelle calculee tombe vers 0.36 et le plancher la remontait a 0.85 : le bandeau prenait 80 % de la largeur et un
+  quart de la hauteur. A 0.6 il fait environ 58 % de la largeur. Rien ne change sur un ecran PC de 1080 de haut.
+- Knob : `MIN_SCALE` en tete de `Modules/UI/Core/Dialogue`.
+
 ## 0.0.870 — La vue premiere personne est retiree
 
 Le jeu n'utilisera jamais la premiere personne.

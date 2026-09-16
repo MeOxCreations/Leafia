@@ -53,7 +53,11 @@ local EMOTIONS: { [string]: string } = {
 local REF_WIDTH = 800 -- largeur du bandeau a l'echelle 1
 local HEIGHT = 120 -- hauteur du bandeau a l'echelle 1
 local REF_HEIGHT = 1080 -- hauteur d'ecran de reference (echelle = hauteur reelle / REF_HEIGHT)
-local MIN_SCALE, MAX_SCALE = 0.85, 2.4 -- bornes de l'echelle
+-- Bornes de l'echelle. LE PLANCHER ETAIT A 0.85, et c'est lui qui ecrasait l'ecran des telephones : en paysage ils
+-- n'ont qu'environ 385 unites de haut, l'echelle calculee tombe vers 0.36, et le plancher la remontait a 0.85 -- le
+-- bandeau prenait alors 80 % de la largeur et un quart de la hauteur (vu sur capture). A 0.6 il garde un texte lisible
+-- et laisse voir la scene. C'EST LE KNOB si le texte parait trop petit ou le bandeau encore trop gros sur mobile.
+local MIN_SCALE, MAX_SCALE = 0.6, 2.4
 local WIDTH_MAX_FRAC = 0.92 -- le bandeau ne depasse jamais cette fraction de la largeur ecran (ecrans etroits)
 local BOTTOM_MARGIN = 28 -- marge au-dessus du bord bas de l'ecran
 -- Portrait du personnage, a gauche du texte. Plus HAUT que le bandeau : le perso "sort" de la boite (sa tete depasse).
