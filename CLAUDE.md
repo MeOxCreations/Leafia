@@ -1450,6 +1450,14 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   n'est plus jamais reposee, et les jambes d'un PNJ tournent a vitesse 1 quelle que soit son allure. Vecu sur la
   marche de suivi du grand-pere. Regle : passer la vitesse DANS `Play(fade, poids, vitesse)`, ou regler APRES.
 
+- **CE QUI SUIT UN OBJET DU MONDE A L'ECRAN SE CALCULE APRES LA CAMERA, jamais par `RenderStepped:Connect`.**
+  `RenderStepped` tourne au DEBUT de l'image, avant les fonctions liees a la priorite Camera (celle de Roblox
+  comme les notres) : `WorldToViewportPoint` y lit la camera de l'image PRECEDENTE, et tout ce qui est accroche
+  au monde (pastilles, badges, jauges) traine d'une image et tremble des qu'on tourne la vue -- "pas fluide",
+  surtout sur mobile. Le commentaire de `WorldAnchor` affirmait l'inverse ("RenderStepped = calcule avant le
+  dessin, donc pas de retard") ; les fantomes du mode build, eux, etaient deja a `Camera.Value + 1`. Regle :
+  `BindToRenderStep(nom, Enum.RenderPriority.Camera.Value + 1, fn)` pour toute projection monde -> ecran.
+
 - **LUAU N'ACCEPTE QUE 200 VARIABLES LOCALES AU PREMIER NIVEAU D'UN FICHIER, et le depasser tue le module ENTIER
   au chargement** : `Out of local registers when trying to allocate X: exceeded limit 200`. Ni selene ni `rojo
   build` ne le voient -- l'erreur ne sort qu'au lancement, et comme le module est requis par le bootstrap, tout ce

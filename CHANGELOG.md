@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.861 — Les pastilles et les badges ne tremblent plus quand la camera tourne
+
+Vu sur mobile : les pastilles des outils n'etaient "pas fluides".
+
+- CAUSE : `WorldAnchor` recalculait les positions a l'ecran par `RenderStepped:Connect`, qui tourne AU DEBUT de
+  l'image -- avant que les cameras (celle de Roblox et toutes celles du jeu, liees a la priorite Camera) ne
+  bougent. Chaque pastille utilisait donc la camera de l'image D'AVANT : une image de retard, qui tremble des
+  qu'on tourne la vue.
+- CORRIGE : la boucle passe en `BindToRenderStep` a la priorite Camera + 1, donc APRES toutes les cameras. Vaut
+  pour tout ce qui suit un objet du monde : pastilles, " ! ", badges d'interaction, jauges, combo.
+- LES PASTILLES D'OUTILS NE CLIGNOTENT PLUS a la limite des 18 studs : elles reviennent seulement au-dela de
+  22 studs (`ToolMarkerConfigs.NEAR_HYSTERESIS`).
+
 ## 0.0.860 — Les outils du didacticiel sont de nouveau verrouilles
 
 - `TutorialConfigs.TEST_FREE_TOOLS` repasse a `false` : seau et tondeuse bloques jusqu'a la consigne du grand-pere,

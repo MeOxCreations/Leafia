@@ -145,7 +145,13 @@ function ToolMarkerController.init()
 				-- L'IDENTITE EST RETESTEE : un outil range dans le camion depuis le dernier balayage n'en est plus un.
 				if part and model.Parent and kindOf(model) == kind and not carried(part) then
 					local delta = part.Position - (from :: Vector3)
-					local far = math.sqrt(delta.X * delta.X + delta.Z * delta.Z) > ToolMarkerConfigs.NEAR_DISTANCE
+					-- HYSTERESIS : elle s'allume un peu PLUS LOIN qu'elle ne s'eteint. Un seuil unique la faisait
+					-- clignoter -- apparaitre, disparaitre, reapparaitre avec son grossissement -- pour un joueur qui
+					-- marche autour de la distance limite.
+					local limit = if shown[model]
+						then ToolMarkerConfigs.NEAR_DISTANCE
+						else ToolMarkerConfigs.NEAR_DISTANCE + ToolMarkerConfigs.NEAR_HYSTERESIS
+					local far = math.sqrt(delta.X * delta.X + delta.Z * delta.Z) > limit
 					if far and not WorldMarker.isMarked(model, own) then
 						seen[model] = true
 						local s = shown[model]

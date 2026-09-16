@@ -22,6 +22,9 @@ return {
 	-- SOUS CETTE DISTANCE, pas de pastille, en studs a plat. De pres l'outil est sous les yeux, et la pastille
 	-- recouvrirait l'invite pour le prendre.
 	NEAR_DISTANCE = 18,
+	-- De combien il faut s'eloigner EN PLUS pour qu'elle revienne, en studs. Sans cette marge, un joueur qui marche
+	-- autour de la limite la fait clignoter.
+	NEAR_HYSTERESIS = 4,
 	-- La liste des outils se relit a ce rythme : elle parcourt tout le Workspace. Un outil qui sort du camion est vu
 	-- au tour suivant.
 	RESCAN_INTERVAL = 2,

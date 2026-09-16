@@ -50,7 +50,8 @@ type Entry = {
 }
 
 local entries: { [GuiObject]: Entry } = {}
-local connection: RBXScriptConnection? = nil
+local BIND_NAME = "LeafiaWorldAnchor"
+local bound = false
 
 local function positionOf(target: Target): Vector3?
 	if typeof(target) == "Vector3" then
@@ -181,12 +182,16 @@ local function update()
 end
 
 local function ensureLoop()
-	if connection then
+	if bound then
 		return
 	end
-	-- RenderStepped : la position doit etre calculee AVANT que l'image soit dessinee, sinon l'element traine
-	-- d'une frame derriere sa cible des qu'on tourne la camera.
-	connection = RunService.RenderStepped:Connect(update)
+	bound = true
+	-- APRES LA CAMERA, PAS PAR `RenderStepped:Connect`. `RenderStepped` tourne au DEBUT de l'image, avant les
+	-- fonctions liees a la priorite Camera -- celle de Roblox et toutes celles du jeu. La projection lisait donc la
+	-- camera de l'image PRECEDENTE : chaque element trainait d'une image et tremblait des qu'on tournait la vue
+	-- ("pas fluide", vu sur mobile). Un cran au-dessus de la priorite Camera, la camera de CETTE image est deja
+	-- posee quand on projette.
+	RunService:BindToRenderStep(BIND_NAME, Enum.RenderPriority.Camera.Value + 1, update)
 end
 
 --
