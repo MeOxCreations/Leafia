@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.865 — La tete du grand-pere garde ses proportions sur telephone (ecran de chargement)
+
+- Le visage du rideau de chargement etait dimensionne en fraction de la largeur ET de la hauteur, et etire pour
+  remplir son cadre. Sur un ecran bien plus large qu'un PC 16:9 (telephone 2340 x 1080) il sortait ~22 % trop
+  large, ecrase. Ses deux cotes sont maintenant en fraction de la HAUTEUR (`SizeConstraint = RelativeYY`) : rien
+  ne change sur PC, les proportions tiennent sur tous les formats.
+
 ## 0.0.864 — Le repere de direction pulse
 
 - Le repere de direction du tuto (`MarkerDirectionTutorial`, vers la porte puis vers la tondeuse) pulse en

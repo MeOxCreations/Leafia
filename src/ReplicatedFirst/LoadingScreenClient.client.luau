@@ -219,7 +219,11 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	local FACE_FRONT = "rbxassetid://116099459878511"
 	local FACE_FRONT_HALF = "rbxassetid://95027481047570"
 	local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
-	local FACE_SIZE = UDim2.fromScale(0.133, 0.229)
+	-- LES DEUX COTES EN FRACTION DE LA HAUTEUR (voir `RelativeYY` a la construction), comme la couronne de points.
+	-- La largeur etait en fraction de la LARGEUR : sur un telephone (2340 x 1080, bien plus large qu'un ecran PC) la
+	-- tete, en `Stretch`, sortait 22 % plus large que haute -- ecrasee. 0.2365 = l'ancienne largeur (0.133) ramenee
+	-- a la hauteur d'un ecran 16:9 : rien ne change sur PC, et le visage garde ses proportions partout ailleurs.
+	local FACE_SIZE = UDim2.fromScale(0.2365, 0.229)
 	-- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
 	--
 	-- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement
@@ -443,8 +447,8 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- que grossir et rapetisser -- elle ne peut pas se deformer, par construction. Piege deja paye deux fois dans
 	-- ce projet, sur les feuilles du chargement puis sur le marqueur du monde.
 	--
-	-- Le prix : la tete prend les proportions de son cadre, donc elle sera un peu plus fine ou plus large selon le
-	-- format d'ecran. C'est ce que coute la deformation, et c'est invisible sur les formats courants.
+	-- Le prix : la tete prend les proportions de son cadre. D'ou le cadre en `RelativeYY` plus bas -- sans lui,
+	-- elle s'ecrasait sur les telephones, bien plus larges qu'un ecran PC.
 	face.ScaleType = Enum.ScaleType.Stretch
 	face.AnchorPoint = Vector2.new(0.5, 0.5)
 	face.Position = UDim2.fromScale(0.5, 0.5)
@@ -453,6 +457,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Elle grandit depuis son CENTRE (son point d'ancrage y est deja) : le haut et le bas s'ecartent ensemble, ce
 	-- qui se lit comme un depliage. Ancree en bas, elle POUSSERAIT vers le haut -- un autre geste, pas celui-la.
 	face.Size = UDim2.fromScale(FACE_SIZE.X.Scale, 0)
+	-- LES DEUX COTES SUR LA HAUTEUR DE L'ECRAN, donc des proportions fixes quel que soit le format. Sans lui, la
+	-- largeur suivait la largeur de l'ecran et la tete s'ecrasait sur les ecrans larges (telephones).
+	face.SizeConstraint = Enum.SizeConstraint.RelativeYY
 	face.ZIndex = 5
 	face.Parent = curtain
 
