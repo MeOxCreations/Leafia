@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.862 — Au spawn du tuto, le repere de direction montre la porte du grand-pere
+
+- Tant que le joueur n'a pas toque, le repere de direction (`MarkerDirectionTutorial`, porte par le joueur) pointe
+  vers la porte, en plus du halo et du " ! ". Le meme repere que celui qui montre la tondeuse ensuite.
+- Il se cache tout seul a 14 studs de la porte, et pour de bon quand on toque.
+
 ## 0.0.861 — Les pastilles et les badges ne tremblent plus quand la camera tourne
 
 Vu sur mobile : les pastilles des outils n'etaient "pas fluides".

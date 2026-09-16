@@ -1767,6 +1767,9 @@ function TutorialController.startMission()
 	end
 	missionStarted = true
 	TutorialController.setDoorHint(false)
+	-- LE REPERE DE DIRECTION A FINI SON TRAVAIL : on est devant la porte. Range ICI, une seule fois, et pas dans la
+	-- boucle : plus tard le meme repere montre la tondeuse, et un `hide` a chaque image le ferait clignoter.
+	GroundGuide.hide()
 	hideOurs()
 	setActionBound(false)
 	-- AVANT TOUT LE RESTE : le joueur a appuye sur E, il tient peut-etre encore une touche de deplacement. Couper
@@ -2785,6 +2788,12 @@ local function step(dt: number)
 	elseif not doorHint and doorMarker then
 		WorldMarker.remove(doorMarker)
 		doorMarker = nil
+	end
+	-- ET LE REPERE DE DIRECTION, porte par le joueur, pointe vers la porte tant qu'il n'a pas toque. Le " ! " dit OU
+	-- quand on le voit ; le repere dit PAR OU partir quand la porte est dans le dos. A CHAQUE IMAGE : il suit le
+	-- joueur, et il se cache tout seul en arrivant. `startMission` le range quand on toque.
+	if doorHint and not missionStarted then
+		GroundGuide.point(anchorPos)
 	end
 
 	local root = getRoot()
