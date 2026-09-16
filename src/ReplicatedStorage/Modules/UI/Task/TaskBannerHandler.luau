@@ -19,6 +19,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
+local PanelFocus = require(ReplicatedStorage.Modules.UI.Core.PanelFocus)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 
@@ -50,6 +51,12 @@ local SHOWN_X = 0
 -- la camera, et le titre y etait coupe. Le decalage aligne le bandeau sur le bouton Roblox au-dessus de lui.
 -- `TouchEnabled` seul : c'est une capacite, vraie aussi dans l'emulateur d'appareil de Studio.
 local TOUCH_LEFT = 0.055
+local AREA_X = if UserInputService.TouchEnabled then TOUCH_LEFT else 0
+-- LE RANGEMENT : quand un panneau s'ouvre (barre du camion, menu des outils), toute la liste glisse hors de l'ecran
+-- par la gauche -- le bord d'ou elle est arrivee -- et revient pareil a la fermeture. On bouge le CADRE, pas les
+-- lignes : elles ont deja leurs propres glissements, et deux ecritures sur la meme position se battraient.
+local TUCK_SHIFT = 0.5
+local PANEL_NAME = "TaskBanner"
 
 local SLIDE_IN = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SLIDE_OUT = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -132,6 +139,7 @@ local screen: ScreenGui? = nil
 local template: Frame? = nil
 local rows: { Row } = {}
 local fillConn: RBXScriptConnection? = nil
+local area: Frame? = nil
 
 --- Cree une instance, lui pose ses proprietes, la parente.
 ---
@@ -438,16 +446,31 @@ local function build(): boolean
 
 	-- UN CADRE DE LA TAILLE DE L'ECRAN, simplement decale : toutes les valeurs de la maquette restent des fractions
 	-- de l'ecran, et le decalage mobile se regle en UN seul endroit au lieu de toucher chaque position.
-	local area = make("Frame", {
+	local frame = make("Frame", {
 		Name = "Area",
 		BackgroundTransparency = 1,
 		Size = UDim2.fromScale(1, 1),
-		Position = UDim2.fromScale(if UserInputService.TouchEnabled then TOUCH_LEFT else 0, 0),
-	}, sg)
+		Position = UDim2.fromScale(AREA_X, 0),
+	}, sg) :: Frame
 
-	buildHeader(area)
-	template = buildRow(area)
-	screen = sg
+	buildHeader(frame)
+	template = buildRow(frame)
+	screen, area = sg, frame
+
+	PanelFocus.register(PANEL_NAME, {
+		tuck = function(tucked: boolean, instant: boolean)
+			local target = area
+			if not target then
+				return
+			end
+			local goal = UDim2.fromScale(if tucked then AREA_X - TUCK_SHIFT else AREA_X, 0)
+			if instant then
+				target.Position = goal
+			else
+				TweenService:Create(target, if tucked then SLIDE_OUT else SLIDE_IN, { Position = goal }):Play()
+			end
+		end,
+	})
 	return true
 end
 

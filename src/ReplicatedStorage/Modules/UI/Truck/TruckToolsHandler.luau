@@ -29,6 +29,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local PanelFocus = require(ReplicatedStorage.Modules.UI.Core.PanelFocus)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
 local TruckToolsHandler = {}
@@ -107,6 +108,10 @@ local VIEW_PITCH = 18
 local TAKE_TEXT = "TAKE"
 local BACK_TEXT = "PUT BACK"
 local TITLE_TEXT = "IN THE TRUCK"
+
+-- SON NOM DE PANNEAU. Ouverte, elle range le bouton des outils et la liste des taches (voir PanelFocus). Sans
+-- `close` : c'est le hayon et la distance qui la ferment, pas un autre panneau.
+local PANEL = "TruckTools"
 
 local gui: ScreenGui? = nil
 local root: Frame? = nil
@@ -431,6 +436,7 @@ function TruckToolsHandler.setShown(on: boolean)
 	if not frame then
 		return
 	end
+	PanelFocus.setOpen(PANEL, on)
 	hideToken += 1
 	local token = hideToken
 	if on then
@@ -475,6 +481,7 @@ end
 --- Detruit tout. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 function TruckToolsHandler.destroy()
 	hideToken += 1
+	PanelFocus.setOpen(PANEL, false)
 	local holder = gui
 	if holder then
 		holder:Destroy()

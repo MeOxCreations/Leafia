@@ -13,15 +13,19 @@
 --
 -- BLANC, comme les cartes du camion : les deux interfaces parlent des memes outils, elles doivent se reconnaitre.
 --
--- EN BAS A GAUCHE, loin de la barre du camion (en bas au centre) : les deux peuvent etre ouvertes en meme temps
--- devant la benne, et deux panneaux qui se chevauchent se cliquent l'un pour l'autre.
+-- EN BAS A GAUCHE. Et PAS EN MEME TEMPS que la barre du camion : les deux parlent des memes outils, et les voir
+-- ensemble devant la benne rendait le choix confus. Quand la barre s'ouvre, le bouton se range sous l'ecran et
+-- revient a sa fermeture (voir PanelFocus).
 --
 -- ELLE NE DECIDE RIEN. On lui donne la liste des outils possedes et celui qui est en main ; equiper, ranger, et
 -- savoir ce qu'on possede est l'affaire du controller et du serveur.
 
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+
+local PanelFocus = require(ReplicatedStorage.Modules.UI.Core.PanelFocus)
 
 local ToolHudHandler = {}
 
@@ -71,6 +75,13 @@ local STAGGER = 0.035
 local ROW_SLIDE = 14
 -- LE "+" DEVIENT UNE CROIX en tournant d'un huitieme de tour : le meme signe dit "ouvrir" puis "fermer".
 local BADGE_TURN = 45
+-- LE RANGEMENT : le bouton descend sous le bas de l'ecran quand un autre panneau prend la place, et remonte avec un
+-- leger rebond. Sous l'ecran, et pas en fondu : il sort par le bord le plus proche, donc on devine ou il est parti.
+local TUCK_OUT = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local TUCK_IN = TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+-- La marge sous l'ecran : le "+" en coin depasse du bouton, il ne doit pas rester visible au bord.
+local TUCK_MARGIN = 24
+local PANEL = "ToolHud"
 -- Le dessin du bouton quand on ne tient rien. En attendant une caisse a outils, c'est l'icone de la cisaille.
 local BUTTON_ICON = "rbxassetid://96003986607540"
 
@@ -115,7 +126,8 @@ local function getGui(): ScreenGui
 	created.ResetOnSpawn = false
 	created.IgnoreGuiInset = true
 	created.ScreenInsets = Enum.ScreenInsets.None
-	-- Sous la barre du camion : quand les deux sont la, c'est le camion qu'on vient d'ouvrir qui compte.
+	-- Sous la barre du camion : ils ne s'affichent plus ensemble, mais se croisent le temps du rangement, et c'est
+	-- le camion qu'on vient d'ouvrir qui compte.
 	created.DisplayOrder = 52
 	created.Parent = player:WaitForChild("PlayerGui")
 	gui = created
@@ -163,6 +175,7 @@ end
 --- Ouvre ou ferme le panneau. `animateRows` fait glisser les lignes une a une : seulement a l'ouverture, pas quand
 --- la liste est refaite pendant qu'il est deja ouvert -- sinon chaque changement d'outil rejouerait l'entree.
 local function applyOpen(animateRows: boolean)
+	PanelFocus.setOpen(PANEL, open)
 	openToken += 1
 	local token = openToken
 	local group, scale, mark = menu, menuScale, badge
@@ -334,6 +347,25 @@ local function build(onToggle: () -> ()): Frame
 
 	root, buttonIcon, buttonCaption, buttonStroke = frame, icon, caption, toggleStroke
 	badge, menu, menuScale, card, shadow = mark, group, scale, panel, panelShadow
+
+	-- SEUL ECRIVAIN DE `frame.Position` apres sa creation : le rangement. Rien d'autre ne deplace le bouton.
+	local hidden = UDim2.new(ROOT_POS.X.Scale, ROOT_POS.X.Offset, 1, BUTTON + TUCK_MARGIN)
+	PanelFocus.register(PANEL, {
+		tuck = function(tucked: boolean, instant: boolean)
+			if tucked and open then
+				ToolHudHandler.setOpen(false)
+			end
+			local goal = if tucked then hidden else ROOT_POS
+			if instant then
+				frame.Position = goal
+			else
+				TweenService:Create(frame, if tucked then TUCK_OUT else TUCK_IN, { Position = goal }):Play()
+			end
+		end,
+		close = function()
+			ToolHudHandler.setOpen(false)
+		end,
+	})
 	return frame
 end
 
@@ -477,6 +509,10 @@ function ToolHudHandler.setOpen(on: boolean): boolean
 	if on == open then
 		return open
 	end
+	-- RANGE, IL NE S'OUVRE PAS : son panneau se deplierait depuis un bouton hors de l'ecran.
+	if on and PanelFocus.isTucked(PANEL) then
+		return open
+	end
 	open = on
 	applyOpen(on)
 	return open
@@ -501,6 +537,7 @@ end
 --- Detruit tout. Celui qui cree est celui qui nettoie, et il nettoie TOUT.
 function ToolHudHandler.destroy()
 	openToken += 1
+	PanelFocus.unregister(PANEL)
 	local connection = outsideClick
 	if connection then
 		connection:Disconnect()

@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.876 — Un seul panneau a la fois : le bouton des outils et les taches se rangent devant la benne
+
+- Nouveau `Modules/UI/Core/PanelFocus` : un seul PANNEAU ouvert a la fois, et les HUD se rangent tant qu'un
+  panneau qui n'est pas le leur est ouvert. Il ne touche a aucune interface : chacune lui donne ses gestes
+  (`tuck` pour se ranger, `close` pour se fermer quand un autre panneau s'ouvre).
+- Barre du camion ouverte : le bouton TOOLS descend sous l'ecran (son menu se ferme s'il etait ouvert) et la
+  liste des taches glisse hors de l'ecran par la gauche. Tout revient a la fermeture, avec un court relais
+  (`RETURN_DELAY`) pour ne pas croiser la sortie des cartes.
+- Menu MY TOOLS ouvert : la liste des taches se range aussi, et revient a sa fermeture.
+- `TaskBannerHandler` range son cadre `Area` entier : les lignes gardent leurs propres glissements, sans se battre
+  avec le rangement.
+
 ## 0.0.875 — Sur telephone, la barre du camion est deux fois plus petite et les taches quittent le bord
 
 - `TruckToolsHandler` : un `UIScale` a 0.5 sur le rang des cartes quand l'appareil est tactile (`TOUCH_SCALE`).
