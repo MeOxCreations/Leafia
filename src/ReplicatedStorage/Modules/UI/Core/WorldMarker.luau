@@ -65,22 +65,15 @@ local EDGE_MARGIN = 42
 -- hauteur reelle / 1080, borne : lisible sur un petit ecran, pas minuscule sur un grand.
 --
 -- LA HAUTEUR ET PAS LA LARGEUR : un telephone en paysage est tres large et tres bas, c'est la hauteur qui manque.
-local REF_HEIGHT = 1080
+-- Le calcul vit dans WorldAnchor (`screenScale`), partage avec l'onomatopee ; ici seulement le plancher des balises.
 local SCREEN_MIN = 0.6
-local SCREEN_MAX = 1.5
 -- Derniere hauteur d'ecran appliquee : on ne retaille qu'au changement (rotation, fenetre redimensionnee).
 local lastViewHeight = 0
-
-local function screenScale(): number
-	local camera = workspace.CurrentCamera
-	local height = if camera then camera.ViewportSize.Y else REF_HEIGHT
-	return math.clamp(height / REF_HEIGHT, SCREEN_MIN, SCREEN_MAX)
-end
 
 --- Taille et marge au bord d'un marqueur, a l'echelle de l'ecran. Le grossissement selon la distance passe, lui,
 --- par un UIScale (WorldAnchor) : les deux se multiplient sans se gener.
 local function resize(frame: Frame)
-	local s = screenScale()
+	local s = WorldAnchor.screenScale(SCREEN_MIN)
 	frame.Size = UDim2.fromOffset(SIZE * s, SIZE * s)
 	WorldAnchor.setEdgeClamp(frame, EDGE_MARGIN * s)
 end

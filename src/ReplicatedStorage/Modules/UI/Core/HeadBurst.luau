@@ -92,6 +92,9 @@ local LOOKS: { [string]: Look } = {
 -- ===== LA DISTANCE =====
 -- Comme WorldMarker : taille bornee pour rester lisible de loin sans devenir enorme colle dessus.
 local SCALE: WorldAnchor.Scale = { ref = 40, min = 0.55, max = 1.3 }
+-- PLANCHER DE LA TAILLE D'ECRAN (voir `WorldAnchor.screenScale`). Plus bas que celui des balises (0.6) : c'est un
+-- dessin d'ambiance, pas une indication qu'on doit lire de loin -- sur telephone il etait "beaucoup trop gros".
+local SCREEN_MIN = 0.4
 -- Au-dela, on ne l'affiche pas. Une colere a l'autre bout de la map n'attire pas l'attention, elle l'epuise.
 local MAX_DISTANCE = 140
 
@@ -166,7 +169,11 @@ function HeadBurst.play(target: WorldAnchor.Target, offset: Vector3?, kind: Kind
 	local holder = getGui()
 	local look = LOOKS[kind or "Anger"] or LOOKS.Anger
 
-	local w, h = look.width * look.scale, look.height * look.scale
+	-- A LA TAILLE DE L'ECRAN. Les tailles du dessin sont des pixels pour un ecran de 1080 de haut : sur un telephone,
+	-- qui n'en a que quelques centaines, l'onomatopee etait "beaucoup trop grosse". Plancher plus bas que celui des
+	-- balises (0.4) : c'est un dessin d'ambiance, il n'a pas a rester lisible de loin.
+	local screen = WorldAnchor.screenScale(SCREEN_MIN)
+	local w, h = look.width * look.scale * screen, look.height * look.scale * screen
 	local normal = UDim2.fromOffset(w, h)
 
 	local label = Instance.new("ImageLabel")

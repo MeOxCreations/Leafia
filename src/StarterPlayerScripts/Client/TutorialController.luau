@@ -1843,6 +1843,27 @@ local function bodyPart(model: Model): BasePart?
 	return model.PrimaryPart or model:FindFirstChildWhichIsA("BasePart", true)
 end
 
+-- L'ONOMATOPEE AU-DESSUS DE SA TETE, posee sur l'Attachment place dans Studio (`IMPATIENT_BURST_ATTACHMENT`). Le point
+-- se regle a la souris, sur le modele, au lieu d'un decalage en studs devine depuis sa RootPart.
+--
+-- ACCROCHEE A L'ATTACHMENT LUI-MEME, pas a sa position : il marche, et un point fige resterait en l'air derriere lui.
+-- Sans Attachment, on retombe sur l'ancien reglage (RootPart + decalage) plutot que de ne rien montrer.
+local function burstOn(model: Model, kind: HeadBurst.Kind)
+	local spot = model:FindFirstChild(TutorialConfigs.IMPATIENT_BURST_ATTACHMENT, true)
+	if spot and spot:IsA("Attachment") then
+		HeadBurst.play(spot, Vector3.zero, kind)
+		return
+	end
+	local body = bodyPart(model)
+	if body then
+		HeadBurst.play(
+			body,
+			Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0),
+			kind
+		)
+	end
+end
+
 -- SON VISAGE QUAND IL RALE.
 --
 -- JOUEE CHEZ CE JOUEUR, pas par le serveur -- contrairement a sa marche et a son explication. Et c'est VOULU :
@@ -1961,14 +1982,7 @@ local function playImpatient(sounds: { { string } }, last: number): number
 	if not grandpa then
 		return last
 	end
-	local anchor = bodyPart(grandpa)
-	if anchor then
-		HeadBurst.play(
-			anchor,
-			Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0),
-			"Anger"
-		)
-	end
+	burstOn(grandpa, "Anger")
 	-- ET IL EN FAIT LA TETE. Le visage part avec la voix : une grimace qui arrive apres la phrase se lit comme
 	-- une reaction a autre chose.
 	playImpatientFace(grandpa)
@@ -2343,13 +2357,9 @@ local function step(dt: number)
 					end
 					sayVoice(lines[i])
 				end
-				local anchor = grandpaBody()
-				if anchor then
-					HeadBurst.play(
-						anchor,
-						Vector3.new(TutorialConfigs.IMPATIENT_BURST_SIDE, TutorialConfigs.IMPATIENT_BURST_UP, 0),
-						if angry then "Anger" else "Question"
-					)
+				local grandpaModel = findModel(TutorialConfigs.GRANDPA_NAME)
+				if grandpaModel then
+					burstOn(grandpaModel, if angry then "Anger" else "Question")
 				end
 			end
 		end

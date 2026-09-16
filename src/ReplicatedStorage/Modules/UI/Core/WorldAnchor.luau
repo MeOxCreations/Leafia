@@ -24,7 +24,9 @@ local RunService = game:GetService("RunService")
 
 local WorldAnchor = {}
 
-export type Target = BasePart | Vector3
+-- UN ATTACHMENT SE VISE DIRECTEMENT : c'est la facon de choisir le point exact dans Studio, a la souris, au lieu
+-- d'un decalage en studs devine depuis une part (l'onomatopee du grand-pere, par exemple).
+export type Target = BasePart | Vector3 | Attachment
 
 -- Grossissement selon la distance (optionnel). Facteur 1 a `ref` studs ; plus proche = plus grand, plus loin = plus
 -- petit, borne par [min, max]. Applique via un UIScale sur l'element (cree a la demande). Sans ca, l'element garde
@@ -59,7 +61,29 @@ local function positionOf(target: Target): Vector3?
 		return target
 	end
 	-- Parent verifie : une part detruite ou sortie du streaming laisserait l'element fige en plein ecran.
-	return if target.Parent then target.Position else nil
+	if not target.Parent then
+		return nil
+	end
+	if target:IsA("Attachment") then
+		return (target :: Attachment).WorldPosition
+	end
+	return (target :: BasePart).Position
+end
+
+-- ===== LA TAILLE SUIT L'ECRAN =====
+-- Les tailles en pixels des elements accroches sont pensees pour un ecran de 1080 de haut. Un telephone en paysage
+-- n'en a que quelques centaines : sans correction, tout y est enorme. Ce facteur = hauteur reelle / 1080, borne.
+--
+-- LE PLANCHER APPARTIENT A L'APPELANT : une balise doit rester lisible de loin (plancher haut), une onomatopee
+-- d'ambiance peut rapetisser davantage. LA HAUTEUR ET PAS LA LARGEUR : un telephone en paysage est tres large et tres
+-- bas, c'est la hauteur qui manque.
+local REF_HEIGHT = 1080
+local SCREEN_MAX = 1.5
+
+function WorldAnchor.screenScale(minScale: number): number
+	local camera = workspace.CurrentCamera
+	local height = if camera then camera.ViewportSize.Y else REF_HEIGHT
+	return math.clamp(height / REF_HEIGHT, minScale, SCREEN_MAX)
 end
 
 -- L'OFFSET EN REPERE CAMERA -- MAIS LE HAUT RESTE LE HAUT DU MONDE.

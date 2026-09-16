@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.872 — L'onomatopee du grand-pere se pose sur son Attachment, et rapetisse sur telephone
+
+- L'ECLAIR (colere) ET LE POINT D'INTERROGATION (attente) se posent sur l'Attachment `AttachmentVisualPopUI` place
+  dans Studio sous le Model `OldmanOriginal` (`TutorialConfigs.IMPATIENT_BURST_ATTACHMENT`). Plus de decalage en
+  studs devine depuis la RootPart ; sans l'Attachment, retour a l'ancien reglage.
+- `WorldAnchor` accepte maintenant un `Attachment` comme cible (sa `WorldPosition`, suivie a chaque image).
+- A LA TAILLE DE L'ECRAN : l'onomatopee etait dessinee en pixels pour un ecran de 1080 de haut, donc enorme sur
+  telephone. Elle est multipliee par hauteur d'ecran / 1080, plancher 0.4 (`HeadBurst.SCREEN_MIN`).
+- Le calcul de taille d'ecran passe dans `WorldAnchor.screenScale(plancher)`, partage par les balises (plancher 0.6)
+  et l'onomatopee.
+- Depend de l'Attachment pose dans Studio (place du tuto).
+
 ## 0.0.871 — La bulle de dialogue ne mange plus l'ecran des telephones
 
 - `Dialogue` : le plancher d'echelle passe de 0.85 a 0.6. Sur un telephone en paysage (environ 385 unites de haut)
