@@ -27,6 +27,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
@@ -40,6 +41,11 @@ local player = Players.LocalPlayer
 local ROW_POS = UDim2.fromScale(0.5, 0.97)
 local CARD_SIZE = UDim2.fromOffset(120, 152)
 local CARD_GAP = 12
+-- SUR TELEPHONE, TOUT LE RANG PASSE A MOITIE. Les tailles ci-dessus sont en pixels d'interface, et un telephone a
+-- l'horizontale n'en a que ~400 de haut : a 1, les cartes mangeaient pres de la moitie de l'ecran. Un `UIScale`
+-- sur le rang plutot que des tailles en double -- la carte reste reglee a un seul endroit.
+-- `TouchEnabled` seul : c'est une capacite, vraie aussi dans l'emulateur d'appareil de Studio.
+local TOUCH_SCALE = 0.5
 
 -- ===== L'ARRIVEE =====
 -- CHAQUE CARTE MONTE DEPUIS SOUS L'ECRAN, a sa place dans le rang. Elle part tres bas -- plus bas que sa propre
@@ -339,6 +345,12 @@ local function build(): Frame
 	frame.Visible = false
 	frame.ClipsDescendants = false
 	frame.Parent = holder
+
+	if UserInputService.TouchEnabled then
+		local scale = Instance.new("UIScale")
+		scale.Scale = TOUCH_SCALE
+		scale.Parent = frame
+	end
 
 	local stack = Instance.new("UIListLayout")
 	stack.FillDirection = Enum.FillDirection.Vertical

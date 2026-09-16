@@ -16,6 +16,7 @@
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
@@ -44,6 +45,11 @@ local ROW_GAP = 0.078
 -- dela du bord pour qu'aucun bout ne depasse avant le depart, meme sur un ecran tres large.
 local HIDDEN_X = -1.5
 local SHOWN_X = 0
+-- SUR TELEPHONE, LE BANDEAU SE DECALE VERS LA DROITE. L'interface couvre tout l'ecran (`ScreenInsets = None`), donc
+-- une ligne a 0 touche le bord physique : sur un telephone a l'horizontale c'est la zone des coins arrondis et de
+-- la camera, et le titre y etait coupe. Le decalage aligne le bandeau sur le bouton Roblox au-dessus de lui.
+-- `TouchEnabled` seul : c'est une capacite, vraie aussi dans l'emulateur d'appareil de Studio.
+local TOUCH_LEFT = 0.055
 
 local SLIDE_IN = TweenInfo.new(0.45, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local SLIDE_OUT = TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
@@ -430,8 +436,17 @@ local function build(): boolean
 		DisplayOrder = 5,
 	}, gui) :: ScreenGui
 
-	buildHeader(sg)
-	template = buildRow(sg)
+	-- UN CADRE DE LA TAILLE DE L'ECRAN, simplement decale : toutes les valeurs de la maquette restent des fractions
+	-- de l'ecran, et le decalage mobile se regle en UN seul endroit au lieu de toucher chaque position.
+	local area = make("Frame", {
+		Name = "Area",
+		BackgroundTransparency = 1,
+		Size = UDim2.fromScale(1, 1),
+		Position = UDim2.fromScale(if UserInputService.TouchEnabled then TOUCH_LEFT else 0, 0),
+	}, sg)
+
+	buildHeader(area)
+	template = buildRow(area)
 	screen = sg
 	return true
 end

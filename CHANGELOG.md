@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.875 — Sur telephone, la barre du camion est deux fois plus petite et les taches quittent le bord
+
+- `TruckToolsHandler` : un `UIScale` a 0.5 sur le rang des cartes quand l'appareil est tactile (`TOUCH_SCALE`).
+  Sur PC, rien ne change.
+- `TaskBannerHandler` : titre et lignes vivent dans un cadre `Area` de la taille de l'ecran, decale de
+  `TOUCH_LEFT` (5.5 % de la largeur) sur tactile. Le titre n'est plus coupe par le bord du telephone.
+
 ## 0.0.874 — Plus de saut pendant la scene du grand-pere, meme sur telephone
 
 - Le bouton de saut tactile ne passait pas par l'action `CharacterJump` qu'on avalait : sur mobile, le joueur
