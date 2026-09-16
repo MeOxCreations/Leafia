@@ -413,25 +413,8 @@ local HedgeConfigs = {
 	CAMERA_DISTANCE_THROTTLE = 9.5,
 	-- Vitesse de lissage du recul (rapproche / ressort a l'acceleration). En parametre : ne deforme pas l'orbite.
 	CAMERA_DISTANCE_LERP = 8,
-
-	-- PREMIERE PERSONNE (experimental). Vrai -> la camera de travail passe A LA TETE du joueur, regard vers la haie, au
-	-- lieu de la vue iso 3/4. La visee (souris / doigt) suit toute seule (le rayon part de cette camera). On peut voir
-	-- ses bras / son corps (une cam scriptee ne cache pas le perso comme la 1re personne native de Roblox), d'ou le
-	-- masquage local a l'engage.
-	--
-	-- REPASSE A FALSE : dans ce mode la vue est FIGEE. La branche 1re personne de HedgeController ne lit ni le pivot
-	-- (yaw) ni le zoom, donc le clic droit, le glissement du doigt et la molette ne font RIEN a l'ecran, alors que le
-	-- code d'orbite tourne quand meme. On taille sous un angle impose, et on ne peut pas aller voir ce qu'on coupe.
-	-- La vue iso, elle, a deja l'orbite, le zoom, le rubber-band de butee et le rapproche a l'acceleration.
-	-- Le remettre a true demande d'abord de brancher yaw et cameraZoom sur le placement de l'oeil.
-	CAMERA_FIRST_PERSON = false,
-	-- Vue RAPPROCHEE DE COTE (near-first-person). Droit dans la haie = plat et illisible ; on DECALE l'oeil sur le cote
-	-- pour voir la surface taillee DE BIAIS. FP_SIDE est le knob principal (l'angle "de cote").
-	FP_SIDE = -4, -- decalage lateral de l'oeil (studs). Signe = cote (negatif = droite du joueur). PLUS GRAND = plus de biais
-	FP_BACK = 2.5, -- recul de l'oeil DERRIERE la tete (loin de la haie), pour englober le geste
-	FP_HEIGHT = 2, -- hauteur de l'oeil au-dessus de la tete
-	FP_LOOK_FORWARD = 1, -- le point VISE est ce nombre de studs DEVANT le joueur (dans la haie)
-	FP_LOOK_HEIGHT = 0, -- ajustement vertical du point vise (studs)
+	-- LA PREMIERE PERSONNE A ETE RETIREE (CAMERA_FIRST_PERSON et ses FP_*) : le jeu ne l'utilisera jamais. La camera de
+	-- travail est la vue iso 3/4, avec orbite, zoom et rapproche a l'acceleration.
 	-- Attribut pose par ToolStartService sur le personnage.
 	THROTTLE_ATTRIBUTE = "LeafiaThrottle",
 	-- Vitesse du GLISSE d'arrivee a l'engage (depuis la cam de jeu jusqu'a la vue de travail). Volontairement lente :

@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.870 — La vue premiere personne est retiree
+
+Le jeu n'utilisera jamais la premiere personne.
+
+- `Client/FirstPersonController` SUPPRIME, avec sa touche C et son bouton tactile VIEW. Retire des deux blocs du
+  bootstrap client.
+- `CameraEffects` : `SetFirstPerson`, `GetFirstPersonAmount`, `SetFirstPersonGap` et tout le glissement vers la
+  vue subjective retires. Le recul de camera (`SetZoomBoost`) marche comme avant, sans la branche qui lui passait
+  devant.
+- Camera de taille : la branche premiere personne (`HedgeConfigs.CAMERA_FIRST_PERSON`, deja a `false`, et ses
+  `FP_*`) et le masquage local du corps qui allait avec sont retires. La vue iso 3/4 est la seule.
+
 ## 0.0.869 — Pas de tuile animee sur le rideau de chargement, sur mobile
 
 - Sur un appareil tactile (`UserInputService.TouchEnabled`), `CurtainVisual` ne pose plus la tuile qui defile. Le

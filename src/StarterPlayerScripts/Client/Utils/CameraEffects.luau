@@ -71,21 +71,6 @@ local zoomBoostSpeed = ZOOM_LERP_SPEED
 local zoomBase: number? = nil -- distance du joueur AU MOMENT ou le recul commence
 local zoomMinWas, zoomMaxWas = 0, 0
 local zoomSaved = false -- les bornes du joueur sont-elles mises de cote ?
--- VUE SUBJECTIVE. Deuxieme raison de toucher aux bornes de zoom, et elle PRIME sur le recul : reculer la vue n'a
--- aucun sens quand on est dans les yeux. Elle vit ICI et pas dans le controller qui la demande, parce que les
--- bornes de zoom n'ont droit qu'a UN ecrivain -- c'est la regle en tete de ce fichier.
-local firstPerson = false
--- ELLE GLISSE, elle ne bascule pas. Passer d'un coup de la distance du joueur a zero est un COUP SEC : on se
--- retrouve dans sa tete sans avoir vu le chemin, et le retour est pire encore. On fait donc voyager la distance.
--- BAS = lent. 4.5 met environ une demi-seconde.
-local FP_LERP_SPEED = 4.5
-local fpAmount = 0 -- 0 = vue de dos, 1 = dans les yeux. Lu aussi par l'appelant, pour effacer le corps AU MEME rythme.
-local fpBase: number? = nil -- distance du joueur AVANT d'entrer : c'est la qu'on revient
--- ECART MINIMAL garde entre l'oeil et la tete, en studs. A ZERO, Roblox considere qu'on est en vue subjective et
--- VERROUILLE la souris au centre a chaque image -- impossible de lui reprendre, meme en ecrivant apres lui
--- (verifie a l'ecran). Laisser un cheveu d'ecart le fait renoncer, et la souris redevient libre.
--- Sert donc uniquement a RENDRE LE CURSEUR ; le reste du temps il vaut zero et rien ne change.
-local fpGap = 0
 
 -- ===== Secousse (impact) =====
 -- Ecrite par la tache de Shake, lue par la boucle. Revient a zero quand la secousse est finie.
@@ -158,25 +143,6 @@ function CameraEffects.SetZoomBoost(studs: number, speed: number?)
 	-- L'allure appartient a l'APPEL, pas au module : le meme decalage doit pouvoir s'installer lentement pour un
 	-- effet de fond et d'un coup pour une reaction. Une seule constante partagee forcerait a choisir.
 	zoomBoostSpeed = speed or ZOOM_LERP_SPEED
-end
-
---- VUE SUBJECTIVE. Colle les bornes de zoom a zero tant que c'est vrai, et rend au joueur les siennes en sortant.
---- Passe par ici et pas par l'appelant : les bornes de zoom n'ont droit qu'a UN ecrivain (voir la regle en tete).
-function CameraEffects.SetFirstPerson(on: boolean)
-	firstPerson = on
-end
-
---- Ou en est le glissement : 0 = vue de dos, 1 = dans les yeux. A lire pour accorder un effet AU MEME rythme --
---- effacer le corps d'un coup pendant que la camera glisse encore montrerait un trou a la place du personnage.
-function CameraEffects.GetFirstPersonAmount(): number
-	return fpAmount
-end
-
---- Ecart minimal entre l'oeil et la tete, en studs, pendant la vue subjective. Zero = colle a la tete, et Roblox
---- verrouille alors la souris au centre. Une valeur non nulle le fait renoncer : c'est la SEULE facon de rendre le
---- curseur sans quitter la vue subjective (verifie a l'ecran, l'ecriture de MouseBehavior apres lui ne suffit pas).
-function CameraEffects.SetFirstPersonGap(studs: number)
-	fpGap = math.max(studs, 0)
 end
 
 -- A-coup de FOV : s'ajoute au fond puis s'efface. Negatif = la vue se resserre.
@@ -266,65 +232,34 @@ function CameraEffects.init()
 			-- La VRAIE distance est camera -> Focus, jamais camera -> personnage : c'est elle, le zoom.
 			-- Les bornes du joueur sont mises de cote a la PREMIERE raison qui se presente, et rendues quand plus
 			-- aucune ne tient. Une capture par raison finirait par memoriser une borne qu'on avait deja modifiee.
-			if (firstPerson or zoomBoostTarget ~= 0) and not zoomSaved then
+			if zoomBoostTarget ~= 0 and not zoomSaved then
 				zoomSaved = true
 				zoomMinWas = player.CameraMinZoomDistance
 				zoomMaxWas = player.CameraMaxZoomDistance
 			end
-			-- La distance de DEPART se capture a l'entree, jamais en continu : la relire pendant qu'on la modifie
-			-- ferait fuir la camera toujours plus loin. Meme piege que le recul, juste au-dessus.
-			if firstPerson and not fpBase then
-				fpBase = math.max((camera.CFrame.Position - camera.Focus.Position).Magnitude, 0.5)
+			zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, zoomBoostSpeed * dt)
+			if zoomBoostTarget ~= 0 and not zoomBase then
+				zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
 			end
-			local fpTarget = if firstPerson then 1 else 0
-			fpAmount += (fpTarget - fpAmount) * math.min(1, FP_LERP_SPEED * dt)
-			-- ON CLE SUR LA CIBLE. Un lerp exponentiel n'atteint JAMAIS son but : sans ca, `fpAmount` resterait a
-			-- 0.004 pour toujours et on ne rendrait donc JAMAIS ses bornes au joueur -- il ne pourrait plus zoomer,
-			-- sans que rien ne l'explique.
-			if math.abs(fpTarget - fpAmount) < 0.01 then
-				fpAmount = fpTarget
+			if zoomBase then
+				if zoomBoostTarget == 0 and math.abs(zoomBoost) < 0.05 then
+					zoomBoost = 0
+					zoomBase = nil
+				else
+					-- Min ET max sur la MEME valeur : la camera Custom s'y cale, et comme la valeur glisse, elle glisse.
+					-- PLANCHER. En dessous d'un demi-stud Roblox bascule en vue subjective : un rapprochement un peu
+					-- fort -- ou un joueur deja zoome au maximum -- ferait passer la camera DANS la tete.
+					local d = math.max((zoomBase :: number) + zoomBoost, MIN_ZOOM)
+					player.CameraMinZoomDistance = d
+					player.CameraMaxZoomDistance = d
+				end
 			end
-
-			if fpAmount > 0 then
-				-- LA VUE SUBJECTIVE PRIME sur le recul de camera : reculer la vue n'a aucun sens quand on est dans
-				-- les yeux, et deux raisons ecrivant la meme borne se battraient a chaque image.
-				-- Le recul est remis a plat pour qu'en ressortant il reparte d'une distance FRAICHE.
-				zoomBase = nil
-				zoomBoost = 0
-				-- L'ECART PREND LE DESSUS quand il est demande, sans jamais faire RECULER la camera plus que le
-				-- glissement en cours : au debut du voyage la distance est encore grande, l'ecart ne doit pas s'y
-				-- ajouter.
-				local d = math.max((fpBase or 12) * (1 - fpAmount), math.min(fpGap, fpBase or 12))
-				player.CameraMinZoomDistance = d
-				player.CameraMaxZoomDistance = d
-			else
-				fpBase = nil
-				zoomBoost += (zoomBoostTarget - zoomBoost) * math.min(1, zoomBoostSpeed * dt)
-				if zoomBoostTarget ~= 0 and not zoomBase then
-					zoomBase = (camera.CFrame.Position - camera.Focus.Position).Magnitude
-				end
-				if zoomBase then
-					if zoomBoostTarget == 0 and math.abs(zoomBoost) < 0.05 then
-						zoomBoost = 0
-						zoomBase = nil
-					else
-						-- Min ET max sur la MEME valeur : la camera Custom s'y cale, et comme la valeur glisse,
-						-- elle glisse.
-						-- PLANCHER. En dessous d'un demi-stud Roblox bascule en vue subjective : un rapprochement un
-						-- peu fort -- ou un joueur deja zoome au maximum -- ferait passer la camera DANS la tete,
-						-- et on chercherait la cause du cote de la vue subjective.
-						local d = math.max((zoomBase :: number) + zoomBoost, MIN_ZOOM)
-						player.CameraMinZoomDistance = d
-						player.CameraMaxZoomDistance = d
-					end
-				end
-				if zoomSaved and not zoomBase then
-					-- Plus aucune raison de tenir les bornes : on les rend. La camera est deja revenue a sa
-					-- distance, donc rien ne saute.
-					player.CameraMinZoomDistance = zoomMinWas
-					player.CameraMaxZoomDistance = zoomMaxWas
-					zoomSaved = false
-				end
+			if zoomSaved and not zoomBase then
+				-- Plus aucune raison de tenir les bornes : on les rend. La camera est deja revenue a sa distance,
+				-- donc rien ne saute.
+				player.CameraMinZoomDistance = zoomMinWas
+				player.CameraMaxZoomDistance = zoomMaxWas
+				zoomSaved = false
 			end
 		end
 

@@ -1463,48 +1463,11 @@ local function stepRelease(dt: number)
 	end
 end
 
--- Parties du CORPS a cacher en vue rapprochee (R15 ET R6). On NE liste PAS les bras/mains : ils restent visibles. L'OUTIL
--- (parts hors corps et hors accessoire) reste visible aussi -> vue 1re personne "mains + outil".
-local FP_HIDE_BODY: { [string]: boolean } = {
-	Head = true,
-	UpperTorso = true,
-	LowerTorso = true,
-	Torso = true, -- R6
-	HumanoidRootPart = true,
-	["Left Leg"] = true, -- R6
-	["Right Leg"] = true, -- R6
-	LeftUpperLeg = true,
-	LeftLowerLeg = true,
-	LeftFoot = true,
-	RightUpperLeg = true,
-	RightLowerLeg = true,
-	RightFoot = true,
-}
-
--- Cache le CORPS du perso EN LOCAL (LocalTransparencyModifier : n'affecte QUE la vue du joueur, les autres le voient
--- normalement), mais GARDE les BRAS / MAINS et l'OUTIL visibles -> vraie 1re personne. Les accessoires (chapeau, cheveux)
--- sont caches aussi (ils boucheraient la vue). hidden=false remet tout visible. Une part intrinsequement invisible
--- (hitbox Transparency=1) le reste : LocalTransparencyModifier n'ecrase pas la transparence propre.
-local function setCharacterHiddenLocally(hidden: boolean)
-	local character = player.Character
-	if not character then
-		return
-	end
-	for _, d in ipairs(character:GetDescendants()) do
-		if d:IsA("BasePart") then
-			local hide = hidden
-				and (FP_HIDE_BODY[d.Name] == true or d:FindFirstAncestorOfClass("Accessory") ~= nil)
-			d.LocalTransparencyModifier = if hide then 1 else 0
-		end
-	end
-end
-
 local function release(humanoid: Humanoid?)
 	if not engaged then
 		return
 	end
 	engaged = false
-	setCharacterHiddenLocally(false) -- on sort : le perso redevient visible en local
 	-- On repart toujours d'une vue de face en revenant sur une haie : garder le pivot d'un chantier precedent
 	-- placerait le joueur de biais sans qu'il comprenne pourquoi.
 	yaw = 0
@@ -1560,11 +1523,6 @@ local function engage(humanoid: Humanoid)
 		return
 	end
 	engaged = true
-
-	-- Vue rapprochee : on cache le perso en LOCAL pour qu'il ne bouche pas la haie (les autres joueurs le voient toujours).
-	if HedgeConfigs.CAMERA_FIRST_PERSON then
-		setCharacterHiddenLocally(true)
-	end
 
 	-- La camera GLISSE depuis la cam de jeu a l'engage (camArrived = false), puis se placera direct une fois
 	-- arrivee. On repart d'une distance de base propre pour que ce glisse ne parte pas du recul de la haie precedente.
@@ -1908,49 +1866,30 @@ local function update(dt: number)
 		end
 	end
 
-	-- PREMIERE PERSONNE (CAMERA_FIRST_PERSON) : oeil A LA TETE, regard vers la haie. Sinon vue iso 3/4 (orbite).
-	local target = camera.CFrame
-	if HedgeConfigs.CAMERA_FIRST_PERSON then
-		-- Vue rapprochee DE COTE : oeil pres de la tete mais DECALE lateralement (FP_SIDE) + un peu en arriere et en
-		-- hauteur, et il regarde le POINT DE TRAVAIL devant le joueur -> on voit la surface de biais (pas plat dans la
-		-- haie). La visee part de CETTE camera (ViewportPointToRay) -> elle suit toute seule, rien a changer.
-		local head = character:FindFirstChild("Head")
-		local headPos = if head and head:IsA("BasePart")
-			then head.Position
-			else position + Vector3.new(0, HedgeConfigs.CAMERA_LOOK_HEIGHT, 0)
-		-- Direction horizontale LE LONG de la haie (perpendiculaire a la normale) : sert au decalage lateral de l'oeil.
-		local side = normal:Cross(Vector3.yAxis)
-		side = if side.Magnitude > 1e-3 then side.Unit else Vector3.xAxis
-		local eye = headPos
-			+ side * HedgeConfigs.FP_SIDE
-			+ normal * HedgeConfigs.FP_BACK
-			+ Vector3.new(0, HedgeConfigs.FP_HEIGHT, 0)
-		local lookAt = headPos - normal * HedgeConfigs.FP_LOOK_FORWARD + Vector3.new(0, HedgeConfigs.FP_LOOK_HEIGHT, 0)
-		target = CFrame.lookAt(eye, lookAt)
-	else
-		local viewNormal = CFrame.Angles(0, yaw, 0) * normal
-		-- Le cote se prend perpendiculairement a cette direction, dans le plan horizontal.
-		local side = viewNormal:Cross(Vector3.yAxis).Unit
-		-- Accelerer rapproche la camera : l'attention se resserre sur le geste. Le lerp de la camera fait la
-		-- transition tout seul, il n'y a rien de plus a ecrire.
-		-- La distance de recul se LISSE en parametre (rapproche a l'acceleration, ressort en relachant) : ca ne deforme
-		-- pas l'orbite, contrairement a un lissage de la POSITION de la camera. Une fois la camera placee direct (plus
-		-- bas), c'est le seul mouvement doux qui reste.
-		local targetDistance = if throttling then HedgeConfigs.CAMERA_DISTANCE_THROTTLE else HedgeConfigs.CAMERA_DISTANCE
-		currentDistance += (targetDistance - currentDistance) * math.min(1, HedgeConfigs.CAMERA_DISTANCE_LERP * dt)
-		-- Le zoom multiplie TOUT le placement, pas le seul recul : l'angle 3/4 reste donc le meme de pres comme de
-		-- loin. En ne mettant a l'echelle que le recul, la vue plongerait en zoomant et s'aplatirait en reculant.
-		-- Sur mobile : depart plus DE FACE (moins de decalage lateral). Le joueur ajuste ensuite par l'orbite tactile.
-		local sideAmount = if InputDevice.isTouch() then HedgeConfigs.CAMERA_SIDE_TOUCH else HedgeConfigs.CAMERA_SIDE
-		local camPosition = position
-			+ (
-				viewNormal * currentDistance
-				+ side * sideAmount
-				+ Vector3.new(0, HedgeConfigs.CAMERA_HEIGHT, 0)
-			) * cameraZoom
-		local camLook = position + Vector3.new(0, HedgeConfigs.CAMERA_LOOK_HEIGHT, 0)
-		target = CFrame.lookAt(camPosition, camLook)
-	end
+	-- VUE ISO 3/4, en orbite autour du joueur. (La branche premiere personne a ete retiree : le jeu ne l'utilisera
+	-- jamais.)
+	local viewNormal = CFrame.Angles(0, yaw, 0) * normal
+	-- Le cote se prend perpendiculairement a cette direction, dans le plan horizontal.
+	local side = viewNormal:Cross(Vector3.yAxis).Unit
+	-- Accelerer rapproche la camera : l'attention se resserre sur le geste. Le lerp de la camera fait la
+	-- transition tout seul, il n'y a rien de plus a ecrire.
+	-- La distance de recul se LISSE en parametre (rapproche a l'acceleration, ressort en relachant) : ca ne deforme
+	-- pas l'orbite, contrairement a un lissage de la POSITION de la camera. Une fois la camera placee direct (plus
+	-- bas), c'est le seul mouvement doux qui reste.
+	local targetDistance = if throttling then HedgeConfigs.CAMERA_DISTANCE_THROTTLE else HedgeConfigs.CAMERA_DISTANCE
+	currentDistance += (targetDistance - currentDistance) * math.min(1, HedgeConfigs.CAMERA_DISTANCE_LERP * dt)
+	-- Le zoom multiplie TOUT le placement, pas le seul recul : l'angle 3/4 reste donc le meme de pres comme de
+	-- loin. En ne mettant a l'echelle que le recul, la vue plongerait en zoomant et s'aplatirait en reculant.
+	-- Sur mobile : depart plus DE FACE (moins de decalage lateral). Le joueur ajuste ensuite par l'orbite tactile.
+	local sideAmount = if InputDevice.isTouch() then HedgeConfigs.CAMERA_SIDE_TOUCH else HedgeConfigs.CAMERA_SIDE
+	local camPosition = position
+		+ (
+			viewNormal * currentDistance
+			+ side * sideAmount
+			+ Vector3.new(0, HedgeConfigs.CAMERA_HEIGHT, 0)
+		) * cameraZoom
+	local camLook = position + Vector3.new(0, HedgeConfigs.CAMERA_LOOK_HEIGHT, 0)
+	local target = CFrame.lookAt(camPosition, camLook)
 	-- ORBITE 1:1, sans corde coupee. On ne LISSE PAS la position de la camera pendant le travail : lisser une
 	-- position qui tourne sur un arc la fait plonger vers l'interieur du cercle puis ressortir (la "courbe"), et
 	-- c'est PIRE quand on tourne vite car le retard grandit. On place donc la camera DIRECTEMENT sur son cercle au

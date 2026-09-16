@@ -467,7 +467,6 @@ local fadeNow = 0
 -- APRES ROBLOX, ET C'EST TOUT L'INTERET. `RenderStepped:Connect` ne garantit AUCUN ordre : notre ecriture peut
 -- tomber avant celle du controleur de transparence, qui l'ecrase aussitot -- on reposerait la valeur a chaque
 -- image pour rien. `BindToRenderStep` a `Camera + 1` nous place explicitement APRES lui.
--- (Meme reglage que FirstPersonController, qui se bat contre le meme adversaire.)
 local FADE_BIND = "LeafiaTutorialFade"
 
 local function stopFadeHold()
