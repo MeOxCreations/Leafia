@@ -153,7 +153,13 @@ local nextUndoneAt = 0
 local lawnFraction = 0
 local missionStarted = false
 local sceneEnded = false
-local controls: any = nil -- ControlModule du PlayerModule, pour couper les deplacements pendant la scene
+-- CE QUE LE BLOCAGE DE LA SCENE A COUPE, pour le rendre a l'identique. `controls` = le ControlModule du
+-- PlayerModule ; `jump` = le saut d'avant la scene, garde AVEC son Humanoid : apres un respawn il n'y a plus rien
+-- a rendre a celui-la, et le nouveau a deja ses valeurs.
+local frozen: {
+	controls: any,
+	jump: { humanoid: Humanoid, height: number, power: number, enabled: boolean }?,
+} = { controls = nil, jump = nil }
 local fadeBound = false -- la boucle qui repose la transparence a chaque image tourne-t-elle ?
 local grandpaTrack: AnimationTrack? = nil
 -- Angle courant de la porte, en degres (0 = fermee). Une seule valeur : la sequence n'est qu'un enchainement de
@@ -564,8 +570,8 @@ end
 -- lecture des deplacements (joystick maison, , puis WASD en direct). Un warning sur un
 -- cas NORMAL et sans action possible finit par etre ignore, et il emmene les vrais avec lui.
 local function getControls(): any
-	if controls then
-		return controls
+	if frozen.controls then
+		return frozen.controls
 	end
 	local scripts = player:FindFirstChild("PlayerScripts")
 	local playerModule = scripts and scripts:FindFirstChild("PlayerModule")
@@ -576,9 +582,9 @@ local function getControls(): any
 		return require(playerModule):GetControls()
 	end)
 	if ok then
-		controls = result
+		frozen.controls = result
 	end
-	return controls
+	return frozen.controls
 end
 
 -- DEUXIEME VERROU, et il ne depend de RIEN. Couper le ControlModule suppose que le PlayerModule se comporte comme
@@ -668,6 +674,26 @@ local function freezePlayer()
 	if ctrls then
 		ctrls:Disable()
 	end
+
+	-- LE SAUT SE COUPE SUR LE HUMANOID, pas seulement sur l'input. Le bouton de saut TACTILE ne passe pas par
+	-- l'action CharacterJump qu'on avale au-dessus : sur telephone, le joueur sautait en pleine scene. Couper le
+	-- saut a la source le bloque quel que soit le chemin, et le PlayerModule de Roblox CACHE son bouton des que
+	-- la hauteur de saut tombe a zero ou que l'etat Jumping est interdit.
+	-- Cote client, et c'est voulu : c'est lui qui simule son personnage.
+	local character = player.Character
+	local humanoid = if character then character:FindFirstChildOfClass("Humanoid") else nil
+	if humanoid and not (frozen.jump and frozen.jump.humanoid == humanoid) then
+		frozen.jump = {
+			humanoid = humanoid,
+			height = humanoid.JumpHeight,
+			power = humanoid.JumpPower,
+			enabled = humanoid:GetStateEnabled(Enum.HumanoidStateType.Jumping),
+		}
+		-- Les DEUX a zero : laquelle compte depend de UseJumpPower.
+		humanoid.JumpHeight = 0
+		humanoid.JumpPower = 0
+		humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+	end
 end
 
 local function unfreezePlayer()
@@ -675,6 +701,13 @@ local function unfreezePlayer()
 	local ctrls = getControls()
 	if ctrls then
 		ctrls:Enable()
+	end
+	local jump = frozen.jump
+	frozen.jump = nil
+	if jump and jump.humanoid.Parent then
+		jump.humanoid.JumpHeight = jump.height
+		jump.humanoid.JumpPower = jump.power
+		jump.humanoid:SetStateEnabled(Enum.HumanoidStateType.Jumping, jump.enabled)
 	end
 end
 

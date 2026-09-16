@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.874 — Plus de saut pendant la scene du grand-pere, meme sur telephone
+
+- Le bouton de saut tactile ne passait pas par l'action `CharacterJump` qu'on avalait : sur mobile, le joueur
+  sautait en pleine scene. `freezePlayer` coupe maintenant le saut sur le Humanoid (JumpHeight / JumpPower a 0,
+  etat Jumping interdit), ce qui cache aussi le bouton du PlayerModule de Roblox.
+- `unfreezePlayer` rend les valeurs d'avant la scene, seulement au meme Humanoid (rien a rendre apres un respawn).
+- `controls` passe dans une table `frozen` avec le saut garde : aucune locale de plus (192/200).
+
 ## 0.0.873 — Le point d'interrogation du grand-pere se pose au milieu de sa tete
 
 - Chaque dessin a son Attachment (`TutorialConfigs.IMPATIENT_BURST_ATTACHMENTS`) : l'eclair sur
