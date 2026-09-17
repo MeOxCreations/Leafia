@@ -12,14 +12,18 @@
 -- HORS CHAMP : par defaut l'element est simplement cache. `setEdgeClamp` le fait rester a l'ecran, plaque sur le
 -- bord du cote de sa cible -- pour ce qui APPELLE le joueur ailleurs (voir WorldMarker).
 --
--- ATTENTION AU DECALAGE DE 36 PIXELS. WorldToViewportPoint rend des coordonnees VIEWPORT, dont l'origine est le
--- COIN ABSOLU de l'ecran (l'inset de la barre Roblox est DEDANS). Le ScreenGui qui recoit ces coords doit donc
--- couvrir tout l'ecran : ScreenInsets = None, et SEULEMENT ca -- poser `IgnoreGuiInset = true` APRES remet
--- `DeviceSafeInsets`, qui vaut zero sur PC et la largeur de l'encoche sur telephone. Avec l'inset par defaut
--- (CoreUiSafeInsets), l'origine du GUI est ~36 px plus bas et l'element suit d'autant trop bas. Verifie a l'ecran :
--- le commentaire d'origine disait l'inverse (IgnoreGuiInset FAUX), c'etait faux. Meme famille de piege que
--- GetMouseLocation / ViewportPointToRay, deja paye une fois.
+-- LE POINT A L'ECRAN N'EST JAMAIS SUPPOSE, IL EST MESURE. Deux reperes se croisent ici : celui de la projection
+-- (viewport, origine au coin de l'ecran) et celui de l'interface (`AbsolutePosition`, decale de l'inset de Roblox --
+-- la barre du haut, et sur telephone et tablette les bords de securite). On supposait que `ScreenInsets = None`
+-- faisait coincider les deux : vrai sur PC, FAUX sur mobile, ou balises et onomatopees tombaient a cote de leur
+-- Attachment. Deux corrections a l'aveugle sur les insets n'y ont rien change.
+--
+-- La position se calcule donc par DIFFERENCE, avec ce que le moteur dit a cette image : l'ecart entre
+-- `WorldToScreenPoint` et `WorldToViewportPoint` (l'inset reel), moins la position du PARENT de l'element. Aucun
+-- reglage de ScreenGui n'a plus besoin d'etre juste, et un element range dans un cadre decale reste bien place.
 
+local GuiService = game:GetService("GuiService")
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local WorldAnchor = {}
@@ -55,6 +59,13 @@ type Entry = {
 local entries: { [GuiObject]: Entry } = {}
 local BIND_NAME = "LeafiaWorldAnchor"
 local bound = false
+
+-- SONDE A L'ECRAN, A LAISSER ALLUMEE LE TEMPS D'UN TEST SUR TELEPHONE. Elle affiche les deux reperes en haut de
+-- l'ecran : un bug qui n'existe que sur mobile ne se lit pas dans une console qu'on ne peut pas ouvrir sur un
+-- telephone. La comparer a la meme ligne sur PC (le temoin qui marche) dit tout de suite ce qui differe.
+local DEBUG_SPACES = true
+local debugLabel: TextLabel? = nil
+local nextDebugAt = 0
 
 local function positionOf(target: Target): Vector3?
 	if typeof(target) == "Vector3" then
@@ -133,12 +144,73 @@ local function toEdge(x: number, y: number, view: Vector2, margin: number): (num
 	return cx + dx * t, cy + dy * t
 end
 
+local function showDebug(camera: Camera, shift: Vector2)
+	local now = os.clock()
+	if now < nextDebugAt then
+		return
+	end
+	nextDebugAt = now + 0.5
+	local label = debugLabel
+	if not (label and label.Parent) then
+		local playerGui = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
+		if not playerGui then
+			return
+		end
+		-- IL SE DENONCE : oublie allume, il partirait chez les joueurs.
+		warn("[WorldAnchor] DEBUG_SPACES est allume : ligne de mesure en haut de l'ecran. A couper apres le test.")
+		local sg = Instance.new("ScreenGui")
+		sg.Name = "LeafiaAnchorDebug"
+		sg.ResetOnSpawn = false
+		sg.ScreenInsets = Enum.ScreenInsets.None
+		sg.DisplayOrder = 1000
+		sg.Parent = playerGui
+		local created = Instance.new("TextLabel")
+		created.AnchorPoint = Vector2.new(0.5, 0)
+		created.Position = UDim2.new(0.5, 0, 0, 4)
+		created.Size = UDim2.fromOffset(520, 22)
+		created.BackgroundColor3 = Color3.new(0, 0, 0)
+		created.BackgroundTransparency = 0.35
+		created.TextColor3 = Color3.new(1, 1, 1)
+		created.TextScaled = true
+		created.Font = Enum.Font.Code
+		created.Parent = sg
+		label = created
+		debugLabel = created
+	end
+	local host: GuiBase2d? = nil
+	for gui in entries do
+		local parent = gui.Parent
+		if parent and parent:IsA("GuiBase2d") then
+			host = parent
+			break
+		end
+	end
+	local topLeft = GuiService:GetGuiInset()
+	local view = camera.ViewportSize
+	local text = `view {math.floor(view.X)}x{math.floor(view.Y)} | shift {math.floor(shift.X)},{math.floor(shift.Y)}`
+		.. ` | inset {math.floor(topLeft.X)},{math.floor(topLeft.Y)}`
+	if host then
+		local p, z = host.AbsolutePosition, host.AbsoluteSize
+		text ..= ` | {host.Name} {math.floor(p.X)},{math.floor(p.Y)} {math.floor(z.X)}x{math.floor(z.Y)}`
+	end;
+	(label :: TextLabel).Text = text
+end
+
 local function update()
 	local camera = workspace.CurrentCamera
 	if not camera then
 		return
 	end
 	local eye = camera.CFrame.Position
+	-- L'INSET REEL DE CETTE IMAGE, lu sur le moteur : l'ecart entre les deux projections d'un meme point. C'est
+	-- exactement ce qui separe le repere de la camera de celui de `AbsolutePosition`, quel que soit l'appareil.
+	local probe = eye + camera.CFrame.LookVector * 10
+	local viewPoint = camera:WorldToViewportPoint(probe)
+	local screenPoint = camera:WorldToScreenPoint(probe)
+	local shift = Vector2.new(screenPoint.X - viewPoint.X, screenPoint.Y - viewPoint.Y)
+	if DEBUG_SPACES then
+		showDebug(camera, shift)
+	end
 
 	for gui, entry in pairs(entries) do
 		if not gui.Parent then
@@ -159,8 +231,14 @@ local function update()
 		-- l'autre cote de l'ecran des qu'on tourne le dos a sa cible.
 		local distance = (world - eye).Magnitude
 		local far = entry.maxDistance > 0 and distance > entry.maxDistance
-		local view = camera.ViewportSize
-		-- LA MARGE DE BORD NE SERT A RIEN SANS VIEWPORT : il vaut (0, 0) les premieres images, et tout ramener au
+		-- LE CADRE QUI RECOIT L'ELEMENT : sa position et sa taille dans le repere de l'interface. La position de
+		-- l'element est relative A LUI, donc c'est lui qu'on retranche -- pas un inset qu'on croirait connaitre.
+		local parent = gui.Parent :: Instance
+		-- Sans cadre d'interface au-dessus, la position est lue comme des coordonnees VIEWPORT : l'origine vaut
+		-- alors l'inset, et les deux s'annulent.
+		local origin = if parent:IsA("GuiBase2d") then parent.AbsolutePosition else shift
+		local view = if parent:IsA("GuiBase2d") then parent.AbsoluteSize else camera.ViewportSize
+		-- LA MARGE DE BORD NE SERT A RIEN SANS TAILLE : elle vaut (0, 0) les premieres images, et tout ramener au
 		-- bord d'un ecran de taille nulle poserait l'element dans le coin.
 		local clamped = entry.edgeMargin > 0 and view.X >= 1 and view.Y >= 1
 		if far or (not onScreen and not clamped) then
@@ -168,7 +246,8 @@ local function update()
 			continue
 		end
 
-		local x, y = screen.X, screen.Y
+		-- DU REPERE CAMERA AU REPERE DU PARENT : + l'inset mesure, - la position du parent.
+		local x, y = screen.X + shift.X - origin.X, screen.Y + shift.Y - origin.Y
 		if clamped then
 			-- DERRIERE LA CAMERA, LA PROJECTION EST FAUSSE : elle rend un point en MIROIR, donc ramene au bord il
 			-- indiquerait le cote oppose a la cible -- exactement l'inverse de ce qu'on veut. On lit alors la

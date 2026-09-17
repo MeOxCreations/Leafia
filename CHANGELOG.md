@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.877 — Balises et onomatopees mesurent leur place a l'ecran au lieu de la supposer (mobile et tablette)
+
+- `WorldAnchor` : la position a l'ecran se calcule par DIFFERENCE avec ce que dit le moteur a chaque image --
+  l'ecart entre `WorldToScreenPoint` et `WorldToViewportPoint` (l'inset reel), moins `AbsolutePosition` du parent
+  de l'element. Avant, on supposait que `ScreenInsets = None` faisait coincider les deux reperes : vrai sur PC,
+  faux sur mobile et tablette, ou la balise rouge, le point d'interrogation et l'eclair tombaient a cote de leur
+  Attachment. Le bord de l'ecran (balises ramenees au bord) se calcule aussi dans le repere du parent.
+- Vaut pour tout ce qui passe par `WorldAnchor`. Les interfaces restees sur l'inset par defaut
+  (`InteractionPrompt`, hologramme de haie) etaient ~36 px trop bas sur PC : elles remontent a leur vraie place.
+- SONDE ALLUMEE (`DEBUG_SPACES = true` dans `WorldAnchor`) : une ligne en haut de l'ecran affiche viewport,
+  inset mesure, inset GuiService et position du cadre. A couper apres le test sur telephone.
+- Commentaires de `WorldMarker` / `HeadBurst` corriges : ils affirmaient que `IgnoreGuiInset` expliquait le
+  decalage mobile, ce qui n'a jamais ete verifie.
+
 ## 0.0.876 — Un seul panneau a la fois : le bouton des outils et les taches se rangent devant la benne
 
 - Nouveau `Modules/UI/Core/PanelFocus` : un seul PANNEAU ouvert a la fois, et les HUD se rangent tant qu'un
