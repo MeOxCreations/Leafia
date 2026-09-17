@@ -105,11 +105,24 @@ local function askFor(toolName: string)
 		return
 	end
 	local r = remote
-	if r then
-		-- ON ENVOIE LE NOM, RIEN D'AUTRE -- pas meme le sens de l'action. C'est la PLACE de l'objet qui decide :
-		-- dans la benne il sort, dehors il rentre. Le client n'a donc aucun etat a tenir juste, et deux joueurs
-		-- qui cliquent en meme temps ne peuvent pas demander deux choses contradictoires.
-		r:FireServer(toolName)
+	if not r then
+		return
+	end
+	-- LA PLACE DE L'OBJET AVANT L'ENVOI : elle dit ce que le clic va faire. On ne l'envoie toujours PAS au serveur
+	-- -- c'est lui qui tranche, sur la place REELLE -- elle ne sert qu'a l'interface.
+	local folder = toolsFolder
+	local taking = folder ~= nil and folder.Parent ~= nil and folder:FindFirstChild(toolName) ~= nil
+	-- ON ENVOIE LE NOM, RIEN D'AUTRE -- pas meme le sens de l'action. C'est la PLACE de l'objet qui decide :
+	-- dans la benne il sort, dehors il rentre. Le client n'a donc aucun etat a tenir juste, et deux joueurs
+	-- qui cliquent en meme temps ne peuvent pas demander deux choses contradictoires.
+	r:FireServer(toolName)
+	-- IL A PRIS SON OUTIL : LA BARRE A FINI SON TRAVAIL. La laisser ouverte cache le jardin et, surtout, garde le
+	-- bouton des outils range (voir PanelFocus) -- le joueur ne pouvait plus equiper ce qu'il venait de sortir.
+	--
+	-- SEULEMENT POUR UNE PRISE. Ranger un outil veut souvent dire qu'on va en prendre un autre : fermer la
+	-- obligerait a rouvrir le hayon entre deux gestes qui vont ensemble.
+	if taking then
+		TruckToolsController.close()
 	end
 end
 

@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.878 — Prendre un outil dans la benne referme la barre du camion
+
+- `TruckToolsController.askFor` : apres un TAKE (l'outil est encore dans la benne), la barre se ferme toute seule.
+  Elle revient quand le joueur s'eloigne puis revient, ou quand le hayon rebouge.
+- Le bouton des outils, range tant que la barre est ouverte (voir PanelFocus), revient donc tout de suite : le
+  joueur peut equiper ce qu'il vient de sortir sans avoir a fermer la barre a la main.
+- PUT BACK ne ferme rien : ranger un outil veut souvent dire qu'on va en prendre un autre.
+
 ## 0.0.877 — Balises et onomatopees mesurent leur place a l'ecran au lieu de la supposer (mobile et tablette)
 
 - `WorldAnchor` : la position a l'ecran se calcule par DIFFERENCE avec ce que dit le moteur a chaque image --
