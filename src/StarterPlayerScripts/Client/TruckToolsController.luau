@@ -101,7 +101,7 @@ local function askFor(toolName: string)
 	-- PAS AVANT QU'ON LUI DISE. Le refus est DIT -- pilule rouge et notification -- parce qu'un bouton qui ne
 	-- fait rien se lit comme un bug, et parce qu'il faut lui dire QUOI attendre.
 	if player:GetAttribute(TruckConfigs.TOOLS_LOCK_ATTRIBUTE) == true then
-		ActionGate.deny(TruckConfigs.TOOLS_LOCK_NOTIF)
+		ActionGate.denyToast(TruckConfigs.TOOLS_LOCK_TEXT)
 		return
 	end
 	local r = remote

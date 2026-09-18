@@ -128,12 +128,9 @@ local TruckConfigs = {
 	-- refuse, en le disant. Cacher la barre repondrait a une question que le joueur ne s'est pas encore posee.
 	TOOLS_LOCK_ATTRIBUTE = "LeafiaTruckToolsLocked",
 	-- CE QU'ON LUI DIT. En anglais et en mots simples : le public a dix ans.
-	TOOLS_LOCK_NOTIF = {
-		kind = "Warning",
-		title = "Not Yet",
-		description = "Wait for the old man. He will tell you what to take.",
-		duration = 10,
-	},
+	-- EN BAS AU MILIEU (Toast), plus la notification laterale : demande du joueur le 18/09/2026. C'est un
+	-- "attends", pas une regle du jeu -- un panneau sur le cote en faisait trop.
+	TOOLS_LOCK_TEXT = "Wait for the old man. He will tell you what to take.",
 	-- LE DESSIN D'UN OUTIL, par le nom de son modele dans la benne. Un dessin se lit d'un coup d'oeil a petite
 	-- taille ; un modele 3D montre l'objet exact mais depend de son angle et de son eclairage.
 	--

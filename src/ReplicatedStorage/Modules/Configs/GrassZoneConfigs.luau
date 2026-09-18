@@ -29,58 +29,19 @@ local GrassZoneConfigs = {
 	-- puisque la touffe est encore a sa pleine hauteur.
 	MOW_SWAP_AT = 0.5,
 
-	-- ===== EMERGENCE DE L'HERBE COUPEE =====
-	-- Au moment de l'echange de maillage, la touffe coupee est ENFONCEE sous la surface, et elle remonte a sa
-	-- place en prenant sa couleur en chemin.
+	-- ===== LA TOUFFE COUPEE APPARAIT EN FONDU =====
+	-- A l'echange du maillage (`MOW_SWAP_AT`, sous le carter), la touffe prend D'UN COUP sa taille et sa couleur de
+	-- tondue, et devient invisible ; elle apparait ensuite en fondu, en ce temps-la (secondes).
 	--
-	-- POURQUOI. Sans ca, l'herbe coupee APPARAIT par-dessus, deja de sa couleur : on voit qu'on AJOUTE quelque
-	-- chose, pas qu'on coupe. En la faisant sortir du sol, elle a l'air d'avoir toujours ete la, dessous, cachee
-	-- par l'herbe haute -- ce qui est d'ailleurs la verite d'une pelouse.
+	-- POURQUOI UN FONDU ET PLUS UN MOUVEMENT (18/09/2026, idee du joueur). La coupe etait une DESCENTE animee, avec
+	-- un temps mort (0.5 s) puis un glissement (0.45 s) vers la hauteur tondue. Mais son point de depart dependait
+	-- de ce que la machine avait ecrase : plus bas que la hauteur tondue, la touffe REMONTAIT derriere la machine,
+	-- et on la voyait monter et redescendre selon les touffes. Un fondu n'a pas de point de depart : la touffe est
+	-- deja a sa place, seule sa visibilite change.
 	--
-	-- Duree en secondes. Assez longue pour se VOIR, assez courte pour ne pas trainer derriere la machine.
-	-- La coupe elle-meme dure 0.125 s (MOW_RATE) : c'est bien trop court pour qu'on y lise une transition, et
-	-- c'est justement pour ca que l'emergence a son propre temps au lieu de suivre l'avancement de la coupe.
-	-- Historique : 0.35 (trop sec, ca ressemblait a un interrupteur), 0.9 (trop mou), 0.45.
-	--
-	-- A NE PAS CONFONDRE AVEC CUT_RISE_DELAY, juste en dessous. Celui-ci dit a quelle VITESSE la touffe descend et
-	-- sort du sol ; l'autre dit QUAND elle commence. "Ca se couche trop tot" se regle avec le DELAI, "ca se couche
-	-- trop lentement" avec celui-ci -- les confondre force a sacrifier l'un pour l'autre.
-	--
-	-- Et surtout pas MOW_RATE : celui-la decide si la touffe est coupee, pas de ce qu'on VOIT.
-	-- Duree de la DESCENTE, une fois le temps mort passe. La touffe glisse de sa hauteur ecrasee a sa hauteur
-	-- tondue.
-	--
-	-- La descente est ADOUCIE AUX DEUX BOUTS (voir le code) : elle part sans a-coup et se pose sans a-coup. Une
-	-- descente lineaire demarre a pleine vitesse, et sur une pelouse entiere ce depart sec se lit comme un
-	-- clignotement au passage de la machine.
-	CUT_RISE_TIME = 0.45,
-	-- TEMPS MORT avant que la touffe commence a descendre, en secondes.
-	--
-	-- La lame passe, et la touffe tient encore un instant avant de tomber. C'est ce court retard qui fait la
-	-- difference entre "l'herbe s'eteint sous la machine" et "la machine coupe l'herbe" : sans lui, la coupe est
-	-- SIMULTANEE au passage, donc elle ressemble a un interrupteur.
-	--
-	-- Monte de 0.18 : la touffe tombait encore trop tot, donc trop pres de la machine.
-	--
-	-- ON APPROCHE DE LA LIMITE. Au-dela d'une demi-seconde, on voit la machine passer et l'herbe tomber loin
-	-- DERRIERE elle -- ca cesse de se lire comme une coupe et ca ressemble a un retard d'affichage.
-	CUT_RISE_DELAY = 0.5,
-	-- De combien elle est enfoncee au depart, en part de sa PROPRE hauteur (1 = entierement sous la surface).
-	-- RELATIF et pas en studs : l'herbe n'a pas la meme taille partout, et une valeur absolue laisserait les
-	-- touffes hautes depasser pendant que les basses seraient enterrees trop profond.
-	-- Descendu de 1, ou la touffe partait ENTIEREMENT sous la surface : le trajet etait trop long, on voyait
-	-- clairement quelque chose sortir du sol au lieu de ne rien voir du tout.
-	-- PLUS DE SORTIE DE TERRE. La touffe ne s'enfouit plus et ne remonte plus : elle est ECRASEE par la lame, on
-	-- remplace son maillage pendant qu'elle est basse, et elle se reduit ensuite a sa hauteur tondue. Un seul
-	-- mouvement, vers le bas.
-	--
-	-- L'enfouissement servait a cacher le remplacement du maillage. Mais ce remplacement se fait deja a MI-COUPE
-	-- (`MOW_SWAP_AT`), quand la touffe est tassee sous la machine -- il etait donc CACHE DEUX FOIS. Et comme la
-	-- sortie de terre partait tout de suite alors que la reduction de hauteur attendait `CUT_RISE_DELAY`, la
-	-- touffe REMONTAIT a pleine hauteur avant de redescendre. C'est ce mouvement en cloche qu'on voyait.
-	--
-	-- Regle generale : quand deux mouvements se contredisent, supprimer celui qui ne sert plus coute moins cher
-	-- que de les mettre d'accord.
+	-- Plus court = la coupe claque comme un interrupteur ; plus long = une trainee d'herbe absente derriere la
+	-- machine.
+	CUT_FADE_TIME = 0.35,
 
 	-- Delai TOTAL pour trouver la racine et le mesh au demarrage (un seul delai pour tout le chemin).
 	RESOLVE_TIMEOUT = 15,
@@ -560,7 +521,7 @@ local GrassZoneConfigs = {
 	-- il faut 0.2 s de contact, ce qu'un passage de tondeuse donne largement. Trop bas, une passe rapide laisserait
 	-- des touffes a moitie coupees derriere elle -- et rien n'est plus penible que devoir repasser sur ce qu'on
 	-- croit avoir fait.
-	-- Pour que l'herbe descende plus DOUCEMENT, c'est CUT_RISE_TIME qu'il faut monter, pas celui-ci.
+	-- Pour que la coupe apparaisse plus DOUCEMENT, c'est CUT_FADE_TIME qu'il faut monter, pas celui-ci.
 	MOW_RATE = 5,
 	-- LES FLEURS SE FAUCHENT PLUS LENTEMENT QUE L'HERBE, et c'est tout l'interet : a la vitesse de l'herbe
 	-- (0.125 s), une fleur disparaitrait d'un coup en passant devant la machine -- ca se lirait comme un bug.

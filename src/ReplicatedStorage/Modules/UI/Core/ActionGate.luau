@@ -16,6 +16,7 @@ local Players = game:GetService("Players")
 
 local InteractionPrompt = require(script.Parent.InteractionPrompt)
 local SideNotificationHandler = require(script.Parent.Parent.Notification.SideNotificationHandler)
+local Toast = require(script.Parent.Toast)
 
 local ActionGate = {}
 
@@ -30,6 +31,8 @@ ActionGate.ATTRIBUTE = ATTRIBUTE
 -- La notification n'apparait pas a CHAQUE refus : la pilule rouge qui tremble suffit a dire non, et une
 -- notification qui revient a chaque appui devient du bruit. Elle rappelle POURQUOI, de temps en temps.
 local NOTIFY_COOLDOWN = 12
+-- LE MEME RAPPEL EN BAS AU MILIEU (Toast) : plus discret que la notification laterale, il peut revenir plus vite.
+local TOAST_COOLDOWN = 4
 -- EN ANGLAIS, comme tout texte vu par le joueur, et en mots simples : le public a dix ans.
 local NOTIF: SideNotificationHandler.NotifData = {
 	kind = "Warning",
@@ -78,6 +81,19 @@ function ActionGate.deny(notif: SideNotificationHandler.NotifData): boolean
 	if now - (lastNotifyAt[key] or -math.huge) >= NOTIFY_COOLDOWN then
 		lastNotifyAt[key] = now
 		SideNotificationHandler.spawn(notif)
+	end
+	return true
+end
+
+--- DIT NON, avec le petit message EN BAS AU MILIEU (Toast) au lieu de la notification laterale. Pour un refus
+--- qui ne merite pas un panneau : "attends", pas "voici une regle du jeu". Rend toujours vrai.
+function ActionGate.denyToast(text: string): boolean
+	InteractionPrompt.refuse()
+	local now = os.clock()
+	local key = "toast:" .. text
+	if now - (lastNotifyAt[key] or -math.huge) >= TOAST_COOLDOWN then
+		lastNotifyAt[key] = now
+		Toast.show("Warning", text)
 	end
 	return true
 end

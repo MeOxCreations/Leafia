@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.884 — L'herbe coupee apparait en fondu au lieu de bouger ; le refus du camion passe en bas au milieu
+
+- `GrassZoneController` : la coupe est immediate. A l'echange du maillage (sous le carter), la touffe prend d'un
+  coup sa taille et sa couleur de tondue, devient invisible, puis apparait en fondu (`CUT_FADE_TIME`, 0.35 s).
+  Fini la descente animee (temps mort 0.5 s + glissement 0.45 s) : son point de depart dependait de ce que la
+  machine avait ecrase, et la touffe montait puis redescendait. Retires : `CUT_RISE_TIME`, `CUT_RISE_DELAY`, le
+  plafond `cutHold` (et le correctif 0.0.883 qui le bornait). La fin du fondu repose PILE la transparence de
+  repos (sinon la touffe resterait dans le rendu transparent de Roblox).
+- Benne verrouillee : le refus s'affiche en bas au milieu (Toast) au lieu de la notification laterale.
+  `ActionGate.denyToast(text)` (rappel toutes les 4 s au plus), `TruckConfigs.TOOLS_LOCK_TEXT` remplace
+  `TOOLS_LOCK_NOTIF`. Depend du `NotificationUI` pose dans Studio (StarterGui de la place du didacticiel).
+
 ## 0.0.883 — L'herbe tondue ne remonte plus derriere la tondeuse
 
 - `GrassZoneController` : pendant la coupe, le plafond de hauteur (`cutHold`) ne descend plus sous la hauteur

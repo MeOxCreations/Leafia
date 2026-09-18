@@ -107,17 +107,14 @@ type Clump = {
 	lift: number, -- hauteur de TIGE au repos (fleurs seulement, 0 pour l'herbe). Se comprime avec l'ecrasement.
 	flower: boolean, -- fleur et non touffe d'herbe : la tondeuse la FAUCHE au lieu de la raccourcir
 	gone: boolean, -- fauchee : sa part est detruite, plus rien ne doit y toucher
-	-- LA PHASE "COUPEE" A COMMENCE : maillage echange (s'il y en a un) et emergence lancee. Le nom ne dit pas
+	-- LA PHASE "COUPEE" A COMMENCE : maillage echange (s'il y en a un) et fondu lance. Le nom ne dit pas
 	-- "maillage applique", parce que la phase demarre AUSSI quand aucun mesh de rechange n'existe -- sinon la
 	-- couleur de tonte ne partirait jamais dans ce cas-la.
 	cutStarted: boolean,
-	cutWait: number, -- temps restant avant que la touffe commence a se coucher. La lame passe, elle tient encore.
-	-- Hauteur la plus BASSE atteinte depuis le debut de la coupe. Elle empeche la touffe de REMONTER pendant la
-	-- transition : voir le plafond pose plus bas.
-	cutHold: number,
-	lastRiseT: number, -- dernier avancement REELLEMENT dessine
-	cutT: number, -- avancement de l'emergence (0 = enfouie et couleur d'herbe haute, 1 = en place et tondue)
-	lastCutT: number, -- dernier avancement REELLEMENT dessine : sans lui la remontee ne serait pas redessinee
+	cutT: number, -- avancement du FONDU de la touffe coupee (0 = invisible, 1 = opaque et finie)
+	lastCutT: number, -- dernier avancement REELLEMENT dessine : sans lui le fondu ne serait pas redessine
+	baseTransparency: number, -- transparence au repos, relevee a la pose : la fin du fondu y revient PILE
+	lastFade: number, -- derniere transparence de fondu REELLEMENT ecrite
 	lastSquash: number, -- dernier aplatissement REELLEMENT ecrit : redimensionner coute plus cher que deplacer
 	lastShrink: number, -- dernier retrecissement de fleur fauchee REELLEMENT ecrit
 	baseColor: Color3, -- couleur au repos, TACHE comprise
@@ -248,12 +245,7 @@ local function apply(
 	local myPart = clump.part
 	if not clump.cutStarted and not clump.flower and mown >= GrassZoneConfigs.MOW_SWAP_AT then
 		clump.cutStarted = true
-		clump.cutT = 0 -- l'emergence part d'ici : enfouie, et encore de la couleur de l'herbe haute
-		-- ELLE TIENT ENCORE UN INSTANT. La lame vient de passer, mais une touffe ne tombe pas dans la meme image :
-		-- sans ce retard la coupe est SIMULTANEE au passage, et ca ressemble a un interrupteur.
-		clump.cutWait = GrassZoneConfigs.CUT_RISE_DELAY
-		-- Repart de "aucun plafond" : le premier passage le posera a la hauteur reelle de l'instant.
-		clump.cutHold = math.huge
+		clump.cutT = 0 -- le fondu part d'ici : la touffe coupee est invisible, elle va apparaitre
 		if cutMesh and myPart:IsA("MeshPart") then
 			myPart:ApplyMesh(cutMesh)
 			-- On ne SUPPOSE pas ce qu'ApplyMesh a touche (taille ? texture ? materiau ?) : on invalide les caches
@@ -278,63 +270,34 @@ local function apply(
 	-- LA TOUFFE TONDUE RACCOURCIT, mais garde son EMPRISE AU SOL. Deux reglages separes, parce que ce sont deux
 	-- grandeurs sans rapport : la hauteur fait qu'une pelouse a l'air tondue, l'emprise fait qu'elle reste pleine.
 	-- Les avoir confondus donnait soit de l'herbe trop haute, soit des trous entre les touffes.
-	-- Suivent l'EMERGENCE et non la coupe : la touffe sort du sol a sa nouvelle taille, en un seul mouvement.
+	-- LA COUPE EST IMMEDIATE : des l'echange du maillage, la touffe a sa taille tondue. Plus aucune descente
+	-- animee -- elle montait et redescendait selon ce que la machine avait ecrase, et ca se voyait. C'est le FONDU
+	-- (plus bas) qui porte la transition.
 	local mownY, mownXZ = 1, 1
-	if not clump.flower then
-		-- ADOUCIE AUX DEUX BOUTS. La courbe part de zero, accelere, puis se repose : la touffe quitte sa hauteur
-		-- ecrasee sans a-coup et arrive a sa hauteur tondue sans a-coup.
-		--
-		-- En lineaire, la descente demarre a PLEINE vitesse. Sur une seule touffe ca ne se remarque pas ; sur une
-		-- bande entiere qui part en meme temps derriere la machine, ce depart sec se lit comme un clignotement.
-		local e = clump.cutT
-		local cutEase = e * e * (3 - 2 * e)
-		mownY = 1 - cutEase * (1 - GrassZoneConfigs.MOWN_SCALE_Y)
-		mownXZ = 1 - cutEase * (1 - GrassZoneConfigs.MOWN_SCALE_XZ)
+	if clump.cutStarted and not clump.flower then
+		mownY = GrassZoneConfigs.MOWN_SCALE_Y
+		mownXZ = GrassZoneConfigs.MOWN_SCALE_XZ
 	end
 	squash = math.floor(squash / SQUASH_STEP + 0.5) * SQUASH_STEP
-	-- Une seule valeur de cache pour les deux facteurs : ils varient ENSEMBLE (tous deux pilotes par l'emergence),
+	-- Une seule valeur de cache pour les deux facteurs : ils changent ENSEMBLE (tous deux a l'echange du maillage),
 	-- donc surveiller le premier suffit a savoir que le second a bouge.
 	local shrinkY = shrink * mownY
 
-	-- UNE TOUFFE COUPEE NE REMONTE PLUS, tant que la coupe n'est pas finie.
-	--
-	-- C'ETAIT LE BUG. La tondeuse ECRASE la touffe en passant, et c'est pendant qu'elle est basse qu'on remplace
-	-- son maillage -- silhouette petite, changement invisible. Mais la machine s'eloigne, l'ecrasement se
-	-- relache... et la touffe REMONTE a pleine hauteur, avec le maillage coupe. Sa reduction de hauteur, elle,
-	-- n'arrive qu'apres CUT_RISE_DELAY. Entre les deux, de l'herbe COUPEE depassait de l'herbe intacte.
-	--
-	-- On garde donc la hauteur la plus basse atteinte : la touffe reste couchee sous la lame, puis se reduit --
-	-- elle ne repasse jamais par le haut. Un PLAFOND, pas une nouvelle animation : rien a synchroniser avec
-	-- CUT_RISE_DELAY, donc rien qui puisse s'en desaccorder.
-	--
-	-- Le plafond ne vaut QUE pendant la transition. Le garder ensuite figerait la pelouse tondue : un pas ne
-	-- pourrait plus la coucher, et elle ne se releverait jamais.
-	--
-	-- ET IL SE RELACHE VERS LA HAUTEUR FINALE, jamais vers la hauteur courante.
-	--
-	-- C'ETAIT LA BOSSE. Le melange visait la hauteur "naturelle" de l'instant -- mais au DEBUT de la descente,
-	-- celle-ci vaut encore presque le maximum : la touffe montait donc VERS elle avant de redescendre. Mesure sur
-	-- une touffe ecrasee a 0.30 pour une hauteur tondue de 0.25 : elle passait par 0.46 au milieu du trajet, soit
-	-- plus de 50 % au-dessus de son point de depart. Ca se voit, et ca ne ressemble a rien.
-	--
-	-- En visant la hauteur FINALE, le trajet va de l'ecrasement a la tonte sans detour : il ne peut plus faire de
-	-- detour, par construction. C'est la meme lecon que le plafond relache d'un coup, un cran plus loin --
-	-- interpoler vers une valeur qui BOUGE encore n'est pas interpoler vers sa destination.
-	local height = squash * shrinkY
-	if clump.cutStarted and clump.cutT < 1 then
-		-- LE PLAFOND NE DESCEND PAS SOUS LA HAUTEUR TONDUE. La machine ecrase la touffe en passant, parfois plus bas
-		-- que sa hauteur finale : le plafond gardait ce creux, et la touffe REMONTAIT ensuite vers sa hauteur
-		-- tondue, derriere la machine -- "la pelouse monte quand on la tond". Invisible tant que la hauteur tondue
-		-- (0.25) etait sous l'ecrasement, apparu en la montant a 0.4. Borne ici, le trajet ne fait plus que
-		-- descendre, quelle que soit la hauteur reglee. Le seul ecart se fait a l'echange du maillage, sous le carter.
-		clump.cutHold = math.min(clump.cutHold, math.max(height, shrink * GrassZoneConfigs.MOWN_SCALE_Y))
+	-- LE FONDU DE LA TOUFFE COUPEE : elle apparait au lieu de bouger. Adouci aux deux bouts, et reposee PILE sur sa
+	-- transparence de repos a la fin : un residu (0.005) suffirait a la garder dans le rendu TRANSPARENT de Roblox,
+	-- ou le tri se fait par objet -- des touffes qui se chevauchent mal quand on tourne la camera.
+	if clump.cutStarted and not clump.flower then
 		local e = clump.cutT
-		local final = squash * shrink * GrassZoneConfigs.MOWN_SCALE_Y
-		height = clump.cutHold + (final - clump.cutHold) * (e * e * (3 - 2 * e))
-		-- On repartage la hauteur plafonnee entre les deux facteurs : `shrinkY` porte la taille verticale, et
-		-- `squash` sert au reste du calcul (enfoncement, inclinaison). Diviser garde les deux d'accord.
-		shrinkY = if squash > 1e-3 then height / squash else height
+		local fade = if e >= 1
+			then clump.baseTransparency
+			else clump.baseTransparency + (1 - clump.baseTransparency) * (1 - e * e * (3 - 2 * e))
+		fade = if e >= 1 then fade else math.floor(fade / SQUASH_STEP + 0.5) * SQUASH_STEP
+		if fade ~= clump.lastFade then
+			clump.part.Transparency = fade
+			clump.lastFade = fade
+		end
 	end
+
 
 	if squash ~= clump.lastSquash or shrinkY ~= clump.lastShrink then
 		clump.part.Size = Vector3.new(
@@ -365,12 +328,9 @@ local function apply(
 	end
 	do
 		local blend = math.floor(crush / SQUASH_STEP + 0.5) * SQUASH_STEP
-		-- LA COULEUR SUIT L'EMERGENCE, PAS L'AVANCEMENT DE LA COUPE. Branchee sur `mown`, elle etait deja a
-		-- mi-chemin de la teinte tondue a l'instant ou le maillage changeait : le nouveau mesh apparaissait donc
-		-- DEJA colore, et on voyait qu'on ajoutait une herbe au lieu d'en couper une.
-		-- En la branchant sur l'emergence, la touffe sort du sol avec la couleur de l'herbe HAUTE et devient
-		-- tondue en montant.
-		local mowBlend = math.floor(clump.cutT / SQUASH_STEP + 0.5) * SQUASH_STEP
+		-- LA COULEUR TONDUE DES L'ECHANGE : la touffe coupee apparait en fondu, deja a sa couleur. Un glissement
+		-- de teinte en plus du fondu ferait deux transitions pour un seul evenement.
+		local mowBlend = if clump.cutStarted and not clump.flower then 1 else 0
 		-- La rafale bouge en permanence : sans quantification, on reecrirait la couleur de chaque touffe a chaque
 		-- image, pour des ecarts que l'oeil ne voit pas. Meme raison que pour l'ecrasement, avec son propre pas.
 		local step = GrassZoneConfigs.GUST_LIGHT_STEP
@@ -639,8 +599,8 @@ end
 -- COUPE UNE TOUFFE SANS TRANSITION, comme si elle avait toujours ete tondue.
 --
 -- ON RE-UTILISE LA MECANIQUE NORMALE au lieu de la recopier : `apply` fait lui-meme l'echange de maillage quand
--- `mown` depasse son seuil, et il pose au passage l'etat d'emergence. On l'appelle donc une premiere fois pour
--- declencher tout ca, on avance l'emergence a sa FIN, et on redessine. Recopier ces quinze lignes ici les aurait
+-- `mown` depasse son seuil, et il lance au passage le fondu. On l'appelle donc une premiere fois pour
+-- declencher tout ca, on avance le fondu a sa FIN, et on redessine. Recopier ces quinze lignes ici les aurait
 -- fait diverger a la premiere retouche de la coupe.
 local function cutInstantly(clump: Clump)
 	if clump.gone or clump.mown >= 1 then
@@ -660,9 +620,8 @@ local function cutInstantly(clump: Clump)
 	end
 	clump.mown = 1
 	apply(clump, WIND_ANGLE, 1, 0, 0, 1, 0)
-	-- L'EMERGENCE EST DEJA FINIE : la touffe ne doit pas sortir de terre sous les yeux du joueur au boot. Le temps
-	-- mort non plus -- il sert a ce qu'on VOIE la lame passer avant que l'herbe tombe, et ici personne n'a rien vu.
-	clump.cutWait = 0
+	-- LE FONDU EST DEJA FINI : la touffe ne doit pas apparaitre sous les yeux du joueur au boot, personne ne l'a
+	-- vue se faire couper.
 	clump.cutT = 1
 	apply(clump, WIND_ANGLE, 1, 0, 0, 1, 0)
 end
@@ -929,11 +888,10 @@ local function populate(zone: Zone)
 				flower = isFlower,
 				gone = false,
 				cutStarted = false,
-				cutWait = 0,
-				cutHold = math.huge,
-				lastRiseT = 1,
 				cutT = 0,
 				lastCutT = 0,
+				baseTransparency = part.Transparency,
+				lastFade = part.Transparency,
 				lastSquash = 1,
 				lastShrink = 1,
 				-- Relevee APRES la pose des rayures et de la tache : c'est bien SA nuance locale qui glissera.
@@ -1113,18 +1071,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		if clump.gone then
 			continue
 		end
-		-- EMERGENCE de l'herbe coupee : elle remonte a sa place et prend sa couleur. Son propre temps, deconnecte
-		-- de l'avancement de la coupe -- celle-ci dure 0.125 s, bien trop court pour qu'on y lise une transition.
-		-- DEUX COMPTEURS, DEUX MOMENTS. La touffe SORT DE TERRE tout de suite (le maillage se remplace, ca ne doit
-		-- pas se voir), puis elle SE COUCHE apres le temps mort (la coupe, elle, doit se voir).
+		-- FONDU de l'herbe coupee. Son propre temps, deconnecte de l'avancement de la coupe -- celle-ci dure
+		-- 0.125 s, bien trop court pour qu'on y lise une transition.
 		if clump.cutStarted and clump.cutT < 1 then
-			-- Le temps mort s'ecoule D'ABORD. Tant qu'il reste, la touffe garde sa hauteur et sa couleur d'herbe
-			-- haute -- elle est coupee, elle ne le SAIT pas encore.
-			if clump.cutWait > 0 then
-				clump.cutWait -= dt
-			else
-				clump.cutT = math.min(1, clump.cutT + dt / GrassZoneConfigs.CUT_RISE_TIME)
-			end
+			clump.cutT = math.min(1, clump.cutT + dt / GrassZoneConfigs.CUT_FADE_TIME)
 		end
 		-- Le joueur le PLUS proche gagne. On ne MOYENNE pas les directions : deux joueurs de part et d'autre d'une
 		-- touffe la redresseraient, ce qui est l'inverse du sens voulu.
@@ -1193,12 +1143,10 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.colorCrush ~= target
 			or clump.mown ~= clump.lastMown
 			or clump.cutT ~= clump.lastCutT
-			-- LE TEMPS MORT COMPTE COMME DU MOUVEMENT, meme si rien ne bouge encore a l'ecran.
-			--
-			-- Sinon le pave se declare AU REPOS pendant l'attente, cesse d'etre mis a jour, et le compte a rebours
-			-- ne s'ecoule jamais : la touffe reste debout POUR TOUJOURS. Meme piege qu'un `return` pose sur "rien a
-			-- faire pour l'instant" -- ce n'est pas parce qu'il n'y a rien a dessiner qu'il n'y a rien a faire.
-			or clump.cutWait > 0
+			-- UN FONDU EN COURS COMPTE COMME DU MOUVEMENT, des sa premiere image. Sinon le pave peut se declarer AU
+			-- REPOS avant que le fondu ait avance, cesser d'etre mis a jour, et la touffe reste invisible POUR
+			-- TOUJOURS. Meme piege qu'un `return` pose sur "rien a faire pour l'instant".
+			or (clump.cutStarted and clump.cutT < 1)
 		then
 			moving += 1
 		end
@@ -1235,7 +1183,7 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 		--
 		-- Un reglage qui annule un EFFET n'annule pas son COUT : il faut sortir avant le calcul, pas apres.
 		--
-		-- On exige les DEUX conditions. `mown` atteint 1 en 0.125 s, mais l'emergence (`cutT`) dure plus longtemps :
+		-- On exige les DEUX conditions. `mown` atteint 1 en 0.125 s, mais le fondu (`cutT`) dure plus longtemps :
 		-- couper le vent sur le seul `mown` figerait la touffe en plein milieu de sa transition. Et `cutStarted`
 		-- ecarte les fleurs, qui ne se tondent pas et doivent continuer d'onduler.
 		local stillCut = clump.cutStarted and clump.cutT >= 1 and clump.mown >= 1
@@ -1307,8 +1255,8 @@ local function updateBucket(bucket: Bucket, players: { Vector3 }, now: number, d
 			or clump.squashCrush ~= clump.lastSquashCrush
 			or clump.colorCrush ~= clump.lastColorCrush
 			or clump.mown ~= clump.lastMown
-			-- L'EMERGENCE CONTINUE APRES LA COUPE. `mown` atteint 1 en 0.125 s et ne bouge plus ; sans ce test,
-			-- la touffe resterait enfouie et de la couleur de l'herbe haute POUR TOUJOURS, sauf coup de vent.
+			-- LE FONDU CONTINUE APRES LA COUPE. `mown` atteint 1 en 0.125 s et ne bouge plus ; sans ce test, la
+			-- touffe resterait a moitie transparente POUR TOUJOURS, sauf coup de vent.
 			or clump.cutT ~= clump.lastCutT
 		then
 			-- L'INCLINAISON EST L'ECART entre l'ecrasement rapide et le tassement lent, ramene sur la cible.
