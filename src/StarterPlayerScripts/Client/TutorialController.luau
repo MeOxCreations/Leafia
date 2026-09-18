@@ -1276,6 +1276,9 @@ local function sayVoice(path: { string }): Sound?
 	return speechSound
 end
 
+-- Une bulle dans une suite de repliques : son texte, et l'expression du grand-pere.
+type BubbleLine = { text: string, emotion: string? }
+
 -- UNE REPLIQUE ET SA BULLE : la voix, et son texte a l'ecran le temps qu'elle dure. Une consigne qui ne passe
 -- que par le son est perdue pour tout joueur qui joue sans le son -- et sur telephone, c'est souvent le cas.
 -- Rend la voix, comme `sayVoice` : une suite de repliques s'enchaine sur sa fin.
@@ -1313,7 +1316,7 @@ local function sayChain(
 	paths: { { string } },
 	index: number?,
 	onEach: ((number) -> ())?,
-	texts: { [number]: string }?
+	texts: { [number]: BubbleLine }?
 )
 	local at = index or 1
 	local path = paths[at]
@@ -1325,8 +1328,8 @@ local function sayChain(
 	if onEach then
 		onEach(at)
 	end
-	local text = if texts then texts[at] else nil
-	local voice = if text then sayWithBubble(path, text) else sayVoice(path)
+	local line = if texts then texts[at] else nil
+	local voice = if line then sayWithBubble(path, line.text, line.emotion) else sayVoice(path)
 	local chained = false
 	local function follow()
 		if chained then
@@ -3085,10 +3088,13 @@ function TutorialController.init()
 										talk:FireServer(seconds)
 									end
 								end,
+								say = function(paths: { { string } }, lines: { [number]: BubbleLine })
+									sayChain(paths, nil, nil, lines)
+								end,
 							})
 						end)
 					end
-				end, { [2] = TutorialConfigs.PICKUP_LEAVES_TEXT })
+				end, { [2] = { text = TutorialConfigs.PICKUP_LEAVES_TEXT } })
 			end
 		end)
 	end)

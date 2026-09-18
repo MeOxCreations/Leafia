@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.897 — Le grand-pere dit a voix haute qu'il donne son entreprise
+
+- `GIFT_LINES` : chaque replique a sa voix -- `Oldman_scene_speech_Final_say_1` ("Well done, lad..."),
+  `Oldman_scene_speech_Final_mybuisness` ("My business!"), `Oldman_scene_speech_Final_mybuisness_1` ("She's not
+  what she used to be... but I reckon you'll bring her back.", une seule bulle au lieu de deux : une seule voix).
+- `TutorialGift` passe par un nouveau crochet `say` qui utilise `sayChain` du controller : chaque bulle dure sa
+  voix, la suivante part a la fin de la precedente. `sayChain` prend maintenant `{ text, emotion }` par replique.
+- Depend des trois sons poses dans Studio sous `SoundService.Sounds.Scenes.Voices`.
+
 ## 0.0.896 — La consigne des feuilles s'affiche en bulle quand le grand-pere se leve
 
 - `sayChain` prend un 4e argument facultatif `texts` (la bulle de chaque replique, par son numero) ;

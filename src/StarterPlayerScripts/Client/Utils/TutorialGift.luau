@@ -2,7 +2,7 @@
 -- LE CADEAU DU GRAND-PERE, dans le didacticiel. Les feuilles ramassees, la pastille se pose sur lui et le badge
 -- PARLER revient. Le joueur vient le voir : il lui fait face et lui donne son entreprise.
 --
--- EN TEXTE SEUL pour l'instant (voir GIFT_LINES) : les voix ne sont pas enregistrees.
+-- CHAQUE REPLIQUE A SA VOIX ET SA BULLE (voir GIFT_LINES), enchainees par la suite de repliques du controller.
 --
 -- A PART DE TutorialController pour la meme raison que TutorialLeaves : Luau n'accepte que 200 variables locales
 -- au premier niveau d'un fichier, et le didacticiel en est tout pres.
@@ -16,7 +16,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
-local Dialogue = require(ReplicatedStorage.Modules.UI.Core.Dialogue)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
 
@@ -27,6 +26,8 @@ export type Hooks = {
 	face: () -> (),
 	-- Il gesticule pendant tant de secondes.
 	talk: (seconds: number) -> (),
+	-- Il dit ces repliques a la suite, chacune avec sa bulle (la suite de repliques du controller).
+	say: (paths: { { string } }, lines: { [number]: { text: string, emotion: string? } }) -> (),
 }
 
 local TutorialGift = {}
@@ -105,19 +106,14 @@ function TutorialGift.give()
 	-- IL SE TOURNE ET IL GESTICULE EN MEME TEMPS que le texte arrive : on ne donne pas son entreprise de profil.
 	h.face()
 	h.talk(TutorialConfigs.GIFT_TALK_SECONDS)
-	local lines: { Dialogue.Line } = {}
-	for _, entry in TutorialConfigs.GIFT_LINES do
-		table.insert(lines, {
-			speaker = TutorialConfigs.SPEECH2_SPEAKER,
-			text = entry.text,
-			emotion = entry.emotion,
-		})
+	local paths: { { string } } = {}
+	local lines: { [number]: { text: string, emotion: string? } } = {}
+	for i, entry in TutorialConfigs.GIFT_LINES do
+		paths[i] = entry.sound
+		lines[i] = { text = entry.text, emotion = entry.emotion }
 	end
-	print("[TutorialGift] Le grand-pere donne son entreprise au joueur.")
-	Dialogue.play(lines, function()
-		-- LA SUITE N'EST PAS ECRITE : le choix du nom et le depart en ville viendront ici.
-		print("[TutorialGift] Fin du texte : le choix du nom et le depart en ville restent a brancher.")
-	end)
+	-- LA SUITE N'EST PAS ECRITE : le choix du nom et le depart en ville viendront apres ces repliques.
+	h.say(paths, lines)
 end
 
 --- A appeler a chaque image.

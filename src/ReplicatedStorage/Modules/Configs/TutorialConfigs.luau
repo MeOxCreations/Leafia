@@ -1066,14 +1066,21 @@ return {
 	-- Les feuilles ramassees, la pastille passe sur lui et le badge PARLER revient. Le joueur vient le voir : il lui
 	-- fait face et lui donne son entreprise.
 	--
-	-- EN TEXTE SEUL pour l'instant : les voix ne sont pas enregistrees. SANS `hold`, donc le joueur tape pour
-	-- avancer -- sans voix, rien ne dit a quelle vitesse lire, et un enfant lit moins vite qu'une duree devinee.
-	-- Le jour ou les voix existent, on ajoute les `hold` comme dans SPEECH2_LINES.
+	-- CHAQUE REPLIQUE A SA VOIX, et sa bulle dure ce que dure la voix ; la suivante part a la fin de la precedente.
+	-- "She's not what she used to be... but I reckon you'll bring her back." etait coupee en deux bulles quand le
+	-- texte etait seul : UNE voix enregistree pour les deux moities, donc une seule bulle.
 	GIFT_LINES = {
-		{ text = "Well done, lad. Now listen... I've got something for you.", emotion = "happy" },
-		{ text = "My business!", emotion = "happy" },
-		{ text = "She's not what she used to be...", emotion = "sad" },
-		{ text = "...but I reckon you'll bring her back.", emotion = "wink" },
+		{
+			text = "Well done, lad. Now listen... I've got something for you.",
+			emotion = "happy",
+			sound = voice("Oldman_scene_speech_Final_say_1"),
+		},
+		{ text = "My business!", emotion = "happy", sound = voice("Oldman_scene_speech_Final_mybuisness") },
+		{
+			text = "She's not what she used to be... but I reckon you'll bring her back.",
+			emotion = "sad",
+			sound = voice("Oldman_scene_speech_Final_mybuisness_1"),
+		},
 	},
 	-- Duree de son geste d'explication, en secondes. Devinee : sans voix, rien ne mesure combien de temps il parle.
 	GIFT_TALK_SECONDS = 8,
