@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.888 — Retouches de la jauge des taches
+
+- `TaskBannerHandler` : remplissage plein a 0.999 (etait 0.997), contour de la barre en blanc (etait noir), barre
+  a 0.4 x 0.21 (etait 0.39 x 0.21).
+- Le coin haut-droit du remplissage part arrondi a 20 px (jauge vide) et se redresse a mesure que la jauge se
+  remplit, jusqu'a 0 (pleine) -- pour epouser le coin vif de la barre. `FILL_TIP_RADIUS`.
+
 ## 0.0.887 — Sous la tondeuse, l'herbe haute tombe pendant que l'herbe coupee apparait
 
 - Deux transitions qui se chevauchent (idee du joueur). A l'echange du maillage, une COPIE de la touffe haute

@@ -100,13 +100,17 @@ local COIN_BOUNCE = TweenInfo.new(0.55, Enum.EasingStyle.Elastic, Enum.EasingDir
 
 -- ===== JAUGE =====
 local FILL_SPEED = 6
--- Un poil sous 1 : a 1 pile, les coins arrondis du remplissage debordent de ceux de la barre. Valeur relevee
--- dans Studio, jauge pleine a l'ecran -- a 0.98 il restait un creux visible au bout.
-local FILL_MAX = 0.997
+-- Un poil sous 1 : a 1 pile, les coins arrondis du remplissage debordent de ceux de la barre. 0.999 a la demande
+-- du joueur (etait 0.997, releve dans Studio ; a 0.98 il restait un creux visible au bout).
+local FILL_MAX = 0.999
 -- Un lerp exponentiel n'atteint jamais sa cible : sans ce clou, une jauge pleine resterait a 99,7 % pour
 -- toujours.
 local FILL_SNAP = 0.004
 local FILL_HEIGHT = 0.9
+-- LE COIN HAUT-DROIT DU REMPLISSAGE S'ARRONDIT QUAND LA JAUGE EST VIDE, et se redresse a mesure qu'elle se remplit.
+-- Carre, un remplissage presque vide ressemble a un bloc coupe net ; arrondi, a une goutte qui avance. Il finit
+-- carre, pour epouser le coin vif de la barre. En pixels, a jauge vide.
+local FILL_TIP_RADIUS = 20
 
 local WHITE = Color3.fromRGB(255, 255, 255)
 -- Le vert de la tonte, pose sur le fond de chaque ligne.
@@ -128,6 +132,8 @@ local FADE_OUT_SEQ = NumberSequence.new({
 type Row = {
 	frame: Frame,
 	fill: Frame?,
+	tip: UICorner?, -- le coin du remplissage, dont le haut-droit suit l'avancement
+	lastTip: number, -- dernier rayon ecrit, pour ne pas le reecrire a chaque image
 	target: number,
 	current: number,
 	-- Deja grisee ? Sans ce drapeau, un appel repete rejouerait le fondu a chaque image -- et la boucle qui
@@ -182,7 +188,7 @@ local function buildRow(parent: Instance): Frame
 		-- ou elle s'arrete.
 		BackgroundTransparency = 0,
 		Position = UDim2.fromScale(0.145, 0.745),
-		Size = UDim2.fromScale(0.39, 0.21),
+		Size = UDim2.fromScale(0.4, 0.21),
 		ZIndex = 1,
 	}, row)
 	-- Trois coins arrondis sur quatre : le coin haut-droit reste vif, c'est ce qui donne sa forme a la barre.
@@ -195,7 +201,7 @@ local function buildRow(parent: Instance): Frame
 	-- `ScaledSize` : l'epaisseur est rapportee a la taille de l'element, donc le contour reste juste sur tous les
 	-- ecrans. En `Pixels`, il faudrait le reregler pour chaque resolution.
 	make("UIStroke", {
-		Color = Color3.fromRGB(0, 0, 0),
+		Color = Color3.fromRGB(255, 255, 255),
 		StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
 		Thickness = 0.14,
 		LineJoinMode = Enum.LineJoinMode.Round,
@@ -221,7 +227,8 @@ local function buildRow(parent: Instance): Frame
 		TopLeftRadius = UDim.new(0, 20),
 		BottomLeftRadius = UDim.new(0, 20),
 		BottomRightRadius = UDim.new(0, 20),
-		TopRightRadius = UDim.new(0, 0),
+		-- Part arrondi (jauge vide) : la boucle de remplissage le redresse a mesure (voir FILL_TIP_RADIUS).
+		TopRightRadius = UDim.new(0, FILL_TIP_RADIUS),
 	}, fill)
 	-- A -90 le degrade va du HAUT vers le BAS de la jauge : elle s'eclaircit sur sa hauteur, ce qui lui donne du
 	-- relief. Sans rotation il irait de gauche a droite, donc la teinte changerait avec le REMPLISSAGE -- une
@@ -502,6 +509,14 @@ local function startFill()
 				moving = true
 			end
 			fill.Size = UDim2.fromScale(row.current * FILL_MAX, FILL_HEIGHT)
+			local tip = row.tip
+			if tip then
+				local radius = math.floor(FILL_TIP_RADIUS * (1 - row.current) + 0.5)
+				if radius ~= row.lastTip then
+					row.lastTip = radius
+					tip.TopRightRadius = UDim.new(0, radius)
+				end
+			end
 		end
 		if not moving then
 			stopFill()
@@ -577,8 +592,17 @@ local function addRow(entry: TaskConfigs.Task, index: number, wait: number)
 	local bar = frame:FindFirstChild("Bar")
 	local fillFrame = bar and bar:FindFirstChild("Fill")
 	local fill = if fillFrame and fillFrame:IsA("Frame") then fillFrame else nil
+	local tipCorner = if fill then fill:FindFirstChildOfClass("UICorner") else nil
 
-	table.insert(rows, { frame = frame, fill = fill, target = entry.progress or 0, current = 0, done = false })
+	table.insert(rows, {
+		frame = frame,
+		fill = fill,
+		tip = tipCorner,
+		lastTip = FILL_TIP_RADIUS,
+		target = entry.progress or 0,
+		current = 0,
+		done = false,
+	})
 
 	local slideTo = UDim2.fromScale(SHOWN_X, frame.Position.Y.Scale)
 	task.delay(wait, function()
