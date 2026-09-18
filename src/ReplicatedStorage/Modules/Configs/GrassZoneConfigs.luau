@@ -42,6 +42,13 @@ local GrassZoneConfigs = {
 	-- Plus court = la coupe claque comme un interrupteur ; plus long = une trainee d'herbe absente derriere la
 	-- machine.
 	CUT_FADE_TIME = 0.35,
+	-- ET L'HERBE HAUTE TOMBE EN MEME TEMPS (idee du joueur, deux transitions qui se chevauchent) : une copie de la
+	-- touffe haute s'ecrase vers le sol en `TALL_DROP_TIME` secondes, jusqu'a `TALL_DROP_TO` de sa hauteur, puis
+	-- disparait. La touffe coupee attend `CUT_FADE_DELAY` avant d'apparaitre -- MOINS que la chute : elle se montre
+	-- avant que l'herbe haute ait fini de tomber.
+	TALL_DROP_TIME = 0.3,
+	TALL_DROP_TO = 0.05,
+	CUT_FADE_DELAY = 0.08,
 
 	-- Delai TOTAL pour trouver la racine et le mesh au demarrage (un seul delai pour tout le chemin).
 	RESOLVE_TIMEOUT = 15,

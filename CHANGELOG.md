@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.887 — Sous la tondeuse, l'herbe haute tombe pendant que l'herbe coupee apparait
+
+- Deux transitions qui se chevauchent (idee du joueur). A l'echange du maillage, une COPIE de la touffe haute
+  (`dropTallGhost`) s'ecrase vers le sol (`TALL_DROP_TIME` 0.3 s, jusqu'a `TALL_DROP_TO` 5 % de sa hauteur, pied
+  au sol) puis se detruit. La vraie touffe prend son maillage coupe et apparait en fondu apres `CUT_FADE_DELAY`
+  (0.08 s) -- avant que l'herbe haute ait fini de tomber.
+- Pas de copie pour les touffes posees deja tondues au demarrage (`quietCut`) : personne ne les regarde, et il y
+  en aurait des milliers d'un coup.
+
 ## 0.0.886 — Le grand-pere ne marche plus les jambes de travers, et ses marches ne remplissent plus la console
 
 - BUG DES JAMBES (trajet vers le camion) : la sonde a montre son geste de parole (`OLDMAN_TALK_ANIM`, priorite

@@ -13,6 +13,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local GrassZoneConfigs = require(ReplicatedStorage.Modules.Configs.GrassZoneConfigs)
@@ -214,6 +215,39 @@ end
 
 -- ===== Pose =====
 
+-- COUPE SILENCIEUSE (touffes posees deja tondues au demarrage) : aucune herbe haute a faire tomber, personne ne
+-- regarde. Sans ce drapeau, des milliers de fantomes s'ecraseraient d'un coup au boot.
+local quietCut = false
+
+-- L'HERBE HAUTE TOMBE PENDANT QUE L'HERBE COUPEE APPARAIT : deux transitions en meme temps, sur deux maillages.
+-- Une seule part ne peut pas montrer les deux formes a la fois -- d'ou ce FANTOME : une copie de la touffe haute,
+-- telle qu'elle est a l'instant de la coupe, qui s'ecrase vers le sol puis se detruit. La vraie touffe, elle,
+-- prend tout de suite son maillage coupe et apparait en fondu (voir `apply`).
+--
+-- LE PIED RESTE AU SOL : la part est posee par son centre, donc on la descend de la moitie de ce qu'elle perd.
+local function dropTallGhost(part: BasePart)
+	if quietCut or not part.Parent then
+		return
+	end
+	local ghost = part:Clone()
+	ghost.Name = "TallGhost"
+	ghost.Parent = part.Parent
+	local size = part.Size
+	local low = size.Y * GrassZoneConfigs.TALL_DROP_TO
+	local tween = TweenService:Create(
+		ghost,
+		TweenInfo.new(GrassZoneConfigs.TALL_DROP_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{
+			Size = Vector3.new(size.X, low, size.Z),
+			CFrame = part.CFrame - part.CFrame.UpVector * ((size.Y - low) * 0.5),
+		}
+	)
+	tween.Completed:Connect(function()
+		ghost:Destroy()
+	end)
+	tween:Play()
+end
+
 -- Pose la touffe. On repart TOUJOURS du pied et de la rotation propre, jamais du CFrame precedent.
 -- Deux inclinaisons se composent : l'ECRASEMENT (fuit le joueur, fort, direction variable) puis le VENT (direction
 -- fixe, faible). Toutes deux sont calculees en MONDE, elles passent donc a gauche du yaw propre de la touffe.
@@ -245,7 +279,11 @@ local function apply(
 	local myPart = clump.part
 	if not clump.cutStarted and not clump.flower and mown >= GrassZoneConfigs.MOW_SWAP_AT then
 		clump.cutStarted = true
-		clump.cutT = 0 -- le fondu part d'ici : la touffe coupee est invisible, elle va apparaitre
+		-- LE FONDU PART UN PEU APRES : NEGATIF, le compteur attend `CUT_FADE_DELAY` avant de monter. La touffe
+		-- coupee commence donc a apparaitre pendant que l'herbe haute tombe encore -- les deux se chevauchent.
+		clump.cutT = -GrassZoneConfigs.CUT_FADE_DELAY / math.max(GrassZoneConfigs.CUT_FADE_TIME, 1e-3)
+		-- LA COPIE DE L'HERBE HAUTE D'ABORD, avant d'echanger le maillage : c'est elle qui tombe.
+		dropTallGhost(myPart)
 		if cutMesh and myPart:IsA("MeshPart") then
 			myPart:ApplyMesh(cutMesh)
 			-- On ne SUPPOSE pas ce qu'ApplyMesh a touche (taille ? texture ? materiau ?) : on invalide les caches
@@ -287,7 +325,7 @@ local function apply(
 	-- transparence de repos a la fin : un residu (0.005) suffirait a la garder dans le rendu TRANSPARENT de Roblox,
 	-- ou le tri se fait par objet -- des touffes qui se chevauchent mal quand on tourne la camera.
 	if clump.cutStarted and not clump.flower then
-		local e = clump.cutT
+		local e = math.max(clump.cutT, 0)
 		local fade = if e >= 1
 			then clump.baseTransparency
 			else clump.baseTransparency + (1 - clump.baseTransparency) * (1 - e * e * (3 - 2 * e))
@@ -619,7 +657,9 @@ local function cutInstantly(clump: Clump)
 		return
 	end
 	clump.mown = 1
+	quietCut = true
 	apply(clump, WIND_ANGLE, 1, 0, 0, 1, 0)
+	quietCut = false
 	-- LE FONDU EST DEJA FINI : la touffe ne doit pas apparaitre sous les yeux du joueur au boot, personne ne l'a
 	-- vue se faire couper.
 	clump.cutT = 1
