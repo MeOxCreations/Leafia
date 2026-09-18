@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.898 — La tete du grand-pere du chargement est plus petite sur PC
+
+- `CurtainVisual` : sur PC (pas tactile), le visage passe a 60 % de sa taille (`FACE_PC_SCALE`). Le telephone ne
+  change pas. Vaut pour les trois rideaux (chargement de map, teleport, START).
+
 ## 0.0.897 — Le grand-pere dit a voix haute qu'il donne son entreprise
 
 - `GIFT_LINES` : chaque replique a sa voix -- `Oldman_scene_speech_Final_say_1` ("Well done, lad..."),

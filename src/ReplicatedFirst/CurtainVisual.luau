@@ -98,7 +98,11 @@ local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
 -- LES DEUX COTES EN FRACTION DE LA HAUTEUR (`RelativeYY`), comme la couronne de points. La largeur etait en fraction
 -- de la LARGEUR : sur un telephone (2340 x 1080, bien plus large qu'un ecran PC) la tete, en `Stretch`, sortait 22 %
 -- plus large que haute -- ecrasee. 0.2365 = l'ancienne largeur (0.133) ramenee a la hauteur d'un ecran 16:9.
-local FACE_SIZE = UDim2.fromScale(0.2365, 0.229)
+-- SUR PC, 60 % de cette taille : a pleine taille elle mangeait le milieu d'un grand ecran (demande du joueur). Le
+-- telephone garde la sienne, reglee a part et jugee bonne. `TouchEnabled` seul, comme SHOW_TILE.
+local FACE_PC_SCALE = 0.6
+local FACE_K = if UserInputService.TouchEnabled then 1 else FACE_PC_SCALE
+local FACE_SIZE = UDim2.fromScale(0.2365 * FACE_K, 0.229 * FACE_K)
 -- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
 --
 -- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement qui fait
