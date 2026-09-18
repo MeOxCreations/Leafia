@@ -1086,8 +1086,16 @@ return {
 			sound = voice("Oldman_scene_speech_Final_mybuisness_1"),
 		},
 	},
-	-- Duree de son geste d'explication, en secondes. Devinee : sans voix, rien ne mesure combien de temps il parle.
-	GIFT_TALK_SECONDS = 8,
+	-- ===== IL SORT LE BILLET =====
+	-- Le modele `Billet` est rigge DANS le papi (Motor6D : Part0 = sa HumanoidRootPart, Part1 = BilletPart), et
+	-- l'animation ci-dessous anime les deux ensemble. Le serveur le retire du papi au demarrage (sinon il l'aurait
+	-- en main toute la partie), et le remet le temps du geste. Cherche aussi dans ReplicatedStorage.Assets s'il y
+	-- a ete range.
+	GIFT_BILL_MODEL = "Billet",
+	GIFT_BILL_ANIM = "rbxassetid://71350099771226",
+	-- AU-DESSUS de tout ce qu'il joue d'autre (idle, gestes de parole) : c'est le geste de la scene.
+	GIFT_BILL_PRIORITY = Enum.AnimationPriority.Action4,
+	GIFT_BILL_FADE = 0.2,
 	GIFT_ACTION_NAME = "LeafiaTutorialGift",
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,

@@ -3091,11 +3091,15 @@ function TutorialController.init()
 										face:FireServer()
 									end
 								end,
-								talk = function(seconds: number)
-									local talk = talkRemote
-									if talk then
-										talk:FireServer(seconds)
-									end
+								-- EN TACHE DE FOND : `getRemote` cache un WaitForChild. Resolu ici plutot que garde : une
+								-- variable de plus au premier niveau de ce fichier, qui en a presque 200.
+								bill = function()
+									task.spawn(function()
+										local r = RemoteSetup.getRemote("TutorialGrandpaBill", "Tutorial")
+										if r and r:IsA("RemoteEvent") then
+											r:FireServer()
+										end
+									end)
 								end,
 								say = function(paths: { { string } }, lines: { [number]: BubbleLine })
 									sayChain(paths, nil, nil, lines)

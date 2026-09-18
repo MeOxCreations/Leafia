@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.901 — Le grand-pere sort un billet en donnant sa recompense
+
+- Le modele `Billet` est rigge dans `OldmanOriginal` (Motor6D : Part0 = HumanoidRootPart, Part1 = BilletPart).
+  Au demarrage, `TutorialService` le retire du papi et le garde (sinon il l'aurait en main toute la partie) ; il le
+  cherche aussi dans `ReplicatedStorage.Assets` s'il y a ete range.
+- Quand le joueur vient chercher son cadeau, `TutorialGift` demande `TutorialGrandpaBill` (nouveau remote) : le
+  serveur clone le billet (libre, sans poids, sans collision), le raccroche a la racine du papi par son Motor6D
+  (reglages de Studio gardes) et joue `71350099771226` en `Action4`, une fois. A la fin du geste, le billet part.
+  Une seule fois, et seulement pour le joueur de la scene.
+- Le geste de parole generique du cadeau (`GIFT_TALK_SECONDS`) est remplace par cette animation.
+- Depend du modele `Billet` pose dans Studio (place du tuto).
+
 ## 0.0.900 — Les feuilles a tailler clignotent en cyan
 
 - Idee du joueur : pendant l'etape de la haie, la couleur du `SurfaceAppearance` des feuilles encore a tailler bat

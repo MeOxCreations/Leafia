@@ -24,8 +24,8 @@ export type Hooks = {
 	body: () -> BasePart?,
 	-- Il se tourne vers le joueur.
 	face: () -> (),
-	-- Il gesticule pendant tant de secondes.
-	talk: (seconds: number) -> (),
+	-- Il sort le billet (animation jouee cote serveur).
+	bill: () -> (),
 	-- Il dit ces repliques a la suite, chacune avec sa bulle (la suite de repliques du controller).
 	say: (paths: { { string } }, lines: { [number]: { text: string, emotion: string? } }) -> (),
 }
@@ -103,9 +103,9 @@ function TutorialGift.give()
 	given = true
 	release()
 	clearMarker()
-	-- IL SE TOURNE ET IL GESTICULE EN MEME TEMPS que le texte arrive : on ne donne pas son entreprise de profil.
+	-- IL SE TOURNE ET IL SORT LE BILLET EN MEME TEMPS que le texte arrive : on ne donne pas sa recompense de profil.
 	h.face()
-	h.talk(TutorialConfigs.GIFT_TALK_SECONDS)
+	h.bill()
 	local paths: { { string } } = {}
 	local lines: { [number]: { text: string, emotion: string? } } = {}
 	for i, entry in TutorialConfigs.GIFT_LINES do

@@ -76,6 +76,9 @@ local REMOTES: { { any } } = {
 	-- qui la joue pour tout le monde), donc lui seul sait quand elle commence et quand il s'assoit -- et c'est le
 	-- CLIENT qui joue les voix.
 	{ "TutorialGrandpaBench", E, "Tutorial" },
+	-- IL SORT LE BILLET, quand le joueur vient chercher sa recompense. Le client sait quand (c'est lui qui tape
+	-- PARLER), le grand-pere est anime cote serveur -- il faut donc le lui dire.
+	{ "TutorialGrandpaBill", E, "Tutorial" },
 
 	-- [ TOOL ] --
 	-- Le client demande, il n'ordonne pas : il n'envoie AUCUN argument. Le serveur sait deja ce que le joueur

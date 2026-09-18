@@ -755,6 +755,9 @@ end
 -- LA HAIE DU DIDACTICIEL, gardee : c'est la sienne qu'on surveille pour savoir quand il peut se relever. Une
 -- seule par place -- si un jour il y en a plusieurs, ce sera une table.
 local tutorialHedge: BasePart? = nil
+-- LE BILLET DU CADEAU, retire du papi au demarrage et garde ici. `billGiven` : il ne le sort qu'une fois.
+local billTemplate: Model? = nil
+local billGiven = false
 -- SES DEUX PISTES D'ASSISE : le geste (socle, fige) et l'idle par-dessus. Gardees pour pouvoir les DEFAIRE.
 local sitTrack: AnimationTrack? = nil
 local sitIdleTrack: AnimationTrack? = nil
@@ -1782,7 +1785,102 @@ local function onPlayerAdded(player: Player)
 	end
 end
 
+--- LE MODELE DU BILLET, garde hors du papi. Rigge DANS le papi dans Studio -- c'est comme ca qu'on l'anime avec lui
+--- -- donc on l'en RETIRE ici, sinon il l'aurait en main toute la partie. Rangé dans les Assets, on l'y laisse.
+local function resolveBill(): Model?
+	local cached = billTemplate
+	if cached then
+		return cached
+	end
+	local grandpa = findByName(TutorialConfigs.GRANDPA_NAME)
+	local inside = if grandpa then grandpa:FindFirstChild(TutorialConfigs.GIFT_BILL_MODEL) else nil
+	if inside and inside:IsA("Model") then
+		inside.Parent = nil
+		billTemplate = inside
+		return inside
+	end
+	local assets = ReplicatedStorage:FindFirstChild("Assets")
+	local stored = if assets then assets:FindFirstChild(TutorialConfigs.GIFT_BILL_MODEL, true) else nil
+	if stored and stored:IsA("Model") then
+		billTemplate = stored
+		return stored
+	end
+	return nil
+end
+
+--- IL SORT LE BILLET : le modele revient dans le papi, accroche a sa racine par son Motor6D, et l'animation les
+--- anime ensemble. A la fin du geste, le billet repart.
+local function giveBill()
+	local model = findByName(TutorialConfigs.GRANDPA_NAME)
+	local template = resolveBill()
+	if not (model and model:IsA("Model") and template) then
+		warn(
+			`[Tutorial] Pas de modele "{TutorialConfigs.GIFT_BILL_MODEL}" dans "{TutorialConfigs.GRANDPA_NAME}" ni `
+				.. "dans ReplicatedStorage.Assets : il ne sortira pas de billet."
+		)
+		return
+	end
+	local root = model:FindFirstChild("HumanoidRootPart")
+	local humanoid = model:FindFirstChildOfClass("Humanoid")
+	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
+	if not (root and root:IsA("BasePart") and animator) then
+		return
+	end
+	local bill = template:Clone()
+	-- LIBRE ET SANS POIDS : une part ancree ignore son Motor6D (le billet resterait fige), et une part qui pese
+	-- tirerait sur le papi.
+	for _, d in bill:GetDescendants() do
+		if d:IsA("BasePart") then
+			d.Anchored = false
+			d.CanCollide = false
+			d.CanQuery = false
+			d.CanTouch = false
+			d.Massless = true
+		end
+	end
+	-- LE JOINT GARDE SES REGLAGES DE STUDIO (C0, C1) ; seule son attache au papi est reposee -- rangé dans les
+	-- Assets, il ne pointe plus sur rien.
+	local joint = bill:FindFirstChildWhichIsA("Motor6D", true)
+	if joint then
+		joint.Part0 = root
+	else
+		warn(`[Tutorial] "{TutorialConfigs.GIFT_BILL_MODEL}" n'a pas de Motor6D : le billet ne suivra pas le papi.`)
+	end
+	bill.Parent = model
+
+	local anim = Instance.new("Animation")
+	anim.AnimationId = TutorialConfigs.GIFT_BILL_ANIM
+	local ok, result = pcall(function()
+		return (animator :: Animator):LoadAnimation(anim)
+	end)
+	if not (ok and typeof(result) == "Instance") then
+		warn(`[Tutorial] Animation du billet non chargeable ({TutorialConfigs.GIFT_BILL_ANIM}).`)
+		bill:Destroy()
+		return
+	end
+	local track = result :: AnimationTrack
+	-- PONCTUEL, ecrit ici : le reglage de l'editeur n'est qu'une suggestion.
+	track.Looped = false
+	track.Priority = TutorialConfigs.GIFT_BILL_PRIORITY
+	track.Stopped:Once(function()
+		bill:Destroy()
+	end)
+	track:Play(TutorialConfigs.GIFT_BILL_FADE)
+end
+
 function TutorialService.init()
+	-- LE BILLET QUITTE LE PAPI DES LE DEPART : rigge dans lui pour l'animer, il ne doit pas l'avoir en main avant
+	-- le cadeau.
+	resolveBill()
+	local billRemote = RemoteSetup.getRemote("TutorialGrandpaBill", "Tutorial") :: RemoteEvent
+	billRemote.OnServerEvent:Connect(function(player)
+		-- UNE FOIS, et seulement pour celui qui joue la scene.
+		if sceneOwner ~= player or billGiven then
+			return
+		end
+		billGiven = true
+		giveBill()
+	end)
 	-- LA HAIE DU DIDACTICIEL EST PREPAREE TOUT DE SUITE : toutes ses faces nettes sauf celle qu'on montrera. En
 	-- tache de fond parce qu'elle attend la grille de carreaux, et qu'un init de boot n'attend jamais.
 	task.spawn(prepareHedgeWhenReady)
