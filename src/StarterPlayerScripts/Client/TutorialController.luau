@@ -2118,7 +2118,7 @@ function TutorialController.talkToGrandpa()
 	hideTalkPrompt()
 	WorldMarker.remove(grandpaMarker)
 	grandpaMarker, grandpaMarkerPart = nil, nil
-	sayVoice(TutorialConfigs.TALK_SOUND)
+	sayWithBubble(TutorialConfigs.TALK_SOUND, TutorialConfigs.TALK_TEXT)
 	-- ET IL LUI FAIT FACE PENDANT QU'IL PARLE. Demande AVANT d'attendre la fin de la voix : on ne repond pas de
 	-- profil a quelqu'un qui vient de vous interpeller.
 	local face = faceRemote

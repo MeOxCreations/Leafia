@@ -634,6 +634,7 @@ return {
 	-- ET CE QU'IL DIT QUAND LE JOUEUR ARRIVE. Il n'enchaine sur aucune tache pour le moment : la suite du
 	-- scenario n'est pas ecrite, et donner une consigne qui n'existe pas serait pire que de ne rien donner.
 	TALK_SOUND = voice("Oldman_scene_speech_HeppyForCutGrass"),
+	TALK_TEXT = "Nice work! You know how to handle a mower! That's clean.",
 	-- ET S'IL VIENT LE VOIR SANS AVOIR FINI. Le joueur qui abandonne a mi-chemin et revient chercher la suite
 	-- recoit une reponse, au lieu d'un badge qui ne fait rien : une action sans effet se lit comme un bug.
 	TALK_UNDONE_SOUND = voice("Oldman_scene_speech_DidntFinishItAll"),

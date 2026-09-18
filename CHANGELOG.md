@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.892 — Les felicitations du grand-pere apres la tonte s'affichent en bulle
+
+- Quand le joueur vient lui parler, pelouse finie : `Oldman_scene_speech_HeppyForCutGrass` avec la bulle
+  "Nice work! You know how to handle a mower! That's clean." (`TALK_TEXT`, via `sayWithBubble`).
+
 ## 0.0.891 — Le contour de la jauge des taches est a cheval sur le bord
 
 - `TaskBannerHandler` : `UIStroke.BorderStrokePosition = Center` sur la barre (etait `Outer`, le defaut). Sous
