@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.900 — Les feuilles a tailler clignotent en cyan
+
+- Idee du joueur : pendant l'etape de la haie, la couleur du `SurfaceAppearance` des feuilles encore a tailler bat
+  entre leur couleur normale et le cyan (0, 255, 247), sur 1.6 s. Le battement suit la pousse de chaque feuille :
+  taillee a ras, elle ne clignote plus. Tout s'arrete et reprend sa couleur quand la haie est finie.
+- `HedgeLeafController.setGlow(hedge)` : c'est lui qui ecrit deja la couleur des feuilles, il reste le seul
+  ecrivain (le balancement lui passe la couleur normale). Ne parcourt que les feuilles restant a tailler, et
+  n'ecrit que quand le palier du battement change (`LEAF_GLOW_STEPS`, 20). Reglages `LEAF_GLOW_*` dans HedgeConfigs.
+- `TutorialController` : 195 locales sur 200.
+
 ## 0.0.899 — Le texte des bulles parlees s'ecrit au rythme de la voix
 
 - `Dialogue.Line.typeTime` : le texte s'ecrit en ce nombre de secondes au lieu de 45 lettres/s.

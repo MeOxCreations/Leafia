@@ -674,6 +674,15 @@ local HedgeConfigs = {
 	-- animees, c'est la bande passante entiere pour du decor.
 	LEAF_SWAY_ANGLE = 7, -- degres
 	LEAF_SWAY_SPEED = 1, -- oscillations par seconde
+	-- ===== LES FEUILLES A TAILLER CLIGNOTENT (didacticiel) =====
+	-- Idee du joueur : la teinte du SurfaceAppearance des feuilles encore a tailler bat entre leur couleur et ce
+	-- cyan. Une feuille se calme a mesure qu'elle est taillee (le battement suit sa pousse) : ce qui reste a faire
+	-- clignote, ce qui est fait ne bouge plus. Allume par `HedgeLeafController.setGlow`.
+	LEAF_GLOW_COLOR = Color3.fromRGB(0, 255, 247),
+	LEAF_GLOW_PERIOD = 1.6, -- un aller-retour complet, en secondes (meme battement que les halos)
+	LEAF_GLOW_MAX = 1, -- jusqu'ou il va vers le cyan au sommet du battement (1 = cyan plein)
+	-- Paliers du battement : la couleur n'est reecrite que quand le palier change, pas a chaque image.
+	LEAF_GLOW_STEPS = 20,
 	-- Au-dela de cette distance de la camera, une feuille ne bouge plus. Personne ne voit un balancement de
 	-- sept degres a soixante-dix studs, autant ne pas le payer.
 	-- Distance a la HAIE, pas a la feuille : la portee de sa sphere englobante s'y ajoute. Au-dela, la haie

@@ -46,6 +46,7 @@ local SceneCamera = require(script.Parent.Utils.SceneCamera)
 local GroundGuide = require(script.Parent.Utils.GroundGuide)
 local TutorialLeaves = require(script.Parent.Utils.TutorialLeaves)
 local TutorialGift = require(script.Parent.Utils.TutorialGift)
+local HedgeLeafController = require(script.Parent.HedgeLeafController)
 -- VOISIN DIRECT : les pastilles des outils se taisent pendant l'ouverture, et le didacticiel est le seul a savoir
 -- quand elle finit.
 local ToolMarkerController = require(script.Parent.ToolMarkerController)
@@ -2465,6 +2466,9 @@ local function step(dt: number)
 		local me = getRoot()
 		local from = if anchorPart then anchorPart.Position elseif me then me.Position else nil
 		hedgeModel = if from then nearestHedge(from) else nil
+		-- SES FEUILLES A TAILLER CLIGNOTENT EN CYAN jusqu'a ce qu'elle soit finie : ce qui reste a faire se voit
+		-- de loin, sans marqueur de plus.
+		HedgeLeafController.setGlow(hedgeModel)
 		if not hedgeModel then
 			warn(
 				`[Tutorial] Aucune part portant l'attribut "{HedgeConfigs.HEDGE_MARK_ATTRIBUTE}" : pas de haie a `
@@ -2521,6 +2525,7 @@ local function step(dt: number)
 				TaskBannerHandler.setProgress(3, math.clamp(mine / done, 0, 1))
 				if mine >= done then
 					hedgeTaskDone = true
+					HedgeLeafController.setGlow(nil)
 					TaskBannerHandler.setDone(3)
 					WorldMarker.remove(hedgeMarker)
 					hedgeMarker = nil
@@ -3212,6 +3217,7 @@ function TutorialController.stop()
 	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
+	HedgeLeafController.setGlow(nil)
 	TutorialLeaves.stop()
 	TutorialGift.stop()
 	hideTalkPrompt()
@@ -3285,6 +3291,7 @@ function TutorialController.stop()
 	nextTruckImpatientAt = math.huge
 	WorldMarker.remove(hedgeMarker)
 	hedgeMarker, hedgeModel = nil, nil
+	HedgeLeafController.setGlow(nil)
 	TutorialLeaves.stop()
 	hideTalkPrompt()
 	WorldMarker.remove(grandpaMarker)

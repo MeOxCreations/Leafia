@@ -53,6 +53,13 @@ type Leaf = {
 	-- Present si la feuille a un SurfaceAppearance. C'est LUI qui porte la couleur quand il existe : la teinte
 	-- de la part est alors ignoree par le moteur.
 	appearance: SurfaceAppearance?,
+	-- LA COULEUR NORMALE de la feuille (pousse, degats, degrade), telle que calculee par le balancement. Le
+	-- clignotement part d'elle ; hors clignotement, c'est elle qui est ecrite.
+	shownColor: Color3,
+	-- Part de cyan REELLEMENT ecrite par le clignotement (0 = aucune).
+	glowK: number,
+	-- La couleur normale a change pendant un clignotement : le clignotement doit la reecrire.
+	glowDirty: boolean,
 	-- Decalage propre a chaque feuille. Sans lui toute la haie oscillerait d'un seul bloc, ce qui ressemble a
 	-- une erreur d'affichage et pas a du vent.
 	phase: number,
@@ -80,6 +87,15 @@ type Group = {
 }
 
 local groups: { [Instance]: Group } = {}
+
+-- LE CLIGNOTEMENT DES FEUILLES A TAILLER. `glowHedge` = la haie demandee ; son groupe est retrouve tant qu'on ne
+-- l'a pas (streaming). `glowLeaves` = celles qui restaient a tailler quand on l'a trouve : les autres faces de la
+-- haie du didacticiel sont deja nettes, les parcourir a chaque image ne servirait a rien.
+local glowHedge: BasePart? = nil
+local glowGroup: Group? = nil
+local glowLeaves: { Leaf } = {}
+local glowCount = -1
+local glowStepShown = -1
 
 -- Palette de couleurs de coupe (base + accents), poids total precalcule une fois.
 local TRIMMED_VARIANTS = HedgeConfigs.TRIMMED_COLOR_VARIANTS
@@ -131,6 +147,9 @@ local function addLeaf(group: Group, part: BasePart)
 		spawnColor = appearance and appearance.Color or part.Color,
 		trimmedColor = pickTrimmedColor(position),
 		appearance = appearance,
+		shownColor = appearance and appearance.Color or part.Color,
+		glowK = 0,
+		glowDirty = false,
 		phase = phase,
 		-- Au repos au depart : sa CFrame de naissance est deja sa pose de repos a pousse pleine, donc rien a
 		-- corriger tant qu'elle n'est pas entree dans la bulle.
@@ -279,13 +298,20 @@ local function sway(
 			local tintStart = HedgeConfigs.DAMAGE_TINT_START
 			local tint = math.clamp((hurt - tintStart) / math.max(1 - tintStart, 1e-3), 0, 1)
 			local final = base:Lerp(HedgeConfigs.DAMAGE_COLOR, tint)
-			-- Le SurfaceAppearance porte la couleur quand il existe : la teinte de la part est alors ignoree par
-			-- le moteur. Chaque feuille a le sien, puisqu'elle est clonee.
-			local appearance = leaf.appearance
-			if appearance then
-				appearance.Color = final
+			leaf.shownColor = final
+			-- PENDANT UN CLIGNOTEMENT, c'est lui qui ecrit la couleur (une propriete, un seul ecrivain) : on lui
+			-- signale seulement que la base a change.
+			if leaf.glowK > 0 then
+				leaf.glowDirty = true
 			else
-				leaf.part.Color = final
+				-- Le SurfaceAppearance porte la couleur quand il existe : la teinte de la part est alors ignoree
+				-- par le moteur. Chaque feuille a le sien, puisqu'elle est clonee.
+				local appearance = leaf.appearance
+				if appearance then
+					appearance.Color = final
+				else
+					leaf.part.Color = final
+				end
 			end
 		end
 
@@ -357,6 +383,104 @@ local function viewpoint(): Vector3?
 	return camera and camera.CFrame.Position
 end
 
+local function paint(leaf: Leaf, color: Color3)
+	local appearance = leaf.appearance
+	if appearance then
+		appearance.Color = color
+	else
+		leaf.part.Color = color
+	end
+end
+
+-- Rend a chaque feuille sa couleur normale et oublie le clignotement.
+local function stopGlow()
+	for _, leaf in glowLeaves do
+		if leaf.glowK > 0 and leaf.part.Parent then
+			paint(leaf, leaf.shownColor)
+		end
+		leaf.glowK = 0
+		leaf.glowDirty = false
+	end
+	table.clear(glowLeaves)
+	glowGroup = nil
+	glowCount = -1
+	glowStepShown = -1
+end
+
+-- LE GROUPE DE LA HAIE DEMANDEE. Les dossiers portent le NOM de leur haie, et deux haies peuvent s'appeler pareil :
+-- on garde celui dont le centre est le plus proche de la haie.
+local function findGlowGroup(hedge: BasePart): Group?
+	local best: Group? = nil
+	local bestDist = math.huge
+	for folder, group in pairs(groups) do
+		if folder.Name == hedge.Name and #group.leaves > 0 then
+			if group.dirty then
+				refresh(group)
+			end
+			local d = (group.center - hedge.Position).Magnitude
+			if d < bestDist then
+				best, bestDist = group, d
+			end
+		end
+	end
+	return best
+end
+
+local function glow(now: number)
+	local hedge = glowHedge
+	if not (hedge and hedge.Parent) then
+		return
+	end
+	local group = glowGroup
+	if not group then
+		group = findGlowGroup(hedge)
+		glowGroup = group
+	end
+	if not group then
+		return -- pas encore replique : on reessaie a l'image suivante
+	end
+	-- LA LISTE SE REFAIT QUAND DES FEUILLES ARRIVENT OU PARTENT (streaming, feuilles de bordure retirees).
+	if #group.leaves ~= glowCount then
+		glowCount = #group.leaves
+		table.clear(glowLeaves)
+		for _, leaf in group.leaves do
+			local growth = leaf.cell:GetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE)
+			if leaf.glowK > 0 or not (typeof(growth) == "number" and growth <= 0) then
+				table.insert(glowLeaves, leaf)
+			end
+		end
+	end
+	local steps = HedgeConfigs.LEAF_GLOW_STEPS
+	local wave = 0.5 - 0.5 * math.cos(now * math.pi * 2 / HedgeConfigs.LEAF_GLOW_PERIOD)
+	local stepNow = math.floor(wave * steps + 0.5)
+	local anyDirty = false
+	for _, leaf in glowLeaves do
+		if leaf.glowDirty then
+			anyDirty = true
+			break
+		end
+	end
+	if stepNow == glowStepShown and not anyDirty then
+		return
+	end
+	glowStepShown = stepNow
+	local peak = stepNow / steps * HedgeConfigs.LEAF_GLOW_MAX
+	for _, leaf in glowLeaves do
+		if not leaf.part.Parent then
+			continue
+		end
+		-- LE BATTEMENT SUIT LA POUSSE : une feuille taillee a ras ne clignote plus.
+		local growth = leaf.cell:GetAttribute(HedgeConfigs.GROWTH_ATTRIBUTE)
+		local g = if typeof(growth) == "number" then math.clamp(growth, 0, 1) else 1
+		local k = math.floor(peak * g * steps + 0.5) / steps
+		if k ~= leaf.glowK or leaf.glowDirty then
+			leaf.glowK = k
+			leaf.glowDirty = false
+			paint(leaf, if k > 0 then leaf.shownColor:Lerp(HedgeConfigs.LEAF_GLOW_COLOR, k) else leaf.shownColor)
+		end
+	end
+end
+
 local function step()
 	local eye = viewpoint()
 	if not eye then
@@ -389,6 +513,8 @@ local function step()
 			rest(group)
 		end
 	end
+
+	glow(now)
 end
 
 local function collect(folder: Instance)
@@ -430,6 +556,15 @@ local function collect(folder: Instance)
 	folder.ChildRemoved:Connect(function(child: Instance)
 		groups[child] = nil
 	end)
+end
+
+--- FAIT CLIGNOTER les feuilles encore a tailler de `hedge` (nil = plus rien ne clignote). Idempotent.
+function HedgeLeafController.setGlow(hedge: BasePart?)
+	if hedge == glowHedge then
+		return
+	end
+	stopGlow()
+	glowHedge = hedge
 end
 
 function HedgeLeafController.init()
