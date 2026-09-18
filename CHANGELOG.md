@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.889 — Pelouse finie : la phrase du grand-pere s'affiche aussi en bulle
+
+- `TutorialController.sayWithBubble(path, text, emotion?)` : la voix ET sa bulle, qui dure la longueur de la voix
+  (secours `BUBBLE_HOLD_FALLBACK`, 3.5 s, si le fichier n'est pas encore charge).
+- Fin de tonte : `LAWN_DONE_TEXT` = "Perfect! Now come and see me." avec `Oldman_scene_speech_PerfectComeSeeMe`.
+  TEXTE DEDUIT DU NOM DU FICHIER, a verifier contre la voix.
+- L'arrivee a la haie passe par le meme helper (`HEDGE_ARRIVE_HOLD` remplace par `BUBBLE_HOLD_FALLBACK`).
+- `TutorialController` : 193 locales sur 200.
+
 ## 0.0.888 — Retouches de la jauge des taches
 
 - `TaskBannerHandler` : remplissage plein a 0.999 (etait 0.997), contour de la barre en blanc (etait noir), barre

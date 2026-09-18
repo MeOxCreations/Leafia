@@ -1321,6 +1321,21 @@ local function sayChain(paths: { { string } }, index: number?, onEach: ((number)
 	end)
 end
 
+-- UNE REPLIQUE ET SA BULLE : la voix, et son texte a l'ecran le temps qu'elle dure. Une consigne qui ne passe
+-- que par le son est perdue pour tout joueur qui joue sans le son -- et sur telephone, c'est souvent le cas.
+local function sayWithBubble(path: { string }, text: string, emotion: string?)
+	local voice = sayVoice(path)
+	local length = if voice then voice.TimeLength else 0
+	Dialogue.play({
+		{
+			speaker = TutorialConfigs.SPEECH2_SPEAKER,
+			text = text,
+			emotion = emotion or "happy",
+			hold = if length > 0.5 then length else TutorialConfigs.BUBBLE_HOLD_FALLBACK,
+		},
+	})
+end
+
 -- SES DEUX REPLIQUES D'OUVERTURE. Elles se suivent : la premiere part quand le battant s'entrebaille, la seconde
 -- des que la premiere a fini de parler. La porte, elle, continue de s'ouvrir pendant qu'il parle -- son mouvement
 -- ne commande plus rien de la voix.
@@ -2337,7 +2352,7 @@ local function step(dt: number)
 					-- IL RAPPELLE LE JOUEUR, a l'instant ou la derniere touffe tombe. Sans cette phrase la tache
 					-- passait en gris et plus rien ne se passait -- juste apres son premier travail, soit le
 					-- moment exact ou il decide s'il en fait un deuxieme.
-					sayVoice(TutorialConfigs.LAWN_DONE_SOUND)
+					sayWithBubble(TutorialConfigs.LAWN_DONE_SOUND, TutorialConfigs.LAWN_DONE_TEXT)
 					-- ET IL S'ARRETE DE FLANER POUR L'ATTENDRE. Le compte des touffes vit ICI, sa marche vit sur
 					-- le SERVEUR : il faut le lui dire. Un grand-pere qui s'eloigne pendant qu'on vient le voir
 					-- transforme une recompense en course-poursuite.
@@ -2984,16 +2999,7 @@ function TutorialController.init()
 				return
 			end
 			whenSpeechDone(function()
-				local voice = sayVoice(TutorialConfigs.HEDGE_ARRIVE_SOUND)
-				local length = if voice then voice.TimeLength else 0
-				Dialogue.play({
-					{
-						speaker = TutorialConfigs.SPEECH2_SPEAKER,
-						text = TutorialConfigs.HEDGE_ARRIVE_TEXT,
-						emotion = "happy",
-						hold = if length > 0.5 then length else TutorialConfigs.HEDGE_ARRIVE_HOLD,
-					},
-				})
+				sayWithBubble(TutorialConfigs.HEDGE_ARRIVE_SOUND, TutorialConfigs.HEDGE_ARRIVE_TEXT)
 			end)
 		end)
 	end)

@@ -628,6 +628,9 @@ return {
 	-- Sa replique part a l'instant ou la derniere touffe tombe, et le marqueur se pose sur lui dans le meme
 	-- geste : la voix dit de venir, le dessin dit ou.
 	LAWN_DONE_SOUND = voice("Oldman_scene_speech_PerfectComeSeeMe"),
+	-- ET SA BULLE : c'est la replique qui dit OU aller ensuite, elle doit se lire meme le son coupe.
+	-- TEXTE A VERIFIER CONTRE LA VOIX : deduit du nom du fichier, pas ecoute.
+	LAWN_DONE_TEXT = "Perfect! Now come and see me.",
 	-- ET CE QU'IL DIT QUAND LE JOUEUR ARRIVE. Il n'enchaine sur aucune tache pour le moment : la suite du
 	-- scenario n'est pas ecrite, et donner une consigne qui n'existe pas serait pire que de ne rien donner.
 	TALK_SOUND = voice("Oldman_scene_speech_HeppyForCutGrass"),
@@ -778,6 +781,9 @@ return {
 	-- LE NOM AFFICHE dans la pastille jaune. Ici et nulle part ailleurs : le jour ou il a un vrai prenom, il
 	-- change a un seul endroit.
 	SPEECH2_SPEAKER = "GRANDPA",
+	-- DUREE D'UNE BULLE PARLEE quand la voix n'a pas encore de longueur connue (fichier pas encore charge). Sinon la
+	-- bulle dure exactement ce que dure la voix.
+	BUBBLE_HOLD_FALLBACK = 3.5,
 	-- SA REPLIQUE, DECOUPEE. Chaque ligne porte sa duree : elles avancent TOUTES SEULES, sans que le joueur ait a
 	-- taper. Sur une replique doublee c'est obligatoire -- faire avancer a la main desynchronise le texte de la
 	-- voix des la premiere ligne, et plus rien ne les recale ensuite.
@@ -946,8 +952,6 @@ return {
 	HEDGE_ARRIVE_LEAD = 1.2,
 	HEDGE_ARRIVE_SOUND = voice("Oldman_scene_speech_Thishedge_needcut"),
 	HEDGE_ARRIVE_TEXT = "There she is. Trim her up nice and proper.",
-	-- Duree de la bulle si la voix n'a pas encore de longueur connue (fichier pas charge).
-	HEDGE_ARRIVE_HOLD = 3.5,
 
 	-- ===== ET IL VA S'ASSEOIR =====
 	-- Pendant que le joueur taille, le grand-pere ne reste pas plante a le regarder : il va s'asseoir sur son
