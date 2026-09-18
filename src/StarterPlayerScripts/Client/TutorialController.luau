@@ -3039,7 +3039,12 @@ function TutorialController.init()
 	resolve("TutorialGrandpaBench", function(r)
 		r.OnClientEvent:Connect(function(phase)
 			if phase == "walk" then
-				sayVoice(TutorialConfigs.SEAT_DOWN_SOUND)
+				-- APRES CE QU'IL DIT DEVANT LA HAIE, jamais par-dessus. Le serveur le fait partir 2.2 s apres son
+				-- arrivee, sans savoir s'il parle encore ; `sayVoice` coupe la voix en cours, donc "There she is..."
+				-- se faisait couper des qu'elle partait un peu tard (la marche plus rapide la decale).
+				whenSpeechDone(function()
+					sayVoice(TutorialConfigs.SEAT_DOWN_SOUND)
+				end)
 			elseif phase == "hup" then
 				sayVoice(TutorialConfigs.HUP_JUMP_SOUND)
 			elseif phase == "stand" then

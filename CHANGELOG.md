@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.895 — La phrase devant la haie n'est plus coupee par le depart vers le banc
+
+- La replique de depart vers le banc (`SEAT_DOWN_SOUND`) attend la fin de la voix en cours (`whenSpeechDone`).
+  Avant, elle partait 2.2 s apres l'arrivee a la haie et COUPAIT "There she is. Trim her up nice and proper."
+  des que celle-ci demarrait un peu tard (apres la replique precedente, avec la marche plus rapide).
+
 ## 0.0.894 — Le hayon du camion respire quand le grand-pere dit de l'ouvrir
 
 - `TutorialController` : un `Highlight` sur la part `DoorBack` (celui pose dans Studio s'il existe, sinon cree en
