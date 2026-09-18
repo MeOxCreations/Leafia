@@ -2978,6 +2978,25 @@ function TutorialController.init()
 	end)
 	resolve("TutorialGrandpaHedge", function(r)
 		hedgeRemote = r
+		-- IL ARRIVE A LA HAIE : sa phrase, avec sa bulle. Apres la precedente s'il parle encore -- une voix qui en
+		-- coupe une autre en plein mot se lit comme un bug.
+		r.OnClientEvent:Connect(function(phase)
+			if phase ~= "arrive" then
+				return
+			end
+			whenSpeechDone(function()
+				local voice = sayVoice(TutorialConfigs.HEDGE_ARRIVE_SOUND)
+				local length = if voice then voice.TimeLength else 0
+				Dialogue.play({
+					{
+						speaker = TutorialConfigs.SPEECH2_SPEAKER,
+						text = TutorialConfigs.HEDGE_ARRIVE_TEXT,
+						emotion = "happy",
+						hold = if length > 0.5 then length else TutorialConfigs.HEDGE_ARRIVE_HOLD,
+					},
+				})
+			end)
+		end)
 	end)
 	-- IL VA S'ASSEOIR : une phrase en partant, une autre en se posant. C'est le SERVEUR qui dit quand -- sa marche
 	-- et son animation sont a lui -- et le client qui joue les voix.

@@ -525,12 +525,18 @@ end
 --- `viaName` est FACULTATIF : sans lui il va tout droit, avec lui il suit une courbe TIREE vers cette part. Un
 --- buisson en travers du chemin suffit a rendre la ligne droite impossible, et poser un point de controle a cote
 --- de l'obstacle se regle a la souris -- alors qu'un contournement calcule demanderait de connaitre le decor.
+--- `speedMul` : multiplie sa vitesse ET celle de ses jambes pour ce trajet (1 par defaut). `lead` + `onLead` :
+--- appele `lead` secondes AVANT l'arrivee, pour une phrase qui doit tomber pendant qu'il arrive.
 local function walkOldMan(
 	targetName: string,
 	onDone: ((Model) -> ())?,
 	onStart: ((Model) -> ())?,
-	viaName: string?
+	viaName: string?,
+	speedMul: number?,
+	lead: number?,
+	onLead: (() -> ())?
 )
+	local mul = math.max(speedMul or 1, 0.1)
 	if walking then
 		return
 	end
@@ -663,6 +669,7 @@ local function walkOldMan(
 				TutorialConfigs.OLDMAN_WALK_SPEED
 					/ TutorialConfigs.OLDMAN_WALK_REFERENCE
 					* TutorialConfigs.OLDMAN_WALK_ANIM_BOOST
+					* mul
 			)
 			track = t
 		end
@@ -672,7 +679,7 @@ local function walkOldMan(
 
 	-- LA DUREE VIENT DE LA DISTANCE, jamais d'un chiffre pose a la main : deplacer la part dans Studio suffit
 	-- alors a rallonger le trajet, et ses pieds restent d'accord avec son deplacement quoi qu'on change.
-	local seconds = pathLength / math.max(TutorialConfigs.OLDMAN_WALK_SPEED, 0.1)
+	local seconds = pathLength / math.max(TutorialConfigs.OLDMAN_WALK_SPEED * mul, 0.1)
 
 	if onStart then
 		onStart(model :: Model)
@@ -697,8 +704,15 @@ local function walkOldMan(
 
 		-- PHASE 2 : IL AVANCE DROIT DEVANT, de `aim` a `to`.
 		local t0 = os.clock()
+		local leadFired = false
 		while true do
 			local e = math.clamp((os.clock() - t0) / seconds, 0, 1)
+			-- LA PHRASE D'ARRIVEE, une fois, quand il reste `lead` secondes. Un trajet plus court que `lead` la
+			-- declenche des le depart : mieux vaut tot que jamais.
+			if onLead and not leadFired and os.clock() - t0 >= seconds - (lead or 0) then
+				leadFired = true
+				task.spawn(onLead)
+			end
 			if not model.Parent then
 				break -- detruit en chemin (changement de place, rechargement) : plus rien a deplacer
 			end
@@ -1970,7 +1984,12 @@ function TutorialService.init()
 					end)
 				end)
 			end)
-		end, nil, TutorialConfigs.OLDMAN_HEDGE_VIA)
+		end, nil, TutorialConfigs.OLDMAN_HEDGE_VIA, TutorialConfigs.OLDMAN_HEDGE_SPEED_MUL, TutorialConfigs.HEDGE_ARRIVE_LEAD, function()
+			-- IL MONTRE LA HAIE EN ARRIVANT. Le client joue la voix et la bulle : c'est lui qui a les voix.
+			if sceneOwner == player then
+				hedgeRemote:FireClient(player, "arrive")
+			end
+		end)
 
 		-- LA HAIE, ELLE, EST DEJA PREPAREE depuis le demarrage du serveur (voir `prepareHedgeWhenReady`) : toutes
 		-- ses faces sont nettes sauf celle qu'on vient de lui montrer.

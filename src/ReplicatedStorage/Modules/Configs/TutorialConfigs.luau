@@ -938,6 +938,16 @@ return {
 	-- une part tous les trois metres.
 	OLDMAN_HEDGE_VIA = "OldManWalkToHedgeBezierCurveMiddle",
 	OLDMAN_HEDGE_TARGET = "OldManWalkToHedgeFinal",
+	-- IL Y VA PLUS VITE QU'AILLEURS, en multiple de sa marche normale : le joueur a la cisaille en main et attend
+	-- de s'en servir. Les JAMBES accelerent du meme facteur, sinon ses pieds patineraient sur le trottoir.
+	OLDMAN_HEDGE_SPEED_MUL = 1.6,
+	-- CE QU'IL DIT EN ARRIVANT, un peu AVANT de s'arreter (secondes avant l'arrivee) : la phrase montre la haie
+	-- pendant qu'il la rejoint, au lieu de tomber sur un personnage deja plante devant.
+	HEDGE_ARRIVE_LEAD = 1.2,
+	HEDGE_ARRIVE_SOUND = voice("Oldman_scene_speech_Thishedge_needcut"),
+	HEDGE_ARRIVE_TEXT = "There she is. Trim her up nice and proper.",
+	-- Duree de la bulle si la voix n'a pas encore de longueur connue (fichier pas charge).
+	HEDGE_ARRIVE_HOLD = 3.5,
 
 	-- ===== ET IL VA S'ASSEOIR =====
 	-- Pendant que le joueur taille, le grand-pere ne reste pas plante a le regarder : il va s'asseoir sur son

@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.885 — Le grand-pere file a la haie, et la montre en arrivant
+
+- `TutorialService.walkOldMan` prend trois arguments facultatifs : `speedMul` (vitesse du trajet ET des jambes),
+  `lead` et `onLead` (appele `lead` secondes avant l'arrivee).
+- Trajet `OldManWalkToTruck` -> `OldManWalkToHedgeFinal` : `OLDMAN_HEDGE_SPEED_MUL` = 1.6, l'animation de marche
+  accelere du meme facteur (pas de pieds qui patinent).
+- `HEDGE_ARRIVE_LEAD` (1.2 s) avant l'arrivee, le serveur previent le client par `TutorialGrandpaHedge` ("arrive") :
+  voix `Oldman_scene_speech_Thishedge_needcut` et bulle "There she is. Trim her up nice and proper.", apres la
+  replique precedente s'il parle encore. La bulle dure la longueur de la voix (secours `HEDGE_ARRIVE_HOLD`).
+- Depend du son `Oldman_scene_speech_Thishedge_needcut` pose dans Studio sous `Sounds.Scenes.Voices`.
+
 ## 0.0.884 — L'herbe coupee apparait en fondu au lieu de bouger ; le refus du camion passe en bas au milieu
 
 - `GrassZoneController` : la coupe est immediate. A l'echange du maillage (sous le carter), la touffe prend d'un
