@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.886 — Le grand-pere ne marche plus les jambes de travers, et ses marches ne remplissent plus la console
+
+- BUG DES JAMBES (trajet vers le camion) : la sonde a montre son geste de parole (`OLDMAN_TALK_ANIM`, priorite
+  `Action`, poids 1) joue EN MEME TEMPS que sa marche (`Movement`) -- il gagne sur les articulations qu'il cle,
+  jambes comprises. `setFollowWalking` passe maintenant le geste a poids 0 tant qu'il marche avec le joueur, et le
+  remet a 1 quand il s'arrete (`stopFollow` aussi). Poids 0 et pas arret : la piste avance et ses marqueurs
+  tombent a l'heure. Un geste qui demarre pendant la marche part muet. Pour garder les bras en marchant : retirer
+  les cles des jambes de l'animation de parole dans l'editeur.
+- Sonde retiree (`DEBUG_GRANDPA_ANIMS`, `probeTracks`, `checkTalkOverWalk`) : elle a donne sa reponse.
+- Prints retires : geste du grand-pere, "accompagne", "arrive au camion" (serveur et client), "part s'asseoir",
+  "marqueur pose sur le hayon".
+
 ## 0.0.885 — Le grand-pere file a la haie, et la montre en arrivant
 
 - `TutorialService.walkOldMan` prend trois arguments facultatifs : `speedMul` (vitesse du trajet ET des jambes),

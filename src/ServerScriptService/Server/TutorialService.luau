@@ -8,7 +8,6 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local CollectionService = game:GetService("CollectionService")
-local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
@@ -346,6 +345,9 @@ end
 -- reenregistrer la voix (et rebouger les `hold`) rallonge la piste toute seule. Et elle part au meme instant que
 -- la voix -- SPEECH2_DELAY, le souffle qu'il prend en arrivant -- pour ne pas gesticuler dans le silence.
 local talkTrack: AnimationTrack? = nil
+-- IL MARCHE AVEC LE JOUEUR EN CE MOMENT (escorte, promenade). Lu par `playTalk` : un geste qui demarre pendant
+-- qu'il marche doit partir muet (voir `setFollowWalking`).
+local followMoving = false
 -- QUEL GESTE ACCOMPAGNE SES PHRASES, en ce moment. Il explique avec les bras par defaut ; arrive au camion, il le
 -- MONTRE DU DOIGT.
 --
@@ -450,8 +452,8 @@ local function playTalk(model: Model): boolean
 		end
 	end)
 
-	track:Play(TutorialConfigs.OLDMAN_TALK_FADE)
-	print(`[Tutorial] Geste du grand-pere : {talkAnimId}`)
+	-- MUET S'IL MARCHE AVEC LE JOUEUR : voir `setFollowWalking`. Joue quand meme -- ses marqueurs doivent tomber.
+	track:Play(TutorialConfigs.OLDMAN_TALK_FADE, if followMoving then 0 else 1)
 	return true
 end
 
@@ -1322,6 +1324,15 @@ local function stopFollow()
 	strollTarget = nil
 	engineStarted = false
 	escortTarget = nil
+	-- IL NE MARCHE PLUS AVEC LE JOUEUR : son geste de parole reprend sa voix. Sans ca, un suivi coupe en pleine
+	-- marche laisserait tous les gestes suivants muets.
+	if followMoving then
+		followMoving = false
+		local talk = talkTrack
+		if talk and talk.IsPlaying then
+			talk:AdjustWeight(1, TutorialConfigs.FOLLOW_ANIM_FADE)
+		end
+	end
 	-- ET SON GESTE REDEVIENT L'EXPLICATION. Sans ca, une scene rejouee le trouverait encore en train de montrer
 	-- du doigt un camion dont il n'a pas encore parle.
 	talkAnimId = TutorialConfigs.OLDMAN_TALK_ANIM
@@ -1340,6 +1351,23 @@ end
 -- seconde.
 local function setFollowWalking(model: Model, speed: number)
 	local moving = speed > 0
+	-- SON GESTE DE PAROLE SE TAIT PENDANT QU'IL MARCHE, et revient quand il s'arrete.
+	--
+	-- C'ETAIT LE BUG DES JAMBES, mesure par la sonde sur le trajet du camion : le geste (priorite `Action`, poids 1)
+	-- jouait EN MEME TEMPS que la marche (`Movement`). Au-dessus d'elle, il gagne sur toutes les articulations
+	-- qu'il cle -- jambes comprises -- et le grand-pere "marchait en jouant une autre animation".
+	--
+	-- POIDS ZERO ET PAS ARRET : une piste de poids nul joue, avance et declenche ses marqueurs a l'heure, elle
+	-- n'ecrit simplement rien. Le geste reprend la ou il en est quand il s'arrete.
+	-- Pour garder les gestes des BRAS en marchant, il faudrait retirer les cles des jambes de l'animation de parole
+	-- dans l'editeur ; ce code pourrait alors disparaitre.
+	if moving ~= followMoving then
+		followMoving = moving
+		local talk = talkTrack
+		if talk and talk.IsPlaying then
+			talk:AdjustWeight(if moving then 0 else 1, TutorialConfigs.FOLLOW_ANIM_FADE)
+		end
+	end
 	local track = followTrack
 	if not moving then
 		if track and track.IsPlaying then
@@ -1379,84 +1407,6 @@ local function setFollowWalking(model: Model, speed: number)
 		followAnimSpeed = speed
 		track:AdjustSpeed(animSpeed)
 	end
-end
-
--- ===== SONDE : QUELLES ANIMATIONS JOUENT SUR LUI =====
--- Il a ete vu MARCHER en jouant une autre animation en meme temps, les jambes de travers, sur le trajet du camion.
--- A l'oeil on ne peut pas dire laquelle : ca ne se lit que dans `GetPlayingAnimationTracks`. La sonde imprime la
--- liste des qu'elle CHANGE (pas a chaque image), avec la priorite, le poids vise et la vitesse de chaque piste.
-local lastTracksLine = ""
-local checkedOverlap = false
-
-local function probeTracks(model: Model, where: string)
-	local humanoid = model:FindFirstChildOfClass("Humanoid")
-	local animator = if humanoid then humanoid:FindFirstChildOfClass("Animator") else nil
-	if not animator then
-		return
-	end
-	local parts: { string } = {}
-	for _, t in (animator :: Animator):GetPlayingAnimationTracks() do
-		local source = t.Animation
-		local id = if source then string.match(source.AnimationId, "%d+") or source.AnimationId else t.Name
-		-- LE POIDS VISE, pas le poids courant : pendant un fondu le courant change a chaque image, et la ligne
-		-- se reimprimerait dix fois pour un seul changement.
-		table.insert(
-			parts,
-			`{id} [{t.Priority.Name}, poids {string.format("%.1f", t.WeightTarget)}, vitesse {string.format("%.2f", t.Speed)}]`
-		)
-	end
-	table.sort(parts)
-	local line = table.concat(parts, " + ")
-	if line ~= lastTracksLine then
-		lastTracksLine = line
-		print(`[Tutorial] Pistes du grand-pere ({where}) : {if line ~= "" then line else "aucune"}`)
-	end
-end
-
---- Les articulations qu'une animation ECRIT (poses de poids non nul), lues dans le fichier lui-meme.
-local function keyedParts(animId: string): { [string]: boolean }?
-	local ok, sequence = pcall(function()
-		return KeyframeSequenceProvider:GetKeyframeSequenceAsync(animId)
-	end)
-	if not (ok and typeof(sequence) == "Instance") then
-		return nil
-	end
-	local names: { [string]: boolean } = {}
-	for _, d in (sequence :: Instance):GetDescendants() do
-		if d:IsA("Pose") and d.Weight > 0 then
-			names[d.Name] = true
-		end
-	end
-	return names
-end
-
---- LE GESTE DE PAROLE TOUCHE-T-IL LES MEMES ARTICULATIONS QUE LA MARCHE ? Il est en `Action`, la marche en
---- `Movement` : sur chaque articulation que les deux ecrivent, c'est le geste qui gagne. S'il ecrit les jambes, il
---- ecrase le pas des qu'il parle en marchant. Une seule fois par partie, en tache de fond (appel reseau).
-local function checkTalkOverWalk()
-	if checkedOverlap then
-		return
-	end
-	checkedOverlap = true
-	task.spawn(function()
-		local talk = keyedParts(TutorialConfigs.OLDMAN_TALK_ANIM)
-		local walk = keyedParts(TutorialConfigs.OLDMAN_WALK_ANIM)
-		if not (talk and walk) then
-			warn("[Tutorial] Sonde : lecture des animations ratee (appel reseau). Relancer la partie pour reessayer.")
-			return
-		end
-		local both: { string } = {}
-		for name in talk do
-			if walk[name] then
-				table.insert(both, name)
-			end
-		end
-		table.sort(both)
-		print(
-			`[Tutorial] Sonde : le geste de parole ecrit {if #both > 0 then table.concat(both, ", ") else "AUCUNE"} `
-				.. "articulation(s) que la marche ecrit aussi -- sur celles-la, c'est le geste qui gagne."
-		)
-	end)
 end
 
 -- LA TONDEUSE LIBRE LA PLUS PROCHE DU JOUEUR. Meme critere que le repere affiche chez lui : les deux doivent
@@ -1753,7 +1703,6 @@ startFollow = function(player: Player, model: Model)
 			talkAnimId = TutorialConfigs.OLDMAN_POINT_ANIM
 			local remote = atTruckRemote
 			if remote and player.Parent then
-				print(`[Tutorial] Le grand-pere est arrive au camion avec {player.Name}.`)
 				remote:FireClient(player)
 			end
 			return
@@ -1823,12 +1772,7 @@ startFollow = function(player: Player, model: Model)
 		-- `GetPivot`, qui suit la boite englobante -- une part ajoutee au modele dans Studio le decalerait.
 		model:PivotTo(facing * rootPart.CFrame:Inverse() * model:GetPivot())
 		setFollowWalking(model, if step > 0 then speed else 0)
-		-- SONDE : n'imprime que quand les pistes CHANGENT, donc l'appeler a chaque image ne remplit pas la console.
-		if TutorialConfigs.DEBUG_GRANDPA_ANIMS then
-			probeTracks(model, if escorting then "escorte" elseif chasing then "vers la tondeuse" else "promenade")
-		end
 	end)
-	print(`[Tutorial] Le grand-pere accompagne {player.Name} : la tondeuse, puis la promenade.`)
 end
 
 local function onPlayerAdded(player: Player)
@@ -1929,10 +1873,6 @@ function TutorialService.init()
 			return
 		end
 		escortTarget = point :: BasePart
-		-- SONDE : au depart vers le camion, on regarde une fois si son geste de parole ecrase les jambes de sa marche.
-		if TutorialConfigs.DEBUG_GRANDPA_ANIMS then
-			checkTalkOverWalk()
-		end
 		local model = findByName(TutorialConfigs.GRANDPA_NAME)
 		if model and model:IsA("Model") then
 			-- LA BOUCLE EST MORTE DEPUIS LA FIN DE LA TONTE : on la relance. Elle sort d'elle-meme si une autre

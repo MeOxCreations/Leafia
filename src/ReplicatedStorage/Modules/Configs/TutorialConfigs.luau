@@ -1407,11 +1407,6 @@ return {
 	-- A remettre a false une fois le didacticiel regle.
 	DEBUG = false,
 	DEBUG_INTERVAL = 2,
-	-- SONDE DES ANIMATIONS DU GRAND-PERE, cote serveur. Imprime les pistes qui jouent sur lui des qu'elles changent
-	-- pendant qu'il marche avec le joueur, et dit une fois si son geste de parole ecrit les memes articulations que
-	-- sa marche. Posee pour le "il marche et joue une autre animation" du trajet vers le camion.
-	-- A remettre a false une fois regle.
-	DEBUG_GRANDPA_ANIMS = true,
 	-- Toujours rien apres ce delai : on le DIT. Un halo qui ne s'allume jamais ne produit aucune erreur, et sans
 	-- ce message on chercherait le bug dans l'animation du halo au lieu du nom de la porte.
 	NOT_FOUND_WARN_AFTER = 12,

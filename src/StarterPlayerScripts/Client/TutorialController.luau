@@ -2500,7 +2500,6 @@ local function step(dt: number)
 		local door = findPart(TutorialConfigs.TRUCK_DOOR_NAME)
 		if door then
 			truckMarker = WorldMarker.show(door, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
-			print(`[Tutorial] Marqueur pose sur "{TutorialConfigs.TRUCK_DOOR_NAME}".`)
 		elseif not warned.warnedNoTruckDoor and now - truckWantedAt > TutorialConfigs.TRUCK_DOOR_PATIENCE then
 			-- ON NOMME CE QU'ON N'A PAS TROUVE. C'est ce message qui a designe la vraie cause la premiere fois :
 			-- il y avait bien un "DoorBack", mais c'etait le Motor6D du hayon, pas sa part.
@@ -3003,7 +3002,6 @@ function TutorialController.init()
 	resolve("TutorialGrandpaBench", function(r)
 		r.OnClientEvent:Connect(function(phase)
 			if phase == "walk" then
-				print("[Tutorial] Le grand-pere part s'asseoir sur son banc.")
 				sayVoice(TutorialConfigs.SEAT_DOWN_SOUND)
 			elseif phase == "hup" then
 				sayVoice(TutorialConfigs.HUP_JUMP_SOUND)
@@ -3085,7 +3083,6 @@ function TutorialController.init()
 
 	resolve("TutorialGrandpaAtTruck", function(r)
 		r.OnClientEvent:Connect(function()
-			print("[Tutorial] Le grand-pere est arrive au camion : le marqueur passe sur le hayon.")
 			escorting = false
 			sayVoice(TutorialConfigs.OPEN_TRUCK_SOUND)
 			-- LE MARQUEUR PASSE SUR LE HAYON. On pose l'INTENTION, pas le marqueur : la boucle le fabrique des
