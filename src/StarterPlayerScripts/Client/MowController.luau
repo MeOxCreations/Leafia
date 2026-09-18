@@ -33,6 +33,7 @@ local Vignette = require(ReplicatedStorage.Modules.UI.Core.Vignette)
 local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 local DriveCamera = require(script.Parent.Utils.DriveCamera)
+local PullTimerHandler = require(ReplicatedStorage.Modules.UI.Mow.PullTimerHandler)
 
 local MowController = {}
 
@@ -59,6 +60,10 @@ local carryRemote: RemoteEvent? = nil
 local steerRemote: RemoteEvent? = nil
 local pullRemote: RemoteEvent? = nil
 local pullBound = false
+-- LE RYTHME DES CLICS SUR LA CORDE. `last` : le dernier clic accepte (anti double-clic). `waitUntil` : on attend
+-- que le serveur confirme ce clic -- entre le clic et sa reponse, le suivant tomberait pendant le geste et ne
+-- ferait rien. `seen` : l'heure de fin connue AU MOMENT du clic ; quand elle change, le serveur a repondu.
+local pullClick: { last: number, waitUntil: number, seen: number? } = { last = 0, waitUntil = 0, seen = nil }
 -- Dernier braquage ENVOYE. On ne renvoie que sur un vrai changement : tenir une touche ne doit pas remplir
 -- le reseau d'un message par image pour une valeur qui ne bouge pas.
 local lastSteerSent = 0
@@ -1316,6 +1321,23 @@ local function setPullBound(active: boolean)
 			if not pullRemote then
 				return
 			end
+			-- UN CLIC QUI NE PEUT RIEN FAIRE NE PART PAS : ni message, ni gerbe. Trois raisons de l'ignorer --
+			-- trop pres du precedent, reponse du serveur encore attendue, geste encore en cours (la barre
+			-- d'attente le montre). Sans ca, la gerbe partait a chaque clic alors que la corde ne bougeait pas, et
+			-- le joueur croyait que son clic comptait.
+			local now = os.clock()
+			if now - pullClick.last < MowConfigs.PULL_DEBOUNCE or now < pullClick.waitUntil then
+				return
+			end
+			local current = myMower()
+			local ready = if current then current:GetAttribute(MowConfigs.PULL_READY_ATTRIBUTE) else nil
+			local readyAt = if typeof(ready) == "number" then ready :: number else nil
+			if readyAt and readyAt > Workspace:GetServerTimeNow() then
+				return
+			end
+			pullClick.last = now
+			pullClick.waitUntil = now + MowConfigs.PULL_CONFIRM_TIMEOUT
+			pullClick.seen = readyAt
 			pullRemote:FireServer()
 			-- LA GERBE PART TOUT DE SUITE, sans attendre la reponse du serveur. C'est un effet, pas une
 			-- decision : le serveur dira si le moteur prend, mais l'a-coup du bras, lui, a deja eu lieu.
@@ -1574,6 +1596,7 @@ local function update(dt: number)
 
 	if not mine then
 		setPullBound(false)
+		PullTimerHandler.hide()
 		lastCutPos = nil
 		-- ON ETEINT CE QU'ON A ALLUME. Une machine reposee garderait sinon son vent et ses brins d'herbe en vol
 		-- pour toujours : les emetteurs vivent sur le MODELE, ils ne partent pas avec le portage.
@@ -1585,6 +1608,18 @@ local function update(dt: number)
 		return
 	end
 	setPullBound(not running)
+	-- LA BARRE D'ATTENTE DE LA CORDE, et la fin de l'attente de confirmation : l'heure de fin a change, donc le
+	-- serveur a repondu au dernier clic.
+	local ready = mine:GetAttribute(MowConfigs.PULL_READY_ATTRIBUTE)
+	local readyAt = if typeof(ready) == "number" and not running then ready :: number else nil
+	if readyAt ~= pullClick.seen then
+		pullClick.waitUntil = 0
+		pullClick.seen = readyAt
+	end
+	local mineRoot = rootOf(mine)
+	if mineRoot then
+		PullTimerHandler.update(mineRoot, readyAt, MowConfigs.PULL_TIMER_UP)
+	end
 
 	local point, radius = cutPointOf(mine)
 	if not point then

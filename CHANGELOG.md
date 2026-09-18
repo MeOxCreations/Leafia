@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.881 — Une barre d'attente au-dessus de la tondeuse entre deux coups de corde
+
+- `MowService.pullStarter` pose `LeafiaMowPullReadyAt` sur la tondeuse (heure serveur ou la corde redevient
+  tirable : le reste du geste a `START_SPEED`). Le rearmement apres un tirage rate la remet a l'instant exact ;
+  `releaseLauncher` (moteur lance, machine reposee) l'efface.
+- Nouveau `Modules/UI/Mow/PullTimerHandler` : une petite carte blanche avec une jauge verte au-dessus de la
+  machine, qui se remplit pendant le geste et disparait quand on peut retirer.
+- `MowController` : un clic sur la corde est ignore (ni message, ni gerbe) s'il suit le precedent de moins de
+  `PULL_DEBOUNCE` (0.1 s), si le serveur n'a pas encore repondu au precedent (filet `PULL_CONFIRM_TIMEOUT`, 1 s),
+  ou si le geste est encore en cours. Avant, la gerbe partait a chaque clic alors que la corde ne bougeait pas.
+
 ## 0.0.880 — L'herbe tondue est moins ecrasee et d'un vert plus frais
 
 - `GrassZoneConfigs.MOWN_SCALE_Y` : 0.25 -> 0.4. Le maillage coupe est deja court, le tasser au quart de la

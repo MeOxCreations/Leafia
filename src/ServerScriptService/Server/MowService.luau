@@ -243,6 +243,8 @@ end
 -- La poignee revient a sa place sur la machine, EXACTEMENT la ou elle etait. On la re-soude plutot que de la
 -- poser : sans joint elle tomberait, la tondeuse etant desancree pendant le portage.
 local function releaseLauncher(model: Model, state: CarryState)
+	-- PLUS DE CORDE A TIRER : la barre d'attente du client disparait avec elle.
+	model:SetAttribute(MowConfigs.PULL_READY_ATTRIBUTE, nil)
 	local joint = state.launcherJoint
 	state.launcherJoint = nil
 	if joint then
@@ -377,6 +379,9 @@ local function playStart(model: Model, character: Model, state: CarryState, onDo
 		track:Play(0)
 		track:AdjustSpeed(0)
 		track.TimePosition = 0
+		-- PRET POUR DE BON, a cet instant precis. La duree annoncee au tirage n'etait qu'une estimation : c'est ICI
+		-- que la corde redevient tirable, et c'est ce moment-la que le client doit voir.
+		model:SetAttribute(MowConfigs.PULL_READY_ATTRIBUTE, workspace:GetServerTimeNow())
 	end)
 	-- FIGEE A SA PREMIERE IMAGE : le personnage TIENT la corde, pret a tirer. C'est le CLIC du joueur qui la
 	-- relance (voir MowService.pull) -- on ne demarre pas une tondeuse en la regardant.
@@ -390,11 +395,16 @@ end
 
 -- TIRAGE DE CORDE : le joueur a clique. On relance la piste figee -- c'est le seul changement, la posture etait
 -- deja la bonne, donc il n'y a aucune transition a fondre.
-local function pullStarter(state: CarryState)
+local function pullStarter(model: Model, state: CarryState)
 	local track = state.start
 	if not track or track.Speed ~= 0 then
 		return -- pas de corde a tirer, ou deja en train de la tirer
 	end
+	-- ON ANNONCE QUAND ON POURRA RETIRER : le reste du geste, a la vitesse du tirage. Le client en fait une barre
+	-- d'attente, pour que le joueur VOIE que son clic suivant attend, au lieu de cliquer dans le vide.
+	-- Une estimation, rectifiee au rearmement (voir `playStart`) : c'est lui qui dit le vrai moment.
+	local left = math.max(track.Length - track.TimePosition, 0) / MowConfigs.START_SPEED
+	model:SetAttribute(MowConfigs.PULL_READY_ATTRIBUTE, workspace:GetServerTimeNow() + left)
 	-- ON NE FAIT QUE RELANCER LA PISTE. Tout ce qui se voit et s'entend (la machine qui se cabre, la toux du
 	-- moteur, le son de la corde) part du MARQUEUR pose dans l'animation, pas d'ici -- voir yankStarter.
 	--
@@ -1429,9 +1439,9 @@ function MowService.init()
 	-- le message si la machine est deja lancee -- un clic de plus ne relance pas le geste.
 	local pullRemote = RemoteSetup.getRemote("PullMowStarter", "Mow") :: RemoteEvent
 	pullRemote.OnServerEvent:Connect(function(player: Player)
-		for _, state in pairs(carried) do
+		for model, state in pairs(carried) do
 			if state.owner == player then
-				pullStarter(state)
+				pullStarter(model, state)
 			end
 		end
 	end)

@@ -223,6 +223,19 @@ return {
 	-- Meme mecanique que le lanceur du taille-haie (voir ToolStartService : Ready puis Pulling partagent la meme
 	-- piste, seule la vitesse change).
 	START_ACTION = "LeafiaMowPull",
+	-- ===== LE RYTHME DES COUPS DE CORDE =====
+	-- UN CLIC TROP RAPPROCHE DU PRECEDENT EST IGNORE, en secondes. Un double-clic nerveux ne doit pas compter pour
+	-- deux tirages -- le second tomberait pendant le geste, et le serveur l'ignorerait de toute facon.
+	PULL_DEBOUNCE = 0.1,
+	-- QUAND ON POURRA RETIRER, en temps SERVEUR (`workspace:GetServerTimeNow()`), pose par MowService sur la
+	-- tondeuse a chaque coup. Le client en tire la barre d'attente au-dessus de la machine, et refuse les clics
+	-- d'ici la. Absent = pas de corde a tirer (moteur lance, ou machine reposee).
+	PULL_READY_ATTRIBUTE = "LeafiaMowPullReadyAt",
+	-- Si le serveur ne confirme pas un coup dans ce delai, le client redevient cliquable. Filet pour un message
+	-- perdu : sans lui, un seul clic sans reponse bloquerait la corde pour de bon.
+	PULL_CONFIRM_TIMEOUT = 1,
+	-- LA BARRE D'ATTENTE, au-dessus de la machine, en studs.
+	PULL_TIMER_UP = 3.2,
 	-- LA GERBE D'ETOILES DU TIRAGE, en studs au-dessus de la racine de la machine. La meme que les coups a la
 	-- porte : le joueur a deja appris que ce dessin veut dire "un coup vient d'etre donne", et un effort qui ne
 	-- donne rien merite exactement ca.
