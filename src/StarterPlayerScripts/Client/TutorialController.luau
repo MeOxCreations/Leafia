@@ -2134,7 +2134,7 @@ function TutorialController.talkToGrandpa()
 	whenSpeechDone(function()
 		-- ET IL L'EMMENE. La phrase part AVEC le depart, pas avant et pas apres : le joueur le voit s'ebranler
 		-- pendant qu'il l'entend annoncer le camion, donc il comprend qu'il doit suivre.
-		sayVoice(TutorialConfigs.GO_ON_TRUCK_SOUND)
+		sayWithBubble(TutorialConfigs.GO_ON_TRUCK_SOUND, TutorialConfigs.GO_ON_TRUCK_TEXT)
 		local truck = truckRemote
 		if truck then
 			truck:FireServer()

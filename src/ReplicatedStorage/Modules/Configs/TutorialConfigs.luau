@@ -660,6 +660,7 @@ return {
 	-- ET IL L'EMMENE AU CAMION. Dite au moment ou il se met en route : une phrase qui annonce un deplacement doit
 	-- partir AVEC lui, sinon le joueur le voit s'eloigner sans savoir pourquoi.
 	GO_ON_TRUCK_SOUND = voice("Oldman_scene_speech_GoOnTruck"),
+	GO_ON_TRUCK_TEXT = "Let's go to the truck.",
 	-- ET CE QU'IL DIT EN ARRIVANT : ouvre l'arriere, les outils sont dedans.
 	OPEN_TRUCK_SOUND = voice("Oldman_scene_speech_OpenTruckBack"),
 	-- ET QUAND LE JOUEUR OUVRE ENFIN LE HAYON : il commente ce qu'on y voit. Dite a l'OUVERTURE et pas a
