@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.891 — Le contour de la jauge des taches est a cheval sur le bord
+
+- `TaskBannerHandler` : `UIStroke.BorderStrokePosition = Center` sur la barre (etait `Outer`, le defaut). Sous
+  pcall, avec un warn si la propriete n'existe pas.
+
 ## 0.0.890 — Sous le rideau de chargement, le joueur ne bouge plus, et le jeu apparait camera dans son dos
 
 - `LoadingScreenClient` (rideau : tuto, jardins, arrivee par teleport) : pendant tout le rideau, `Move(0)` et

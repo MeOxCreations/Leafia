@@ -200,12 +200,21 @@ local function buildRow(parent: Instance): Frame
 	}, bar)
 	-- `ScaledSize` : l'epaisseur est rapportee a la taille de l'element, donc le contour reste juste sur tous les
 	-- ecrans. En `Pixels`, il faudrait le reregler pour chaque resolution.
-	make("UIStroke", {
+	local barStroke = make("UIStroke", {
 		Color = Color3.fromRGB(255, 255, 255),
 		StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
 		Thickness = 0.14,
 		LineJoinMode = Enum.LineJoinMode.Round,
 	}, bar)
+	-- LE CONTOUR A CHEVAL SUR LE BORD (Center), pas a l'exterieur (Outer, le defaut) : demande du joueur, reglee dans
+	-- Studio. Sous pcall : propriete recente, et un nom d'enum inconnu ferait tomber tout le bandeau au lieu du seul
+	-- contour.
+	local placed = pcall(function()
+		(barStroke :: any).BorderStrokePosition = (Enum :: any).BorderStrokePosition.Center
+	end)
+	if not placed then
+		warn("[TaskBanner] UIStroke.BorderStrokePosition introuvable : le contour de la barre reste a l'exterieur.")
+	end
 
 	local fill = make("Frame", {
 		Name = "Fill",
