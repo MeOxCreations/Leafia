@@ -322,7 +322,12 @@ local function apply(
 	-- interpoler vers une valeur qui BOUGE encore n'est pas interpoler vers sa destination.
 	local height = squash * shrinkY
 	if clump.cutStarted and clump.cutT < 1 then
-		clump.cutHold = math.min(clump.cutHold, height)
+		-- LE PLAFOND NE DESCEND PAS SOUS LA HAUTEUR TONDUE. La machine ecrase la touffe en passant, parfois plus bas
+		-- que sa hauteur finale : le plafond gardait ce creux, et la touffe REMONTAIT ensuite vers sa hauteur
+		-- tondue, derriere la machine -- "la pelouse monte quand on la tond". Invisible tant que la hauteur tondue
+		-- (0.25) etait sous l'ecrasement, apparu en la montant a 0.4. Borne ici, le trajet ne fait plus que
+		-- descendre, quelle que soit la hauteur reglee. Le seul ecart se fait a l'echange du maillage, sous le carter.
+		clump.cutHold = math.min(clump.cutHold, math.max(height, shrink * GrassZoneConfigs.MOWN_SCALE_Y))
 		local e = clump.cutT
 		local final = squash * shrink * GrassZoneConfigs.MOWN_SCALE_Y
 		height = clump.cutHold + (final - clump.cutHold) * (e * e * (3 - 2 * e))

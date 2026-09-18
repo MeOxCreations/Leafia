@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.883 — L'herbe tondue ne remonte plus derriere la tondeuse
+
+- `GrassZoneController` : pendant la coupe, le plafond de hauteur (`cutHold`) ne descend plus sous la hauteur
+  tondue. La machine ecrase la touffe en passant, parfois plus bas que `MOWN_SCALE_Y` : la touffe remontait
+  ensuite vers sa hauteur tondue, derriere la machine. Apparu en passant `MOWN_SCALE_Y` de 0.25 a 0.4 (0.0.880).
+
 ## 0.0.882 — Prendre la cisaille la met en main, referme le camion, et le grand-pere repart
 
 - BUG : `TruckToolsController.close()` posait son drapeau mais la barre restait a l'ecran (le `return` du
