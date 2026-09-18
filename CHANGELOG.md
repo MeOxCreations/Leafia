@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.882 — Prendre la cisaille la met en main, referme le camion, et le grand-pere repart
+
+- BUG : `TruckToolsController.close()` posait son drapeau mais la barre restait a l'ecran (le `return` du
+  drapeau sortait sans rien cacher). Ni la fermeture apres TAKE, ni celle du didacticiel ne marchaient.
+- `TruckToolsService` : prendre un outil qui s'equipe (cisaille, taille-haie, rateau) le met EN MAIN
+  (`ToolService.equip`). Avant, il allait seulement dans l'inventaire : il fallait rouvrir le menu des outils, et
+  le didacticiel, qui attend la cisaille en main, restait bloque. Si les mains sont prises, il reste dans
+  l'inventaire. (Ce service ne tourne que dans la place du didacticiel.)
+- Dans le didacticiel, prendre la cisaille referme le hayon (`TruckService.close`), donc la barre IN THE TRUCK
+  se ferme chez tout le monde.
+- `TruckService` : la bascule du prompt passe par une fonction `setOpen` partagee avec `TruckService.close`
+  (attribut, sons et mouvement par un seul chemin).
+- Le titre du debut de scene devient `GRANDFATHER` (etait `CHAPTER 1 : THE GRANDFATHER`).
+
 ## 0.0.881 — Une barre d'attente au-dessus de la tondeuse entre deux coups de corde
 
 - `MowService.pullStarter` pose `LeafiaMowPullReadyAt` sur la tondeuse (heure serveur ou la corde redevient

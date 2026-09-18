@@ -415,7 +415,8 @@ return {
 	--
 	-- EN ANGLAIS, comme tout ce que le joueur lit : le traducteur automatique de Roblox part de l'anglais, et un
 	-- texte ecrit en francais n'est traduit nulle part.
-	CHAPTER_TITLE = "CHAPTER 1 : THE GRANDFATHER",
+	-- LE NOM SEUL, sans numero de chapitre : demande du joueur le 18/09/2026.
+	CHAPTER_TITLE = "GRANDFATHER",
 	-- Apres le debut de la scene. Le temps que les barres finissent de descendre : un titre qui s'ecrit sur une
 	-- bande encore en mouvement se fait couper par elle.
 	CHAPTER_DELAY = 0.8,

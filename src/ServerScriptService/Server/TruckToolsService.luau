@@ -26,8 +26,11 @@ local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 -- quand elle s'est posee. Ses zones de grimpe se calculent depuis le sol sous elle, elles ne peuvent pas se faire
 -- avant l'atterrissage.
 local LadderZoneService = require(script.Parent.LadderZoneService)
+local ToolService = require(script.Parent.ToolService)
+local TruckService = require(script.Parent.TruckService)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
+local PlacesConfig = require(ReplicatedStorage.Modules.Configs.PlacesConfig)
 local BinConfigs = require(ReplicatedStorage.Modules.Configs.BinConfigs)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 
@@ -462,13 +465,25 @@ function TruckToolsService.init()
 				else nil
 			-- CE QUI VA DANS LES MAINS NE VOLE PAS. Voir `moveNow` : un objet qui disparait a l'arrivee ne doit
 			-- pas etre annonce par un trajet qui dit "regarde ou je me pose".
-			if TruckConfigs.TOOL_EQUIP[toolName :: string] then
+			local equipName = TruckConfigs.TOOL_EQUIP[toolName :: string]
+			if equipName then
 				print(`[TruckToolsService] {player.Name} prend "{toolName}" en main.`)
 				inside:SetAttribute(
 					TruckConfigs.POSE_ATTRIBUTE,
 					truck:GetPivot():ToObjectSpace(inside:GetPivot())
 				)
 				moveNow(inside, landing :: CFrame, nil)
+				-- ET IL EST VRAIMENT EN MAIN. Avant, "prendre" le rangeait seulement dans l'inventaire : le joueur
+				-- devait rouvrir le menu des outils pour s'en servir, alors que le bouton disait TAKE -- et le
+				-- didacticiel, qui attend la cisaille EN MAIN, restait bloque sans rien expliquer. Refuse (mains deja
+				-- prises par la tondeuse ou l'echelle), il reste dans l'inventaire : rien n'est perdu.
+				ToolService.equip(player, equipName)
+				-- LA CISAILLE DU DIDACTICIEL REFERME LE CAMION : c'est ce qu'on lui demandait d'y prendre, et le
+				-- grand-pere part aussitot vers la haie. Fermer le hayon ferme aussi la barre des outils chez tout
+				-- le monde -- elle suit l'etat de la porte.
+				if toolName == TutorialConfigs.SHEAR_TOOL_NAME and game.PlaceId == PlacesConfig.TUTORIAL then
+					TruckService.close(truck)
+				end
 				return
 			end
 			-- ON RETIENT SA POSE AVANT DE LE SORTIR, en repere du camion : c'est elle qui le ramenera exactement

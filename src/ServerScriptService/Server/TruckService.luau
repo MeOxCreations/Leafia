@@ -20,6 +20,7 @@ local TruckService = {}
 
 type Truck = {
 	model: Model,
+	door: BasePart, -- porte les sons d'ouverture et de fermeture
 	track: AnimationTrack?,
 	open: boolean, -- ce qu'on VEUT : la porte glisse vers cet etat, elle n'y saute pas
 	time: number, -- ou l'on en est dans l'animation, en secondes
@@ -75,6 +76,36 @@ local function step(dt: number)
 	end
 end
 
+--- Ouvre ou ferme la porte. UN SEUL CHEMIN pour le prompt et pour le scenario : l'attribut, les sons et le
+--- mouvement ne peuvent donc pas se desaccorder selon qui a demande.
+local function setOpen(truck: Truck, open: boolean)
+	if truck.open == open then
+		return
+	end
+	truck.open = open
+	-- ET ON LE DIT AU MONDE. L'interface des outils n'a pas a refaire la detection de proximite ni a suivre
+	-- l'animation : elle demande "est-elle ouverte ?", et l'attribut repond -- chez tout le monde, y compris
+	-- chez un client arrive en retard.
+	truck.model:SetAttribute(TruckConfigs.OPEN_ATTRIBUTE, open)
+	local door = truck.door
+	-- LE SON PART A L'APPUI, pas a la fin du mouvement : c'est le geste du joueur qu'il accompagne. Attendre
+	-- que la porte soit ouverte le decalerait d'une seconde et il ne repondrait plus a rien.
+	if open then
+		SoundUtils.play(TruckConfigs.DOOR_OPEN_SOUND, door)
+	else
+		-- LA FERMETURE ARRIVE EN RETARD. Le bruit d'une porte qui claque se fait quand elle TOUCHE, pas quand
+		-- on la pousse : joue a l'appui, il precedait l'image de la porte encore grande ouverte.
+		task.delay(TruckConfigs.DOOR_CLOSE_SOUND_DELAY, function()
+			-- ON REVALIDE AVANT DE JOUER. Un second appui pendant l'attente rouvre la porte, et le claquement
+			-- partirait alors sur une porte qui s'ouvre. Le drapeau dit l'etat COURANT, pas celui d'il y a une
+			-- demi-seconde.
+			if not truck.open and door.Parent then
+				SoundUtils.play(TruckConfigs.DOOR_CLOSE_SOUND, door)
+			end
+		end)
+	end
+end
+
 local function setup(model: Model)
 	-- LE PROMPT VA SUR LA PORTE, pas sur le camion. Une part precise plutot que le modele entier : sinon il
 	-- s'affiche des qu'on longe la carrosserie, y compris a l'avant, ou l'action n'a aucun sens.
@@ -87,7 +118,7 @@ local function setup(model: Model)
 		return
 	end
 
-	local truck: Truck = { model = model, track = nil, open = false, time = 0 }
+	local truck: Truck = { model = model, door = door :: BasePart, track = nil, open = false, time = 0 }
 	-- L'ETAT DE DEPART EST ECRIT, pas suppose. Un attribut absent se lit `nil`, et chaque lecteur devrait alors
 	-- decider lui-meme si ca veut dire "fermee" ou "on ne sait pas" -- donc deux lecteurs finiraient par ne pas
 	-- repondre pareil.
@@ -181,36 +212,23 @@ local function setup(model: Model)
 	prompt.Triggered:Connect(function(_player: Player)
 		-- UNE BASCULE, et rien de plus : le meme appui ouvre et referme. Aucun etat a valider -- le pire qu'un
 		-- joueur puisse faire est d'ouvrir une porte de camion.
-		truck.open = not truck.open
-		-- ET ON LE DIT AU MONDE. L'interface des outils n'a pas a refaire la detection de proximite ni a suivre
-		-- l'animation : elle demande "est-elle ouverte ?", et l'attribut repond -- chez tout le monde, y compris
-		-- chez un client arrive en retard.
-		model:SetAttribute(TruckConfigs.OPEN_ATTRIBUTE, truck.open)
-		-- LE SON PART A L'APPUI, pas a la fin du mouvement : c'est le geste du joueur qu'il accompagne. Attendre
-		-- que la porte soit ouverte le decalerait d'une seconde et il ne repondrait plus a rien.
-		--
-		-- Lu APRES la bascule : `truck.open` porte deja l'etat VOULU, donc il dit quel son jouer sans qu'on ait a
-		-- retenir le precedent.
-		if truck.open then
-			SoundUtils.play(TruckConfigs.DOOR_OPEN_SOUND, door :: BasePart)
-		else
-			-- LA FERMETURE ARRIVE EN RETARD. Le bruit d'une porte qui claque se fait quand elle TOUCHE, pas quand
-			-- on la pousse : joue a l'appui, il precedait l'image de la porte encore grande ouverte.
-			task.delay(TruckConfigs.DOOR_CLOSE_SOUND_DELAY, function()
-				-- ON REVALIDE AVANT DE JOUER. Un second appui pendant l'attente rouvre la porte, et le claquement
-				-- partirait alors sur une porte qui s'ouvre. Le drapeau dit l'etat COURANT, pas celui d'il y a une
-				-- demi-seconde.
-				if not truck.open and (door :: BasePart).Parent then
-					SoundUtils.play(TruckConfigs.DOOR_CLOSE_SOUND, door :: BasePart)
-				end
-			end)
-		end
+		setOpen(truck, not truck.open)
 	end)
 
 	table.insert(trucks, truck)
 
 	if not stepConn then
 		stepConn = RunService.Heartbeat:Connect(step)
+	end
+end
+
+--- Referme le hayon de `model` (ou de tous les camions si nil). Pour le scenario : il a pris ce qu'on lui
+--- demandait, le camion a fini son role pour l'instant.
+function TruckService.close(model: Model?)
+	for _, truck in trucks do
+		if model == nil or truck.model == model then
+			setOpen(truck, false)
+		end
 	end
 end
 

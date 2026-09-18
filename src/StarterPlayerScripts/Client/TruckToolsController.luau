@@ -150,7 +150,12 @@ local function refreshNow()
 		return
 	end
 	if dismissed then
-		return -- fermee a la main : elle reviendra quand il s'eloignera ou rouvrira le hayon
+		-- FERMEE A LA MAIN : elle reviendra quand il s'eloignera ou rouvrira le hayon.
+		--
+		-- ELLE SE CACHE ICI, et c'etait le bug : ce `return` sortait sans rien cacher. `close()` posait donc le
+		-- drapeau et la barre restait a l'ecran -- apres TAKE, et meme quand le didacticiel la fermait.
+		TruckToolsHandler.setShown(false)
+		return
 	end
 	local list = allTools()
 	if #list == 0 then
