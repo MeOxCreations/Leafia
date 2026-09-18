@@ -510,7 +510,11 @@ local GrassZoneConfigs = {
 	-- La lecon vaut au-dela de ce chiffre : la deformation d'un maillage n'est un probleme que si elle SE VOIT en
 	-- tant que deformation. Sur des brins d'herbe, tous verticaux, l'ecrasement se lit comme une COUPE. C'est
 	-- pour ca qu'on est revenu ici apres avoir cherche ailleurs.
-	MOWN_SCALE_Y = 0.25,
+	--
+	-- 0.4 le 18/09/2026 : a 0.25, le joueur trouvait l'herbe coupee ECRASEE, et c'est lui qui a raison a l'ecran.
+	-- Le maillage coupe (GrassCut) est deja court par lui-meme : le tasser au quart de la hauteur de l'herbe haute
+	-- l'aplatissait une seconde fois. Remonter si c'est encore trop plat, redescendre vers 0.3 si ca fait mal coupe.
+	MOWN_SCALE_Y = 0.4,
 	-- EMPRISE AU SOL. A 1, la touffe couvre exactement la meme surface qu'avant la coupe : aucun trou ne peut
 	-- apparaitre. C'est la valeur sure, et il n'y a aucune raison d'en bouger sauf a vouloir un gazon clairseme.
 	MOWN_SCALE_XZ = 1,
@@ -584,7 +588,12 @@ local GrassZoneConfigs = {
 	-- C'EST LA COULEUR DE LA BANDE CLAIRE, pas une teinte moyenne : les bandes ne font qu'ASSOMBRIR a partir
 	-- d'elle (voir MOWN_BAND_STRENGTH). Ce qui est ecrit ici est donc exactement ce qu'on voit sur une bande
 	-- claire -- rien ne vient le multiplier par-dessus.
-	MOWN_COLOR = Color3.fromRGB(123, 148, 74),
+	--
+	-- (106, 156, 64) le 18/09/2026, a la place de (123, 148, 74). L'ancienne tirait sur le JAUNE-OLIVE (rouge a 83 %
+	-- du vert) : a cote de l'herbe haute, olive elle aussi, la tonte ne se distinguait que par la clarte, et
+	-- ressemblait a de l'herbe seche. Celle-ci est plus VERTE (rouge a 68 % du vert) : l'ecart avec l'herbe haute
+	-- passe par la teinte ET la clarte -- un gazon frais a cote d'une herbe sombre.
+	MOWN_COLOR = Color3.fromRGB(106, 156, 64),
 
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.

@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.880 — L'herbe tondue est moins ecrasee et d'un vert plus frais
+
+- `GrassZoneConfigs.MOWN_SCALE_Y` : 0.25 -> 0.4. Le maillage coupe est deja court, le tasser au quart de la
+  hauteur de l'herbe haute l'aplatissait une seconde fois.
+- `GrassZoneConfigs.MOWN_COLOR` : (123, 148, 74) -> (106, 156, 64). L'ancienne tirait sur le jaune-olive et
+  ressemblait a de l'herbe seche ; la nouvelle est plus verte, donc la tonte se distingue de l'herbe haute par la
+  teinte ET la clarte. Les bandes sombres suivent (elles partent de cette couleur).
+
 ## 0.0.879 — La couronne de points du chargement remonte et rapetisse
 
 - `CurtainVisual` : `SPIN_POS` passe de 0.92 a 0.85 de la hauteur, `SPIN_SIZE` de 0.08 a 0.06. Vaut pour les
