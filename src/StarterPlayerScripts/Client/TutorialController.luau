@@ -1285,12 +1285,16 @@ type BubbleLine = { text: string, emotion: string? }
 local function sayWithBubble(path: { string }, text: string, emotion: string?): Sound?
 	local voice = sayVoice(path)
 	local length = if voice then voice.TimeLength else 0
+	-- LA DUREE DE LA VOIX, ou une estimation au rythme d'une voix parlee si le fichier n'est pas encore charge.
+	local spoken = if length > 0.5 then length else #text / TutorialConfigs.BUBBLE_SPOKEN_CPS
 	Dialogue.play({
 		{
 			speaker = TutorialConfigs.SPEECH2_SPEAKER,
 			text = text,
 			emotion = emotion or "happy",
-			hold = if length > 0.5 then length else TutorialConfigs.BUBBLE_HOLD_FALLBACK,
+			hold = math.max(spoken, TutorialConfigs.BUBBLE_HOLD_FALLBACK),
+			-- LE TEXTE S'ECRIT AU RYTHME DE LA VOIX, et finit un peu avant elle : le joueur lit ce qu'il entend.
+			typeTime = spoken * TutorialConfigs.BUBBLE_TYPE_SHARE,
 		},
 	})
 	return voice

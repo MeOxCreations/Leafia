@@ -786,6 +786,10 @@ return {
 	-- DUREE D'UNE BULLE PARLEE quand la voix n'a pas encore de longueur connue (fichier pas encore charge). Sinon la
 	-- bulle dure exactement ce que dure la voix.
 	BUBBLE_HOLD_FALLBACK = 3.5,
+	-- LE TEXTE D'UNE BULLE PARLEE s'ecrit sur cette part de la voix (0.85 = fini un peu avant qu'il se taise).
+	BUBBLE_TYPE_SHARE = 0.85,
+	-- Rythme d'une voix parlee, en lettres par seconde : sert a estimer la duree quand le fichier n'est pas charge.
+	BUBBLE_SPOKEN_CPS = 14,
 	-- SA REPLIQUE, DECOUPEE. Chaque ligne porte sa duree : elles avancent TOUTES SEULES, sans que le joueur ait a
 	-- taper. Sur une replique doublee c'est obligatoire -- faire avancer a la main desynchronise le texte de la
 	-- voix des la premiere ligne, et plus rien ne les recale ensuite.

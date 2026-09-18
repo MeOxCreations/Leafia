@@ -31,7 +31,11 @@ local player = Players.LocalPlayer
 ---
 --- Absent : la ligne attend le joueur, comme avant. Le tap continue de fonctionner dans les deux cas -- il permet
 --- de couper court, jamais de rester bloque.
-export type Line = { speaker: string?, text: string, emotion: string?, hold: number? }
+---
+--- `typeTime` : le texte s'ecrit en ce nombre de secondes au lieu du rythme par defaut. Pour une replique doublee :
+--- a 45 lettres par seconde, une phrase de 150 lettres etait ecrite en 3 s pendant que la voix en durait 9 -- le
+--- texte courait loin devant ce que le joueur entendait.
+export type Line = { speaker: string?, text: string, emotion: string?, hold: number?, typeTime: number? }
 
 -- Emotions de PAPI (le meme dessin, plusieurs expressions). Une replique choisit son emotion par NOM (lisible),
 -- pas par asset id brut. Emotion absente sur une ligne = on garde le dessin precedent.
@@ -100,6 +104,7 @@ local sequence: { Line } = {}
 local currentIndex = 0
 local total = 0 -- graphemes de la replique courante
 local revealed = 0 -- combien on en a ecrit (fractionnaire, arrondi a l'affichage)
+local lineSpeed = CHARS_PER_SEC -- vitesse d'ecriture de la ligne courante (voir `typeTime`)
 local typing = false -- vrai tant que la ligne s'ecrit
 local shownOnScreen = false
 local onDoneFn: (() -> ())? = nil
@@ -214,6 +219,8 @@ local function startLine(i: number)
 	body.MaxVisibleGraphemes = 0
 	total = graphemeCount(line.text)
 	revealed = 0
+	local typeTime = line.typeTime
+	lineSpeed = if typeTime and typeTime > 0 then math.max(total / typeTime, 1) else CHARS_PER_SEC
 	typing = true
 	typeAccum = 0
 	setHintVisible(false)
@@ -467,7 +474,7 @@ local function build()
 			return
 		end
 		local prev = math.floor(revealed)
-		revealed += dt * CHARS_PER_SEC
+		revealed += dt * lineSpeed
 		local n = math.floor(revealed)
 		if n >= total then
 			n = total

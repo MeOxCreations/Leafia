@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.899 — Le texte des bulles parlees s'ecrit au rythme de la voix
+
+- `Dialogue.Line.typeTime` : le texte s'ecrit en ce nombre de secondes au lieu de 45 lettres/s.
+- `sayWithBubble` le regle sur la voix : ecrit sur 85 % de sa duree (`BUBBLE_TYPE_SHARE`), la bulle tient toute
+  la voix. Si le fichier n'est pas charge, duree estimee a 14 lettres/s (`BUBBLE_SPOKEN_CPS`). Avant, la consigne
+  des feuilles (150 lettres) s'ecrivait en 3 s pendant que la voix en durait bien plus.
+
 ## 0.0.898 — La tete du grand-pere du chargement est plus petite sur PC
 
 - `CurtainVisual` : sur PC (pas tactile), le visage passe a 60 % de sa taille (`FACE_PC_SCALE`). Le telephone ne
