@@ -116,6 +116,10 @@ local truckMarkerWanted = false
 -- -- le marqueur ne sort pas, et rien ne dit pourquoi. Quelques secondes de patience d'abord : avec le
 -- streaming, "pas encore la" est un etat normal.
 local truckWantedAt = 0
+-- LE HALO DU HAYON, qui respire tant que le marqueur est demande -- comme la porte et la tondeuse. Celui pose dans
+-- Studio sous la part s'il y en a un (ses reglages a l'oeil gagnent), sinon cree ici : Rojo ne synchronise pas le
+-- Workspace, et un halo qui n'existe que dans une place manque dans l'autre sans rien dire.
+local truckHalo: Highlight? = nil
 -- IL N'A QU'UNE PHRASE POUR L'OUVERTURE DU HAYON, et il ne la dit qu'une fois : la porte est une BASCULE, donc
 -- le joueur peut la rouvrir dix fois -- une replique qui repart a chaque fois cesse d'etre une reaction.
 local saidTruckOpened = false
@@ -2515,6 +2519,20 @@ local function step(dt: number)
 		local door = findPart(TutorialConfigs.TRUCK_DOOR_NAME)
 		if door then
 			truckMarker = WorldMarker.show(door, Vector3.new(0, TutorialConfigs.TRUCK_MARKER_UP, 0))
+			local existing = door:FindFirstChild(TutorialConfigs.HIGHLIGHT_NAME)
+			if existing and existing:IsA("Highlight") then
+				truckHalo = existing
+			elseif not truckHalo then
+				-- SUR LA PART SEULE (Adornee), pas sur le camion entier : c'est le hayon qu'on montre.
+				local made = Instance.new("Highlight")
+				made.Name = TutorialConfigs.HIGHLIGHT_NAME
+				made.Adornee = door
+				made.FillColor = Color3.fromRGB(255, 255, 255)
+				made.OutlineColor = Color3.fromRGB(255, 255, 255)
+				made.FillTransparency = TutorialConfigs.FILL_MAX
+				made.Parent = door
+				truckHalo = made
+			end
 		elseif not warned.warnedNoTruckDoor and now - truckWantedAt > TutorialConfigs.TRUCK_DOOR_PATIENCE then
 			-- ON NOMME CE QU'ON N'A PAS TROUVE. C'est ce message qui a designe la vraie cause la premiere fois :
 			-- il y avait bien un "DoorBack", mais c'etait le Motor6D du hayon, pas sa part.
@@ -2524,6 +2542,19 @@ local function step(dt: number)
 					.. "de marqueur sur le camion. Rojo ne synchronise pas le Workspace, elle doit exister dans "
 					.. "CETTE place."
 			)
+		end
+	end
+
+	-- LE HAYON RESPIRE tant que le marqueur est demande, et s'eteint des qu'il est ouvert. Meme battement que la
+	-- porte et la tondeuse (FILL_MIN, FILL_MAX, PULSE_PERIOD) : un seul langage pour "c'est ca qu'on cherche".
+	local tHalo = truckHalo
+	if tHalo and tHalo.Parent then
+		if tHalo.Enabled ~= truckMarkerWanted then
+			tHalo.Enabled = truckMarkerWanted
+		end
+		if truckMarkerWanted then
+			local a = 0.5 - 0.5 * math.cos(os.clock() * math.pi * 2 / TutorialConfigs.PULSE_PERIOD)
+			tHalo.FillTransparency = TutorialConfigs.FILL_MAX + (TutorialConfigs.FILL_MIN - TutorialConfigs.FILL_MAX) * a
 		end
 	end
 
@@ -3250,6 +3281,10 @@ function TutorialController.stop()
 	local halo = highlight
 	if halo and halo.Parent then
 		halo.FillTransparency = TutorialConfigs.FILL_MAX
+	end
+	local tHalo = truckHalo
+	if tHalo and tHalo.Parent then
+		tHalo.Enabled = false
 	end
 	hideOurs()
 	setActionBound(false)

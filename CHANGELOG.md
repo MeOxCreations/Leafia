@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.894 — Le hayon du camion respire quand le grand-pere dit de l'ouvrir
+
+- `TutorialController` : un `Highlight` sur la part `DoorBack` (celui pose dans Studio s'il existe, sinon cree en
+  code, blanc, sur la part seule) bat comme la porte et la tondeuse tant que le marqueur du hayon est demande, et
+  s'eteint a l'ouverture. `TutorialController` : 194 locales sur 200.
+
 ## 0.0.893 — "Let's go to the truck." s'affiche en bulle
 
 - Apres ses felicitations, `Oldman_scene_speech_GoOnTruck` part avec la bulle "Let's go to the truck."
