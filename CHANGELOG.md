@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.896 — La consigne des feuilles s'affiche en bulle quand le grand-pere se leve
+
+- `sayChain` prend un 4e argument facultatif `texts` (la bulle de chaque replique, par son numero) ;
+  `sayWithBubble` rend la voix pour que la suite s'enchaine dessus.
+- En se levant du banc, la 2e replique (`Oldman_scene_speech_SayHowPickupLeaves`) affiche "Now look at all those
+  leaves on the ground. They need picking up. Grab the bucket and the leaf rake. After that, the place'll be
+  perfect." (`PICKUP_LEAVES_TEXT`). La 1re (le compliment) reste sans bulle : texte pas encore fourni.
+
 ## 0.0.895 — La phrase devant la haie n'est plus coupee par le depart vers le banc
 
 - La replique de depart vers le banc (`SEAT_DOWN_SOUND`) attend la fin de la voix en cours (`whenSpeechDone`).

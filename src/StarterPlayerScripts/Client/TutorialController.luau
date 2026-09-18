@@ -1276,6 +1276,23 @@ local function sayVoice(path: { string }): Sound?
 	return speechSound
 end
 
+-- UNE REPLIQUE ET SA BULLE : la voix, et son texte a l'ecran le temps qu'elle dure. Une consigne qui ne passe
+-- que par le son est perdue pour tout joueur qui joue sans le son -- et sur telephone, c'est souvent le cas.
+-- Rend la voix, comme `sayVoice` : une suite de repliques s'enchaine sur sa fin.
+local function sayWithBubble(path: { string }, text: string, emotion: string?): Sound?
+	local voice = sayVoice(path)
+	local length = if voice then voice.TimeLength else 0
+	Dialogue.play({
+		{
+			speaker = TutorialConfigs.SPEECH2_SPEAKER,
+			text = text,
+			emotion = emotion or "happy",
+			hold = if length > 0.5 then length else TutorialConfigs.BUBBLE_HOLD_FALLBACK,
+		},
+	})
+	return voice
+end
+
 -- UNE SUITE DE REPLIQUES QUI S'ENCHAINENT SANS TROU.
 --
 -- LA SECONDE PART SUR LA FIN REELLE DE LA PREMIERE (`Ended`), jamais sur une duree ecrite quelque part : une
@@ -1290,7 +1307,14 @@ end
 --
 -- Note : la paire d'ouverture de la scene (juste en dessous) garde sa propre version. Sa seconde replique a son
 -- drapeau a elle parce que DEUX chemins peuvent la lancer ; la faire passer par ici lui retirerait ce garde.
-local function sayChain(paths: { { string } }, index: number?, onEach: ((number) -> ())?)
+--
+-- `texts` : la bulle de chaque replique, par son numero. Absente = la voix seule.
+local function sayChain(
+	paths: { { string } },
+	index: number?,
+	onEach: ((number) -> ())?,
+	texts: { [number]: string }?
+)
 	local at = index or 1
 	local path = paths[at]
 	if not path then
@@ -1301,14 +1325,15 @@ local function sayChain(paths: { { string } }, index: number?, onEach: ((number)
 	if onEach then
 		onEach(at)
 	end
-	local voice = sayVoice(path)
+	local text = if texts then texts[at] else nil
+	local voice = if text then sayWithBubble(path, text) else sayVoice(path)
 	local chained = false
 	local function follow()
 		if chained then
 			return
 		end
 		chained = true
-		sayChain(paths, at + 1, onEach)
+		sayChain(paths, at + 1, onEach, texts)
 	end
 	if not voice then
 		follow() -- replique introuvable : la suivante compte plus que l'ordre
@@ -1323,21 +1348,6 @@ local function sayChain(paths: { { string } }, index: number?, onEach: ((number)
 			follow()
 		end
 	end)
-end
-
--- UNE REPLIQUE ET SA BULLE : la voix, et son texte a l'ecran le temps qu'elle dure. Une consigne qui ne passe
--- que par le son est perdue pour tout joueur qui joue sans le son -- et sur telephone, c'est souvent le cas.
-local function sayWithBubble(path: { string }, text: string, emotion: string?)
-	local voice = sayVoice(path)
-	local length = if voice then voice.TimeLength else 0
-	Dialogue.play({
-		{
-			speaker = TutorialConfigs.SPEECH2_SPEAKER,
-			text = text,
-			emotion = emotion or "happy",
-			hold = if length > 0.5 then length else TutorialConfigs.BUBBLE_HOLD_FALLBACK,
-		},
-	})
 end
 
 -- SES DEUX REPLIQUES D'OUVERTURE. Elles se suivent : la premiere part quand le battant s'entrebaille, la seconde
@@ -3078,7 +3088,7 @@ function TutorialController.init()
 							})
 						end)
 					end
-				end)
+				end, { [2] = TutorialConfigs.PICKUP_LEAVES_TEXT })
 			end
 		end)
 	end)

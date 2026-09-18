@@ -1027,6 +1027,9 @@ return {
 	-- il ne l'ecouterait pas.
 	HAPPY_HEDGE_SOUND = voice("Oldman_scene_speech_HappyForCutHedge"),
 	PICKUP_LEAVES_SOUND = voice("Oldman_scene_speech_SayHowPickupLeaves"),
+	-- Le texte du joueur, sans son tiret long du milieu : coupe en phrases nettes (regle des textes affiches).
+	PICKUP_LEAVES_TEXT = "Now look at all those leaves on the ground. They need picking up. Grab the bucket and "
+		.. "the leaf rake. After that, the place'll be perfect.",
 	-- ===== LES FEUILLES A RAMASSER RESPIRENT EN BLANC =====
 	-- Des qu'il commence a expliquer le ramassage, le `Highlight` pose dans Studio sous `LeafsDebrisGroundType1`
 	-- bat sur chaque tas au sol -- petits et gros. Meme battement que la porte et la tondeuse (FILL_MIN, FILL_MAX,
