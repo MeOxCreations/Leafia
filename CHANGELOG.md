@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.890 — Sous le rideau de chargement, le joueur ne bouge plus, et le jeu apparait camera dans son dos
+
+- `LoadingScreenClient` (rideau : tuto, jardins, arrivee par teleport) : pendant tout le rideau, `Move(0)` et
+  `Jump = false` a chaque image juste apres le module de controle (priorite Input + 1), et saut coupe sur l'etat
+  (cache aussi le bouton tactile). Pas d'ancrage : le joueur tombe sur son point d'apparition sous le rideau, pas
+  sous nos yeux. Les commandes reviennent au debut du balayage de sortie. Filet : deverrouille au bout de 90 s.
+- Pendant que le volet blanc couvre, la camera (si elle est en Custom) est tournee dans le dos du joueur, en
+  gardant son zoom et son inclinaison. Avant, elle gardait l'angle d'avant le placement par le serveur.
+
 ## 0.0.889 — Pelouse finie : la phrase du grand-pere s'affiche aussi en bulle
 
 - `TutorialController.sayWithBubble(path, text, emotion?)` : la voix ET sa bulle, qui dure la longueur de la voix

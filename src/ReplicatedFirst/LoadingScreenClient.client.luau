@@ -142,6 +142,47 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- la fin quoi qu'il arrive, donc au pire le balayage part du mauvais cote, il ne bloque jamais le jeu.
 	local WIPE_ROTATION = 0
 
+	-- ===== LE JOUEUR NE BOUGE PAS SOUS LE RIDEAU =====
+	-- Le personnage est la bien avant que le rideau se leve (dix secondes au moins) : sans verrou, on marchait a
+	-- l'aveugle derriere l'ecran de chargement, et on arrivait n'importe ou.
+	--
+	-- UNE ENTREE ANNULEE A CHAQUE IMAGE, pas une propriete : `Move` a zero et `Jump` faux, juste APRES le module de
+	-- controle de Roblox (priorite Input + 1). Clavier, manette, joystick et bouton de saut tactiles passent tous
+	-- par lui, donc tous sont annules -- et rien n'est ecrit que le serveur pourrait ecraser (une vitesse de marche
+	-- reposee par lui au spawn rendrait les jambes). Pas d'ancrage non plus : le joueur doit pouvoir TOMBER sur son
+	-- point d'apparition, sinon il atterrirait sous nos yeux a la levee du rideau.
+	-- Le saut est coupe en plus sur l'etat, ce qui cache aussi le bouton de saut tactile.
+	local FREEZE_BIND = "LeafiaCurtainFreeze"
+	local frozenHumanoid: Humanoid? = nil
+	RunService:BindToRenderStep(FREEZE_BIND, Enum.RenderPriority.Input.Value + 1, function()
+		local char = player.Character
+		local hum = if char then char:FindFirstChildOfClass("Humanoid") else nil
+		if not hum then
+			return
+		end
+		hum:Move(Vector3.zero, false)
+		hum.Jump = false
+		if frozenHumanoid ~= hum then
+			frozenHumanoid = hum
+			hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, false)
+		end
+	end)
+	local unfrozen = false
+	local function unfreeze()
+		if unfrozen then
+			return
+		end
+		unfrozen = true
+		RunService:UnbindFromRenderStep(FREEZE_BIND)
+		local hum = frozenHumanoid
+		if hum and hum.Parent then
+			hum:SetStateEnabled(Enum.HumanoidStateType.Jumping, true)
+		end
+	end
+	-- FILET : si une ligne du rideau echouait, le joueur resterait fige pour toute la session. Tres large -- il ne
+	-- sert jamais quand tout va bien (le personnage peut mettre 15 s a arriver, plus les 10 s du rideau).
+	task.delay(90, unfreeze)
+
 	local sg = Instance.new("ScreenGui")
 	sg.Name = "LeafiaCurtain"
 	sg.ScreenInsets = Enum.ScreenInsets.None
@@ -328,7 +369,36 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- couperait pas -- elle tournerait sur des instances mortes toute la session.
 	stopAnimation()
 	sg:Destroy()
+
+	-- LA CAMERA SE POSE DANS LE DOS DU JOUEUR, pendant qu'on ne voit rien. Sans ca, le jeu apparaissait avec la
+	-- camera tournee n'importe comment : le serveur pose le personnage sur son point d'apparition APRES que la
+	-- camera a pris son angle, et elle garde celui d'avant.
+	--
+	-- On ne touche qu'a sa DIRECTION : la camera de jeu (Custom) relit son regard dans `camera.CFrame` a chaque
+	-- image, et garde son propre zoom. Meme distance et meme inclinaison qu'elle avait, donc rien ne saute. Seulement
+	-- si elle est en Custom : une camera scriptee (selection de plot) n'est pas a nous.
+	local cam = workspace.CurrentCamera
+	local root = if player.Character then player.Character:FindFirstChild("HumanoidRootPart") else nil
+	if cam and cam.CameraType == Enum.CameraType.Custom and root and root:IsA("BasePart") then
+		local facing = root.CFrame.LookVector
+		local flat = Vector3.new(facing.X, 0, facing.Z)
+		if flat.Magnitude > 1e-3 then
+			local focus = cam.Focus.Position
+			local offset = cam.CFrame.Position - focus
+			local dist = offset.Magnitude
+			if dist > 0.5 then
+				-- L'inclinaison actuelle, gardee : seule la direction au sol change.
+				local rise = math.clamp(offset.Y / dist, -0.99, 0.99)
+				local back = -flat.Unit * math.sqrt(1 - rise * rise)
+				cam.CFrame = CFrame.lookAt(focus + (back + Vector3.new(0, rise, 0)) * dist, focus)
+			end
+		end
+	end
 	task.wait(WIPE_HOLD)
+
+	-- LES COMMANDES REVIENNENT AVEC L'IMAGE, pas apres le balayage : le joueur qui appuie deja doit partir tout de
+	-- suite, sinon la levee du rideau se lit comme un lag.
+	unfreeze()
 
 	-- ET LE JEU APPARAIT. Le meme bord repart en arriere : le volet se retire par ou il est venu.
 	sweep(1, 0, WIPE_REVEAL_TIME)
