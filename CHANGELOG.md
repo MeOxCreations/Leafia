@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.879 — La couronne de points du chargement remonte et rapetisse
+
+- `CurtainVisual` : `SPIN_POS` passe de 0.92 a 0.85 de la hauteur, `SPIN_SIZE` de 0.08 a 0.06. Vaut pour les
+  trois rideaux (chargement de map, teleport, START) : ils partagent le meme dessin.
+
 ## 0.0.878 — Prendre un outil dans la benne referme la barre du camion
 
 - `TruckToolsController.askFor` : apres un TAKE (l'outil est encore dans la benne), la barre se ferme toute seule.

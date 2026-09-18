@@ -141,9 +141,11 @@ local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 
 -- ===== LA COURONNE DE POINTS, en bas =====
 -- Elle ne promet rien d'autre que "ca travaille", et c'est la seule chose qu'on sache.
-local SPIN_POS = UDim2.fromScale(0.5, 0.92)
+-- Remontee de 0.92 a 0.85 et reduite de 0.08 a 0.06 a la demande du joueur : collee au bas de l'ecran et plus
+-- grosse, elle prenait trop de place a cote de la tete.
+local SPIN_POS = UDim2.fromScale(0.5, 0.85)
 -- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
-local SPIN_SIZE = 0.08
+local SPIN_SIZE = 0.06
 -- Sous 8 la rotation se lit comme une suite de sauts ; au-dela de 16 les points se touchent.
 local SPIN_DOTS = 12
 -- Rayon du cercle, en fraction du cadre. 0.5 poserait les centres sur le bord et les points depasseraient.
