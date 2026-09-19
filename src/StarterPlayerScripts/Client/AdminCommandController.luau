@@ -35,15 +35,23 @@ local FONT_BOLD = Enum.Font.GothamBold
 
 -- `TouchEnabled` SEUL : c'est une capacite, vraie aussi dans l'emulateur de Studio (voir le journal de CLAUDE.md).
 local IS_TOUCH = UserInputService.TouchEnabled
--- Tailles : plus grandes au doigt qu'a la souris, sinon on tape a cote des suggestions.
-local INPUT_H = if IS_TOUCH then 44 else 34
-local ROW_H = if IS_TOUCH then 34 else 26
-local TEXT_SIZE = if IS_TOUCH then 17 else 15
+-- SUR TELEPHONE, C'EST LA HAUTEUR QUI MANQUE : un ecran en paysage fait ~360 points, et le clavier en prend la
+-- moitie. La console tactile est donc COMPACTE -- texte plus petit, suggestions en pastilles sur UNE ligne qui defile,
+-- resultat dans une zone de hauteur fixe qui defile. La version PC garde sa liste verticale avec les descriptions.
+-- (Premiere version tactile : texte a 17 et huit lignes de suggestions, la console sortait par le bas de l'ecran.)
+local TEXT_SIZE = if IS_TOUCH then 14 else 15
+local TITLE_H = 24
+local INPUT_H = 34
+local ROW_H = 26 -- ligne de suggestion (PC)
+local CHIP_H = 28 -- pastille de suggestion (tactile)
+local OUTPUT_H = 90 -- zone de resultat (tactile), elle defile au-dela
+local PAD = if IS_TOUCH then 10 else 14
+local GAP = if IS_TOUCH then 6 else 8
 
 local TOGGLE_KEY = Enum.KeyCode.F2
-local MAX_SUGGESTIONS = 8
--- Largeur de la console : 94 % de l'ecran, plafonnee. Un telephone en paysage n'a pas toujours 560 px a donner.
-local PANEL_MAX_WIDTH = 560
+local MAX_SUGGESTIONS = 8 -- PC seulement : sur tactile la ligne de pastilles defile, on les montre toutes
+-- Largeur de la console : 94 % de l'ecran, plafonnee.
+local PANEL_MAX_WIDTH = if IS_TOUCH then 460 else 560
 
 -- BOUTON TACTILE. Sans clavier, pas de F2, donc pas de console. Au depart, la roue se range dans la barre du haut de
 -- Roblox, juste apres ses boutons (`GuiService.TopbarInset` = la place que Roblox laisse libre pour ca) : elle ne
@@ -67,8 +75,11 @@ local ANCHOR_WAIT = 30 -- s : au-dela, on renonce et la roue reste dans la barre
 -- Etat, cree paresseusement au 1er toggle (pas au boot : inutile tant qu'on n'ouvre pas la console).
 local gui: ScreenGui? = nil
 local inputBox: TextBox? = nil
-local predictor: Frame? = nil
+local predictor: GuiObject? = nil
 local output: TextLabel? = nil
+-- Ce qui apparait avec le resultat : le texte lui-meme sur PC, sa zone qui defile sur tactile.
+local outputBox: GuiObject? = nil
+local closeButton: TextButton? = nil
 local remote: RemoteFunction? = nil
 local touchButton: ImageButton? = nil
 local touchStroke: UIStroke? = nil
@@ -92,7 +103,7 @@ local function corner(r: number): UICorner
 	return create("UICorner", { CornerRadius = UDim.new(0, r) }) :: UICorner
 end
 
-local function clearRows(pred: Frame)
+local function clearRows(pred: Instance)
 	for _, child in pred:GetChildren() do
 		if child:IsA("TextButton") then
 			child:Destroy()
@@ -125,7 +136,7 @@ local function refreshPredictor()
 	if not (predictor and inputBox) then
 		return
 	end
-	local pred = predictor :: Frame
+	local pred = predictor :: GuiObject
 	local box = inputBox :: TextBox
 	if box.Text:find("%s") then
 		clearPredictor()
@@ -137,10 +148,40 @@ local function refreshPredictor()
 	for _, cmd in ipairs(AdminCommandConfigs.COMMANDS) do
 		if q == "" or cmd.name:sub(1, #q) == q then
 			shown += 1
+			local cmdName = cmd.name
+			if IS_TOUCH then
+				-- PASTILLE : le nom seul, assez gros pour le doigt. La description ne tiendrait pas.
+				local chip = create("TextButton", {
+					Name = "Suggest_" .. cmdName,
+					BackgroundColor3 = WELL,
+					AutoButtonColor = false,
+					Size = UDim2.fromScale(0, 1),
+					AutomaticSize = Enum.AutomaticSize.X,
+					Font = FONT_BOLD,
+					TextSize = TEXT_SIZE,
+					TextColor3 = ACCENT_TEXT,
+					Text = cmdName,
+					LayoutOrder = shown,
+					Children = {
+						create("UICorner", { CornerRadius = UDim.new(0.5, 0) }),
+						create("UIStroke", {
+							Color = PANEL_STROKE,
+							Thickness = 1,
+							ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+						}),
+						create("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }),
+					},
+				}) :: TextButton
+				chip.Activated:Connect(function()
+					fillInput(cmdName .. " ")
+					clearPredictor()
+				end)
+				chip.Parent = pred
+				continue
+			end
 			if shown > MAX_SUGGESTIONS then
 				break
 			end
-			local cmdName = cmd.name
 			local row = create("TextButton", {
 				Name = "Suggest_" .. cmdName,
 				BackgroundColor3 = WELL,
@@ -191,12 +232,24 @@ local function refreshPredictor()
 	pred.Visible = shown > 0
 end
 
+local function showOutput(text: string)
+	local out, shownBox = output, outputBox
+	if out then
+		out.Text = text
+	end
+	if shownBox then
+		shownBox.Visible = true
+		if shownBox:IsA("ScrollingFrame") then
+			shownBox.CanvasPosition = Vector2.zero -- un nouveau resultat se lit depuis le debut
+		end
+	end
+end
+
 local function execute()
 	if not (inputBox and output) then
 		return
 	end
 	local box = inputBox :: TextBox
-	local out = output :: TextLabel
 	local text = box.Text
 	if text:gsub("%s", "") == "" then
 		return
@@ -225,8 +278,7 @@ local function execute()
 				duration = 8,
 			})
 		end)
-		out.Text = "Notifications de test affichees."
-		out.Visible = true
+		showOutput("Notifications de test affichees.")
 		box.Text = ""
 		box:CaptureFocus()
 		return
@@ -234,12 +286,11 @@ local function execute()
 	if word == "tasks" then
 		if text:lower():match("%soff%s*$") then
 			TaskBannerHandler.hide()
-			out.Text = "Bandeau d'objectifs range."
+			showOutput("Bandeau d'objectifs range.")
 		else
 			TaskBannerHandler.show(TaskConfigs.DEMO_TASKS)
-			out.Text = `Bandeau rejoue : {#TaskConfigs.DEMO_TASKS} taches de demonstration.`
+			showOutput(`Bandeau rejoue : {#TaskConfigs.DEMO_TASKS} taches de demonstration.`)
 		end
-		out.Visible = true
 		box.Text = ""
 		box:CaptureFocus()
 		return
@@ -247,15 +298,13 @@ local function execute()
 
 	local r = remote
 	if not r then
-		out.Text = "Remote admin indisponible."
-		out.Visible = true
+		showOutput("Remote admin indisponible.")
 		return
 	end
 	local ok, result = pcall(function()
 		return (r :: RemoteFunction):InvokeServer(text)
 	end)
-	out.Text = if ok then tostring(result) else "Echec de l'appel serveur."
-	out.Visible = true
+	showOutput(if ok then tostring(result) else "Echec de l'appel serveur.")
 	box.Text = ""
 	box:CaptureFocus()
 end
@@ -269,6 +318,9 @@ local function build()
 		DisplayOrder = 100,
 		Enabled = false,
 	}) :: ScreenGui
+	-- PAS D'EFFET SLIME ici : les pastilles se dimensionnent seules dans une ligne, et le grossissement du slime les
+	-- ferait bouger (meme raison que la barre de navigation).
+	sg:SetAttribute("LeafiaNoSlime", true)
 
 	-- Sur tactile, SOUS la barre du haut : a 6 % de l'ecran, la console recouvrait la roue qui sert a la fermer.
 	local top = if IS_TOUCH then UDim2.new(0.5, 0, 0, GuiService.TopbarInset.Max.Y + 8) else UDim2.fromScale(0.5, 0.06)
@@ -284,30 +336,51 @@ local function build()
 			create("UISizeConstraint", { MaxSize = Vector2.new(PANEL_MAX_WIDTH, math.huge) }),
 			create("UIStroke", { Color = PANEL_STROKE, Thickness = 1.5 }),
 			create("UIPadding", {
-				PaddingTop = UDim.new(0, 14),
-				PaddingBottom = UDim.new(0, 14),
-				PaddingLeft = UDim.new(0, 14),
-				PaddingRight = UDim.new(0, 14),
+				PaddingTop = UDim.new(0, PAD),
+				PaddingBottom = UDim.new(0, PAD),
+				PaddingLeft = UDim.new(0, PAD),
+				PaddingRight = UDim.new(0, PAD),
 			}),
 			create("UIListLayout", {
 				FillDirection = Enum.FillDirection.Vertical,
-				Padding = UDim.new(0, 8),
+				Padding = UDim.new(0, GAP),
 				SortOrder = Enum.SortOrder.LayoutOrder,
 			}),
 		},
 	}) :: Frame
 
+	-- TITRE + FERMER. Une croix a portee de pouce : fermer ne doit pas obliger a retrouver la roue.
+	local titleRow = create("Frame", {
+		Name = "TitleRow",
+		BackgroundTransparency = 1,
+		Size = UDim2.new(1, 0, 0, TITLE_H),
+		LayoutOrder = 1,
+	}) :: Frame
 	create("TextLabel", {
 		Name = "Title",
 		BackgroundTransparency = 1,
-		Size = UDim2.new(1, 0, 0, 20),
+		Size = UDim2.new(1, -(TITLE_H + 8), 1, 0),
 		Font = FONT_BOLD,
-		TextSize = TEXT_SIZE,
+		TextSize = TEXT_SIZE + 1,
 		TextXAlignment = Enum.TextXAlignment.Left,
 		TextColor3 = TEXT_MAIN,
 		Text = if IS_TOUCH then "ADMIN CONSOLE" else "ADMIN CONSOLE   -   F2 pour fermer",
-		LayoutOrder = 1,
-	}).Parent = panel
+	}).Parent = titleRow
+	local close = create("TextButton", {
+		Name = "Close",
+		BackgroundColor3 = WELL,
+		AnchorPoint = Vector2.new(1, 0),
+		Position = UDim2.fromScale(1, 0),
+		Size = UDim2.fromOffset(TITLE_H, TITLE_H),
+		AutoButtonColor = true,
+		Font = FONT_BOLD,
+		TextSize = TEXT_SIZE - 1,
+		TextColor3 = TEXT_DIM,
+		Text = "X",
+		Children = { create("UICorner", { CornerRadius = UDim.new(0.5, 0) }) },
+	}) :: TextButton
+	close.Parent = titleRow
+	titleRow.Parent = panel
 
 	local inputRow = create("Frame", {
 		Name = "InputRow",
@@ -352,26 +425,54 @@ local function build()
 	runBtn.Parent = inputRow
 	inputRow.Parent = panel
 
-	local pred = create("Frame", {
-		Name = "Predictor",
-		BackgroundTransparency = 1,
-		Size = UDim2.fromScale(1, 0),
-		AutomaticSize = Enum.AutomaticSize.Y,
-		Visible = false,
-		LayoutOrder = 3,
-		Children = {
-			create("UIListLayout", {
-				FillDirection = Enum.FillDirection.Vertical,
-				Padding = UDim.new(0, 3),
-				SortOrder = Enum.SortOrder.LayoutOrder,
-			}),
-		},
-	}) :: Frame
+	-- SUGGESTIONS. PC : une liste verticale, nom + description. Tactile : une seule ligne de pastilles qui defile.
+	local pred: GuiObject
+	if IS_TOUCH then
+		pred = create("ScrollingFrame", {
+			Name = "Predictor",
+			BackgroundTransparency = 1,
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, CHIP_H),
+			CanvasSize = UDim2.new(),
+			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			ScrollingDirection = Enum.ScrollingDirection.X,
+			ScrollBarThickness = 0,
+			Visible = false,
+			LayoutOrder = 3,
+			Children = {
+				create("UIListLayout", {
+					FillDirection = Enum.FillDirection.Horizontal,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					Padding = UDim.new(0, 6),
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
+			},
+		}) :: ScrollingFrame
+	else
+		pred = create("Frame", {
+			Name = "Predictor",
+			BackgroundTransparency = 1,
+			Size = UDim2.fromScale(1, 0),
+			AutomaticSize = Enum.AutomaticSize.Y,
+			Visible = false,
+			LayoutOrder = 3,
+			Children = {
+				create("UIListLayout", {
+					FillDirection = Enum.FillDirection.Vertical,
+					Padding = UDim.new(0, 3),
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
+			},
+		}) :: Frame
+	end
 	pred.Parent = panel
 
+	-- RESULTAT. PC : il grandit avec son texte. Tactile : zone de hauteur fixe qui defile -- la liste de `help`
+	-- pousserait sinon la console hors de l'ecran.
 	local out = create("TextLabel", {
 		Name = "Output",
 		BackgroundColor3 = WELL,
+		BackgroundTransparency = if IS_TOUCH then 1 else 0,
 		Size = UDim2.fromScale(1, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Font = FONT,
@@ -381,19 +482,37 @@ local function build()
 		TextYAlignment = Enum.TextYAlignment.Top,
 		TextWrapped = true,
 		Text = "",
-		Visible = false,
+		Visible = IS_TOUCH, -- sur tactile, c'est sa zone qui apparait et disparait
 		LayoutOrder = 4,
 		Children = {
 			corner(8),
 			create("UIPadding", {
-				PaddingTop = UDim.new(0, 10),
-				PaddingBottom = UDim.new(0, 10),
+				PaddingTop = UDim.new(0, 8),
+				PaddingBottom = UDim.new(0, 8),
 				PaddingLeft = UDim.new(0, 10),
 				PaddingRight = UDim.new(0, 10),
 			}),
 		},
 	}) :: TextLabel
-	out.Parent = panel
+	local shownBox: GuiObject = out
+	if IS_TOUCH then
+		shownBox = create("ScrollingFrame", {
+			Name = "OutputBox",
+			BackgroundColor3 = WELL,
+			BorderSizePixel = 0,
+			Size = UDim2.new(1, 0, 0, OUTPUT_H),
+			CanvasSize = UDim2.new(),
+			AutomaticCanvasSize = Enum.AutomaticSize.Y,
+			ScrollingDirection = Enum.ScrollingDirection.Y,
+			ScrollBarThickness = 4,
+			ScrollBarImageColor3 = TEXT_DIM,
+			Visible = false,
+			LayoutOrder = 4,
+			Children = { corner(8) },
+		}) :: ScrollingFrame
+		out.Parent = shownBox
+	end
+	shownBox.Parent = panel
 
 	panel.Parent = sg
 	sg.Parent = player:WaitForChild("PlayerGui")
@@ -402,6 +521,8 @@ local function build()
 	inputBox = box
 	predictor = pred
 	output = out
+	outputBox = shownBox
+	closeButton = close
 
 	box:GetPropertyChangedSignal("Text"):Connect(refreshPredictor)
 	box.FocusLost:Connect(function(enterPressed: boolean)
@@ -424,6 +545,10 @@ end
 local function toggle()
 	if not gui then
 		build()
+		local close = closeButton
+		if close then
+			close.Activated:Connect(toggle)
+		end
 	end
 	local g = gui
 	if not g then

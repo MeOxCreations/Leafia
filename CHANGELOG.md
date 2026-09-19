@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.925 — Console admin sur telephone : version compacte
+
+- `AdminCommandController` : la version tactile de 0.0.922 sortait par le bas de l'ecran (texte a 17, huit lignes de
+  suggestions, et le clavier qui prend la moitie d'un ecran en paysage). Refaite COMPACTE :
+  - texte a 14, panneau plafonne a 460 px ;
+  - suggestions en PASTILLES (le nom seul) sur une seule ligne qui defile au doigt, toutes les commandes dedans ;
+  - resultat dans une zone de 90 px qui defile, remontee en haut a chaque nouveau resultat.
+- Une croix dans le titre ferme la console (PC et tactile) : pas besoin de retrouver la roue.
+- Pas d'effet slime sur la console : les pastilles se dimensionnent seules dans leur ligne, le grossissement les
+  ferait bouger (meme raison que la barre de navigation).
+- PC : inchange, sauf la croix.
+
 ## 0.0.924 — La roue de la console admin se pose par defaut a droite du nom du plot
 
 - `AdminCommandController` : dans le hub, la roue dentee se cale a droite du texte "STARTER PLOT" (`TitleNamePlot`
