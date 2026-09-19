@@ -1467,6 +1467,12 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   propre module, et les familles de variables (delais, drapeaux) se regroupent en tables. Compter se fait en une
   commande : `grep -c "^local " fichier`. Au-dessus de ~180, extraire AVANT d'ajouter.
 
+- **UN SON SE DECLARE DANS `SoundConfigs`, JAMAIS EN POSANT UN Sound DANS STUDIO.** Rojo ne synchronise pas
+  SoundService : un son pose a la main n'existe que dans sa place, et manque dans l'autre sans un mot (vecu sur la
+  replique devant la haie, absente du didacticiel). `SoundRegistryService` pose au demarrage chaque son de la config
+  a son chemin sous SoundService, donc le code qui cherche un son par son chemin n'a pas change. Pour recuperer des
+  sons deja poses : `scripts/studio/ExporterSons.lua`. Meme raison pour une interface : `ExporterInterface.lua`.
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
