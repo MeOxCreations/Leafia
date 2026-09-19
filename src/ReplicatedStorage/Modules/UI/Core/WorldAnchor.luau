@@ -22,8 +22,6 @@
 -- `WorldToScreenPoint` et `WorldToViewportPoint` (l'inset reel), moins la position du PARENT de l'element. Aucun
 -- reglage de ScreenGui n'a plus besoin d'etre juste, et un element range dans un cadre decale reste bien place.
 
-local GuiService = game:GetService("GuiService")
-local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local WorldAnchor = {}
@@ -59,13 +57,6 @@ type Entry = {
 local entries: { [GuiObject]: Entry } = {}
 local BIND_NAME = "LeafiaWorldAnchor"
 local bound = false
-
--- SONDE A L'ECRAN, A LAISSER ALLUMEE LE TEMPS D'UN TEST SUR TELEPHONE. Elle affiche les deux reperes en haut de
--- l'ecran : un bug qui n'existe que sur mobile ne se lit pas dans une console qu'on ne peut pas ouvrir sur un
--- telephone. La comparer a la meme ligne sur PC (le temoin qui marche) dit tout de suite ce qui differe.
-local DEBUG_SPACES = true
-local debugLabel: TextLabel? = nil
-local nextDebugAt = 0
 
 local function positionOf(target: Target): Vector3?
 	if typeof(target) == "Vector3" then
@@ -144,58 +135,6 @@ local function toEdge(x: number, y: number, view: Vector2, margin: number): (num
 	return cx + dx * t, cy + dy * t
 end
 
-local function showDebug(camera: Camera, shift: Vector2)
-	local now = os.clock()
-	if now < nextDebugAt then
-		return
-	end
-	nextDebugAt = now + 0.5
-	local label = debugLabel
-	if not (label and label.Parent) then
-		local playerGui = Players.LocalPlayer and Players.LocalPlayer:FindFirstChildOfClass("PlayerGui")
-		if not playerGui then
-			return
-		end
-		-- IL SE DENONCE : oublie allume, il partirait chez les joueurs.
-		warn("[WorldAnchor] DEBUG_SPACES est allume : ligne de mesure en haut de l'ecran. A couper apres le test.")
-		local sg = Instance.new("ScreenGui")
-		sg.Name = "LeafiaAnchorDebug"
-		sg.ResetOnSpawn = false
-		sg.ScreenInsets = Enum.ScreenInsets.None
-		sg.DisplayOrder = 1000
-		sg.Parent = playerGui
-		local created = Instance.new("TextLabel")
-		created.AnchorPoint = Vector2.new(0.5, 0)
-		created.Position = UDim2.new(0.5, 0, 0, 4)
-		created.Size = UDim2.fromOffset(520, 22)
-		created.BackgroundColor3 = Color3.new(0, 0, 0)
-		created.BackgroundTransparency = 0.35
-		created.TextColor3 = Color3.new(1, 1, 1)
-		created.TextScaled = true
-		created.Font = Enum.Font.Code
-		created.Parent = sg
-		label = created
-		debugLabel = created
-	end
-	local host: GuiBase2d? = nil
-	for gui in entries do
-		local parent = gui.Parent
-		if parent and parent:IsA("GuiBase2d") then
-			host = parent
-			break
-		end
-	end
-	local topLeft = GuiService:GetGuiInset()
-	local view = camera.ViewportSize
-	local text = `view {math.floor(view.X)}x{math.floor(view.Y)} | shift {math.floor(shift.X)},{math.floor(shift.Y)}`
-		.. ` | inset {math.floor(topLeft.X)},{math.floor(topLeft.Y)}`
-	if host then
-		local p, z = host.AbsolutePosition, host.AbsoluteSize
-		text ..= ` | {host.Name} {math.floor(p.X)},{math.floor(p.Y)} {math.floor(z.X)}x{math.floor(z.Y)}`
-	end;
-	(label :: TextLabel).Text = text
-end
-
 local function update()
 	local camera = workspace.CurrentCamera
 	if not camera then
@@ -208,9 +147,6 @@ local function update()
 	local viewPoint = camera:WorldToViewportPoint(probe)
 	local screenPoint = camera:WorldToScreenPoint(probe)
 	local shift = Vector2.new(screenPoint.X - viewPoint.X, screenPoint.Y - viewPoint.Y)
-	if DEBUG_SPACES then
-		showDebug(camera, shift)
-	end
 
 	for gui, entry in pairs(entries) do
 		if not gui.Parent then

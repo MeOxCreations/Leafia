@@ -31,8 +31,8 @@ local COMMANDS: { Command } = {
 	{ name = "tutodone", usage = "tutodone [joueur]", description = "Marque le tuto fini sur la save active (START entre dans le jeu)" },
 }
 
--- UserId autorises sur les VRAIS serveurs. En Studio, tout le monde est admin (c'est toi qui testes). Ajoute ton
--- UserId Roblox ici pour rester admin en jeu publie.
+-- UserId autorises sur les VRAIS serveurs, EN PLUS du proprietaire du jeu (admin d'office, voir isAdmin). En
+-- Studio, tout le monde est admin (c'est toi qui testes).
 local ADMIN_USER_IDS: { number } = {
 	-- 123456789,
 }
@@ -40,10 +40,15 @@ local ADMIN_USER_IDS: { number } = {
 AdminCommandConfigs.COMMANDS = COMMANDS
 AdminCommandConfigs.ADMIN_USER_IDS = ADMIN_USER_IDS
 
--- Politique d'acces. Studio -> toujours admin (le dev). Sinon -> UserId dans la liste. Le serveur reste l'autorite :
--- cote client ca ne fait que decider si on affiche la console.
+-- Politique d'acces. Studio -> toujours admin (le dev). Sinon -> le proprietaire du jeu, ou un UserId de la liste.
+-- Le serveur reste l'autorite : cote client ca ne fait que decider si on affiche la console.
 function AdminCommandConfigs.isAdmin(player: Player): boolean
 	if RunService:IsStudio() then
+		return true
+	end
+	-- LE PROPRIETAIRE DU JEU, sans rien recopier. Ne couvre qu'un jeu possede par un COMPTE : possede par un
+	-- groupe, CreatorId designe le groupe, et il faut alors la liste ci-dessus.
+	if game.CreatorType == Enum.CreatorType.User and player.UserId == game.CreatorId then
 		return true
 	end
 	return table.find(ADMIN_USER_IDS, player.UserId) ~= nil

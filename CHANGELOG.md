@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.917 — Compteur FPS et ping pour le developpeur ; la bande de debug des balises s'en va
+
+- Nouveau `PerfStatsController` (client, dans les deux places) : une ligne en haut de l'ecran avec les images par
+  seconde, la pire image des 3 dernieres secondes et le ping. Vert a 55 et plus, orange a 45, rouge en dessous.
+  Visible seulement pour un admin (`AdminCommandConfigs.isAdmin`). Interrupteur : `ENABLED` en tete du fichier.
+- La PIRE IMAGE est affichee a cote de la moyenne : un a-coup de 150 ms ne se voit pas dans une moyenne a 58 FPS,
+  et c'est pourtant lui qu'on ressent.
+- `isAdmin` : le proprietaire du jeu est admin d'office en jeu publie (jeu possede par un compte). Sans ca, le
+  compteur et la console F2 n'apparaissaient qu'en Studio, puisque la liste des UserId est vide.
+- `WorldAnchor` : la sonde `DEBUG_SPACES` est retiree. Les balises sont validees sur telephone.
+- Rien de nouveau pour l'herbe hors champ : c'est deja fait depuis 0.0.384 (`CULL_BEHIND`, on n'anime plus les
+  paves dans le dos du joueur) et, sur mobile, l'herbe au-dela de 90 studs est retiree. Roblox ne dessine deja pas
+  ce qui est derriere la camera ; cacher en plus ces touffes a chaque rotation couterait plus que ca ne rapporte.
+
 ## 0.0.916 — Le billet pris, voile blanc et depart vers le hub ; le tuto est marque fini a l'arrivee
 
 - Nouveau `ReplicatedFirst/WipeVisual` : le voile blanc du chargement, sorti de `LoadingScreenClient` (qui s'en

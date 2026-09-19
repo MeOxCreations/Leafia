@@ -30,6 +30,8 @@ local PlacesConfig = require(game:GetService("ReplicatedStorage").Modules.Config
 -- dont les ScreenGui n'existent pas dans la place tuto (ils timeouteraient). Le `return` coupe la sequence principale.
 if game.PlaceId == PlacesConfig.TUTORIAL then
 	local RS = game:GetService("ReplicatedStorage")
+	-- COMPTEUR FPS / PING, developpeur seulement. En premier : il mesure aussi le demarrage.
+	require(script.PerfStatsController).init()
 	require(script.CursorController).init()
 	require(script.ClickSoundController).init()
 	require(script.ButtonSlimeController).init()
@@ -117,6 +119,11 @@ if game.PlaceId == PlacesConfig.TUTORIAL then
 	print("[Client] Pret (tuto)")
 	return
 end
+
+-- COMPTEUR FPS / PING, developpeur seulement (Studio ou proprietaire du jeu). En premier : il mesure aussi le
+-- demarrage, et il ne depend de rien.
+local PerfStatsController = require(script.PerfStatsController)
+PerfStatsController.init()
 
 -- Curseur custom (cache le curseur systeme, suit la souris). Ordre indifferent : il ne partage rien avec les autres.
 local CursorController = require(script.CursorController)
