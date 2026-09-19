@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.918 — Mode build sur mobile : la rotation a deux doigts tourne dans le bon sens
+
+- `BuildController` : le twist a deux doigts faisait tourner la vue a l'envers (doigts vers la gauche, vue vers
+  la droite). Signe inverse la ou le yaw est calcule. Le clic droit sur PC n'est pas touche, il etait juste.
+
 ## 0.0.917 — Compteur FPS et ping pour le developpeur ; la bande de debug des balises s'en va
 
 - Nouveau `PerfStatsController` (client, dans les deux places) : une ligne en haut de l'ecran avec les images par

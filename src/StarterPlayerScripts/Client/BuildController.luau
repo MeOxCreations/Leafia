@@ -782,7 +782,9 @@ function BuildController.init()
 					elseif dAng < -math.pi then
 						dAng += 2 * math.pi
 					end
-					camYawTarget += dAng * CAM_TWIST_SENS
+					-- SIGNE CONFIRME A L'ECRAN (telephone) : en `+=`, tourner les doigts vers la gauche faisait tourner
+					-- la vue vers la droite.
+					camYawTarget -= dAng * CAM_TWIST_SENS
 				end
 				pinchPrev = dist
 				twistPrev = ang
