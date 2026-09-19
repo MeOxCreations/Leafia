@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.912 — Un outil indisponible a une pastille a rayures
+
+- `WorldMarker.show` prend un 4e argument `locked` : le rond rouge devient l'image a barreaux en diagonale du
+  joueur (`rbxassetid://99020394814206`), l'icone reste par-dessus.
+- `ToolMarkerController` : une pastille passe en rayures quand l'outil n'est pas disponible pour ce joueur, et
+  redevient rouge s'il le redevient. Regle actuelle : la tondeuse une fois la pelouse finie (`LeafiaMowDone`).
+
 ## 0.0.911 — Commande admin `notif` : notifications de test
 
 - Console admin (F2) : `notif` affiche un toast (bas au milieu) et deux notifications laterales (une simple, une

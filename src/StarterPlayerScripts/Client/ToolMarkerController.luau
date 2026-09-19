@@ -28,7 +28,7 @@ local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
 
 local ToolMarkerController = {}
 
-type Shown = { frame: Frame, part: BasePart }
+type Shown = { frame: Frame, part: BasePart, locked: boolean }
 
 -- Le nom de la part de reference des trois outils (seau, tondeuse et echelle l'appellent pareil).
 local ROOT_NAME = MowConfigs.ROOT_NAME
@@ -87,6 +87,18 @@ local function carried(part: BasePart): boolean
 	end
 	local model = assembly:FindFirstAncestorOfClass("Model")
 	return model ~= nil and Players:GetPlayerFromCharacter(model) ~= nil
+end
+
+--- L'OUTIL EST-IL INDISPONIBLE POUR CE JOUEUR ? Sa pastille passe alors en rayures au lieu de disparaitre : le
+--- joueur voit toujours ou il est, et comprend qu'il n'a pas a y aller.
+---
+--- UNE REGLE PAR OUTIL, lue sur ce que les autres systemes posent deja -- jamais un etat tenu ici. Pour l'instant
+--- seule la tondeuse en a une : pelouse finie, on ne la reprend plus (voir MowConfigs.DONE_ATTRIBUTE).
+local function unavailable(kind: string): boolean
+	if kind == "Mower" then
+		return player:GetAttribute(MowConfigs.DONE_ATTRIBUTE) == true
+	end
+	return false
 end
 
 local function clear(model: Model)
@@ -154,17 +166,20 @@ function ToolMarkerController.init()
 					local far = math.sqrt(delta.X * delta.X + delta.Z * delta.Z) > limit
 					if far and not WorldMarker.isMarked(model, own) then
 						seen[model] = true
+						local locked = unavailable(kind)
 						local s = shown[model]
-						if not s or s.part ~= part then
+						-- REFAITE AUSSI QUAND LA DISPONIBILITE CHANGE : le rond rouge et les rayures sont deux dessins.
+						if not s or s.part ~= part or s.locked ~= locked then
 							clear(model)
 							local icon = ToolMarkerConfigs.ICONS[kind] or ""
 							local frame = WorldMarker.show(
 								part,
 								Vector3.new(0, ToolMarkerConfigs.UP[kind] or 3, 0),
-								if icon ~= "" then icon else nil
+								if icon ~= "" then icon else nil,
+								locked
 							)
 							own[frame] = true
-							shown[model] = { frame = frame, part = part }
+							shown[model] = { frame = frame, part = part, locked = locked }
 						end
 					end
 				end

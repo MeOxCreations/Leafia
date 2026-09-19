@@ -28,6 +28,9 @@ local WorldAnchor = require(script.Parent.WorldAnchor)
 local WorldMarker = {}
 
 local CIRCLE_IMAGE = "rbxassetid://124707156951795"
+-- LE ROND D'UN OBJET INDISPONIBLE : des barreaux en diagonale (dessin du joueur) a la place du rond rouge. Le rouge
+-- dit "va la" ; les rayures disent "c'est la, mais pas pour toi maintenant" -- l'icone reste, on sait de quoi on parle.
+local LOCKED_CIRCLE_IMAGE = "rbxassetid://99020394814206"
 local MARK_IMAGE = "rbxassetid://78589393871508"
 -- LA MARQUE A SES PROPRES PROPORTIONS, en fraction du cercle. Le dessin fait 63 x 115 pixels a sa taille
 -- naturelle : lui donner un cadre CARRE l'ecraserait, et un " ! " ecrase ne ressemble plus a rien.
@@ -220,8 +223,9 @@ local function step()
 end
 
 -- Pose un marqueur sur une cible. `offset` decale le point vise, en studs -- typiquement pour le mettre au-dessus
--- de la tete. `icon` (un "rbxassetid://...") remplace le " ! " par ce dessin. Rend le marqueur, a passer a `remove`.
-function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: string?): Frame
+-- de la tete. `icon` (un "rbxassetid://...") remplace le " ! " par ce dessin. `locked` : l'objet est la mais pas
+-- disponible, le rond rouge devient des rayures. Rend le marqueur, a passer a `remove`.
+function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: string?, locked: boolean?): Frame
 	local holder = getGui()
 
 	local frame = Instance.new("Frame")
@@ -234,7 +238,7 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: st
 	circle.Name = "Circle"
 	circle.BackgroundTransparency = 1
 	circle.Size = UDim2.fromScale(1, 1)
-	circle.Image = CIRCLE_IMAGE
+	circle.Image = if locked then LOCKED_CIRCLE_IMAGE else CIRCLE_IMAGE
 	-- `Stretch` sur les DEUX couches, et pas `Fit`. `Fit` conserve les proportions de l'image et la borne par le
 	-- plus PETIT cote du cadre : une image en `Fit` ne sait que grossir et rapetisser, elle ne peut pas s'etirer.
 	-- Le sursaut du " ! " le RETRECIRAIT au lieu de l'allonger. Piege deja paye sur les feuilles du chargement.
