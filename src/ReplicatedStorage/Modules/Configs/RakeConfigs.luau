@@ -131,9 +131,11 @@ local RakeConfigs = {
 
 	-- ===== SONS =====
 	-- Dossier dans SoundService. Vide = aucun son, et aucune erreur.
-	SOUND_FOLDER = { "Sounds", "Tools", "Rake" },
+	-- Etait "Sounds/Tools/Rake/RakeSweepSound", qui n'a jamais existe : le son du joueur est range sous "Engins",
+	-- comme les autres outils (voir SoundConfigs). Le rateau etait donc muet depuis toujours.
+	SOUND_FOLDER = { "Sounds", "Engins", "Rake" },
 	-- Joue a chaque coup de rateau, depuis la position du joueur (donc spatialise pour les autres).
-	SWEEP_SOUND = "RakeSweepSound",
+	SWEEP_SOUND = "RakeSound",
 }
 
 return RakeConfigs

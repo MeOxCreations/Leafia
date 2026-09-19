@@ -16,12 +16,58 @@
 -- prend les defauts de Roblox (0.5, 1, pas de boucle). Seul l'id est toujours impose.
 --
 -- POUR REMPLIR : coller `scripts/studio/ExporterSons.lua` dans la barre de commandes de Studio, il imprime ces
--- lignes a partir des Sound deja poses.
+-- lignes a partir des Sound deja poses. La liste ci-dessous en vient (19/09/2026, 82 sons, aucun effet ni
+-- SoundGroup) : les Sound de Studio peuvent donc etre supprimes, tout est ici.
 
 -- `playing = true` : le son joue tout seul des le demarrage, pour tout le monde (une ambiance comme `Nature`).
 export type Entry = { id: string, volume: number?, speed: number?, looped: boolean?, playing: boolean? }
 
 local SoundConfigs: { [string]: Entry } = {
+	-- ===== TAILLE-HAIE =====
+	["Sounds/Engins/HedgeTrimmer/IdleSound"] = { id = "rbxassetid://125973675482567", looped = true },
+	["Sounds/Engins/HedgeTrimmer/SpeedStartMotor"] = { id = "rbxassetid://140365046135870" },
+	["Sounds/Engins/HedgeTrimmer/SpeedStartMotorInfinite"] = { id = "rbxassetid://111384966371570" },
+	["Sounds/Engins/HedgeTrimmer/StartFirstSound"] = { id = "rbxassetid://124324008992320" },
+	["Sounds/Engins/HedgeTrimmer/TryLaunchSound"] = { id = "rbxassetid://105854367308281" },
+	-- ===== ECHELLE =====
+	["Sounds/Engins/Ladder/LadderClimbStepOne"] = { id = "rbxassetid://123516158890121" },
+	["Sounds/Engins/Ladder/LadderClimbStepTwo"] = { id = "rbxassetid://91896511790466" },
+	["Sounds/Engins/Ladder/LadderDeposeSound"] = { id = "rbxassetid://101257499986377" },
+	["Sounds/Engins/Ladder/LadderTakeSound"] = { id = "rbxassetid://130066040440975" },
+	-- ===== TONDEUSE =====
+	["Sounds/Engins/LawnMower/IdleLawnMowerSound"] = { id = "rbxassetid://108231814930143" },
+	["Sounds/Engins/LawnMower/SucessTryLaunchSound"] = { id = "rbxassetid://109057911869830" },
+	["Sounds/Engins/LawnMower/TryLaunchSound"] = { id = "rbxassetid://130333921586760" },
+	-- ===== RATEAU =====
+	["Sounds/Engins/Rake/RakeSound"] = { id = "rbxassetid://120265530505885" },
+	-- ===== ENVIRONNEMENT (pas, feuilles) =====
+	["Sounds/Environnement/FootSteps/GroundStepSound"] = { id = "rbxassetid://92715028306400" },
+	["Sounds/Environnement/Leafs/LeafCutSound"] = { id = "rbxassetid://71548559176319" },
+	-- ===== AMBIANCE (joue toute seule, pour tout le monde) =====
+	["Sounds/Game/Background/Nature"] = { id = "rbxassetid://118755434492556", volume = 0.1, looped = true, playing = true },
+	-- ===== SONS DU MONDE (camion, boite aux lettres, depots) =====
+	["Sounds/Game/GlobalSounds/CloseDoorTruckSound"] = { id = "rbxassetid://86379404626306" },
+	["Sounds/Game/GlobalSounds/CloseMailboxSound"] = { id = "rbxassetid://116996075824435" },
+	["Sounds/Game/GlobalSounds/DropSound"] = { id = "rbxassetid://101141177714787" },
+	["Sounds/Game/GlobalSounds/JoinSound"] = { id = "rbxassetid://103716524346544" },
+	["Sounds/Game/GlobalSounds/OpenDoorTruckSound"] = { id = "rbxassetid://131610185149540" },
+	["Sounds/Game/GlobalSounds/OpenMailboxSound"] = { id = "rbxassetid://76627983706798" },
+	-- ===== MUSIQUES DU MODE BUILD =====
+	["Sounds/Game/Musics/Build/MusicBuild1"] = { id = "rbxassetid://109736730543867", volume = 0.2 },
+	["Sounds/Game/Musics/Build/MusicBuild2"] = { id = "rbxassetid://135887795209145", volume = 0.2 },
+	["Sounds/Game/Musics/Build/MusicBuild3"] = { id = "rbxassetid://100473199218843", volume = 0.2 },
+	["Sounds/Game/Musics/Build/MusicBuild4"] = { id = "rbxassetid://126815240231500", volume = 0.2 },
+	["Sounds/Game/Musics/Build/MusicBuild5"] = { id = "rbxassetid://71266878799604", volume = 0.2 },
+	-- ===== MUSIQUES (la boucle est posee par le code qui les joue) =====
+	["Sounds/Game/Musics/Music1"] = { id = "rbxassetid://96165653865003" },
+	["Sounds/Game/Musics/Music2"] = { id = "rbxassetid://133946377022705", volume = 0.2 },
+	["Sounds/Game/Musics/MusicMainMenu"] = { id = "rbxassetid://134274317565831", volume = 0.2 },
+	-- ===== SCENE 1 : la porte =====
+	["Sounds/Scenes/Scene1/DingDongSound"] = { id = "rbxassetid://82126204576333" },
+	["Sounds/Scenes/Scene1/KnockDoorSound"] = { id = "rbxassetid://104599555824865" },
+	["Sounds/Scenes/Scene1/OpenDoorSound"] = { id = "rbxassetid://139842253747596" },
+	["Sounds/Scenes/Scene1/SceneFontSound"] = { id = "rbxassetid://98223755178135" },
+	["Sounds/Scenes/Scene1/TryUnlockDoorSound"] = { id = "rbxassetid://135441014182396" },
 	-- ===== LES VOIX DU GRAND-PERE =====
 	["Sounds/Scenes/Voices/Oldman_scene_speech_0"] = { id = "rbxassetid://116521869903565" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_1"] = { id = "rbxassetid://138057580250669" },
@@ -33,7 +79,6 @@ local SoundConfigs: { [string]: Entry } = {
 	["Sounds/Scenes/Voices/Oldman_scene_speech_Final_mybuisness_1"] = { id = "rbxassetid://82398954870392" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_Final_say_1"] = { id = "rbxassetid://91125045666381" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_GoOnTruck"] = { id = "rbxassetid://95560463779429" },
-	["Sounds/Scenes/Voices/Oldman_scene_speech_Thishedge_needcut"] = { id = "rbxassetid://128358915165021" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_GrabMowerAgain"] = { id = "rbxassetid://101432488664034" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_GrabTheShear"] = { id = "rbxassetid://120868682814149" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_HappyForCutHedge"] = { id = "rbxassetid://126978564351732" },
@@ -63,39 +108,15 @@ local SoundConfigs: { [string]: Entry } = {
 	["Sounds/Scenes/Voices/Oldman_scene_speech_Say_wait_player_4"] = { id = "rbxassetid://76409832856011" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_Say_wait_player_5"] = { id = "rbxassetid://104171039520251" },
 	["Sounds/Scenes/Voices/Oldman_scene_speech_Say_wait_player_6"] = { id = "rbxassetid://120478642081816" },
-	-- ===== SCENE 1 : la porte =====
-	["Sounds/Scenes/Scene1/DingDongSound"] = { id = "rbxassetid://82126204576333" },
-	["Sounds/Scenes/Scene1/KnockDoorSound"] = { id = "rbxassetid://104599555824865" },
-	["Sounds/Scenes/Scene1/OpenDoorSound"] = { id = "rbxassetid://139842253747596" },
-	["Sounds/Scenes/Scene1/SceneFontSound"] = { id = "rbxassetid://98223755178135" },
-	["Sounds/Scenes/Scene1/TryUnlockDoorSound"] = { id = "rbxassetid://135441014182396" },
+	["Sounds/Scenes/Voices/Oldman_scene_speech_Thishedge_needcut"] = { id = "rbxassetid://128358915165021" },
 	-- ===== INTERFACE =====
-	["Sounds/UI/AppearSound_1"] = { id = "rbxassetid://138424352985426" },
-	["Sounds/UI/HoverButtonSound"] = { id = "rbxassetid://106419078545029" },
-	["Sounds/UI/NotificationSound"] = { id = "rbxassetid://116529150972106" },
-	["Sounds/UI/PassingSound"] = { id = "rbxassetid://136350943692482" },
-	["Sounds/UI/PopSound_1"] = { id = "rbxassetid://85294471660646" },
+	["Sounds/UI/AppearSound_1"] = { id = "rbxassetid://138424352985426", volume = 0.4 },
+	["Sounds/UI/HoverButtonSound"] = { id = "rbxassetid://106419078545029", volume = 0.4 },
+	["Sounds/UI/NotificationSound"] = { id = "rbxassetid://116529150972106", volume = 0.4 },
+	["Sounds/UI/PassingSound"] = { id = "rbxassetid://136350943692482", volume = 0.4 },
+	["Sounds/UI/PopSound_1"] = { id = "rbxassetid://85294471660646", volume = 0.4 },
 	["Sounds/UI/PressButtonSound"] = { id = "rbxassetid://77899431201803" },
-	["Sounds/UI/PressCursorSound"] = { id = "rbxassetid://120539641598067" },
-	-- ===== AMBIANCE =====
-	["Sounds/Game/Background/Nature"] = { id = "rbxassetid://118755434492556" },
-	-- ===== SONS DU MONDE (camion, boite aux lettres, depots) =====
-	["Sounds/Game/GlobalSounds/CloseDoorTruckSound"] = { id = "rbxassetid://86379404626306" },
-	["Sounds/Game/GlobalSounds/CloseMailboxSound"] = { id = "rbxassetid://116996075824435" },
-	["Sounds/Game/GlobalSounds/DropSound"] = { id = "rbxassetid://101141177714787" },
-	["Sounds/Game/GlobalSounds/JoinSound"] = { id = "rbxassetid://103716524346544" },
-	["Sounds/Game/GlobalSounds/OpenDoorTruckSound"] = { id = "rbxassetid://131610185149540" },
-	["Sounds/Game/GlobalSounds/OpenMailboxSound"] = { id = "rbxassetid://76627983706798" },
-	-- ===== MUSIQUES (la boucle est posee par le code qui les joue) =====
-	["Sounds/Game/Musics/Music1"] = { id = "rbxassetid://96165653865003" },
-	["Sounds/Game/Musics/Music2"] = { id = "rbxassetid://133946377022705" },
-	["Sounds/Game/Musics/MusicMainMenu"] = { id = "rbxassetid://134274317565831" },
-	-- ===== MUSIQUES DU MODE BUILD =====
-	["Sounds/Game/Musics/Build/MusicBuild1"] = { id = "rbxassetid://109736730543867" },
-	["Sounds/Game/Musics/Build/MusicBuild2"] = { id = "rbxassetid://135887795209145" },
-	["Sounds/Game/Musics/Build/MusicBuild3"] = { id = "rbxassetid://100473199218843" },
-	["Sounds/Game/Musics/Build/MusicBuild4"] = { id = "rbxassetid://126815240231500" },
-	["Sounds/Game/Musics/Build/MusicBuild5"] = { id = "rbxassetid://71266878799604" },
+	["Sounds/UI/PressCursorSound"] = { id = "rbxassetid://120539641598067", volume = 0.012 },
 }
 
 return SoundConfigs

@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.909 — Tous les sons du jeu sont dans le code (82), et le rateau a enfin un son
+
+- `SoundConfigs` remplace par l'export complet de Studio (`ExporterSons.lua`) : 82 sons avec leurs volumes, boucles
+  et l'ambiance `Nature` (volume 0.1, boucle, joue toute seule). Nouveaux par rapport a 0.0.905 : taille-haie,
+  echelle, tondeuse, rateau, pas et feuilles. Aucun n'a d'effet ni de SoundGroup : les Sound de Studio peuvent
+  etre supprimes.
+- BUG : `RakeConfigs` cherchait `Sounds/Tools/Rake/RakeSweepSound`, qui n'a jamais existe (warn au demarrage).
+  Pointe maintenant sur `Sounds/Engins/Rake/RakeSound`.
+
 ## 0.0.908 — Les sons de la config peuvent jouer tout seuls
 
 - `SoundConfigs` : champ `playing = true` pour un son qui joue des le demarrage (une ambiance comme `Nature`,
