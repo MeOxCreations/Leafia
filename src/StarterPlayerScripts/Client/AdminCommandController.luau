@@ -56,6 +56,13 @@ local BTN_GAP = 6 -- ecart avec le dernier bouton de Roblox
 -- Distance (px) au-dela de laquelle un appui devient un GLISSER. En dessous, c'est un appui : un doigt tremble toujours
 -- un peu, et la console ne s'ouvrirait jamais si le moindre pixel comptait comme un deplacement.
 local DRAG_THRESHOLD = 10
+-- PLACE PAR DEFAUT DANS LE HUB : a droite du nom du plot ("STARTER PLOT") de l'ecran de choix, la ou le joueur l'a
+-- demandee. Prise au PREMIER moment ou ce nom est a l'ecran, puis figee : elle ne suit pas le nom quand on change de
+-- plot et ne disparait pas avec lui en entrant dans le jeu. Ailleurs (didacticiel), la barre du haut.
+local ANCHOR_UI = "LoadSaveUI"
+local ANCHOR_LABEL = "TitleNamePlot"
+local ANCHOR_GAP = 12 -- px entre la fin du texte et la roue
+local ANCHOR_WAIT = 30 -- s : au-dela, on renonce et la roue reste dans la barre du haut
 
 -- Etat, cree paresseusement au 1er toggle (pas au boot : inutile tant qu'on n'ouvre pas la console).
 local gui: ScreenGui? = nil
@@ -438,8 +445,8 @@ end
 -- LA ROUE DENTEE (ecran tactile). Sa place se MESURE a chaque changement de la barre du haut ou de l'ecran (rotation,
 -- tablette), jamais une fois pour toutes. Position relative a l'ORIGINE REELLE du ScreenGui : sur mobile, meme en
 -- `ScreenInsets.None`, elle ne tombe pas forcement sur le coin de l'ecran (meme piege que WorldAnchor).
--- Une fois GLISSEE a la main, elle reste la ou on l'a posee (pour la session : rien n'est sauvegarde), seulement
--- ramenee dans l'ecran si celui-ci change de taille.
+-- Une fois POSEE -- glissee a la main, ou calee a cote du nom du plot -- elle reste la (pour la session : rien n'est
+-- sauvegarde), seulement ramenee dans l'ecran si celui-ci change de taille.
 local function buildTouchButton()
 	local playerGui = player:WaitForChild("PlayerGui", 30)
 	if not playerGui then
@@ -483,7 +490,8 @@ local function buildTouchButton()
 	touchButton = button
 	touchStroke = stroke
 
-	local userPlaced = false
+	-- Vrai des que la place est decidee (glisser, ou nom du plot) : la barre du haut ne la deplace plus.
+	local pinned = false
 
 	local function clampToScreen(x: number, y: number, size: number): (number, number)
 		local area = sg.AbsoluteSize
@@ -495,7 +503,7 @@ local function buildTouchButton()
 		local size = if inset.Height > 0 then math.clamp(inset.Height - 8, BTN_MIN, BTN_MAX) else BTN_MAX
 		button.Size = UDim2.fromOffset(size, size)
 		local x, y
-		if userPlaced then
+		if pinned then
 			x, y = button.Position.X.Offset, button.Position.Y.Offset
 		elseif inset.Height > 0 then
 			local origin = sg.AbsolutePosition
@@ -512,6 +520,59 @@ local function buildTouchButton()
 	GuiService:GetPropertyChangedSignal("TopbarInset"):Connect(place)
 	sg:GetPropertyChangedSignal("AbsolutePosition"):Connect(place)
 	sg:GetPropertyChangedSignal("AbsoluteSize"):Connect(place)
+
+	-- LA FIN DU TEXTE du nom du plot, pas le bord du label : le label peut etre bien plus large que son texte, et la
+	-- roue se poserait loin du mot. Les deux positions sont dans le meme repere (`AbsolutePosition`), on retranche
+	-- l'origine de notre ScreenGui, comme pour la barre du haut.
+	-- `Visible` ne dit rien des parents : un label visible dans un ecran cache n'est pas a l'ecran.
+	local function onScreen(gui: GuiObject): boolean
+		local node: Instance? = gui
+		while node and not node:IsA("ScreenGui") do
+			if node:IsA("GuiObject") and not node.Visible then
+				return false
+			end
+			node = node.Parent
+		end
+		return node ~= nil and (node :: ScreenGui).Enabled
+	end
+
+	local function anchorSpot(): (number?, number?)
+		local ui = playerGui:FindFirstChild(ANCHOR_UI)
+		local found = ui and ui:FindFirstChild(ANCHOR_LABEL, true)
+		if not (found and found:IsA("TextLabel") and found.TextBounds.X > 0 and onScreen(found)) then
+			return nil, nil
+		end
+		local label = found :: TextLabel
+		local pos, size, text = label.AbsolutePosition, label.AbsoluteSize, label.TextBounds
+		local right
+		if label.TextXAlignment == Enum.TextXAlignment.Left then
+			right = pos.X + text.X
+		elseif label.TextXAlignment == Enum.TextXAlignment.Right then
+			right = pos.X + size.X
+		else
+			right = pos.X + (size.X + text.X) / 2
+		end
+		local origin = sg.AbsolutePosition
+		local side = button.AbsoluteSize.X
+		return right + ANCHOR_GAP - origin.X, pos.Y + size.Y / 2 - side / 2 - origin.Y
+	end
+	-- L'ECRAN DE CHOIX ARRIVE APRES LE SPAWN, et son nom peut encore glisser en place. On attend qu'il soit la ET
+	-- immobile (deux mesures identiques), sinon la roue se poserait au milieu de son animation d'entree.
+	task.spawn(function()
+		local deadline = os.clock() + ANCHOR_WAIT
+		local lastX, lastY = nil, nil
+		while not pinned and os.clock() < deadline do
+			local x, y = anchorSpot()
+			if x and y and x == lastX and y == lastY then
+				local cx, cy = clampToScreen(x, y, button.AbsoluteSize.X)
+				button.Position = UDim2.fromOffset(cx, cy)
+				pinned = true
+				return
+			end
+			lastX, lastY = x, y
+			task.wait(0.5)
+		end
+	end)
 
 	-- APPUYER OU GLISSER. On ne lit que des ECARTS au point de depart : convertir une position de doigt en position
 	-- d'interface est un pari sur la barre du haut, un ecart ne l'est pas (journal de CLAUDE.md). Et c'est nous qui
@@ -538,7 +599,7 @@ local function buildTouchButton()
 			return
 		end
 		dragging = true
-		userPlaced = true
+		pinned = true
 		local x, y = clampToScreen(startX + delta.X, startY + delta.Y, button.AbsoluteSize.X)
 		button.Position = UDim2.fromOffset(x, y)
 	end

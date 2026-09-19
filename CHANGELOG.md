@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.924 — La roue de la console admin se pose par defaut a droite du nom du plot
+
+- `AdminCommandController` : dans le hub, la roue dentee se cale a droite du texte "STARTER PLOT" (`TitleNamePlot`
+  de `LoadSaveUI`) des que l'ecran de choix du plot est affiche et immobile. Position prise une fois, puis figee :
+  elle ne suit pas le nom en changeant de plot et reste a sa place en entrant dans le jeu. On peut toujours la
+  glisser ailleurs.
+- Calee sur la FIN DU TEXTE (`TextBounds`), pas sur le bord du label, qui peut etre bien plus large que le mot.
+- Sans ce label (didacticiel), ou s'il n'apparait pas en 30 s, elle reste dans la barre du haut comme avant.
+
 ## 0.0.923 — Le voile blanc ferme le chargement au lieu de l'ouvrir ; le glisser au doigt garde son elan
 
 - `LoadingOverlay` : au clic sur PLAY / CONTINUE, le rideau de chargement revient en FONDU comme avant. Le voile
