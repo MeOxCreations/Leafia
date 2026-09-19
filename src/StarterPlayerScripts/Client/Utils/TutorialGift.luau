@@ -15,6 +15,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local TutorialConfigs = require(ReplicatedStorage.Modules.Configs.TutorialConfigs)
+local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local WipeVisual = require(game:GetService("ReplicatedFirst").WipeVisual)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
 local WorldMarker = require(ReplicatedStorage.Modules.UI.Core.WorldMarker)
@@ -38,6 +40,9 @@ local player = Players.LocalPlayer
 
 local hooks: Hooks? = nil
 local given = false
+-- LE VOILE DE SORTIE, pose quand le serveur annonce le depart vers le hub. Ecoute branchee une fois.
+local exitWipe: WipeVisual.Wipe? = nil
+local listening = false
 -- LE BILLET A ETE PRIS : plus rien a proposer.
 local taken = false
 local marker: Frame? = nil
@@ -91,6 +96,47 @@ local function clearMarker()
 	marker, markerPart = nil, nil
 end
 
+-- LE SERVEUR ANNONCE LA SORTIE ("leave") ou l'annule ("stay", teleportation impossible -- Studio). Branche DES
+-- l'ouverture de l'etape : le message arrive juste apres la prise, il ne doit pas trouver personne a l'ecoute.
+local function listenExit()
+	if listening then
+		return
+	end
+	listening = true
+	task.spawn(function()
+		local remote = RemoteSetup.getRemote("TutorialGrandpaBill", "Tutorial")
+		if not (remote and remote:IsA("RemoteEvent")) then
+			return
+		end
+		remote.OnClientEvent:Connect(function(phase)
+			if phase == "leave" and not exitWipe then
+				local playerGui = player:FindFirstChildOfClass("PlayerGui")
+				if not playerGui then
+					return
+				end
+				local wipe = WipeVisual.create(playerGui)
+				exitWipe = wipe
+				wipe.sweep(0, 1, WipeVisual.COVER_TIME)
+				-- FILET : si on est toujours la bien apres, la teleportation n'a pas eu lieu -- on rend l'ecran.
+				task.delay(TutorialConfigs.EXIT_WIPE_FAILSAFE, function()
+					if exitWipe == wipe and wipe.gui.Parent then
+						wipe.sweep(1, 0, WipeVisual.REVEAL_TIME)
+						wipe.gui:Destroy()
+						exitWipe = nil
+					end
+				end)
+			elseif phase == "stay" then
+				local wipe = exitWipe
+				if wipe then
+					exitWipe = nil
+					wipe.sweep(1, 0, WipeVisual.REVEAL_TIME)
+					wipe.gui:Destroy()
+				end
+			end
+		end)
+	end)
+end
+
 --- Ouvre l'etape : pastille sur lui, badge quand on approche. Idempotent.
 function TutorialGift.start(h: Hooks)
 	if hooks then
@@ -100,6 +146,7 @@ function TutorialGift.start(h: Hooks)
 	given = false
 	taken = false
 	nextCheck = 0
+	listenExit()
 	print("[TutorialGift] Les feuilles sont ramassees : le grand-pere attend le joueur.")
 end
 

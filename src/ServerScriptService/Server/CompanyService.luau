@@ -6,6 +6,7 @@
 -- SERIALISATION : Companies est un tableau PLEIN de 3 cases (false = vide), pas un tableau a trous -- un trou casse la
 -- serialisation JSON du DataStore. Chaque case remplie = une table Company (que du plat).
 
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
@@ -227,7 +228,40 @@ function CompanyService.markTutorialDone(player: Player)
 	end
 end
 
+-- ARRIVE DU DIDACTICIEL : la teleportation porte `fromTutorial`, on marque le tuto fini sur la save active.
+--
+-- LE TUTO N'A PAS DE SAUVEGARDE A LUI : c'est ici, ou la save est chargee, qu'on peut l'ecrire. On attend que le
+-- profil soit charge (il arrive un peu apres le joueur), avec un plafond.
+--
+-- LIMITE CONNUE : les donnees de teleportation passent par le client, un tricheur pourrait les forger. Le pire qu'il
+-- obtienne est de sauter le didacticiel -- rien a gagner, donc on accepte.
+local ARRIVAL_PROFILE_WAIT = 30
+
+local function markIfFromTutorial(player: Player)
+	local join = player:GetJoinData()
+	local data = if type(join) == "table" then join.TeleportData else nil
+	if not (type(data) == "table" and data.fromTutorial == true) then
+		return
+	end
+	local deadline = os.clock() + ARRIVAL_PROFILE_WAIT
+	while player.Parent and os.clock() < deadline do
+		if DataService.get(player) then
+			CompanyService.markTutorialDone(player)
+			print(`[CompanyService] {player.Name} revient du didacticiel : tuto marque fini.`)
+			return
+		end
+		task.wait(0.5)
+	end
+	warn(`[CompanyService] {player.Name} revient du didacticiel mais sa save n'a pas charge : tuto pas marque.`)
+end
+
 function CompanyService.init()
+	Players.PlayerAdded:Connect(function(player)
+		task.spawn(markIfFromTutorial, player)
+	end)
+	for _, player in Players:GetPlayers() do
+		task.spawn(markIfFromTutorial, player)
+	end
 	local function bind(name: string, handler: (Player, ...any) -> ...any)
 		local remote = RemoteSetup.getRemote(name, "Company")
 		if remote and remote:IsA("RemoteFunction") then

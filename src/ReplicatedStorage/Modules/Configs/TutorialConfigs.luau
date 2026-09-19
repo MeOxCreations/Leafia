@@ -1109,6 +1109,14 @@ return {
 	-- Distance maxi (studs, a plat) acceptee par le SERVEUR pour prendre le billet : un peu plus que le rayon du badge,
 	-- pour la latence. Le client ment toujours.
 	GIFT_BILL_TAKE_RADIUS = 16,
+	-- ===== LA SORTIE DU DIDACTICIEL =====
+	-- Le billet pris, le voile blanc couvre l'ecran et le joueur part vers le hub principal. Le serveur attend ce
+	-- delai (le temps que le voile couvre, en secondes) avant de lancer la teleportation : partir avant, on verrait
+	-- l'ecran de teleport couper le balayage en plein milieu.
+	EXIT_TELEPORT_DELAY = 0.9,
+	-- Filet cote client : si la teleportation n'a pas eu lieu apres ce delai, le voile se retire -- un ecran blanc
+	-- colle pour toujours est la pire chose a laisser au joueur.
+	EXIT_WIPE_FAILSAFE = 25,
 	GIFT_ACTION_NAME = "LeafiaTutorialGift",
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,

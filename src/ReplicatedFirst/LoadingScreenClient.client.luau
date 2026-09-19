@@ -24,6 +24,7 @@ local TeleportService = game:GetService("TeleportService")
 -- LE DESSIN DU RIDEAU, partage avec l'ecran du teleport. Voisin DANS ReplicatedFirst, donc deja la : ce require
 -- n'attend aucune replication, contrairement a un module de ReplicatedStorage.
 local CurtainVisual = require(script.Parent.CurtainVisual)
+local WipeVisual = require(script.Parent.WipeVisual)
 
 local player = Players.LocalPlayer
 ReplicatedFirst:RemoveDefaultLoadingScreen()
@@ -130,17 +131,10 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- POURQUOI PAS UN SIMPLE FONDU. En fondant, chaque element du rideau disparait a sa maniere : la tuile, la
 	-- feuille et les textes s'effacent en meme temps mais pas au meme rythme, et ca se lit comme un bug. Sous le
 	-- volet, on ne voit RIEN partir -- le rideau est deja detruit quand le blanc se retire.
-	local WIPE_COLOR = Color3.fromRGB(255, 255, 255)
-	local WIPE_COVER_TIME = 0.55 -- duree pour recouvrir
-	local WIPE_HOLD = 0.12 -- temps couvert, pendant lequel on detruit le rideau
-	-- Plus lent que l'arrivee, et c'est voulu : on COUVRE pour cacher (autant que ce soit vite fait), on DECOUVRE
-	-- pour montrer le jeu (autant que ca se savoure). Les deux n'ont pas le meme role, ils n'ont pas la meme duree.
-	local WIPE_REVEAL_TIME = 0.85
-	local WIPE_SOFT = 0.18 -- douceur du bord. 0 = coupure nette, ce qui se lit comme un masque
-	-- SENS DU BALAYAGE, en degres. 0 = de gauche a droite, 180 = l'inverse.
-	-- Il ne se DEDUIT pas -- deja au journal. Mais ici il n'y a AUCUN risque a se tromper : le volet est detruit a
-	-- la fin quoi qu'il arrive, donc au pire le balayage part du mauvais cote, il ne bloque jamais le jeu.
-	local WIPE_ROTATION = 0
+	-- Le dessin et le mouvement du voile vivent dans `WipeVisual` : la sortie du didacticiel joue le meme.
+	local WIPE_COVER_TIME = WipeVisual.COVER_TIME
+	local WIPE_HOLD = WipeVisual.HOLD -- temps couvert, pendant lequel on detruit le rideau
+	local WIPE_REVEAL_TIME = WipeVisual.REVEAL_TIME
 
 	-- ===== LE JOUEUR NE BOUGE PAS SOUS LE RIDEAU =====
 	-- Le personnage est la bien avant que le rideau se leve (dix secondes au moins) : sans verrou, on marchait a
@@ -291,22 +285,9 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	end
 
 	-- ===== VOLET DE SORTIE =====
-	local wipeGui = Instance.new("ScreenGui")
-	wipeGui.Name = "LeafiaWipe"
-	wipeGui.ScreenInsets = Enum.ScreenInsets.None
-	wipeGui.ResetOnSpawn = false
-	wipeGui.DisplayOrder = 2000 -- AU-DESSUS du rideau : c'est lui qui doit le cacher, pas l'inverse
-	wipeGui.Parent = player:WaitForChild("PlayerGui")
-
-	local wipe = Instance.new("Frame")
-	wipe.BackgroundColor3 = WIPE_COLOR
-	wipe.BorderSizePixel = 0
-	wipe.Size = UDim2.fromScale(1, 1)
-	wipe.Parent = wipeGui
-
-	local wipeGrad = Instance.new("UIGradient")
-	wipeGrad.Rotation = WIPE_ROTATION
-	wipeGrad.Parent = wipe
+	local wipe = WipeVisual.create(player:WaitForChild("PlayerGui"))
+	local wipeGui = wipe.gui
+	local sweep = wipe.sweep
 
 	-- CONDAMNE D'AVANCE. Un aplat blanc plein cadre est la pire chose a laisser derriere soi : il cache le jeu
 	-- entier et le joueur n'a aucun moyen de s'en debarrasser. On programme donc sa destruction MAINTENANT, avant
@@ -316,52 +297,6 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 		wipeGui:Destroy()
 	end)
 
-	-- ON CONSTRUIT LA SEQUENCE, ON N'ANIME PAS L'OFFSET.
-	--
-	-- Le sens d'un `UIGradient.Offset` est imprevisible (deja au journal, et deja paye sur cet ecran). Les TEMPS
-	-- d'une NumberSequence, eux, sont deterministes : 0 est le debut du degrade, 1 sa fin. En posant les points
-	-- soi-meme, on sait exactement ce qu'on fabrique.
-	--
-	-- `edge` va de 0 a 1 et decrit jusqu'ou le blanc s'etend. Le meme constructeur sert aux deux moities du
-	-- mouvement : on le fait monter pour couvrir, puis redescendre pour decouvrir -- et cette descente EST le
-	-- balayage inverse, sans une ligne de plus.
-	local function wipeAt(edge: number)
-		if edge >= 1 then
-			wipeGrad.Transparency = NumberSequence.new(0) -- tout blanc
-			return
-		end
-		if edge <= 0 then
-			wipeGrad.Transparency = NumberSequence.new(1) -- rien
-			return
-		end
-		-- Les temps doivent croitre STRICTEMENT : on force un ecart minimal, sinon Roblox refuse la sequence des
-		-- que le bord touche un bord.
-		local b = math.clamp(edge, 0.002, 0.998)
-		local a = math.clamp(b - WIPE_SOFT, 0.001, b - 0.001)
-		wipeGrad.Transparency = NumberSequence.new({
-			NumberSequenceKeypoint.new(0, 0),
-			NumberSequenceKeypoint.new(a, 0),
-			NumberSequenceKeypoint.new(b, 1),
-			NumberSequenceKeypoint.new(1, 1),
-		})
-	end
-
-	local function sweep(from: number, to: number, duration: number)
-		local t0 = os.clock()
-		while true do
-			local t = math.clamp((os.clock() - t0) / duration, 0, 1)
-			-- Ease in-out : le bord part doucement, file au milieu, se pose. Lineaire, un balayage a l'air
-			-- mecanique -- on voit une barre traverser, pas un volet.
-			local eased = t * t * (3 - 2 * t)
-			wipeAt(from + (to - from) * eased)
-			if t >= 1 then
-				return
-			end
-			RunService.RenderStepped:Wait()
-		end
-	end
-
-	wipeAt(0)
 	sweep(0, 1, WIPE_COVER_TIME)
 
 	-- COUVERT : on demonte le rideau pendant qu'on ne voit rien. C'est tout l'interet du volet.

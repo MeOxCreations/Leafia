@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.916 — Le billet pris, voile blanc et depart vers le hub ; le tuto est marque fini a l'arrivee
+
+- Nouveau `ReplicatedFirst/WipeVisual` : le voile blanc du chargement, sorti de `LoadingScreenClient` (qui s'en
+  sert maintenant) pour que la sortie du didacticiel joue exactement le meme.
+- `TutorialService` : quand la prise du billet est acceptee, le client recoit "leave" (voile qui couvre), puis
+  apres `EXIT_TELEPORT_DELAY` (0.9 s) le serveur teleporte vers `PlacesConfig.MAIN` avec `{ fromTutorial = true }`.
+  Teleportation impossible (Studio) : "stay", le voile se retire. Filet client : retire au bout de 25 s.
+- `CompanyService` (hub) : un joueur qui arrive avec `fromTutorial` voit `TutorialDone` pose sur sa save active
+  des que son profil est charge (le START n'enverra plus au tuto). C'etait le branchement "a faire" de
+  `markTutorialDone`. Limite : les donnees de teleportation passent par le client (pire triche : sauter le tuto).
+
 ## 0.0.915 — Le rond des balises est dessine en code, avec un contour noir
 
 - `WorldMarker` : le rond n'est plus une image. C'est un cadre arrondi (`UICorner` 0.5), rouge (`CIRCLE_COLOR`),

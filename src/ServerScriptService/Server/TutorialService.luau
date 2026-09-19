@@ -13,6 +13,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
 local HedgeCellService = require(script.Parent.HedgeCellService)
+local LeafiaTeleport = require(script.Parent.TeleportService)
+local PlacesConfig = require(ReplicatedStorage.Modules.Configs.PlacesConfig)
 local MowConfigs = require(ReplicatedStorage.Modules.Configs.MowConfigs)
 local RakeConfigs = require(ReplicatedStorage.Modules.Configs.RakeConfigs)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
@@ -1898,26 +1900,26 @@ local function giveBill()
 	track:Play(TutorialConfigs.GIFT_BILL_FADE)
 end
 
---- LE JOUEUR PREND LE BILLET : il quitte la main du papi, qui baisse le bras.
-local function takeBill(player: Player)
+--- LE JOUEUR PREND LE BILLET : il quitte la main du papi, qui baisse le bras. Rend vrai si la prise est acceptee.
+local function takeBill(player: Player): boolean
 	local bill = billModel
 	if billTaken or not bill then
-		return
+		return false
 	end
 	local model = bill.Parent
 	if not (model and model:IsA("Model")) or model:GetAttribute(TutorialConfigs.GIFT_BILL_OFFER_ATTRIBUTE) ~= true then
-		return -- il ne le tend pas encore
+		return false -- il ne le tend pas encore
 	end
 	-- LE CLIENT MENT TOUJOURS : il faut etre pres du papi pour prendre ce qu'il tend.
 	local character = player.Character
 	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
 	local grandpaRoot = model:FindFirstChild("HumanoidRootPart")
 	if not (root and root:IsA("BasePart") and grandpaRoot and grandpaRoot:IsA("BasePart")) then
-		return
+		return false
 	end
 	local flat = (root.Position - grandpaRoot.Position) * Vector3.new(1, 0, 1)
 	if flat.Magnitude > TutorialConfigs.GIFT_BILL_TAKE_RADIUS then
-		return
+		return false
 	end
 	billTaken = true
 	model:SetAttribute(TutorialConfigs.GIFT_BILL_OFFER_ATTRIBUTE, nil)
@@ -1928,6 +1930,27 @@ local function takeBill(player: Player)
 	end
 	bill:Destroy()
 	billModel = nil
+	return true
+end
+
+--- LE DIDACTICIEL EST FINI : voile blanc chez le joueur, puis direction le hub principal.
+---
+--- LA TELEPORTATION PORTE `fromTutorial` : c'est ce qui dit au hub de marquer le didacticiel fini sur la save. Le
+--- tuto n'a pas de sauvegarde a lui -- le hub est le seul a pouvoir l'ecrire.
+---
+--- EN STUDIO elle ne part jamais (TeleportService.teleportToPlace rend faux) : on retire alors le voile, sinon le
+--- joueur resterait devant un ecran blanc.
+local function leaveTutorial(player: Player, remote: RemoteEvent)
+	remote:FireClient(player, "leave")
+	task.delay(TutorialConfigs.EXIT_TELEPORT_DELAY, function()
+		if player.Parent == nil then
+			return
+		end
+		local ok = LeafiaTeleport.teleportToPlace(player, PlacesConfig.MAIN, { fromTutorial = true })
+		if not ok and player.Parent then
+			remote:FireClient(player, "stay")
+		end
+	end)
 end
 
 function TutorialService.init()
@@ -1942,7 +1965,9 @@ function TutorialService.init()
 		end
 		-- "take" : il prend le billet tendu. Sans argument : le papi le sort, une fois.
 		if action == "take" then
-			takeBill(player)
+			if takeBill(player) then
+				leaveTutorial(player, billRemote)
+			end
 			return
 		end
 		if billGiven then
