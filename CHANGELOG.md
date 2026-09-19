@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.902 — Le billet se voit des le debut de l'animation
+
+- `giveBill` force `Transparency = 0` sur les parts du billet clone : laisse transparent dans Studio (pour ne pas
+  encombrer le papi), il sortait invisible. Hors du geste, il n'existe pas en jeu (retire du papi au demarrage).
+
 ## 0.0.901 — Le grand-pere sort un billet en donnant sa recompense
 
 - Le modele `Billet` est rigge dans `OldmanOriginal` (Motor6D : Part0 = HumanoidRootPart, Part1 = BilletPart).

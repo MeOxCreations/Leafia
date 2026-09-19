@@ -1829,6 +1829,9 @@ local function giveBill()
 	local bill = template:Clone()
 	-- LIBRE ET SANS POIDS : une part ancree ignore son Motor6D (le billet resterait fige), et une part qui pese
 	-- tirerait sur le papi.
+	--
+	-- ET VISIBLE : dans Studio le billet peut etre laisse transparent pour ne pas encombrer le papi pendant qu'on
+	-- l'anime. Le seul moment ou il existe en jeu, c'est ce geste -- il doit donc se voir des sa premiere image.
 	for _, d in bill:GetDescendants() do
 		if d:IsA("BasePart") then
 			d.Anchored = false
@@ -1836,6 +1839,7 @@ local function giveBill()
 			d.CanQuery = false
 			d.CanTouch = false
 			d.Massless = true
+			d.Transparency = 0
 		end
 	end
 	-- LE JOINT GARDE SES REGLAGES DE STUDIO (C0, C1) ; seule son attache au papi est reposee -- rangé dans les
