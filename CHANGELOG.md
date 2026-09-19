@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.907 — Script d'export d'une interface Studio
+
+- `scripts/studio/ExporterInterface.lua` (barre de commandes) : imprime tout l'arbre de l'interface selectionnee
+  (par defaut `StarterGui.NotificationUI`) -- chaque objet, chaque propriete differente de sa valeur par defaut,
+  et les attributs. Premiere etape pour passer `NotificationUI` en code et qu'il arrive dans toutes les places.
+
 ## 0.0.906 — L'echelle et le seau ont leur icone sur leur pastille
 
 - `TruckConfigs.TOOL_ICONS.Ladder` = `rbxassetid://81092511869730` : la carte de l'echelle dans la barre du camion
