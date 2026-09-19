@@ -27,7 +27,13 @@ local WorldAnchor = require(script.Parent.WorldAnchor)
 
 local WorldMarker = {}
 
-local CIRCLE_IMAGE = "rbxassetid://124707156951795"
+-- LE ROND EST DESSINE EN CODE (un cadre arrondi), plus une image : demande du joueur. Sa couleur et son contour se
+-- reglent ici, et il reste net a toutes les tailles d'ecran.
+local CIRCLE_COLOR = Color3.fromRGB(228, 38, 38)
+-- LE CONTOUR NOIR, en fraction de la taille du rond (`ScaledSize`) : il garde la meme epaisseur visible du PC au
+-- telephone, et quand la balise grossit ou rapetisse avec la distance.
+local CIRCLE_STROKE_COLOR = Color3.fromRGB(0, 0, 0)
+local CIRCLE_STROKE = 0.09
 -- UN OBJET INDISPONIBLE : des barreaux en diagonale (dessin du joueur) POSES PAR-DESSUS le rond rouge, sous l'icone.
 -- Le rond reste -- c'est lui qui fait reconnaitre une balise ; les rayures disent "c'est la, mais pas pour toi
 -- maintenant", et l'icone dit de quel outil on parle.
@@ -235,19 +241,22 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: st
 	frame.Size = UDim2.fromOffset(SIZE, SIZE)
 	frame.Parent = holder
 
-	local circle = Instance.new("ImageLabel")
+	-- UN CADRE CARRE ARRONDI A FOND (`UDim.new(0.5, 0)`) : c'est un rond, a toutes les tailles. Le cadre de la balise
+	-- est carre, donc rien a contraindre.
+	local circle = Instance.new("Frame")
 	circle.Name = "Circle"
-	circle.BackgroundTransparency = 1
+	circle.BackgroundColor3 = CIRCLE_COLOR
+	circle.BorderSizePixel = 0
 	circle.Size = UDim2.fromScale(1, 1)
-	circle.Image = CIRCLE_IMAGE
-	-- `Stretch` sur les DEUX couches, et pas `Fit`. `Fit` conserve les proportions de l'image et la borne par le
-	-- plus PETIT cote du cadre : une image en `Fit` ne sait que grossir et rapetisser, elle ne peut pas s'etirer.
-	-- Le sursaut du " ! " le RETRECIRAIT au lieu de l'allonger. Piege deja paye sur les feuilles du chargement.
-	--
-	-- Le cercle est CARRE et son image aussi ; la marque, elle, porte le rapport de son propre dessin (voir
-	-- MARK_RATIO). `Stretch` ne deforme donc rien au repos, et reste libre d'etirer pendant le sursaut.
-	circle.ScaleType = Enum.ScaleType.Stretch
 	circle.Parent = frame
+	local round = Instance.new("UICorner") :: UICorner
+	round.CornerRadius = UDim.new(0.5, 0)
+	round.Parent = circle
+	local ring = Instance.new("UIStroke")
+	ring.Color = CIRCLE_STROKE_COLOR
+	ring.Thickness = CIRCLE_STROKE
+	ring.StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize
+	ring.Parent = circle
 
 	local mark = Instance.new("ImageLabel")
 	mark.Name = "Mark"

@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.915 — Le rond des balises est dessine en code, avec un contour noir
+
+- `WorldMarker` : le rond n'est plus une image. C'est un cadre arrondi (`UICorner` 0.5), rouge (`CIRCLE_COLOR`),
+  avec un `UIStroke` noir en `ScaledSize` (`CIRCLE_STROKE`, 0.09) : meme epaisseur visible sur PC, telephone, et
+  quand la balise grossit avec la distance. Le " ! ", les icones et les rayures se posent dessus comme avant.
+
 ## 0.0.914 — Le grand-pere tend le billet jusqu'a ce que le joueur le prenne
 
 - A la fin du geste du billet, le serveur ne detruit plus le billet : il joue l'idle bras tendu
