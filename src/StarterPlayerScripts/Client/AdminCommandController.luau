@@ -15,6 +15,7 @@ local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHa
 local Toast = require(ReplicatedStorage.Modules.UI.Core.Toast)
 local SideNotificationHandler = require(ReplicatedStorage.Modules.UI.Notification.SideNotificationHandler)
 local AdminCommandConfigs = require(ReplicatedStorage.Modules.Configs.AdminCommandConfigs)
+local CustomKeyboard = require(ReplicatedStorage.Modules.UI.Core.CustomKeyboard)
 
 local AdminCommandController = {}
 
@@ -52,6 +53,14 @@ local TOGGLE_KEY = Enum.KeyCode.F2
 local MAX_SUGGESTIONS = 8 -- PC seulement : sur tactile la ligne de pastilles defile, on les montre toutes
 -- Largeur de la console : 94 % de l'ecran, plafonnee.
 local PANEL_MAX_WIDTH = if IS_TOUCH then 460 else 560
+
+-- CLAVIER DU JEU (tactile) : le clavier du telephone recouvrait la moitie de l'ecran, console comprise. Chiffres en
+-- tete (montants, niveaux), `_` en plus pour les noms de joueurs. Tout en minuscules : c'est ce qu'attendent les
+-- commandes.
+local KB_ROWS = { "1234567890", "qwertyuiop", "asdfghjkl", "zxcvbnm" }
+local KEY_PRESS = Color3.fromRGB(211, 240, 197) -- vert tres pale tant qu'on appuie
+local KB_MAX_WIDTH, KB_MAX_HEIGHT = 520, 300
+local INPUT_MAX_LEN = 60
 
 -- BOUTON TACTILE. Sans clavier, pas de F2, donc pas de console. Au depart, la roue se range dans la barre du haut de
 -- Roblox, juste apres ses boutons (`GuiService.TopbarInset` = la place que Roblox laisse libre pour ca) : elle ne
@@ -120,6 +129,13 @@ local function clearPredictor()
 	pred.Visible = false
 end
 
+-- SUR TACTILE, JAMAIS LE FOCUS NATIF : il ouvrirait le clavier du telephone par-dessus celui du jeu.
+local function focusInput(box: TextBox)
+	if not IS_TOUCH then
+		box:CaptureFocus()
+	end
+end
+
 local function fillInput(text: string)
 	local box = inputBox
 	if not box then
@@ -127,7 +143,7 @@ local function fillInput(text: string)
 	end
 	box.Text = text
 	box.CursorPosition = #text + 1
-	box:CaptureFocus()
+	focusInput(box)
 end
 
 -- Filtre les commandes par le 1er mot tape et affiche les correspondances. Des qu'il y a un espace (commande choisie,
@@ -280,7 +296,7 @@ local function execute()
 		end)
 		showOutput("Notifications de test affichees.")
 		box.Text = ""
-		box:CaptureFocus()
+		focusInput(box)
 		return
 	end
 	if word == "tasks" then
@@ -292,7 +308,7 @@ local function execute()
 			showOutput(`Bandeau rejoue : {#TaskConfigs.DEMO_TASKS} taches de demonstration.`)
 		end
 		box.Text = ""
-		box:CaptureFocus()
+		focusInput(box)
 		return
 	end
 
@@ -306,7 +322,7 @@ local function execute()
 	end)
 	showOutput(if ok then tostring(result) else "Echec de l'appel serveur.")
 	box.Text = ""
-	box:CaptureFocus()
+	focusInput(box)
 end
 
 local function build()
@@ -322,14 +338,16 @@ local function build()
 	-- ferait bouger (meme raison que la barre de navigation).
 	sg:SetAttribute("LeafiaNoSlime", true)
 
-	-- Sur tactile, SOUS la barre du haut : a 6 % de l'ecran, la console recouvrait la roue qui sert a la fermer.
-	local top = if IS_TOUCH then UDim2.new(0.5, 0, 0, GuiService.TopbarInset.Max.Y + 8) else UDim2.fromScale(0.5, 0.06)
+	-- Sur tactile : SOUS la barre du haut (sinon la console recouvrait la roue qui sert a la fermer), et a GAUCHE --
+	-- le clavier du jeu prend la moitie droite. Cote a cote, les deux tiennent dans un telephone en paysage ; empiles,
+	-- ils n'y tenaient pas.
+	local topY = GuiService.TopbarInset.Max.Y + 8
 	local panel = create("Frame", {
 		Name = "Panel",
 		BackgroundColor3 = PANEL_BG,
-		AnchorPoint = Vector2.new(0.5, 0),
-		Position = top,
-		Size = UDim2.fromScale(0.94, 0),
+		AnchorPoint = if IS_TOUCH then Vector2.new(0, 0) else Vector2.new(0.5, 0),
+		Position = if IS_TOUCH then UDim2.new(0.02, 0, 0, topY) else UDim2.fromScale(0.5, 0.06),
+		Size = UDim2.fromScale(if IS_TOUCH then 0.47 else 0.94, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Children = {
 			corner(14),
@@ -401,6 +419,7 @@ local function build()
 		PlaceholderColor3 = TEXT_DIM,
 		Text = "",
 		ClearTextOnFocus = false,
+		TextEditable = not IS_TOUCH, -- tactile : lecture seule, on tape au clavier du jeu
 		Children = {
 			corner(8),
 			create("UIStroke", { Color = PANEL_STROKE, Thickness = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }),
@@ -514,6 +533,59 @@ local function build()
 	end
 	shownBox.Parent = panel
 
+	-- LE CLAVIER DU JEU (tactile), a droite de la console, de la barre du haut jusqu'en bas de l'ecran.
+	if IS_TOUCH then
+		local keyboard = create("Frame", {
+			Name = "Keyboard",
+			BackgroundColor3 = PANEL_BG,
+			AnchorPoint = Vector2.new(1, 0),
+			Position = UDim2.new(0.98, 0, 0, topY),
+			Size = UDim2.new(0.49, 0, 1, -(topY + 12)),
+			Children = {
+				corner(14),
+				create("UIStroke", { Color = PANEL_STROKE, Thickness = 1.5 }),
+				create("UISizeConstraint", { MaxSize = Vector2.new(KB_MAX_WIDTH, KB_MAX_HEIGHT) }),
+				create("UIPadding", {
+					PaddingTop = UDim.new(0, 8),
+					PaddingBottom = UDim.new(0, 8),
+					PaddingLeft = UDim.new(0, 8),
+					PaddingRight = UDim.new(0, 8),
+				}),
+				create("UIListLayout", {
+					FillDirection = Enum.FillDirection.Vertical,
+					HorizontalAlignment = Enum.HorizontalAlignment.Center,
+					VerticalAlignment = Enum.VerticalAlignment.Center,
+					Padding = UDim.new(0.025, 0),
+					SortOrder = Enum.SortOrder.LayoutOrder,
+				}),
+			},
+		}) :: Frame
+		CustomKeyboard.fill(keyboard, {
+			rows = KB_ROWS,
+			keyWidth = 0.088,
+			rowHeight = 0.17,
+			extraKeys = { "_" },
+			font = Font.fromEnum(FONT_BOLD),
+			zIndex = 2,
+			keyColor = WELL,
+			specialColor = ROW_HOVER,
+			textColor = TEXT_MAIN,
+			pressColor = KEY_PRESS,
+			confirmColor = ACCENT,
+			confirmTextColor = Color3.new(1, 1, 1),
+			onChar = function(c: string)
+				if #box.Text < INPUT_MAX_LEN then
+					box.Text ..= c
+				end
+			end,
+			onBackspace = function()
+				box.Text = box.Text:sub(1, -2)
+			end,
+			onConfirm = execute,
+		})
+		keyboard.Parent = sg
+	end
+
 	panel.Parent = sg
 	sg.Parent = player:WaitForChild("PlayerGui")
 
@@ -560,7 +632,7 @@ local function toggle()
 	if g.Enabled then
 		refreshPredictor()
 		if inputBox then
-			(inputBox :: TextBox):CaptureFocus()
+			focusInput(inputBox :: TextBox)
 		end
 	else
 		clearPredictor()

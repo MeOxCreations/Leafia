@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.928 — Console admin sur telephone : le clavier du jeu au lieu de celui du telephone
+
+- Nouveau `Modules/UI/Core/CustomKeyboard` : le clavier a l'ecran de la fenetre du nom d'entreprise, sorti de
+  `LoadCompanyController` pour servir aussi a la console. Il ne tient aucun texte : chaque touche appelle
+  `onChar` / `onBackspace` / `onConfirm`, l'appelant decide du reste. Memes touches, memes tailles, memes couleurs
+  pour le nom d'entreprise qu'avant.
+- `AdminCommandController` (tactile) : le champ passe en lecture seule et ne prend plus jamais le focus natif, donc le
+  clavier du telephone ne s'ouvre plus. Le clavier du jeu s'affiche a DROITE de la console, dans son style : chiffres
+  en tete (montants, niveaux), lettres, `_` pour les noms de joueurs, effacer, espace, OK (= EXECUTE).
+- La console passe a GAUCHE sur tactile : cote a cote, console et clavier tiennent dans un telephone en paysage.
+- PC inchange : vrai clavier, console centree.
+
 ## 0.0.927 — Une ombre d'ecran derriere le menu des saves et la barre du camion
 
 - Nouveau `Modules/UI/Core/ScreenShadow` : l'image d'ombre du joueur (`rbxassetid://74658820247403`, 120 % de

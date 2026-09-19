@@ -13,6 +13,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local TileField = require(ReplicatedStorage.Modules.UI.Core.TileField)
+local CustomKeyboard = require(ReplicatedStorage.Modules.UI.Core.CustomKeyboard)
 local ScreenShadow = require(ReplicatedStorage.Modules.UI.Core.ScreenShadow)
 local ButtonSlime = require(ReplicatedStorage.Modules.UI.Core.ButtonSlime)
 local FormatUtils = require(ReplicatedStorage.Modules.Utils.FormatUtils)
@@ -1000,92 +1001,23 @@ local function buildNameDialog(parent: Instance)
 		setSaveScreenVisible(true) -- retour a l'ecran de save
 	end)
 
-	-- Une touche : widthScale = fraction de la LARGEUR du clavier (touches uniformes).
-	local function makeKey(labelText: string, widthScale: number, bg: Color3, textColor: Color3, onClick: () -> ()): TextButton
-		local btn = create("TextButton", {
-			Name = "Key_" .. labelText,
-			BackgroundColor3 = bg,
-			Size = UDim2.fromScale(widthScale, 1),
-			Text = labelText,
-			TextColor3 = textColor,
-			FontFace = FONT_BOLD,
-			TextScaled = true,
-			AutoButtonColor = false, -- on gere la couleur d'appui a la main (InputBegan / InputEnded)
-			ZIndex = 62,
-			Children = {
-				corner(0.16),
-				create("UIPadding", {
-					PaddingTop = UDim.new(0.2, 0),
-					PaddingBottom = UDim.new(0.2, 0),
-					PaddingLeft = UDim.new(0.08, 0),
-					PaddingRight = UDim.new(0.08, 0),
-				}),
-			},
-		}) :: TextButton
-		btn.Activated:Connect(onClick)
-		-- Retour visuel d'appui : la touche vire au jaune chaud tant qu'on la maintient, puis revient a sa couleur (bg).
-		btn.InputBegan:Connect(function(input: InputObject)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				btn.BackgroundColor3 = KB_KEY_PRESS
-			end
-		end)
-		btn.InputEnded:Connect(function(input: InputObject)
-			if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-				btn.BackgroundColor3 = bg
-			end
-		end)
-		btn.MouseLeave:Connect(function() -- glisse hors de la touche sans relacher : on remet la couleur d'origine
-			btn.BackgroundColor3 = bg
-		end)
-		return btn
-	end
-
-	local function makeRow(order: number): Frame
-		return create("Frame", {
-			Name = "Row" .. order,
-			BackgroundTransparency = 1,
-			Size = UDim2.fromScale(1, 0.2),
-			LayoutOrder = order,
-			Children = {
-				create("UIListLayout", {
-					FillDirection = Enum.FillDirection.Horizontal,
-					HorizontalAlignment = Enum.HorizontalAlignment.Center,
-					VerticalAlignment = Enum.VerticalAlignment.Center,
-					Padding = UDim.new(0.008, 0),
-					SortOrder = Enum.SortOrder.LayoutOrder,
-				}),
-			},
-		}) :: Frame
-	end
-
-	-- Rangees de lettres.
-	for r, rowStr in KB_ROWS do
-		local rowFrame = makeRow(r)
-		for i = 1, #rowStr do
-			local ch = rowStr:sub(i, i)
-			local key = makeKey(ch:upper(), 0.088, KB_KEY_BG, KB_KEY_TEXT, function()
-				appendChar(ch)
-			end)
-			key.LayoutOrder = i
-			key.Parent = rowFrame
-		end
-		rowFrame.Parent = keyboard
-	end
-
-	-- Derniere rangee : effacer, espace (large), valider.
-	local specialRow = makeRow(#KB_ROWS + 1)
-	local delKey = makeKey("<", 0.16, KB_SPECIAL_BG, KB_KEY_TEXT, backspace)
-	delKey.LayoutOrder = 1
-	delKey.Parent = specialRow
-	local spaceKey = makeKey("SPACE", 0.46, KB_SPECIAL_BG, KB_KEY_TEXT, function()
-		appendChar(" ")
-	end)
-	spaceKey.LayoutOrder = 2
-	spaceKey.Parent = specialRow
-	local okKey = makeKey("OK", 0.16, TAG_PULSE_A, WHITE, confirm)
-	okKey.LayoutOrder = 3
-	okKey.Parent = specialRow
-	specialRow.Parent = keyboard
+	-- LES TOUCHES : le clavier commun (Modules/UI/Core/CustomKeyboard), ne ici et partage depuis avec la console admin.
+	CustomKeyboard.fill(keyboard, {
+		rows = KB_ROWS,
+		keyWidth = 0.088,
+		rowHeight = 0.2,
+		font = FONT_BOLD,
+		zIndex = 62,
+		keyColor = KB_KEY_BG,
+		specialColor = KB_SPECIAL_BG,
+		textColor = KB_KEY_TEXT,
+		pressColor = KB_KEY_PRESS,
+		confirmColor = TAG_PULSE_A,
+		confirmTextColor = WHITE,
+		onChar = appendChar,
+		onBackspace = backspace,
+		onConfirm = confirm,
+	})
 end
 
 -- Ouvre le modal de nommage : vide la saisie et l'affiche. PAS de focus natif (le champ est en lecture seule).
