@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.903 — Les petits messages du bas remontent au-dessus de la barre du camion
+
+- `Toast` s'inscrit dans `PanelFocus` : tant qu'un panneau est ouvert (barre du camion, menu des outils), la pile
+  de toasts remonte de 22 % de la hauteur d'ecran (`PANEL_LIFT`), puis redescend a sa place de Studio. Avant, le
+  refus "Wait for the old man..." s'ecrivait par-dessus les cartes IN THE TRUCK.
+
 ## 0.0.902 — Le billet se voit des le debut de l'animation
 
 - `giveBill` force `Transparency = 0` sur les parts du billet clone : laisse transparent dans Studio (pour ne pas

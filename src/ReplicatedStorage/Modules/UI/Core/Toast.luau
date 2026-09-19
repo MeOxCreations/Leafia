@@ -15,6 +15,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local PanelFocus = require(script.Parent.PanelFocus)
 
 local Toast = {}
 
@@ -47,6 +48,37 @@ local KIND_COLORS: { [string]: Color3 } = {
 
 local template: GuiObject? = nil
 local list: GuiObject? = nil
+
+-- ===== LA PILE MONTE QUAND UN PANNEAU OCCUPE LE BAS DE L'ECRAN =====
+-- La barre du camion vit en bas au milieu, la ou tombent les toasts : le refus "attends le grand-pere" s'ecrivait
+-- PAR-DESSUS les cartes qu'on venait de cliquer. Tant qu'un panneau est ouvert (voir PanelFocus), la pile remonte
+-- de cette part de la hauteur d'ECRAN (en pixels, pas en scale : la pile vit dans un cadre plus petit que l'ecran),
+-- puis redescend. 0.22 couvre la barre du camion sur PC comme sur telephone.
+local PANEL_LIFT = 0.22
+local LIFT_TWEEN = TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local lifted = false
+local liftedList: GuiObject? = nil
+local liftHome = UDim2.new()
+
+local function applyLift(instant: boolean)
+	local pile = list
+	if not (pile and pile.Parent) then
+		return -- pas encore resolue : `resolve` la posera a sa place en la trouvant
+	end
+	-- SA PLACE DE STUDIO, relevee une fois par pile : l'interface est recreee au respawn.
+	if liftedList ~= pile then
+		liftedList = pile
+		liftHome = pile.Position
+	end
+	local camera = workspace.CurrentCamera
+	local screenH = if camera then camera.ViewportSize.Y else 1080
+	local goal = if lifted then liftHome - UDim2.fromOffset(0, math.floor(screenH * PANEL_LIFT)) else liftHome
+	if instant then
+		pile.Position = goal
+	else
+		TweenService:Create(pile, LIFT_TWEEN, { Position = goal }):Play()
+	end
+end
 -- Toasts vivants, du plus VIEUX au plus recent : c'est cet ordre qui permet d'appliquer le plafond MAX en
 -- retirant toujours le premier.
 local active: { GuiObject } = {}
@@ -70,6 +102,7 @@ local function resolve(): boolean
 		foundTemplate.Visible = false
 		template = foundTemplate
 		list = foundList
+		applyLift(true)
 		return true
 	end
 
@@ -185,6 +218,14 @@ function Toast.show(kind: string?, text: string?)
 end
 
 function Toast.init()
+	-- UN HUD POUR PanelFocus : "range" veut dire ici "remonte au-dessus du panneau", pas "disparait" -- un refus
+	-- doit rester lisible pendant qu'on regarde la barre.
+	PanelFocus.register("Toast", {
+		tuck = function(tucked: boolean, instant: boolean)
+			lifted = tucked
+			applyLift(instant)
+		end,
+	})
 	-- Le serveur DEMANDE un toast par ce remote. Seul chemin serveur -> client : le client affiche, il ne
 	-- valide rien (un FireClient ne peut venir que du serveur, qui est notre autorite).
 	--
