@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.921 — Console admin sur mobile et tablette : une roue dentee dans la barre du haut
+
+- `AdminCommandController` : sur ecran tactile, une petite roue dentee (`rbxassetid://72145892854726`) ouvre et
+  ferme la console, a la place de F2. Admins seulement, comme la console.
+- RANGEE DANS LA BARRE DU HAUT DE ROBLOX, juste apres ses boutons : `GuiService.TopbarInset` donne la place que
+  Roblox laisse libre pour ca. Meme hauteur que les boutons voisins (bornee 30-44 px), re-mesuree a chaque
+  changement de barre ou d'ecran : elle suit la rotation et les tablettes, et ne recouvre rien du jeu.
+- Style des cartes du jeu : rond blanc, contour gris clair, icone sombre. Console ouverte : fond vert Leafia.
+  L'icone reste sombre dans les deux etats, lisible quelle que soit la couleur de l'image d'origine.
+- La console s'adapte a l'ecran : 94 % de la largeur, plafonnee a 560 px (elle faisait 560 px fixes). Sur tactile
+  elle s'ouvre SOUS la barre du haut, sinon elle recouvrait la roue qui sert a la fermer.
+- Note : cette icone etait prevue pour les futurs PARAMETRES du jeu. Deux roues identiques a l'ecran pour deux
+  usages seraient confuses le jour ou les parametres arrivent.
+
 ## 0.0.920 — Mode build : en zoomant, la vue se couche ; en reculant, elle repasse au-dessus
 
 - `BuildController.applyZoom` : le zoom (molette ou pincement) ne file plus droit le long du regard. Il s'approche
