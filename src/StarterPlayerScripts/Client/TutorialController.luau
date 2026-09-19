@@ -3101,6 +3101,14 @@ function TutorialController.init()
 										end
 									end)
 								end,
+								takeBill = function()
+									task.spawn(function()
+										local r = RemoteSetup.getRemote("TutorialGrandpaBill", "Tutorial")
+										if r and r:IsA("RemoteEvent") then
+											r:FireServer("take")
+										end
+									end)
+								end,
 								say = function(paths: { { string } }, lines: { [number]: BubbleLine })
 									sayChain(paths, nil, nil, lines)
 								end,

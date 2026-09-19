@@ -758,6 +758,10 @@ local tutorialHedge: BasePart? = nil
 -- LE BILLET DU CADEAU, retire du papi au demarrage et garde ici. `billGiven` : il ne le sort qu'une fois.
 local billTemplate: Model? = nil
 local billGiven = false
+-- LE BILLET EN MAIN et son idle bras tendu, gardes jusqu'a ce que le joueur le prenne.
+local billModel: Model? = nil
+local billHold: AnimationTrack? = nil
+local billTaken = false
 -- SES DEUX PISTES D'ASSISE : le geste (socle, fige) et l'idle par-dessus. Gardees pour pouvoir les DEFAIRE.
 local sitTrack: AnimationTrack? = nil
 local sitIdleTrack: AnimationTrack? = nil
@@ -1863,13 +1867,67 @@ local function giveBill()
 		return
 	end
 	local track = result :: AnimationTrack
+	billModel = bill
 	-- PONCTUEL, ecrit ici : le reglage de l'editeur n'est qu'une suggestion.
 	track.Looped = false
 	track.Priority = TutorialConfigs.GIFT_BILL_PRIORITY
 	track.Stopped:Once(function()
-		bill:Destroy()
+		if billTaken or not bill.Parent then
+			bill:Destroy()
+			return
+		end
+		-- IL LE TEND, EN BOUCLE, tant que le joueur ne l'a pas pris. Charge d'abord, et SEULEMENT s'il charge on
+		-- annonce l'offre : un badge PRENDRE sur un papi qui a baisse le bras mentirait.
+		local holdAnim = Instance.new("Animation")
+		holdAnim.AnimationId = TutorialConfigs.GIFT_BILL_HOLD_ANIM
+		local okHold, hold = pcall(function()
+			return (animator :: Animator):LoadAnimation(holdAnim)
+		end)
+		if okHold and typeof(hold) == "Instance" then
+			local holdTrack = hold :: AnimationTrack
+			-- EN BOUCLE, ecrit ici aussi : c'est le code qui decide, pas le reglage de l'editeur.
+			holdTrack.Looped = true
+			holdTrack.Priority = TutorialConfigs.GIFT_BILL_PRIORITY
+			holdTrack:Play(TutorialConfigs.GIFT_BILL_FADE)
+			billHold = holdTrack
+		else
+			warn(`[Tutorial] Idle du billet tendu non chargeable ({TutorialConfigs.GIFT_BILL_HOLD_ANIM}).`)
+		end
+		model:SetAttribute(TutorialConfigs.GIFT_BILL_OFFER_ATTRIBUTE, true)
 	end)
 	track:Play(TutorialConfigs.GIFT_BILL_FADE)
+end
+
+--- LE JOUEUR PREND LE BILLET : il quitte la main du papi, qui baisse le bras.
+local function takeBill(player: Player)
+	local bill = billModel
+	if billTaken or not bill then
+		return
+	end
+	local model = bill.Parent
+	if not (model and model:IsA("Model")) or model:GetAttribute(TutorialConfigs.GIFT_BILL_OFFER_ATTRIBUTE) ~= true then
+		return -- il ne le tend pas encore
+	end
+	-- LE CLIENT MENT TOUJOURS : il faut etre pres du papi pour prendre ce qu'il tend.
+	local character = player.Character
+	local root = if character then character:FindFirstChild("HumanoidRootPart") else nil
+	local grandpaRoot = model:FindFirstChild("HumanoidRootPart")
+	if not (root and root:IsA("BasePart") and grandpaRoot and grandpaRoot:IsA("BasePart")) then
+		return
+	end
+	local flat = (root.Position - grandpaRoot.Position) * Vector3.new(1, 0, 1)
+	if flat.Magnitude > TutorialConfigs.GIFT_BILL_TAKE_RADIUS then
+		return
+	end
+	billTaken = true
+	model:SetAttribute(TutorialConfigs.GIFT_BILL_OFFER_ATTRIBUTE, nil)
+	local hold = billHold
+	billHold = nil
+	if hold then
+		hold:Stop(TutorialConfigs.GIFT_BILL_FADE)
+	end
+	bill:Destroy()
+	billModel = nil
 end
 
 function TutorialService.init()
@@ -1877,9 +1935,17 @@ function TutorialService.init()
 	-- le cadeau.
 	resolveBill()
 	local billRemote = RemoteSetup.getRemote("TutorialGrandpaBill", "Tutorial") :: RemoteEvent
-	billRemote.OnServerEvent:Connect(function(player)
-		-- UNE FOIS, et seulement pour celui qui joue la scene.
-		if sceneOwner ~= player or billGiven then
+	billRemote.OnServerEvent:Connect(function(player, action)
+		-- SEULEMENT pour celui qui joue la scene.
+		if sceneOwner ~= player then
+			return
+		end
+		-- "take" : il prend le billet tendu. Sans argument : le papi le sort, une fois.
+		if action == "take" then
+			takeBill(player)
+			return
+		end
+		if billGiven then
 			return
 		end
 		billGiven = true

@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.914 — Le grand-pere tend le billet jusqu'a ce que le joueur le prenne
+
+- A la fin du geste du billet, le serveur ne detruit plus le billet : il joue l'idle bras tendu
+  (`GIFT_BILL_HOLD_ANIM`, `123855882550069`, en boucle, `Action4`) et pose `LeafiaBillOffered` sur le papi.
+- `TutorialGift` montre alors un badge REWARD / TAKE sur le billet (pres du papi, mains libres, meme touche que
+  pour lui parler). Le joueur le prend : `TutorialGrandpaBill` avec "take", le serveur verifie la distance
+  (`GIFT_BILL_TAKE_RADIUS`), coupe l'idle et retire le billet.
+
 ## 0.0.913 — Les rayures se posent sur le rond rouge au lieu de le remplacer
 
 - `WorldMarker` : pour un objet indisponible, le rond rouge reste, les barreaux en diagonale se posent par-dessus

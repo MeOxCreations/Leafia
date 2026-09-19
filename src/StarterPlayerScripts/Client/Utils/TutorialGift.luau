@@ -26,6 +26,8 @@ export type Hooks = {
 	face: () -> (),
 	-- Il sort le billet (animation jouee cote serveur).
 	bill: () -> (),
+	-- Le joueur prend le billet tendu (valide cote serveur).
+	takeBill: () -> (),
 	-- Il dit ces repliques a la suite, chacune avec sa bulle (la suite de repliques du controller).
 	say: (paths: { { string } }, lines: { [number]: { text: string, emotion: string? } }) -> (),
 }
@@ -36,6 +38,8 @@ local player = Players.LocalPlayer
 
 local hooks: Hooks? = nil
 local given = false
+-- LE BILLET A ETE PRIS : plus rien a proposer.
+local taken = false
 local marker: Frame? = nil
 local markerPart: BasePart? = nil
 local anchor: BasePart? = nil
@@ -58,7 +62,12 @@ local function setBound(active: boolean)
 			-- LA TOUCHE SUIT LE BADGE : `Pass` laisse l'appui filer vers tout ce qui est a portee, donc sans ce test
 			-- parler au grand-pere ramasserait aussi le seau pose a ses pieds.
 			if state == Enum.UserInputState.Begin and InteractionPrompt.owns(anchor) then
-				TutorialGift.give()
+				-- LA MEME TOUCHE POUR LES DEUX TEMPS : lui parler, puis prendre ce qu'il tend.
+				if given then
+					TutorialGift.take()
+				else
+					TutorialGift.give()
+				end
 			end
 			return Enum.ContextActionResult.Pass
 			-- PAS DE BOUTON TACTILE AUTOMATIQUE (le `false`) : la pilule PARLER se tape deja.
@@ -89,6 +98,7 @@ function TutorialGift.start(h: Hooks)
 	end
 	hooks = h
 	given = false
+	taken = false
 	nextCheck = 0
 	print("[TutorialGift] Les feuilles sont ramassees : le grand-pere attend le joueur.")
 end
@@ -116,13 +126,68 @@ function TutorialGift.give()
 	h.say(paths, lines)
 end
 
+--- LE JOUEUR PREND LE BILLET que le papi lui tend. Une fois ; le serveur valide et le retire.
+function TutorialGift.take()
+	local h = hooks
+	if taken or not given or not h then
+		return
+	end
+	taken = true
+	release()
+	h.takeBill()
+end
+
+-- LE BILLET TENDU, s'il l'est : sa part (pour y poser le badge), ou nil.
+local function offeredBill(body: BasePart): BasePart?
+	local grandpa = body:FindFirstAncestorOfClass("Model")
+	if not (grandpa and grandpa:GetAttribute(TutorialConfigs.GIFT_BILL_OFFER_ATTRIBUTE) == true) then
+		return nil
+	end
+	local bill = grandpa:FindFirstChild(TutorialConfigs.GIFT_BILL_MODEL)
+	local part = if bill then bill:FindFirstChildWhichIsA("BasePart", true) else nil
+	return part or body
+end
+
 --- A appeler a chaque image.
 function TutorialGift.step(now: number)
 	local h = hooks
-	if not h or given then
+	if not h or taken then
 		return
 	end
 	local body = h.body()
+	-- APRES LE CADEAU : il tend le billet, on propose de le PRENDRE. Meme regles que pour lui parler -- pres, les
+	-- mains libres, la touche qui suit le badge.
+	if given then
+		if now < nextCheck then
+			return
+		end
+		nextCheck = now + TutorialConfigs.PROMPT_INTERVAL
+		local billPart = if body then offeredBill(body) else nil
+		local meRoot = getRoot()
+		if not (billPart and meRoot and CarryUtils.isFree(player)) then
+			release()
+			return
+		end
+		local away = ((body :: BasePart).Position - (meRoot :: BasePart).Position) * Vector3.new(1, 0, 1)
+		if away.Magnitude > TutorialConfigs.TALK_RADIUS then
+			release()
+			return
+		end
+		if anchor ~= billPart then
+			release()
+			anchor = billPart
+		end
+		setBound(true)
+		InteractionPrompt.show(
+			billPart,
+			TutorialConfigs.TALK_PROMPT_KEY,
+			TutorialConfigs.GIFT_BILL_PROMPT_LABEL,
+			TutorialConfigs.GIFT_BILL_PROMPT_OFFSET,
+			TutorialGift.take,
+			TutorialConfigs.GIFT_BILL_PROMPT_TITLE
+		)
+		return
+	end
 	-- LA PASTILLE, mains libres ou pas : elle DESIGNE, elle ne propose rien. Accrochee a son CORPS et pas a un point,
 	-- sinon elle resterait la ou il etait au moment du calcul.
 	if body and markerPart ~= body then
@@ -169,6 +234,7 @@ function TutorialGift.stop()
 	clearMarker()
 	hooks = nil
 	given = false
+	taken = false
 end
 
 return TutorialGift

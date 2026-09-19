@@ -1096,6 +1096,19 @@ return {
 	-- AU-DESSUS de tout ce qu'il joue d'autre (idle, gestes de parole) : c'est le geste de la scene.
 	GIFT_BILL_PRIORITY = Enum.AnimationPriority.Action4,
 	GIFT_BILL_FADE = 0.2,
+	-- ET IL LE TEND tant que le joueur ne l'a pas pris : son idle bras tendu (il cligne des yeux), en boucle, par-dessus
+	-- le reste. Le billet reste dans sa main pendant ce temps.
+	GIFT_BILL_HOLD_ANIM = "rbxassetid://123855882550069",
+	-- POSE PAR LE SERVEUR SUR LE PAPI quand il tend le billet : c'est ce qui fait apparaitre le badge PRENDRE chez le
+	-- client. Le serveur sait quand le geste finit ; le client sait si le joueur est pres et les mains libres.
+	GIFT_BILL_OFFER_ATTRIBUTE = "LeafiaBillOffered",
+	GIFT_BILL_PROMPT_TITLE = "REWARD",
+	GIFT_BILL_PROMPT_LABEL = "TAKE",
+	-- Le badge au-dessus du billet, pas du papi : c'est le billet qu'on prend.
+	GIFT_BILL_PROMPT_OFFSET = Vector3.new(0, 1.5, 0),
+	-- Distance maxi (studs, a plat) acceptee par le SERVEUR pour prendre le billet : un peu plus que le rayon du badge,
+	-- pour la latence. Le client ment toujours.
+	GIFT_BILL_TAKE_RADIUS = 16,
 	GIFT_ACTION_NAME = "LeafiaTutorialGift",
 	-- ===== IL EMMENE LE JOUEUR AU CAMION =====
 	-- IL N'Y VA PAS TOUT SEUL. Un PNJ qui part devant transforme une consigne en course : le joueur suit un dos,
