@@ -51,9 +51,18 @@ function SoundRegistryService.init()
 			created += 1
 		end
 		sound.SoundId = entry.id
-		sound.Volume = entry.volume or 0.5
-		sound.PlaybackSpeed = entry.speed or 1
-		sound.Looped = entry.looped == true
+		-- SEULEMENT CE QUE LA CONFIG DIT. Un volume regle a l'oreille dans Studio n'est pas ecrase par un defaut :
+		-- la config n'impose une valeur que si elle en donne une.
+		local volume, speed, looped = entry.volume, entry.speed, entry.looped
+		if volume then
+			sound.Volume = volume
+		end
+		if speed then
+			sound.PlaybackSpeed = speed
+		end
+		if looped ~= nil then
+			sound.Looped = looped
+		end
 		sound.Parent = parent
 	end
 	print(`[SoundRegistry] {created} son(s) pose(s), {updated} son(s) de Studio mis a jour depuis la config.`)

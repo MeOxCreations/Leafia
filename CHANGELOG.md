@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.905 — 67 sons passent dans le code
+
+- `SoundConfigs` rempli avec les ids donnes par le joueur : 40 voix du grand-pere (dont
+  `Oldman_scene_speech_Thishedge_needcut`), 5 sons de la scene de la porte, 7 sons d'interface, l'ambiance
+  `Nature`, 6 sons du monde, 3 musiques et 5 musiques de build. `KnockDoorSound(good)` laisse de cote (a retirer).
+- `SoundRegistryService` n'impose plus que l'id : volume, vitesse et boucle ne sont ecrits que si la config les
+  donne. Un Sound de Studio garde donc son volume regle a l'oreille ; un son cree par le code prend les defauts.
+
 ## 0.0.904 — Les sons peuvent etre declares par leur ID dans le code
 
 - Nouveau `Modules/Configs/SoundConfigs` : un son = son chemin sous SoundService + son id (+ volume, vitesse,
