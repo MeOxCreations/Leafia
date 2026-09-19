@@ -28,9 +28,10 @@ local WorldAnchor = require(script.Parent.WorldAnchor)
 local WorldMarker = {}
 
 local CIRCLE_IMAGE = "rbxassetid://124707156951795"
--- LE ROND D'UN OBJET INDISPONIBLE : des barreaux en diagonale (dessin du joueur) a la place du rond rouge. Le rouge
--- dit "va la" ; les rayures disent "c'est la, mais pas pour toi maintenant" -- l'icone reste, on sait de quoi on parle.
-local LOCKED_CIRCLE_IMAGE = "rbxassetid://99020394814206"
+-- UN OBJET INDISPONIBLE : des barreaux en diagonale (dessin du joueur) POSES PAR-DESSUS le rond rouge, sous l'icone.
+-- Le rond reste -- c'est lui qui fait reconnaitre une balise ; les rayures disent "c'est la, mais pas pour toi
+-- maintenant", et l'icone dit de quel outil on parle.
+local LOCKED_STRIPES_IMAGE = "rbxassetid://99020394814206"
 local MARK_IMAGE = "rbxassetid://78589393871508"
 -- LA MARQUE A SES PROPRES PROPORTIONS, en fraction du cercle. Le dessin fait 63 x 115 pixels a sa taille
 -- naturelle : lui donner un cadre CARRE l'ecraserait, et un " ! " ecrase ne ressemble plus a rien.
@@ -224,7 +225,7 @@ end
 
 -- Pose un marqueur sur une cible. `offset` decale le point vise, en studs -- typiquement pour le mettre au-dessus
 -- de la tete. `icon` (un "rbxassetid://...") remplace le " ! " par ce dessin. `locked` : l'objet est la mais pas
--- disponible, le rond rouge devient des rayures. Rend le marqueur, a passer a `remove`.
+-- disponible, des rayures se posent sur le rond. Rend le marqueur, a passer a `remove`.
 function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: string?, locked: boolean?): Frame
 	local holder = getGui()
 
@@ -238,7 +239,7 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: st
 	circle.Name = "Circle"
 	circle.BackgroundTransparency = 1
 	circle.Size = UDim2.fromScale(1, 1)
-	circle.Image = if locked then LOCKED_CIRCLE_IMAGE else CIRCLE_IMAGE
+	circle.Image = CIRCLE_IMAGE
 	-- `Stretch` sur les DEUX couches, et pas `Fit`. `Fit` conserve les proportions de l'image et la borne par le
 	-- plus PETIT cote du cadre : une image en `Fit` ne sait que grossir et rapetisser, elle ne peut pas s'etirer.
 	-- Le sursaut du " ! " le RETRECIRAIT au lieu de l'allonger. Piege deja paye sur les feuilles du chargement.
@@ -272,8 +273,20 @@ function WorldMarker.show(target: WorldAnchor.Target, offset: Vector3?, icon: st
 	end
 	-- ENFANT DU CERCLE, pas pose a cote : il herite de sa taille et de sa place, donc les deux ne peuvent pas se
 	-- decaler. Deux images placees separement finissent toujours par diverger d'un reglage.
-	mark.ZIndex = 2
+	mark.ZIndex = 3
 	mark.Parent = circle
+
+	-- LES RAYURES, entre le rond et l'icone : elles barrent le rond sans cacher de quoi il s'agit.
+	if locked then
+		local stripes = Instance.new("ImageLabel")
+		stripes.Name = "Stripes"
+		stripes.BackgroundTransparency = 1
+		stripes.Size = UDim2.fromScale(1, 1)
+		stripes.Image = LOCKED_STRIPES_IMAGE
+		stripes.ScaleType = Enum.ScaleType.Stretch
+		stripes.ZIndex = 2
+		stripes.Parent = circle
+	end
 
 	-- LE BALANCEMENT PART A UNE PHASE AU HASARD. Deux marqueurs poses en meme temps monteraient et descendraient
 	-- ensemble, ce qui se lit comme une interface qui clignote au lieu de deux objets vivants.

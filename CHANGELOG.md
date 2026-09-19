@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.913 — Les rayures se posent sur le rond rouge au lieu de le remplacer
+
+- `WorldMarker` : pour un objet indisponible, le rond rouge reste, les barreaux en diagonale se posent par-dessus
+  (`Stripes`, entre le rond et l'icone).
+
 ## 0.0.912 — Un outil indisponible a une pastille a rayures
 
 - `WorldMarker.show` prend un 4e argument `locked` : le rond rouge devient l'image a barreaux en diagonale du
