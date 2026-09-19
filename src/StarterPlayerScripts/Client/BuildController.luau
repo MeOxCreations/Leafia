@@ -257,6 +257,14 @@ local CAM_PINCH_SENS = 0.12 -- dolly par pixel de pincement (zoom mobile)
 local CAM_TWIST_SENS = 1 -- facteur de rotation a deux doigts (yaw mobile)
 local CAM_PAN_TOUCH = 0.003 -- pan au doigt : studs par pixel, x distance (dezoome = pan plus vite). Monte = glisse plus vite
 local CAM_PAN_KEY = 1.1 -- pan clavier WASD : vitesse relative, x distance x dt
+-- ELAN DU GLISSER AU DOIGT : lachee en mouvement, la vue continue un peu sur sa lancee puis ralentit, au lieu de
+-- s'arreter net sous le pouce. Tactile seulement -- le clavier a deja son ressort. Plus haut = s'arrete plus vite.
+local PAN_GLIDE_FRICTION = 5
+-- Lissage de la vitesse mesuree pendant le glisser : sans lui, la derniere image avant le lacher (souvent un a-coup du
+-- pouce qui se souleve) deciderait seule de l'elan.
+local PAN_GLIDE_SMOOTH = 14
+-- En dessous de cette vitesse (studs/s), pas d'elan : un doigt pose puis leve sur place ne doit pas faire deriver la vue.
+local PAN_GLIDE_MIN = 2
 -- Ressort du focus (effet SLIME a l'arret du pan clavier) : le focus SUIT une cible, il la rejoint en debordant
 -- LEGEREMENT puis se pose. Raideur haute = snappy ; amortissement bas = plus de rebond. A regler a l'oeil.
 local FOCUS_STIFFNESS = 350
@@ -282,6 +290,9 @@ local camPosTarget = Vector3.zero -- cible du pan ; camPos la rejoint via un res
 local camPosVel = Vector3.zero -- vitesse du ressort de position
 local prevPos = Vector3.zero -- position de la frame precedente, pour mesurer la vitesse (effet FOV)
 local groundRefY = 0 -- hauteur du sol de reference (borne le zoom + echelle du pan)
+local panAccum = Vector3.zero -- deplacement au doigt accumule depuis l'image precedente
+local panVel = Vector3.zero -- vitesse lissee du glisser au doigt (studs/s)
+local glideVel = Vector3.zero -- elan en cours apres le lacher (studs/s)
 local enterTween: Tween? = nil
 
 -- Etat d'input.
@@ -384,6 +395,8 @@ local function applyPanTouch(deltaX: number, deltaY: number)
 	camPosTarget += delta
 	camPos += delta
 	camPosVel = Vector3.zero
+	panAccum += delta -- mesure de la vitesse, pour l'elan au lacher (voir updateBuildCamera)
+	glideVel = Vector3.zero -- le doigt a repris la main : l'elan precedent s'arrete
 end
 
 -- PAN clavier (WASD) + HAUTEUR (E monte / Q descend), lu chaque frame (touches maintenues). Vitesse x hauteur x dt.
@@ -429,6 +442,22 @@ local function updateBuildCamera(dt: number)
 	if not camera then
 		return
 	end
+	-- ELAN DU GLISSER, mesure sur le pas REEL : le pas borne ci-dessous surestimerait la vitesse quand le FPS chute.
+	-- Un doigt pose : on mesure. Plus de doigt : on rejoue la vitesse mesuree, en freinant.
+	local realDt = math.max(dt, 1e-3)
+	if #activeTouches == 1 then
+		panVel += (panAccum / realDt - panVel) * math.min(1, PAN_GLIDE_SMOOTH * realDt)
+	elseif glideVel ~= Vector3.zero then
+		local step = glideVel * realDt
+		camPosTarget += step
+		camPos += step
+		glideVel *= math.exp(-PAN_GLIDE_FRICTION * realDt)
+		if glideVel.Magnitude < PAN_GLIDE_MIN then
+			glideVel = Vector3.zero
+		end
+	end
+	panAccum = Vector3.zero
+
 	dt = math.min(dt, 1 / 30) -- borne le pas : garde le ressort stable si le FPS chute
 	keyboardPan(dt) -- deplace la CIBLE de position
 	-- RESSORT de POSITION : suit de pres pendant le mouvement, deborde legerement puis se pose a l'arret (slime).
@@ -544,6 +573,9 @@ local function stopBuildCamera()
 	table.clear(activeTouches)
 	pinchPrev = 0
 	twistPrev = 0
+	panAccum = Vector3.zero
+	panVel = Vector3.zero
+	glideVel = Vector3.zero
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	local camera = workspace.CurrentCamera
 	if not camera then
@@ -793,10 +825,14 @@ function BuildController.init()
 			UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
 		elseif input.UserInputType == Enum.UserInputType.Touch then
 			table.insert(activeTouches, input)
+			-- Un doigt qui se pose RATTRAPE la vue : l'elan en cours s'arrete, comme une main qui bloque une toupie.
+			glideVel = Vector3.zero
 			if #activeTouches == 2 then
 				local a, b = activeTouches[1].Position, activeTouches[2].Position
 				pinchPrev = (a - b).Magnitude
 				twistPrev = math.atan2(b.Y - a.Y, b.X - a.X)
+				-- Un deuxieme doigt = pincement ou rotation, plus un glisser : sa vitesse ne doit pas partir en elan.
+				panVel = Vector3.zero
 			end
 		end
 	end)
@@ -852,6 +888,11 @@ function BuildController.init()
 			if #activeTouches < 2 then
 				pinchPrev = 0 -- pincement / rotation reprennent a neuf au prochain 2e doigt
 				twistPrev = 0
+			end
+			-- LE DERNIER DOIGT SE LEVE : la vue garde la vitesse du glisser, et la boucle la freine.
+			if #activeTouches == 0 then
+				glideVel = if active and panVel.Magnitude > PAN_GLIDE_MIN then panVel else Vector3.zero
+				panVel = Vector3.zero
 			end
 		end
 	end)

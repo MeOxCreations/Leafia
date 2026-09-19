@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.923 — Le voile blanc ferme le chargement au lieu de l'ouvrir ; le glisser au doigt garde son elan
+
+- `LoadingOverlay` : au clic sur PLAY / CONTINUE, le rideau de chargement revient en FONDU comme avant. Le voile
+  blanc ne joue plus qu'a la FIN : il couvre, le rideau est detruit dessous, il se retire sur le joueur. Joue
+  aussi a l'entree (0.0.919), il passait avant le rideau, dans le mauvais ordre.
+- `BuildController` (mode build, tactile) : lachee en mouvement, la vue continue sur sa lancee puis ralentit
+  (`PAN_GLIDE_FRICTION` = 5), au lieu de s'arreter net sous le pouce. Vitesse mesuree pendant le glisser et
+  lissee (`PAN_GLIDE_SMOOTH`), pour que l'a-coup du pouce qui se souleve ne decide pas seul de l'elan ; en dessous
+  de `PAN_GLIDE_MIN` (2 studs/s), aucun elan. Poser un doigt arrete l'elan ; un deuxieme doigt (pincement,
+  rotation) ne compte pas comme un glisser. PC non touche : le clavier a deja son ressort.
+
 ## 0.0.922 — La console admin prend le style du jeu ; la roue se deplace au doigt
 
 - `AdminCommandController` : la console passe au style des cartes du jeu (menu des outils, camion) -- fond blanc,

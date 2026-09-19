@@ -5,14 +5,15 @@
 -- visage du grand-pere, couronne de points. C'etait un fond gris avec une feuille qui se remplissait, reste d'une
 -- ancienne version : le joueur voyait trois ecrans de chargement differents a la suite pour un seul depart.
 --
--- ET LE MEME VOILE BLANC (`ReplicatedFirst.WipeVisual`) pour entrer et sortir : il balaie l'ecran, le rideau
--- apparait (ou disparait) pendant qu'il couvre, puis il se retire. C'est le geste du chargement d'arrivee et de la
--- sortie du didacticiel ; un simple fondu ici aurait ete le seul passage du jeu a ne pas le jouer.
+-- LE VOILE BLANC (`ReplicatedFirst.WipeVisual`) FERME LE CHARGEMENT, il ne l'ouvre pas : le rideau apparait en
+-- fondu, et c'est a la FIN que le voile couvre, que le rideau est detruit dessous, puis que le voile se retire sur le
+-- jeu. Meme ordre que le chargement d'arrivee. Joue aussi a l'entree, il passait avant le rideau -- a l'envers.
 --
 -- ReplicatedFirst est replique avant tout le reste : les modules sont la bien avant que quiconque appelle show().
 
 local Players = game:GetService("Players")
 local ReplicatedFirst = game:GetService("ReplicatedFirst")
+local TweenService = game:GetService("TweenService")
 
 local CurtainVisual = require(ReplicatedFirst.CurtainVisual)
 local WipeVisual = require(ReplicatedFirst.WipeVisual)
@@ -21,14 +22,16 @@ local LoadingOverlay = {}
 
 local player = Players.LocalPlayer
 
+-- Fondu d'entree : court, le rideau doit couvrir vite ce qui se passe derriere.
+local FADE_IN = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
 local gui: ScreenGui? = nil
 local curtain: CanvasGroup? = nil
 local stopAnimation: (() -> ())? = nil
 
--- Temps avant que l'ecran soit COUVERT (show) : expose pour que l'appelant sache combien attendre avant de bouger
--- quoi que ce soit derriere (camera, UI). On compte le temps tenu en plus du balayage : a la toute fin du balayage
--- le bord n'est pas encore tout a fait pose, et le menu se verrait disparaitre dans le dernier coin.
-LoadingOverlay.showTime = WipeVisual.COVER_TIME + WipeVisual.HOLD
+-- Duree du fondu d'entree (show) : exposee pour que l'appelant sache combien attendre que le rideau soit OPAQUE avant de
+-- bouger quoi que ce soit derriere (camera, UI). Sinon la transition se verrait a travers le rideau encore transparent.
+LoadingOverlay.showTime = FADE_IN.Time
 
 local function build()
 	local sg = Instance.new("ScreenGui")
@@ -84,7 +87,7 @@ local function wipeAround(swap: () -> (), onDone: (() -> ())?)
 	end)
 end
 
--- Affiche le rideau SOUS LE VOILE : le voile couvre, le rideau est pose, le voile se retire sur le rideau.
+-- Affiche le rideau en FONDU (fade-in).
 function LoadingOverlay.show()
 	if not gui then
 		build()
@@ -92,12 +95,10 @@ function LoadingOverlay.show()
 	if not (gui and curtain) then
 		return
 	end
-	local g = gui :: ScreenGui
 	local group = curtain :: CanvasGroup
-	wipeAround(function()
-		group.GroupTransparency = 0
-		g.Enabled = true
-	end)
+	group.GroupTransparency = 1
+	;(gui :: ScreenGui).Enabled = true
+	TweenService:Create(group, FADE_IN, { GroupTransparency = 0 }):Play()
 end
 
 -- FIN DU CHARGEMENT : le voile couvre, le rideau est DETRUIT avec ses animations, le voile se retire sur le jeu.
