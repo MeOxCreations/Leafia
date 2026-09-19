@@ -13,6 +13,7 @@ local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 
 local TileField = require(ReplicatedStorage.Modules.UI.Core.TileField)
+local ScreenShadow = require(ReplicatedStorage.Modules.UI.Core.ScreenShadow)
 local ButtonSlime = require(ReplicatedStorage.Modules.UI.Core.ButtonSlime)
 local FormatUtils = require(ReplicatedStorage.Modules.Utils.FormatUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
@@ -169,6 +170,10 @@ local FONT_DIAMOND_CTA = Font.new("rbxasset://fonts/families/Montserrat.json", E
 -- Etat (l'UI est construite UNE fois puis reutilisee : reset a chaque open). root = le panneau, enfant de LoadSaveUI.
 local root: Frame? = nil
 local tileHandle: TileField.Handle? = nil -- fond en tuiles de cet ecran (visible seulement quand l'ecran est affiche)
+-- OMBRE D'ECRAN derriere le menu des saves. ZIndex -4 : juste au-dessus du voile blanc de fond (-5), sous tout le reste
+-- de LoadSaveUI (qui est en ZIndexBehavior Global, donc les ZIndex se comparent sur toute l'interface).
+local SHADOW_Z = -4
+local shadow: ScreenShadow.Handle? = nil
 local fontGradient: Frame? = nil -- voile blanc de fond GLOBAL (ZIndex -5) : ecran de plot ET Load Company. Cree une fois.
 local cardFrames: { TextButton } = {} -- les cartes dans l'ordre : slide d'entree UNE PAR UNE (staggered) a l'ouverture
 local cardHomes: { UDim2 } = {} -- leur position d'origine (parallele a cardFrames)
@@ -1900,6 +1905,12 @@ function LoadCompanyController.open(config: OpenConfig)
 	if tileHandle then
 		tileHandle.setVisible(true)
 	end
+	if not shadow then
+		shadow = ScreenShadow.new(config.parent, SHADOW_Z)
+	end
+	if shadow then
+		shadow.set(true)
+	end
 	-- Entree UNE PAR UNE : on pose toutes les cartes hors ecran (gauche), puis on lance leur slide avec un decalage
 	-- croissant (Card1 d'abord, puis Card2, puis Card3).
 	for i, card in cardFrames do
@@ -1928,6 +1939,9 @@ function LoadCompanyController.close()
 	end
 	if tileHandle then
 		tileHandle.setVisible(false)
+	end
+	if shadow then
+		shadow.set(false)
 	end
 	if root then
 		root.Visible = false

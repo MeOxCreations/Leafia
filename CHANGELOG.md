@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.927 — Une ombre d'ecran derriere le menu des saves et la barre du camion
+
+- Nouveau `Modules/UI/Core/ScreenShadow` : l'image d'ombre du joueur (`rbxassetid://74658820247403`, 120 % de
+  l'ecran, centree), posee DERRIERE un menu avec un fondu de 0.3 s. Cachee, elle n'est plus dessinee du tout.
+- Construite en code et pas dans Studio : StarterGui n'est pas synchronise, une ombre posee a la main n'existerait
+  que dans sa place.
+- Branchee sur le menu des saves (`LoadCompanyController`, ZIndex -4 dans LoadSaveUI : juste au-dessus du voile
+  blanc de fond) et sur la barre des outils du camion (`TruckToolsHandler`, ZIndex 0 dans sa propre interface).
+- Pas pour la scene du grand-pere (demande retiree).
+- A FAIRE DANS STUDIO : supprimer le `StarterGui.ScreenGui` de test qui contient `BackgroundShadow`, sinon l'ombre
+  reste affichee en permanence dans le hub, par-dessus tout.
+
 ## 0.0.926 — Sonde de performance : le compteur dit quelle boucle mange le temps
 
 - Mesure remontee sur telephone, dans le didacticiel : 13 a 15 FPS, pire image 123 ms, connexion stable. Pas de
