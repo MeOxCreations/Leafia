@@ -2,6 +2,7 @@
 -- LES PASTILLES DES OUTILS POSES SUR LE TERRAIN (seaux, tondeuses, echelles). Data pure, zero logique.
 
 local TaskConfigs = require(script.Parent.TaskConfigs)
+local TruckConfigs = require(script.Parent.TruckConfigs)
 
 return {
 	-- L'ICONE DE CHAQUE OUTIL, dans le rond blanc de la pastille. VIDE = le " ! " a la place, et la console le dit
@@ -9,8 +10,9 @@ return {
 	ICONS = {
 		-- Le meme dessin que la tache "START THE MOWER" : lu dans TaskConfigs, pas recopie.
 		Mower = TaskConfigs.ICONS.Mower,
-		Bin = "", -- A REMPLIR : "rbxassetid://..." de l'icone du seau
-		Ladder = "", -- A REMPLIR : "rbxassetid://..." de l'icone de l'echelle
+		-- Les memes dessins que les cartes du camion : lus dans TruckConfigs, pas recopies.
+		Bin = TruckConfigs.TOOL_ICONS.Bin,
+		Ladder = TruckConfigs.TOOL_ICONS.Ladder,
 	} :: { [string]: string },
 	-- Hauteur de la pastille au-dessus de la racine de l'outil, en studs. Une par outil : une echelle est bien plus
 	-- haute qu'un seau.

@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.906 — L'echelle et le seau ont leur icone sur leur pastille
+
+- `TruckConfigs.TOOL_ICONS.Ladder` = `rbxassetid://81092511869730` : la carte de l'echelle dans la barre du camion
+  montre ce dessin au lieu de l'apercu 3D.
+- `ToolMarkerConfigs.ICONS` lit `Bin` et `Ladder` dans `TruckConfigs.TOOL_ICONS` (un seul endroit par dessin) :
+  les pastilles du seau et de l'echelle ont leur icone au lieu du " ! ".
+
 ## 0.0.905 — 67 sons passent dans le code
 
 - `SoundConfigs` rempli avec les ids donnes par le joueur : 40 voix du grand-pere (dont

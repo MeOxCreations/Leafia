@@ -143,6 +143,7 @@ local TruckConfigs = {
 		Shear = "rbxassetid://96003986607540",
 		HedgeTrimmer = "rbxassetid://90444880289298",
 		Bin = "rbxassetid://127321612230568",
+		Ladder = "rbxassetid://81092511869730",
 	},
 
 	-- LA MARQUE D'UN OUTIL SORTI DU CAMION : sa pose D'ORIGINE, gardee en repere du camion.
