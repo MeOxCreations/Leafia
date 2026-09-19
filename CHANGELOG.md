@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.919 — Le bouton CONTINUE joue le voile blanc, a l'entree et a la sortie du rideau
+
+- `LoadingOverlay` : le rideau du bouton START / CONTINUE apparait et disparait sous le voile blanc
+  (`ReplicatedFirst/WipeVisual`), au lieu de deux fondus. C'est le geste du chargement d'arrivee et de la sortie
+  du didacticiel : ce passage etait le seul du jeu a ne pas le jouer.
+- `showTime` vaut maintenant le balayage PLUS le temps tenu (0.67 s) : a la toute fin du balayage le bord n'est pas
+  encore pose, et le menu se serait vu disparaitre dans le dernier coin.
+- Le voile est condamne des sa creation (detruit quoi qu'il arrive quelques secondes apres) : un aplat blanc colle
+  a l'ecran bloquerait le jeu entier.
+- `onRevealed` (la notification de bienvenue) part toujours une fois le jeu visible, apres le retrait du voile.
+
 ## 0.0.918 — Mode build sur mobile : la rotation a deux doigts tourne dans le bon sens
 
 - `BuildController` : le twist a deux doigts faisait tourner la vue a l'envers (doigts vers la gauche, vue vers

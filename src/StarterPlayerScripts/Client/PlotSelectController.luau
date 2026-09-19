@@ -61,7 +61,7 @@ local LOADING_MIN = 12
 local LOADING_AFTER_CHARACTER = 10
 -- Temps pendant lequel le rideau reste seul a l'ecran AVANT qu'on demande au serveur ou aller.
 -- Sur le chemin TELEPORT (nouvelle save -> tuto), le rideau n'a pas de fin a lui : la bascule de lieu le remplace.
--- Sans cette attente il n'aurait que le temps de son fondu d'entree, on ne verrait passer que la feuille.
+-- Sans cette attente il n'aurait que le temps de son entree sous le voile blanc : on le verrait a peine passer.
 local START_HOLD = 4
 -- Valeurs MESUREES sur l'etat de repos reel de la camera de jeu (Custom) : le tween doit finir la pour que Custom
 -- n'ait RIEN a corriger au handoff (ni zoom, ni saut). Important : Custom REMET sa propre inclinaison au repos
