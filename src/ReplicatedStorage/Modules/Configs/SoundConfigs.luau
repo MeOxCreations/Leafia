@@ -18,7 +18,8 @@
 -- POUR REMPLIR : coller `scripts/studio/ExporterSons.lua` dans la barre de commandes de Studio, il imprime ces
 -- lignes a partir des Sound deja poses.
 
-export type Entry = { id: string, volume: number?, speed: number?, looped: boolean? }
+-- `playing = true` : le son joue tout seul des le demarrage, pour tout le monde (une ambiance comme `Nature`).
+export type Entry = { id: string, volume: number?, speed: number?, looped: boolean?, playing: boolean? }
 
 local SoundConfigs: { [string]: Entry } = {
 	-- ===== LES VOIX DU GRAND-PERE =====

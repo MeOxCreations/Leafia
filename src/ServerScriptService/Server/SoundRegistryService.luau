@@ -64,6 +64,11 @@ function SoundRegistryService.init()
 			sound.Looped = looped
 		end
 		sound.Parent = parent
+		-- UNE AMBIANCE JOUE TOUTE SEULE : dans Studio c'etait la case Playing. Pose par le serveur, elle joue chez
+		-- tous les joueurs.
+		if entry.playing then
+			sound.Playing = true
+		end
 	end
 	print(`[SoundRegistry] {created} son(s) pose(s), {updated} son(s) de Studio mis a jour depuis la config.`)
 end

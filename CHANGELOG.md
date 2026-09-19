@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.908 — Les sons de la config peuvent jouer tout seuls
+
+- `SoundConfigs` : champ `playing = true` pour un son qui joue des le demarrage (une ambiance comme `Nature`,
+  qui dans Studio tenait a la case Playing). `SoundRegistryService` le lance cote serveur, pour tous.
+- `ExporterSons.lua` exporte aussi `playing`.
+
 ## 0.0.907 — Script d'export d'une interface Studio
 
 - `scripts/studio/ExporterInterface.lua` (barre de commandes) : imprime tout l'arbre de l'interface selectionnee

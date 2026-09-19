@@ -4,7 +4,7 @@
 -- places par Rojo au lieu d'etre recopies a la main dans chacune. Les recopier ID par ID serait long et plein de
 -- fautes : ce script lit tous les Sound poses sous SoundService et imprime les lignes de config, pretes a coller.
 --
--- CE QU'IL LIT : l'id, le volume, la vitesse, la boucle. Un Sound qui porte des EFFETS (egaliseur, reverb...) ou un
+-- CE QU'IL LIT : l'id, le volume, la vitesse, la boucle, et s'il joue tout seul (Playing). Un Sound qui porte des EFFETS (egaliseur, reverb...) ou un
 -- SoundGroup est signale en commentaire : la config ne les decrit pas, il faut garder ce Sound dans Studio.
 --
 -- A FAIRE DANS LA PLACE QUI A LE PLUS DE SONS, puis m'envoyer tout ce qui est imprime entre les deux lignes.
@@ -37,6 +37,9 @@ for _, d in ipairs(SoundService:GetDescendants()) do
 		end
 		if d.Looped then
 			table.insert(parts, "looped = true")
+		end
+		if d.Playing then
+			table.insert(parts, "playing = true")
 		end
 		local line = string.format('\t["%s"] = { %s },', pathOf(d), table.concat(parts, ", "))
 		local extras = {}
