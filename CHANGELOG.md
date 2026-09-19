@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.910 — L'interface des notifications est construite en code
+
+- Nouveau `Modules/UI/Notification/NotificationScreen` : reproduit `NotificationUI` a l'identique, a partir de
+  l'export de la maquette de Studio (35 objets : pile du bas + modele de toast, pile laterale + modele de
+  notification laterale). Synchronisee par Rojo, elle arrive dans toutes les places.
+- `Toast.init` et `SideNotificationHandler.init` la posent (idempotent) ; ils la cherchent toujours par son nom,
+  rien d'autre n'a change. Une `NotificationUI` qui arriverait encore de StarterGui est detruite (deux interfaces
+  du meme nom se disputeraient les notifications). `ResetOnSpawn` faux : personne ne la recreerait.
+- La `NotificationUI` de StarterGui peut etre supprimee dans les deux places.
+
 ## 0.0.909 — Tous les sons du jeu sont dans le code (82), et le rateau a enfin un son
 
 - `SoundConfigs` remplace par l'export complet de Studio (`ExporterSons.lua`) : 82 sons avec leurs volumes, boucles

@@ -22,6 +22,7 @@ local UserInputService = game:GetService("UserInputService")
 local FormatUtils = require(ReplicatedStorage.Modules.Utils.FormatUtils)
 local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
+local NotificationScreen = require(script.Parent.NotificationScreen)
 
 local SideNotificationHandler = {}
 
@@ -485,6 +486,8 @@ local function animateRainbow()
 end
 
 function SideNotificationHandler.init()
+	-- L'INTERFACE EST CONSTRUITE EN CODE (NotificationScreen). Idempotent : Toast l'a peut-etre deja posee.
+	task.spawn(NotificationScreen.ensure)
 	-- Une seule boucle globale (Heartbeat), no-op tant qu'aucune notif n'existe : le degrade arc-en-ciel des gains ET le
 	-- compte a rebours de fermeture auto.
 	RunService.Heartbeat:Connect(function()

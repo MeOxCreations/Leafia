@@ -16,6 +16,7 @@ local SoundService = game:GetService("SoundService")
 
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local PanelFocus = require(script.Parent.PanelFocus)
+local NotificationScreen = require(script.Parent.Parent.Notification.NotificationScreen)
 
 local Toast = {}
 
@@ -218,6 +219,9 @@ function Toast.show(kind: string?, text: string?)
 end
 
 function Toast.init()
+	-- L'INTERFACE EST CONSTRUITE EN CODE (NotificationScreen), plus copiee depuis StarterGui. En tache de fond : elle
+	-- attend le PlayerGui, et un init de boot n'attend jamais.
+	task.spawn(NotificationScreen.ensure)
 	-- UN HUD POUR PanelFocus : "range" veut dire ici "remonte au-dessus du panneau", pas "disparait" -- un refus
 	-- doit rester lisible pendant qu'on regarde la barre.
 	PanelFocus.register("Toast", {
