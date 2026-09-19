@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.904 — Les sons peuvent etre declares par leur ID dans le code
+
+- Nouveau `Modules/Configs/SoundConfigs` : un son = son chemin sous SoundService + son id (+ volume, vitesse,
+  boucle). Synchronise par Rojo, il arrive dans TOUTES les places -- plus de son present dans une place et absent
+  de l'autre (vecu sur `Oldman_scene_speech_Thishedge_needcut`, absent du didacticiel).
+- Nouveau `SoundRegistryService` (serveur, en tete des deux bootstraps) : pose chaque son de la config a son
+  chemin dans SoundService (repliques a tous). Un Sound deja pose dans Studio prend les valeurs de la config et
+  garde ses effets. Le reste du jeu n'a pas change : il cherche toujours ses sons par leur chemin.
+- `scripts/studio/ExporterSons.lua` (barre de commandes) : imprime les lignes de config a partir des Sound deja
+  poses, et signale ceux qui ont des effets ou un SoundGroup (a garder dans Studio).
+- Config vide pour l'instant : a remplir avec la sortie du script.
+
 ## 0.0.903 — Les petits messages du bas remontent au-dessus de la barre du camion
 
 - `Toast` s'inscrit dans `PanelFocus` : tant qu'un panneau est ouvert (barre du camion, menu des outils), la pile

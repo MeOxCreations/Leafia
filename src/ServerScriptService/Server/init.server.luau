@@ -13,6 +13,8 @@ RemoteSetup.init()
 -- Tout le code est synce (meme src que Leafia), on n'INIT que le necessaire. La taille marche ; grantXp / grantCoins
 -- sont des no-op (leurs services ne sont pas init ici). Le `return` coupe la sequence principale ci-dessous.
 if game.PlaceId == PlacesConfig.TUTORIAL then
+	-- LES SONS D'ABORD : tout ce qui suit peut en jouer, et ceux de la config n'existent qu'une fois poses.
+	require(script.SoundRegistryService).init()
 	require(script.CharacterService).init()
 	require(script.ToolService).init()
 	require(script.ToolStartService).init()
@@ -64,6 +66,10 @@ end
 
 -- Les services se declarent UN PAR UN, dans l'ordre voulu. C'est volontairement explicite : quand un service
 -- en attend un autre (data avant economie, par exemple), l'ordre se lit ici en clair.
+
+-- LES SONS DE LA CONFIG, poses dans SoundService avant tout service qui pourrait en jouer. Ne lit ni n'ecrit
+-- aucune donnee joueur, donc il peut passer avant la sauvegarde.
+require(script.SoundRegistryService).init()
 
 -- EN PREMIER : la sauvegarde. Tout service qui devra lire / ecrire des donnees joueur passe par lui.
 local DataService = require(script.DataService)
