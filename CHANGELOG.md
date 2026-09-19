@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.920 — Mode build : en zoomant, la vue se couche ; en reculant, elle repasse au-dessus
+
+- `BuildController.applyZoom` : le zoom (molette ou pincement) ne file plus droit le long du regard. Il s'approche
+  du POINT VISE AU SOL, qui reste au centre de l'ecran, et l'inclinaison suit la distance (`zoomPitch`) : 14 degres
+  au plus pres (vue presque a plat, a hauteur d'homme, on voit loin), 65 au plus loin (vue de dessus). Courbe en
+  ease-out : elle se redresse vite en quittant le sol, pour ne pas rester couchee la ou on construit.
+- Bornes du zoom en DISTANCE (16 a 110 studs) au lieu de la hauteur. Plancher de hauteur descendu de 8 a 3 studs :
+  a 8, la vue couchee du zoom proche etait impossible.
+- Une inclinaison donnee au clic droit (PC) s'efface en zoomant, sur 25 studs, au lieu de sauter vers la courbe au
+  premier cran de molette. Le depart de la camera tombe deja sur la courbe (48 degres a 55 studs).
+- Reglages en tete de la camera de build : `CAM_ZOOM_DIST_MIN/MAX`, `CAM_ZOOM_PITCH_NEAR/FAR`, `CAM_ZOOM_BIAS_FADE`.
+
 ## 0.0.919 — Le bouton CONTINUE joue le voile blanc, a l'entree et a la sortie du rideau
 
 - `LoadingOverlay` : le rideau du bouton START / CONTINUE apparait et disparait sous le voile blanc

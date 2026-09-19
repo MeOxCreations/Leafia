@@ -218,13 +218,24 @@ end
 --   ROTATION : clic DROIT + glisser (PC) ou 2 doigts en tournant (mobile) -> la cam pivote SUR PLACE (facon Studio :
 --     elle reste au meme endroit, seul son regard tourne). PAS d'orbite autour d'un point (pas de grand arc).
 --   PAN (se deplacer) : UN doigt (mobile) ou WASD (PC) -> deplace la cam dans le plan du sol.
---   ZOOM : pincement (mobile) ou molette (PC) -> avance / recule la cam le long de son regard (dolly).
+--   ZOOM : pincement (mobile) ou molette (PC) -> la cam s'approche / s'eloigne du point vise AU SOL, et son
+--     inclinaison suit : pres du sol la vue se couche (on voit loin), en reculant elle se redresse (vue de dessus).
 -- Entree DOUCE : on tween de la vue de jeu vers la vue de depart, PUIS on branche la cam interactive.
 local CAM_BIND = "LeafiaBuildOrbit"
 local CAM_PITCH_START = 48 -- deg : inclinaison (grand = plus du dessus)
 local CAM_PITCH_MIN, CAM_PITCH_MAX = 8, 82 -- bornes de l'inclinaison du regard (pas sous l'horizon / pas a la verticale)
 local CAM_DISTANCE_START = 55 -- studs : recul initial (POSE la cam au depart ; ensuite le zoom la deplace)
-local CAM_HEIGHT_MIN, CAM_HEIGHT_MAX = 8, 150 -- bornes de HAUTEUR de la cam au-dessus du sol (clamp du zoom + echelle du pan)
+-- Bornes de HAUTEUR de la cam au-dessus du sol : montee / descente au clavier, plancher du zoom, echelle du pan. Le
+-- minimum est BAS, a hauteur d'oeil : c'est la que le zoom le plus proche pose la vue couchee.
+local CAM_HEIGHT_MIN, CAM_HEIGHT_MAX = 3, 150
+-- ZOOM FACON SIMS : l'inclinaison SUIT la distance au point vise au sol. Au plus pres, la vue est presque a plat, a
+-- hauteur d'homme, et on voit au loin ; en reculant elle se redresse vers une vue de dessus. Distances en studs, angles
+-- en degres. Le depart (CAM_DISTANCE_START / CAM_PITCH_START) tombe deja sur cette courbe, a un degre pres.
+local CAM_ZOOM_DIST_MIN, CAM_ZOOM_DIST_MAX = 16, 110
+local CAM_ZOOM_PITCH_NEAR, CAM_ZOOM_PITCH_FAR = 14, 65
+-- Une inclinaison donnee A LA MAIN (clic droit sur PC) s'efface en zoomant, sur cette distance. Sans ca, le premier cran
+-- de molette la ferait sauter d'un coup vers la courbe.
+local CAM_ZOOM_BIAS_FADE = 25
 local CAM_LOOK_UP = 3 -- on vise un peu au-dessus du sol
 local CAM_TWEEN = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- entree vers la vue orbitale
 local EXIT_TIME = 0.45 -- duree du fondu de SORTIE (retour a la cam de jeu). Mieux qu'un snap/teleport.
@@ -286,9 +297,21 @@ local savedWalkSpeed = 16
 local controls: any = nil
 
 -- Direction du REGARD depuis (yaw, pitch) : horizontale tournee par yaw, inclinee vers le bas par pitch. Unitaire.
+local function lookFrom(yaw: number, pitch: number): Vector3
+	local h = Vector3.new(-math.cos(yaw), 0, -math.sin(yaw)) -- horizontale du regard (unitaire)
+	return h * math.cos(pitch) + Vector3.new(0, -math.sin(pitch), 0)
+end
+
 local function lookDir(): Vector3
-	local h = Vector3.new(-math.cos(camYaw), 0, -math.sin(camYaw)) -- horizontale du regard (unitaire)
-	return h * math.cos(camPitch) + Vector3.new(0, -math.sin(camPitch), 0)
+	return lookFrom(camYaw, camPitch)
+end
+
+-- L'inclinaison que le zoom demande a cette distance du point vise. Ease-out : la vue se redresse vite en quittant le
+-- sol, puis plafonne -- lineaire, elle resterait trop couchee a mi-distance, la ou on construit le plus.
+local function zoomPitch(distance: number): number
+	local t = math.clamp((distance - CAM_ZOOM_DIST_MIN) / (CAM_ZOOM_DIST_MAX - CAM_ZOOM_DIST_MIN), 0, 1)
+	t = 1 - (1 - t) * (1 - t)
+	return math.rad(CAM_ZOOM_PITCH_NEAR + (CAM_ZOOM_PITCH_FAR - CAM_ZOOM_PITCH_NEAR) * t)
 end
 
 -- CFrame de la cam : ANCREE en camPos, regardant dans lookDir. La rotation ne bouge donc pas camPos (sur place).
@@ -318,15 +341,36 @@ local function applyOrbit(deltaX: number, deltaY: number)
 	camPitchTarget = math.clamp(camPitchTarget + deltaY * CAM_ROT_SENS, math.rad(CAM_PITCH_MIN), math.rad(CAM_PITCH_MAX))
 end
 
--- ZOOM = DOLLY : on avance / recule la cam le long de son regard (amount > 0 = vers ce qu'on regarde). On borne la
--- HAUTEUR pour ne pas traverser le sol ni partir trop haut. Instantane (pas de ressort) : cible et position ensemble.
+-- ZOOM : on s'approche (amount > 0) ou on s'eloigne du POINT VISE AU SOL, et l'inclinaison suit la distance
+-- (zoomPitch). Le point vise reste au centre de l'ecran : la vue tourne AUTOUR de lui, elle ne file pas droit devant.
+-- Instantane (pas de ressort) : cible et position ensemble, sinon le pincement lague sous les doigts.
+--
+-- TOUT SE CALCULE SUR LES CIBLES : deux crans de molette rapides se composent, au lieu de repartir d'une vue encore
+-- en train de se poser.
 local function applyZoom(amount: number)
-	local move = lookDir() * amount
-	camPos += move
-	camPosTarget += move
-	local minY, maxY = groundRefY + CAM_HEIGHT_MIN, groundRefY + CAM_HEIGHT_MAX
-	camPos = Vector3.new(camPos.X, math.clamp(camPos.Y, minY, maxY), camPos.Z)
-	camPosTarget = Vector3.new(camPosTarget.X, math.clamp(camPosTarget.Y, minY, maxY), camPosTarget.Z)
+	local look = lookFrom(camYawTarget, camPitchTarget)
+	-- Distance au sol le long du regard. Regard presque a plat : le sol est tres loin, on prend la borne haute.
+	local drop = math.max(camPosTarget.Y - groundRefY, 0.5)
+	local distance = if look.Y < -0.05 then drop / -look.Y else CAM_ZOOM_DIST_MAX
+	distance = math.clamp(distance, CAM_ZOOM_DIST_MIN, CAM_ZOOM_DIST_MAX)
+	local focus = camPosTarget + look * distance
+
+	local newDistance = math.clamp(distance - amount, CAM_ZOOM_DIST_MIN, CAM_ZOOM_DIST_MAX)
+	-- L'ECART a la courbe (inclinaison donnee au clic droit) est garde, puis s'efface a mesure qu'on zoome.
+	local bias = camPitchTarget - zoomPitch(distance)
+	bias *= math.max(0, 1 - math.abs(newDistance - distance) / CAM_ZOOM_BIAS_FADE)
+	local pitch = math.clamp(zoomPitch(newDistance) + bias, math.rad(CAM_PITCH_MIN), math.rad(CAM_PITCH_MAX))
+
+	local pos = focus - lookFrom(camYawTarget, pitch) * newDistance
+	-- Plancher de hauteur : une inclinaison a la main tres couchee pourrait sinon passer sous le sol.
+	pos = Vector3.new(pos.X, math.clamp(pos.Y, groundRefY + CAM_HEIGHT_MIN, groundRefY + CAM_HEIGHT_MAX), pos.Z)
+
+	camPitchTarget = pitch
+	camPitch = pitch
+	camPitchVel = 0
+	camPos = pos
+	camPosTarget = pos
+	camPosVel = Vector3.zero
 end
 
 -- PAN au doigt : convention "j'ATTRAPE le monde et je le tire" (confirme a l'ecran) -> glisser a droite fait aller la vue
