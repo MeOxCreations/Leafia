@@ -26,6 +26,8 @@ local COMMANDS: { Command } = {
 	-- CLIENTE : traitee par AdminCommandController et jamais envoyee au serveur. Rejouer une animation
 	-- d'interface ne quitte pas cet ecran.
 	{ name = "tasks", usage = "tasks [off]", description = "Rejoue le bandeau d'objectifs (3 taches de demo)" },
+	-- CLIENTE aussi : affiche les deux notifications (bas au milieu + laterales), pour verifier leur dessin.
+	{ name = "notif", usage = "notif", description = "Affiche des notifications de test (bas + cote)" },
 	{ name = "tutodone", usage = "tutodone [joueur]", description = "Marque le tuto fini sur la save active (START entre dans le jeu)" },
 }
 

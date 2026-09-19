@@ -10,6 +10,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local TaskConfigs = require(ReplicatedStorage.Modules.Configs.TaskConfigs)
 local TaskBannerHandler = require(ReplicatedStorage.Modules.UI.Task.TaskBannerHandler)
+local Toast = require(ReplicatedStorage.Modules.UI.Core.Toast)
+local SideNotificationHandler = require(ReplicatedStorage.Modules.UI.Notification.SideNotificationHandler)
 local AdminCommandConfigs = require(ReplicatedStorage.Modules.Configs.AdminCommandConfigs)
 
 local AdminCommandController = {}
@@ -169,6 +171,30 @@ local function execute()
 	-- cet ecran : l'envoyer demanderait un remote et une reponse pour un effet que le serveur ne voit meme pas.
 	-- Traitees AVANT lui, sinon il repondrait "commande inconnue" a une commande qui a fait son travail.
 	local word = text:lower():match("^(%S+)")
+	if word == "notif" then
+		-- LES DEUX SORTES, et la laterale en deux versions (simple, puis avec un gain) : tout le dessin d'un coup.
+		Toast.show("Warning", "This is a test notification.")
+		SideNotificationHandler.spawn({
+			kind = "Warning",
+			title = "Test",
+			description = "This is a side notification.",
+			duration = 8,
+		})
+		task.delay(0.6, function()
+			SideNotificationHandler.spawn({
+				kind = "Info",
+				title = "Level up",
+				description = "You reached a new level!",
+				earn = "+ 1 SKILL POINT",
+				duration = 8,
+			})
+		end)
+		out.Text = "Notifications de test affichees."
+		out.Visible = true
+		box.Text = ""
+		box:CaptureFocus()
+		return
+	end
 	if word == "tasks" then
 		if text:lower():match("%soff%s*$") then
 			TaskBannerHandler.hide()

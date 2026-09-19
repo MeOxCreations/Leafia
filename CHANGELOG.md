@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.911 — Commande admin `notif` : notifications de test
+
+- Console admin (F2) : `notif` affiche un toast (bas au milieu) et deux notifications laterales (une simple, une
+  avec un gain), pour verifier le dessin de `NotificationUI` construite en code. Cliente, rien ne part au serveur.
+
 ## 0.0.910 — L'interface des notifications est construite en code
 
 - Nouveau `Modules/UI/Notification/NotificationScreen` : reproduit `NotificationUI` a l'identique, a partir de
