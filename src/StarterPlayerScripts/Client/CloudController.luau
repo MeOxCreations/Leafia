@@ -13,6 +13,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local CloudConfigs = require(ReplicatedStorage.Modules.Configs.CloudConfigs)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local CloudController = {}
 
@@ -208,7 +209,7 @@ function CloudController.init()
 		folder = created
 		print(`[Clouds] {#clouds} nuage(s) en vol.`)
 
-		heartbeat = RunService.Heartbeat:Connect(update)
+		heartbeat = RunService.Heartbeat:Connect(PerfProbe.wrap("clouds", update))
 	end)
 end
 

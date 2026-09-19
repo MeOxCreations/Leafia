@@ -21,6 +21,7 @@ local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local CarryUtils = require(ReplicatedStorage.Modules.Utils.CarryUtils)
 local LadderFoldUtils = require(ReplicatedStorage.Modules.Utils.LadderFoldUtils)
 local InteractionPrompt = require(ReplicatedStorage.Modules.UI.Core.InteractionPrompt)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local LadderController = {}
 
@@ -995,7 +996,7 @@ function LadderController.init()
 		end
 	end)
 
-	RunService.Heartbeat:Connect(update)
+	RunService.Heartbeat:Connect(PerfProbe.wrap("ladder", update))
 
 	print("[Ladder] Pret. Entre dans une zone -> prompt E (MONTER). Avant = monte, arriere = descend / lache.")
 end

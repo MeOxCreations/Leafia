@@ -22,6 +22,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
 
 local ButterflyConfigs = require(ReplicatedStorage.Modules.Configs.ButterflyConfigs)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local ButterflyController = {}
 
@@ -672,7 +673,7 @@ function ButterflyController.init()
 		end
 
 		print(`[Butterfly] {#zones} zone(s) trouvee(s).`)
-		conn = RunService.Heartbeat:Connect(update)
+		conn = RunService.Heartbeat:Connect(PerfProbe.wrap("butterflies", update))
 	end)
 end
 

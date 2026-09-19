@@ -34,6 +34,7 @@ local MoveThumb = require(ReplicatedStorage.Modules.UI.Core.MoveThumb)
 local MoveInput = require(script.Parent.Utils.MoveInput)
 local DriveCamera = require(script.Parent.Utils.DriveCamera)
 local PullTimerHandler = require(ReplicatedStorage.Modules.UI.Mow.PullTimerHandler)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local MowController = {}
 
@@ -1728,7 +1729,7 @@ function MowController.init()
 
 	-- On branche la boucle MEME si aucune tondeuse n'est encore la : avec le streaming, "absente au demarrage" est
 	-- un etat normal, et un `return` ici ne se rattraperait jamais. Elle sort en trois lignes tant qu'il n'y a rien.
-	connection = RunService.Heartbeat:Connect(update)
+	connection = RunService.Heartbeat:Connect(PerfProbe.wrap("mower", update))
 
 	-- Nouveau perso : le prompt d'avant pointait sur une position morte, et on ne porte plus rien.
 	player.CharacterAdded:Connect(function()

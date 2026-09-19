@@ -1,5 +1,7 @@
 --!strict
--- COMPTEUR DE PERFORMANCE, en haut de l'ecran : images par seconde, pire image recente, ping.
+-- COMPTEUR DE PERFORMANCE, en haut de l'ecran.
+--   Ligne 1 : images par seconde, pire image recente, ping.
+--   Ligne 2 : le temps que prennent NOS grosses boucles par image (voir PerfProbe), puis le nombre de pieces du monde.
 --
 -- POUR LE DEVELOPPEUR SEULEMENT (voir `AdminCommandConfigs.isAdmin` : Studio, ou le proprietaire du jeu en ligne).
 -- Il sert a trouver OU le jeu ralentit, sur telephone surtout, ou la console ne s'ouvre pas.
@@ -7,12 +9,18 @@
 -- LA PIRE IMAGE compte autant que la moyenne : un jeu a 58 images par seconde qui fige 150 ms toutes les deux
 -- secondes se ressent comme "ca rame", et la moyenne ne le montre pas. On la garde affichee quelques secondes,
 -- sinon un a-coup ne resterait a l'ecran qu'une demi-seconde et on le raterait.
+--
+-- LIRE LA LIGNE 2 : si nos boucles prennent l'essentiel d'une image (a 60 FPS, une image dure 16.7 ms), ce sont nos
+-- scripts qui rament. Si elles prennent peu alors que les FPS sont bas, c'est le DESSIN (trop de pieces, trop de
+-- detail) -- et c'est le nombre de pieces qu'il faut regarder.
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats")
 
 local AdminCommandConfigs = require(ReplicatedStorage.Modules.Configs.AdminCommandConfigs)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local PerfStatsController = {}
 
@@ -25,6 +33,8 @@ local WORST_WINDOWS = 6
 -- Seuils de couleur, en images par seconde. Sous 45, le joueur sent que "ca repond mal" sans savoir le nommer.
 local FPS_GOOD = 55
 local FPS_BAD = 45
+-- Combien de boucles on nomme sur la ligne 2 (les plus cheres d'abord). Le total, lui, les compte toutes.
+local TOP_PROBES = 4
 
 local localPlayer = Players.LocalPlayer
 
@@ -37,6 +47,14 @@ local function colorFor(fps: number): string
 	return "#FF5A5A"
 end
 
+-- Nombre de pieces du monde, lu sur le moteur. Protege : si la propriete n'est pas lisible ici, on s'en passe.
+local function partCount(): number?
+	local ok, value = pcall(function()
+		return Stats.PrimitivesCount
+	end)
+	return if ok and type(value) == "number" then value else nil
+end
+
 local function build(playerGui: PlayerGui): TextLabel
 	local gui = Instance.new("ScreenGui")
 	gui.Name = "LeafiaPerfStats"
@@ -46,7 +64,7 @@ local function build(playerGui: PlayerGui): TextLabel
 	local label = Instance.new("TextLabel")
 	label.AnchorPoint = Vector2.new(0.5, 0)
 	label.Position = UDim2.new(0.5, 0, 0, 4)
-	label.Size = UDim2.fromOffset(300, 20)
+	label.Size = UDim2.fromOffset(380, 38)
 	label.BackgroundColor3 = Color3.new(0, 0, 0)
 	label.BackgroundTransparency = 0.35
 	label.TextColor3 = Color3.new(1, 1, 1)
@@ -63,6 +81,9 @@ function PerfStatsController.init()
 	if not ENABLED or not AdminCommandConfigs.isAdmin(localPlayer) then
 		return
 	end
+	-- TOUT DE SUITE, pas dans la tache de fond : les autres modules enveloppent leurs boucles a leur init, juste
+	-- apres celui-ci. Allumee trop tard, la sonde ne verrait rien.
+	PerfProbe.enable()
 	task.spawn(function()
 		local playerGui = localPlayer:WaitForChild("PlayerGui", 30)
 		if not (playerGui and playerGui:IsA("PlayerGui")) then
@@ -101,13 +122,37 @@ function PerfStatsController.init()
 			local worstColor = colorFor(if worst > 0 then 1 / worst else math.huge)
 			local ping = localPlayer:GetNetworkPing() * 1000
 
+			-- LIGNE 2 : millisecondes PAR IMAGE de chaque boucle, les plus cheres d'abord.
+			local probes: { { name: string, ms: number } } = {}
+			local total = 0
+			for name, seconds in PerfProbe.take() do
+				local ms = seconds * 1000 / frames
+				total += ms
+				table.insert(probes, { name = name, ms = ms })
+			end
+			table.sort(probes, function(a, b)
+				return a.ms > b.ms
+			end)
+			local parts = {}
+			for i = 1, math.min(TOP_PROBES, #probes) do
+				table.insert(parts, string.format("%s %.1f", probes[i].name, probes[i].ms))
+			end
+			local count = partCount()
+			local line2 = string.format(
+				"%s  |  lua %.1f ms%s",
+				if #parts > 0 then table.concat(parts, "  ") else "-",
+				total,
+				if count then string.format("  |  parts %.1fk", count / 1000) else ""
+			)
+
 			label.Text = string.format(
-				'<font color="%s">%d FPS</font>  |  worst <font color="%s">%d ms</font>  |  ping %d ms',
+				'<font color="%s">%d FPS</font>  |  worst <font color="%s">%d ms</font>  |  ping %d ms\n%s',
 				colorFor(fps),
 				math.floor(fps + 0.5),
 				worstColor,
 				math.floor(worst * 1000 + 0.5),
-				math.floor(ping + 0.5)
+				math.floor(ping + 0.5),
+				line2
 			)
 
 			frames = 0

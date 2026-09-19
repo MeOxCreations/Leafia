@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.926 — Sonde de performance : le compteur dit quelle boucle mange le temps
+
+- Mesure remontee sur telephone, dans le didacticiel : 13 a 15 FPS, pire image 123 ms, connexion stable. Pas de
+  correctif a l'aveugle : un jeu peut ramer parce que nos SCRIPTS calculent trop, ou parce que le moteur a trop de
+  pieces a DESSINER. Les deux se corrigent a des endroits sans rapport.
+- Nouveau `Modules/Utils/PerfProbe` : `wrap(nom, fn)` mesure le temps d'une boucle par image. Eteinte (joueur non
+  admin), elle rend la fonction telle quelle, zero cout. Allumee par `PerfStatsController` a son init, qui passe en
+  tete du bootstrap justement pour ca.
+- Boucles mesurees : herbe (`grass`), feuilles des haies (`leaves`), papillons, nuages, echelle, tondeuse, camera de
+  taille (`hedge`), badges accroches au monde (`anchors`).
+- Le compteur a une deuxieme ligne : les 4 boucles les plus cheres en ms par image, le total (`lua`), et le nombre
+  de pieces du monde (`Stats.PrimitivesCount`, lu sous pcall). A 60 FPS une image dure 16.7 ms : si `lua` en prend
+  l'essentiel, ce sont nos scripts ; sinon, c'est le dessin.
+- Pas mesure : `TutorialController` (195 locales sur 200 : on n'en ajoute pas une pour une sonde) et quelques
+  boucles ecrites en fonction anonyme (marqueurs d'outils, poussiere de pas, seau, camion).
+
 ## 0.0.925 — Console admin sur telephone : version compacte
 
 - `AdminCommandController` : la version tactile de 0.0.922 sortait par le bas de l'ecran (texte a 17, huit lignes de

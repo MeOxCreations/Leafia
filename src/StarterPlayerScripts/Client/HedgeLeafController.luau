@@ -21,6 +21,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local HedgeConfigs = require(ReplicatedStorage.Modules.Configs.HedgeConfigs)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local HedgeLeafController = {}
 
@@ -580,7 +581,7 @@ function HedgeLeafController.init()
 
 	-- Heartbeat et non RenderStepped : le balancement est du decor, il n'a aucune raison de passer avant le
 	-- rendu de la frame. Ce qui doit etre pret AVANT l'image, c'est la camera, pas les feuilles.
-	RunService.Heartbeat:Connect(step)
+	RunService.Heartbeat:Connect(PerfProbe.wrap("leaves", step))
 end
 
 return HedgeLeafController

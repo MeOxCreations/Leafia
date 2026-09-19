@@ -22,6 +22,7 @@ local CameraEffects = require(script.Parent.Utils.CameraEffects)
 local CharacterFade = require(script.Parent.Utils.CharacterFade)
 local InputDevice = require(ReplicatedStorage.Modules.Utils.InputDevice)
 local Toast = require(ReplicatedStorage.Modules.UI.Core.Toast)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 -- Attribut pose par ToolService sur le modele de l'outil tenu (sa valeur = le nom de l'outil).
 local TOOL_ATTRIBUTE = "LeafiaTool"
@@ -2060,7 +2061,7 @@ function HedgeController.init()
 		cutEffect = found
 	end
 
-	RunService:BindToRenderStep("LeafiaHedge", Enum.RenderPriority.Camera.Value, update)
+	RunService:BindToRenderStep("LeafiaHedge", Enum.RenderPriority.Camera.Value, PerfProbe.wrap("hedge", update))
 
 	-- Les pistes se chargent au spawn, JAMAIS dans la boucle : setupCharacter attend l'Animator, et un
 	-- WaitForChild dans un BindToRenderStep bloquerait le rendu de la frame.

@@ -17,6 +17,7 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local GrassZoneConfigs = require(ReplicatedStorage.Modules.Configs.GrassZoneConfigs)
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 -- ===== PROFIL D'APPAREIL =====
 -- Sur mobile, la pelouse coute trop cher : moins de touffes, et un rayon d'animation plus court.
@@ -1767,7 +1768,7 @@ function GrassZoneController.init()
 		-- "aucune zone", et il sautait ce Connect : une zone arrivee 3 s plus tard par le streaming etait bien remplie
 		-- (l'herbe s'affichait, jolie) mais plus rien ne l'animait ni ne l'ecrasait. `update` sort tout de suite tant
 		-- que la liste est vide, donc ne rien brancher n'economisait rien.
-		heartbeat = RunService.Heartbeat:Connect(update)
+		heartbeat = RunService.Heartbeat:Connect(PerfProbe.wrap("grass", update))
 	end)
 end
 

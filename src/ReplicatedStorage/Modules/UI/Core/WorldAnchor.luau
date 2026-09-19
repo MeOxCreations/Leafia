@@ -22,7 +22,10 @@
 -- `WorldToScreenPoint` et `WorldToViewportPoint` (l'inset reel), moins la position du PARENT de l'element. Aucun
 -- reglage de ScreenGui n'a plus besoin d'etre juste, et un element range dans un cadre decale reste bien place.
 
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+
+local PerfProbe = require(ReplicatedStorage.Modules.Utils.PerfProbe)
 
 local WorldAnchor = {}
 
@@ -231,7 +234,7 @@ local function ensureLoop()
 	-- camera de l'image PRECEDENTE : chaque element trainait d'une image et tremblait des qu'on tournait la vue
 	-- ("pas fluide", vu sur mobile). Un cran au-dessus de la priorite Camera, la camera de CETTE image est deja
 	-- posee quand on projette.
-	RunService:BindToRenderStep(BIND_NAME, Enum.RenderPriority.Camera.Value + 1, update)
+	RunService:BindToRenderStep(BIND_NAME, Enum.RenderPriority.Camera.Value + 1, PerfProbe.wrap("anchors", update))
 end
 
 --
