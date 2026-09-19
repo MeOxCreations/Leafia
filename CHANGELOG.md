@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.922 — La console admin prend le style du jeu ; la roue se deplace au doigt
+
+- `AdminCommandController` : la console passe au style des cartes du jeu (menu des outils, camion) -- fond blanc,
+  contour gris clair, texte sombre en Gotham, vert Leafia pour EXECUTE et les commandes. Elle etait sombre, en
+  police de terminal, et jurait avec le reste.
+- Plus grande au doigt : champ de saisie a 44 px (34 a la souris), suggestions a 34 px (26), texte a 17 (15). Les
+  suggestions etaient trop petites pour etre touchees sans viser.
+- La roue dentee se GLISSE au doigt, et reste ou on la pose. Un simple appui (moins de 10 px de mouvement) ouvre la
+  console ; au-dela, c'est un deplacement. Tant qu'on ne l'a pas bougee, elle suit la barre du haut.
+- Glisser par ECARTS au point de depart (aucune conversion doigt -> interface), gestes commences SUR la roue
+  seulement, lacher sur `TouchEnded` et sur l'ouverture du menu Roblox : les trois regles deja payees sur le
+  joystick mobile (journal de CLAUDE.md).
+- Position gardee pour la session seulement : rien n'est sauvegarde, elle revient dans la barre du haut au
+  prochain lancement.
+
 ## 0.0.921 — Console admin sur mobile et tablette : une roue dentee dans la barre du haut
 
 - `AdminCommandController` : sur ecran tactile, une petite roue dentee (`rbxassetid://72145892854726`) ouvre et
