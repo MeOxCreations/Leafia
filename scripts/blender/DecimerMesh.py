@@ -32,6 +32,9 @@ def parse_args():
     p.add_argument("--input", required=True, help="fichier a alleger (.fbx, .obj, .glb, .gltf, .blend)")
     p.add_argument("--output", default=None, help="FBX a ecrire (defaut : <input>_light.fbx)")
     p.add_argument("--budget", type=int, default=2000, help="triangles vises pour le modele entier")
+    p.add_argument("--keep-under", type=int, default=600,
+                   help="un objet sous ce nombre de triangles n est PAS touche : un petit objet deja leger "
+                        "n a rien a gagner a etre decime, et le reduire du meme facteur que les gros le detruit")
     p.add_argument("--keep-shape", action="store_true",
                    help="decime en PLANAIRE plutot qu en COLLAPSE : garde les faces plates, "
                         "utile pour du batiment, mauvais pour de l organique")
@@ -64,6 +67,14 @@ def load(path):
 
 def meshes():
     return [o for o in bpy.context.scene.objects if o.type == "MESH"]
+
+
+def count_one(obj, depsgraph):
+    evaluated = obj.evaluated_get(depsgraph)
+    mesh = evaluated.to_mesh()
+    n = sum(max(len(p.vertices) - 2, 0) for p in mesh.polygons)
+    evaluated.to_mesh_clear()
+    return n
 
 
 def triangle_count(objects):
@@ -119,18 +130,31 @@ def main():
         raise SystemExit("[Decimer] Aucun mesh dans ce fichier.")
 
     triangulate(objects)
-    before = triangle_count(objects)
+    depsgraph = bpy.context.evaluated_depsgraph_get()
+    counts = {obj.name: count_one(obj, depsgraph) for obj in objects}
+    before = sum(counts.values())
     print(f"[Decimer] {len(objects)} objet(s), {before} triangles au depart.")
 
-    if before <= args.budget:
+    # LES PETITS OBJETS SONT LAISSES ENTIERS. Un meme facteur applique a tout le monde detruit ce qui etait deja
+    # leger : sur une boite aux lettres, les gros meshes passent de 86 000 a 2 000 triangles -- et les petits
+    # cubes de 194 a 10, donc en bouillie. Ils ne pesaient rien : les toucher ne rapporte rien et coute tout.
+    heavy = [o for o in objects if counts[o.name] > args.keep_under]
+    light = [o for o in objects if counts[o.name] <= args.keep_under]
+    if light:
+        print(f"[Decimer] Laisses entiers ({args.keep_under} tris ou moins) : "
+              + ", ".join(f"{o.name} ({counts[o.name]})" for o in light))
+
+    heavy_before = sum(counts[o.name] for o in heavy)
+    light_total = before - heavy_before
+    # Le budget des gros, c'est le budget TOTAL moins ce que les petits consomment deja.
+    share = max(args.budget - light_total, 1)
+    if not heavy or heavy_before <= share:
         print("[Decimer] Deja sous le budget : rien a decimer, on reexporte tel quel.")
-        ratio = 1.0
     else:
-        # LE MEME FACTEUR POUR TOUS : decimer chaque objet a un nombre FIXE de triangles ecraserait les petites
-        # pieces (un oeil, un bec) pour sauver les grandes. Proportionnellement, chacun garde son importance.
-        ratio = args.budget / before
-        print(f"[Decimer] Reduction a {ratio * 100:.1f} % pour viser {args.budget} triangles.")
-        decimate(objects, ratio, args.keep_shape)
+        ratio = share / heavy_before
+        print(f"[Decimer] Reduction des gros objets a {ratio * 100:.1f} % "
+              f"({heavy_before} -> ~{share} triangles).")
+        decimate(heavy, ratio, args.keep_shape)
 
     apply_all(objects)
     after = triangle_count(meshes())
