@@ -415,6 +415,10 @@ local EYE = {
 local GAZE = {
 	X = 0.016, -- amplitude horizontale, en fraction de la tete. KNOB
 	Y = 0.007,
+	-- PARFOIS IL LEVE LES YEUX, franchement a gauche ou a droite. Un balayage qui ne fait que glisser au hasard
+	-- se lit comme un tic ; un regard qui part EN HAUT ET DE COTE donne l'air de penser a quelque chose.
+	UP_CHANCE = 0.4, -- part des coups d'oeil qui montent. KNOB
+	UP_Y = 0.015, -- de combien il leve les yeux. Trop haut, les pupilles sortent des paupieres dessinees
 	EVERY = 1.3, -- temps entre deux coups d'oeil
 	JITTER = 1.9,
 	TIME = 0.22, -- duree du deplacement
@@ -1006,15 +1010,20 @@ task.spawn(function()
 		if not eyes.Parent then
 			return
 		end
+		local dx, dy
+		if math.random() < GAZE.UP_CHANCE then
+			-- EN HAUT ET FRANCHEMENT D'UN COTE : tire au hasard, le decalage lateral serait souvent quasi nul et
+			-- le regard monterait tout droit, ce qui ne raconte rien.
+			dx = if math.random() < 0.5 then -GAZE.X else GAZE.X
+			dy = -GAZE.UP_Y -- en interface, le Y descend : vers le haut, c'est donc negatif
+		else
+			dx = (math.random() * 2 - 1) * GAZE.X
+			dy = (math.random() * 2 - 1) * GAZE.Y
+		end
 		TweenService:Create(
 			eyes,
 			TweenInfo.new(GAZE.TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{
-				Position = UDim2.fromScale(
-					0.5 + (math.random() * 2 - 1) * GAZE.X,
-					0.5 + (math.random() * 2 - 1) * GAZE.Y
-				),
-			}
+			{ Position = UDim2.fromScale(0.5 + dx, 0.5 + dy) }
 		):Play()
 	end
 end)
