@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.969 — Le mot et la tete quittent l'ecran avant qu'il ne s'efface
+
+Les lettres repartent une par une en retombant, leur contour avec elles, et la tete se retracte a zero. Le
+fondu de l'ecran ne part qu'ensuite : tout partait d'un bloc, ce qui se lisait comme une coupure et non comme
+une fin.
+
+La tete tangue aussi, doucement, comme sur le rideau de changement de map. Le tangage et le penchement du clin
+d'oeil ecrivent la meme rotation : le penchement vit dans une valeur a part et la boucle ecrit la SOMME des
+deux, sinon le dernier a parler effacerait l'autre.
+
+Le son du clin d'oeil part desormais avec le geste, plus en avance.
+
 ## 0.0.968 — Le clin d'oeil du grand-pere tombe au bon moment
 
 Il se compte maintenant depuis l'arrivee de la TETE (deux secondes apres), et non depuis la fin du son

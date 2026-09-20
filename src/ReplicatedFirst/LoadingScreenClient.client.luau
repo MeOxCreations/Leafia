@@ -551,6 +551,15 @@ local WORD_LAST = {
 	GROW_TIME = 0.5,
 	SNAP_TIME = 0.1, -- le choc : court, et en easing `In` pour que la vitesse soit maximale A L'ARRIVEE
 }
+-- LA SORTIE. Les lettres s'en vont et la tete se retracte AVANT que l'ecran ne s'efface : sinon tout part d'un
+-- bloc, et un fondu global se lit comme une coupure et non comme une fin.
+local EXIT = {
+	LETTER_TIME = 0.22,
+	LETTER_STAGGER = 0.035, -- elles repartent dans l'ordre ou elles sont arrivees
+	LETTER_DROP = 0.05, -- de combien elles redescendent en partant
+	FACE_TIME = 0.3,
+	HOLD = 0.3, -- temps laisse a la sortie avant que l'ecran ne s'efface
+}
 local WORD_SHINE_DELAY = 0.4 -- apres la pose de la derniere lettre
 local WORD_SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
 local WORD_SHINE_TIME = 0.3 -- aller-retour d'UNE lettre
@@ -1741,6 +1750,38 @@ do
 		camera.CameraType = Enum.CameraType.Scriptable
 		camera.CFrame = zoomFarCFrame
 	end
+end
+
+-- ===== LA SORTIE DU MOT ET DE LA TETE, avant que l'ecran ne s'efface =====
+do
+	local letterOut = TweenInfo.new(EXIT.LETTER_TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+	for i, letter in ipairs(letters) do
+		task.delay((i - 1) * EXIT.LETTER_STAGGER, function()
+			if not letter.Parent then
+				return
+			end
+			local home = letter.Position
+			TweenService:Create(letter, letterOut, {
+				TextTransparency = 1,
+				Position = UDim2.new(home.X.Scale, home.X.Offset, home.Y.Scale + EXIT.LETTER_DROP, home.Y.Offset),
+			}):Play()
+			-- Le contour est un enfant, pas une propriete de la lettre : sans lui, le trait noir reste seul a
+			-- l'ecran pendant que le texte s'efface.
+			local stroke = letter:FindFirstChildOfClass("UIStroke")
+			if stroke then
+				TweenService:Create(stroke, letterOut, { Transparency = 1 }):Play()
+			end
+		end)
+	end
+	if faceGroup.Parent then
+		-- `Back In` : elle se ramasse un peu avant d'etre aspiree, ce qui donne du poids a la disparition.
+		TweenService:Create(
+			faceGroup,
+			TweenInfo.new(EXIT.FACE_TIME, Enum.EasingStyle.Back, Enum.EasingDirection.In),
+			{ Size = UDim2.fromScale(0, 0) }
+		):Play()
+	end
+	task.wait(EXIT.HOLD)
 end
 
 -- Fondu de tout le bloc en une fois (CanvasGroup). Le zoom part EN MEME TEMPS et dure plus longtemps.
