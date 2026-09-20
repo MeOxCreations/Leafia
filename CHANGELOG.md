@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.951 — Le grand-pere cligne des yeux, et LEAFIA grossit encore
+
+- Clignement branche avec les deux images du joueur : ouvert `111069478991867`, ferme `92930536214559`. L'etape
+  "a moitie" devient OPTIONNELLE (vide = on passe direct d'ouvert a ferme) : deux images suffisent.
+- L'ecart entre deux clignements garde son hasard : un intervalle constant se lit comme un metronome.
+- Taille des lettres : 0.245 -> 0.49 -> 0.62 de la hauteur d'ecran, a la demande.
+
 ## 0.0.950 — LEAFIA plus gros et plus serre
 
 - Taille des lettres : 0.179 -> 0.205 de la hauteur d'ecran.

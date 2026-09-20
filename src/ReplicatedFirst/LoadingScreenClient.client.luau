@@ -364,11 +364,11 @@ local INK = Color3.fromRGB(0, 0, 0)
 -- LA TETE DU GRAND-PERE et l'ONOMATOPEE a cote d'elle. Toutes deux fondues vers le bas par un degrade (voir
 -- `fadeGradient`) : c'est ce qui leur donne leur gris, sans qu'aucune couleur n'entre dans l'ecran.
 local FACE_IMAGE = "rbxassetid://111069478991867"
--- CLIGNEMENT : les memes images que le rideau de changement de map (yeux ouverts / a moitie / fermes). Le passage
--- par l'etape "a moitie" compte : d'ouvert a ferme en une seule image, ca claque au lieu de cligner.
--- VIDE = pas de clignement. Tant que les variantes du nouveau visage n'existent pas, il regarde droit devant.
+-- CLIGNEMENT : on echange l'image. Deux suffisent (ouvert / ferme) ; l'etape "a moitie" est OPTIONNELLE -- laissee
+-- vide, on passe direct d'ouvert a ferme. Avec elle, le clignement est plus doux (c'est ce que fait le rideau de
+-- changement de map). VIDE partout = pas de clignement du tout.
 local FACE_HALF_IMAGE = ""
-local FACE_SHUT_IMAGE = ""
+local FACE_SHUT_IMAGE = "rbxassetid://92930536214559"
 -- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 local FACE_BLINK_EVERY = 3.2
 local FACE_BLINK_JITTER = 2.4
@@ -398,7 +398,7 @@ local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait 
 -- On ecrit la taille plutot que d'utiliser `TextScaled`, pour qu'elle ne depende QUE de l'ecran. (Et non, TextScaled
 -- ne plafonne pas a 100 px : je l'ai cru et affirme, la capture du joueur -- des lettres de 193 px -- dit le
 -- contraire. Le mot etait simplement trop petit, parce que je lui donnais 0.13 de hauteur au lieu de 0.179.)
-local WORD_TEXT_RATIO = 0.49
+local WORD_TEXT_RATIO = 0.62
 local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la taille du texte
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
@@ -604,19 +604,24 @@ face.Parent = root
 
 -- LE CLIGNEMENT, en changeant d'image. Rien a faire tant que les deux variantes ne sont pas fournies : mieux vaut un
 -- visage qui ne cligne pas qu'une image vide au milieu de l'ecran.
-if FACE_HALF_IMAGE ~= "" and FACE_SHUT_IMAGE ~= "" then
+if FACE_SHUT_IMAGE ~= "" then
 	task.spawn(function()
 		while face.Parent do
+			-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
 			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
 			if not face.Parent then
 				return
 			end
-			face.Image = FACE_HALF_IMAGE
-			task.wait(FACE_BLINK_HALF_TIME)
+			if FACE_HALF_IMAGE ~= "" then
+				face.Image = FACE_HALF_IMAGE
+				task.wait(FACE_BLINK_HALF_TIME)
+			end
 			face.Image = FACE_SHUT_IMAGE
 			task.wait(FACE_BLINK_SHUT_TIME)
-			face.Image = FACE_HALF_IMAGE
-			task.wait(FACE_BLINK_HALF_TIME)
+			if FACE_HALF_IMAGE ~= "" then
+				face.Image = FACE_HALF_IMAGE
+				task.wait(FACE_BLINK_HALF_TIME)
+			end
 			face.Image = FACE_IMAGE
 		end
 	end)
