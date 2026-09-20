@@ -389,17 +389,15 @@ local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 -- avait ete essaye pour les resserrer : il les a EMPILEES les unes sur les autres. Une lettre posee a sa place ne
 -- peut pas chevaucher sa voisine, et l'animation devient plus simple -- chaque lettre bouge chez elle.
 local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait le reste
--- TAILLE DES LETTRES, en fraction de la hauteur d'ECRAN, et elle vaut la HAUTEUR DE LA CASE que le joueur a donnee a
--- ses lettres (0.1789, soit 193 px sur un ecran 1080p -- lu dans son panneau de proprietes, `AbsoluteSize`).
+-- LA TAILLE DES LETTRES VIENT DE LEUR CASE, VIA `TextScaled`, ET PAS DE `TextSize`.
 --
--- LES LETTRES SE CHEVAUCHENT, ET C'EST VOULU : leurs centres sont espaces de 86 px pour des lettres de 126 px de
--- large. C'est ce qui fait un mot d'un bloc, et pas six lettres alignees.
+-- C'EST `TextSize` QUI EST PLAFONNE A 100 px, pas TextScaled. Ecrire 0.13, puis 0.205, puis 0.49, puis 0.62 de la
+-- hauteur d'ecran n'a donc rien change : les lettres restaient a 100 px, et le mot restait petit quoi qu'on regle.
+-- (J'ai d'abord affirme l'inverse -- que TextScaled plafonnait -- c'etait faux, et ca a coute quatre essais.)
 --
--- On ecrit la taille plutot que d'utiliser `TextScaled`, pour qu'elle ne depende QUE de l'ecran. (Et non, TextScaled
--- ne plafonne pas a 100 px : je l'ai cru et affirme, la capture du joueur -- des lettres de 193 px -- dit le
--- contraire. Le mot etait simplement trop petit, parce que je lui donnais 0.13 de hauteur au lieu de 0.179.)
-local WORD_TEXT_RATIO = 0.62
-local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la taille du texte
+-- Pour AGRANDIR le mot, on agrandit donc la CASE : `WORD_SCALE`. TextScaled remplit ce qu'on lui donne.
+local WORD_SCALE = 1.35 -- multiplie la taille de case relevee. 1 = exactement le montage du joueur
+local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la hauteur de la lettre
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
 local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
@@ -647,11 +645,12 @@ local letters: { TextLabel } = {}
 for i = 1, #TITLE_TEXT do
 	local letter = text("Letter" .. i, root, FONT_TITLE, WORD_COLOR)
 	letter.Text = TITLE_TEXT:sub(i, i)
-	letter.TextScaled = false -- voir WORD_TEXT_RATIO : TextScaled plafonne a 100 px et change le mot selon la fenetre
+	letter.TextScaled = true -- la lettre remplit sa case ; c'est la case qui donne la taille (voir WORD_SCALE)
+	letter.RichText = true
 	letter.ZIndex = 9
 	local home_x = WORD_X[i] or 0.5
 	local middle = ((WORD_X[1] or 0.5) + (WORD_X[#WORD_X] or 0.5)) / 2
-	place(letter, Vector2.new(middle + (home_x - middle) * WORD_SPREAD, WORD_Y), WORD_SIZE)
+	place(letter, Vector2.new(middle + (home_x - middle) * WORD_SPREAD, WORD_Y), WORD_SIZE * WORD_SCALE)
 
 	-- LE CONTOUR NOIR, en fraction de la HAUTEUR de la lettre : en pixels fixes il serait gras sur telephone et fin
 	-- sur grand ecran. `Contextual` suit le texte, pas la boite.
@@ -659,14 +658,13 @@ for i = 1, #TITLE_TEXT do
 	stroke.Color = INK
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = letter
-	-- La taille du texte et son contour suivent la HAUTEUR D'ECRAN, relue a chaque changement (rotation, resize).
-	local function fitText()
-		local size = math.max(root.AbsoluteSize.Y * WORD_TEXT_RATIO, 1)
-		letter.TextSize = size
-		stroke.Thickness = math.max(size * WORD_STROKE_RATIO, 1)
+	-- Le contour suit la HAUTEUR REELLE de la lettre, relue a chaque changement d'ecran (rotation, resize) : en
+	-- pixels fixes il serait gras sur telephone et fin sur grand ecran.
+	local function fitStroke()
+		stroke.Thickness = math.max(letter.AbsoluteSize.Y * WORD_STROKE_RATIO, 1)
 	end
-	fitText()
-	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitText)
+	fitStroke()
+	letter:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitStroke)
 
 	letters[i] = letter
 

@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.952 — LEAFIA grossit VRAIMENT : c'est `TextSize` qui plafonne a 100 px, pas `TextScaled`
+
+- Quatre essais pour rien (0.13, 0.205, 0.49, 0.62 de hauteur d'ecran) : le texte restait a 100 px. La propriete
+  `TextSize` est PLAFONNEE A 100 ; `TextScaled`, lui, ne l'est pas -- c'est pourquoi les lettres du joueur faisaient
+  193 px. J'avais affirme l'inverse, c'etait faux, et le commentaire du code le dit maintenant en toutes lettres.
+- Les lettres repassent en `TextScaled` (+ `RichText`), et c'est la CASE qui porte la taille : nouveau `WORD_SCALE`
+  (1.35) qui multiplie la taille relevee. 1 = exactement le montage du joueur.
+- Le contour se calcule sur la hauteur REELLE de la lettre, relue a chaque changement d'ecran.
+
 ## 0.0.951 — Le grand-pere cligne des yeux, et LEAFIA grossit encore
 
 - Clignement branche avec les deux images du joueur : ouvert `111069478991867`, ferme `92930536214559`. L'etape
