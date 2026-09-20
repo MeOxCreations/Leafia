@@ -2204,6 +2204,13 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.947 — LEAFIA ne flotte plus : les lettres arrivent et restent posees
+
+- L'ondulation verticale des lettres est retiree. Le mot doit se lire POSE, pas flotter. Il garde son arrivee lettre
+  par lettre et le reflet qui le traverse.
+- Les positions sont celles du releve, inchangees : L 0.3777, E 0.4225, A 0.4808, F 0.5371, I 0.5762, A 0.6215, a
+  0.6444 de hauteur, chaque lettre en 0.0659 x 0.1789.
+
 ## 0.0.946 — Les lettres de LEAFIA sont posees a la place ou le joueur les a mises
 
 - Les lettres se CHEVAUCHAIENT : un `UIListLayout` avec un ecart NEGATIF etait cense les resserrer, il les a

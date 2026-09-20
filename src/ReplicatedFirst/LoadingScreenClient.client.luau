@@ -396,12 +396,10 @@ local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
 local STATUS_POS = Vector2.new(0.4995, 0.7299)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
--- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule.
+-- LE MOT ARRIVE LETTRE PAR LETTRE, puis ne bouge plus : seul le reflet le traverse.
 local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
 local WORD_DROP = 0.06 -- d'ou la lettre monte, en fraction de la hauteur d'ecran
 local WORD_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local WORD_WAVE = 0.012 -- hauteur de l'ondulation, en fraction de la hauteur d'ecran. KNOB
-local WORD_WAVE_TIME = 1.1 -- duree d'un aller de l'ondulation. KNOB
 
 -- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
 -- s'estompe et revient, decalee sur sa voisine.
@@ -660,21 +658,9 @@ for i = 1, #TITLE_TEXT do
 		if not letter.Parent then
 			return
 		end
+		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
 		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
-		-- VAGUE : chaque lettre monte et redescend en boucle, decalee de la precedente -- c'est ce DECALAGE qui fait
-		-- la vague. Lancee apres l'arrivee, sinon les deux tweens se disputent la meme position.
-		task.delay(WORD_IN.Time, function()
-			if not letter.Parent then
-				return
-			end
-			local up = UDim2.new(home.X.Scale, home.X.Offset, home.Y.Scale - WORD_WAVE, home.Y.Offset)
-			TweenService:Create(
-				letter,
-				TweenInfo.new(WORD_WAVE_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-				{ Position = up }
-			):Play()
-		end)
 	end)
 end
 
