@@ -73,6 +73,10 @@ local function describe(gui: GuiObject, depth: number)
 		if gui.ScaleType == Enum.ScaleType.Tile then
 			table.insert(parts, `tileSize = {gui.TileSize}`)
 		end
+		-- Une image DECOUPEE dans une planche : sans ces deux valeurs, on afficherait la planche entiere.
+		if gui.ImageRectSize.X > 0 or gui.ImageRectSize.Y > 0 then
+			table.insert(parts, `rect = {gui.ImageRectOffset} + {gui.ImageRectSize}`)
+		end
 	end
 	if gui:IsA("TextLabel") or gui:IsA("TextButton") then
 		table.insert(parts, `text = "{gui.Text}"`)
@@ -86,14 +90,40 @@ local function describe(gui: GuiObject, depth: number)
 	end
 	table.insert(lines, table.concat(parts, "  |  "))
 
-	-- Les degrades portent la couleur du fond : sans eux, un ciel exporte n'est qu'un aplat.
-	local grad = gui:FindFirstChildOfClass("UIGradient")
-	if grad then
-		local keys = {}
-		for _, k in ipairs(grad.Color.Keypoints) do
-			table.insert(keys, `{n(k.Time)} = {colour(k.Value)}`)
+	-- LES ENFANTS QUI CHANGENT LE RENDU. Sans eux, un degrade exporte n'est qu'un aplat, et un mot detoure perd son
+	-- contour : on relirait l'ecran a l'ecran en se demandant ce qui manque.
+	for _, child in ipairs(gui:GetChildren()) do
+		local indent = string.rep("  ", depth + 1)
+		if child:IsA("UIGradient") then
+			local colours = {}
+			for _, k in ipairs(child.Color.Keypoints) do
+				table.insert(colours, `{n(k.Time)} = {colour(k.Value)}`)
+			end
+			local fades = {}
+			for _, k in ipairs(child.Transparency.Keypoints) do
+				table.insert(fades, `{n(k.Time)} = {n(k.Value)}`)
+			end
+			local parts2 = {
+				`{indent}UIGradient`,
+				`rotation = {n(child.Rotation)}`,
+				`offset = {n(child.Offset.X)}, {n(child.Offset.Y)}`,
+				`couleurs : {table.concat(colours, " , ")}`,
+			}
+			if #fades > 1 or (fades[1] and fades[1] ~= "0 = 0") then
+				table.insert(parts2, `transparences : {table.concat(fades, " , ")}`)
+			end
+			table.insert(lines, table.concat(parts2, "  |  "))
+		elseif child:IsA("UIStroke") then
+			table.insert(
+				lines,
+				`{indent}UIStroke  |  color = {colour(child.Color)}  |  thickness = {n(child.Thickness)}`
+					.. `  |  transparency = {n(child.Transparency)}  |  mode = {child.ApplyStrokeMode.Name}`
+			)
+		elseif child:IsA("UICorner") then
+			table.insert(lines, `{indent}UICorner  |  radius = {child.CornerRadius}`)
+		elseif child:IsA("UIAspectRatioConstraint") then
+			table.insert(lines, `{indent}UIAspectRatioConstraint  |  ratio = {n(child.AspectRatio)}`)
 		end
-		table.insert(lines, `{string.rep("  ", depth + 1)}UIGradient  |  rotation = {n(grad.Rotation)}  |  {table.concat(keys, " , ")}`)
 	end
 
 	for _, child in ipairs(gui:GetChildren()) do
