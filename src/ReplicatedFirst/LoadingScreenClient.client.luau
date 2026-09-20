@@ -458,12 +458,13 @@ local WARMUP_FRAMES = 4 -- images d'affilee assez rapides avant de lancer le mot
 local WARMUP_MAX_DT = 0.12 -- au-dela, l'image est trop lente : le client charge encore
 local WARMUP_TIMEOUT = 12 -- on lance quand meme apres ce temps : mieux vaut une anim ratee que pas d'anim
 
--- ON DOIT AVOIR LE TEMPS DE LES VOIR ARRIVER. A 0.07 s d'ecart et 0.34 s d'arrivee, le mot entier se posait en
--- moins d'une seconde : l'oeil n'attrapait rien, on voyait juste le mot apparaitre d'un bloc.
-local WORD_DELAY = 0.5 -- temps avant la premiere lettre : le regard se pose sur l'ecran d'abord
-local WORD_STAGGER = 0.22 -- decalage entre deux lettres
+-- VIF, MAIS PAS INSTANTANE. On n'attrapait rien a 0.07 s d'ecart ; a 0.22 s le mot s'ecrivait trop lentement. Ce
+-- qui rend les lettres VISIBLES n'etait pas la lenteur, c'est l'attente du 1er dessin (WARMUP) : une fois cette
+-- cause reglee, le geste peut redevenir rapide.
+local WORD_DELAY = 0.3 -- temps avant la premiere lettre : le regard se pose sur l'ecran d'abord
+local WORD_STAGGER = 0.1 -- decalage entre deux lettres
 local WORD_DROP = 0.06 -- d'ou la lettre monte, en fraction de la hauteur d'ecran
-local WORD_IN = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local WORD_IN = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 -- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
 -- s'estompe et revient, decalee sur sa voisine.
