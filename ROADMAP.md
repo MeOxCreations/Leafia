@@ -107,7 +107,31 @@ dans le hub, pas dans le vide.
 **Ce qui manque** : le grand-pere du hub (cle, portail, felicitations), et le premier chantier enchaine tout de
 suite apres.
 
-### Etape 5 — Mesurer la retention
+### Etape 5 — Le menage : ranger, et couper ce qui est trop gros
+
+**Pourquoi maintenant et pas avant** : un rangement touche des dizaines de fichiers. S'il casse quelque chose, ca
+casse pendant qu'on teste autre chose. On le fait une fois que le jeu tient debout.
+
+**Ranger, pas entasser.** Fusionner des fichiers ne rend pas plus clair : Luau n'accepte que 200 variables au
+premier niveau d'un fichier, et au-dela le module entier meurt au chargement, sans erreur avant le lancement.
+`TutorialController` est deja a 195. Ce qu'il faut, ce sont des DOSSIERS par feature :
+
+```
+Client/Hedge/   HedgeController, HedgeLeafController, HedgeMeshController
+Client/Build/   Build, BuildPlace, BuildWall, BuildDelete
+Client/Ladder/  Ladder, LadderMove
+Client/Bin/     BinCarry, BinFill, BinZone
+Server/Hedge/   Hedge, HedgeCell, HedgeCut, HedgeBranch, HedgeGround, HedgeStock
+```
+
+Zero ligne de logique changee : des deplacements, et les `require` a corriger.
+
+**Et deux fichiers a COUPER, pas a fusionner** : `TutorialController` (3 339 lignes) et `HedgeController`
+(2 191). Chaque etape du didacticiel y ajoute son etat, et on approche du mur.
+
+**Comment tester** : le jeu se lance dans les DEUX places, et la console ne montre aucun module manquant.
+
+### Etape 6 — Mesurer la retention
 
 **Pourquoi** : avant ca, on ne sait pas si le jeu retient. Et on ne monetise pas un seau perce.
 

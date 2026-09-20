@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.935 — ROADMAP : une etape de menage, apres que le jeu tienne debout
+
+- `ROADMAP.md` gagne une etape 5 "menage" : ranger les modules en DOSSIERS par feature (Client/Hedge, Client/Build,
+  Server/Hedge...) plutot que de les fusionner, et COUPER les deux plus gros (`TutorialController` 3 339 lignes et
+  195 locales sur 200, `HedgeController` 2 191).
+- Pourquoi pas de fusion : Luau tue le module entier au-dela de 200 variables au premier niveau, sans rien dire
+  avant le lancement. On l'a deja paye une fois.
+- Pourquoi apres : un rangement touche des dizaines de fichiers ; s'il casse, il casse pendant qu'on teste autre
+  chose.
+
 ## 0.0.934 — Console admin : au milieu de l'ecran sur PC, et deplacable par son titre
 
 - `AdminCommandController` : sur PC la console s'ouvre au CENTRE de l'ecran. Collee en haut, elle recouvrait le HUD
