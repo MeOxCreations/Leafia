@@ -375,6 +375,10 @@ local EYE = {
 	SHUT = "rbxassetid://80743235106162", -- les deux fermes
 	WINK = "rbxassetid://133495431262696", -- l'oeil droit ferme : le clin d'oeil
 	SOUND = { "Sounds", "UI", "EyeWinkSound" },
+	-- ECARTEMENT, en fraction de la largeur de la tete : chaque oeil glisse vers son cote. Rectification faite
+	-- ICI plutot que dans l'image, tant qu'elle reste petite. A NOTER : le calque des DEUX yeux fermes ne peut
+	-- pas suivre (ses deux yeux sont dans la meme image), donc un ecart trop grand se verrait au clignement.
+	SPREAD = 0.008, -- KNOB
 	SOUND_VOLUME = 0.6,
 	-- LE CLIN D'OEIL EST UN MOMENT ECRIT, PAS UN HASARD : il tombe a la FIN du son d'arrivee.
 	--
@@ -832,6 +836,11 @@ local eyeLayers = {
 	shut = eyeLayer("EyesShut", EYE.SHUT, false),
 	wink = eyeLayer("EyeWink", EYE.WINK, false),
 }
+
+-- CHAQUE OEIL GLISSE VERS SON COTE. Le calque du clin d'oeil suit l'oeil DROIT : c'est le meme oeil.
+eyeLayers.left.Position = UDim2.fromScale(0.5 - EYE.SPREAD, 0.5)
+eyeLayers.right.Position = UDim2.fromScale(0.5 + EYE.SPREAD, 0.5)
+eyeLayers.wink.Position = UDim2.fromScale(0.5 + EYE.SPREAD, 0.5)
 
 -- LES DEUX CALQUES CACHES SE TELECHARGENT D'AVANCE. Une image ne part se charger que lorsqu'on l'AFFICHE : celles
 -- du clignement et du clin d'oeil ne se montrent que deux dixiemes de seconde, donc elles n'avaient jamais le
