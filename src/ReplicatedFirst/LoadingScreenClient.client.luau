@@ -478,6 +478,7 @@ local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait 
 --
 -- Pour AGRANDIR le mot, on agrandit donc la CASE : `WORD_SCALE`. TextScaled remplit ce qu'on lui donne.
 local WORD_SCALE = 0.9 -- multiplie la taille de case relevee. 1 = exactement le montage du joueur
+local WORD_STROKE_COLOR = Color3.fromRGB(217, 217, 217)
 local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la hauteur de la lettre
 -- LE REFLET SUR LE CONTOUR. Un UIGradient peut vivre DANS un UIStroke : c'est la facon de faire briller un contour,
 -- et c'est le montage que le joueur avait fait a la main. La bande claire reste HORS CHAMP au repos (le contour est
@@ -1096,7 +1097,7 @@ for i = 1, #TITLE_TEXT do
 	-- LE CONTOUR NOIR, en fraction de la HAUTEUR de la lettre : en pixels fixes il serait gras sur telephone et fin
 	-- sur grand ecran. `Contextual` suit le texte, pas la boite.
 	local stroke = Instance.new("UIStroke")
-	stroke.Color = INK
+	stroke.Color = WORD_STROKE_COLOR
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = letter
 	local shine = Instance.new("UIGradient")
