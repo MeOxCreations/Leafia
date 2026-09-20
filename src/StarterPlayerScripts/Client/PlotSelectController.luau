@@ -479,7 +479,6 @@ local function enterGame(gui: ScreenGui)
 		tileHandle = nil
 	end
 	setDof(false) -- on entre dans le jeu : couper le flou (sinon le joueur, tout proche, serait floute)
-	LoadCompanyController.setShadow(false) -- on quitte les ecrans de selection : l'ombre s'en va avec eux
 	fadeOutMusic() -- silence a l'entree dans le jeu (l'etat psychologique voulu)
 	-- On DIT au serveur quel plot on a choisi : il valide et le retient (autorite -> n'ouvrir que SA boite aux lettres, etc.).
 	if currentPlot then
@@ -592,7 +591,6 @@ local function setup(gui: ScreenGui)
 	applyMobileLayout(gui) -- ajustements de mise en page reserves au petit ecran tactile (rien sur PC)
 	LoadCompanyController.ensureBackdrop(gui) -- voile blanc de fond, visible sur CET ecran ET sur Load Company
 	LoadCompanyController.ensureTopBar(gui) -- StepBadge + compteur diamant : top bar commun aux 2 ecrans de selection
-	LoadCompanyController.setShadow(true, gui) -- ombre de fond, sur les 2 ecrans ; eteinte en entrant dans le jeu
 
 	-- Ecrans mutuellement exclusifs via UIManager : afficher l'un cache l'autre AUTOMATIQUEMENT (donc Claim cache
 	-- HolderSelectPlot tout seul), et impossible d'en avoir deux a la fois meme en spammant les boutons.

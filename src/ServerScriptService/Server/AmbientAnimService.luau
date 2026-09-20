@@ -226,15 +226,22 @@ function AmbientAnimService.init()
 			end
 		end)
 
-		-- CE QUI MANQUE, nomme. Une entree de config qu'on ne trouve nulle part est presque toujours un modele mal
-		-- nomme ou range hors de la racine -- et sans ce mot, ca se cherche a l'aveugle (vecu deux fois).
+		-- CE QUI MANQUE, nomme -- mais en PRINT, pas en warn. La config est commune a TOUTES les places : le camion
+		-- n'existe que dans le didacticiel, les cypres que dans certaines cartes, et le grand-pere du hub est une
+		-- copie posee par le client (que le serveur ne voit pas). Absent d'une place est donc NORMAL, et un warn sur
+		-- un evenement normal finit par masquer les vrais. La ligne reste : un modele mal nomme se voit ici.
+		local missing: { string } = {}
 		for name in pairs(AmbientAnimConfigs.ANIMATIONS) do
 			if not seen[name] then
-				warn(
-					`[AmbientAnim] "{name}" est dans la config mais RIEN n'a ete anime sous ce nom. `
-						.. `Verifie le nom EXACT du Model dans le Workspace (il n'y a pas de recherche approchante).`
-				)
+				table.insert(missing, name)
 			end
+		end
+		if #missing > 0 then
+			table.sort(missing)
+			print(
+				`[AmbientAnim] Pas dans cette place : {table.concat(missing, ", ")}. `
+					.. `(Si l'un d'eux DEVRAIT y etre, verifier le nom EXACT du Model : aucune recherche approchante.)`
+			)
 		end
 
 		local detail = {}

@@ -30,7 +30,6 @@ local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
 local PanelFocus = require(ReplicatedStorage.Modules.UI.Core.PanelFocus)
-local ScreenShadow = require(ReplicatedStorage.Modules.UI.Core.ScreenShadow)
 local TruckConfigs = require(ReplicatedStorage.Modules.Configs.TruckConfigs)
 
 local TruckToolsHandler = {}
@@ -116,8 +115,6 @@ local PANEL = "TruckTools"
 
 local gui: ScreenGui? = nil
 local root: Frame? = nil
--- OMBRE D'ECRAN derriere la barre : dans notre ScreenGui, a ZIndex 0, donc sous la barre (1) et devant le jeu.
-local shadow: ScreenShadow.Handle? = nil
 local row: Frame? = nil
 local titleLabel: TextLabel? = nil
 local shown = false
@@ -445,12 +442,6 @@ function TruckToolsHandler.setShown(on: boolean)
 	if on then
 		frame.Visible = true
 	end
-	if on and not shadow then
-		shadow = ScreenShadow.new(getGui(), 0)
-	end
-	if shadow then
-		shadow.set(on)
-	end
 	local title = titleLabel
 	if title then
 		TweenService:Create(title, if on then RISE else FALL, {
@@ -491,10 +482,6 @@ end
 function TruckToolsHandler.destroy()
 	hideToken += 1
 	PanelFocus.setOpen(PANEL, false)
-	if shadow then
-		shadow.destroy()
-		shadow = nil
-	end
 	local holder = gui
 	if holder then
 		holder:Destroy()

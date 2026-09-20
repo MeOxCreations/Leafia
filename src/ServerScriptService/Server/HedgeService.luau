@@ -739,9 +739,9 @@ function HedgeService.init()
 
 	local tagged = setupAutoTag()
 	if tagged == 0 then
-		-- Anormal ET actionnable : sans une seule haie taguee, rien ne se declenchera jamais et on chercherait
-		-- l'erreur dans le code.
-		warn(
+		-- EN PRINT, pas en warn : une place SANS haie est normale (le hub n'en a pas encore). La ligne reste, parce
+		-- que dans une place qui en attend, c'est elle qui dit pourquoi rien ne se declenche.
+		print(
 			`[HedgeService] Aucune haie trouvee. Attendu : des parts nommees "{HedgeConfigs.AUTO_TAG_PREFIX}..." `
 				.. `dans Workspace.{table.concat(HedgeConfigs.AUTO_TAG_ROOT, ".")}, ou taguees "{HedgeConfigs.TAG}".`
 		)

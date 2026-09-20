@@ -2204,7 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
-## 0.0.931 — ROADMAP.md : ou on en est, ce qui vient ensuite, et comment reprendre sans assistant
+## 0.0.932 — L'ombre d'ecran est retiree ; moins de warns pour des choses normales
+
+- L'ombre d'ecran (0.0.927, 0.0.929) est RETIREE partout : ecran de choix du plot, menu des saves, barre du camion.
+  Le module `ScreenShadow` est supprime. Tout est dans l'historique git si on la reveut un jour.
+- `AmbientAnimService` : "X est dans la config mais RIEN n'a ete anime" passe de warn a print, et en UNE ligne pour
+  tous les manquants. La config est commune a toutes les places : le camion n'existe que dans le didacticiel, et le
+  grand-pere du hub est une copie posee par le CLIENT, que le serveur ne voit pas. Absent d'une place est normal.
+- `HedgeService` : "Aucune haie trouvee" passe aussi en print. Le hub n'a pas encore de haie.
+- Restent en warn, parce qu'ils sont anormaux ET actionnables : les parts ancrees qu'un Motor6D doit bouger, et les
+  assets absents de la place (animations, mesh de papillon, particules de pas) -- ceux-la se copient a la main.
+
 
 - Nouveau `ROADMAP.md` a la racine : etat reel du projet (ce qui marche, ce qui est fragile, ce qui n'existe pas),
   l'ordre de travail (FPS mobile, validation de la tonte, boucle d'argent, build sauvegarde, didacticiel, mesure de

@@ -14,7 +14,6 @@ local UserInputService = game:GetService("UserInputService")
 
 local TileField = require(ReplicatedStorage.Modules.UI.Core.TileField)
 local CustomKeyboard = require(ReplicatedStorage.Modules.UI.Core.CustomKeyboard)
-local ScreenShadow = require(ReplicatedStorage.Modules.UI.Core.ScreenShadow)
 local ButtonSlime = require(ReplicatedStorage.Modules.UI.Core.ButtonSlime)
 local FormatUtils = require(ReplicatedStorage.Modules.Utils.FormatUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
@@ -171,12 +170,6 @@ local FONT_DIAMOND_CTA = Font.new("rbxasset://fonts/families/Montserrat.json", E
 -- Etat (l'UI est construite UNE fois puis reutilisee : reset a chaque open). root = le panneau, enfant de LoadSaveUI.
 local root: Frame? = nil
 local tileHandle: TileField.Handle? = nil -- fond en tuiles de cet ecran (visible seulement quand l'ecran est affiche)
--- OMBRE D'ECRAN de TOUT l'ecran de chargement (choix du plot ET choix de la save). ZIndex 20 : au-dessus du fond en
--- tuiles (0) et du voile blanc (-5), sous le top bar (50) et les panneaux (60 et plus). LoadSaveUI est en
--- ZIndexBehavior Global, donc ces ZIndex se comparent sur toute l'interface.
--- A -4 elle etait sous le fond en tuiles du menu des saves : on ne la voyait pas.
-local SHADOW_Z = 20
-local shadow: ScreenShadow.Handle? = nil
 local fontGradient: Frame? = nil -- voile blanc de fond GLOBAL (ZIndex -5) : ecran de plot ET Load Company. Cree une fois.
 local cardFrames: { TextButton } = {} -- les cartes dans l'ordre : slide d'entree UNE PAR UNE (staggered) a l'ouverture
 local cardHomes: { UDim2 } = {} -- leur position d'origine (parallele a cardFrames)
@@ -1823,17 +1816,6 @@ function LoadCompanyController.ensureTopBar(parent: Instance)
 		TweenService:Create(stepBadge, TOPBAR_SLIDE, { Position = stepHome }):Play()
 		TweenService:Create(d, TOPBAR_SLIDE, { Position = diamondHome }):Play()
 	end)
-end
-
---- L'OMBRE DE L'ECRAN DE CHARGEMENT : posee une fois dans LoadSaveUI, allumee tant qu'on choisit son plot ou sa save,
---- eteinte en entrant dans le jeu. Elle appartient aux DEUX ecrans, pas au menu des saves seul.
-function LoadCompanyController.setShadow(on: boolean, parent: Instance?)
-	if not shadow and parent then
-		shadow = ScreenShadow.new(parent, SHADOW_Z)
-	end
-	if shadow then
-		shadow.set(on)
-	end
 end
 
 function LoadCompanyController.open(config: OpenConfig)
