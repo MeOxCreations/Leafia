@@ -380,7 +380,9 @@ local SHOUT_ROT = 20
 local SHOUT_POP = 0.15 -- taille de depart (fraction de sa taille) : elle part de presque rien
 local SHOUT_TILT = 22 -- degres de plus au depart : elle se redresse en arrivant, ca la rend vivante
 -- Back = elle depasse sa taille puis revient : c'est ce depassement qui fait le cote dessin anime.
-local SHOUT_IN = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+-- COURT : elle doit jaillir AVEC le retour du A, pas arriver apres coup. A 0.55 s elle trainait une demi-seconde
+-- derriere le geste qui est cense la projeter.
+local SHOUT_IN = TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 -- ELLE NE RESTE PAS. Un eclat d'onomatopee qui s'installe devient un element de decor : il doit jaillir et partir.
 local SHOUT_SOUND = { "Sounds", "UI", "AppearSound_1" }
 local SHOUT_SOUND_VOLUME = 0.5
@@ -403,6 +405,12 @@ local FACE_REVEAL = {
 	SQUASH_X = 0.68,
 	SQUASH_Y = 1.3,
 	EDGE = 0.3, -- douceur de la limite de revelation
+	-- LARGEUR / HAUTEUR DE L'IMAGE ELLE-MEME (1 = carree). En `Stretch`, la tete prend les proportions de sa
+	-- case : la case relevee sur le montage est 15 % plus large que haute, donc la tete au repos s'en trouvait
+	-- elargie d'autant. On RECALCULE la largeur a partir de la hauteur et du format de l'ecran, ce qui redonne
+	-- exactement le rendu d'avant (`Fit` bornait sur la hauteur) sur n'importe quel ecran. KNOB si le visage
+	-- reste large ou devient etroit.
+	ASPECT = 1,
 	-- LE SENS D'UN OFFSET NE SE DEDUIT PAS : si elle se devoile du haut vers le bas, passer a true.
 	FLIP = false,
 }
@@ -479,7 +487,7 @@ local WORD_IN = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.O
 -- tete. Les faire partir a l'apparition de la lettre les decollerait du geste ; ici ils sont l'onde de choc.
 local WORD_LAST = {
 	POP = 1.3, -- de combien le A gonfle
-	TIME = 0.16, -- aller (le retour dure autant : le tween s'inverse)
+	TIME = 0.12, -- aller (le retour dure autant : le tween s'inverse)
 }
 local WORD_SHINE_DELAY = 0.4 -- apres la pose de la derniere lettre
 local WORD_SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
@@ -681,7 +689,13 @@ faceGroup.ZIndex = 5
 -- le bas et le geste se lirait comme un simple zoom.
 faceGroup.AnchorPoint = Vector2.new(0.5, 1)
 faceGroup.Position = UDim2.fromScale(FACE_POS.X, FACE_POS.Y + FACE_SIZE.Y / 2)
-faceGroup.Size = UDim2.fromScale(FACE_SIZE.X * FACE_REVEAL.SQUASH_X, FACE_SIZE.Y * FACE_REVEAL.SQUASH_Y)
+-- LA CASE DE REPOS : la hauteur relevee, et la largeur qui en decoule pour respecter le format de l'image.
+local faceView = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
+local faceRest = Vector2.new(
+	FACE_SIZE.Y * (faceView.Y / math.max(faceView.X, 1)) * FACE_REVEAL.ASPECT,
+	FACE_SIZE.Y
+)
+faceGroup.Size = UDim2.fromScale(faceRest.X * FACE_REVEAL.SQUASH_X, faceRest.Y * FACE_REVEAL.SQUASH_Y)
 faceGroup.GroupTransparency = 1 -- invisible tant que la derniere lettre ne l'a pas appelee
 faceGroup.Parent = root
 
@@ -763,7 +777,7 @@ local function revealFace()
 	TweenService:Create(
 		faceGroup,
 		TweenInfo.new(FACE_REVEAL.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Size = UDim2.fromScale(FACE_SIZE.X, FACE_SIZE.Y) }
+		{ Size = UDim2.fromScale(faceRest.X, faceRest.Y) }
 	):Play()
 	TweenService:Create(
 		faceReveal,
