@@ -880,6 +880,21 @@ end
 
 -- LE CLIN D'OEIL, appele du dehors (la fin du son d'arrivee). Le drapeau evite qu'il se croise avec un
 -- clignement : les deux ecrivent les memes calques, et celui qui finit en dernier gagnerait.
+-- LE TANGAGE. Il ecrit la MEME propriete que le penchement du clin d'oeil : si les deux la posaient chacun de
+-- leur cote, celui qui parle en dernier gagnerait et le penchement disparaitrait sous le tangage. Le penchement
+-- vit donc dans une valeur a part, que les tweens animent, et la boucle ECRIT LA SOMME des deux.
+local tiltValue = Instance.new("NumberValue")
+tiltValue.Value = 0
+local swayConn: RBXScriptConnection? = nil
+swayConn = RunService.Heartbeat:Connect(function()
+	if not faceGroup.Parent then
+		return
+	end
+	-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
+	-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentirait le tangage.
+	faceGroup.Rotation = math.sin(os.clock() * EYE.SWAY_SPEED) * EYE.SWAY_ANGLE + tiltValue.Value
+end)
+
 -- LE SON D'ARRIVEE EN COURS, pose par la premiere lettre et lu par le planificateur du clin d'oeil.
 local joinSoundPlaying: Sound? = nil
 local eyesBusy = false
@@ -939,21 +954,6 @@ local function winkOnce()
 		):Play()
 	end)
 end
-
--- LE TANGAGE. Il ecrit la MEME propriete que le penchement du clin d'oeil : si les deux la posaient chacun de
--- leur cote, celui qui parle en dernier gagnerait et le penchement disparaitrait sous le tangage. Le penchement
--- vit donc dans une valeur a part, que les tweens animent, et la boucle ECRIT LA SOMME des deux.
-local tiltValue = Instance.new("NumberValue")
-tiltValue.Value = 0
-local swayConn: RBXScriptConnection? = nil
-swayConn = RunService.Heartbeat:Connect(function()
-	if not faceGroup.Parent then
-		return
-	end
-	-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
-	-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentirait le tangage.
-	faceGroup.Rotation = math.sin(os.clock() * EYE.SWAY_SPEED) * EYE.SWAY_ANGLE + tiltValue.Value
-end)
 
 -- QUAND LE CLIN D'OEIL SE JOUE. Un seul endroit decide, plutot que deux declencheurs qui se doublaient : la fin
 -- du son et une limite de temps pouvaient tomber dans n'importe quel ordre, donc le geste changeait de place
