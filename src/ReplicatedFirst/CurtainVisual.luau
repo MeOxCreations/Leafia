@@ -158,7 +158,7 @@ local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 --
 -- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
 local SPIN_SIZE = 0.06
-local SPIN_GAP = 0.03 -- espace entre le bas de la tete et le haut de la couronne
+local SPIN_GAP = 0.09 -- espace entre le bas de la tete et le haut de la couronne. KNOB
 -- SA PLACE SE CALCULE, elle ne s'ecrit pas : la tete n'a pas la meme taille sur telephone et sur PC (voir
 -- FACE_K), donc une valeur en dur la collerait au visage d'un cote et la laisserait flotter de l'autre.
 local SPIN_POS = UDim2.fromScale(0.5, 0.5 + FACE_SIZE.Y.Scale / 2 + SPIN_GAP + SPIN_SIZE / 2)
@@ -264,6 +264,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	face.SizeConstraint = Enum.SizeConstraint.RelativeYY
 	-- POSE A SA TAILLE PLEINE : c'est l'image figee du teleport. `animate` la replie a plat avant de la deplier.
 	face.Size = FACE_SIZE
+	FaceEyes.fade(face) -- le meme fondu que sur le grand ecran : il efface le bas du visage et lui donne son gris
 	face.ZIndex = 5
 	face.Parent = container
 
@@ -349,7 +350,9 @@ function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
 	local conns: { RBXScriptConnection } = {}
 
 	-- Les calques suivent la tete : poses DANS elle, ils heritent de sa taille et de son depliage sans un calcul.
-	local eyes = FaceEyes.attach(face, { zIndex = face.ZIndex + 1 })
+	-- Le fondu se REPOSE sur chaque calque : un enfant n herite pas du UIGradient de son parent, et sans lui les
+	-- yeux resteraient pleins la ou la tete s estompe.
+	local eyes = FaceEyes.attach(face, { zIndex = face.ZIndex + 1, decorate = FaceEyes.fade })
 
 	local offX, offY = 0, 0
 	local swayTime = 0

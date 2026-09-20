@@ -432,7 +432,6 @@ local FACE_REVEAL = {
 	-- LE SENS D'UN OFFSET NE SE DEDUIT PAS : si elle se devoile du haut vers le bas, passer a true.
 	FLIP = false,
 }
-local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 
 -- LE MOT : UNE LIGNE PAR LETTRE, a la place exacte ou le joueur l'a posee. Un `UIListLayout` avec un ecart negatif
 -- avait ete essaye pour les resserrer : il les a EMPILEES les unes sur les autres. Une lettre posee a sa place ne
@@ -721,15 +720,9 @@ local function place(gui: GuiObject, pos: Vector2, size: Vector2)
 	gui.Size = UDim2.fromScale(size.X, size.Y)
 end
 
--- LE DEGRADE QUI EFFACE LE BAS DES IMAGES NOIRES : c'est lui qui donne le fondu gris de la tete et de l'onomatopee.
--- Blanc uni, transparence de 0 a 1 : seule la transparence travaille, la couleur ne sert qu'a exister.
-local function fadeGradient(parent: Instance)
-	local grad = Instance.new("UIGradient")
-	grad.Rotation = ART_FADE_ROTATION
-	grad.Color = ColorSequence.new(WHITE)
-	grad.Transparency = NumberSequence.new(0, 1)
-	grad.Parent = parent
-end
+-- LE DEGRADE QUI EFFACE LE BAS DES IMAGES NOIRES : c'est lui qui donne le fondu gris de la tete et de
+-- l'onomatopee. Il vit dans `FaceEyes` parce que le rideau de changement de map pose le meme.
+local fadeGradient = FaceEyes.fade
 
 -- LE GROUPE PORTE LA REVELATION ET LA TAILLE ; la tete le remplit. On redimensionne le GROUPE et non la tete :
 -- dedans, elle serait rognee par le clipping du CanvasGroup des qu'elle depasserait.

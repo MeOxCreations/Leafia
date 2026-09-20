@@ -57,6 +57,22 @@ local TILT_IN = 0.35
 local TILT_HOLD = 0 -- temps ou la tete reste penchee APRES la reouverture de l oeil
 local TILT_OUT = 0.5 -- plus lent que l aller : la tete "revient" au lieu de claquer
 
+-- LE FONDU DU MONTAGE, celui qui efface le bas du visage et lui donne son gris. Il vit ici parce que les DEUX
+-- ecrans le posent, sur la tete ET sur chaque calque d oeil : recopie de chaque cote, son angle finirait par
+-- differer d un ecran a l autre sans que personne ne s en apercoive.
+--
+-- Blanc uni, transparence de 0 a 1 : seule la transparence travaille, la couleur ne sert qu a exister (un
+-- UIGradient MULTIPLIE la couleur de l objet).
+local FADE_ROTATION = 210.2216
+
+function FaceEyes.fade(gui: Instance)
+	local grad = Instance.new("UIGradient")
+	grad.Rotation = FADE_ROTATION
+	grad.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
+	grad.Transparency = NumberSequence.new(0, 1)
+	grad.Parent = gui
+end
+
 export type Handle = {
 	wink: () -> (),
 	tilt: () -> number,
