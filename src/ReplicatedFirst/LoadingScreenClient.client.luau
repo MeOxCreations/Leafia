@@ -578,7 +578,7 @@ local MOWER = {
 	-- DE COMBIEN ELLE REMONTE AU-DESSUS DE CE SOL. Un reglage a elle, et pas un sol abaisse : `GROUND_Y` est la
 	-- ligne que l'HERBE partage avec elle, la bouger deplacerait les deux. Sert a rattraper le vide que l'image
 	-- de la machine peut avoir sous ses roues.
-	LIFT = 0.02, -- KNOB
+	LIFT = 0.01, -- KNOB
 	START_X = -0.12, -- hors ecran a gauche
 	END_X = 1.12, -- hors ecran a droite
 	TIME = 7, -- duree d'une traversee, en secondes. KNOB
