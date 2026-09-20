@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.957 — Un reflet passe sur le contour des lettres, et le mot de chargement change de police
+
+Le contour noir de chaque lettre de LEAFIA recoit un UIGradient : une bande claire le traverse en diagonale
+a chaque passage du reflet. Contour et remplissage brillent au MEME instant, donc on lit un seul reflet qui
+glisse sur le mot, pas deux effets qui se croisent. Au repos la bande est hors champ : le contour reste plein.
+
+Le texte de chargement sous le mot passe en Montserrat Black (`Enum.FontWeight.Heavy`).
+
+Reglages dans `STROKE_SHINE` (`LoadingScreenClient`) : largeur de la bande, force, duree, inclinaison.
+`FLIP` inverse le sens de passage : le sens d'un `UIGradient.Offset` ne se deduit pas, il s'observe.
+
+L'exportateur `scripts/studio/ExporterEcranChargement.lua` releve maintenant les UIGradient poses DANS un
+UIStroke : ils passaient a la trappe, et un contour monte a la main ressortait uni a l'export.
+
 ## 0.0.956 — Le mot n'apparait plus dans le vide : il attend que l'ecran s'affiche vraiment
 
 - Le joueur ne voyait pas les lettres arriver, quelle que soit leur duree. CAUSE : un tween avance avec le TEMPS,
