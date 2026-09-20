@@ -171,9 +171,11 @@ local FONT_DIAMOND_CTA = Font.new("rbxasset://fonts/families/Montserrat.json", E
 -- Etat (l'UI est construite UNE fois puis reutilisee : reset a chaque open). root = le panneau, enfant de LoadSaveUI.
 local root: Frame? = nil
 local tileHandle: TileField.Handle? = nil -- fond en tuiles de cet ecran (visible seulement quand l'ecran est affiche)
--- OMBRE D'ECRAN derriere le menu des saves. ZIndex -4 : juste au-dessus du voile blanc de fond (-5), sous tout le reste
--- de LoadSaveUI (qui est en ZIndexBehavior Global, donc les ZIndex se comparent sur toute l'interface).
-local SHADOW_Z = -4
+-- OMBRE D'ECRAN de TOUT l'ecran de chargement (choix du plot ET choix de la save). ZIndex 20 : au-dessus du fond en
+-- tuiles (0) et du voile blanc (-5), sous le top bar (50) et les panneaux (60 et plus). LoadSaveUI est en
+-- ZIndexBehavior Global, donc ces ZIndex se comparent sur toute l'interface.
+-- A -4 elle etait sous le fond en tuiles du menu des saves : on ne la voyait pas.
+local SHADOW_Z = 20
 local shadow: ScreenShadow.Handle? = nil
 local fontGradient: Frame? = nil -- voile blanc de fond GLOBAL (ZIndex -5) : ecran de plot ET Load Company. Cree une fois.
 local cardFrames: { TextButton } = {} -- les cartes dans l'ordre : slide d'entree UNE PAR UNE (staggered) a l'ouverture
@@ -1823,6 +1825,17 @@ function LoadCompanyController.ensureTopBar(parent: Instance)
 	end)
 end
 
+--- L'OMBRE DE L'ECRAN DE CHARGEMENT : posee une fois dans LoadSaveUI, allumee tant qu'on choisit son plot ou sa save,
+--- eteinte en entrant dans le jeu. Elle appartient aux DEUX ecrans, pas au menu des saves seul.
+function LoadCompanyController.setShadow(on: boolean, parent: Instance?)
+	if not shadow and parent then
+		shadow = ScreenShadow.new(parent, SHADOW_Z)
+	end
+	if shadow then
+		shadow.set(on)
+	end
+end
+
 function LoadCompanyController.open(config: OpenConfig)
 	currentConfig = config
 	refreshCompanies() -- lit les VRAIS slots du serveur (ou 3 vides en secours) AVANT de construire les cartes
@@ -1836,12 +1849,6 @@ function LoadCompanyController.open(config: OpenConfig)
 	end
 	if tileHandle then
 		tileHandle.setVisible(true)
-	end
-	if not shadow then
-		shadow = ScreenShadow.new(config.parent, SHADOW_Z)
-	end
-	if shadow then
-		shadow.set(true)
 	end
 	-- Entree UNE PAR UNE : on pose toutes les cartes hors ecran (gauche), puis on lance leur slide avec un decalage
 	-- croissant (Card1 d'abord, puis Card2, puis Card3).
@@ -1871,9 +1878,6 @@ function LoadCompanyController.close()
 	end
 	if tileHandle then
 		tileHandle.setVisible(false)
-	end
-	if shadow then
-		shadow.set(false)
 	end
 	if root then
 		root.Visible = false

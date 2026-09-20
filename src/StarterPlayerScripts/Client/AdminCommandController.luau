@@ -44,7 +44,10 @@ local TEXT_SIZE = if IS_TOUCH then 14 else 15
 local TITLE_H = 24
 local INPUT_H = 34
 local ROW_H = 26 -- ligne de suggestion (PC)
-local CHIP_H = 28 -- pastille de suggestion (tactile)
+local CHIP_H = 30 -- pastille de suggestion (tactile)
+-- La bande des pastilles est plus haute qu'elles : posees pile a la hauteur de leur bande, elles etaient rognees en
+-- haut et en bas (le contour et les coins arrondis debordent du texte).
+local CHIP_BAND_H = CHIP_H + 8
 local OUTPUT_H = 90 -- zone de resultat (tactile), elle defile au-dela
 local PAD = if IS_TOUCH then 10 else 14
 local GAP = if IS_TOUCH then 6 else 8
@@ -171,7 +174,7 @@ local function refreshPredictor()
 					Name = "Suggest_" .. cmdName,
 					BackgroundColor3 = WELL,
 					AutoButtonColor = false,
-					Size = UDim2.fromScale(0, 1),
+					Size = UDim2.fromOffset(0, CHIP_H), -- hauteur FIXE, centree dans sa bande : plus rien n'est rogne
 					AutomaticSize = Enum.AutomaticSize.X,
 					Font = FONT_BOLD,
 					TextSize = TEXT_SIZE,
@@ -451,9 +454,10 @@ local function build()
 			Name = "Predictor",
 			BackgroundTransparency = 1,
 			BorderSizePixel = 0,
-			Size = UDim2.new(1, 0, 0, CHIP_H),
+			Size = UDim2.new(1, 0, 0, CHIP_BAND_H),
 			CanvasSize = UDim2.new(),
-			AutomaticCanvasSize = Enum.AutomaticSize.X,
+			-- XY et pas X : avec une toile de hauteur ZERO, les pastilles etaient coupees par la zone de defilement.
+			AutomaticCanvasSize = Enum.AutomaticSize.XY,
 			ScrollingDirection = Enum.ScrollingDirection.X,
 			ScrollBarThickness = 0,
 			Visible = false,

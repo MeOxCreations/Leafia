@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.929 — Pastilles de commandes entieres, et l'ombre sur tout l'ecran de chargement des saves
+
+- `AdminCommandController` : les pastilles de suggestion etaient rognees en haut et en bas. Leur bande est plus
+  haute qu'elles (38 px pour 30), leur hauteur est fixe et centree, et la zone de defilement calcule sa toile sur
+  les DEUX axes -- avec une toile de hauteur zero, elle les coupait.
+- `LoadCompanyController` / `PlotSelectController` : l'ombre d'ecran couvre maintenant TOUT l'ecran de chargement
+  des saves (choix du plot ET choix de la save), allumee au montage de LoadSaveUI et eteinte en entrant dans le
+  jeu. Elle ne s'affichait que sur le menu des saves.
+- Son ZIndex passe de -4 a 20 : a -4 elle etait SOUS le fond en tuiles du menu (0), donc invisible. A 20 elle
+  passe au-dessus du fond et reste sous le top bar (50) et les panneaux (60 et plus).
+
 ## 0.0.928 — Console admin sur telephone : le clavier du jeu au lieu de celui du telephone
 
 - Nouveau `Modules/UI/Core/CustomKeyboard` : le clavier a l'ecran de la fenetre du nom d'entreprise, sorti de
