@@ -26,9 +26,9 @@ export type Built = { tile: ImageLabel?, face: ImageLabel, dots: { Frame } }
 -- PAS DE TUILE SUR MOBILE, a la demande du joueur apres test sur telephone. Le ciel degrade, le visage et la couronne
 -- restent : seul le motif qui defile disparait.
 --
--- `TouchEnabled` SEUL : c'est une CAPACITE, vraie sur telephone et dans l'emulateur de Studio (qui garde le clavier du
--- PC). Deja paye au journal.
-local SHOW_TILE = not UserInputService.TouchEnabled
+-- COUPEES : le fond est un blanc nu. Le motif est garde en code plutot que supprime -- il se rallume d'une ligne,
+-- et sa mecanique de defilement (periode relue a chaque image) n'est pas triviale a reecrire.
+local SHOW_TILE = false
 
 -- COULEUR DE SECOURS DU CONTENEUR. Elle ne se voit qu'un instant -- celui ou le rideau existe deja mais ou son cadre
 -- degrade n'est pas encore pose -- et partout ou ce cadre ne couvrirait pas.
@@ -150,13 +150,15 @@ CurtainVisual.DEST_FALLBACK = "LOADING"
 local DEST_POS = UDim2.fromScale(0.988, 0.056)
 local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 
--- ===== LA COURONNE DE POINTS, en bas =====
+-- ===== LA COURONNE DE POINTS, sous la tete =====
 -- Elle ne promet rien d'autre que "ca travaille", et c'est la seule chose qu'on sache.
--- Remontee de 0.92 a 0.85 et reduite de 0.08 a 0.06 a la demande du joueur : collee au bas de l'ecran et plus
--- grosse, elle prenait trop de place a cote de la tete.
-local SPIN_POS = UDim2.fromScale(0.5, 0.85)
+--
 -- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
-local SPIN_SIZE = 0.06
+local SPIN_SIZE = 0.14
+local SPIN_GAP = 0.03 -- espace entre le bas de la tete et le haut de la couronne
+-- SA PLACE SE CALCULE, elle ne s'ecrit pas : la tete n'a pas la meme taille sur telephone et sur PC (voir
+-- FACE_K), donc une valeur en dur la collerait au visage d'un cote et la laisserait flotter de l'autre.
+local SPIN_POS = UDim2.fromScale(0.5, 0.5 + FACE_SIZE.Y.Scale / 2 + SPIN_GAP + SPIN_SIZE / 2)
 -- Sous 8 la rotation se lit comme une suite de sauts ; au-dela de 16 les points se touchent.
 local SPIN_DOTS = 12
 -- Rayon du cercle, en fraction du cadre. 0.5 poserait les centres sur le bord et les points depasseraient.
