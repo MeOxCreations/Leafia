@@ -376,11 +376,10 @@ local EYE = {
 	WINK = "rbxassetid://103054129911820", -- l'oeil droit ferme : le clin d'oeil
 	SOUND = { "Sounds", "UI", "EyeWinkSound" },
 	SOUND_VOLUME = 0.6,
-	WINK_CHANCE = 0.4, -- part des clignements SUIVANTS qui sont un clin d'oeil. KNOB
-	-- LE PREMIER GESTE EST TOUJOURS UN CLIN D'OEIL, et il arrive vite. Laisse au hasard, il tombait une fois sur
-	-- trois toutes les 4 s : sur un chargement de dix secondes, on ne le voyait quasiment jamais. Un geste qui
-	-- porte le caractere du personnage ne se joue pas aux des.
-	FIRST_DELAY = 0.7,
+	-- LE CLIN D'OEIL EST UN MOMENT ECRIT, PAS UN HASARD : il tombe a la FIN du son d'arrivee. Tire au sort parmi
+	-- les clignements, il n'arrivait quasiment jamais avant la fin du chargement, et jamais deux fois au meme
+	-- endroit du son. Ce delai n'est qu'un FILET, pour le cas ou ce son serait introuvable.
+	FALLBACK_DELAY = 4,
 	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 	BLINK_EVERY = 3.2,
 	BLINK_JITTER = 2.4,
@@ -824,31 +823,42 @@ local function waitForFace()
 	return faceGroup.Parent ~= nil
 end
 
--- CLIGNEMENTS ET CLINS D'OEIL.
+-- LE CLIN D'OEIL, appele du dehors (la fin du son d'arrivee). Le drapeau evite qu'il se croise avec un
+-- clignement : les deux ecrivent les memes calques, et celui qui finit en dernier gagnerait.
+local eyesBusy = false
+local function winkOnce()
+	if eyesBusy or not eyes.Parent then
+		return
+	end
+	if not waitForFace() then -- le son peut finir avant que la tete soit sortie
+		return
+	end
+	eyesBusy = true
+	eyeLayers.right.Visible = false
+	eyeLayers.wink.Visible = true
+	local cling = findSound(EYE.SOUND)
+	if cling then
+		playSound(cling, EYE.SOUND_VOLUME)
+	end
+	task.wait(EYE.WINK_TIME)
+	eyeLayers.wink.Visible = false
+	eyeLayers.right.Visible = true
+	eyesBusy = false
+end
+
+-- LES CLIGNEMENTS ORDINAIRES, qui ne font que vivre le visage.
 task.spawn(function()
 	if not waitForFace() then
 		return
 	end
-	local firstGesture = true
 	while eyes.Parent do
 		-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
-		task.wait(if firstGesture then EYE.FIRST_DELAY else EYE.BLINK_EVERY + math.random() * EYE.BLINK_JITTER)
+		task.wait(EYE.BLINK_EVERY + math.random() * EYE.BLINK_JITTER)
 		if not eyes.Parent then
 			return
 		end
-		local doWink = firstGesture or math.random() < EYE.WINK_CHANCE
-		firstGesture = false
-		if doWink then
-			eyeLayers.right.Visible = false
-			eyeLayers.wink.Visible = true
-			local cling = findSound(EYE.SOUND)
-			if cling then
-				playSound(cling, EYE.SOUND_VOLUME)
-			end
-			task.wait(EYE.WINK_TIME)
-			eyeLayers.wink.Visible = false
-			eyeLayers.right.Visible = true
-		else
+		if not eyesBusy then
+			eyesBusy = true
 			eyeLayers.left.Visible = false
 			eyeLayers.right.Visible = false
 			eyeLayers.shut.Visible = true
@@ -856,6 +866,7 @@ task.spawn(function()
 			eyeLayers.shut.Visible = false
 			eyeLayers.left.Visible = true
 			eyeLayers.right.Visible = true
+			eyesBusy = false
 		end
 	end
 end)
@@ -1017,7 +1028,15 @@ for i = 1, #TITLE_TEXT do
 		if i == 1 then
 			local welcome = findSound(JOIN_SOUND)
 			if welcome then
-				playSound(welcome, JOIN_SOUND_VOLUME)
+				local playing = playSound(welcome, JOIN_SOUND_VOLUME)
+				-- LE CLIN D'OEIL TOMBE SUR LA DERNIERE NOTE. Branche sur `Ended` et pas sur une duree recopiee :
+				-- si le son change de longueur, le geste reste colle a sa fin.
+				playing.Ended:Once(function()
+					task.spawn(winkOnce)
+				end)
+			else
+				-- Filet : pas de son pose, on joue quand meme le geste.
+				task.delay(EYE.FALLBACK_DELAY, winkOnce)
 			end
 		end
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
