@@ -124,6 +124,26 @@ local function describe(gui: GuiObject, depth: number)
 				`{indent}UIStroke  |  color = {colour(child.Color)}  |  thickness = {n(child.Thickness)}`
 					.. `  |  transparency = {n(child.Transparency)}  |  mode = {child.ApplyStrokeMode.Name}`
 			)
+			-- UN UIGradient PEUT VIVRE DANS UN UIStroke (c'est ainsi qu'on fait briller un contour). On ne balayait
+			-- que les enfants des elements d'interface : celui-la passait a la trappe, et le contour exporte
+			-- ressortait uni.
+			local inner = child:FindFirstChildOfClass("UIGradient")
+			if inner then
+				local colours, fades = {}, {}
+				for _, k in ipairs(inner.Color.Keypoints) do
+					table.insert(colours, `{n(k.Time)} = {colour(k.Value)}`)
+				end
+				for _, k in ipairs(inner.Transparency.Keypoints) do
+					table.insert(fades, `{n(k.Time)} = {n(k.Value)}`)
+				end
+				table.insert(
+					lines,
+					`{indent}  UIGradient (dans le UIStroke)  |  rotation = {n(inner.Rotation)}`
+						.. `  |  offset = {n(inner.Offset.X)}, {n(inner.Offset.Y)}`
+						.. `  |  couleurs : {table.concat(colours, " , ")}`
+						.. `  |  transparences : {table.concat(fades, " , ")}`
+				)
+			end
 		elseif child:IsA("UICorner") then
 			table.insert(lines, `{indent}UICorner  |  radius = {child.CornerRadius}`)
 		elseif child:IsA("UIAspectRatioConstraint") then

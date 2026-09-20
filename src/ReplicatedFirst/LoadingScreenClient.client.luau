@@ -404,6 +404,12 @@ local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait 
 -- Pour AGRANDIR le mot, on agrandit donc la CASE : `WORD_SCALE`. TextScaled remplit ce qu'on lui donne.
 local WORD_SCALE = 0.9 -- multiplie la taille de case relevee. 1 = exactement le montage du joueur
 local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la hauteur de la lettre
+-- LE CONTOUR N'EST PAS UNI : un UIGradient POSE DANS LE UIStroke le fait s'effacer vers le bas, ce qui donne une
+-- lumiere sur le haut des lettres. (Un UIGradient peut vivre dans un UIStroke : c'est la facon de faire briller un
+-- contour, et c'est ce que le joueur avait monte a la main.)
+local STROKE_FADE_ROTATION = 90 -- 90 = de haut en bas
+local STROKE_FADE_TOP = 0 -- contour plein en haut
+local STROKE_FADE_BOTTOM = 0.55 -- et a moitie efface en bas. KNOB
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
 local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
@@ -689,6 +695,13 @@ for i = 1, #TITLE_TEXT do
 	stroke.Color = INK
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = letter
+	do
+		local shine = Instance.new("UIGradient")
+		shine.Rotation = STROKE_FADE_ROTATION
+		shine.Color = ColorSequence.new(WHITE) -- blanc uni : seule la transparence travaille
+		shine.Transparency = NumberSequence.new(STROKE_FADE_TOP, STROKE_FADE_BOTTOM)
+		shine.Parent = stroke
+	end
 	-- Le contour suit la HAUTEUR REELLE de la lettre, relue a chaque changement d'ecran (rotation, resize) : en
 	-- pixels fixes il serait gras sur telephone et fin sur grand ecran.
 	local function fitStroke()
