@@ -437,7 +437,7 @@ local WORD_SHINE_PEAK = 0.7 -- transparence au sommet de la vague
 local WORD_SHINE_PERIOD = 2.6 -- temps entre deux passages
 
 -- ===== LA TONDEUSE QUI TOND LA RANGEE D'HERBE, EN BAS =====
-local MOWER_IMAGE = "rbxassetid://90792094723212"
+local MOWER_IMAGE = "rbxassetid://93898580984673"
 local MOWER_SIZE = Vector2.new(0.1262, 0.237)
 -- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
 local MOWER_GROUND_Y = 1.0201
