@@ -490,15 +490,19 @@ local GRASS_IMAGE = "rbxassetid://90924932701080"
 -- PETITES ET NOMBREUSES : une pelouse, pas une rangee de buissons. La taille et le pas vont ENSEMBLE -- reduire
 -- l'un sans l'autre laisse des trous ou fait se chevaucher les touffes.
 -- LA HAUTEUR SE LIT CONTRE LA TONDEUSE, pas dans l'absolu : trop courte, la rangee devient un trait et la machine
--- a l'air de rouler sur du vide. Elle doit monter a peu pres a la moitie des roues.
-local GRASS_SIZE = Vector2.new(0.052, 0.125)
+-- a l'air de rouler sur du vide.
+local GRASS_SIZE = Vector2.new(0.07, 0.22)
 -- LA LIGNE DE SOL : c'est le BAS des touffes, pas leur centre. Posee ainsi, changer leur hauteur ne les fait plus
 -- monter ni s'enfoncer -- elles poussent depuis le meme sol quelle que soit leur taille.
 --
--- ELLE VAUT CELLE DE LA TONDEUSE : les deux roulent sur le meme sol. Elle etait a 1.0647, valeur qui venait du bas
--- des ANCIENNES touffes (deux fois plus hautes) : gardee telle quelle avec des touffes courtes, elle n'en laissait
--- depasser qu'un centieme d'ecran, le reste passait sous le bord. Un repere herite d'une taille qui a change.
-local GRASS_BASE_Y = MOWER_GROUND_Y
+-- ELLE PART DE CELLE DE LA TONDEUSE : les deux roulent sur le meme sol. Elle a ete un temps ecrite a part (1.0647),
+-- valeur heritee du bas des ANCIENNES touffes, deux fois plus hautes : avec des touffes courtes elle n'en laissait
+-- depasser qu'un centieme d'ecran.
+--
+-- L'ENFONCEMENT EN PLUS : l'image d'herbe a du VIDE sous les brins. Posee pile sur le sol, la rangee semble donc
+-- flotter au-dessus du bord de l'ecran. On l'enfonce d'autant, et ce vide sort de l'ecran.
+local GRASS_SINK = 0.07 -- KNOB : monter = herbe plus enfoncee ; baisser = elle remonte
+local GRASS_BASE_Y = MOWER_GROUND_Y + GRASS_SINK
 local GRASS_START_X = 0.013 -- centre de la premiere touffe
 -- L'ECART SE DEDUIT DE LA LARGEUR, il ne s'ecrit pas a part : pose a la main, il finit toujours par ne plus
 -- correspondre a la taille (a 0.026 pour des touffes de 0.052, chacune couvrait la moitie de sa voisine et la
