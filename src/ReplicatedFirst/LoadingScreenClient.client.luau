@@ -489,7 +489,9 @@ local MOWER_SQUASH_TIME = 0.32
 local GRASS_IMAGE = "rbxassetid://90924932701080"
 -- PETITES ET NOMBREUSES : une pelouse, pas une rangee de buissons. La taille et le pas vont ENSEMBLE -- reduire
 -- l'un sans l'autre laisse des trous ou fait se chevaucher les touffes.
-local GRASS_SIZE = Vector2.new(0.052, 0.08)
+-- LA HAUTEUR SE LIT CONTRE LA TONDEUSE, pas dans l'absolu : trop courte, la rangee devient un trait et la machine
+-- a l'air de rouler sur du vide. Elle doit monter a peu pres a la moitie des roues.
+local GRASS_SIZE = Vector2.new(0.052, 0.125)
 -- LA LIGNE DE SOL : c'est le BAS des touffes, pas leur centre. Posee ainsi, changer leur hauteur ne les fait plus
 -- monter ni s'enfoncer -- elles poussent depuis le meme sol quelle que soit leur taille.
 --
