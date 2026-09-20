@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.942 — Un outil releve l'ecran de chargement fait a la main
+
+- Nouveau `scripts/studio/ExporterEcranChargement.lua` : il lit `StarterGui.LoadingScreenManuel` (la copie que le
+  joueur a placee a la souris) et imprime, pour chaque element, sa position et sa taille EN FRACTION D'ECRAN, sa
+  rotation, son image, ses couleurs et ses transparences -- plus les degrades, sans quoi un ciel exporte n'est qu'un
+  aplat.
+- En fractions d'ecran, et pas en UDim2 bruts : les valeurs ne dependent alors ni du rangement (cadres imbriques) ni
+  de la taille de la fenetre, et se recollent telles quelles dans le code de `ReplicatedFirst`.
+- Il refuse de sortir des chiffres quand l'ecran n'a pas de taille (Enabled = false) : des zeros ressembleraient a de
+  vraies valeurs.
+
 ## 0.0.941 — Les feuilles et les points reapparaissent sur l'ecran de chargement
 
 - UN `CanvasGroup` DECOUPE CE QUI DEPASSE DE SON CADRE : il dessine ses enfants dans une image de SA taille. Les

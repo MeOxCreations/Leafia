@@ -9,6 +9,9 @@ calcul ici coute dix minutes et supprime la classe entiere de bugs.
 
 ## Ce qu'il y a dedans
 
+- `ExporterEcranChargement.lua` — releve les positions, tailles, rotations et reglages d'un ecran de chargement
+  bricole a la main dans StarterGui (`LoadingScreenManuel`), en FRACTIONS D'ECRAN, pretes a recopier dans le code.
+  Placer a la souris coute dix secondes ; deviner les memes chiffres coute une heure.
 - `RangerWorkspace.lua` — range le Workspace : cree les dossiers attendus et y deplace ce qui traine a la racine.
   **Commence en mode APERCU** : il ecrit ce qu'il ferait sans rien toucher. Passe `PREVIEW = false` pour appliquer.
 
