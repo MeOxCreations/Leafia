@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.949 — LEAFIA a enfin la taille du montage : 0.179 de hauteur d'ecran
+
+- Les lettres etaient trop petites, donc espacees. Leur taille passe de 0.13 a 0.179 de la hauteur d'ecran : la
+  HAUTEUR EXACTE de la case que le joueur a donnee a ses lettres (193 px sur 1080, lu dans son panneau de
+  proprietes). A cette taille, les centres espaces de 86 px pour des lettres de 126 px font se CHEVAUCHER les
+  lettres -- c'est ce qui fait un mot d'un bloc, et c'est ce qu'il voulait.
+- Correction d'un diagnostic FAUX de la version precedente : "TextScaled plafonne a 100 px". La capture du joueur
+  montre des lettres de 193 px. Le mot n'etait pas plafonne, il etait juste trop petit. Le commentaire du code le
+  dit maintenant, pour que personne ne reprenne l'erreur.
+- Contour ramene de 0.04 a 0.03 de la taille du texte.
+
 ## 0.0.948 — LEAFIA : la taille des lettres ne depend plus de la fenetre
 
 - `TextScaled` PLAFONNE LE TEXTE A 100 px. Dans une petite fenetre les lettres remplissaient leur case et se

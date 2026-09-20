@@ -389,12 +389,17 @@ local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 -- avait ete essaye pour les resserrer : il les a EMPILEES les unes sur les autres. Une lettre posee a sa place ne
 -- peut pas chevaucher sa voisine, et l'animation devient plus simple -- chaque lettre bouge chez elle.
 local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait le reste
--- TAILLE DES LETTRES, en fraction de la hauteur d'ECRAN. On n'utilise PAS `TextScaled` : il plafonne le texte a
--- 100 px. Resultat, le mot changeait d'allure selon la fenetre -- lettres qui se touchent dans une petite fenetre
--- (elles remplissent leur case), lettres rapetissees et espacees en plein ecran (elles restent a 100 px dans une
--- case qui, elle, a grandi). Une taille donnee en fraction de l'ecran garde le meme mot partout.
-local WORD_TEXT_RATIO = 0.13
-local WORD_STROKE_RATIO = 0.04 -- epaisseur du contour, en fraction de la taille du texte
+-- TAILLE DES LETTRES, en fraction de la hauteur d'ECRAN, et elle vaut la HAUTEUR DE LA CASE que le joueur a donnee a
+-- ses lettres (0.1789, soit 193 px sur un ecran 1080p -- lu dans son panneau de proprietes, `AbsoluteSize`).
+--
+-- LES LETTRES SE CHEVAUCHENT, ET C'EST VOULU : leurs centres sont espaces de 86 px pour des lettres de 126 px de
+-- large. C'est ce qui fait un mot d'un bloc, et pas six lettres alignees.
+--
+-- On ecrit la taille plutot que d'utiliser `TextScaled`, pour qu'elle ne depende QUE de l'ecran. (Et non, TextScaled
+-- ne plafonne pas a 100 px : je l'ai cru et affirme, la capture du joueur -- des lettres de 193 px -- dit le
+-- contraire. Le mot etait simplement trop petit, parce que je lui donnais 0.13 de hauteur au lieu de 0.179.)
+local WORD_TEXT_RATIO = 0.179
+local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la taille du texte
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
 local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
