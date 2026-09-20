@@ -568,7 +568,7 @@ local WORD_SHINE_PERIOD = 2.6 -- temps entre deux passages
 
 -- ===== LA TONDEUSE QUI TOND LA RANGEE D'HERBE, EN BAS =====
 local MOWER = {
-	IMAGE = "rbxassetid://93898580984673",
+	IMAGE = "rbxassetid://83457112402648",
 	SIZE = Vector2.new(0.1262, 0.237),
 	-- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
 	GROUND_Y = 1.0201,
