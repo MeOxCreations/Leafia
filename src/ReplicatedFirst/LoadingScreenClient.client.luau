@@ -83,7 +83,14 @@ local function playSound(source: Sound, volume: number?, speed: number?): Sound
 	end
 	sound.Parent = SoundService
 	sound:Play()
-	Debris:AddItem(sound, 5) -- garde-fou si Ended ne tire jamais (asset absent)
+	-- ON NETTOIE SUR `Ended`, jamais sur un delai. Ce delai etait fixe a 5 s -- valeur ecrite pour les petits pops
+	-- des lettres -- et il COUPAIT en silence tout son plus long : le son d'arrivee s'arretait en plein milieu.
+	-- Debris ne reste qu'en FILET, au cas ou `Ended` ne tirerait jamais (asset introuvable), et avec une valeur
+	-- large plutot qu'ajustee : une borne ne doit jamais etre plus serree que ce qu'elle borne.
+	sound.Ended:Once(function()
+		sound:Destroy()
+	end)
+	Debris:AddItem(sound, math.max(sound.TimeLength + 5, 60))
 	return sound
 end
 
