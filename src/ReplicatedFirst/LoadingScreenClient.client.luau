@@ -570,7 +570,9 @@ local WORD_SHINE_PERIOD = 2.6 -- temps entre deux passages
 -- ===== LA TONDEUSE QUI TOND LA RANGEE D'HERBE, EN BAS =====
 local MOWER = {
 	IMAGE = "rbxassetid://83457112402648",
-	SIZE = Vector2.new(0.1262, 0.237),
+	-- ECRASEE EN HAUTEUR. Rien ne borne ses proportions (pas de `ScaleType`, donc `Stretch` par defaut) : la
+	-- hauteur se regle seule, sans toucher a la largeur.
+	SIZE = Vector2.new(0.1262, 0.17),
 	-- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
 	GROUND_Y = 1.0201,
 	START_X = -0.12, -- hors ecran a gauche
