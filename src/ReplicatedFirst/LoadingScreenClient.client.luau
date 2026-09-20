@@ -398,14 +398,14 @@ local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait 
 -- On ecrit la taille plutot que d'utiliser `TextScaled`, pour qu'elle ne depende QUE de l'ecran. (Et non, TextScaled
 -- ne plafonne pas a 100 px : je l'ai cru et affirme, la capture du joueur -- des lettres de 193 px -- dit le
 -- contraire. Le mot etait simplement trop petit, parce que je lui donnais 0.13 de hauteur au lieu de 0.179.)
-local WORD_TEXT_RATIO = 0.205
+local WORD_TEXT_RATIO = 0.245
 local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la taille du texte
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
 local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
 -- RESSERREMENT DU MOT : chaque lettre est rapprochee du CENTRE du mot d'autant. 1 = les positions relevees telles
 -- quelles ; en dessous, les lettres se rapprochent sans que le mot se decale ni qu'une lettre parte de travers.
-local WORD_SPREAD = 0.86
+local WORD_SPREAD = 0.74
 local STATUS_POS = Vector2.new(0.4995, 0.7299)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
