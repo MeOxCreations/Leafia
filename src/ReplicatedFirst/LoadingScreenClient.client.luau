@@ -389,7 +389,12 @@ local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 -- avait ete essaye pour les resserrer : il les a EMPILEES les unes sur les autres. Une lettre posee a sa place ne
 -- peut pas chevaucher sa voisine, et l'animation devient plus simple -- chaque lettre bouge chez elle.
 local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait le reste
-local WORD_STROKE_RATIO = 0.05 -- epaisseur du contour, en fraction de la hauteur de la lettre
+-- TAILLE DES LETTRES, en fraction de la hauteur d'ECRAN. On n'utilise PAS `TextScaled` : il plafonne le texte a
+-- 100 px. Resultat, le mot changeait d'allure selon la fenetre -- lettres qui se touchent dans une petite fenetre
+-- (elles remplissent leur case), lettres rapetissees et espacees en plein ecran (elles restent a 100 px dans une
+-- case qui, elle, a grandi). Une taille donnee en fraction de l'ecran garde le meme mot partout.
+local WORD_TEXT_RATIO = 0.13
+local WORD_STROKE_RATIO = 0.04 -- epaisseur du contour, en fraction de la taille du texte
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
 local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
@@ -629,7 +634,7 @@ local letters: { TextLabel } = {}
 for i = 1, #TITLE_TEXT do
 	local letter = text("Letter" .. i, root, FONT_TITLE, WORD_COLOR)
 	letter.Text = TITLE_TEXT:sub(i, i)
-	letter.TextScaled = true
+	letter.TextScaled = false -- voir WORD_TEXT_RATIO : TextScaled plafonne a 100 px et change le mot selon la fenetre
 	letter.ZIndex = 9
 	place(letter, Vector2.new(WORD_X[i] or 0.5, WORD_Y), WORD_SIZE)
 
@@ -639,11 +644,14 @@ for i = 1, #TITLE_TEXT do
 	stroke.Color = INK
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = letter
-	local function fitStroke()
-		stroke.Thickness = math.max(letter.AbsoluteSize.Y * WORD_STROKE_RATIO, 1)
+	-- La taille du texte et son contour suivent la HAUTEUR D'ECRAN, relue a chaque changement (rotation, resize).
+	local function fitText()
+		local size = math.max(root.AbsoluteSize.Y * WORD_TEXT_RATIO, 1)
+		letter.TextSize = size
+		stroke.Thickness = math.max(size * WORD_STROKE_RATIO, 1)
 	end
-	fitStroke()
-	letter:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitStroke)
+	fitText()
+	root:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitText)
 
 	letters[i] = letter
 

@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.948 — LEAFIA : la taille des lettres ne depend plus de la fenetre
+
+- `TextScaled` PLAFONNE LE TEXTE A 100 px. Dans une petite fenetre les lettres remplissaient leur case et se
+  touchaient ; en plein ecran elles restaient a 100 px dans une case devenue bien plus grande, donc rapetissees et
+  espacees. Ce n'est pas l'espacement qui bougeait, c'est la taille -- et aucun reglage de position ne pouvait le
+  corriger.
+- Les lettres ont maintenant une taille de texte donnee en fraction de la HAUTEUR D'ECRAN (`WORD_TEXT_RATIO` = 0.13),
+  relue a chaque changement de taille d'ecran. Le mot a la meme allure partout.
+- Le contour suit la taille du texte (`WORD_STROKE_RATIO` = 0.04) : il etait calcule sur la case, donc trop gras.
+
 ## 0.0.947 — LEAFIA ne flotte plus : les lettres arrivent et restent posees
 
 - L'ondulation verticale des lettres est retiree. Le mot doit se lire POSE, pas flotter. Il garde son arrivee lettre
