@@ -370,8 +370,8 @@ local FACE_IMAGE = "rbxassetid://107162385671697" -- la tete SANS les yeux
 -- ils tombent pile en place, sans un seul chiffre a regler. Les faire regarder ailleurs revient alors a DECALER le
 -- calque -- et comme ils sont tous dans le meme cadre, ils ne peuvent pas se desaligner entre eux.
 local EYE = {
-	LEFT = "rbxassetid://125953232760196",
-	RIGHT = "rbxassetid://117974680192122",
+	LEFT = "rbxassetid://130322074892629",
+	RIGHT = "rbxassetid://108086469738634",
 	SHUT = "rbxassetid://80743235106162", -- les deux fermes
 	WINK = "rbxassetid://133495431262696", -- l'oeil droit ferme : le clin d'oeil
 	SOUND = { "Sounds", "UI", "EyeWinkSound" },
