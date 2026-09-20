@@ -405,7 +405,7 @@ local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
 -- quelles ; en dessous, les lettres se rapprochent sans que le mot se decale ni qu'une lettre parte de travers.
 -- Les lettres sont maintenant 1.35 fois plus grandes qu'au releve : a ecartement egal, elles se chevauchent
 -- d'autant plus. On rend donc l'ecartement du releve (1) au lieu de le resserrer.
-local WORD_SPREAD = 1.02
+local WORD_SPREAD = 0.94
 local STATUS_POS = Vector2.new(0.4995, 0.7299)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
