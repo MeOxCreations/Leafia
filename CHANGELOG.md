@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.965 — Le dernier A rebondit, et c'est lui qui fait sortir la tete et l'onomatopee
+
+Ecran de chargement. Le A final gonfle puis revient a sa taille, et c'est ce RETOUR qui declenche l'onomatopee
+(avec son propre son) et la sortie de la tete. Les trois gestes se lisent alors comme une seule onde de choc.
+
+La tete part etroite et haute et reprend sa forme en rebondissant. Cela imposait de la passer en
+`ScaleType = Stretch` : en `Fit`, retrecir la largeur ne deforme rien, ca RAPETISSE l'image entiere -- piege
+deja paye sur les feuilles de cet ecran. Le prix est qu'elle prend les proportions de sa case (`FACE_SIZE`).
+
 ## 0.0.964 — La tete du grand-pere sort du sol avec la deuxieme lettre
 
 Ecran de chargement. La tete n'est plus posee la depuis le debut : elle se devoile du BAS vers le HAUT quand le

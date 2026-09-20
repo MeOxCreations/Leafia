@@ -382,6 +382,9 @@ local SHOUT_TILT = 22 -- degres de plus au depart : elle se redresse en arrivant
 -- Back = elle depasse sa taille puis revient : c'est ce depassement qui fait le cote dessin anime.
 local SHOUT_IN = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 -- ELLE NE RESTE PAS. Un eclat d'onomatopee qui s'installe devient un element de decor : il doit jaillir et partir.
+local SHOUT_SOUND = { "Sounds", "UI", "AppearSound_1" }
+local SHOUT_SOUND_VOLUME = 0.5
+local SHOUT_SOUND_PITCH = 0.92 -- un peu bas : ca donne du poids a l'eclat
 local SHOUT_HOLD = 0.1 -- temps d'affichage une fois arrivee
 local SHOUT_OUT = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local SHOUT_OUT_GROW = 1.25 -- elle grossit en s'effacant : ca se lit comme un eclat qui se dissipe
@@ -393,14 +396,12 @@ local SHOUT_OUT_GROW = 1.25 -- elle grossit en s'effacant : ca se lit comme un e
 -- passe donc par un CanvasGroup pose autour d'elle, qui porte le second. Le groupe fait exactement la taille de la
 -- tete -- un CanvasGroup CLIPPE ce qui depasse, et c'est deja ce qui avait fait disparaitre les feuillages ici.
 local FACE_REVEAL = {
-	LETTER = 2, -- le "E" de LEAFIA
-	TIME = 0.5,
-	-- DEPART ECRASE. La tete est en `ScaleType = Fit` : elle garde ses proportions, donc elle ne s'ETIRE pas, elle
-	-- grandit. Le SQUASH_X ne sert qu'a garder la case plus large que haute pour que Fit se cale sur la HAUTEUR.
-	-- Pour un vrai etirement facon slime il faudrait la passer en `Stretch`, au prix d'une deformation permanente
-	-- si la case n'est pas au ratio de l'image.
-	SQUASH_X = 1.14,
-	SQUASH_Y = 0.45,
+	TIME = 0.55,
+	-- DEPART DEFORME : etroite et haute, elle revient a sa forme en rebondissant (slime). Cela EXIGE
+	-- `ScaleType = Stretch` sur l'image : en `Fit`, retrecir la largeur ne deforme rien, ca RAPETISSE l'image
+	-- entiere -- piege deja paye sur les feuilles de cet ecran.
+	SQUASH_X = 0.68,
+	SQUASH_Y = 1.3,
 	EDGE = 0.3, -- douceur de la limite de revelation
 	-- LE SENS D'UN OFFSET NE SE DEDUIT PAS : si elle se devoile du haut vers le bas, passer a true.
 	FLIP = false,
@@ -474,6 +475,12 @@ local WORD_IN = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.O
 
 -- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
 -- s'estompe et revient, decalee sur sa voisine.
+-- LE DERNIER "A" FAIT TOUT : il gonfle, revient a sa taille, et c'est CE RETOUR qui lance l'onomatopee et la
+-- tete. Les faire partir a l'apparition de la lettre les decollerait du geste ; ici ils sont l'onde de choc.
+local WORD_LAST = {
+	POP = 1.3, -- de combien le A gonfle
+	TIME = 0.16, -- aller (le retour dure autant : le tween s'inverse)
+}
 local WORD_SHINE_DELAY = 0.4 -- apres la pose de la derniere lettre
 local WORD_SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
 local WORD_SHINE_TIME = 0.3 -- aller-retour d'UNE lettre
@@ -675,6 +682,7 @@ faceGroup.ZIndex = 5
 faceGroup.AnchorPoint = Vector2.new(0.5, 1)
 faceGroup.Position = UDim2.fromScale(FACE_POS.X, FACE_POS.Y + FACE_SIZE.Y / 2)
 faceGroup.Size = UDim2.fromScale(FACE_SIZE.X * FACE_REVEAL.SQUASH_X, FACE_SIZE.Y * FACE_REVEAL.SQUASH_Y)
+faceGroup.GroupTransparency = 1 -- invisible tant que la derniere lettre ne l'a pas appelee
 faceGroup.Parent = root
 
 local faceReveal = Instance.new("UIGradient")
@@ -693,7 +701,9 @@ face.Name = "Face"
 face.BackgroundTransparency = 1
 face.Image = FACE_IMAGE
 face.ImageColor3 = INK
-face.ScaleType = Enum.ScaleType.Fit -- garde ses proportions quel que soit l'ecran
+-- STRETCH ET NON FIT : c'est la seule facon de l'ECRASER (Fit ne sait que grossir et rapetisser). Le prix est
+-- qu'elle prend les proportions de sa case : si elle parait trop large au repos, c'est FACE_SIZE qu'on corrige.
+face.ScaleType = Enum.ScaleType.Stretch
 face.ZIndex = 5
 face.AnchorPoint = Vector2.new(0.5, 0.5)
 face.Position = UDim2.fromScale(0.5, 0.5)
@@ -740,6 +750,54 @@ shout.ZIndex = 5
 place(shout, SHOUT_POS, SHOUT_SIZE * SHOUT_POP)
 fadeGradient(shout)
 shout.Parent = root
+
+-- CE QUE LA DERNIERE LETTRE DECLENCHE. Ecrit ici, avant la boucle : une fonction ne s'appelle jamais au-dessus
+-- de sa definition.
+local function revealFace()
+	if not faceGroup.Parent then
+		return
+	end
+	faceGroup.GroupTransparency = 0
+	-- LE REBOND EST SUR LA FORME (Back), pas sur la revelation : un Back sur un devoilement ferait REDESCENDRE la
+	-- limite en fin de course, donc reapparaitre un bout deja revele.
+	TweenService:Create(
+		faceGroup,
+		TweenInfo.new(FACE_REVEAL.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+		{ Size = UDim2.fromScale(FACE_SIZE.X, FACE_SIZE.Y) }
+	):Play()
+	TweenService:Create(
+		faceReveal,
+		TweenInfo.new(FACE_REVEAL.TIME * 0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+		{ Offset = Vector2.new(0, if FACE_REVEAL.FLIP then 1 else -1) }
+	):Play()
+end
+
+local function burstShout()
+	if not shout.Parent then
+		return
+	end
+	local cry = findSound(SHOUT_SOUND)
+	if cry then
+		playSound(cry, SHOUT_SOUND_VOLUME, SHOUT_SOUND_PITCH)
+	end
+	local pop = TweenService:Create(shout, SHOUT_IN, {
+		ImageTransparency = 0,
+		Rotation = SHOUT_ROT,
+		Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
+	})
+	pop.Completed:Once(function()
+		task.delay(SHOUT_HOLD, function()
+			if not shout.Parent then
+				return
+			end
+			TweenService:Create(shout, SHOUT_OUT, {
+				ImageTransparency = 1,
+				Size = UDim2.fromScale(SHOUT_SIZE.X * SHOUT_OUT_GROW, SHOUT_SIZE.Y * SHOUT_OUT_GROW),
+			}):Play()
+		end)
+	end)
+	pop:Play()
+end
 
 -- MOT "LEAFIA", LETTRE PAR LETTRE, chacune a sa place relevee.
 local letters: { TextLabel } = {}
@@ -809,39 +867,32 @@ for i = 1, #TITLE_TEXT do
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
 		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
-		-- CETTE LETTRE FAIT SORTIR LA TETE : elle se devoile du bas vers le haut en s'etirant.
-		if i == FACE_REVEAL.LETTER then
-			local reveal = TweenInfo.new(FACE_REVEAL.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-			TweenService:Create(faceGroup, reveal, {
-				Size = UDim2.fromScale(FACE_SIZE.X, FACE_SIZE.Y),
-			}):Play()
-			-- LA REVELATION VA PLUS VITE QUE L'ETIREMENT, et sans rebond : un Back sur un devoilement ferait
-			-- REDESCENDRE la limite en fin de course, donc reapparaitre un bout deja revele.
-			TweenService:Create(
-				faceReveal,
-				TweenInfo.new(FACE_REVEAL.TIME * 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-				{ Offset = Vector2.new(0, if FACE_REVEAL.FLIP then 1 else -1) }
-			):Play()
-		end
-		-- LA DERNIERE LETTRE APPELLE L'ONOMATOPEE : elle jaillit comme si le "A" venait de la projeter, puis part.
+		-- LE DERNIER "A" GONFLE PUIS REVIENT, et c'est SON RETOUR qui fait jaillir l'onomatopee et sortir la tete.
+		-- `reverses = true` fait l'aller-retour en un seul tween : son `Completed` tire donc a la fin du RETOUR,
+		-- exactement l'instant voulu. Enchaine apres l'arrivee de la lettre, sinon les deux tweens se disputent
+		-- la meme propriete.
 		if i == #TITLE_TEXT then
-			local pop = TweenService:Create(shout, SHOUT_IN, {
-				ImageTransparency = 0,
-				Rotation = SHOUT_ROT,
-				Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
-			})
-			pop.Completed:Once(function()
-				task.delay(SHOUT_HOLD, function()
-					if not shout.Parent then
-						return
-					end
-					TweenService:Create(shout, SHOUT_OUT, {
-						ImageTransparency = 1,
-						Size = UDim2.fromScale(SHOUT_SIZE.X * SHOUT_OUT_GROW, SHOUT_SIZE.Y * SHOUT_OUT_GROW),
-					}):Play()
-				end)
+			local home_size = letter.Size
+			local swell = TweenService:Create(
+				letter,
+				TweenInfo.new(WORD_LAST.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, true),
+				{
+					Size = UDim2.fromScale(
+						home_size.X.Scale * WORD_LAST.POP,
+						home_size.Y.Scale * WORD_LAST.POP
+					),
+				}
+			)
+			swell.Completed:Once(function()
+				letter.Size = home_size -- le tween rend la taille de depart, on la reecrit pour n'en rien devoir
+				revealFace()
+				burstShout()
 			end)
-			pop:Play()
+			task.delay(WORD_IN.Time, function()
+				if letter.Parent then
+					swell:Play()
+				end
+			end)
 		end
 	end
 end
