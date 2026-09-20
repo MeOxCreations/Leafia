@@ -895,10 +895,10 @@ for i = 1, #TITLE_TEXT do
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
 		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
-		-- LE DERNIER "A" GONFLE PUIS REVIENT, et c'est SON RETOUR qui fait jaillir l'onomatopee et sortir la tete.
-		-- `reverses = true` fait l'aller-retour en un seul tween : son `Completed` tire donc a la fin du RETOUR,
-		-- exactement l'instant voulu. Enchaine apres l'arrivee de la lettre, sinon les deux tweens se disputent
-		-- la meme propriete.
+		-- LE DERNIER "A" GONFLE PUIS REVIENT, et l'onomatopee et la tete partent AVEC LUI, pas apres son retour :
+		-- enchaines, ils arrivaient une demi-seconde trop tard et se lisaient comme trois evenements separes.
+		-- `reverses = true` fait l'aller-retour en un seul tween. Il peut demarrer tout de suite : l'arrivee de la
+		-- lettre anime sa POSITION, jamais sa taille, donc les deux tweens ne se disputent rien.
 		if i == #TITLE_TEXT then
 			local home_size = letter.Size
 			local swell = TweenService:Create(
@@ -913,14 +913,10 @@ for i = 1, #TITLE_TEXT do
 			)
 			swell.Completed:Once(function()
 				letter.Size = home_size -- le tween rend la taille de depart, on la reecrit pour n'en rien devoir
-				revealFace()
-				burstShout()
 			end)
-			task.delay(WORD_IN.Time, function()
-				if letter.Parent then
-					swell:Play()
-				end
-			end)
+			swell:Play()
+			revealFace()
+			burstShout()
 		end
 	end
 end
