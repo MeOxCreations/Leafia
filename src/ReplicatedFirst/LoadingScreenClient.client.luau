@@ -486,12 +486,16 @@ local MOWER_PAUSE = 0.8 -- temps mort avant le passage suivant
 local MOWER_SQUASH_X, MOWER_SQUASH_Y = 1.04, 0.94
 local MOWER_SQUASH_TIME = 0.32
 
-local GRASS_IMAGE = "rbxassetid://90924932701080"
+-- ROGNEE AU PLUS PRES DES BRINS : plus de vide transparent sous l'herbe. La rangee pose donc pile sur le sol, sans
+-- rien a compenser dans le code -- et l'icone se repose telle quelle ailleurs sans trainer sa marge invisible.
+local GRASS_IMAGE = "rbxassetid://87955164509294"
 -- PETITES ET NOMBREUSES : une pelouse, pas une rangee de buissons. La taille et le pas vont ENSEMBLE -- reduire
 -- l'un sans l'autre laisse des trous ou fait se chevaucher les touffes.
 -- LA HAUTEUR SE LIT CONTRE LA TONDEUSE, pas dans l'absolu : trop courte, la rangee devient un trait et la machine
 -- a l'air de rouler sur du vide.
-local GRASS_SIZE = Vector2.new(0.07, 0.22)
+-- 0.15 ET NON 0.22 : l'ancienne image portait environ un tiers de vide sous les brins, on compensait donc en
+-- l'agrandissant. Image rognee, la meme hauteur de BRINS tient dans une case plus courte.
+local GRASS_SIZE = Vector2.new(0.07, 0.15)
 -- LA LIGNE DE SOL : c'est le BAS des touffes, pas leur centre. Posee ainsi, changer leur hauteur ne les fait plus
 -- monter ni s'enfoncer -- elles poussent depuis le meme sol quelle que soit leur taille.
 --
@@ -499,9 +503,9 @@ local GRASS_SIZE = Vector2.new(0.07, 0.22)
 -- valeur heritee du bas des ANCIENNES touffes, deux fois plus hautes : avec des touffes courtes elle n'en laissait
 -- depasser qu'un centieme d'ecran.
 --
--- L'ENFONCEMENT EN PLUS : l'image d'herbe a du VIDE sous les brins. Posee pile sur le sol, la rangee semble donc
--- flotter au-dessus du bord de l'ecran. On l'enfonce d'autant, et ce vide sort de l'ecran.
-local GRASS_SINK = 0.07 -- KNOB : monter = herbe plus enfoncee ; baisser = elle remonte
+-- L'ENFONCEMENT EST A ZERO depuis que l'image est rognee : il ne servait qu'a pousser hors de l'ecran le vide que
+-- l'ancienne image avait sous ses brins. Garde comme KNOB au cas ou l'herbe doive mordre dans le sol.
+local GRASS_SINK = 0
 local GRASS_BASE_Y = MOWER_GROUND_Y + GRASS_SINK
 local GRASS_START_X = 0.013 -- centre de la premiere touffe
 -- L'ECART SE DEDUIT DE LA LARGEUR, il ne s'ecrit pas a part : pose a la main, il finit toujours par ne plus
