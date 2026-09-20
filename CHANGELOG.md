@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.958 — L'herbe repousse derriere la tondeuse, et le fond retrouve ses petits points
+
+Ecran de chargement. Chaque touffe coupee se redresse un peu plus loin derriere la machine, et sort de terre
+au lieu d'apparaitre : le bas de l'ecran tourne en boucle tant que ca charge, la tondeuse repasse sur une
+pelouse qui a repousse. La machine passe maintenant PAR-DESSUS l'herbe, plus derriere.
+
+Le retard de repousse est donne en DISTANCE derriere la tondeuse (`GRASS_REGROW.LAG`), pas en secondes : il
+reste juste si on change la vitesse de passage. Le temps s'en deduit.
+
+Le fond tuile reprend la configuration du rideau de changement de map (`CurtainVisual`) : meme image, meme
+maille fine, meme defilement en diagonale, meme fondu. Les deux ecrans de chargement se ressemblent enfin.
+
 ## 0.0.957 — Un reflet passe sur le contour des lettres, et le mot de chargement change de police
 
 Le contour noir de chaque lettre de LEAFIA recoit un UIGradient : une bande claire le traverse en diagonale

@@ -88,14 +88,24 @@ local function playSound(source: Sound, volume: number?, speed: number?): Sound
 end
 
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
--- LE FOND TUILE, releve sur la maquette : image, taille et transparence viennent de la.
-local TILE_IMAGE = "rbxassetid://78626050824347"
-local TILE_TRANSPARENCY = 0.95 -- KNOB : baisser = tuile plus visible ; monter = plus discrete
--- TileSize en SCALE (fraction de l'ImageLabel tuile, qui fait deux fois l'ecran) : c'est ainsi que le joueur l'a
--- regle a l'oeil. A REGLER a l'oeil pour l'image, pas a deduire.
-local TILE_SCALE_X = 0.037
-local TILE_SCALE_Y = 0.07
-local TILE_SPEED = 15
+-- LE FOND TUILE, REPRIS DU RIDEAU DE CHANGEMENT DE MAP (`CurtainVisual`) : meme image, meme maille, meme vitesse,
+-- meme fondu en diagonale. Les deux ecrans de chargement se ressemblent alors, au lieu d'avoir chacun son motif.
+local TILE_IMAGE = "rbxassetid://80842701479373"
+local TILE_TRANSPARENCY = 0.6 -- KNOB : baisser = points plus visibles ; monter = plus discrets
+-- TileSize en SCALE (fraction de l'ImageLabel tuile, qui fait deux fois l'ecran).
+local TILE_SCALE_X = 0.005
+local TILE_SCALE_Y = 0.01
+local TILE_SPEED = 15 -- pixels par seconde, EN DIAGONALE : sur un seul axe ca se lit comme un decor qui glisse
+-- LE MOTIF S'EFFACE D'UN COTE. Plein cadre et uniforme, il se lit comme un papier peint et rentre en concurrence
+-- avec la tete au milieu. Une NumberSequence DOIT aller de 0 a 1 en temps croissant, sinon Roblox refuse la
+-- sequence entiere et le degrade disparait sans un mot.
+local TILE_FADE_ROTATION = 50
+local TILE_FADE = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(0.36, 1),
+	NumberSequenceKeypoint.new(0.748, 0.813),
+	NumberSequenceKeypoint.new(1, 0),
+})
 -- ON NE DETRUIT PLUS `ReplicatedFirst.LoadingScreen`. Ce fichier le faisait -- l'ancien ecran n'etait plus lu, on
 -- le nettoyait -- mais c'est devenu exactement l'endroit ou vit le MODELE du rideau de changement de map. Le
 -- detruire au demarrage revenait a supprimer le decor juste avant de s'en servir.
@@ -471,7 +481,7 @@ local MOWER_GROUND_Y = 1.0201
 local MOWER_START_X = -0.12 -- hors ecran a gauche
 local MOWER_END_X = 1.12 -- hors ecran a droite
 local MOWER_TIME = 7 -- duree d'une traversee, en secondes. KNOB
-local MOWER_PAUSE = 1.6 -- temps mort avant le passage suivant (l'herbe repousse hors champ)
+local MOWER_PAUSE = 0.8 -- temps mort avant le passage suivant
 -- Ecrasement : elle s'aplatit un peu et s'elargit d'autant, sans quitter le sol.
 local MOWER_SQUASH_X, MOWER_SQUASH_Y = 1.04, 0.94
 local MOWER_SQUASH_TIME = 0.32
@@ -486,6 +496,14 @@ local GRASS_WIPE_EDGE = 0.18 -- douceur du bord de coupe (0 = coupure nette)
 -- LE SENS DU BALAYAGE NE SE DEDUIT PAS, il se constate a l'ecran (journal de CLAUDE.md). Si la touffe s'efface du
 -- mauvais cote, inverser CE booleen -- il n'y a rien d'autre a changer.
 local GRASS_WIPE_FLIP = false
+
+-- L'HERBE REPOUSSE DERRIERE LA TONDEUSE, et la tondeuse repasse : le bas de l'ecran tourne en boucle tant que ca
+-- charge. Le retard est donne en DISTANCE (fraction d'ecran derriere la machine) et non en secondes : regle ainsi,
+-- il reste juste meme si on change la vitesse de la tondeuse. Le temps s'en deduit.
+local GRASS_REGROW = {
+	LAG = 0.34, -- a quelle distance DERRIERE la tondeuse la touffe se redresse. KNOB
+	TIME = 0.5, -- duree de la pousse
+}
 
 local FOLIAGE_TINT = Color3.new(0, 0, 0)
 local FOLIAGE_ALPHA = 0.89 -- KNOB : baisser = feuilles plus sombres (valeur relevee sur la maquette)
@@ -599,7 +617,16 @@ tile.AnchorPoint = Vector2.new(0.5, 0.5)
 tile.Position = UDim2.fromScale(0.5, 0.5)
 tile.Size = UDim2.fromScale(2, 2) -- deborde largement pour recycler le defilement sans montrer les bords
 tile.ZIndex = 2
+-- NOIR : l'ecran est blanc. Le rideau, lui, teinte ses tuiles en BLANC parce que son fond est cyan. Le gradient ne
+-- porte ici que de la TRANSPARENCE, donc la teinte ne rabote aucune valeur de couleur.
+tile.ImageColor3 = INK
 tile.Parent = root
+do
+	local fade = Instance.new("UIGradient")
+	fade.Transparency = TILE_FADE
+	fade.Rotation = TILE_FADE_ROTATION
+	fade.Parent = tile
+end
 
 -- Defilement diagonal : chaque axe recycle sur SA periode (la taille PIXEL de la tuile sur cet axe) pour boucler
 -- sans saut. Le modulo garde l'offset dans [0, periode).
@@ -828,7 +855,7 @@ grassRow.Position = UDim2.fromScale(0.5, 0.5)
 grassRow.Size = UDim2.fromScale(1, 1)
 grassRow.ZIndex = 7
 
-type Blade = { gui: ImageLabel, grad: UIGradient, x: number, cut: boolean }
+type Blade = { gui: ImageLabel, grad: UIGradient, x: number, cut: boolean, id: number }
 local blades: { Blade } = {}
 local x = GRASS_START_X
 while x < 1 + GRASS_STEP do
@@ -837,8 +864,10 @@ while x < 1 + GRASS_STEP do
 	blade.BackgroundTransparency = 1
 	blade.Image = GRASS_IMAGE
 	blade.ImageColor3 = INK
-	blade.AnchorPoint = Vector2.new(0.5, 0.5)
-	blade.Position = UDim2.fromScale(x, GRASS_Y)
+	-- ANCREE PAR LE BAS : une touffe qui repousse sort de TERRE. Ancree au centre, elle grandirait aussi vers le bas,
+	-- donc elle s'enfoncerait dans le sol en meme temps qu'elle pousse.
+	blade.AnchorPoint = Vector2.new(0.5, 1)
+	blade.Position = UDim2.fromScale(x, GRASS_Y + GRASS_SIZE.Y / 2)
 	blade.Size = UDim2.fromScale(GRASS_SIZE.X, GRASS_SIZE.Y)
 	blade.ZIndex = 7
 	blade.Parent = grassRow
@@ -861,7 +890,7 @@ while x < 1 + GRASS_STEP do
 	grad.Offset = Vector2.new(if GRASS_WIPE_FLIP then 1 else -1, 0)
 	grad.Parent = blade
 
-	table.insert(blades, { gui = blade, grad = grad, x = x, cut = false })
+	table.insert(blades, { gui = blade, grad = grad, x = x, cut = false, id = 0 })
 	x += GRASS_STEP
 end
 
@@ -875,7 +904,9 @@ mower.ImageColor3 = INK
 mower.AnchorPoint = Vector2.new(0.5, 1)
 mower.Size = UDim2.fromScale(MOWER_SIZE.X, MOWER_SIZE.Y)
 mower.Position = UDim2.fromScale(MOWER_START_X, MOWER_GROUND_Y)
-mower.ZIndex = 9
+-- BIEN AU-DESSUS DE L'HERBE : la machine passe DEVANT les touffes, sinon elle a l'air de rouler derriere elles.
+-- Large exprès (l'herbe est a 7) : un ecart d'un seul cran se perd des qu'un autre element s'intercale.
+mower.ZIndex = 12
 mower.Parent = root
 
 -- ECRASEMENT : elle s'aplatit et se retend sans arret, sans jamais quitter le sol. Sur la TAILLE et pas la position :
@@ -890,12 +921,17 @@ TweenService:Create(
 -- la main image par image plutot qu'en tween, justement pour pouvoir comparer -- un tween ne dit pas ou il en est.
 local mowConn: RBXScriptConnection? = nil
 task.spawn(function()
+	-- LE RETARD DE REPOUSSE EN SECONDES : la distance voulue, divisee par la vitesse de la tondeuse.
+	local speed = (MOWER_END_X - MOWER_START_X) / MOWER_TIME
+	local regrowDelay = GRASS_REGROW.LAG / speed
+	local regrowIn = TweenInfo.new(GRASS_REGROW.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	while root.Parent do
 		local travelled = 0
+		-- ON NE REDRESSE PLUS L'HERBE AU DEPART : chaque touffe repousse toute seule derriere la machine. La remettre
+		-- debout ici ferait sauter d'un coup celles qui sont encore couchees, juste avant que la tondeuse revienne.
+		-- Seul le drapeau se rouvre, et il est sans danger : la tondeuse part de HORS ECRAN, donc a gauche de tout.
 		for _, blade in blades do
 			blade.cut = false
-			blade.grad.Offset = Vector2.new(if GRASS_WIPE_FLIP then 1 else -1, 0)
-			blade.gui.ImageTransparency = 0
 		end
 		local done = false
 		mowConn = RunService.Heartbeat:Connect(function(dt: number)
@@ -908,6 +944,20 @@ task.spawn(function()
 					TweenService:Create(blade.grad, GRASS_CUT, {
 						Offset = Vector2.new(if GRASS_WIPE_FLIP then -1 else 1, 0),
 					}):Play()
+					-- ELLE REPOUSSE UNE FOIS LA MACHINE LOIN. Le jeton evite qu'une repousse en retard ne redresse une
+					-- touffe que le passage SUIVANT vient de recouper -- elle se releverait sous la lame.
+					blade.id += 1
+					local id = blade.id
+					task.delay(regrowDelay, function()
+						if blade.id ~= id or not blade.gui.Parent then
+							return
+						end
+						blade.grad.Offset = Vector2.new(if GRASS_WIPE_FLIP then 1 else -1, 0)
+						blade.gui.Size = UDim2.fromScale(GRASS_SIZE.X, 0)
+						TweenService:Create(blade.gui, regrowIn, {
+							Size = UDim2.fromScale(GRASS_SIZE.X, GRASS_SIZE.Y),
+						}):Play()
+					end)
 				end
 			end
 			if travelled >= 1 then
@@ -921,7 +971,8 @@ task.spawn(function()
 			mowConn:Disconnect()
 			mowConn = nil
 		end
-		-- L'HERBE REPOUSSE HORS CHAMP : la tondeuse est sortie par la droite, personne ne voit le retour.
+		-- LE TEMPS QU'ELLE REVIENNE PAR LA GAUCHE. Court : l'herbe n'a plus besoin d'etre remise debout en coulisse,
+		-- elle s'est deja redressee derriere la machine.
 		task.wait(MOWER_PAUSE)
 	end
 end)
