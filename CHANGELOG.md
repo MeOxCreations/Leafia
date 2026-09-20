@@ -2204,7 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
-## 0.0.938 — RangerWorkspace aplatit les dossiers gigognes
+## 0.0.939 — L'ecran de chargement de depart prend le motif de points de l'ecran de choix du plot
+
+- `LoadingScreenClient` : meme image de tuile que `TileField` (`rbxassetid://111706805079464`) et meme mesure de
+  taille -- le cote d'une tuile vaut 10 % de la HAUTEUR de l'ecran, en pixels. Le joueur reconnait le meme fond d'un
+  ecran a l'autre.
+- La taille etait donnee en fraction de l'ImageLabel, qui fait deux fois l'ecran : les tuiles s'etiraient
+  differemment selon le format. Elles sont maintenant CARREES partout, et se recalculent a la rotation.
+- Le rideau de changement de map (`CurtainVisual`) n'est PAS touche : il garde son motif.
+- Corrige au passage un commentaire faux : ces valeurs n'etaient pas partagees avec le rideau, elles ne servaient
+  qu'a l'ecran de depart.
+
 
 - `Default` contient un dossier `Dev`, qui contient le reste : deplace tel quel, ca donnait
   `Workspace.Dev.Default.Dev.<tout>`. Le script remonte le contenu d'un cran tant qu'il reste une coquille (trois

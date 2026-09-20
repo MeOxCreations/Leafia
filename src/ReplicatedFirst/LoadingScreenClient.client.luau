@@ -85,13 +85,17 @@ local function playSound(source: Sound, volume: number?): Sound
 end
 
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
-local TILE_IMAGE = "rbxassetid://137385330828951" -- fond tuile qui defile en diagonale
+-- LE MEME MOTIF DE POINTS QUE L'ECRAN DE CHOIX DU PLOT (`Modules/UI/Core/TileField`) : le joueur doit reconnaitre le
+-- meme fond d'un ecran a l'autre.
+--
+-- LA VALEUR EST RECOPIEE ICI, pas requise : ReplicatedFirst se replique en premier, et attendre un module de
+-- ReplicatedStorage reviendrait a bloquer sur ce qu'on masque. Si l'une des deux change, changer l'autre.
+local TILE_IMAGE = "rbxassetid://111706805079464"
 local TILE_TRANSPARENCY = 0.95 -- KNOB : baisser = tuile plus visible ; monter = plus discrete
--- Taille et vitesse de la tuile. LUES PAR LES DEUX ECRANS (l'intro et le rideau de changement de map) : en changer
--- un change les deux, c'est voulu -- le rideau doit ressembler a l'ecran principal.
--- TileSize en SCALE (fraction de l'ImageLabel tuile) : ca s'adapte a l'ecran. A REGLER a l'oeil pour l'image.
-local TILE_SCALE_X = 0.037 -- largeur d'une tuile (fraction de la largeur de l'ImageLabel tuile)
-local TILE_SCALE_Y = 0.07 -- hauteur d'une tuile (fraction de la hauteur de l'ImageLabel tuile)
+-- COTE D'UNE TUILE, en fraction de la HAUTEUR de l'ecran : la meme mesure que TileField (son `tileFrac`, 0.1 par
+-- defaut). Des tuiles CARREES en pixels, donc le meme motif sur tous les formats. C'etait avant une fraction de
+-- l'ImageLabel, qui fait deux fois l'ecran : les tuiles s'etiraient differemment selon le format.
+local TILE_FRAC = 0.1
 local TILE_SPEED = 15
 -- ON NE DETRUIT PLUS `ReplicatedFirst.LoadingScreen`. Ce fichier le faisait -- l'ancien ecran n'etait plus lu, on
 -- le nettoyait -- mais c'est devenu exactement l'endroit ou vit le MODELE du rideau de changement de map. Le
@@ -450,13 +454,20 @@ skyGrad.Parent = sky
 -- et SOUS tout le reste (le contenu le cacherait dessus). Le decalage X ET Y a la meme vitesse donne la diagonale ;
 -- on recycle chaque axe sur SA periode (la taille de tuile sur cet axe) pour boucler sans saut.
 -- TileSize en SCALE (fraction de l'ImageLabel tuile) : ca s'adapte a l'ecran. A REGLER a l'oeil pour l'image.
+-- Cote d'une tuile EN PIXELS, relu a l'ecran : il suit la rotation et les changements de taille.
+local function tileSide(): number
+	local camera = workspace.CurrentCamera
+	local height = if camera then camera.ViewportSize.Y else 720
+	return math.max(height * TILE_FRAC, 1)
+end
+
 local tile = Instance.new("ImageLabel")
 tile.Name = "Tile"
 tile.BackgroundTransparency = 1
 tile.Image = TILE_IMAGE
 tile.ImageTransparency = TILE_TRANSPARENCY
 tile.ScaleType = Enum.ScaleType.Tile
-tile.TileSize = UDim2.fromScale(TILE_SCALE_X, TILE_SCALE_Y) -- taille de la tuile (scale -> s'adapte a l'ecran)
+tile.TileSize = UDim2.fromOffset(tileSide(), tileSide())
 tile.AnchorPoint = Vector2.new(0.5, 0.5)
 tile.Position = UDim2.fromScale(0.5, 0.5)
 tile.Size = UDim2.fromScale(2, 2) -- deborde largement pour recycler le defilement sans montrer les bords
@@ -468,15 +479,15 @@ tile.Parent = root
 local tileOffX, tileOffY = 0, 0
 local tileConn: RBXScriptConnection? = nil
 tileConn = RunService.Heartbeat:Connect(function(dt: number)
-	-- Periode de recyclage = la taille PIXEL d'une tuile (scale * taille de l'ImageLabel). Relue chaque frame -> suit
-	-- l'ecran (rotation mobile, resize).
-	local periodX = TILE_SCALE_X * tile.AbsoluteSize.X
-	local periodY = TILE_SCALE_Y * tile.AbsoluteSize.Y
-	if periodX <= 0 or periodY <= 0 then
-		return
+	-- Periode de recyclage = le cote d'une tuile, en pixels. Relu chaque frame -> suit l'ecran (rotation, resize).
+	-- On ne REECRIT la taille que si elle a vraiment bouge : une ecriture par image sur une propriete de rendu coute
+	-- pour rien.
+	local side = tileSide()
+	if math.abs(tile.TileSize.X.Offset - side) > 0.5 then
+		tile.TileSize = UDim2.fromOffset(side, side)
 	end
-	tileOffX = (tileOffX + TILE_SPEED * dt) % periodX
-	tileOffY = (tileOffY + TILE_SPEED * dt) % periodY
+	tileOffX = (tileOffX + TILE_SPEED * dt) % side
+	tileOffY = (tileOffY + TILE_SPEED * dt) % side
 	tile.Position = UDim2.new(0.5, tileOffX, 0.5, tileOffY)
 end)
 
