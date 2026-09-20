@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.961 — Les touffes d'herbe ne se recouvrent plus
+
+L'ecart entre deux touffes se deduit maintenant de leur LARGEUR, au lieu d'etre ecrit a part : a 0.026 pour des
+touffes de 0.052, chacune couvrait la moitie de sa voisine et la rangee devenait une masse noire continue.
+Un seul reglage reste, `GRASS_OVERLAP` : le recouvrement voulu.
+
 ## 0.0.960 — L'herbe du chargement redevient visible
 
 Les touffes reduites passaient sous le bord de l'ecran : leur ligne de sol venait du bas des ANCIENNES touffes,
