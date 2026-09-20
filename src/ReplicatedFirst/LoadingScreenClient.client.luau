@@ -361,12 +361,12 @@ local WHITE = Color3.fromRGB(255, 255, 255)
 -- LA TETE DU GRAND-PERE, au-dessus du titre : elle dit de qui parle le jeu avant meme qu'on lise le nom.
 local FACE_IMAGE = "rbxassetid://111069478991867"
 local FACE_TRANSPARENCY = 0
-local FACE_POS = Vector2.new(0.4995, 0.3731)
-local FACE_SIZE = Vector2.new(0.1835, 0.2889)
+local FACE_POS = Vector2.new(0.4989, 0.4188)
+local FACE_SIZE = Vector2.new(0.1835, 0.1975)
 -- LE MOT et le texte de chargement, poses eux aussi a la main.
 local WORD_POS = Vector2.new(0.4995, 0.6205)
 local WORD_SIZE = Vector2.new(0.3196, 0.1659)
-local STATUS_POS = Vector2.new(0.5, 0.7178)
+local STATUS_POS = Vector2.new(0.4995, 0.6827)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
 -- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule. Largeur d'une lettre = hauteur du mot x ce facteur : TextScaled
@@ -669,17 +669,17 @@ local FOLIAGE_DATA: { FoliageEntry } = {
 	{ image = "rbxassetid://120457348978315", x = 1.0242, y = 0.315, w = 0.1141, h = 0.2769, rot = -140 },
 	{ image = "rbxassetid://120457348978315", x = 1.0239, y = -0.0442, w = 0.1936, h = 0.3834, rot = -140 },
 	{ image = "rbxassetid://78090496362298", x = 0.982, y = 0.5818, w = 0.1474, h = 0.3784, rot = -140 },
-	{ image = "rbxassetid://78090496362298", x = 0.6199, y = -0.0035, w = 0.2195, h = 0.49, rot = 106 },
+	{ image = "rbxassetid://78090496362298", x = 0.6205, y = 0.0208, w = 0.2973, h = 0.553, rot = 106 },
 	{ image = "rbxassetid://120457348978315", x = 0.3912, y = -0.0939, w = 0.1875, h = 0.372, rot = 180 },
 	{ image = "rbxassetid://106884980828867", x = 0.1678, y = -0.1345, w = 0.3184, h = 0.5778, rot = 135 },
 	{ image = "rbxassetid://106884980828867", x = -0.0038, y = 0.1466, w = 0.2156, h = 0.407, rot = 103 },
 	{ image = "rbxassetid://120457348978315", x = -0.1309, y = -0.0111, w = 0.2156, h = 0.407, rot = 103 },
 	{ image = "rbxassetid://120457348978315", x = -0.1776, y = 0.3517, w = 0.2156, h = 0.407, rot = 103 },
-	{ image = "rbxassetid://133121907005690", x = -0.0036, y = 0.5354, w = 0.2238, h = 0.3938, rot = 83 },
-	{ image = "rbxassetid://106884980828867", x = 0.1017, y = 0.9088, w = 0.2773, h = 0.4523, rot = 48 },
+	{ image = "rbxassetid://133121907005690", x = 0, y = 0.5057, w = 0.2238, h = 0.3938, rot = 83 },
+	{ image = "rbxassetid://106884980828867", x = 0.084, y = 0.9218, w = 0.2773, h = 0.4523, rot = 48 },
 	{ image = "rbxassetid://78090496362298", x = 0.2728, y = 1.0939, w = 0.1474, h = 0.3784, rot = -62 },
-	{ image = "rbxassetid://78090496362298", x = 0.3426, y = 1.042, w = 0.1474, h = 0.3784, rot = 0 },
-	{ image = "rbxassetid://133121907005690", x = 0.8828, y = 1.0424, w = 0.2817, h = 0.5445, rot = -28 },
+	{ image = "rbxassetid://78090496362298", x = 0.3588, y = 1.0466, w = 0.1474, h = 0.3784, rot = 0 },
+	{ image = "rbxassetid://133121907005690", x = 0.9031, y = 1.0545, w = 0.2817, h = 0.5445, rot = -28 },
 }
 local FOLIAGE_SPREAD = 1.55 -- d'ou ils partent (position projetee vers l'exterieur). KNOB
 local FOLIAGE_STAGGER = 0.03 -- decalage entre 2 feuillages a l'arrivee (l'eventail). KNOB
