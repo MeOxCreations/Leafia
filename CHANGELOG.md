@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.953 — L'onomatopee jaillit quand le dernier "A" se pose
+
+- Elle partait au debut de chaque passage de tondeuse, en boucle : rejouee sans arret, elle devenait du decor. Elle
+  jaillit maintenant UNE SEULE FOIS, a l'arrivee de la derniere lettre du mot -- comme si le "A" venait de la
+  projeter.
+- Jaillissement facon dessin anime : elle part a 15 % de sa taille et inclinee de 22 degres de plus, et se pose en
+  `Back` (elle DEPASSE sa taille puis revient -- c'est ce depassement qui fait le cote cartoon).
+- Elle ne s'efface plus : une fois posee, elle fait partie du mot.
+
 ## 0.0.952 — LEAFIA grossit VRAIMENT : c'est `TextSize` qui plafonne a 100 px, pas `TextScaled`
 
 - Quatre essais pour rien (0.13, 0.205, 0.49, 0.62 de hauteur d'ecran) : le texte restait a 100 px. La propriete

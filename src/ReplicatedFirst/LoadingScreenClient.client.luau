@@ -380,9 +380,12 @@ local SHOUT_IMAGE = "rbxassetid://84029477406959"
 local SHOUT_POS = Vector2.new(0.6433, 0.5022)
 local SHOUT_SIZE = Vector2.new(0.092, 0.2508)
 local SHOUT_ROT = 20
-local SHOUT_POP = 0.6 -- taille de depart de son apparition (fraction de sa taille) : elle grossit d'un coup
-local SHOUT_IN = TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local SHOUT_OUT = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+-- ELLE JAILLIT QUAND LA DERNIERE LETTRE DU MOT SE POSE, une seule fois : c'est le "et voila" du mot. Posee d'entree
+-- ou rejouee en boucle, elle ferait partie du decor et on ne la verrait plus.
+local SHOUT_POP = 0.15 -- taille de depart (fraction de sa taille) : elle part de presque rien
+local SHOUT_TILT = 22 -- degres de plus au depart : elle se redresse en arrivant, ca la rend vivante
+-- Back = elle depasse sa taille puis revient : c'est ce depassement qui fait le cote dessin anime.
+local SHOUT_IN = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 
 -- LE MOT : UNE LIGNE PAR LETTRE, a la place exacte ou le joueur l'a posee. Un `UIListLayout` avec un ecart negatif
@@ -636,9 +639,9 @@ shout.Image = SHOUT_IMAGE
 shout.ImageColor3 = INK
 shout.ImageTransparency = 1
 shout.ScaleType = Enum.ScaleType.Fit
-shout.Rotation = SHOUT_ROT
+shout.Rotation = SHOUT_ROT + SHOUT_TILT
 shout.ZIndex = 5
-place(shout, SHOUT_POS, SHOUT_SIZE)
+place(shout, SHOUT_POS, SHOUT_SIZE * SHOUT_POP)
 fadeGradient(shout)
 shout.Parent = root
 
@@ -684,6 +687,14 @@ for i = 1, #TITLE_TEXT do
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
 		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
+		-- LA DERNIERE LETTRE APPELLE L'ONOMATOPEE : elle jaillit comme si le "A" venait de la projeter.
+		if i == #TITLE_TEXT then
+			TweenService:Create(shout, SHOUT_IN, {
+				ImageTransparency = 0,
+				Rotation = SHOUT_ROT,
+				Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
+			}):Play()
+		end
 	end)
 end
 
@@ -797,14 +808,6 @@ task.spawn(function()
 			blade.grad.Offset = Vector2.new(if GRASS_WIPE_FLIP then 1 else -1, 0)
 			blade.gui.ImageTransparency = 0
 		end
-		-- L'ONOMATOPEE SAUTE au depart du passage : c'est le moment ou il se passe quelque chose.
-		shout.ImageTransparency = 1
-		shout.Size = UDim2.fromScale(SHOUT_SIZE.X * SHOUT_POP, SHOUT_SIZE.Y * SHOUT_POP)
-		TweenService:Create(shout, SHOUT_IN, {
-			ImageTransparency = 0,
-			Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
-		}):Play()
-
 		local done = false
 		mowConn = RunService.Heartbeat:Connect(function(dt: number)
 			travelled += dt / MOWER_TIME
@@ -830,7 +833,6 @@ task.spawn(function()
 			mowConn = nil
 		end
 		-- L'HERBE REPOUSSE HORS CHAMP : la tondeuse est sortie par la droite, personne ne voit le retour.
-		TweenService:Create(shout, SHOUT_OUT, { ImageTransparency = 1 }):Play()
 		task.wait(MOWER_PAUSE)
 	end
 end)
