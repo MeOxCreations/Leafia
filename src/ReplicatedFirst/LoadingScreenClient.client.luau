@@ -371,12 +371,26 @@ local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
 -- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule. Largeur d'une lettre = hauteur du mot x ce facteur : TextScaled
 -- remplit sa case, il ne la dimensionne pas -- sans largeur imposee, toutes les lettres se tasseraient.
-local WORD_LETTER_RATIO = 0.62
+-- HAUTEUR DES LETTRES, en fraction de la hauteur du mot. Chaque lettre prend ensuite SA largeur (AutomaticSize) :
+-- une largeur imposee, identique pour toutes, ecartait le "I" du reste comme s'il y avait un espace.
+local WORD_TEXT_RATIO = 0.95
+-- RESSERREMENT entre deux lettres, en fraction de leur hauteur. Negatif : les lettres se rapprochent jusqu'a se
+-- toucher, comme dans un mot ecrit d'un bloc. 0 = l'espacement naturel de la police.
+local WORD_KERNING = -0.08
 local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
 local WORD_DROP = 0.35 -- d'ou la lettre monte (fraction de sa case)
 local WORD_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local WORD_WAVE = 0.08 -- hauteur de l'ondulation (fraction de la case). KNOB
 local WORD_WAVE_TIME = 1.1 -- duree d'un aller de l'ondulation. KNOB
+
+-- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
+-- s'estompe et revient, decalee sur sa voisine. ON NE PEUT PAS ECLAIRCIR DU BLANC -- il n'y a rien au-dessus du
+-- blanc -- donc la lumiere se fait par la TRANSPARENCE : la lettre recule, puis revient. L'oeil lit un passage.
+local WORD_SHINE_DELAY = 0.4 -- apres la pose de la derniere lettre
+local WORD_SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
+local WORD_SHINE_TIME = 0.3 -- aller-retour d'UNE lettre
+local WORD_SHINE_PEAK = 0.7 -- transparence au sommet de la vague
+local WORD_SHINE_PERIOD = 2.6 -- temps entre deux passages
 
 -- LES FEUILLAGES SONT NOIRS ET TRANSPARENTS : sur le vert, ca donne une ombre de feuille, pas un dessin colle.
 --
@@ -552,9 +566,17 @@ do
 	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 	layout.VerticalAlignment = Enum.VerticalAlignment.Center
 	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	-- RESSERREMENT : un ecart NEGATIF rapproche les lettres jusqu'a se toucher. Recalcule avec l'ecran, puisqu'il est
+	-- donne en fraction de la hauteur du mot.
+	local function fitGap()
+		layout.Padding = UDim.new(0, wordHolder.AbsoluteSize.Y * WORD_KERNING)
+	end
+	fitGap()
+	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitGap)
 	layout.Parent = wordHolder
 end
 
+local letters: { TextLabel } = {}
 for i = 1, #TITLE_TEXT do
 	local cell = frame("Cell" .. i, wordHolder)
 	cell.BackgroundTransparency = 1
@@ -563,16 +585,23 @@ for i = 1, #TITLE_TEXT do
 
 	local letter = text("Letter", cell, FONT_TITLE, WHITE)
 	letter.Text = TITLE_TEXT:sub(i, i)
-	letter.TextScaled = true
 	letter.AnchorPoint = Vector2.new(0.5, 0.5)
-	letter.Size = UDim2.fromScale(1, 1)
 	letter.ZIndex = 6
-	-- Largeur de la case = hauteur x le facteur : TextScaled remplit la case, il ne la dimensionne pas. Un facteur
-	-- unique pour toutes les lettres garde un espacement regulier.
-	cell.Size = UDim2.new(0, math.max(wordHolder.AbsoluteSize.Y * WORD_LETTER_RATIO, 1), 1, 0)
-	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-		cell.Size = UDim2.new(0, math.max(wordHolder.AbsoluteSize.Y * WORD_LETTER_RATIO, 1), 1, 0)
-	end)
+	-- TEXTE A TAILLE FIXE, et c'est la LETTRE qui donne sa largeur a sa case (AutomaticSize). Avec TextScaled, c'est
+	-- l'inverse : il faut imposer une largeur, la meme pour toutes, et le "I" se retrouve avec autant d'air qu'un "A".
+	letter.TextScaled = false
+	letter.AutomaticSize = Enum.AutomaticSize.X
+	letter.Size = UDim2.fromScale(0, 1)
+	cell.AutomaticSize = Enum.AutomaticSize.X
+	cell.Size = UDim2.fromScale(0, 1)
+
+	local function fitText()
+		letter.TextSize = math.max(wordHolder.AbsoluteSize.Y * WORD_TEXT_RATIO, 1)
+	end
+	fitText()
+	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitText)
+
+	letters[i] = letter
 
 	-- ARRIVEE : la lettre monte de sous sa case en s'allumant, l'une apres l'autre.
 	letter.TextTransparency = 1
@@ -596,6 +625,30 @@ for i = 1, #TITLE_TEXT do
 		end)
 	end)
 end
+
+-- LE REFLET QUI TRAVERSE LE MOT, en boucle. Une seule tache pour tout le mot : c'est elle qui tient l'ordre des
+-- lettres, et le decalage entre elles fait glisser la lumiere de gauche a droite.
+task.spawn(function()
+	task.wait((#letters - 1) * WORD_STAGGER + WORD_IN.Time + WORD_SHINE_DELAY)
+	while wordHolder.Parent do
+		for i, letter in ipairs(letters) do
+			task.delay((i - 1) * WORD_SHINE_STAGGER, function()
+				if not letter.Parent then
+					return
+				end
+				local half = TweenInfo.new(WORD_SHINE_TIME / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
+				local dim = TweenService:Create(letter, half, { TextTransparency = WORD_SHINE_PEAK })
+				dim.Completed:Once(function()
+					if letter.Parent then
+						TweenService:Create(letter, half, { TextTransparency = 0 }):Play()
+					end
+				end)
+				dim:Play()
+			end)
+		end
+		task.wait(WORD_SHINE_PERIOD)
+	end
+end)
 
 -- TEXTE D'ETAT ("Planting flower beds..."), juste sous le mot. Place comme les deux autres.
 local statusText = text("Status", root, FONT_BOLD, WHITE)

@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.944 — LEAFIA : lettres collees, et le reflet du titre de chapitre
+
+- Les lettres etaient trop ecartees : chaque case avait une largeur FIXE, la meme pour toutes, donc le "I" avait
+  autant d'air qu'un "A". Desormais le texte a une taille fixe et c'est la LETTRE qui donne sa largeur a sa case
+  (`AutomaticSize`). Avec `TextScaled`, c'est l'inverse : il faut imposer une largeur, et l'espacement se voit.
+- `WORD_KERNING` (-0.08 de la hauteur du mot) resserre encore les lettres jusqu'a se toucher, comme sur la maquette.
+- LE REFLET, repris du titre de chapitre du didacticiel : chaque lettre s'estompe et revient, decalee sur sa voisine,
+  toutes les 2.6 s. On ne peut pas ECLAIRCIR du blanc -- il n'y a rien au-dessus -- donc la lumiere se fait par la
+  transparence : la lettre recule, puis revient.
+- Reglages : `WORD_TEXT_RATIO`, `WORD_KERNING`, `WORD_SHINE_STAGGER`, `WORD_SHINE_PEAK`, `WORD_SHINE_PERIOD`.
+
 ## 0.0.943 — L'ecran de chargement prend les valeurs posees a la main, et LEAFIA arrive lettre par lettre
 
 - Tout le placement vient du releve de `StarterGui.LoadingScreenManuel` : fond (degrade 213,255,76 -> 147,255,101),
