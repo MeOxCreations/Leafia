@@ -520,6 +520,11 @@ local GRASS_WIPE_EDGE = 0.3 -- douceur du bord de coupe (0 = coupure nette)
 -- mauvais cote, inverser CE booleen -- il n'y a rien d'autre a changer.
 local GRASS_WIPE_FLIP = false
 
+-- LA COUPE PART QUAND LE NEZ DE LA MACHINE ARRIVE, PAS QUAND SON CENTRE EST DESSUS. `pos` est le CENTRE de la
+-- tondeuse : tester la touffe contre lui laissait la machine rouler sur une demi-largeur d'herbe encore debout.
+-- La demi-largeur se CALCULE (elle suit la taille de la tondeuse) ; le seul reglage est l'avance en plus.
+local GRASS_CUT_LEAD = 0.02 -- de combien la touffe se couche AVANT le nez, en fraction d'ecran. KNOB
+
 -- L'HERBE REPOUSSE DERRIERE LA TONDEUSE, et la tondeuse repasse : le bas de l'ecran tourne en boucle tant que ca
 -- charge. Le retard est donne en DISTANCE (fraction d'ecran derriere la machine) et non en secondes : regle ainsi,
 -- il reste juste meme si on change la vitesse de la tondeuse. Le temps s'en deduit.
@@ -962,7 +967,7 @@ task.spawn(function()
 			local pos = MOWER_START_X + (MOWER_END_X - MOWER_START_X) * math.min(travelled, 1)
 			mower.Position = UDim2.fromScale(pos, MOWER_GROUND_Y)
 			for _, blade in blades do
-				if not blade.cut and pos >= blade.x then
+				if not blade.cut and pos + MOWER_SIZE.X / 2 + GRASS_CUT_LEAD >= blade.x then
 					blade.cut = true
 					TweenService:Create(blade.grad, GRASS_CUT, {
 						Offset = Vector2.new(if GRASS_WIPE_FLIP then -1 else 1, 0),
