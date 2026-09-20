@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.931 — ROADMAP.md : ou on en est, ce qui vient ensuite, et comment reprendre sans assistant
+
+- Nouveau `ROADMAP.md` a la racine : etat reel du projet (ce qui marche, ce qui est fragile, ce qui n'existe pas),
+  l'ordre de travail (FPS mobile, validation de la tonte, boucle d'argent, build sauvegarde, didacticiel, mesure de
+  la retention), et le cout honnete des gros systemes a venir.
+- Ecrit pour que quelqu'un puisse reprendre le projet sans nous : outils (Rojo, selene, rokit), ce que Rojo ne
+  synchronise PAS, ou regler les valeurs sans coder (les Configs), et le piege des places (un module non declare
+  dans le bootstrap ne fait rien, sans erreur).
+
 ## 0.0.930 — Un grand-pere pose sur chaque plot du hub
 
 - Nouveau `PlotOldmanController` (client, hub uniquement) : il copie
