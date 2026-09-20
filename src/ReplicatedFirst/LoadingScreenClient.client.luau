@@ -88,24 +88,6 @@ local function playSound(source: Sound, volume: number?, speed: number?): Sound
 end
 
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
--- LE FOND TUILE. L'IMAGE est celle du joueur ; la MAILLE, la vitesse et le fondu en diagonale sont repris du rideau
--- de changement de map (`CurtainVisual`), pour que les deux ecrans de chargement se ressemblent.
-local TILE_IMAGE = "rbxassetid://78626050824347"
-local TILE_TRANSPARENCY = 0.6 -- KNOB : baisser = points plus visibles ; monter = plus discrets
--- TileSize en SCALE (fraction de l'ImageLabel tuile, qui fait deux fois l'ecran).
-local TILE_SCALE_X = 0.005
-local TILE_SCALE_Y = 0.01
-local TILE_SPEED = 15 -- pixels par seconde, EN DIAGONALE : sur un seul axe ca se lit comme un decor qui glisse
--- LE MOTIF S'EFFACE D'UN COTE. Plein cadre et uniforme, il se lit comme un papier peint et rentre en concurrence
--- avec la tete au milieu. Une NumberSequence DOIT aller de 0 a 1 en temps croissant, sinon Roblox refuse la
--- sequence entiere et le degrade disparait sans un mot.
-local TILE_FADE_ROTATION = 50
-local TILE_FADE = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 1),
-	NumberSequenceKeypoint.new(0.36, 1),
-	NumberSequenceKeypoint.new(0.748, 0.813),
-	NumberSequenceKeypoint.new(1, 0),
-})
 -- ON NE DETRUIT PLUS `ReplicatedFirst.LoadingScreen`. Ce fichier le faisait -- l'ancien ecran n'etait plus lu, on
 -- le nettoyait -- mais c'est devenu exactement l'endroit ou vit le MODELE du rideau de changement de map. Le
 -- detruire au demarrage revenait a supprimer le decor juste avant de s'en servir.
@@ -623,53 +605,6 @@ local sky = frame("Sky", root)
 sky.Size = UDim2.fromScale(1, 1)
 sky.Position = UDim2.fromScale(0, 0)
 sky.ZIndex = 1
-do
-	local grad = Instance.new("UIGradient")
-	grad.Rotation = 90 -- vertical : haut -> bas
-	grad.Color = ColorSequence.new({
-		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
-		ColorSequenceKeypoint.new(0.8372, Color3.fromRGB(249, 255, 250)),
-		ColorSequenceKeypoint.new(1, Color3.fromRGB(193, 193, 193)),
-	})
-	grad.Parent = sky
-end
-
-local tile = Instance.new("ImageLabel")
-tile.Name = "Tile"
-tile.BackgroundTransparency = 1
-tile.Image = TILE_IMAGE
-tile.ImageTransparency = TILE_TRANSPARENCY
-tile.ScaleType = Enum.ScaleType.Tile
-tile.TileSize = UDim2.fromScale(TILE_SCALE_X, TILE_SCALE_Y)
-tile.AnchorPoint = Vector2.new(0.5, 0.5)
-tile.Position = UDim2.fromScale(0.5, 0.5)
-tile.Size = UDim2.fromScale(2, 2) -- deborde largement pour recycler le defilement sans montrer les bords
-tile.ZIndex = 2
--- NOIR : l'ecran est blanc. Le rideau, lui, teinte ses tuiles en BLANC parce que son fond est cyan. Le gradient ne
--- porte ici que de la TRANSPARENCE, donc la teinte ne rabote aucune valeur de couleur.
-tile.ImageColor3 = INK
-tile.Parent = root
-do
-	local fade = Instance.new("UIGradient")
-	fade.Transparency = TILE_FADE
-	fade.Rotation = TILE_FADE_ROTATION
-	fade.Parent = tile
-end
-
--- Defilement diagonal : chaque axe recycle sur SA periode (la taille PIXEL de la tuile sur cet axe) pour boucler
--- sans saut. Le modulo garde l'offset dans [0, periode).
-local tileOffX, tileOffY = 0, 0
-local tileConn: RBXScriptConnection? = nil
-tileConn = RunService.Heartbeat:Connect(function(dt: number)
-	local periodX = TILE_SCALE_X * tile.AbsoluteSize.X
-	local periodY = TILE_SCALE_Y * tile.AbsoluteSize.Y
-	if periodX <= 0 or periodY <= 0 then
-		return
-	end
-	tileOffX = (tileOffX + TILE_SPEED * dt) % periodX
-	tileOffY = (tileOffY + TILE_SPEED * dt) % periodY
-	tile.Position = UDim2.new(0.5, tileOffX, 0.5, tileOffY)
-end)
 
 -- L'ATTENTE DU PREMIER VRAI DESSIN. `RenderStepped` ne tire que quand une image est DESSINEE : c'est donc le seul
 -- juge de "l'ecran s'affiche-t-il vraiment". PARTAGEE par le mot ET par la tondeuse : tout ce qui s'anime doit
@@ -1435,9 +1370,6 @@ end
 fade.Completed:Wait()
 
 -- ===== Nettoyage des connexions (elles vivent sur RunService, pas sur le GUI) =====
-if tileConn then
-	tileConn:Disconnect()
-end
 for _, t in foliageIdle do
 	t:Cancel() -- couper le flottement des feuillages (boucles infinies) avant de detruire l'ecran
 end

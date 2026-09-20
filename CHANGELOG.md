@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.963 — Le fond du chargement redevient blanc uni
+
+Retire le degrade du fond et tout le motif de points qui defilait en diagonale, avec sa boucle et son fondu.
+Le fond est blanc, rien ne bouge derriere la scene.
+
 ## 0.0.962 — La tondeuse part avec la premiere lettre, et l'herbe repousse dans l'ordre
 
 Ecran de chargement. La tondeuse attendait le meme signal que le mot : elle tondait pendant que le client
