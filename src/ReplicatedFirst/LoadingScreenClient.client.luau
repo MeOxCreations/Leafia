@@ -424,6 +424,16 @@ local LETTER_SOUND_PITCH = 0.9 -- hauteur de la 1re lettre
 local LETTER_SOUND_STEP = 0.07 -- de combien elle monte a chaque lettre suivante
 
 -- LE MOT ARRIVE LETTRE PAR LETTRE, puis ne bouge plus : seul le reflet le traverse.
+-- L'ANIMATION N'A PAS LE DROIT DE COMMENCER TANT QUE L'ECRAN NE S'AFFICHE PAS VRAIMENT.
+--
+-- Un tween avance avec le TEMPS, pas avec les images : pendant que le client charge (replication, assets), il ne
+-- dessine presque rien, et le mot finit de s'ecrire dans le vide. Le joueur arrive, tout est deja pose -- "je n'ai
+-- pas le temps de voir les lettres". On attend donc quelques images d'affilee assez rapides pour dire que l'ecran
+-- tourne, avec un plafond de securite pour ne jamais rester muet.
+local WARMUP_FRAMES = 4 -- images d'affilee assez rapides avant de lancer le mot
+local WARMUP_MAX_DT = 0.12 -- au-dela, l'image est trop lente : le client charge encore
+local WARMUP_TIMEOUT = 12 -- on lance quand meme apres ce temps : mieux vaut une anim ratee que pas d'anim
+
 -- ON DOIT AVOIR LE TEMPS DE LES VOIR ARRIVER. A 0.07 s d'ecart et 0.34 s d'arrivee, le mot entier se posait en
 -- moins d'une seconde : l'oeil n'attrapait rien, on voyait juste le mot apparaitre d'un bloc.
 local WORD_DELAY = 0.5 -- temps avant la premiere lettre : le regard se pose sur l'ecran d'abord
@@ -661,6 +671,8 @@ shout.Parent = root
 
 -- MOT "LEAFIA", LETTRE PAR LETTRE, chacune a sa place relevee.
 local letters: { TextLabel } = {}
+-- Le depart de chaque lettre, garde de cote : il ne part qu'une fois l'ecran vraiment affiche (voir plus bas).
+local starts: { () -> () } = {}
 for i = 1, #TITLE_TEXT do
 	local letter = text("Letter" .. i, root, FONT_TITLE, WORD_COLOR)
 	letter.Text = TITLE_TEXT:sub(i, i)
@@ -694,7 +706,7 @@ for i = 1, #TITLE_TEXT do
 	letter.TextTransparency = 1
 	stroke.Transparency = 1
 	letter.Position = from
-	task.delay(WORD_DELAY + (i - 1) * WORD_STAGGER, function()
+	starts[i] = function()
 		if not letter.Parent then
 			return
 		end
@@ -715,13 +727,24 @@ for i = 1, #TITLE_TEXT do
 				Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
 			}):Play()
 		end
-	end)
+	end
 end
 
--- LE REFLET QUI TRAVERSE LE MOT, en boucle. Une seule tache pour tout le mot : c'est elle qui tient l'ordre des
--- lettres, et le decalage entre elles fait glisser la lumiere de gauche a droite.
+-- L'ATTENTE, puis le depart des lettres. `RenderStepped` ne tire que quand une image est DESSINEE : c'est donc le
+-- seul juge de "l'ecran s'affiche-t-il vraiment".
 task.spawn(function()
-	task.wait(WORD_DELAY + (#letters - 1) * WORD_STAGGER + WORD_IN.Time + WORD_SHINE_DELAY)
+	local smooth = 0
+	local deadline = os.clock() + WARMUP_TIMEOUT
+	while smooth < WARMUP_FRAMES and os.clock() < deadline do
+		local dt = RunService.RenderStepped:Wait()
+		smooth = if dt <= WARMUP_MAX_DT then smooth + 1 else 0
+	end
+	task.wait(WORD_DELAY)
+	for i, start in ipairs(starts) do
+		task.delay((i - 1) * WORD_STAGGER, start)
+	end
+	-- LE REFLET attend la derniere lettre : il part d'ici, donc il suit l'attente lui aussi.
+	task.wait((#starts - 1) * WORD_STAGGER + WORD_IN.Time + WORD_SHINE_DELAY)
 	while root.Parent do
 		for i, letter in ipairs(letters) do
 			task.delay((i - 1) * WORD_SHINE_STAGGER, function()

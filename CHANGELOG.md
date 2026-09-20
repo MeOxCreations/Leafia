@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.956 — Le mot n'apparait plus dans le vide : il attend que l'ecran s'affiche vraiment
+
+- Le joueur ne voyait pas les lettres arriver, quelle que soit leur duree. CAUSE : un tween avance avec le TEMPS,
+  pas avec les images. Pendant le chargement, le client ne dessine presque rien -- le mot s'ecrivait donc dans le
+  vide, et quand l'image revenait, tout etait deja pose. Rallonger les durees ne pouvait rien y faire.
+- Le depart des lettres attend maintenant `WARMUP_FRAMES` (4) images d'affilee rendues en moins de
+  `WARMUP_MAX_DT` (0.12 s) : `RenderStepped` ne tire que quand une image est DESSINEE, c'est donc le seul juge de
+  "l'ecran s'affiche-t-il vraiment". Plafond de securite a 12 s, pour ne jamais rester muet.
+- Le reflet part de la meme tache, donc il suit la meme attente.
+
 ## 0.0.955 — On a le temps de voir les lettres arriver
 
 - Le mot entier se posait en moins d'une seconde (0.07 s entre deux lettres, 0.34 s d'arrivee) : l'oeil n'attrapait
