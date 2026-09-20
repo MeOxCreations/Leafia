@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.955 — On a le temps de voir les lettres arriver
+
+- Le mot entier se posait en moins d'une seconde (0.07 s entre deux lettres, 0.34 s d'arrivee) : l'oeil n'attrapait
+  rien, on voyait le mot apparaitre d'un bloc. Desormais 0.22 s entre deux lettres et 0.5 s d'arrivee, soit ~1.6 s
+  pour le mot.
+- Nouveau `WORD_DELAY` (0.5 s) avant la premiere lettre : le regard se pose sur l'ecran avant que ca commence.
+- Le reflet attend toujours la derniere lettre : son declenchement suit les nouveaux temps.
+
 ## 0.0.954 — Un son par lettre, de plus en plus haut
 
 - Chaque lettre de LEAFIA joue `Sounds/UI/PopSound_1` en arrivant, un demi-ton plus haut que la precedente : six

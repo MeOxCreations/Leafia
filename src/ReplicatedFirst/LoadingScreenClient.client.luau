@@ -424,9 +424,12 @@ local LETTER_SOUND_PITCH = 0.9 -- hauteur de la 1re lettre
 local LETTER_SOUND_STEP = 0.07 -- de combien elle monte a chaque lettre suivante
 
 -- LE MOT ARRIVE LETTRE PAR LETTRE, puis ne bouge plus : seul le reflet le traverse.
-local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
+-- ON DOIT AVOIR LE TEMPS DE LES VOIR ARRIVER. A 0.07 s d'ecart et 0.34 s d'arrivee, le mot entier se posait en
+-- moins d'une seconde : l'oeil n'attrapait rien, on voyait juste le mot apparaitre d'un bloc.
+local WORD_DELAY = 0.5 -- temps avant la premiere lettre : le regard se pose sur l'ecran d'abord
+local WORD_STAGGER = 0.22 -- decalage entre deux lettres
 local WORD_DROP = 0.06 -- d'ou la lettre monte, en fraction de la hauteur d'ecran
-local WORD_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local WORD_IN = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
 -- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
 -- s'estompe et revient, decalee sur sa voisine.
@@ -691,7 +694,7 @@ for i = 1, #TITLE_TEXT do
 	letter.TextTransparency = 1
 	stroke.Transparency = 1
 	letter.Position = from
-	task.delay((i - 1) * WORD_STAGGER, function()
+	task.delay(WORD_DELAY + (i - 1) * WORD_STAGGER, function()
 		if not letter.Parent then
 			return
 		end
@@ -718,7 +721,7 @@ end
 -- LE REFLET QUI TRAVERSE LE MOT, en boucle. Une seule tache pour tout le mot : c'est elle qui tient l'ordre des
 -- lettres, et le decalage entre elles fait glisser la lumiere de gauche a droite.
 task.spawn(function()
-	task.wait((#letters - 1) * WORD_STAGGER + WORD_IN.Time + WORD_SHINE_DELAY)
+	task.wait(WORD_DELAY + (#letters - 1) * WORD_STAGGER + WORD_IN.Time + WORD_SHINE_DELAY)
 	while root.Parent do
 		for i, letter in ipairs(letters) do
 			task.delay((i - 1) * WORD_SHINE_STAGGER, function()
