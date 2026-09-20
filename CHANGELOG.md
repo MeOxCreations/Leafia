@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.974 — Une haie taillee est enfin NETTE
+
+Le desordre de naissance d une feuille (relief, basculement hors du plan, travers) etait garde tel quel a
+toutes les pousses : la lame ne faisait que l enfoncer et la peigner un peu. Une haie rasee gardait donc ses
+feuilles de travers et partait dans tous les sens, alors que c est exactement la ou le travail doit se voir.
+
+Chaque feuille glisse maintenant de sa pose de naissance vers une pose MISE AU PROPRE a mesure qu on la taille :
+a plat sur la face, en gardant sa place et son orientation DANS le plan (sans elles, les feuilles se
+superposeraient au centre de leur case et laisseraient des trous). A ras, la surface est droite et propre,
+comme un cupressus qu on vient de tailler.
+
+Un seul `Lerp` de CFrame fait tout : le relief, le basculement et le travers s effacent ensemble, sans qu aucun
+reglage n ait a rester d accord avec un autre. `TRIM_FLATTEN` dose l effet (0 = ancien comportement).
+
 ## 0.0.973 — La haie prend du relief, et la pelouse perd sa couleur criarde
 
 Trois choses rendaient la haie plate. Toutes ses feuilles avaient EXACTEMENT la meme couleur (un aplat vert,

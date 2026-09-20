@@ -37,6 +37,9 @@ type Leaf = {
 	-- C'est ce qui evite que serveur et client se disputent la meme CFrame. Le serveur possede la DONNEE
 	-- (combien il reste de pousse), le client possede le RENDU (ou ca se traduit a l'ecran).
 	spawnLocal: CFrame,
+	-- LA MEME POSE, MISE AU PROPRE : a plat sur la face, sans relief ni basculement, en gardant sa place et son
+	-- orientation DANS le plan. C'est la pose que la feuille prend quand elle est rasee.
+	flatLocal: CFrame,
 	-- Taille a pousse pleine. La feuille RETRECIT en etant taillee : l'enfoncement seul ne se voit presque pas
 	-- sur une feuille large, alors qu'un changement de silhouette saute aux yeux.
 	spawnSize: Vector3,
@@ -108,6 +111,24 @@ end
 -- Couleur de coupe DE CETTE feuille : tiree de la palette par un hash de sa POSITION (deterministe, donc identique
 -- sur tous les clients et rien a synchroniser, meme idee que phase). Feuilles voisines = valeurs differentes -> des
 -- TACHES de tons melanges une fois la haie taillee, au lieu d'un aplat uniforme.
+-- LA POSE PROPRE D'UNE FEUILLE : a plat sur la face, sans relief ni basculement, en gardant sa PLACE et son
+-- orientation DANS le plan.
+--
+-- POURQUOI. Une haie fraichement taillee est NETTE : c'est ce qui rend le travail beau a regarder. Or le
+-- desordre de naissance (relief, basculement hors du plan, decalage) etait garde tel quel a toutes les pousses :
+-- rasee, la haie gardait ses feuilles de travers et partait dans tous les sens. Le desordre doit DISPARAITRE
+-- avec la pousse, pas survivre a la lame.
+--
+-- ON GARDE le decalage dans le plan et la rotation dans le plan : sans eux les feuilles se superposeraient
+-- toutes au centre de leur case et laisseraient des trous. Ce qui part, c'est tout ce qui SORT du plan.
+local function flatten(local0: CFrame): CFrame
+	-- L'angle DANS le plan se lit sur l'axe X de la feuille projete sur le plan du carreau. `atan2` le rend
+	-- meme quand la feuille est aussi basculee hors du plan -- c'est precisement ce basculement qu'on jette.
+	local axis = local0.XVector
+	local spin = math.atan2(axis.Y, axis.X)
+	return CFrame.new(local0.X, local0.Y, 0) * CFrame.Angles(0, 0, spin)
+end
+
 local function pickTrimmedColor(position: Vector3): Color3
 	local h = math.sin(position.X * 12.9898 + position.Y * 78.233 + position.Z * 37.719) * 43758.5453
 	local r = (h - math.floor(h)) * TRIMMED_WEIGHT_TOTAL -- fraction 0..1 * poids total
@@ -126,6 +147,7 @@ local function addLeaf(group: Group, part: BasePart)
 		return
 	end
 
+	local local0 = cell.CFrame:Inverse() * part.CFrame
 	local position = part.Position
 	-- Phase DEDUITE de la position plutot que tiree au hasard : deux feuilles voisines ont des phases
 	-- differentes, et rien n'a besoin d'etre stocke ni synchronise entre les clients.
@@ -139,7 +161,8 @@ local function addLeaf(group: Group, part: BasePart)
 		cellCFrame = cellCFrame,
 		-- Le serveur ne deplace jamais la feuille : sa CFrame est donc toujours celle de la pousse pleine,
 		-- meme pour un joueur qui arrive sur une haie deja taillee.
-		spawnLocal = cellCFrame:Inverse() * part.CFrame,
+		spawnLocal = local0,
+		flatLocal = flatten(local0),
 		spawnSize = part.Size,
 		-- Volontairement impossible : force une premiere mise a l'echelle des la premiere frame, y compris
 		-- pour un joueur qui arrive sur une haie DEJA taillee.
@@ -173,7 +196,14 @@ local function restOf(leaf: Leaf): (CFrame, number)
 	-- reglage. Mis DANS restOf et pas seulement dans le balancement pour qu'une feuille au repos, hors de la
 	-- bulle du joueur, garde quand meme son orientation de taille.
 	local comb = math.rad(HedgeConfigs.LEAF_TRIM_SPIN) * (1 - value)
-	return leaf.cellCFrame * CFrame.new(0, 0, -sink) * leaf.spawnLocal * CFrame.Angles(0, 0, comb), value
+	-- DU DESORDRE VERS LE PROPRE. A pousse pleine, la pose de naissance telle quelle ; a ras, la pose mise a
+	-- plat. `Lerp` d'une CFrame interpole la position ET la rotation, donc le relief, le basculement et le
+	-- travers s'effacent ensemble, sans qu'aucun reglage n'ait a rester d'accord avec un autre.
+	--
+	-- `TRIM_FLATTEN` dose combien de cette mise au propre on applique : a 0, l'ancien comportement.
+	local tidy = math.clamp(value + (1 - value) * (1 - HedgeConfigs.TRIM_FLATTEN), 0, 1)
+	local pose = leaf.flatLocal:Lerp(leaf.spawnLocal, tidy)
+	return leaf.cellCFrame * CFrame.new(0, 0, -sink) * pose * CFrame.Angles(0, 0, comb), value
 end
 
 -- Sphere englobante du groupe. Recalculee seulement quand des feuilles ont ete ajoutees.

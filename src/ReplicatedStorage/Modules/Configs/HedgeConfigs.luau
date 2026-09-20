@@ -681,6 +681,13 @@ local HedgeConfigs = {
 	-- relance -- si les feuilles restent uniformes, c'est ca, et il faut alors varier la texture elle-meme.
 	LEAF_TINT_RANGE = 0.12,
 
+	-- MISE AU PROPRE A LA TAILLE. A 1, une feuille rasee est parfaitement a plat sur la face : la haie finie est
+	-- nette et droite, comme un cupressus qu'on vient de tailler. A 0, elle garde le desordre de sa pousse.
+	--
+	-- C'est le reglage qui porte l'avant / apres : tout le plaisir du geste tient dans l'ecart entre une haie
+	-- hirsute et une surface impeccable. Le baisser rend le travail fini moins spectaculaire.
+	TRIM_FLATTEN = 1,
+
 	-- Balancement, calcule CHEZ CHAQUE CLIENT.
 	--
 	-- Jamais cote serveur : une part que le serveur bouge replique sa CFrame a tous les joueurs. Mille feuilles
