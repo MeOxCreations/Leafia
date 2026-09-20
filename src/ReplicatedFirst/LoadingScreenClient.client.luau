@@ -619,7 +619,10 @@ local GRASS_WIPE_FLIP = false
 -- La demi-largeur se CALCULE (elle suit la taille de la tondeuse) ; le seul reglage est l'avance en plus.
 -- GRISE, PAS NOIRE : en noir plein la rangee pese autant que la tondeuse et le mot, et le bas de l'ecran tire
 -- l'oeil vers le decor au lieu du titre.
-local GRASS_COLOR = Color3.fromRGB(158, 158, 158)
+-- Deux fois moins marquee : c'est le CONTRASTE avec le fond blanc qu'on divise, pas la valeur brute. A 158 sur
+-- un fond a 255, l'ecart vaut 97 ; a 207 il vaut 48. Eclaircir plutot que rendre transparent laisse le degrade
+-- de coupe travailler seul sur la transparence.
+local GRASS_COLOR = Color3.fromRGB(207, 207, 207)
 local GRASS_CUT_LEAD = 0.02 -- de combien la touffe se couche AVANT le nez, en fraction d'ecran. KNOB
 
 -- L'HERBE REPOUSSE DERRIERE LA TONDEUSE, et la tondeuse repasse : le bas de l'ecran tourne en boucle tant que ca
