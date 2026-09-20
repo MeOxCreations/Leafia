@@ -2204,6 +2204,19 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.971 — Le rideau de changement de map passe en noir et blanc
+
+Meme parti pris que le grand ecran de premier lancement : fond blanc a peine grise, tout le dessin en noir.
+Le ciel bleu, le bandeau bleu clair et le halo coloré ont saute. Les deux ecrans se lisent maintenant comme un
+seul jeu.
+
+Le halo derriere la tete est COUPE et non supprime (`SHOW_GLOW`) : il servait a detacher le visage d un ciel
+qui avait presque sa couleur, et le contraste noir sur blanc fait deja ce travail. Une ligne suffit a le
+rallumer si le fond redevient colore.
+
+Les tuiles du fond passent en noir : leur discretion vient de leur TRANSPARENCE et non d un gris, sinon le
+degrade qui les efface rabote ses valeurs en silence.
+
 ## 0.0.970 — Le grand-pere du rideau de map a les memes yeux que celui du chargement
 
 Le rideau de changement de map montre desormais la meme tete (sans yeux, avec les calques par-dessus) : il

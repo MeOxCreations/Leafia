@@ -33,16 +33,21 @@ local SHOW_TILE = not UserInputService.TouchEnabled
 -- COULEUR DE SECOURS DU CONTENEUR. Elle ne se voit qu'un instant -- celui ou le rideau existe deja mais ou son cadre
 -- degrade n'est pas encore pose -- et partout ou ce cadre ne couvrirait pas.
 --
--- Un gris fonce y creait un FLASH SOMBRE avant le ciel. On prend donc un bleu DU MEME degrade : le passage devient
--- invisible au lieu d'etre un a-coup. Une couleur de secours doit ressembler a ce qu'elle remplace, sinon elle se
--- voit precisement parce qu'elle est de secours.
-CurtainVisual.BG = Color3.fromHex("2AC9F7")
+-- Une couleur de secours doit ressembler a ce qu'elle remplace, sinon elle se voit precisement parce qu'elle est
+-- de secours : un gris fonce creait un FLASH SOMBRE avant le fond. Ici le fond est BLANC, comme le grand ecran de
+-- premier lancement -- une seule encre noire, aucun aplat de couleur.
+CurtainVisual.BG = Color3.fromRGB(255, 255, 255)
+
+-- L'ENCRE UNIQUE. Tout le dessin du rideau en noir sur blanc : le meme parti pris que l'ecran de chargement
+-- principal, pour que les deux se lisent comme un seul jeu et pas comme deux ecrans empruntes ailleurs.
+local INK = Color3.fromRGB(0, 0, 0)
 
 -- ===== FOND TUILE =====
 local TILE_IMAGE_ID = "rbxassetid://80842701479373"
--- BLANC PUR, et ce n'est pas cosmetique : un UIGradient MULTIPLIE la couleur de l'objet. Sur un gris, les valeurs du
--- degrade sont rabotees en silence et on regle une courbe dont on ne voit jamais le vrai rendu.
-local TILE_TINT = Color3.fromRGB(255, 255, 255)
+-- NOIRE SUR FOND BLANC. Sa discretion vient de sa TRANSPARENCE (le degrade ci-dessous), pas d'un gris : un
+-- UIGradient MULTIPLIE la couleur de l'objet, donc sur un gris les valeurs du degrade sont rabotees en silence et
+-- on regle une courbe dont on ne voit jamais le vrai rendu.
+local TILE_TINT = Color3.fromRGB(0, 0, 0)
 -- Taille d'UNE tuile, en fraction de l'ImageLabel.
 local TILE_CELL = UDim2.fromScale(0.005, 0.01)
 -- Defilement, en pixels par seconde. EN DIAGONALE : horizontal ou vertical, ca se lit comme un decor qui glisse ; en
@@ -75,20 +80,20 @@ local BANNER_FADE = NumberSequence.new({
 	NumberSequenceKeypoint.new(0.798, 0.756),
 	NumberSequenceKeypoint.new(1, 1),
 })
--- Un bleu tres clair pris dans la famille du ciel : il se pose SUR le fond, un blanc pur se decouperait dessus. Rend
+-- Un gris tres clair : il se pose SUR le fond blanc sans s'en detacher comme le ferait un aplat noir. Rend
 -- exactement ce qu'il dit parce que l'image est blanche (un UIGradient multiplie la couleur de l'objet).
-local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(166, 243, 255))
+local BANNER_COLOR = ColorSequence.new(Color3.fromRGB(232, 232, 232))
 
 -- ===== FOND DEGRADE =====
--- CIEL, EN DIAGONALE, quatre etapes dans la MEME famille : seule la luminosite voyage, donc le fond se lit comme un
+-- BLANC QUI SE GRISE TRES LEGEREMENT, en diagonale : seule la luminosite voyage, donc le fond se lit comme un
 -- espace et pas comme un motif. 40 degres : la lumiere vient du haut-gauche. Le sens d'un UIGradient ne se DEDUIT
 -- pas -- si la lumiere part du mauvais coin, ce nombre est la premiere chose a tourner.
 local BG_ROTATION = 40
 local BG_COLOR = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromHex("6BEBFF")),
-	ColorSequenceKeypoint.new(0.38, Color3.fromHex("2AC9F7")),
-	ColorSequenceKeypoint.new(0.74, Color3.fromHex("1E90E2")),
-	ColorSequenceKeypoint.new(1, Color3.fromHex("1567C6")),
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+	ColorSequenceKeypoint.new(0.38, Color3.fromRGB(250, 250, 250)),
+	ColorSequenceKeypoint.new(0.74, Color3.fromRGB(235, 235, 235)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(214, 214, 214)),
 })
 
 -- ===== LE VISAGE DU GRAND-PERE, AU CENTRE =====
@@ -123,10 +128,12 @@ local FACE_WINK_AFTER = 1.2
 -- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
 
 -- ===== LE HALO =====
--- Il DETACHE le grand-pere du ciel, qui a pratiquement sa couleur. Plus grand que le visage : un halo qui s'arrete au
--- bord de ce qu'il eclaire n'est pas un halo, c'est un contour.
+-- IL SERVAIT A DETACHER le grand-pere d'un ciel qui avait presque sa couleur. Sur un fond blanc avec un visage
+-- noir, le contraste fait deja ce travail : le halo est coupe (SHOW_GLOW) plutot que supprime, pour qu'il revienne
+-- d'une ligne si le fond redevient colore un jour.
+local SHOW_GLOW = false
 local GLOW_IMAGE_ID = "rbxassetid://108057663284590"
-local GLOW_COLOR = Color3.fromRGB(99, 221, 255)
+local GLOW_COLOR = Color3.fromRGB(235, 235, 235)
 local GLOW_SIZE = UDim2.fromScale(0.34, 0.6)
 
 -- ===== DESTINATION =====
@@ -155,7 +162,7 @@ local SPIN_DOTS = 12
 -- Rayon du cercle, en fraction du cadre. 0.5 poserait les centres sur le bord et les points depasseraient.
 local SPIN_RADIUS = 0.38
 local SPIN_DOT = 0.16
-local SPIN_COLOR = Color3.fromRGB(255, 255, 255)
+local SPIN_COLOR = Color3.fromRGB(0, 0, 0)
 -- Transparence du point de TETE et du plus pale. Le second n'est pas a 1 : les points eteints restent VISIBLES,
 -- sinon on ne voit plus une couronne qui tourne mais un point qui saute.
 local SPIN_HEAD_T = 0
@@ -235,6 +242,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	glow.Position = UDim2.fromScale(0.5, 0.5)
 	glow.Size = GLOW_SIZE
 	glow.ZIndex = 3
+	glow.Visible = SHOW_GLOW
 	glow.Parent = container
 
 	local face = Instance.new("ImageLabel")
@@ -244,6 +252,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	-- `Stretch` ET SURTOUT PAS `Fit` : l'animation l'ECRASE a plat puis le deplie. En `Fit`, ecraser sa hauteur ferait
 	-- RETRECIR la tete entiere au lieu de l'aplatir -- une image en `Fit` ne sait que grossir et rapetisser. Le prix :
 	-- la tete prend les proportions de son cadre, d'ou le `RelativeYY` juste en dessous.
+	face.ImageColor3 = INK -- noir sur blanc : sans ca, la tete blanche disparaitrait dans le fond
 	face.ScaleType = Enum.ScaleType.Stretch
 	face.AnchorPoint = Vector2.new(0.5, 0.5)
 	face.Position = UDim2.fromScale(0.5, 0.5)
@@ -312,7 +321,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	dest.Position = DEST_POS
 	dest.Size = DEST_SIZE
 	dest.Text = destText
-	dest.TextColor3 = Color3.fromRGB(255, 255, 255)
+	dest.TextColor3 = Color3.fromRGB(0, 0, 0)
 	dest.TextScaled = true
 	dest.TextXAlignment = Enum.TextXAlignment.Right
 	-- MONTSERRAT HEAVY (la graisse 900) : une lettre nette, et les accents des langues que Roblox traduit.
