@@ -385,22 +385,22 @@ local SHOUT_IN = TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection
 local SHOUT_OUT = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
 local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 
--- LE MOT et le texte de chargement.
-local WORD_POS = Vector2.new(0.4984, 0.6446)
-local WORD_SIZE = Vector2.new(0.3446, 0.1789)
+-- LE MOT : UNE LIGNE PAR LETTRE, a la place exacte ou le joueur l'a posee. Un `UIListLayout` avec un ecart negatif
+-- avait ete essaye pour les resserrer : il les a EMPILEES les unes sur les autres. Une lettre posee a sa place ne
+-- peut pas chevaucher sa voisine, et l'animation devient plus simple -- chaque lettre bouge chez elle.
 local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait le reste
-local WORD_STROKE_RATIO = 0.05 -- epaisseur du contour, en fraction de la taille du texte
+local WORD_STROKE_RATIO = 0.05 -- epaisseur du contour, en fraction de la hauteur de la lettre
+local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
+local WORD_Y = 0.6444
+local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
 local STATUS_POS = Vector2.new(0.4995, 0.7299)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
--- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule. Chaque lettre prend SA largeur (AutomaticSize) : une largeur
--- imposee, identique pour toutes, ecartait le "I" du reste comme s'il y avait un espace.
-local WORD_TEXT_RATIO = 0.95 -- hauteur des lettres, en fraction de la hauteur du mot
-local WORD_KERNING = -0.08 -- resserrement entre deux lettres (negatif = elles se touchent)
+-- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule.
 local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
-local WORD_DROP = 0.35 -- d'ou la lettre monte (fraction de sa case)
+local WORD_DROP = 0.06 -- d'ou la lettre monte, en fraction de la hauteur d'ecran
 local WORD_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
-local WORD_WAVE = 0.08 -- hauteur de l'ondulation (fraction de la case). KNOB
+local WORD_WAVE = 0.012 -- hauteur de l'ondulation, en fraction de la hauteur d'ecran. KNOB
 local WORD_WAVE_TIME = 1.1 -- duree d'un aller de l'ondulation. KNOB
 
 -- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
@@ -517,11 +517,22 @@ root.Active = true
 root.Parent = gui
 
 -- ===== LE FOND : blanc, et la tuile qui defile par-dessus =====
--- PLUS DE CIEL COLORE : l'ecran est en NOIR ET BLANC. Le degrade vert a saute avec le reste de la maquette.
+-- PLUS DE CIEL COLORE : l'ecran est en NOIR ET BLANC. Le fond reste blanc, avec un gris tres leger dans le bas --
+-- il pose le sol sous la rangee d'herbe sans dessiner de ligne.
 local sky = frame("Sky", root)
 sky.Size = UDim2.fromScale(1, 1)
 sky.Position = UDim2.fromScale(0, 0)
 sky.ZIndex = 1
+do
+	local grad = Instance.new("UIGradient")
+	grad.Rotation = 90 -- vertical : haut -> bas
+	grad.Color = ColorSequence.new({
+		ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255)),
+		ColorSequenceKeypoint.new(0.8372, Color3.fromRGB(249, 255, 250)),
+		ColorSequenceKeypoint.new(1, Color3.fromRGB(193, 193, 193)),
+	})
+	grad.Parent = sky
+end
 
 local tile = Instance.new("ImageLabel")
 tile.Name = "Tile"
@@ -615,75 +626,41 @@ place(shout, SHOUT_POS, SHOUT_SIZE)
 fadeGradient(shout)
 shout.Parent = root
 
--- MOT "LEAFIA", LETTRE PAR LETTRE.
---
--- UNE LETTRE = DEUX OBJETS : une CASE que le UIListLayout range, et la lettre qui bouge LIBREMENT dedans. Animer
--- directement ce qu'un layout positionne, c'est se battre contre lui a chaque image -- il repose la position, la
--- tween la reecrit, et le resultat depend de qui parle en dernier.
-local wordHolder = frame("Wordmark", root)
-wordHolder.BackgroundTransparency = 1
-wordHolder.ZIndex = 6
-place(wordHolder, WORD_POS, WORD_SIZE)
-do
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Horizontal
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	-- RESSERREMENT : un ecart NEGATIF rapproche les lettres jusqu'a se toucher. Recalcule avec l'ecran, puisqu'il est
-	-- donne en fraction de la hauteur du mot.
-	local function fitGap()
-		layout.Padding = UDim.new(0, wordHolder.AbsoluteSize.Y * WORD_KERNING)
-	end
-	fitGap()
-	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitGap)
-	layout.Parent = wordHolder
-end
-
+-- MOT "LEAFIA", LETTRE PAR LETTRE, chacune a sa place relevee.
 local letters: { TextLabel } = {}
 for i = 1, #TITLE_TEXT do
-	local cell = frame("Cell" .. i, wordHolder)
-	cell.BackgroundTransparency = 1
-	cell.LayoutOrder = i
-	cell.ZIndex = 6
-
-	local letter = text("Letter", cell, FONT_TITLE, WORD_COLOR)
+	local letter = text("Letter" .. i, root, FONT_TITLE, WORD_COLOR)
 	letter.Text = TITLE_TEXT:sub(i, i)
-	letter.AnchorPoint = Vector2.new(0.5, 0.5)
-	letter.ZIndex = 6
-	-- TEXTE A TAILLE FIXE, et c'est la LETTRE qui donne sa largeur a sa case (AutomaticSize). Avec TextScaled, c'est
-	-- l'inverse : il faut imposer une largeur, la meme pour toutes, et le "I" se retrouve avec autant d'air qu'un "A".
-	letter.TextScaled = false
-	letter.AutomaticSize = Enum.AutomaticSize.X
-	letter.Size = UDim2.fromScale(0, 1)
-	cell.AutomaticSize = Enum.AutomaticSize.X
-	cell.Size = UDim2.fromScale(0, 1)
+	letter.TextScaled = true
+	letter.ZIndex = 9
+	place(letter, Vector2.new(WORD_X[i] or 0.5, WORD_Y), WORD_SIZE)
 
-	-- LE CONTOUR NOIR, en fraction de la taille du texte : en pixels fixes il serait gras sur telephone et fin sur
-	-- grand ecran.
+	-- LE CONTOUR NOIR, en fraction de la HAUTEUR de la lettre : en pixels fixes il serait gras sur telephone et fin
+	-- sur grand ecran. `Contextual` suit le texte, pas la boite.
 	local stroke = Instance.new("UIStroke")
 	stroke.Color = INK
+	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = letter
-
-	local function fitText()
-		local size = math.max(wordHolder.AbsoluteSize.Y * WORD_TEXT_RATIO, 1)
-		letter.TextSize = size
-		stroke.Thickness = size * WORD_STROKE_RATIO
+	local function fitStroke()
+		stroke.Thickness = math.max(letter.AbsoluteSize.Y * WORD_STROKE_RATIO, 1)
 	end
-	fitText()
-	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitText)
+	fitStroke()
+	letter:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitStroke)
 
 	letters[i] = letter
 
-	-- ARRIVEE : la lettre monte de sous sa case en s'allumant, l'une apres l'autre.
+	-- ARRIVEE : la lettre monte d'en dessous en s'allumant, l'une apres l'autre. Sa place finale est SA place : on
+	-- part de plus bas, on y revient.
+	local home = letter.Position
+	local from = UDim2.new(home.X.Scale, home.X.Offset, home.Y.Scale + WORD_DROP, home.Y.Offset)
 	letter.TextTransparency = 1
 	stroke.Transparency = 1
-	letter.Position = UDim2.fromScale(0.5, 0.5 + WORD_DROP)
+	letter.Position = from
 	task.delay((i - 1) * WORD_STAGGER, function()
 		if not letter.Parent then
 			return
 		end
-		TweenService:Create(letter, WORD_IN, { Position = UDim2.fromScale(0.5, 0.5), TextTransparency = 0 }):Play()
+		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
 		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
 		-- VAGUE : chaque lettre monte et redescend en boucle, decalee de la precedente -- c'est ce DECALAGE qui fait
 		-- la vague. Lancee apres l'arrivee, sinon les deux tweens se disputent la meme position.
@@ -691,10 +668,11 @@ for i = 1, #TITLE_TEXT do
 			if not letter.Parent then
 				return
 			end
+			local up = UDim2.new(home.X.Scale, home.X.Offset, home.Y.Scale - WORD_WAVE, home.Y.Offset)
 			TweenService:Create(
 				letter,
 				TweenInfo.new(WORD_WAVE_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-				{ Position = UDim2.fromScale(0.5, 0.5 - WORD_WAVE) }
+				{ Position = up }
 			):Play()
 		end)
 	end)
@@ -704,7 +682,7 @@ end
 -- lettres, et le decalage entre elles fait glisser la lumiere de gauche a droite.
 task.spawn(function()
 	task.wait((#letters - 1) * WORD_STAGGER + WORD_IN.Time + WORD_SHINE_DELAY)
-	while wordHolder.Parent do
+	while root.Parent do
 		for i, letter in ipairs(letters) do
 			task.delay((i - 1) * WORD_SHINE_STAGGER, function()
 				if not letter.Parent then

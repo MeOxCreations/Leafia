@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.946 — Les lettres de LEAFIA sont posees a la place ou le joueur les a mises
+
+- Les lettres se CHEVAUCHAIENT : un `UIListLayout` avec un ecart NEGATIF etait cense les resserrer, il les a
+  empilees. Le layout disparait : chaque lettre est posee a sa position relevee (L 0.3777, E 0.4225, A 0.4808,
+  F 0.5371, I 0.5762, A 0.6215). Une lettre posee a sa place ne peut pas chevaucher sa voisine, et l'animation
+  devient plus simple -- chaque lettre bouge chez elle.
+- L'arrivee et la vague sont maintenant exprimees en fraction de la HAUTEUR D'ECRAN (0.06 et 0.012) : elles etaient
+  en fraction de la case, qui n'existe plus.
+- Le fond retrouve le degrade du releve : blanc, puis un gris tres leger dans le bas. Il pose le sol sous la rangee
+  d'herbe sans dessiner de ligne.
+
 ## 0.0.945 — Ecran de chargement en NOIR ET BLANC, avec la tondeuse qui tond la rangee d'herbe
 
 - Refait d'apres le nouveau montage du joueur (releve avec l'exportateur) : fond blanc, tout le dessin en noir, une
