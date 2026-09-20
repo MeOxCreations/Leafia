@@ -44,10 +44,10 @@ local BY_NAME = {
 	Plane = "Maps", -- le grand sol : il fait partie du decor
 }
 
--- Par CLASSE, pour ce qui n'a pas de nom stable.
+-- Par CLASSE, pour ce qui n'a pas de nom stable. Pas de `Model` ici, volontairement : un Model a la racine se nomme,
+-- il ne se devine pas.
 local BY_CLASS = {
 	Accessory = DEV, -- restes d'un avatar de test
-	Model = nil, -- volontairement absent : un Model a la racine se nomme, il ne se devine pas
 }
 
 local moves, kept, unknown = {}, {}, {}
@@ -90,12 +90,22 @@ local function destinationFor(child)
 	return target
 end
 
-for _, child in ipairs(workspace:GetChildren()) do
-	if KEEP[child.Name] then
+-- ON REGARDE AUSSI SOUS `Terrain`. Roblox accepte qu'on y parente des objets, et c'est la que finit par s'entasser
+-- tout ce qu'on pose "vite fait" -- personne ne va chercher un dossier de test sous le terrain. Rien n'a de raison
+-- d'y vivre : ce qui s'y trouve part dans Dev.
+local candidates = workspace:GetChildren()
+for _, child in ipairs(workspace.Terrain:GetChildren()) do
+	table.insert(candidates, child)
+end
+
+for _, child in ipairs(candidates) do
+	if KEEP[child.Name] and child.Parent == workspace then
 		table.insert(kept, child.Name)
 		continue
 	end
-	local target = destinationFor(child)
+	-- SOUS TERRAIN, tout part dans Dev, sauf ce que la liste des noms envoie ailleurs. Une part posee la n'est pas du
+	-- decor : c'est quelque chose qu'on a lache en travaillant.
+	local target = if child.Parent == workspace then destinationFor(child) else BY_NAME[child.Name] or DEV
 	if not target then
 		table.insert(unknown, `{child.Name} ({child.ClassName})`)
 		continue

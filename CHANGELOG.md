@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.937 — RangerWorkspace regarde aussi SOUS Terrain
+
+- L'apercu ne proposait que de deplacer `Plane` : le fourre-tout (`Default`, `Dev`, `Laptop`, `CurrencyRoot`, les
+  Baseplates) n'est pas a la racine du Workspace, il est parente SOUS `Terrain`. Roblox l'accepte, et personne ne va
+  chercher un dossier de test sous le terrain.
+- Le script balaye donc aussi les enfants de `Terrain`. Rien n'a de raison d'y vivre : ce qui s'y trouve part dans
+  `Dev`, sauf ce que la liste des noms envoie ailleurs.
+
 ## 0.0.936 — Les outils de Studio font le menage, et un nouveau range le Workspace
 
 - `scripts/studio/` : les treize anciens outils de diagnostic (rigs, animations, seaux, prompts, export des sons et
