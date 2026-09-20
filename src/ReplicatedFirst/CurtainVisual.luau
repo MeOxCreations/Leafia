@@ -110,7 +110,10 @@ local FACE_FRONT = FaceEyes.HEAD
 -- telephone garde la sienne, reglee a part et jugee bonne. `TouchEnabled` seul, comme SHOW_TILE.
 local FACE_PC_SCALE = 0.6
 local FACE_K = if UserInputService.TouchEnabled then 1 else FACE_PC_SCALE
-local FACE_SIZE = UDim2.fromScale(0.2365 * FACE_K, 0.229 * FACE_K)
+-- LE VISAGE EST LE SUJET DE L ECRAN : il porte le personnage, tout le reste n est que de l attente. Un facteur
+-- unique plutot que deux nombres retouches a la main -- les proportions de la tete ne bougent pas avec lui.
+local FACE_SCALE = 1.9
+local FACE_SIZE = UDim2.fromScale(0.2365 * FACE_K * FACE_SCALE, 0.229 * FACE_K * FACE_SCALE)
 -- IL SE DEPLIE EN ARRIVANT. Ecrase a plat sur la verticale, puis il s'ouvre en rebondissant.
 --
 -- `Elastic` en sortie : elle DEPASSE la taille visee puis oscille en s'amortissant -- c'est ce depassement qui fait
@@ -154,7 +157,7 @@ local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 -- Elle ne promet rien d'autre que "ca travaille", et c'est la seule chose qu'on sache.
 --
 -- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
-local SPIN_SIZE = 0.14
+local SPIN_SIZE = 0.06
 local SPIN_GAP = 0.03 -- espace entre le bas de la tete et le haut de la couronne
 -- SA PLACE SE CALCULE, elle ne s'ecrit pas : la tete n'a pas la meme taille sur telephone et sur PC (voir
 -- FACE_K), donc une valeur en dur la collerait au visage d'un cote et la laisserait flotter de l'autre.
