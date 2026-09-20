@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.950 — LEAFIA plus gros et plus serre
+
+- Taille des lettres : 0.179 -> 0.205 de la hauteur d'ecran.
+- Nouveau `WORD_SPREAD` (0.86) : chaque lettre est rapprochee du CENTRE du mot d'autant. Un seul chiffre pour
+  resserrer, sans decaler le mot ni retoucher six positions -- et 1 remet le releve tel quel.
+
 ## 0.0.949 — LEAFIA a enfin la taille du montage : 0.179 de hauteur d'ecran
 
 - Les lettres etaient trop petites, donc espacees. Leur taille passe de 0.13 a 0.179 de la hauteur d'ecran : la
