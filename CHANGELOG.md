@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.966 — Le grand-pere regarde autour de lui et fait des clins d'oeil
+
+Ecran de chargement. La tete est maintenant dessinee SANS ses yeux ; les yeux sont des calques a part, aux memes
+dimensions qu'elle, donc ils se superposent pile sans aucun chiffre a regler. Le regard se promene en decalant
+le cadre qui les porte, et un clignement sur trois devient un clin d'oeil, avec son son.
+
+Les deux boucles attendent que la tete soit visible avant de tourner : elles demarrent au chargement, bien
+avant que la derniere lettre ne la fasse sortir, et le son serait parti dans le vide.
+
+Autres sons ajoutes : une note par carte d'entreprise a l'ouverture de Load company (de plus en plus haute), le
+son d'arrivee sur la premiere lettre du titre, et un son quand l'ecran de chargement s'efface.
+
+### A faire dans Studio
+
+Rien. Les sons sont declares dans `SoundConfigs`, donc poses automatiquement dans les deux places.
+
 ## 0.0.965 — Le dernier A rebondit, et c'est lui qui fait sortir la tete et l'onomatopee
 
 Ecran de chargement. Le A final gonfle puis revient a sa taille, et c'est ce RETOUR qui declenche l'onomatopee

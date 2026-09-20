@@ -112,6 +112,7 @@ local SoundConfigs: { [string]: Entry } = {
 	["Sounds/Scenes/Voices/Oldman_scene_speech_Thishedge_needcut"] = { id = "rbxassetid://128358915165021" },
 	-- ===== INTERFACE =====
 	["Sounds/UI/AppearSound_1"] = { id = "rbxassetid://138424352985426", volume = 0.4 },
+	["Sounds/UI/EyeWinkSound"] = { id = "rbxassetid://124741549906304", volume = 0.5 },
 	["Sounds/UI/HoverButtonSound"] = { id = "rbxassetid://106419078545029", volume = 0.4 },
 	["Sounds/UI/NotificationSound"] = { id = "rbxassetid://116529150972106", volume = 0.4 },
 	["Sounds/UI/PassingSound"] = { id = "rbxassetid://136350943692482", volume = 0.4 },

@@ -365,17 +365,32 @@ local INK = Color3.fromRGB(0, 0, 0)
 
 -- LA TETE DU GRAND-PERE et l'ONOMATOPEE a cote d'elle. Toutes deux fondues vers le bas par un degrade (voir
 -- `fadeGradient`) : c'est ce qui leur donne leur gris, sans qu'aucune couleur n'entre dans l'ecran.
-local FACE_IMAGE = "rbxassetid://111069478991867"
--- CLIGNEMENT : on echange l'image. Deux suffisent (ouvert / ferme) ; l'etape "a moitie" est OPTIONNELLE -- laissee
--- vide, on passe direct d'ouvert a ferme. Avec elle, le clignement est plus doux (c'est ce que fait le rideau de
--- changement de map). VIDE partout = pas de clignement du tout.
-local FACE_HALF_IMAGE = ""
-local FACE_SHUT_IMAGE = "rbxassetid://92930536214559"
+local FACE_IMAGE = "rbxassetid://107162385671697" -- la tete SANS les yeux
+-- LES YEUX SONT DES CALQUES A PART, dessines aux MEMES DIMENSIONS que la tete : poses par-dessus en taille (1, 1),
+-- ils tombent pile en place, sans un seul chiffre a regler. Les faire regarder ailleurs revient alors a DECALER le
+-- calque -- et comme ils sont tous dans le meme cadre, ils ne peuvent pas se desaligner entre eux.
+local EYE_LEFT_IMAGE = "rbxassetid://125266353659377"
+local EYE_RIGHT_IMAGE = "rbxassetid://120096099223669"
+local EYE_SHUT_IMAGE = "rbxassetid://80743235106162" -- les deux fermes
+local EYE_WINK_IMAGE = "rbxassetid://103054129911820" -- l'oeil droit ferme : le clin d'oeil
+local WINK_SOUND = { "Sounds", "UI", "EyeWinkSound" }
+local WINK_SOUND_VOLUME = 0.6
+local WINK_CHANCE = 0.3 -- part des clignements qui sont un clin d'oeil. KNOB
 -- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 local FACE_BLINK_EVERY = 3.2
 local FACE_BLINK_JITTER = 2.4
-local FACE_BLINK_HALF_TIME = 0.05
 local FACE_BLINK_SHUT_TIME = 0.09
+local FACE_WINK_TIME = 0.18 -- un clin d'oeil se TIENT, il ne claque pas comme un clignement
+
+-- LE REGARD. Le cadre des yeux glisse de quelques pour cent seulement : au-dela, les pupilles sortiraient des
+-- paupieres dessinees sur la tete.
+local GAZE = {
+	X = 0.016, -- amplitude horizontale, en fraction de la tete. KNOB
+	Y = 0.007,
+	EVERY = 1.3, -- temps entre deux coups d'oeil
+	JITTER = 1.9,
+	TIME = 0.22, -- duree du deplacement
+}
 local FACE_POS = Vector2.new(0.5, 0.398)
 local FACE_SIZE = Vector2.new(0.1835, 0.2837)
 local SHOUT_IMAGE = "rbxassetid://84029477406959"
@@ -755,30 +770,105 @@ face.Size = UDim2.fromScale(1, 1)
 fadeGradient(face)
 face.Parent = faceGroup
 
--- LE CLIGNEMENT, en changeant d'image. Rien a faire tant que les deux variantes ne sont pas fournies : mieux vaut un
--- visage qui ne cligne pas qu'une image vide au milieu de l'ecran.
-if FACE_SHUT_IMAGE ~= "" then
-	task.spawn(function()
-		while face.Parent do
-			-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
-			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
-			if not face.Parent then
-				return
-			end
-			if FACE_HALF_IMAGE ~= "" then
-				face.Image = FACE_HALF_IMAGE
-				task.wait(FACE_BLINK_HALF_TIME)
-			end
-			face.Image = FACE_SHUT_IMAGE
-			task.wait(FACE_BLINK_SHUT_TIME)
-			if FACE_HALF_IMAGE ~= "" then
-				face.Image = FACE_HALF_IMAGE
-				task.wait(FACE_BLINK_HALF_TIME)
-			end
-			face.Image = FACE_IMAGE
-		end
-	end)
+-- LE CADRE DES YEUX : c'est LUI qu'on deplace pour le regard, jamais les calques un par un. Un seul objet a
+-- bouger, donc aucun risque qu'un oeil parte sans l'autre.
+local eyes = Instance.new("Frame")
+eyes.Name = "Eyes"
+eyes.BackgroundTransparency = 1
+eyes.AnchorPoint = Vector2.new(0.5, 0.5)
+eyes.Position = UDim2.fromScale(0.5, 0.5)
+eyes.Size = UDim2.fromScale(1, 1)
+eyes.ZIndex = 6
+eyes.Parent = faceGroup
+
+-- Chaque etat de l'oeil est un calque pleine taille, montre ou cache. Le fondu du montage est repose sur chacun :
+-- sans lui, les yeux resteraient pleins la ou la tete s'estompe, et on les verrait flotter devant elle.
+local function eyeLayer(name: string, image: string, shown: boolean): ImageLabel
+	local layer = Instance.new("ImageLabel")
+	layer.Name = name
+	layer.BackgroundTransparency = 1
+	layer.Image = image
+	layer.ImageColor3 = INK
+	layer.ScaleType = Enum.ScaleType.Stretch -- comme la tete, sinon les deux ne se superposent plus
+	layer.AnchorPoint = Vector2.new(0.5, 0.5)
+	layer.Position = UDim2.fromScale(0.5, 0.5)
+	layer.Size = UDim2.fromScale(1, 1)
+	layer.ZIndex = 6
+	layer.Visible = shown
+	fadeGradient(layer)
+	layer.Parent = eyes
+	return layer
 end
+
+local eyeLeft = eyeLayer("EyeLeft", EYE_LEFT_IMAGE, true)
+local eyeRight = eyeLayer("EyeRight", EYE_RIGHT_IMAGE, true)
+local eyesShut = eyeLayer("EyesShut", EYE_SHUT_IMAGE, false)
+local eyeWink = eyeLayer("EyeWink", EYE_WINK_IMAGE, false)
+
+-- TANT QUE LA TETE EST CACHEE, ON NE JOUE RIEN. Les boucles demarrent au chargement, bien avant que la derniere
+-- lettre ne fasse sortir le visage : sans cette attente, le son du clin d'oeil partirait dans le vide.
+local function waitForFace()
+	while faceGroup.Parent and faceGroup.GroupTransparency > 0.05 do
+		task.wait(0.2)
+	end
+	return faceGroup.Parent ~= nil
+end
+
+-- CLIGNEMENTS ET CLINS D'OEIL.
+task.spawn(function()
+	if not waitForFace() then
+		return
+	end
+	while eyes.Parent do
+		-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
+		task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
+		if not eyes.Parent then
+			return
+		end
+		if math.random() < WINK_CHANCE then
+			eyeRight.Visible = false
+			eyeWink.Visible = true
+			local cling = findSound(WINK_SOUND)
+			if cling then
+				playSound(cling, WINK_SOUND_VOLUME)
+			end
+			task.wait(FACE_WINK_TIME)
+			eyeWink.Visible = false
+			eyeRight.Visible = true
+		else
+			eyeLeft.Visible = false
+			eyeRight.Visible = false
+			eyesShut.Visible = true
+			task.wait(FACE_BLINK_SHUT_TIME)
+			eyesShut.Visible = false
+			eyeLeft.Visible = true
+			eyeRight.Visible = true
+		end
+	end
+end)
+
+-- LE REGARD QUI SE BALADE.
+task.spawn(function()
+	if not waitForFace() then
+		return
+	end
+	while eyes.Parent do
+		task.wait(GAZE.EVERY + math.random() * GAZE.JITTER)
+		if not eyes.Parent then
+			return
+		end
+		TweenService:Create(
+			eyes,
+			TweenInfo.new(GAZE.TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+			{
+				Position = UDim2.fromScale(
+					0.5 + (math.random() * 2 - 1) * GAZE.X,
+					0.5 + (math.random() * 2 - 1) * GAZE.Y
+				),
+			}
+		):Play()
+	end
+end)
 
 -- L'ONOMATOPEE (les trois eclats a cote de la tete). Elle apparait au debut de chaque passage de tondeuse : posee
 -- une fois pour toutes, elle ferait partie du decor et on ne la verrait plus.
