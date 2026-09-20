@@ -124,17 +124,20 @@ for _, child in ipairs(candidates) do
 	end
 end
 
--- Le vieux dossier fourre-tout, une fois vide, n'a plus de raison d'exister.
+-- ON APLATIT LES POUPEES RUSSES. `Default` contient un dossier `Dev`, qui contient le reste : deplace tel quel, ca
+-- donnerait Workspace.Dev.Default.Dev.<tout>. On remonte le contenu d'un cran tant qu'il reste une coquille, et on
+-- jette la coquille vide -- un dossier vide qui porte le nom du dossier parent n'aide personne.
 if not PREVIEW and dev then
-	local old = dev:FindFirstChild("Default")
-	if old and #old:GetChildren() > 0 then
-		for _, child in ipairs(old:GetChildren()) do
+	for _ = 1, 3 do -- trois tours suffisent : au-dela ce n'est plus une coquille, c'est un rangement voulu
+		local shell = dev:FindFirstChild("Default") or dev:FindFirstChild("Dev")
+		if not shell then
+			break
+		end
+		for _, child in ipairs(shell:GetChildren()) do
 			child.Parent = dev
 		end
-	end
-	if old and #old:GetChildren() == 0 then
-		old:Destroy()
-		table.insert(moves, "Default vide -> supprime")
+		table.insert(moves, `{shell.Name} vide -> supprime (son contenu remonte dans {DEV})`)
+		shell:Destroy()
 	end
 end
 

@@ -2204,6 +2204,12 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.938 — RangerWorkspace aplatit les dossiers gigognes
+
+- `Default` contient un dossier `Dev`, qui contient le reste : deplace tel quel, ca donnait
+  `Workspace.Dev.Default.Dev.<tout>`. Le script remonte le contenu d'un cran tant qu'il reste une coquille (trois
+  tours au plus), et jette la coquille vide.
+
 ## 0.0.937 — RangerWorkspace regarde aussi SOUS Terrain
 
 - L'apercu ne proposait que de deplacer `Plane` : le fourre-tout (`Default`, `Dev`, `Laptop`, `CurrencyRoot`, les
