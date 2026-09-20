@@ -575,6 +575,10 @@ local MOWER = {
 	SIZE = Vector2.new(0.1262, 0.17),
 	-- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
 	GROUND_Y = 1.0201,
+	-- DE COMBIEN ELLE REMONTE AU-DESSUS DE CE SOL. Un reglage a elle, et pas un sol abaisse : `GROUND_Y` est la
+	-- ligne que l'HERBE partage avec elle, la bouger deplacerait les deux. Sert a rattraper le vide que l'image
+	-- de la machine peut avoir sous ses roues.
+	LIFT = 0.02, -- KNOB
 	START_X = -0.12, -- hors ecran a gauche
 	END_X = 1.12, -- hors ecran a droite
 	TIME = 7, -- duree d'une traversee, en secondes. KNOB
@@ -1308,7 +1312,7 @@ mower.ImageColor3 = INK
 -- centre, la tondeuse s'enfoncerait ET se souleverait a chaque pas.
 mower.AnchorPoint = Vector2.new(0.5, 1)
 mower.Size = UDim2.fromScale(MOWER.SIZE.X, MOWER.SIZE.Y)
-mower.Position = UDim2.fromScale(MOWER.START_X, MOWER.GROUND_Y)
+mower.Position = UDim2.fromScale(MOWER.START_X, MOWER.GROUND_Y - MOWER.LIFT)
 -- BIEN AU-DESSUS DE L'HERBE : la machine passe DEVANT les touffes, sinon elle a l'air de rouler derriere elles.
 -- Large exprès (l'herbe est a 7) : un ecart d'un seul cran se perd des qu'un autre element s'intercale.
 mower.ZIndex = 12
@@ -1346,7 +1350,7 @@ task.spawn(function()
 		mowConn = RunService.Heartbeat:Connect(function(dt: number)
 			travelled += dt / MOWER.TIME
 			local pos = MOWER.START_X + (MOWER.END_X - MOWER.START_X) * math.min(travelled, 1)
-			mower.Position = UDim2.fromScale(pos, MOWER.GROUND_Y)
+			mower.Position = UDim2.fromScale(pos, MOWER.GROUND_Y - MOWER.LIFT)
 			for _, blade in blades do
 				if not blade.cut and pos + MOWER.SIZE.X / 2 + GRASS_CUT_LEAD >= blade.x then
 					blade.cut = true
