@@ -376,7 +376,11 @@ local EYE = {
 	WINK = "rbxassetid://103054129911820", -- l'oeil droit ferme : le clin d'oeil
 	SOUND = { "Sounds", "UI", "EyeWinkSound" },
 	SOUND_VOLUME = 0.6,
-	WINK_CHANCE = 0.3, -- part des clignements qui sont un clin d'oeil. KNOB
+	WINK_CHANCE = 0.4, -- part des clignements SUIVANTS qui sont un clin d'oeil. KNOB
+	-- LE PREMIER GESTE EST TOUJOURS UN CLIN D'OEIL, et il arrive vite. Laisse au hasard, il tombait une fois sur
+	-- trois toutes les 4 s : sur un chargement de dix secondes, on ne le voyait quasiment jamais. Un geste qui
+	-- porte le caractere du personnage ne se joue pas aux des.
+	FIRST_DELAY = 0.7,
 	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 	BLINK_EVERY = 3.2,
 	BLINK_JITTER = 2.4,
@@ -825,13 +829,16 @@ task.spawn(function()
 	if not waitForFace() then
 		return
 	end
+	local firstGesture = true
 	while eyes.Parent do
 		-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
-		task.wait(EYE.BLINK_EVERY + math.random() * EYE.BLINK_JITTER)
+		task.wait(if firstGesture then EYE.FIRST_DELAY else EYE.BLINK_EVERY + math.random() * EYE.BLINK_JITTER)
 		if not eyes.Parent then
 			return
 		end
-		if math.random() < EYE.WINK_CHANCE then
+		local doWink = firstGesture or math.random() < EYE.WINK_CHANCE
+		firstGesture = false
+		if doWink then
 			eyeLayers.right.Visible = false
 			eyeLayers.wink.Visible = true
 			local cling = findSound(EYE.SOUND)
