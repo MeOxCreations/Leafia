@@ -847,11 +847,23 @@ eyeLayers.wink.Position = UDim2.fromScale(0.5 + EYE.SPREAD, 0.5)
 
 -- LES DEUX CALQUES CACHES SE TELECHARGENT D'AVANCE. Une image ne part se charger que lorsqu'on l'AFFICHE : celles
 -- du clignement et du clin d'oeil ne se montrent que deux dixiemes de seconde, donc elles n'avaient jamais le
--- temps d'arriver -- l'oeil disparaissait au lieu de se fermer, et rien ne le signalait. En tache de fond : un
--- PreloadAsync bloque son thread jusqu'a ce que tout soit la.
+-- temps d'arriver. En tache de fond : un PreloadAsync bloque son thread jusqu'a ce que tout soit la.
+--
+-- ON PRECHARGE LES QUATRE, y compris les deux qui s'affichent deja : sans TEMOIN, un echec ne se distingue pas
+-- d'une lenteur. Le rappel donne le statut REEL de chaque image (Success / Failure / TimedOut), seule facon de
+-- savoir si un asset est refuse plutot que juste lent.
 task.spawn(function()
 	pcall(function()
-		ContentProvider:PreloadAsync({ eyeLayers.shut, eyeLayers.wink })
+		ContentProvider:PreloadAsync({
+			eyeLayers.left,
+			eyeLayers.right,
+			eyeLayers.shut,
+			eyeLayers.wink,
+		}, function(contentId: string, status: Enum.AssetFetchStatus)
+			if EYE.DEBUG then
+				print(`[Loading] image {contentId} : {status.Name}`)
+			end
+		end)
 	end)
 end)
 
