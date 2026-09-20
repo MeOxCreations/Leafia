@@ -529,6 +529,9 @@ local GRASS_WIPE_FLIP = false
 -- LA COUPE PART QUAND LE NEZ DE LA MACHINE ARRIVE, PAS QUAND SON CENTRE EST DESSUS. `pos` est le CENTRE de la
 -- tondeuse : tester la touffe contre lui laissait la machine rouler sur une demi-largeur d'herbe encore debout.
 -- La demi-largeur se CALCULE (elle suit la taille de la tondeuse) ; le seul reglage est l'avance en plus.
+-- GRISE, PAS NOIRE : en noir plein la rangee pese autant que la tondeuse et le mot, et le bas de l'ecran tire
+-- l'oeil vers le decor au lieu du titre.
+local GRASS_COLOR = Color3.fromRGB(158, 158, 158)
 local GRASS_CUT_LEAD = 0.02 -- de combien la touffe se couche AVANT le nez, en fraction d'ecran. KNOB
 
 -- L'HERBE REPOUSSE DERRIERE LA TONDEUSE, et la tondeuse repasse : le bas de l'ecran tourne en boucle tant que ca
@@ -909,7 +912,7 @@ while x < 1 + GRASS_STEP do
 	blade.Name = "Grass"
 	blade.BackgroundTransparency = 1
 	blade.Image = GRASS_IMAGE
-	blade.ImageColor3 = INK
+	blade.ImageColor3 = GRASS_COLOR
 	-- ANCREE PAR LE BAS : une touffe qui repousse sort de TERRE. Ancree au centre, elle grandirait aussi vers le bas,
 	-- donc elle s'enfoncerait dans le sol en meme temps qu'elle pousse.
 	blade.AnchorPoint = Vector2.new(0.5, 1)
