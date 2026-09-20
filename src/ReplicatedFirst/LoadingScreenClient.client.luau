@@ -376,10 +376,14 @@ local EYE = {
 	WINK = "rbxassetid://103054129911820", -- l'oeil droit ferme : le clin d'oeil
 	SOUND = { "Sounds", "UI", "EyeWinkSound" },
 	SOUND_VOLUME = 0.6,
-	-- LE CLIN D'OEIL EST UN MOMENT ECRIT, PAS UN HASARD : il tombe a la FIN du son d'arrivee. Tire au sort parmi
-	-- les clignements, il n'arrivait quasiment jamais avant la fin du chargement, et jamais deux fois au meme
-	-- endroit du son. Ce delai n'est qu'un FILET, pour le cas ou ce son serait introuvable.
-	FALLBACK_DELAY = 4,
+	-- LE CLIN D'OEIL EST UN MOMENT ECRIT, PAS UN HASARD : il tombe a la FIN du son d'arrivee.
+	--
+	-- MAIS IL NE PEUT PAS DEPENDRE DE CE SON SEUL. `Ended` ne tire pas si le son n'a pas pu se telecharger, et
+	-- s'il dure plus longtemps que le chargement il tire APRES la destruction de l'ecran -- dans les deux cas, le
+	-- geste n'arrive jamais. Ce delai est donc une LIMITE : passe ce temps apres l'apparition de la tete, le clin
+	-- d'oeil se joue de toute facon.
+	WINK_DEADLINE = 2.5,
+	DEBUG = true, -- une ligne en console qui dit CE QUI a declenche le clin d'oeil. A repasser a false ensuite.
 	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 	BLINK_EVERY = 3.2,
 	BLINK_JITTER = 2.4,
@@ -826,12 +830,22 @@ end
 -- LE CLIN D'OEIL, appele du dehors (la fin du son d'arrivee). Le drapeau evite qu'il se croise avec un
 -- clignement : les deux ecrivent les memes calques, et celui qui finit en dernier gagnerait.
 local eyesBusy = false
-local function winkOnce()
-	if eyesBusy or not eyes.Parent then
+local winkDone = false
+local function winkOnce(reason: string)
+	-- UNE SEULE FOIS, quel que soit le nombre de declencheurs : la fin du son et la limite de temps peuvent tres
+	-- bien tomber toutes les deux.
+	if winkDone or eyesBusy or not eyes.Parent then
 		return
 	end
 	if not waitForFace() then -- le son peut finir avant que la tete soit sortie
 		return
+	end
+	if winkDone or not eyes.Parent then -- l'attente ci-dessus a pu durer : on reteste
+		return
+	end
+	winkDone = true
+	if EYE.DEBUG then
+		print(`[Loading] clin d'oeil : {reason}`)
 	end
 	eyesBusy = true
 	eyeLayers.right.Visible = false
@@ -1032,12 +1046,18 @@ for i = 1, #TITLE_TEXT do
 				-- LE CLIN D'OEIL TOMBE SUR LA DERNIERE NOTE. Branche sur `Ended` et pas sur une duree recopiee :
 				-- si le son change de longueur, le geste reste colle a sa fin.
 				playing.Ended:Once(function()
-					task.spawn(winkOnce)
+					task.spawn(winkOnce, "fin du son")
 				end)
-			else
-				-- Filet : pas de son pose, on joue quand meme le geste.
-				task.delay(EYE.FALLBACK_DELAY, winkOnce)
+				if EYE.DEBUG then
+					print(`[Loading] son d'arrivee joue, duree connue = {playing.TimeLength}`)
+				end
+			elseif EYE.DEBUG then
+				print("[Loading] son d'arrivee INTROUVABLE sous SoundService")
 			end
+			-- LA LIMITE, dans tous les cas : le geste doit se voir, meme si le son ne finit jamais.
+			task.delay(EYE.WINK_DEADLINE, function()
+				winkOnce("limite de temps")
+			end)
 		end
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
