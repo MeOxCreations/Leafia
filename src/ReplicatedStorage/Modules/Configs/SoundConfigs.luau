@@ -50,6 +50,7 @@ local SoundConfigs: { [string]: Entry } = {
 	["Sounds/Game/GlobalSounds/CloseMailboxSound"] = { id = "rbxassetid://116996075824435" },
 	["Sounds/Game/GlobalSounds/DropSound"] = { id = "rbxassetid://101141177714787" },
 	["Sounds/Game/GlobalSounds/JoinSound"] = { id = "rbxassetid://103716524346544" },
+	["Sounds/Game/GlobalSounds/JoinSound2"] = { id = "rbxassetid://101938307719705" },
 	["Sounds/Game/GlobalSounds/OpenDoorTruckSound"] = { id = "rbxassetid://131610185149540" },
 	["Sounds/Game/GlobalSounds/OpenMailboxSound"] = { id = "rbxassetid://76627983706798" },
 	-- ===== MUSIQUES DU MODE BUILD =====

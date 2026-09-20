@@ -468,6 +468,10 @@ local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 -- par-dessus. Il etait declare dans SoundConfigs et n'avait jamais ete joue nulle part.
 local JOIN_SOUND = { "Sounds", "Game", "GlobalSounds", "JoinSound" }
 local JOIN_SOUND_VOLUME = 0.55
+-- LA SUITE DU PREMIER : elle part quand il FINIT. Branchee sur `Ended` et pas sur un delai, elle reste collee a
+-- lui meme si le son change de longueur.
+local JOIN_TAIL_SOUND = { "Sounds", "Game", "GlobalSounds", "JoinSound2" }
+local JOIN_TAIL_VOLUME = 0.55
 local LETTER_SOUND = { "Sounds", "UI", "PopSound_1" }
 local LETTER_SOUND_VOLUME = 0.25
 local LETTER_SOUND_PITCH = 0.9 -- hauteur de la 1re lettre
@@ -910,7 +914,17 @@ for i = 1, #TITLE_TEXT do
 		if i == 1 then
 			local welcome = findSound(JOIN_SOUND)
 			if welcome then
-				playSound(welcome, JOIN_SOUND_VOLUME)
+				local playing = playSound(welcome, JOIN_SOUND_VOLUME)
+				playing.Ended:Once(function()
+					-- Si l'ecran est deja parti, on ne lance rien : le chargement etait plus court que le son.
+					if not root.Parent then
+						return
+					end
+					local tail = findSound(JOIN_TAIL_SOUND)
+					if tail then
+						playSound(tail, JOIN_TAIL_VOLUME)
+					end
+				end)
 			end
 		end
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
