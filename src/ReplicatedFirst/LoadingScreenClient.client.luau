@@ -397,11 +397,6 @@ local EYE = {
 	BLINK_JITTER = 2.4,
 	SHUT_TIME = 0.09,
 	WINK_TIME = 0.18, -- un clin d'oeil se TIENT, il ne claque pas comme un clignement
-	-- LE SON ANNONCE, L'OEIL SE FERME SUR SA DERNIERE NOTE. On attend donc la duree du son avant de fermer. Cette
-	-- duree n'est connue qu'une fois le son telecharge (`TimeLength` vaut 0 avant) : on la laisse arriver, et on
-	-- retombe sur une valeur de secours si elle ne vient pas -- sinon le geste partirait instantanement.
-	CLING_FALLBACK = 0.5,
-	CLING_OFFSET = -0.05, -- avance (negatif) ou retard sur la derniere note. KNOB, a caler a l'oreille
 	-- LA TETE PENCHE PENDANT LE CLIN D'OEIL. L'inclinaison part AVEC le son et se redresse apres : la tete
 	-- accompagne le geste au lieu de le subir. Sur le GROUPE et non sur l'image : le CanvasGroup tourne son rendu
 	-- entier, donc rien n'est rogne aux coins.
@@ -913,23 +908,13 @@ local function winkOnce()
 	end
 	winkDone = true
 	eyesBusy = true
-	-- LE SON D'ABORD, L'OEIL ENSUITE : il se ferme sur le "cling" final, pas a l'attaque.
+	-- TOUT SUR LA MEME IMAGE : le son, l'oeil qui se ferme, la tete qui penche. Le son a d'abord ete lance en
+	-- avance pour que l'oeil tombe sur sa derniere note -- il partait alors une demi-seconde avant le geste, et
+	-- les trois ne se lisaient plus comme un seul mouvement.
 	local cling = findSound(EYE.SOUND)
 	if cling then
-		local playing = playSound(cling, EYE.SOUND_VOLUME)
-		local deadline = os.clock() + 1
-		while playing.TimeLength <= 0 and os.clock() < deadline do
-			task.wait(0.05)
-		end
-		local length = if playing.TimeLength > 0 then playing.TimeLength else EYE.CLING_FALLBACK
-		task.wait(math.max(length + EYE.CLING_OFFSET, 0))
-		if not eyes.Parent then
-			eyesBusy = false
-			return
-		end
+		playSound(cling, EYE.SOUND_VOLUME)
 	end
-	-- TOUT TOMBE SUR LA MEME IMAGE : l'oeil se ferme et la tete penche ensemble. Penchee des l'attaque du son,
-	-- elle bougeait une demi-seconde avant le geste, et les deux ne se lisaient plus comme un seul mouvement.
 	eyeLayers.right.Visible = false
 	eyeLayers.wink.Visible = true
 	TweenService:Create(
