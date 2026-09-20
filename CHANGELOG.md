@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.936 — Les outils de Studio font le menage, et un nouveau range le Workspace
+
+- `scripts/studio/` : les treize anciens outils de diagnostic (rigs, animations, seaux, prompts, export des sons et
+  de l'interface) sont retires -- ils avaient fait leur travail. Le dossier reste, avec un `README.md` qui dit a quoi
+  il sert et comment ressortir un ancien outil de l'historique git (rien n'est perdu).
+- Nouveau `scripts/studio/RangerWorkspace.lua` : cree les dossiers attendus et deplace ce qui traine A LA RACINE du
+  Workspace (Default, Dev, Particles, Laptop, CurrencyRoot, Baseplate, les accessoires d'avatar de test -> Dev ;
+  Plane et les parts nues -> Worlds.Maps).
+- IL COMMENCE EN APERCU : il imprime ce qu'il ferait sans rien toucher. `PREVIEW = false` pour appliquer.
+- IL NE DEVINE RIEN : ce qu'il ne connait pas, il le laisse et le NOMME a la fin. Un objet range au hasard est pire
+  qu'un objet mal range.
+- Il ne touche JAMAIS au contenu de `Worlds` : `HedgeConfigs.AUTO_TAG_ROOT` et `GrassZoneConfigs.ROOT` valent
+  `Worlds.Maps`, et quatre modules lisent `Worlds.Plots`. Deplacer ces dossiers casserait tout en silence.
+
 ## 0.0.935 — ROADMAP : une etape de menage, apres que le jeu tienne debout
 
 - `ROADMAP.md` gagne une etape 5 "menage" : ranger les modules en DOSSIERS par feature (Client/Hedge, Client/Build,
