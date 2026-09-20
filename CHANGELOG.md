@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.930 — Un grand-pere pose sur chaque plot du hub
+
+- Nouveau `PlotOldmanController` (client, hub uniquement) : il copie
+  `ReplicatedStorage.Assets.Contents.OldmanOriginal` sur la part `PointSpawnOldman` de chaque plot
+  (`Workspace.Worlds.Plots.SlotX`), et joue sa boucle d'ambiance sur place.
+- 100 % CLIENT : le serveur n'envoie rien et ne simule rien, cinq grands-peres ne coutent pas un octet de reseau.
+  Consequence : `AmbientAnimService` (serveur) ne voit pas ces copies, donc l'animation est jouee ici, avec l'ID
+  declare dans `AmbientAnimConfigs` -- une seule declaration pour tout le jeu.
+- Depart au hasard dans la boucle et vitesse legerement differente pour chacun : cinq PNJ qui respirent a la meme
+  image se lisent comme du faux.
+- Les copies vivent dans un dossier `LeafiaLocalNpcs` a la racine du Workspace, pas sous le plot : un objet range
+  sous un modele que le streaming decharge part avec lui, et il ne reviendrait jamais.
+- Re-scan pendant 60 s (chaque passe est instantanee) : sur mobile, un plot peut arriver bien apres le spawn.
+- A FAIRE DANS STUDIO : une part `PointSpawnOldman` par plot (deja posee sur Slot1, Slot2 et Slot5), et le modele
+  `OldmanOriginal` dans `ReplicatedStorage.Assets.Contents` (Rojo ne synchronise pas Assets).
+
 ## 0.0.929 — Pastilles de commandes entieres, et l'ombre sur tout l'ecran de chargement des saves
 
 - `AdminCommandController` : les pastilles de suggestion etaient rognees en haut et en bas. Leur bande est plus

@@ -283,6 +283,11 @@ MailboxController.init()
 local PlotSelectController = require(script.PlotSelectController)
 PlotSelectController.init()
 
+-- Le grand-pere pose sur chaque plot (une copie locale par PointSpawnOldman). HUB SEULEMENT : le didacticiel a le
+-- sien, pose dans sa map. Ordre indifferent : il cherche ses points en tache de fond.
+local PlotOldmanController = require(script.PlotOldmanController)
+PlotOldmanController.init()
+
 -- Mode BUILD (amenagement du plot facon Sims). Increment 1 : entrer / sortir + quadrillage au sol. Ordre indifferent :
 -- il lit l'attribut de plot au moment d'entrer, il ne depend d'aucun autre controller au boot.
 local BuildController = require(script.BuildController)
