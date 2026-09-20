@@ -492,7 +492,11 @@ local GRASS_IMAGE = "rbxassetid://90924932701080"
 local GRASS_SIZE = Vector2.new(0.052, 0.08)
 -- LA LIGNE DE SOL : c'est le BAS des touffes, pas leur centre. Posee ainsi, changer leur hauteur ne les fait plus
 -- monter ni s'enfoncer -- elles poussent depuis le meme sol quelle que soit leur taille.
-local GRASS_BASE_Y = 1.0647
+--
+-- ELLE VAUT CELLE DE LA TONDEUSE : les deux roulent sur le meme sol. Elle etait a 1.0647, valeur qui venait du bas
+-- des ANCIENNES touffes (deux fois plus hautes) : gardee telle quelle avec des touffes courtes, elle n'en laissait
+-- depasser qu'un centieme d'ecran, le reste passait sous le bord. Un repere herite d'une taille qui a change.
+local GRASS_BASE_Y = MOWER_GROUND_Y
 local GRASS_START_X = 0.013 -- centre de la premiere touffe
 local GRASS_STEP = 0.026 -- ecart entre deux touffes
 local GRASS_CUT = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- vitesse de la coupe

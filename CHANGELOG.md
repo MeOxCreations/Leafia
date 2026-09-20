@@ -2204,6 +2204,11 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.960 — L'herbe du chargement redevient visible
+
+Les touffes reduites passaient sous le bord de l'ecran : leur ligne de sol venait du bas des ANCIENNES touffes,
+deux fois plus hautes. Elle vaut maintenant celle de la tondeuse, qui roule sur le meme sol.
+
 ## 0.0.959 — Une vraie pelouse sous la tondeuse, au lieu d'une rangee de buissons
 
 Ecran de chargement. Les touffes sont deux fois plus fines et trois fois plus nombreuses : le bas de l'ecran
