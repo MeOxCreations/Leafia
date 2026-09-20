@@ -125,7 +125,12 @@ if TeleportService:GetLocalPlayerTeleportData() ~= nil or game.PlaceId ~= MAIN_P
 	-- Duree du rideau, comptee A PARTIR DE L'ARRIVEE DU PERSONNAGE et non du chargement du jeu. Un plancher qui
 	-- part d'un autre instant que l'evenement qu'il doit couvrir ne garantit rien : a 1.4 s depuis `game:IsLoaded`,
 	-- le rideau disparaissait avant meme que le joueur soit pose, et on ne le voyait pas.
-	local MIN_ARRIVAL = 10
+	--
+	-- PLUS COURT DANS LE DIDACTICIEL. Ce plancher couvre le temps que le monde finisse d'arriver autour du joueur ;
+	-- le didacticiel est une petite carte, presque tout est deja la quand le personnage se pose, et dix secondes
+	-- d'attente devant un rideau sont dix secondes ou le joueur se demande si le jeu a plante. Ailleurs on garde la
+	-- marge : c'est le seul endroit ou une place a ete MESUREE comme legere.
+	local MIN_ARRIVAL = if game.PlaceId == TUTORIAL_PLACE_ID then 3.5 else 10
 
 	-- ===== VOLET DE SORTIE =====
 	-- Un aplat BLANC balaie l'ecran, on detruit le rideau PENDANT qu'il couvre, puis le blanc s'en va en balayant
