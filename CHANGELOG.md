@@ -2204,6 +2204,17 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.934 — Console admin : au milieu de l'ecran sur PC, et deplacable par son titre
+
+- `AdminCommandController` : sur PC la console s'ouvre au CENTRE de l'ecran. Collee en haut, elle recouvrait le HUD
+  et l'oeil devait la chercher. Sur tactile, rien ne change (a gauche, le clavier du jeu a droite).
+- On la DEPLACE en tenant sa barre de titre, souris ou doigt. Pas le champ ni les suggestions : un panneau qui bouge
+  quand on veut taper dedans est insupportable.
+- Deplacement par ECARTS au point de depart (aucune conversion curseur -> interface), en bougeant les OFFSETS de sa
+  position : ca marche quel que soit son ancrage (centre sur PC, coin sur tactile). Bornee a l'ecran, sinon une
+  console lachee dehors serait perdue pour de bon. Lachee aussi a l'ouverture du menu Roblox.
+- Sa place n'est gardee que pour la session, comme la roue.
+
 ## 0.0.933 — Mode build sur PC : monter et descendre au clavier inclinent la vue comme le zoom
 
 - `BuildController.keyboardPan` : E (descendre) et Q (monter) suivent maintenant la MEME courbe que le zoom -- bas =

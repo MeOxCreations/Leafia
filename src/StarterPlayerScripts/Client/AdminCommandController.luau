@@ -348,8 +348,9 @@ local function build()
 	local panel = create("Frame", {
 		Name = "Panel",
 		BackgroundColor3 = PANEL_BG,
-		AnchorPoint = if IS_TOUCH then Vector2.new(0, 0) else Vector2.new(0.5, 0),
-		Position = if IS_TOUCH then UDim2.new(0.02, 0, 0, topY) else UDim2.fromScale(0.5, 0.06),
+		-- PC : en PLEIN MILIEU de l'ecran. Collee en haut, elle recouvrait le HUD, et l'oeil devait la chercher.
+		AnchorPoint = if IS_TOUCH then Vector2.new(0, 0) else Vector2.new(0.5, 0.5),
+		Position = if IS_TOUCH then UDim2.new(0.02, 0, 0, topY) else UDim2.fromScale(0.5, 0.5),
 		Size = UDim2.fromScale(if IS_TOUCH then 0.47 else 0.94, 0),
 		AutomaticSize = Enum.AutomaticSize.Y,
 		Children = {
@@ -402,6 +403,75 @@ local function build()
 	}) :: TextButton
 	close.Parent = titleRow
 	titleRow.Parent = panel
+
+	-- ON DEPLACE LA CONSOLE PAR SON TITRE, pas par n'importe ou : le champ, les suggestions et le resultat ont deja
+	-- leur usage, et un panneau qui bouge quand on veut taper dedans est insupportable.
+	--
+	-- On ne lit que des ECARTS au point de depart, jamais une position de curseur convertie en position d'interface :
+	-- cette conversion est un pari sur les insets, et il se perd (journal de CLAUDE.md).
+	titleRow.Active = true -- sans ca, un Frame ne recoit pas les appuis
+	local dragHeld: InputObject? = nil
+	local dragFrom = Vector2.zero -- point de depart du curseur / doigt
+	local dragAbs = Vector2.zero -- position du panneau a l'ecran a la prise
+	local dragOffset = Vector2.zero -- les offsets de sa Position a la prise (on garde ses scales, donc son ancrage)
+
+	local function dragTo(position: Vector3)
+		local delta = Vector2.new(position.X, position.Y) - dragFrom
+		local target = dragAbs + delta
+		-- BORNEE A L'ECRAN : une console lachee dehors serait perdue pour de bon.
+		local origin, area, size = sg.AbsolutePosition, sg.AbsoluteSize, panel.AbsoluteSize
+		target = Vector2.new(
+			math.clamp(target.X, origin.X, origin.X + math.max(area.X - size.X, 0)),
+			math.clamp(target.Y, origin.Y, origin.Y + math.max(area.Y - size.Y, 0))
+		)
+		-- Deplacer les OFFSETS bouge le panneau au pixel pres, quel que soit son ancrage (centre sur PC, coin sur
+		-- tactile) : ses scales, eux, ne bougent pas.
+		local moved = dragOffset + (target - dragAbs)
+		local current = panel.Position
+		panel.Position = UDim2.new(current.X.Scale, moved.X, current.Y.Scale, moved.Y)
+	end
+
+	titleRow.InputBegan:Connect(function(input: InputObject)
+		if dragHeld or input.UserInputState ~= Enum.UserInputState.Begin then
+			return
+		end
+		local kind = input.UserInputType
+		if kind ~= Enum.UserInputType.Touch and kind ~= Enum.UserInputType.MouseButton1 then
+			return
+		end
+		dragHeld = input
+		dragFrom = Vector2.new(input.Position.X, input.Position.Y)
+		dragAbs = panel.AbsolutePosition
+		dragOffset = Vector2.new(panel.Position.X.Offset, panel.Position.Y.Offset)
+	end)
+	-- TouchMoved / TouchEnded pour le doigt, InputChanged / InputEnded pour la souris : seuls les premiers tirent de
+	-- facon fiable pour un geste commence SUR un element.
+	UserInputService.TouchMoved:Connect(function(touch: InputObject)
+		if touch == dragHeld then
+			dragTo(touch.Position)
+		end
+	end)
+	UserInputService.InputChanged:Connect(function(input: InputObject)
+		local held = dragHeld
+		if held and held.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement then
+			dragTo(input.Position)
+		end
+	end)
+	local function dropPanel()
+		dragHeld = nil
+	end
+	UserInputService.TouchEnded:Connect(function(touch: InputObject)
+		if touch == dragHeld then
+			dropPanel()
+		end
+	end)
+	UserInputService.InputEnded:Connect(function(input: InputObject)
+		if dragHeld and input.UserInputType == Enum.UserInputType.MouseButton1 then
+			dropPanel()
+		end
+	end)
+	-- Le menu Roblox vole le doigt : son toucher ne se termine alors JAMAIS, et la console resterait accrochee.
+	GuiService.MenuOpened:Connect(dropPanel)
 
 	local inputRow = create("Frame", {
 		Name = "InputRow",
