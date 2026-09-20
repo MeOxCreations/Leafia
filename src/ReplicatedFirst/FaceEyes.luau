@@ -43,10 +43,10 @@ local BLINK_SHUT_TIME = 0.09
 local WINK_TIME = 0.18 -- un clin d oeil se TIENT, il ne claque pas comme un clignement
 
 -- LE REGARD.
-local GAZE_X = 0.032 -- amplitude horizontale, en fraction de la tete
-local GAZE_Y = 0.014
+local GAZE_X = 0.016 -- amplitude horizontale, en fraction de la tete
+local GAZE_Y = 0.007
 local GAZE_UP_CHANCE = 0.4 -- part des coups d oeil qui montent
-local GAZE_UP_Y = 0.028 -- de combien il leve les yeux. Trop haut, les pupilles sortent des paupieres dessinees
+local GAZE_UP_Y = 0.015 -- de combien il leve les yeux. Trop haut, les pupilles sortent des paupieres dessinees
 local GAZE_EVERY = 1.3
 local GAZE_JITTER = 1.9
 local GAZE_TIME = 0.22
