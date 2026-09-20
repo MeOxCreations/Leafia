@@ -385,7 +385,7 @@ local EYE = {
 	-- LE MOMENT SE COMPTE DEPUIS LA TETE, pas depuis un son. Accroche a la fin du son d'arrivee (5,7 s), le geste
 	-- tombait tout a la fin du chargement ou pas du tout. La tete sort avec la derniere lettre : deux secondes
 	-- plus tard, le regard du joueur est dessus et le clin d'oeil se lit.
-	AFTER_FACE = 2, -- KNOB
+	AFTER_FACE = 0.35, -- KNOB. Juste assez pour que la tete ait fini de sortir, pas plus.
 	-- A REMETTRE A `true` pour revoir le statut de chargement des images en console.
 	--
 	-- ATTENTION A `ImageLabel.IsLoaded` : elle reste FAUSSE tant que l'image n'a jamais ete DESSINEE, meme quand
