@@ -381,6 +381,30 @@ local SHOUT_POP = 0.15 -- taille de depart (fraction de sa taille) : elle part d
 local SHOUT_TILT = 22 -- degres de plus au depart : elle se redresse en arrivant, ca la rend vivante
 -- Back = elle depasse sa taille puis revient : c'est ce depassement qui fait le cote dessin anime.
 local SHOUT_IN = TweenInfo.new(0.55, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+-- ELLE NE RESTE PAS. Un eclat d'onomatopee qui s'installe devient un element de decor : il doit jaillir et partir.
+local SHOUT_HOLD = 0.1 -- temps d'affichage une fois arrivee
+local SHOUT_OUT = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local SHOUT_OUT_GROW = 1.25 -- elle grossit en s'effacant : ca se lit comme un eclat qui se dissipe
+
+-- LA TETE ARRIVE AVEC UNE LETTRE, elle n'est pas la depuis le debut. Elle se devoile DU BAS VERS LE HAUT et
+-- s'etire en arrivant.
+--
+-- ELLE PORTE DEJA un UIGradient (le fondu du montage) et Roblox n'en applique QU'UN par objet : la revelation
+-- passe donc par un CanvasGroup pose autour d'elle, qui porte le second. Le groupe fait exactement la taille de la
+-- tete -- un CanvasGroup CLIPPE ce qui depasse, et c'est deja ce qui avait fait disparaitre les feuillages ici.
+local FACE_REVEAL = {
+	LETTER = 2, -- le "E" de LEAFIA
+	TIME = 0.5,
+	-- DEPART ECRASE. La tete est en `ScaleType = Fit` : elle garde ses proportions, donc elle ne s'ETIRE pas, elle
+	-- grandit. Le SQUASH_X ne sert qu'a garder la case plus large que haute pour que Fit se cale sur la HAUTEUR.
+	-- Pour un vrai etirement facon slime il faudrait la passer en `Stretch`, au prix d'une deformation permanente
+	-- si la case n'est pas au ratio de l'image.
+	SQUASH_X = 1.14,
+	SQUASH_Y = 0.45,
+	EDGE = 0.3, -- douceur de la limite de revelation
+	-- LE SENS D'UN OFFSET NE SE DEDUIT PAS : si elle se devoile du haut vers le bas, passer a true.
+	FLIP = false,
+}
 local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
 
 -- LE MOT : UNE LIGNE PAR LETTRE, a la place exacte ou le joueur l'a posee. Un `UIListLayout` avec un ecart negatif
@@ -637,6 +661,30 @@ local function fadeGradient(parent: Instance)
 	grad.Parent = parent
 end
 
+-- LE GROUPE PORTE LA REVELATION ET LA TAILLE ; la tete le remplit. On redimensionne le GROUPE et non la tete :
+-- dedans, elle serait rognee par le clipping du CanvasGroup des qu'elle depasserait.
+local faceGroup = Instance.new("CanvasGroup")
+faceGroup.Name = "FaceGroup"
+faceGroup.BackgroundTransparency = 1
+faceGroup.ZIndex = 5
+-- ANCRE EN BAS : elle s'etire VERS LE HAUT, comme si elle poussait. Ancree au centre, elle grandirait aussi vers
+-- le bas et le geste se lirait comme un simple zoom.
+faceGroup.AnchorPoint = Vector2.new(0.5, 1)
+faceGroup.Position = UDim2.fromScale(FACE_POS.X, FACE_POS.Y + FACE_SIZE.Y / 2)
+faceGroup.Size = UDim2.fromScale(FACE_SIZE.X * FACE_REVEAL.SQUASH_X, FACE_SIZE.Y * FACE_REVEAL.SQUASH_Y)
+faceGroup.Parent = root
+
+local faceReveal = Instance.new("UIGradient")
+faceReveal.Rotation = 90 -- vertical
+faceReveal.Color = ColorSequence.new(WHITE)
+faceReveal.Transparency = NumberSequence.new({
+	NumberSequenceKeypoint.new(0, 1),
+	NumberSequenceKeypoint.new(math.min(FACE_REVEAL.EDGE, 0.999), 0),
+	NumberSequenceKeypoint.new(1, 0),
+})
+faceReveal.Offset = Vector2.new(0, if FACE_REVEAL.FLIP then -1 else 1) -- tout masque au depart
+faceReveal.Parent = faceGroup
+
 local face = Instance.new("ImageLabel")
 face.Name = "Face"
 face.BackgroundTransparency = 1
@@ -644,9 +692,11 @@ face.Image = FACE_IMAGE
 face.ImageColor3 = INK
 face.ScaleType = Enum.ScaleType.Fit -- garde ses proportions quel que soit l'ecran
 face.ZIndex = 5
-place(face, FACE_POS, FACE_SIZE)
+face.AnchorPoint = Vector2.new(0.5, 0.5)
+face.Position = UDim2.fromScale(0.5, 0.5)
+face.Size = UDim2.fromScale(1, 1)
 fadeGradient(face)
-face.Parent = root
+face.Parent = faceGroup
 
 -- LE CLIGNEMENT, en changeant d'image. Rien a faire tant que les deux variantes ne sont pas fournies : mieux vaut un
 -- visage qui ne cligne pas qu'une image vide au milieu de l'ecran.
@@ -756,13 +806,39 @@ for i = 1, #TITLE_TEXT do
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
 		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
-		-- LA DERNIERE LETTRE APPELLE L'ONOMATOPEE : elle jaillit comme si le "A" venait de la projeter.
+		-- CETTE LETTRE FAIT SORTIR LA TETE : elle se devoile du bas vers le haut en s'etirant.
+		if i == FACE_REVEAL.LETTER then
+			local reveal = TweenInfo.new(FACE_REVEAL.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+			TweenService:Create(faceGroup, reveal, {
+				Size = UDim2.fromScale(FACE_SIZE.X, FACE_SIZE.Y),
+			}):Play()
+			-- LA REVELATION VA PLUS VITE QUE L'ETIREMENT, et sans rebond : un Back sur un devoilement ferait
+			-- REDESCENDRE la limite en fin de course, donc reapparaitre un bout deja revele.
+			TweenService:Create(
+				faceReveal,
+				TweenInfo.new(FACE_REVEAL.TIME * 0.8, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+				{ Offset = Vector2.new(0, if FACE_REVEAL.FLIP then 1 else -1) }
+			):Play()
+		end
+		-- LA DERNIERE LETTRE APPELLE L'ONOMATOPEE : elle jaillit comme si le "A" venait de la projeter, puis part.
 		if i == #TITLE_TEXT then
-			TweenService:Create(shout, SHOUT_IN, {
+			local pop = TweenService:Create(shout, SHOUT_IN, {
 				ImageTransparency = 0,
 				Rotation = SHOUT_ROT,
 				Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
-			}):Play()
+			})
+			pop.Completed:Once(function()
+				task.delay(SHOUT_HOLD, function()
+					if not shout.Parent then
+						return
+					end
+					TweenService:Create(shout, SHOUT_OUT, {
+						ImageTransparency = 1,
+						Size = UDim2.fromScale(SHOUT_SIZE.X * SHOUT_OUT_GROW, SHOUT_SIZE.Y * SHOUT_OUT_GROW),
+					}):Play()
+				end)
+			end)
+			pop:Play()
 		end
 	end
 end

@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.964 — La tete du grand-pere sort du sol avec la deuxieme lettre
+
+Ecran de chargement. La tete n'est plus posee la depuis le debut : elle se devoile du BAS vers le HAUT quand le
+E apparait, en s'etirant vers le haut. L'onomatopee, elle, jaillit sur le dernier A puis s'efface en grossissant
+au lieu de rester affichee.
+
+La tete portait deja un UIGradient (le fondu du montage) et Roblox n'en applique qu'un par objet : la revelation
+passe donc par un CanvasGroup pose autour d'elle, exactement a sa taille (il clipperait ce qui depasse).
+
 ## 0.0.963 — Le fond du chargement redevient blanc uni
 
 Retire le degrade du fond et tout le motif de points qui defilait en diagonale, avec sa boucle et son fondu.
