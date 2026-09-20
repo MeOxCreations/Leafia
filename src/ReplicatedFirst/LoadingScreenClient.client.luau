@@ -1,10 +1,10 @@
 --!strict
--- Ecran de chargement de Leafia : ciel, fond tuile qui defile, badge hexagone + mot LEAFIA au centre, barre doree qui
--- suit le VRAI chargement, feuillages.
+-- Ecran de chargement de Leafia : fond vert, tuile qui defile, tete du grand-pere + mot LEAFIA (lettre par lettre,
+-- puis une vague) au centre, barre doree qui suit le VRAI chargement, feuillages en ombre autour.
 --
 -- Construit ENTIEREMENT EN CODE : aucune dependance a une UI Studio, tout est ici, versionne et reglable par les
--- constantes plus bas. Les assets (logo en 4 calques, fond tuile) sont des ID EN DUR : plus rien n'est lu de l'ancien
--- ecran, on le detruit juste s'il traine encore.
+-- constantes plus bas. Les positions viennent d'un ecran monte A LA MAIN dans Studio puis RELEVE avec
+-- `scripts/studio/ExporterEcranChargement.lua` : placer a la souris coute dix secondes, deviner les chiffres une heure.
 --
 -- AUTONOME : ne require aucun module de ReplicatedStorage. ReplicatedFirst se replique avant le reste du jeu :
 -- attendre un module de ReplicatedStorage reviendrait a bloquer sur ce qu'on masque justement.
@@ -85,19 +85,13 @@ local function playSound(source: Sound, volume: number?): Sound
 end
 
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
--- LE MEME MOTIF DE POINTS QUE L'ECRAN DE CHOIX DU PLOT (`Modules/UI/Core/TileField`) : le joueur doit reconnaitre le
--- meme fond d'un ecran a l'autre.
---
--- LA VALEUR EST RECOPIEE ICI, pas requise : ReplicatedFirst se replique en premier, et attendre un module de
--- ReplicatedStorage reviendrait a bloquer sur ce qu'on masque. Si l'une des deux change, changer l'autre.
-local TILE_IMAGE = "rbxassetid://111706805079464"
--- KNOB : baisser = tuile plus visible ; monter = plus discrete. Le motif de TileField est bien plus fin que
--- l'ancienne tuile : a 0.95 on ne voyait plus rien du tout.
-local TILE_TRANSPARENCY = 0.85
--- COTE D'UNE TUILE, en fraction de la HAUTEUR de l'ecran : la meme mesure que TileField (son `tileFrac`, 0.1 par
--- defaut). Des tuiles CARREES en pixels, donc le meme motif sur tous les formats. C'etait avant une fraction de
--- l'ImageLabel, qui fait deux fois l'ecran : les tuiles s'etiraient differemment selon le format.
-local TILE_FRAC = 0.1
+-- LE FOND TUILE, releve sur la maquette : image, taille et transparence viennent de la.
+local TILE_IMAGE = "rbxassetid://78626050824347"
+local TILE_TRANSPARENCY = 0.95 -- KNOB : baisser = tuile plus visible ; monter = plus discrete
+-- TileSize en SCALE (fraction de l'ImageLabel tuile, qui fait deux fois l'ecran) : c'est ainsi que le joueur l'a
+-- regle a l'oeil. A REGLER a l'oeil pour l'image, pas a deduire.
+local TILE_SCALE_X = 0.037
+local TILE_SCALE_Y = 0.07
 local TILE_SPEED = 15
 -- ON NE DETRUIT PLUS `ReplicatedFirst.LoadingScreen`. Ce fichier le faisait -- l'ancien ecran n'etait plus lu, on
 -- le nettoyait -- mais c'est devenu exactement l'endroit ou vit le MODELE du rideau de changement de map. Le
@@ -360,10 +354,29 @@ local MIN_DURATION = 15
 -- Couleurs (maquette). A REGLER a l'oeil.
 local WHITE = Color3.fromRGB(255, 255, 255)
 
--- LA TETE DU GRAND-PERE, au-dessus du titre : elle dit de qui parle le jeu avant meme qu'on lise le nom. Blanche et
--- tres claire, comme un filigrane -- opaque, elle volerait la vedette au mot.
+-- TOUT CE BLOC EST RELEVE SUR L'ECRAN QUE LE JOUEUR A MONTE A LA MAIN dans StarterGui, avec
+-- `scripts/studio/ExporterEcranChargement.lua`. Placer a la souris coute dix secondes ; deviner les memes chiffres
+-- coute une heure. Positions et tailles en FRACTION D'ECRAN, au CENTRE de l'element.
+--
+-- LA TETE DU GRAND-PERE, au-dessus du titre : elle dit de qui parle le jeu avant meme qu'on lise le nom.
 local FACE_IMAGE = "rbxassetid://111069478991867"
-local FACE_TRANSPARENCY = 0.55 -- KNOB : baisser = tete plus marquee, monter = plus discrete
+local FACE_TRANSPARENCY = 0
+local FACE_POS = Vector2.new(0.4995, 0.3731)
+local FACE_SIZE = Vector2.new(0.1835, 0.2889)
+-- LE MOT et le texte de chargement, poses eux aussi a la main.
+local WORD_POS = Vector2.new(0.4995, 0.6205)
+local WORD_SIZE = Vector2.new(0.3196, 0.1659)
+local STATUS_POS = Vector2.new(0.5, 0.7178)
+local STATUS_SIZE = Vector2.new(0.553, 0.0277)
+
+-- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule. Largeur d'une lettre = hauteur du mot x ce facteur : TextScaled
+-- remplit sa case, il ne la dimensionne pas -- sans largeur imposee, toutes les lettres se tasseraient.
+local WORD_LETTER_RATIO = 0.62
+local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
+local WORD_DROP = 0.35 -- d'ou la lettre monte (fraction de sa case)
+local WORD_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local WORD_WAVE = 0.08 -- hauteur de l'ondulation (fraction de la case). KNOB
+local WORD_WAVE_TIME = 1.1 -- duree d'un aller de l'ondulation. KNOB
 
 -- LES FEUILLAGES SONT NOIRS ET TRANSPARENTS : sur le vert, ca donne une ombre de feuille, pas un dessin colle.
 --
@@ -376,9 +389,10 @@ local FACE_TRANSPARENCY = 0.55 -- KNOB : baisser = tete plus marquee, monter = p
 -- taille d'origine ils disparaissaient TOUS. Le groupe couvre donc plusieurs fois l'ecran, et les positions de
 -- FOLIAGE_DATA -- ecrites pour le petit cadre -- sont converties a l'echelle du grand (voir `toHolder`).
 local FOLIAGE_TINT = Color3.new(0, 0, 0)
-local FOLIAGE_ALPHA = 0.88 -- KNOB : baisser = feuilles plus sombres
-local FOLIAGE_BOX = 0.55 -- taille du cadre pour lequel FOLIAGE_DATA a ete ecrit (fraction d'ecran)
-local FOLIAGE_GROUP = 2.6 -- taille du groupe qui les contient sans rien couper (fraction d'ecran)
+local FOLIAGE_ALPHA = 0.89 -- KNOB : baisser = feuilles plus sombres (valeur relevee sur la maquette)
+-- Taille du groupe, en fraction d'ecran. Assez grand pour contenir les feuillages QUI DEBORDENT (ils encadrent
+-- l'ecran) et leur rotation, qui elargit encore leur boite.
+local FOLIAGE_GROUP = 3
 
 -- Polices : Luckiest Guy (titres, chunky) et Gotham (le reste). On passe par FontFace + les familles qui LIVRENT
 -- avec Roblox : pas de risque d'un Enum.Font absent qui casserait tout l'ecran au lancement.
@@ -464,31 +478,20 @@ sky.ZIndex = 1
 -- C'ETAIT UN CIEL BLEU : le jeu parle de pelouse et de haies, le vert le dit des la premiere seconde.
 local skyGrad = Instance.new("UIGradient")
 skyGrad.Rotation = 90
-skyGrad.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(190, 240, 82)),
-	ColorSequenceKeypoint.new(0.45, Color3.fromRGB(150, 238, 84)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(86, 226, 98)),
-})
+skyGrad.Color = ColorSequence.new(Color3.fromRGB(213, 255, 76), Color3.fromRGB(147, 255, 101))
 skyGrad.Parent = sky
 
 -- FOND TUILE qui defile en DIAGONALE. ZIndex = ciel + 1 : juste AU-DESSUS du degrade (opaque, il le cacherait dessous)
 -- et SOUS tout le reste (le contenu le cacherait dessus). Le decalage X ET Y a la meme vitesse donne la diagonale ;
 -- on recycle chaque axe sur SA periode (la taille de tuile sur cet axe) pour boucler sans saut.
 -- TileSize en SCALE (fraction de l'ImageLabel tuile) : ca s'adapte a l'ecran. A REGLER a l'oeil pour l'image.
--- Cote d'une tuile EN PIXELS, relu a l'ecran : il suit la rotation et les changements de taille.
-local function tileSide(): number
-	local camera = workspace.CurrentCamera
-	local height = if camera then camera.ViewportSize.Y else 720
-	return math.max(height * TILE_FRAC, 1)
-end
-
 local tile = Instance.new("ImageLabel")
 tile.Name = "Tile"
 tile.BackgroundTransparency = 1
 tile.Image = TILE_IMAGE
 tile.ImageTransparency = TILE_TRANSPARENCY
 tile.ScaleType = Enum.ScaleType.Tile
-tile.TileSize = UDim2.fromOffset(tileSide(), tileSide())
+tile.TileSize = UDim2.fromScale(TILE_SCALE_X, TILE_SCALE_Y)
 tile.AnchorPoint = Vector2.new(0.5, 0.5)
 tile.Position = UDim2.fromScale(0.5, 0.5)
 tile.Size = UDim2.fromScale(2, 2) -- deborde largement pour recycler le defilement sans montrer les bords
@@ -500,122 +503,130 @@ tile.Parent = root
 local tileOffX, tileOffY = 0, 0
 local tileConn: RBXScriptConnection? = nil
 tileConn = RunService.Heartbeat:Connect(function(dt: number)
-	-- Periode de recyclage = le cote d'une tuile, en pixels. Relu chaque frame -> suit l'ecran (rotation, resize).
-	-- On ne REECRIT la taille que si elle a vraiment bouge : une ecriture par image sur une propriete de rendu coute
-	-- pour rien.
-	local side = tileSide()
-	if math.abs(tile.TileSize.X.Offset - side) > 0.5 then
-		tile.TileSize = UDim2.fromOffset(side, side)
+	-- Periode de recyclage = la taille PIXEL d'une tuile (scale x taille de l'ImageLabel). Relue chaque frame -> suit
+	-- l'ecran (rotation mobile, resize).
+	local periodX = TILE_SCALE_X * tile.AbsoluteSize.X
+	local periodY = TILE_SCALE_Y * tile.AbsoluteSize.Y
+	if periodX <= 0 or periodY <= 0 then
+		return
 	end
-	tileOffX = (tileOffX + TILE_SPEED * dt) % side
-	tileOffY = (tileOffY + TILE_SPEED * dt) % side
+	tileOffX = (tileOffX + TILE_SPEED * dt) % periodX
+	tileOffY = (tileOffY + TILE_SPEED * dt) % periodY
 	tile.Position = UDim2.new(0.5, tileOffX, 0.5, tileOffY)
 end)
 
--- ===== COLONNE CENTRALE (badge + mot + chargement) =====
-local column = frame("Column", root)
-column.AnchorPoint = Vector2.new(0.5, 0.5)
-column.Position = UDim2.fromScale(0.5, 0.493)
-column.Size = UDim2.fromScale(0.324, 0.928)
-column.BackgroundTransparency = 1
-column.ZIndex = 5
-do
-	local layout = Instance.new("UIListLayout")
-	layout.FillDirection = Enum.FillDirection.Vertical
-	-- Trier PAR LayoutOrder (badge 1, LEAFIA 2, pilule 3, barre 4). Sinon le defaut trie par NOM (alphabetique)
-	-- et l'ordre part en vrille (barre avant pilule, LEAFIA en bas...).
-	layout.SortOrder = Enum.SortOrder.LayoutOrder
-	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-	layout.VerticalAlignment = Enum.VerticalAlignment.Center
-	layout.Padding = UDim.new(0.02, 0)
-	layout.Parent = column
-	-- Un ratio pour que la colonne garde ses proportions quel que soit l'ecran (paysage / portrait).
-	local ratio = Instance.new("UIAspectRatioConstraint")
-	ratio.AspectRatio = 0.62
-	ratio.AspectType = Enum.AspectType.FitWithinMaxSize
-	ratio.Parent = column
+-- ===== LE CENTRE : tete, mot, texte de chargement =====
+-- POSES DIRECTEMENT SUR LE FOND, aux valeurs relevees. C'etait une colonne avec un UIListLayout et deux contraintes
+-- de ratio : elle calculait des places qu'on connait deja, et il fallait passer par elle pour bouger quoi que ce
+-- soit. Trois elements, trois positions -- ce que le joueur a sous les yeux dans Studio.
+local function place(gui: GuiObject, pos: Vector2, size: Vector2)
+	gui.AnchorPoint = Vector2.new(0.5, 0.5)
+	gui.Position = UDim2.fromScale(pos.X, pos.Y)
+	gui.Size = UDim2.fromScale(size.X, size.Y)
 end
 
--- BADGE (hexagone) + lueur derriere.
-local badgeHolder = frame("BadgeHolder", column)
-badgeHolder.AnchorPoint = Vector2.new(0.5, 0.5)
-badgeHolder.Size = UDim2.fromScale(0.5, 0.42)
-badgeHolder.BackgroundTransparency = 1
-badgeHolder.LayoutOrder = 1
-badgeHolder.ZIndex = 5
-do
-	local ratio = Instance.new("UIAspectRatioConstraint")
-	ratio.AspectRatio = 1
-	ratio.Parent = badgeHolder
-end
-
--- Conteneur INTERNE du logo : c'est LUI qui flotte. Le BadgeHolder, lui, est place par le UIListLayout de la colonne,
--- donc tweener sa position se battrait avec le layout. Le Logo remplit le BadgeHolder et porte les 4 calques empiles.
-local logo = frame("Logo", badgeHolder)
-logo.BackgroundTransparency = 1
-logo.AnchorPoint = Vector2.new(0.5, 0.5)
-logo.Position = UDim2.fromScale(0.5, 0.5)
-logo.Size = UDim2.fromScale(1, 1)
-logo.ZIndex = 5
-
--- LA TETE. Une seule image, en Fit (elle garde ses proportions quel que soit l'ecran). Le logo a quatre calques,
--- ses deux degrades animes et son entree slime ont ete retires : trop charges pour un ecran qu'on regarde dix
--- secondes, et ils tiraient l'oeil loin du nom.
 local face = Instance.new("ImageLabel")
 face.Name = "Face"
 face.BackgroundTransparency = 1
 face.Image = FACE_IMAGE
 face.ImageColor3 = WHITE
 face.ImageTransparency = FACE_TRANSPARENCY
-face.ScaleType = Enum.ScaleType.Fit
-face.AnchorPoint = Vector2.new(0.5, 0.5)
-face.Position = UDim2.fromScale(0.5, 0.5)
-face.Size = UDim2.fromScale(1, 1)
+face.ScaleType = Enum.ScaleType.Fit -- garde ses proportions quel que soit l'ecran
 face.ZIndex = 5
-face.Parent = logo
+place(face, FACE_POS, FACE_SIZE)
+face.Parent = root
 
--- MOT "LEAFIA". SANS OMBRE : la maquette le veut plat, et une ombre teal sur un fond vert se lit comme une bavure.
-local wordmarkHolder = frame("Wordmark", column)
-wordmarkHolder.Size = UDim2.fromScale(0.95, 0.172)
-wordmarkHolder.BackgroundTransparency = 1
-wordmarkHolder.LayoutOrder = 2
-wordmarkHolder.ZIndex = 5
+-- MOT "LEAFIA", LETTRE PAR LETTRE. SANS OMBRE : la maquette le veut plat, et une ombre teal sur du vert se lit
+-- comme une bavure.
+--
+-- UNE LETTRE = DEUX OBJETS : une CASE que le UIListLayout range, et la lettre qui bouge LIBREMENT dedans. Animer
+-- directement ce qu'un layout positionne, c'est se battre contre lui a chaque image -- il repose la position, la
+-- tween la reecrit, et le resultat depend de qui parle en dernier.
+local wordHolder = frame("Wordmark", root)
+wordHolder.BackgroundTransparency = 1
+wordHolder.ZIndex = 6
+place(wordHolder, WORD_POS, WORD_SIZE)
+do
+	local layout = Instance.new("UIListLayout")
+	layout.FillDirection = Enum.FillDirection.Horizontal
+	layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+	layout.VerticalAlignment = Enum.VerticalAlignment.Center
+	layout.SortOrder = Enum.SortOrder.LayoutOrder
+	layout.Parent = wordHolder
+end
 
-local wordmark = text("Text", wordmarkHolder, FONT_TITLE, WHITE)
-wordmark.Text = TITLE_TEXT
-wordmark.Size = UDim2.fromScale(1, 1)
-wordmark.ZIndex = 6
+for i = 1, #TITLE_TEXT do
+	local cell = frame("Cell" .. i, wordHolder)
+	cell.BackgroundTransparency = 1
+	cell.LayoutOrder = i
+	cell.ZIndex = 6
 
--- TEXTE D'ETAT ("Planting flower beds..."). JUSTE SOUS LE MOT, comme sur la maquette : pose bas sur l'ecran, il
--- flottait tout seul au milieu du vide. Sur root et HORS de la colonne centrale, pour ne pas dependre de son layout.
--- KNOB : le Y (0.66) le monte / descend.
-local statusText = text("Text", root, FONT_BOLD, WHITE)
+	local letter = text("Letter", cell, FONT_TITLE, WHITE)
+	letter.Text = TITLE_TEXT:sub(i, i)
+	letter.TextScaled = true
+	letter.AnchorPoint = Vector2.new(0.5, 0.5)
+	letter.Size = UDim2.fromScale(1, 1)
+	letter.ZIndex = 6
+	-- Largeur de la case = hauteur x le facteur : TextScaled remplit la case, il ne la dimensionne pas. Un facteur
+	-- unique pour toutes les lettres garde un espacement regulier.
+	cell.Size = UDim2.new(0, math.max(wordHolder.AbsoluteSize.Y * WORD_LETTER_RATIO, 1), 1, 0)
+	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+		cell.Size = UDim2.new(0, math.max(wordHolder.AbsoluteSize.Y * WORD_LETTER_RATIO, 1), 1, 0)
+	end)
+
+	-- ARRIVEE : la lettre monte de sous sa case en s'allumant, l'une apres l'autre.
+	letter.TextTransparency = 1
+	letter.Position = UDim2.fromScale(0.5, 0.5 + WORD_DROP)
+	task.delay((i - 1) * WORD_STAGGER, function()
+		if not letter.Parent then
+			return
+		end
+		TweenService:Create(letter, WORD_IN, { Position = UDim2.fromScale(0.5, 0.5), TextTransparency = 0 }):Play()
+		-- VAGUE : chaque lettre monte et redescend en boucle, decalee de la precedente -- c'est ce DECALAGE qui fait
+		-- la vague. Lancee apres l'arrivee, sinon les deux tweens se disputent la meme position.
+		task.delay(WORD_IN.Time, function()
+			if not letter.Parent then
+				return
+			end
+			TweenService:Create(
+				letter,
+				TweenInfo.new(WORD_WAVE_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+				{ Position = UDim2.fromScale(0.5, 0.5 - WORD_WAVE) }
+			):Play()
+		end)
+	end)
+end
+
+-- TEXTE D'ETAT ("Planting flower beds..."), juste sous le mot. Place comme les deux autres.
+local statusText = text("Status", root, FONT_BOLD, WHITE)
 statusText.RichText = true
-statusText.AnchorPoint = Vector2.new(0.5, 0.5)
-statusText.Position = UDim2.fromScale(0.5, 0.66)
-statusText.Size = UDim2.fromScale(0.8, 0.04)
 statusText.ZIndex = 6
+place(statusText, STATUS_POS, STATUS_SIZE)
 
 -- ===== FEUILLAGES qui encadrent l'ecran (entree en eventail + flottement) =====
 -- INLINE, comme tout ce fichier (autonome : pas de require de ReplicatedStorage). Meme idee que le module reutilisable
 -- UI/Core/FoliageReveal, reduite a ce dont le loading a besoin : les feuillages JAILLISSENT depuis l'exterieur, arrivent
 -- a leur place, puis flottent doucement. La position POSEE ici est la position finale ; le depart est CALCULE en la
 -- projetant vers l'exterieur du centre. { image, x, y = position scale ; w, h = taille scale ; rot } ; tous ancres (0.5, 1).
+-- { image ; x, y = CENTRE en fraction d'ecran ; w, h = taille en fraction d'ecran ; rot = degres }. Releve tel quel
+-- sur l'ecran monte a la main : ils debordent volontairement (x et y hors de [0, 1]), ils encadrent l'ecran.
 type FoliageEntry = { image: string, x: number, y: number, w: number, h: number, rot: number }
 local FOLIAGE_DATA: { FoliageEntry } = {
-	{ image = "rbxassetid://133121907005690", x = 1.242, y = 0.196, w = 0.484, h = 0.872, rot = -108 },
-	{ image = "rbxassetid://133121907005690", x = 1.584, y = 1.114, w = 0.475, h = 0.822, rot = -108 },
-	{ image = "rbxassetid://120457348978315", x = 1.584, y = 0.41, w = 0.392, h = 0.74, rot = -140 },
-	{ image = "rbxassetid://120457348978315", x = 1.425, y = 0.131, w = 0.352, h = 0.697, rot = -140 },
-	{ image = "rbxassetid://78090496362298", x = 1.383, y = 0.626, w = 0.268, h = 0.688, rot = -140 },
-	{ image = "rbxassetid://78090496362298", x = 0.808, y = -0.009, w = 0.272, h = 0.693, rot = 106 },
-	{ image = "rbxassetid://120457348978315", x = 0.13, y = -0.068, w = 0.295, h = 0.524, rot = 180 },
-	{ image = "rbxassetid://106884980828867", x = -0.175, y = 0.054, w = 0.598, h = 0.768, rot = 135 },
-	{ image = "rbxassetid://106884980828867", x = -0.452, y = 0.309, w = 0.392, h = 0.74, rot = 103 },
-	{ image = "rbxassetid://120457348978315", x = -0.647, y = -0.058, w = 0.392, h = 0.74, rot = 103 },
-	{ image = "rbxassetid://120457348978315", x = -0.732, y = 0.627, w = 0.392, h = 0.74, rot = 103 },
-	{ image = "rbxassetid://133121907005690", x = -0.392, y = 0.756, w = 0.407, h = 0.716, rot = 83 },
-	{ image = "rbxassetid://106884980828867", x = -0.55, y = 1.194, w = 0.498, h = 0.834, rot = 125 },
+	{ image = "rbxassetid://133121907005690", x = 0.842, y = -0.0931, w = 0.2662, h = 0.4796, rot = -108 },
+	{ image = "rbxassetid://120457348978315", x = 1.0242, y = 0.315, w = 0.1141, h = 0.2769, rot = -140 },
+	{ image = "rbxassetid://120457348978315", x = 1.0239, y = -0.0442, w = 0.1936, h = 0.3834, rot = -140 },
+	{ image = "rbxassetid://78090496362298", x = 0.982, y = 0.5818, w = 0.1474, h = 0.3784, rot = -140 },
+	{ image = "rbxassetid://78090496362298", x = 0.6199, y = -0.0035, w = 0.2195, h = 0.49, rot = 106 },
+	{ image = "rbxassetid://120457348978315", x = 0.3912, y = -0.0939, w = 0.1875, h = 0.372, rot = 180 },
+	{ image = "rbxassetid://106884980828867", x = 0.1678, y = -0.1345, w = 0.3184, h = 0.5778, rot = 135 },
+	{ image = "rbxassetid://106884980828867", x = -0.0038, y = 0.1466, w = 0.2156, h = 0.407, rot = 103 },
+	{ image = "rbxassetid://120457348978315", x = -0.1309, y = -0.0111, w = 0.2156, h = 0.407, rot = 103 },
+	{ image = "rbxassetid://120457348978315", x = -0.1776, y = 0.3517, w = 0.2156, h = 0.407, rot = 103 },
+	{ image = "rbxassetid://133121907005690", x = -0.0036, y = 0.5354, w = 0.2238, h = 0.3938, rot = 83 },
+	{ image = "rbxassetid://106884980828867", x = 0.1017, y = 0.9088, w = 0.2773, h = 0.4523, rot = 48 },
+	{ image = "rbxassetid://78090496362298", x = 0.2728, y = 1.0939, w = 0.1474, h = 0.3784, rot = -62 },
+	{ image = "rbxassetid://78090496362298", x = 0.3426, y = 1.042, w = 0.1474, h = 0.3784, rot = 0 },
+	{ image = "rbxassetid://133121907005690", x = 0.8828, y = 1.0424, w = 0.2817, h = 0.5445, rot = -28 },
 }
 local FOLIAGE_SPREAD = 1.55 -- d'ou ils partent (position projetee vers l'exterieur). KNOB
 local FOLIAGE_STAGGER = 0.03 -- decalage entre 2 feuillages a l'arrivee (l'eventail). KNOB
@@ -628,9 +639,9 @@ local FOLIAGE_IN = TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirecti
 
 -- CanvasGroup et pas Frame : c'est le GROUPE qui porte la transparence, donc deux feuilles qui se recouvrent ne
 -- font pas une tache plus sombre a leur intersection (voir FOLIAGE_ALPHA).
--- Conversion des valeurs de FOLIAGE_DATA (ecrites pour un cadre de FOLIAGE_BOX) vers le grand groupe : les ecarts au
--- centre et les tailles se divisent par le rapport des deux cadres. A l'ecran, rien ne bouge.
-local FOLIAGE_FACTOR = FOLIAGE_BOX / FOLIAGE_GROUP
+-- Conversion ECRAN -> GROUPE : le groupe fait FOLIAGE_GROUP fois l'ecran, donc un ecart au centre y est divise
+-- d'autant, et une taille aussi. Les valeurs de FOLIAGE_DATA restent lisibles en fraction d'ECRAN.
+local FOLIAGE_FACTOR = 1 / FOLIAGE_GROUP
 local function toHolder(v: number): number
 	return 0.5 + (v - 0.5) * FOLIAGE_FACTOR
 end
@@ -653,7 +664,9 @@ for i, d in FOLIAGE_DATA do
 	leaf.BackgroundTransparency = 1
 	leaf.Image = d.image
 	leaf.ImageColor3 = FOLIAGE_TINT
-	leaf.AnchorPoint = Vector2.new(0.5, 1)
+	-- ANCRE AU CENTRE : les valeurs relevees sont des CENTRES, et c'est aussi autour du centre que Roblox fait tourner
+	-- un element -- les deux coincident, donc la rotation ne deplace rien.
+	leaf.AnchorPoint = Vector2.new(0.5, 0.5)
 	leaf.Rotation = d.rot
 	leaf.ZIndex = 8
 	leaf.Parent = foliageHolder

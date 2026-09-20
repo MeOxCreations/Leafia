@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.943 — L'ecran de chargement prend les valeurs posees a la main, et LEAFIA arrive lettre par lettre
+
+- Tout le placement vient du releve de `StarterGui.LoadingScreenManuel` : fond (degrade 213,255,76 -> 147,255,101),
+  tuile (`78626050824347`, 0.037 x 0.07, transparence 0.95), tete du grand-pere (opaque), mot et texte de
+  chargement, et les 15 feuillages avec leurs rotations. Plus aucune valeur devinee.
+- LA COLONNE CENTRALE DISPARAIT : un UIListLayout et deux contraintes de ratio calculaient des places qu'on connait
+  maintenant. Trois elements, trois positions -- ce que le joueur voit dans Studio.
+- LEAFIA ARRIVE LETTRE PAR LETTRE : chacune monte de sous sa case en s'allumant, decalee de 0.07 s, puis ondule en
+  boucle. C'est le DECALAGE entre les lettres qui fait la vague.
+- Une lettre = DEUX objets : une case que le layout range, et la lettre qui bouge librement dedans. Animer
+  directement ce qu'un layout positionne, c'est se battre contre lui a chaque image (deja paye sur les cartes de
+  saves).
+- Les feuillages gardent leur entree en eventail et leur flottement, et vivent toujours dans un CanvasGroup qui porte
+  la transparence (0.89) : deux feuilles qui se recouvrent ne font pas de tache.
+
 ## 0.0.942 — Un outil releve l'ecran de chargement fait a la main
 
 - Nouveau `scripts/studio/ExporterEcranChargement.lua` : il lit `StarterGui.LoadingScreenManuel` (la copie que le
