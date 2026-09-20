@@ -405,6 +405,10 @@ local EYE = {
 	-- LA TETE PENCHE PENDANT LE CLIN D'OEIL. L'inclinaison part AVEC le son et se redresse apres : la tete
 	-- accompagne le geste au lieu de le subir. Sur le GROUPE et non sur l'image : le CanvasGroup tourne son rendu
 	-- entier, donc rien n'est rogne aux coins.
+	-- IL TANGUE, tres doucement, comme sur le rideau de changement de map. FAIBLE ET LENT, les deux ensemble :
+	-- une amplitude large ferait un metronome, une amplitude faible mais rapide un tremblement.
+	SWAY_ANGLE = 4, -- degres de chaque cote
+	SWAY_SPEED = 0.6, -- radians par seconde
 	TILT = 7, -- degres. KNOB
 	TILT_IN = 0.35, -- temps pour pencher
 	TILT_HOLD = 0, -- temps ou la tete reste penchee APRES la reouverture de l'oeil. KNOB
@@ -914,9 +918,9 @@ local function winkOnce()
 	eyeLayers.right.Visible = false
 	eyeLayers.wink.Visible = true
 	TweenService:Create(
-		faceGroup,
+		tiltValue,
 		TweenInfo.new(EYE.TILT_IN, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-		{ Rotation = EYE.TILT }
+		{ Value = EYE.TILT }
 	):Play()
 	task.wait(EYE.WINK_TIME)
 	eyeLayers.wink.Visible = false
@@ -929,12 +933,27 @@ local function winkOnce()
 			return
 		end
 		TweenService:Create(
-			faceGroup,
+			tiltValue,
 			TweenInfo.new(EYE.TILT_OUT, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-			{ Rotation = 0 }
+			{ Value = 0 }
 		):Play()
 	end)
 end
+
+-- LE TANGAGE. Il ecrit la MEME propriete que le penchement du clin d'oeil : si les deux la posaient chacun de
+-- leur cote, celui qui parle en dernier gagnerait et le penchement disparaitrait sous le tangage. Le penchement
+-- vit donc dans une valeur a part, que les tweens animent, et la boucle ECRIT LA SOMME des deux.
+local tiltValue = Instance.new("NumberValue")
+tiltValue.Value = 0
+local swayConn: RBXScriptConnection? = nil
+swayConn = RunService.Heartbeat:Connect(function()
+	if not faceGroup.Parent then
+		return
+	end
+	-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
+	-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentirait le tangage.
+	faceGroup.Rotation = math.sin(os.clock() * EYE.SWAY_SPEED) * EYE.SWAY_ANGLE + tiltValue.Value
+end)
 
 -- QUAND LE CLIN D'OEIL SE JOUE. Un seul endroit decide, plutot que deux declencheurs qui se doublaient : la fin
 -- du son et une limite de temps pouvaient tomber dans n'importe quel ordre, donc le geste changeait de place
@@ -1794,6 +1813,9 @@ fade.Completed:Wait()
 -- ===== Nettoyage des connexions (elles vivent sur RunService, pas sur le GUI) =====
 for _, t in foliageIdle do
 	t:Cancel() -- couper le flottement des feuillages (boucles infinies) avant de detruire l'ecran
+end
+if swayConn then
+	swayConn:Disconnect()
 end
 if fpsConn then
 	fpsConn:Disconnect()
