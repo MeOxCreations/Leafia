@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.967 — L'ecran de chargement remarche : il avait depasse la limite de 200 locales de Luau
+
+Les calques d'yeux ont fait passer `LoadingScreenClient` au-dessus des 200 variables locales de premier niveau
+que Luau accepte. Le module entier mourait au chargement (`Out of local registers`), donc plus d'ecran du tout.
+Ni selene ni `rojo build` ne voient cette limite : elle ne sort qu'au lancement.
+
+Les reglages de la tondeuse et des yeux sont regroupes en tables (`MOWER`, `EYE`, `eyeLayers`) : 198 locales
+-> 177, et une famille de reglages qui grandit ne coute plus qu'une seule locale.
+
 ## 0.0.966 — Le grand-pere regarde autour de lui et fait des clins d'oeil
 
 Ecran de chargement. La tete est maintenant dessinee SANS ses yeux ; les yeux sont des calques a part, aux memes

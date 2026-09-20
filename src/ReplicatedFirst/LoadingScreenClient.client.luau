@@ -369,18 +369,20 @@ local FACE_IMAGE = "rbxassetid://107162385671697" -- la tete SANS les yeux
 -- LES YEUX SONT DES CALQUES A PART, dessines aux MEMES DIMENSIONS que la tete : poses par-dessus en taille (1, 1),
 -- ils tombent pile en place, sans un seul chiffre a regler. Les faire regarder ailleurs revient alors a DECALER le
 -- calque -- et comme ils sont tous dans le meme cadre, ils ne peuvent pas se desaligner entre eux.
-local EYE_LEFT_IMAGE = "rbxassetid://125266353659377"
-local EYE_RIGHT_IMAGE = "rbxassetid://120096099223669"
-local EYE_SHUT_IMAGE = "rbxassetid://80743235106162" -- les deux fermes
-local EYE_WINK_IMAGE = "rbxassetid://103054129911820" -- l'oeil droit ferme : le clin d'oeil
-local WINK_SOUND = { "Sounds", "UI", "EyeWinkSound" }
-local WINK_SOUND_VOLUME = 0.6
-local WINK_CHANCE = 0.3 -- part des clignements qui sont un clin d'oeil. KNOB
--- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
-local FACE_BLINK_EVERY = 3.2
-local FACE_BLINK_JITTER = 2.4
-local FACE_BLINK_SHUT_TIME = 0.09
-local FACE_WINK_TIME = 0.18 -- un clin d'oeil se TIENT, il ne claque pas comme un clignement
+local EYE = {
+	LEFT = "rbxassetid://125266353659377",
+	RIGHT = "rbxassetid://120096099223669",
+	SHUT = "rbxassetid://80743235106162", -- les deux fermes
+	WINK = "rbxassetid://103054129911820", -- l'oeil droit ferme : le clin d'oeil
+	SOUND = { "Sounds", "UI", "EyeWinkSound" },
+	SOUND_VOLUME = 0.6,
+	WINK_CHANCE = 0.3, -- part des clignements qui sont un clin d'oeil. KNOB
+	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
+	BLINK_EVERY = 3.2,
+	BLINK_JITTER = 2.4,
+	SHUT_TIME = 0.09,
+	WINK_TIME = 0.18, -- un clin d'oeil se TIENT, il ne claque pas comme un clignement
+}
 
 -- LE REGARD. Le cadre des yeux glisse de quelques pour cent seulement : au-dela, les pupilles sortiraient des
 -- paupieres dessinees sur la tete.
@@ -530,17 +532,19 @@ local WORD_SHINE_PEAK = 0.7 -- transparence au sommet de la vague
 local WORD_SHINE_PERIOD = 2.6 -- temps entre deux passages
 
 -- ===== LA TONDEUSE QUI TOND LA RANGEE D'HERBE, EN BAS =====
-local MOWER_IMAGE = "rbxassetid://93898580984673"
-local MOWER_SIZE = Vector2.new(0.1262, 0.237)
--- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
-local MOWER_GROUND_Y = 1.0201
-local MOWER_START_X = -0.12 -- hors ecran a gauche
-local MOWER_END_X = 1.12 -- hors ecran a droite
-local MOWER_TIME = 7 -- duree d'une traversee, en secondes. KNOB
-local MOWER_PAUSE = 0.8 -- temps mort avant le passage suivant
--- Ecrasement : elle s'aplatit un peu et s'elargit d'autant, sans quitter le sol.
-local MOWER_SQUASH_X, MOWER_SQUASH_Y = 1.04, 0.94
-local MOWER_SQUASH_TIME = 0.32
+local MOWER = {
+	IMAGE = "rbxassetid://93898580984673",
+	SIZE = Vector2.new(0.1262, 0.237),
+	-- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
+	GROUND_Y = 1.0201,
+	START_X = -0.12, -- hors ecran a gauche
+	END_X = 1.12, -- hors ecran a droite
+	TIME = 7, -- duree d'une traversee, en secondes. KNOB
+	PAUSE = 0.8, -- temps mort avant le passage suivant
+	-- Ecrasement : elle s'aplatit un peu et s'elargit d'autant, sans quitter le sol.
+	SQUASH = Vector2.new(1.04, 0.94),
+	SQUASH_TIME = 0.32,
+}
 
 -- ROGNEE AU PLUS PRES DES BRINS : plus de vide transparent sous l'herbe. La rangee pose donc pile sur le sol, sans
 -- rien a compenser dans le code -- et l'icone se repose telle quelle ailleurs sans trainer sa marge invisible.
@@ -562,7 +566,7 @@ local GRASS_SIZE = Vector2.new(0.045, 0.09)
 -- L'ENFONCEMENT EST A ZERO depuis que l'image est rognee : il ne servait qu'a pousser hors de l'ecran le vide que
 -- l'ancienne image avait sous ses brins. Garde comme KNOB au cas ou l'herbe doive mordre dans le sol.
 local GRASS_SINK = 0
-local GRASS_BASE_Y = MOWER_GROUND_Y + GRASS_SINK
+local GRASS_BASE_Y = MOWER.GROUND_Y + GRASS_SINK
 local GRASS_START_X = 0.013 -- centre de la premiere touffe
 -- L'ECART SE DEDUIT DE LA LARGEUR, il ne s'ecrit pas a part : pose a la main, il finit toujours par ne plus
 -- correspondre a la taille (a 0.026 pour des touffes de 0.052, chacune couvrait la moitie de sa voisine et la
@@ -800,10 +804,12 @@ local function eyeLayer(name: string, image: string, shown: boolean): ImageLabel
 	return layer
 end
 
-local eyeLeft = eyeLayer("EyeLeft", EYE_LEFT_IMAGE, true)
-local eyeRight = eyeLayer("EyeRight", EYE_RIGHT_IMAGE, true)
-local eyesShut = eyeLayer("EyesShut", EYE_SHUT_IMAGE, false)
-local eyeWink = eyeLayer("EyeWink", EYE_WINK_IMAGE, false)
+local eyeLayers = {
+	left = eyeLayer("EyeLeft", EYE.LEFT, true),
+	right = eyeLayer("EyeRight", EYE.RIGHT, true),
+	shut = eyeLayer("EyesShut", EYE.SHUT, false),
+	wink = eyeLayer("EyeWink", EYE.WINK, false),
+}
 
 -- TANT QUE LA TETE EST CACHEE, ON NE JOUE RIEN. Les boucles demarrent au chargement, bien avant que la derniere
 -- lettre ne fasse sortir le visage : sans cette attente, le son du clin d'oeil partirait dans le vide.
@@ -821,28 +827,28 @@ task.spawn(function()
 	end
 	while eyes.Parent do
 		-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
-		task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
+		task.wait(EYE.BLINK_EVERY + math.random() * EYE.BLINK_JITTER)
 		if not eyes.Parent then
 			return
 		end
-		if math.random() < WINK_CHANCE then
-			eyeRight.Visible = false
-			eyeWink.Visible = true
-			local cling = findSound(WINK_SOUND)
+		if math.random() < EYE.WINK_CHANCE then
+			eyeLayers.right.Visible = false
+			eyeLayers.wink.Visible = true
+			local cling = findSound(EYE.SOUND)
 			if cling then
-				playSound(cling, WINK_SOUND_VOLUME)
+				playSound(cling, EYE.SOUND_VOLUME)
 			end
-			task.wait(FACE_WINK_TIME)
-			eyeWink.Visible = false
-			eyeRight.Visible = true
+			task.wait(EYE.WINK_TIME)
+			eyeLayers.wink.Visible = false
+			eyeLayers.right.Visible = true
 		else
-			eyeLeft.Visible = false
-			eyeRight.Visible = false
-			eyesShut.Visible = true
-			task.wait(FACE_BLINK_SHUT_TIME)
-			eyesShut.Visible = false
-			eyeLeft.Visible = true
-			eyeRight.Visible = true
+			eyeLayers.left.Visible = false
+			eyeLayers.right.Visible = false
+			eyeLayers.shut.Visible = true
+			task.wait(EYE.SHUT_TIME)
+			eyeLayers.shut.Visible = false
+			eyeLayers.left.Visible = true
+			eyeLayers.right.Visible = true
 		end
 	end
 end)
@@ -1150,13 +1156,13 @@ end
 local mower = Instance.new("ImageLabel")
 mower.Name = "Mower"
 mower.BackgroundTransparency = 1
-mower.Image = MOWER_IMAGE
+mower.Image = MOWER.IMAGE
 mower.ImageColor3 = INK
 -- ANCRE EN BAS AU MILIEU : l'ecrasement se fait alors vers le sol, comme une vraie masse posee dessus. Ancree au
 -- centre, la tondeuse s'enfoncerait ET se souleverait a chaque pas.
 mower.AnchorPoint = Vector2.new(0.5, 1)
-mower.Size = UDim2.fromScale(MOWER_SIZE.X, MOWER_SIZE.Y)
-mower.Position = UDim2.fromScale(MOWER_START_X, MOWER_GROUND_Y)
+mower.Size = UDim2.fromScale(MOWER.SIZE.X, MOWER.SIZE.Y)
+mower.Position = UDim2.fromScale(MOWER.START_X, MOWER.GROUND_Y)
 -- BIEN AU-DESSUS DE L'HERBE : la machine passe DEVANT les touffes, sinon elle a l'air de rouler derriere elles.
 -- Large exprès (l'herbe est a 7) : un ecart d'un seul cran se perd des qu'un autre element s'intercale.
 mower.ZIndex = 12
@@ -1166,8 +1172,8 @@ mower.Parent = root
 -- un rebond la ferait sauter, or elle roule.
 TweenService:Create(
 	mower,
-	TweenInfo.new(MOWER_SQUASH_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-	{ Size = UDim2.fromScale(MOWER_SIZE.X * MOWER_SQUASH_X, MOWER_SIZE.Y * MOWER_SQUASH_Y) }
+	TweenInfo.new(MOWER.SQUASH_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+	{ Size = UDim2.fromScale(MOWER.SIZE.X * MOWER.SQUASH.X, MOWER.SIZE.Y * MOWER.SQUASH.Y) }
 ):Play()
 
 -- LE PASSAGE : la tondeuse traverse, et chaque touffe se fait couper QUAND ELLE LA DEPASSE. On avance la position a
@@ -1179,7 +1185,7 @@ task.spawn(function()
 	waitForFirstFrames()
 	task.wait(WORD_DELAY)
 	-- LE RETARD DE REPOUSSE EN SECONDES : la distance voulue, divisee par la vitesse de la tondeuse.
-	local speed = (MOWER_END_X - MOWER_START_X) / MOWER_TIME
+	local speed = (MOWER.END_X - MOWER.START_X) / MOWER.TIME
 	local regrowDelay = GRASS_REGROW.LAG / speed
 	local regrowIn = TweenInfo.new(GRASS_REGROW.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 	while root.Parent do
@@ -1192,11 +1198,11 @@ task.spawn(function()
 		end
 		local done = false
 		mowConn = RunService.Heartbeat:Connect(function(dt: number)
-			travelled += dt / MOWER_TIME
-			local pos = MOWER_START_X + (MOWER_END_X - MOWER_START_X) * math.min(travelled, 1)
-			mower.Position = UDim2.fromScale(pos, MOWER_GROUND_Y)
+			travelled += dt / MOWER.TIME
+			local pos = MOWER.START_X + (MOWER.END_X - MOWER.START_X) * math.min(travelled, 1)
+			mower.Position = UDim2.fromScale(pos, MOWER.GROUND_Y)
 			for _, blade in blades do
-				if not blade.cut and pos + MOWER_SIZE.X / 2 + GRASS_CUT_LEAD >= blade.x then
+				if not blade.cut and pos + MOWER.SIZE.X / 2 + GRASS_CUT_LEAD >= blade.x then
 					blade.cut = true
 					TweenService:Create(blade.grad, GRASS_CUT, {
 						Offset = Vector2.new(if GRASS_WIPE_FLIP then -1 else 1, 0),
@@ -1230,7 +1236,7 @@ task.spawn(function()
 		end
 		-- LE TEMPS QU'ELLE REVIENNE PAR LA GAUCHE. Court : l'herbe n'a plus besoin d'etre remise debout en coulisse,
 		-- elle s'est deja redressee derriere la machine.
-		task.wait(MOWER_PAUSE)
+		task.wait(MOWER.PAUSE)
 	end
 end)
 
