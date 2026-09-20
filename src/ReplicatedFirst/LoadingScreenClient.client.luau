@@ -413,12 +413,12 @@ local EYE = {
 -- LE REGARD. Le cadre des yeux glisse de quelques pour cent seulement : au-dela, les pupilles sortiraient des
 -- paupieres dessinees sur la tete.
 local GAZE = {
-	X = 0.016, -- amplitude horizontale, en fraction de la tete. KNOB
-	Y = 0.007,
+	X = 0.032, -- amplitude horizontale, en fraction de la tete. KNOB
+	Y = 0.014,
 	-- PARFOIS IL LEVE LES YEUX, franchement a gauche ou a droite. Un balayage qui ne fait que glisser au hasard
 	-- se lit comme un tic ; un regard qui part EN HAUT ET DE COTE donne l'air de penser a quelque chose.
 	UP_CHANCE = 0.4, -- part des coups d'oeil qui montent. KNOB
-	UP_Y = 0.015, -- de combien il leve les yeux. Trop haut, les pupilles sortent des paupieres dessinees
+	UP_Y = 0.028, -- de combien il leve les yeux. Trop haut, les pupilles sortent des paupieres dessinees
 	EVERY = 1.3, -- temps entre deux coups d'oeil
 	JITTER = 1.9,
 	TIME = 0.22, -- duree du deplacement
