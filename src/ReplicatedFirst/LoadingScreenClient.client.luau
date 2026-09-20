@@ -495,7 +495,7 @@ local GRASS_IMAGE = "rbxassetid://87955164509294"
 -- a l'air de rouler sur du vide.
 -- 0.15 ET NON 0.22 : l'ancienne image portait environ un tiers de vide sous les brins, on compensait donc en
 -- l'agrandissant. Image rognee, la meme hauteur de BRINS tient dans une case plus courte.
-local GRASS_SIZE = Vector2.new(0.07, 0.15)
+local GRASS_SIZE = Vector2.new(0.045, 0.09)
 -- LA LIGNE DE SOL : c'est le BAS des touffes, pas leur centre. Posee ainsi, changer leur hauteur ne les fait plus
 -- monter ni s'enfoncer -- elles poussent depuis le meme sol quelle que soit leur taille.
 --
@@ -511,7 +511,7 @@ local GRASS_START_X = 0.013 -- centre de la premiere touffe
 -- L'ECART SE DEDUIT DE LA LARGEUR, il ne s'ecrit pas a part : pose a la main, il finit toujours par ne plus
 -- correspondre a la taille (a 0.026 pour des touffes de 0.052, chacune couvrait la moitie de sa voisine et la
 -- rangee devenait une masse noire continue, sans touffes lisibles). Un seul nombre a regler : le RECOUVREMENT.
-local GRASS_OVERLAP = 0.12 -- 0 = touffes bord a bord ; 0.12 = elles se touchent juste. KNOB
+local GRASS_OVERLAP = 0.25 -- 0 = touffes bord a bord ; plus on monte, plus elles se serrent. KNOB
 local GRASS_STEP = GRASS_SIZE.X * (1 - GRASS_OVERLAP)
 local GRASS_CUT = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- vitesse de la coupe
 local GRASS_WIPE_EDGE = 0.3 -- douceur du bord de coupe (0 = coupure nette)
