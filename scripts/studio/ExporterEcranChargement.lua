@@ -81,8 +81,13 @@ local function describe(gui: GuiObject, depth: number)
 	if gui:IsA("TextLabel") or gui:IsA("TextButton") then
 		table.insert(parts, `text = "{gui.Text}"`)
 		table.insert(parts, `font = {gui.FontFace.Family}`)
+		table.insert(parts, `weight = {gui.FontFace.Weight.Name}`)
 		table.insert(parts, `textColor = {colour(gui.TextColor3)}`)
 		table.insert(parts, `textTransparency = {n(gui.TextTransparency)}`)
+		-- AVEC `TextScaled`, la taille vient de la boite ; SANS, elle est ecrite ici. Sans cette distinction, un texte
+		-- recopie ailleurs sort deux fois trop gros ou deux fois trop petit, sans qu'on comprenne pourquoi.
+		table.insert(parts, if gui.TextScaled then "textScaled = true" else `textSize = {n(gui.TextSize)}`)
+		table.insert(parts, `align = {gui.TextXAlignment.Name} / {gui.TextYAlignment.Name}`)
 	end
 	if gui.BackgroundTransparency < 1 then
 		table.insert(parts, `bg = {colour(gui.BackgroundColor3)}`)
