@@ -2204,6 +2204,20 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.972 — Le rideau de changement de map ne garde que l essentiel
+
+Plus de couronne de points, plus de motif de fond, plus de halo : un fond blanc, la tete du grand-pere (bien
+plus grosse), le bandeau et le nom du lieu. Le fichier passe de 406 a 261 lignes.
+
+Les trois elements sont SUPPRIMES et non caches derriere un drapeau : du code mort derriere un `false` finit
+par etre du code que plus personne n ose toucher. Git les garde si on les veut un jour.
+
+La tete reprend aussi le fondu du montage (le meme degrade que sur le grand ecran), pose une seule fois dans
+`FaceEyes` pour que son angle ne puisse pas diverger entre les deux ecrans.
+
+Le rideau du didacticiel dure 3,5 s apres l arrivee du personnage au lieu de 10 : c est une petite carte,
+presque tout est deja la quand le joueur se pose.
+
 ## 0.0.971 — Le rideau de changement de map passe en noir et blanc
 
 Meme parti pris que le grand ecran de premier lancement : fond blanc a peine grise, tout le dessin en noir.

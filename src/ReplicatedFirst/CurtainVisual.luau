@@ -20,15 +20,13 @@ local FaceEyes = require(script.Parent.FaceEyes)
 
 local CurtainVisual = {}
 
--- `tile` est nil sur mobile : voir SHOW_TILE.
-export type Built = { tile: ImageLabel?, face: ImageLabel, dots: { Frame } }
+export type Built = { face: ImageLabel }
 
 -- PAS DE TUILE SUR MOBILE, a la demande du joueur apres test sur telephone. Le ciel degrade, le visage et la couronne
 -- restent : seul le motif qui defile disparait.
 --
 -- COUPEES : le fond est un blanc nu. Le motif est garde en code plutot que supprime -- il se rallume d'une ligne,
 -- et sa mecanique de defilement (periode relue a chaque image) n'est pas triviale a reecrire.
-local SHOW_TILE = false
 
 -- COULEUR DE SECOURS DU CONTENEUR. Elle ne se voit qu'un instant -- celui ou le rideau existe deja mais ou son cadre
 -- degrade n'est pas encore pose -- et partout ou ce cadre ne couvrirait pas.
@@ -41,30 +39,6 @@ CurtainVisual.BG = Color3.fromRGB(255, 255, 255)
 -- L'ENCRE UNIQUE. Tout le dessin du rideau en noir sur blanc : le meme parti pris que l'ecran de chargement
 -- principal, pour que les deux se lisent comme un seul jeu et pas comme deux ecrans empruntes ailleurs.
 local INK = Color3.fromRGB(0, 0, 0)
-
--- ===== FOND TUILE =====
-local TILE_IMAGE_ID = "rbxassetid://80842701479373"
--- NOIRE SUR FOND BLANC. Sa discretion vient de sa TRANSPARENCE (le degrade ci-dessous), pas d'un gris : un
--- UIGradient MULTIPLIE la couleur de l'objet, donc sur un gris les valeurs du degrade sont rabotees en silence et
--- on regle une courbe dont on ne voit jamais le vrai rendu.
-local TILE_TINT = Color3.fromRGB(0, 0, 0)
--- Taille d'UNE tuile, en fraction de l'ImageLabel.
-local TILE_CELL = UDim2.fromScale(0.005, 0.01)
--- Defilement, en pixels par seconde. EN DIAGONALE : horizontal ou vertical, ca se lit comme un decor qui glisse ; en
--- diagonale, comme un mouvement propre.
-local TILE_DRIFT = 15
--- FONDU SUR LA TUILE. Plein cadre et uniforme, le motif se lit comme un papier peint et rentre en concurrence avec
--- le visage du milieu. On le laisse dense d'un cote et on le fait disparaitre de l'autre.
---
--- Une NumberSequence DOIT commencer a 0 et finir a 1, en temps strictement croissant : Roblox refuse la sequence
--- entiere sinon, et le degrade disparait sans le moindre message.
-local TILE_FADE_ROTATION = 50
-local TILE_FADE = NumberSequence.new({
-	NumberSequenceKeypoint.new(0, 1),
-	NumberSequenceKeypoint.new(0.36, 1),
-	NumberSequenceKeypoint.new(0.748, 0.813),
-	NumberSequenceKeypoint.new(1, 0),
-})
 
 -- ===== BANDEAU, EN HAUT A DROITE, derriere le nom du lieu =====
 -- Retourne de 180 degres pour que sa pointe parte du bon cote : l'image a un sens, et le sens ne se DEDUIT pas.
@@ -130,15 +104,6 @@ local FACE_SWAY_SPEED = 0.6 -- radians par seconde : un aller-retour complet en 
 local FACE_WINK_AFTER = 1.2
 -- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
 
--- ===== LE HALO =====
--- IL SERVAIT A DETACHER le grand-pere d'un ciel qui avait presque sa couleur. Sur un fond blanc avec un visage
--- noir, le contraste fait deja ce travail : le halo est coupe (SHOW_GLOW) plutot que supprime, pour qu'il revienne
--- d'une ligne si le fond redevient colore un jour.
-local SHOW_GLOW = false
-local GLOW_IMAGE_ID = "rbxassetid://108057663284590"
-local GLOW_COLOR = Color3.fromRGB(235, 235, 235)
-local GLOW_SIZE = UDim2.fromScale(0.34, 0.6)
-
 -- ===== DESTINATION =====
 -- Le lieu ou l'on va, en haut a droite. ReplicatedFirst ne peut pas require PlacesConfig : les identifiants sont EN
 -- DUR ici, a tenir d'accord a la main -- c'est le prix de tourner aussi tot.
@@ -153,49 +118,9 @@ CurtainVisual.DEST_FALLBACK = "LOADING"
 local DEST_POS = UDim2.fromScale(0.988, 0.056)
 local DEST_SIZE = UDim2.fromScale(0.3, 0.075)
 
--- ===== LA COURONNE DE POINTS, sous la tete =====
--- Elle ne promet rien d'autre que "ca travaille", et c'est la seule chose qu'on sache.
---
--- Cote du cadre carre, en fraction de la HAUTEUR de l'ecran (voir `RelativeYY` a la construction).
-local SPIN_SIZE = 0.06
-local SPIN_GAP = 0.09 -- espace entre le bas de la tete et le haut de la couronne. KNOB
--- SA PLACE SE CALCULE, elle ne s'ecrit pas : la tete n'a pas la meme taille sur telephone et sur PC (voir
--- FACE_K), donc une valeur en dur la collerait au visage d'un cote et la laisserait flotter de l'autre.
-local SPIN_POS = UDim2.fromScale(0.5, 0.5 + FACE_SIZE.Y.Scale / 2 + SPIN_GAP + SPIN_SIZE / 2)
--- Sous 8 la rotation se lit comme une suite de sauts ; au-dela de 16 les points se touchent.
-local SPIN_DOTS = 12
--- Rayon du cercle, en fraction du cadre. 0.5 poserait les centres sur le bord et les points depasseraient.
-local SPIN_RADIUS = 0.38
-local SPIN_DOT = 0.16
-local SPIN_COLOR = Color3.fromRGB(0, 0, 0)
--- Transparence du point de TETE et du plus pale. Le second n'est pas a 1 : les points eteints restent VISIBLES,
--- sinon on ne voit plus une couronne qui tourne mais un point qui saute.
-local SPIN_HEAD_T = 0
-local SPIN_TAIL_T = 0.78
--- De combien le point de tete grossit. Le meme dessin en deux tailles se distingue mieux qu'en deux gris.
-local SPIN_HEAD_SCALE = 1.35
--- Duree d'UN TOUR, en secondes. Plus vite, ca s'agite ; plus lentement, ca a l'air en panne.
-local SPIN_PERIOD = 1
-
 --- Le nom affiche pour ce lieu.
 function CurtainVisual.destFor(placeId: number): string
 	return DEST_BY_PLACE[placeId] or CurtainVisual.DEST_FALLBACK
-end
-
---- Allume la couronne pour une tete a la position `head` (de 0 a 1 sur le cercle).
----
---- LES POINTS NE BOUGENT PAS : seule leur transparence et leur taille tournent. La meme fonction sert a l'animation
---- et a l'image figee du teleport -- les deux ne peuvent donc pas dessiner deux couronnes differentes.
-local function paintSpinner(dots: { Frame }, head: number)
-	for i, dot in dots do
-		if dot.Parent then
-			-- DISTANCE DERRIERE LA TETE, de 0 (c'est elle) a presque 1. Le modulo fait le tour tout seul.
-			local d = (head - (i - 1) / SPIN_DOTS) % 1
-			dot.BackgroundTransparency = SPIN_HEAD_T + (SPIN_TAIL_T - SPIN_HEAD_T) * d
-			local s = SPIN_DOT * (1 + (SPIN_HEAD_SCALE - 1) * (1 - d))
-			dot.Size = UDim2.fromScale(s, s)
-		end
-	end
 end
 
 --- Dessine le rideau dans `container` (plein ecran). FIGE : rien ne bouge tant qu'on n'appelle pas `animate`.
@@ -215,41 +140,6 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	bgGradient.Rotation = BG_ROTATION
 	bgGradient.Parent = bg
 
-	local tile: ImageLabel? = nil
-	if SHOW_TILE then
-		local label = Instance.new("ImageLabel")
-		label.Name = "Tile"
-		label.BackgroundTransparency = 1
-		label.Image = TILE_IMAGE_ID
-		label.ImageColor3 = TILE_TINT
-		label.ScaleType = Enum.ScaleType.Tile
-		label.TileSize = TILE_CELL
-		label.AnchorPoint = Vector2.new(0.5, 0.5)
-		label.Position = UDim2.fromScale(0.5, 0.5)
-		label.Size = UDim2.fromScale(2, 2) -- deborde largement : le defilement recycle sans jamais montrer les bords
-		label.ZIndex = 2
-		label.Parent = container
-		local tileFade = Instance.new("UIGradient")
-		tileFade.Transparency = TILE_FADE
-		tileFade.Rotation = TILE_FADE_ROTATION
-		tileFade.Parent = label
-		tile = label
-	end
-
-	-- LE HALO EN PREMIER, donc DERRIERE le visage.
-	local glow = Instance.new("ImageLabel")
-	glow.Name = "FaceGlow"
-	glow.BackgroundTransparency = 1
-	glow.Image = GLOW_IMAGE_ID
-	glow.ImageColor3 = GLOW_COLOR
-	glow.ScaleType = Enum.ScaleType.Fit
-	glow.AnchorPoint = Vector2.new(0.5, 0.5)
-	glow.Position = UDim2.fromScale(0.5, 0.5)
-	glow.Size = GLOW_SIZE
-	glow.ZIndex = 3
-	glow.Visible = SHOW_GLOW
-	glow.Parent = container
-
 	local face = Instance.new("ImageLabel")
 	face.Name = "OldManFace"
 	face.BackgroundTransparency = 1
@@ -267,39 +157,6 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	FaceEyes.fade(face) -- le meme fondu que sur le grand ecran : il efface le bas du visage et lui donne son gris
 	face.ZIndex = 5
 	face.Parent = container
-
-	local spinner = Instance.new("Frame")
-	spinner.Name = "Spinner"
-	spinner.BackgroundTransparency = 1
-	spinner.AnchorPoint = Vector2.new(0.5, 0.5)
-	spinner.Position = SPIN_POS
-	-- CARRE PAR CONSTRUCTION : `RelativeYY` calcule les DEUX cotes sur la hauteur, sinon la couronne devient un ovale
-	-- des que l'ecran n'est pas carre -- c'est-a-dire toujours.
-	spinner.SizeConstraint = Enum.SizeConstraint.RelativeYY
-	spinner.Size = UDim2.fromScale(SPIN_SIZE, SPIN_SIZE)
-	spinner.ZIndex = 4
-	spinner.Parent = container
-
-	local dots: { Frame } = {}
-	for i = 1, SPIN_DOTS do
-		local a = (i - 1) / SPIN_DOTS * math.pi * 2
-		local dot = Instance.new("Frame")
-		dot.Name = `Dot{i}`
-		dot.AnchorPoint = Vector2.new(0.5, 0.5)
-		-- L'ANGLE PART DU HAUT et tourne dans le sens des aiguilles : l'axe Y d'une interface DESCEND, d'ou le `-cos`.
-		dot.Position = UDim2.fromScale(0.5 + math.sin(a) * SPIN_RADIUS, 0.5 - math.cos(a) * SPIN_RADIUS)
-		dot.Size = UDim2.fromScale(SPIN_DOT, SPIN_DOT)
-		dot.BackgroundColor3 = SPIN_COLOR
-		dot.BorderSizePixel = 0
-		dot.ZIndex = 4
-		-- Le cast est OBLIGATOIRE : luau-lsp ne resout pas `Instance.new("UICorner")` vers `UICorner`.
-		local corner = Instance.new("UICorner") :: UICorner
-		corner.CornerRadius = UDim.new(0.5, 0)
-		corner.Parent = dot
-		dot.Parent = spinner
-		dots[i] = dot
-	end
-	paintSpinner(dots, 0)
 
 	local banner = Instance.new("ImageLabel")
 	banner.Name = "Banner"
@@ -335,7 +192,7 @@ function CurtainVisual.build(container: GuiObject, destText: string): Built
 	dest.ZIndex = 4
 	dest.Parent = container
 
-	return { tile = tile, face = face, dots = dots }
+	return { face = face }
 end
 
 --- Anime un rideau construit par `build` : la tuile defile, le visage se deplie (si `pop`), tangue et cligne, la
@@ -345,7 +202,7 @@ end
 --- `pop` a faux : le visage est deja a l'ecran a sa taille (arrivee apres un teleport). Le replier pour le deplier le
 --- ferait disparaitre puis revenir pile au moment ou deux ecrans se relaient.
 function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
-	local tile, face, dots = built.tile, built.face, built.dots
+	local face = built.face
 	local alive = true
 	local conns: { RBXScriptConnection } = {}
 
@@ -354,31 +211,16 @@ function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
 	-- yeux resteraient pleins la ou la tete s estompe.
 	local eyes = FaceEyes.attach(face, { zIndex = face.ZIndex + 1, decorate = FaceEyes.fade })
 
-	local offX, offY = 0, 0
+	-- LE TANGAGE. Le temps ECOULE et pas un compteur par image : a bas FPS, un compteur ralentirait la rotation.
 	local swayTime = 0
-	local t0 = os.clock()
 	table.insert(
 		conns,
 		RunService.Heartbeat:Connect(function(dt: number)
-			-- Periode de recyclage = la taille PIXEL d'une tuile. Relue a chaque image, donc elle suit l'ecran
-			-- (resize, rotation mobile). Le modulo garde l'offset dans [0, periode).
-			-- Pas de tuile sur mobile (voir SHOW_TILE) : rien a faire defiler.
-			if tile then
-				local periodX = TILE_CELL.X.Scale * tile.AbsoluteSize.X
-				local periodY = TILE_CELL.Y.Scale * tile.AbsoluteSize.Y
-				if periodX > 0 and periodY > 0 then
-					offX = (offX + TILE_DRIFT * dt) % periodX
-					offY = (offY + TILE_DRIFT * dt) % periodY
-					tile.Position = UDim2.new(0.5, offX, 0.5, offY)
-				end
-			end
-			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
+			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux bouts.
 			swayTime += dt
 			-- LA SOMME DES DEUX : le tangage ici, le penchement du clin d oeil dans `FaceEyes`. Chacun ecrivant de
 			-- son cote, le dernier a parler effacerait l autre.
 			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE + eyes.tilt()
-			-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentit la rotation.
-			paintSpinner(dots, ((os.clock() - t0) / SPIN_PERIOD) % 1)
 		end)
 	)
 
