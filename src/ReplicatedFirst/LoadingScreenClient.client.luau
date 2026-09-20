@@ -487,7 +487,11 @@ local WORD_IN = TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.O
 -- tete. Les faire partir a l'apparition de la lettre les decollerait du geste ; ici ils sont l'onde de choc.
 local WORD_LAST = {
 	POP = 1.3, -- de combien le A gonfle
-	TIME = 0.12, -- aller (le retour dure autant : le tween s'inverse)
+	-- DEUX TEMPS INEGAUX, et c'est tout l'effet : il enfle LENTEMENT, puis claque d'un coup. Un aller-retour en
+	-- `reverses` ne peut pas le faire -- il rejoue la meme duree et la meme courbe a l'envers, donc un retour
+	-- aussi mou que l'aller.
+	GROW_TIME = 0.5,
+	SNAP_TIME = 0.1, -- le choc : court, et en easing `In` pour que la vitesse soit maximale A L'ARRIVEE
 }
 local WORD_SHINE_DELAY = 0.4 -- apres la pose de la derniere lettre
 local WORD_SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
@@ -903,7 +907,7 @@ for i = 1, #TITLE_TEXT do
 			local home_size = letter.Size
 			local swell = TweenService:Create(
 				letter,
-				TweenInfo.new(WORD_LAST.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out, 0, true),
+				TweenInfo.new(WORD_LAST.GROW_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
 				{
 					Size = UDim2.fromScale(
 						home_size.X.Scale * WORD_LAST.POP,
@@ -912,7 +916,14 @@ for i = 1, #TITLE_TEXT do
 				}
 			)
 			swell.Completed:Once(function()
-				letter.Size = home_size -- le tween rend la taille de depart, on la reecrit pour n'en rien devoir
+				if not letter.Parent then
+					return
+				end
+				TweenService:Create(
+					letter,
+					TweenInfo.new(WORD_LAST.SNAP_TIME, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
+					{ Size = home_size }
+				):Play()
 			end)
 			swell:Play()
 			revealFace()
