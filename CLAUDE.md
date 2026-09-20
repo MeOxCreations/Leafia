@@ -1473,6 +1473,15 @@ qu'on ait a le demander. But : ne jamais repayer deux fois le meme diagnostic.
   a son chemin sous SoundService, donc le code qui cherche un son par son chemin n'a pas change. Pour recuperer des
   sons deja poses : `scripts/studio/ExporterSons.lua`. Meme raison pour une interface : `ExporterInterface.lua`.
 
+- **UNE MESURE QUI EXISTE N'EST PAS UNE MESURE UTILISABLE : `ViewportSize` vaut (1, 1) dans `ReplicatedFirst`.**
+  On y tourne AVANT que la camera soit prete. Le garde `if camera then` passe donc sans rien garantir, et un
+  rapport `Y / X` y vaut 1 au lieu de 0.56 : une case calculee au demarrage sortait 1.7 fois trop large, et la tete
+  de l'ecran de chargement s'affichait completement aplatie. Symptome trompeur : le CALCUL est juste, on relit donc
+  la formule, les tweens, le CanvasGroup -- alors que c'est son ENTREE qui est fausse, et seulement pendant les
+  premieres images. Regle : une grandeur lue au boot se relit AU MOMENT DE S'EN SERVIR, avec un test de
+  VRAISEMBLANCE (ici : moins de 16 pixels = pas encore dessine, on prend un 16/9) et jamais un simple test
+  d'existence. Meme famille que "a CharacterAdded le personnage est parente mais PAS complet".
+
 ## Design emotionnel
 
 ### L'emotion centrale de Leafia
