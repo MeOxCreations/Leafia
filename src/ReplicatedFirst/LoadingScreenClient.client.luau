@@ -919,15 +919,22 @@ for i = 1, #TITLE_TEXT do
 				if not letter.Parent then
 					return
 				end
-				TweenService:Create(
+				local snap = TweenService:Create(
 					letter,
 					TweenInfo.new(WORD_LAST.SNAP_TIME, Enum.EasingStyle.Quint, Enum.EasingDirection.In),
 					{ Size = home_size }
-				):Play()
+				)
+				-- L'IMPACT EST LA : la lettre vient de reprendre sa taille, et c'est ce choc qui projette
+				-- l'onomatopee et fait sortir la tete. Les lancer a l'APPARITION de la lettre les detachait du
+				-- geste ; ici ils en sont la consequence.
+				snap.Completed:Once(function()
+					letter.Size = home_size
+					revealFace()
+					burstShout()
+				end)
+				snap:Play()
 			end)
 			swell:Play()
-			revealFace()
-			burstShout()
 		end
 	end
 end
