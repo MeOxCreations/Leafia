@@ -16,6 +16,7 @@ local TileField = require(ReplicatedStorage.Modules.UI.Core.TileField)
 local CustomKeyboard = require(ReplicatedStorage.Modules.UI.Core.CustomKeyboard)
 local ButtonSlime = require(ReplicatedStorage.Modules.UI.Core.ButtonSlime)
 local FormatUtils = require(ReplicatedStorage.Modules.Utils.FormatUtils)
+local SoundUtils = require(ReplicatedStorage.Modules.Utils.SoundUtils)
 local RemoteSetup = require(ReplicatedStorage.Shared.RemoteSetup)
 local SideNotificationHandler = require(ReplicatedStorage.Modules.UI.Notification.SideNotificationHandler)
 
@@ -157,6 +158,11 @@ local function trashPos(index: number, shown: boolean): UDim2
 end
 local CARD_SLIDE = TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local CARD_STAGGER = 0.09
+-- UN SON PAR CARTE, de plus en plus haut : les trois arrivees se lisent comme une montee et non comme trois fois
+-- le meme bruit. Meme principe que les lettres de l'ecran de chargement.
+local CARD_SOUND = { "Sounds", "UI", "AppearSound_1" }
+local CARD_SOUND_PITCH = 0.95
+local CARD_SOUND_STEP = 0.07 -- de combien la hauteur monte d'une carte a l'autre
 -- Entree du top bar (StepBadge + diamant) : il deboule du HAUT quand le loading screen s'enleve.
 local TOPBAR_SLIDE = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 
@@ -1840,6 +1846,10 @@ function LoadCompanyController.open(config: OpenConfig)
 	for i, card in cardFrames do
 		task.delay((i - 1) * CARD_STAGGER, function()
 			TweenService:Create(card, CARD_SLIDE, { Position = cardHomes[i] }):Play()
+			local pop = SoundUtils.play(CARD_SOUND)
+			if pop then
+				pop.PlaybackSpeed = CARD_SOUND_PITCH + (i - 1) * CARD_SOUND_STEP
+			end
 		end)
 	end
 	frame.Visible = true
