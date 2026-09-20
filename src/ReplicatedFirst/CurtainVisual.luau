@@ -16,6 +16,8 @@ local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 
+local FaceEyes = require(script.Parent.FaceEyes)
+
 local CurtainVisual = {}
 
 -- `tile` est nil sur mobile : voir SHOW_TILE.
@@ -92,9 +94,10 @@ local BG_COLOR = ColorSequence.new({
 -- ===== LE VISAGE DU GRAND-PERE, AU CENTRE =====
 -- Un visage dit CHEZ QUI l'on va -- c'est lui, le personnage qu'on va rencontrer. De face, et trois images pour le
 -- clignement (ouvert, a moitie, ferme).
-local FACE_FRONT = "rbxassetid://116099459878511"
-local FACE_FRONT_HALF = "rbxassetid://95027481047570"
-local FACE_FRONT_SHUT = "rbxassetid://92930536214559"
+-- LA TETE EST CELLE DE L ECRAN PRINCIPAL, dessinee SANS yeux : ils sont des calques poses dessus par `FaceEyes`,
+-- qui gere aussi le regard, le clignement et le clin d oeil. Un seul visage pour les deux ecrans, donc un seul
+-- endroit a regler -- et le personnage est le meme partout.
+local FACE_FRONT = FaceEyes.HEAD
 -- LES DEUX COTES EN FRACTION DE LA HAUTEUR (`RelativeYY`), comme la couronne de points. La largeur etait en fraction
 -- de la LARGEUR : sur un telephone (2340 x 1080, bien plus large qu'un ecran PC) la tete, en `Stretch`, sortait 22 %
 -- plus large que haute -- ecrasee. 0.2365 = l'ancienne largeur (0.133) ramenee a la hauteur d'un ecran 16:9.
@@ -115,12 +118,9 @@ local FACE_POP_DELAY = 0.15
 -- amplitude faible mais rapide un tremblement.
 local FACE_SWAY_ANGLE = 4 -- degres de chaque cote
 local FACE_SWAY_SPEED = 0.6 -- radians par seconde : un aller-retour complet en une dizaine de secondes
--- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
-local FACE_BLINK_EVERY = 3.2
-local FACE_BLINK_JITTER = 2.4
+-- LE CLIN D OEIL, une fois le visage pose. Compte depuis le depliage : avant lui, la tete est encore a plat.
+local FACE_WINK_AFTER = 1.2
 -- Duree de chaque etape. TRES court : un clignement lent se lit comme de la fatigue ou un bug d'affichage.
-local FACE_BLINK_HALF = 0.05
-local FACE_BLINK_SHUT = 0.09
 
 -- ===== LE HALO =====
 -- Il DETACHE le grand-pere du ciel, qui a pratiquement sa couleur. Plus grand que le visage : un halo qui s'arrete au
@@ -334,6 +334,9 @@ function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
 	local alive = true
 	local conns: { RBXScriptConnection } = {}
 
+	-- Les calques suivent la tete : poses DANS elle, ils heritent de sa taille et de son depliage sans un calcul.
+	local eyes = FaceEyes.attach(face, { zIndex = face.ZIndex + 1 })
+
 	local offX, offY = 0, 0
 	local swayTime = 0
 	local t0 = os.clock()
@@ -354,7 +357,9 @@ function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
 			end
 			-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
 			swayTime += dt
-			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE
+			-- LA SOMME DES DEUX : le tangage ici, le penchement du clin d oeil dans `FaceEyes`. Chacun ecrivant de
+			-- son cote, le dernier a parler effacerait l autre.
+			face.Rotation = math.sin(swayTime * FACE_SWAY_SPEED) * FACE_SWAY_ANGLE + eyes.tilt()
 			-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentit la rotation.
 			paintSpinner(dots, ((os.clock() - t0) / SPIN_PERIOD) % 1)
 		end)
@@ -376,26 +381,17 @@ function CurtainVisual.animate(built: Built, pop: boolean): () -> ()
 		end)
 	end
 
-	-- IL CLIGNE DES YEUX. L'image INTERMEDIAIRE (paupieres a moitie) est jouee a l'aller ET au retour : sans elle
-	-- l'oeil passe d'ouvert a ferme en une image, ce qui claque au lieu de cligner.
-	task.spawn(function()
-		while alive do
-			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
-			if not alive then
-				return
-			end
-			face.Image = FACE_FRONT_HALF
-			task.wait(FACE_BLINK_HALF)
-			face.Image = FACE_FRONT_SHUT
-			task.wait(FACE_BLINK_SHUT)
-			face.Image = FACE_FRONT_HALF
-			task.wait(FACE_BLINK_HALF)
-			face.Image = FACE_FRONT
+	-- IL REGARDE AUTOUR DE LUI, CLIGNE, ET FAIT UN CLIN D OEIL. Tout vient de `FaceEyes` : le meme visage vit de
+	-- la meme facon sur les deux ecrans.
+	task.delay(FACE_WINK_AFTER, function()
+		if alive then
+			eyes.wink()
 		end
 	end)
 
 	return function()
 		alive = false
+		eyes.stop() -- ses boucles vivent sur des threads a elles : detruire le rideau ne les couperait pas
 		for _, conn in conns do
 			conn:Disconnect()
 		end

@@ -25,6 +25,7 @@ local TeleportService = game:GetService("TeleportService")
 -- n'attend aucune replication, contrairement a un module de ReplicatedStorage.
 local CurtainVisual = require(script.Parent.CurtainVisual)
 local WipeVisual = require(script.Parent.WipeVisual)
+local FaceEyes = require(script.Parent.FaceEyes)
 
 local player = Players.LocalPlayer
 ReplicatedFirst:RemoveDefaultLoadingScreen()
@@ -365,64 +366,22 @@ local INK = Color3.fromRGB(0, 0, 0)
 
 -- LA TETE DU GRAND-PERE et l'ONOMATOPEE a cote d'elle. Toutes deux fondues vers le bas par un degrade (voir
 -- `fadeGradient`) : c'est ce qui leur donne leur gris, sans qu'aucune couleur n'entre dans l'ecran.
-local FACE_IMAGE = "rbxassetid://107162385671697" -- la tete SANS les yeux
+local FACE_IMAGE = FaceEyes.HEAD -- la tete SANS les yeux : les yeux sont des calques (voir FaceEyes)
 -- LES YEUX SONT DES CALQUES A PART, dessines aux MEMES DIMENSIONS que la tete : poses par-dessus en taille (1, 1),
 -- ils tombent pile en place, sans un seul chiffre a regler. Les faire regarder ailleurs revient alors a DECALER le
 -- calque -- et comme ils sont tous dans le meme cadre, ils ne peuvent pas se desaligner entre eux.
+-- CE QUI RESTE PROPRE A CET ECRAN. Les images des yeux, le regard, le clignement et le clin d oeil vivent dans
+-- `FaceEyes`, partage avec le rideau de changement de map.
 local EYE = {
-	LEFT = "rbxassetid://130322074892629",
-	RIGHT = "rbxassetid://108086469738634",
-	SHUT = "rbxassetid://80743235106162", -- les deux fermes
-	WINK = "rbxassetid://133495431262696", -- l'oeil droit ferme : le clin d'oeil
-	SOUND = { "Sounds", "UI", "EyeWinkSound" },
-	-- ECARTEMENT, en fraction de la largeur de la tete : chaque oeil glisse vers son cote. Rectification faite
-	-- ICI plutot que dans l'image, tant qu'elle reste petite. A NOTER : le calque des DEUX yeux fermes ne peut
-	-- pas suivre (ses deux yeux sont dans la meme image), donc un ecart trop grand se verrait au clignement.
-	SPREAD = 0.008, -- KNOB
-	SOUND_VOLUME = 0.6,
-	-- LE CLIN D'OEIL EST UN MOMENT ECRIT, PAS UN HASARD : il tombe a la FIN du son d'arrivee.
-	--
-	-- LE MOMENT SE COMPTE DEPUIS LA TETE, pas depuis un son. Accroche a la fin du son d'arrivee (5,7 s), le geste
-	-- tombait tout a la fin du chargement ou pas du tout. La tete sort avec la derniere lettre : deux secondes
-	-- plus tard, le regard du joueur est dessus et le clin d'oeil se lit.
-	AFTER_FACE = 0.35, -- KNOB. Juste assez pour que la tete ait fini de sortir, pas plus.
-	-- A REMETTRE A `true` pour revoir le statut de chargement des images en console.
-	--
-	-- ATTENTION A `ImageLabel.IsLoaded` : elle reste FAUSSE tant que l'image n'a jamais ete DESSINEE, meme quand
-	-- l'asset est parfaitement disponible. Elle a failli faire accuser un asset qui allait tres bien. La mesure
-	-- qui dit vrai est le statut rendu par `PreloadAsync` (Success / Failure / TimedOut).
-	DEBUG = false,
-	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
-	BLINK_EVERY = 3.2,
-	BLINK_JITTER = 2.4,
-	SHUT_TIME = 0.09,
-	WINK_TIME = 0.18, -- un clin d'oeil se TIENT, il ne claque pas comme un clignement
-	-- LA TETE PENCHE PENDANT LE CLIN D'OEIL. L'inclinaison part AVEC le son et se redresse apres : la tete
-	-- accompagne le geste au lieu de le subir. Sur le GROUPE et non sur l'image : le CanvasGroup tourne son rendu
-	-- entier, donc rien n'est rogne aux coins.
-	-- IL TANGUE, tres doucement, comme sur le rideau de changement de map. FAIBLE ET LENT, les deux ensemble :
-	-- une amplitude large ferait un metronome, une amplitude faible mais rapide un tremblement.
+	-- IL TANGUE, tres doucement, comme le rideau de changement de map. FAIBLE ET LENT, les deux ensemble : une
+	-- amplitude large ferait un metronome, une amplitude faible mais rapide un tremblement.
 	SWAY_ANGLE = 4, -- degres de chaque cote
 	SWAY_SPEED = 0.6, -- radians par seconde
-	TILT = 7, -- degres. KNOB
-	TILT_IN = 0.35, -- temps pour pencher
-	TILT_HOLD = 0, -- temps ou la tete reste penchee APRES la reouverture de l'oeil. KNOB
-	TILT_OUT = 0.5, -- temps pour se redresser : plus lent, la tete "revient" au lieu de claquer
+	-- LE MOMENT DU CLIN D OEIL, compte depuis la sortie de la TETE et pas depuis un son. Accroche a la fin du son
+	-- d arrivee (5,7 s), le geste tombait tout a la fin du chargement, ou pas du tout.
+	AFTER_FACE = 0.35, -- juste assez pour que la tete ait fini de sortir, pas plus. KNOB
 }
 
--- LE REGARD. Le cadre des yeux glisse de quelques pour cent seulement : au-dela, les pupilles sortiraient des
--- paupieres dessinees sur la tete.
-local GAZE = {
-	X = 0.032, -- amplitude horizontale, en fraction de la tete. KNOB
-	Y = 0.014,
-	-- PARFOIS IL LEVE LES YEUX, franchement a gauche ou a droite. Un balayage qui ne fait que glisser au hasard
-	-- se lit comme un tic ; un regard qui part EN HAUT ET DE COTE donne l'air de penser a quelque chose.
-	UP_CHANCE = 0.4, -- part des coups d'oeil qui montent. KNOB
-	UP_Y = 0.028, -- de combien il leve les yeux. Trop haut, les pupilles sortent des paupieres dessinees
-	EVERY = 1.3, -- temps entre deux coups d'oeil
-	JITTER = 1.9,
-	TIME = 0.22, -- duree du deplacement
-}
 local FACE_POS = Vector2.new(0.5, 0.398)
 local FACE_SIZE = Vector2.new(0.1835, 0.2837)
 local SHOUT_IMAGE = "rbxassetid://84029477406959"
@@ -824,86 +783,28 @@ face.Size = UDim2.fromScale(1, 1)
 fadeGradient(face)
 face.Parent = faceGroup
 
--- LE CADRE DES YEUX : c'est LUI qu'on deplace pour le regard, jamais les calques un par un. Un seul objet a
--- bouger, donc aucun risque qu'un oeil parte sans l'autre.
-local eyes = Instance.new("Frame")
-eyes.Name = "Eyes"
-eyes.BackgroundTransparency = 1
-eyes.AnchorPoint = Vector2.new(0.5, 0.5)
-eyes.Position = UDim2.fromScale(0.5, 0.5)
-eyes.Size = UDim2.fromScale(1, 1)
-eyes.ZIndex = 6
-eyes.Parent = faceGroup
+-- LES YEUX vivent dans `FaceEyes` : le rideau de changement de map montre le meme visage, et la meme logique
+-- recopiee aux deux endroits finirait par diverger. Le module pose les calques, fait vivre le regard et rend
+-- l angle du penchement ; ici on ne garde que ce qui est PROPRE a cet ecran -- le tangage et la somme des deux
+-- rotations.
+local faceEyes = FaceEyes.attach(face, {
+	zIndex = 6,
+	tint = INK,
+	-- Le fondu du montage ne se propage pas aux enfants : il se repose sur chaque calque, sinon les yeux
+	-- resteraient pleins la ou la tete s estompe.
+	decorate = fadeGradient,
+	-- Les boucles demarrent au chargement, bien avant que la derniere lettre ne fasse sortir le visage : sans
+	-- cette attente, le son du clin d oeil partirait dans le vide.
+	waitVisible = function(): boolean
+		while faceGroup.Parent and faceGroup.GroupTransparency > 0.05 do
+			task.wait(0.2)
+		end
+		return faceGroup.Parent ~= nil
+	end,
+})
 
--- Chaque etat de l'oeil est un calque pleine taille, montre ou cache. Le fondu du montage est repose sur chacun :
--- sans lui, les yeux resteraient pleins la ou la tete s'estompe, et on les verrait flotter devant elle.
-local function eyeLayer(name: string, image: string, shown: boolean): ImageLabel
-	local layer = Instance.new("ImageLabel")
-	layer.Name = name
-	layer.BackgroundTransparency = 1
-	layer.Image = image
-	layer.ImageColor3 = INK
-	layer.ScaleType = Enum.ScaleType.Stretch -- comme la tete, sinon les deux ne se superposent plus
-	layer.AnchorPoint = Vector2.new(0.5, 0.5)
-	layer.Position = UDim2.fromScale(0.5, 0.5)
-	layer.Size = UDim2.fromScale(1, 1)
-	layer.ZIndex = 6
-	layer.Visible = shown
-	fadeGradient(layer)
-	layer.Parent = eyes
-	return layer
-end
-
-local eyeLayers = {
-	left = eyeLayer("EyeLeft", EYE.LEFT, true),
-	right = eyeLayer("EyeRight", EYE.RIGHT, true),
-	shut = eyeLayer("EyesShut", EYE.SHUT, false),
-	wink = eyeLayer("EyeWink", EYE.WINK, false),
-}
-
--- CHAQUE OEIL GLISSE VERS SON COTE. Le calque du clin d'oeil suit l'oeil DROIT : c'est le meme oeil.
-eyeLayers.left.Position = UDim2.fromScale(0.5 - EYE.SPREAD, 0.5)
-eyeLayers.right.Position = UDim2.fromScale(0.5 + EYE.SPREAD, 0.5)
-eyeLayers.wink.Position = UDim2.fromScale(0.5 + EYE.SPREAD, 0.5)
-
--- LES DEUX CALQUES CACHES SE TELECHARGENT D'AVANCE. Une image ne part se charger que lorsqu'on l'AFFICHE : celles
--- du clignement et du clin d'oeil ne se montrent que deux dixiemes de seconde, donc elles n'avaient jamais le
--- temps d'arriver. En tache de fond : un PreloadAsync bloque son thread jusqu'a ce que tout soit la.
---
--- ON PRECHARGE LES QUATRE, y compris les deux qui s'affichent deja : sans TEMOIN, un echec ne se distingue pas
--- d'une lenteur. Le rappel donne le statut REEL de chaque image (Success / Failure / TimedOut), seule facon de
--- savoir si un asset est refuse plutot que juste lent.
-task.spawn(function()
-	pcall(function()
-		ContentProvider:PreloadAsync({
-			eyeLayers.left,
-			eyeLayers.right,
-			eyeLayers.shut,
-			eyeLayers.wink,
-		}, function(contentId: string, status: Enum.AssetFetchStatus)
-			if EYE.DEBUG then
-				print(`[Loading] image {contentId} : {status.Name}`)
-			end
-		end)
-	end)
-end)
-
--- TANT QUE LA TETE EST CACHEE, ON NE JOUE RIEN. Les boucles demarrent au chargement, bien avant que la derniere
--- lettre ne fasse sortir le visage : sans cette attente, le son du clin d'oeil partirait dans le vide.
-local function waitForFace()
-	while faceGroup.Parent and faceGroup.GroupTransparency > 0.05 do
-		task.wait(0.2)
-	end
-	return faceGroup.Parent ~= nil
-end
-
--- LE CLIN D'OEIL, appele du dehors (la fin du son d'arrivee). Le drapeau evite qu'il se croise avec un
--- clignement : les deux ecrivent les memes calques, et celui qui finit en dernier gagnerait.
--- LE TANGAGE. Il ecrit la MEME propriete que le penchement du clin d'oeil : si les deux la posaient chacun de
--- leur cote, celui qui parle en dernier gagnerait et le penchement disparaitrait sous le tangage. Le penchement
--- vit donc dans une valeur a part, que les tweens animent, et la boucle ECRIT LA SOMME des deux.
-local tiltValue = Instance.new("NumberValue")
-tiltValue.Value = 0
+-- LE TANGAGE. Il ecrit la MEME rotation que le penchement du clin d oeil : si les deux la posaient chacun de
+-- leur cote, celui qui parle en dernier gagnerait. On ECRIT DONC LA SOMME, une seule fois par image.
 local swayConn: RBXScriptConnection? = nil
 swayConn = RunService.Heartbeat:Connect(function()
 	if not faceGroup.Parent then
@@ -911,122 +812,21 @@ swayConn = RunService.Heartbeat:Connect(function()
 	end
 	-- Un sinus : il ralentit en arrivant a un bout et repart. Un aller-retour lineaire claquerait aux extremites.
 	-- Le temps ECOULE et pas un compteur par image : a bas FPS un compteur ralentirait le tangage.
-	faceGroup.Rotation = math.sin(os.clock() * EYE.SWAY_SPEED) * EYE.SWAY_ANGLE + tiltValue.Value
+	faceGroup.Rotation = math.sin(os.clock() * EYE.SWAY_SPEED) * EYE.SWAY_ANGLE + faceEyes.tilt()
 end)
 
--- LE SON D'ARRIVEE EN COURS, pose par la premiere lettre et lu par le planificateur du clin d'oeil.
-local joinSoundPlaying: Sound? = nil
-local eyesBusy = false
-local winkDone = false
-local function winkOnce()
-	-- UNE SEULE FOIS, quel que soit le nombre de declencheurs : la fin du son et la limite de temps peuvent tres
-	-- bien tomber toutes les deux.
-	if winkDone or eyesBusy or not eyes.Parent then
-		return
-	end
-	if not waitForFace() then -- le son peut finir avant que la tete soit sortie
-		return
-	end
-	if winkDone or not eyes.Parent then -- l'attente ci-dessus a pu durer : on reteste
-		return
-	end
-	winkDone = true
-	eyesBusy = true
-	-- TOUT SUR LA MEME IMAGE : le son, l'oeil qui se ferme, la tete qui penche. Le son a d'abord ete lance en
-	-- avance pour que l'oeil tombe sur sa derniere note -- il partait alors une demi-seconde avant le geste, et
-	-- les trois ne se lisaient plus comme un seul mouvement.
-	local cling = findSound(EYE.SOUND)
-	if cling then
-		playSound(cling, EYE.SOUND_VOLUME)
-	end
-	eyeLayers.right.Visible = false
-	eyeLayers.wink.Visible = true
-	TweenService:Create(
-		tiltValue,
-		TweenInfo.new(EYE.TILT_IN, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-		{ Value = EYE.TILT }
-	):Play()
-	task.wait(EYE.WINK_TIME)
-	eyeLayers.wink.Visible = false
-	eyeLayers.right.Visible = true
-	eyesBusy = false
-	-- ELLE RESTE PENCHEE UN MOMENT : se redresser dans le meme geste que la reouverture ferait un aller-retour
-	-- mecanique. Elle tient la pose, puis revient.
-	task.delay(EYE.TILT_HOLD, function()
-		if not faceGroup.Parent then
-			return
-		end
-		TweenService:Create(
-			tiltValue,
-			TweenInfo.new(EYE.TILT_OUT, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-			{ Value = 0 }
-		):Play()
-	end)
-end
-
--- QUAND LE CLIN D'OEIL SE JOUE. Un seul endroit decide, plutot que deux declencheurs qui se doublaient : la fin
--- du son et une limite de temps pouvaient tomber dans n'importe quel ordre, donc le geste changeait de place
--- d'une partie a l'autre.
+-- LE CLIN D OEIL, juste apres que la derniere lettre ait fait sortir la tete.
 task.spawn(function()
-	if not waitForFace() then
+	while faceGroup.Parent and faceGroup.GroupTransparency > 0.05 do
+		task.wait(0.2)
+	end
+	if not faceGroup.Parent then
 		return
 	end
 	task.wait(EYE.AFTER_FACE)
-	winkOnce()
+	faceEyes.wink()
 end)
 
--- LES CLIGNEMENTS ORDINAIRES, qui ne font que vivre le visage.
-task.spawn(function()
-	if not waitForFace() then
-		return
-	end
-	while eyes.Parent do
-		-- Un ecart CONSTANT se lit comme un metronome : on ajoute du hasard.
-		task.wait(EYE.BLINK_EVERY + math.random() * EYE.BLINK_JITTER)
-		if not eyes.Parent then
-			return
-		end
-		if not eyesBusy then
-			eyesBusy = true
-			eyeLayers.left.Visible = false
-			eyeLayers.right.Visible = false
-			eyeLayers.shut.Visible = true
-			task.wait(EYE.SHUT_TIME)
-			eyeLayers.shut.Visible = false
-			eyeLayers.left.Visible = true
-			eyeLayers.right.Visible = true
-			eyesBusy = false
-		end
-	end
-end)
-
--- LE REGARD QUI SE BALADE.
-task.spawn(function()
-	if not waitForFace() then
-		return
-	end
-	while eyes.Parent do
-		task.wait(GAZE.EVERY + math.random() * GAZE.JITTER)
-		if not eyes.Parent then
-			return
-		end
-		local dx, dy
-		if math.random() < GAZE.UP_CHANCE then
-			-- EN HAUT ET FRANCHEMENT D'UN COTE : tire au hasard, le decalage lateral serait souvent quasi nul et
-			-- le regard monterait tout droit, ce qui ne raconte rien.
-			dx = if math.random() < 0.5 then -GAZE.X else GAZE.X
-			dy = -GAZE.UP_Y -- en interface, le Y descend : vers le haut, c'est donc negatif
-		else
-			dx = (math.random() * 2 - 1) * GAZE.X
-			dy = (math.random() * 2 - 1) * GAZE.Y
-		end
-		TweenService:Create(
-			eyes,
-			TweenInfo.new(GAZE.TIME, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-			{ Position = UDim2.fromScale(0.5 + dx, 0.5 + dy) }
-		):Play()
-	end
-end)
 
 -- L'ONOMATOPEE (les trois eclats a cote de la tete). Elle apparait au debut de chaque passage de tondeuse : posee
 -- une fois pour toutes, elle ferait partie du decor et on ne la verrait plus.
@@ -1162,13 +962,7 @@ for i = 1, #TITLE_TEXT do
 		if i == 1 then
 			local welcome = findSound(JOIN_SOUND)
 			if welcome then
-				joinSoundPlaying = playSound(welcome, JOIN_SOUND_VOLUME)
-				if EYE.DEBUG then
-					local length = if joinSoundPlaying then joinSoundPlaying.TimeLength else 0
-					print(`[Loading] son d'arrivee joue, duree connue = {length}`)
-				end
-			elseif EYE.DEBUG then
-				print("[Loading] son d'arrivee INTROUVABLE sous SoundService")
+				playSound(welcome, JOIN_SOUND_VOLUME)
 			end
 		end
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.

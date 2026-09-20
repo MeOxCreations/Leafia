@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.970 — Le grand-pere du rideau de map a les memes yeux que celui du chargement
+
+Le rideau de changement de map montre desormais la meme tete (sans yeux, avec les calques par-dessus) : il
+regarde autour de lui, cligne, et fait un clin d oeil sonore comme sur le grand ecran. Sa tete de face et ses
+deux images de clignement ne servent plus.
+
+Toute cette logique vit maintenant dans `ReplicatedFirst/FaceEyes` au lieu d etre ecrite deux fois. Le module
+ne touche jamais a la rotation de la tete : il rend l angle du penchement, et chaque ecran ecrit la SOMME de ce
+penchement et de son propre tangage -- deux ecrivains sur une meme propriete, et le dernier efface l autre.
+
+L ecran principal y gagne vingt locales de premier niveau, ce qui redonne de la marge sous la limite des 200.
+
 ## 0.0.969 — Le mot et la tete quittent l'ecran avant qu'il ne s'efface
 
 Les lettres repartent une par une en retombant, leur contour avec elles, et la tete se retracte a zero. Le
