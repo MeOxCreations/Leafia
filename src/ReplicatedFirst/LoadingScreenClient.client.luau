@@ -690,12 +690,23 @@ faceGroup.ZIndex = 5
 faceGroup.AnchorPoint = Vector2.new(0.5, 1)
 faceGroup.Position = UDim2.fromScale(FACE_POS.X, FACE_POS.Y + FACE_SIZE.Y / 2)
 -- LA CASE DE REPOS : la hauteur relevee, et la largeur qui en decoule pour respecter le format de l'image.
-local faceView = workspace.CurrentCamera and workspace.CurrentCamera.ViewportSize or Vector2.new(1920, 1080)
-local faceRest = Vector2.new(
-	FACE_SIZE.Y * (faceView.Y / math.max(faceView.X, 1)) * FACE_REVEAL.ASPECT,
-	FACE_SIZE.Y
-)
-faceGroup.Size = UDim2.fromScale(faceRest.X * FACE_REVEAL.SQUASH_X, faceRest.Y * FACE_REVEAL.SQUASH_Y)
+--
+-- RELUE A CHAQUE APPEL, ET JAMAIS GARDEE. Dans `ReplicatedFirst` on tourne AVANT que la camera soit prete :
+-- `ViewportSize` y vaut (1, 1). Mesurer une seule fois au demarrage donnait donc un rapport de 1 au lieu de 0.56,
+-- soit une case 1.7 fois trop large -- une tete completement aplatie, alors que le calcul etait juste. Tester que
+-- la camera EXISTE ne suffit pas : il faut tester que sa mesure est UTILISABLE.
+local function faceRestSize(): Vector2
+	local cam = workspace.CurrentCamera
+	local view = if cam then cam.ViewportSize else Vector2.zero
+	-- Sous cette taille, l'ecran n'est pas encore dessine : on prend un 16/9 plutot qu'un rapport absurde.
+	if view.X < 16 or view.Y < 16 then
+		view = Vector2.new(1920, 1080)
+	end
+	return Vector2.new(FACE_SIZE.Y * (view.Y / view.X) * FACE_REVEAL.ASPECT, FACE_SIZE.Y)
+end
+
+local faceStart = faceRestSize()
+faceGroup.Size = UDim2.fromScale(faceStart.X * FACE_REVEAL.SQUASH_X, faceStart.Y * FACE_REVEAL.SQUASH_Y)
 faceGroup.GroupTransparency = 1 -- invisible tant que la derniere lettre ne l'a pas appelee
 faceGroup.Parent = root
 
@@ -772,12 +783,15 @@ local function revealFace()
 		return
 	end
 	faceGroup.GroupTransparency = 0
+	-- MESUREE MAINTENANT : l'ecran est dessine depuis plusieurs images, la camera a donc sa vraie taille.
+	local rest = faceRestSize()
+	faceGroup.Size = UDim2.fromScale(rest.X * FACE_REVEAL.SQUASH_X, rest.Y * FACE_REVEAL.SQUASH_Y)
 	-- LE REBOND EST SUR LA FORME (Back), pas sur la revelation : un Back sur un devoilement ferait REDESCENDRE la
 	-- limite en fin de course, donc reapparaitre un bout deja revele.
 	TweenService:Create(
 		faceGroup,
 		TweenInfo.new(FACE_REVEAL.TIME, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Size = UDim2.fromScale(faceRest.X, faceRest.Y) }
+		{ Size = UDim2.fromScale(rest.X, rest.Y) }
 	):Play()
 	TweenService:Create(
 		faceReveal,
