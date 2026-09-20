@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.954 — Un son par lettre, de plus en plus haut
+
+- Chaque lettre de LEAFIA joue `Sounds/UI/PopSound_1` en arrivant, un demi-ton plus haut que la precedente : six
+  fois le meme son a la meme hauteur sonne comme une machine, une gamme qui monte se lit comme un mot qui s'ecrit.
+- `playSound` accepte maintenant une hauteur (`PlaybackSpeed`).
+- Le son est cherche AU MOMENT DE JOUER, pas au demarrage : a l'ouverture de l'ecran, le serveur n'a pas forcement
+  encore pose les sons. Absent, on laisse passer en silence -- c'est un ecran de chargement, pas un diagnostic.
+
 ## 0.0.953 — L'onomatopee jaillit quand le dernier "A" se pose
 
 - Elle partait au debut de chaque passage de tondeuse, en boucle : rejouee sans arret, elle devenait du decor. Elle

@@ -73,10 +73,13 @@ end
 
 -- Clone et joue. On CLONE plutot que rejouer l'original : rejouer la meme instance couperait le son en cours, et
 -- le clone garde les reglages faits en Studio (volume, hauteur), qui restent la source de verite.
-local function playSound(source: Sound, volume: number?): Sound
+local function playSound(source: Sound, volume: number?, speed: number?): Sound
 	local sound = source:Clone()
 	if volume then
 		sound.Volume = volume
+	end
+	if speed then
+		sound.PlaybackSpeed = speed
 	end
 	sound.Parent = SoundService
 	sound:Play()
@@ -412,6 +415,14 @@ local WORD_SPREAD = 0.94
 local STATUS_POS = Vector2.new(0.4995, 0.7299)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
+-- UN SON PAR LETTRE, de plus en plus haut : six fois le meme son a la meme hauteur sonne comme une machine, alors
+-- qu'une gamme qui monte se lit comme un mot qui s'ecrit. Le son est OPTIONNEL : sur l'ecran de chargement il peut
+-- ne pas encore exister (le serveur le pose au demarrage), et dans ce cas on laisse passer en silence.
+local LETTER_SOUND = { "Sounds", "UI", "PopSound_1" }
+local LETTER_SOUND_VOLUME = 0.25
+local LETTER_SOUND_PITCH = 0.9 -- hauteur de la 1re lettre
+local LETTER_SOUND_STEP = 0.07 -- de combien elle monte a chaque lettre suivante
+
 -- LE MOT ARRIVE LETTRE PAR LETTRE, puis ne bouge plus : seul le reflet le traverse.
 local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
 local WORD_DROP = 0.06 -- d'ou la lettre monte, en fraction de la hauteur d'ecran
@@ -683,6 +694,12 @@ for i = 1, #TITLE_TEXT do
 	task.delay((i - 1) * WORD_STAGGER, function()
 		if not letter.Parent then
 			return
+		end
+		-- LE SON DE LA LETTRE. Cherche au moment de jouer, pas au boot : a l'ouverture de l'ecran, le serveur n'a pas
+		-- forcement encore pose les sons.
+		local click = findSound(LETTER_SOUND)
+		if click then
+			playSound(click, LETTER_SOUND_VOLUME, LETTER_SOUND_PITCH + (i - 1) * LETTER_SOUND_STEP)
 		end
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
