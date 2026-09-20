@@ -622,7 +622,7 @@ local GRASS_WIPE_FLIP = false
 -- Deux fois moins marquee : c'est le CONTRASTE avec le fond blanc qu'on divise, pas la valeur brute. A 158 sur
 -- un fond a 255, l'ecart vaut 97 ; a 207 il vaut 48. Eclaircir plutot que rendre transparent laisse le degrade
 -- de coupe travailler seul sur la transparence.
-local GRASS_COLOR = Color3.fromRGB(207, 207, 207)
+local GRASS_COLOR = Color3.fromRGB(222, 222, 222)
 local GRASS_CUT_LEAD = 0.02 -- de combien la touffe se couche AVANT le nez, en fraction d'ecran. KNOB
 
 -- L'HERBE REPOUSSE DERRIERE LA TONDEUSE, et la tondeuse repasse : le bas de l'ecran tourne en boucle tant que ca
