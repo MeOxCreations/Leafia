@@ -388,8 +388,11 @@ local EYE = {
 	--
 	-- LE GESTE ATTEND DONC DEUX CHOSES : que le son d'arrivee soit fini, ET une respiration apres la tete. La
 	-- limite borne l'attente du son, pour qu'un son qui ne finit jamais n'emporte pas le geste avec lui.
-	AFTER_FACE = 1.2, -- respiration entre l'arrivee de la tete et le clin d'oeil. KNOB
-	WINK_DEADLINE = 4,
+	AFTER_FACE = 0.5, -- respiration entre l'arrivee de la tete et le clin d'oeil. KNOB
+	-- COURTE : ce n'est PAS le temps du son, c'est le temps qu'on accepte de l'attendre. A 4 s, un son d'arrivee
+	-- de quelques secondes repoussait le clin d'oeil au-dela de la fin du chargement : le geste n'arrivait jamais
+	-- alors que tout le code etait bon. Un ecran de chargement rapide ne laisse que quelques secondes en tout.
+	WINK_DEADLINE = 1.2,
 	DEBUG = true, -- une ligne en console qui dit CE QUI a declenche le clin d'oeil. A repasser a false ensuite.
 	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 	BLINK_EVERY = 3.2,
@@ -881,7 +884,11 @@ local function winkOnce(reason: string)
 	end
 	winkDone = true
 	if EYE.DEBUG then
-		print(`[Loading] clin d'oeil : {reason}`)
+		local w = eyeLayers.wink
+		print(
+			`[Loading] clin d'oeil ({reason}) : image={w.Image} chargee={w.IsLoaded} `
+				.. `taille={w.AbsoluteSize} transparence={w.ImageTransparency} groupe={faceGroup.GroupTransparency}`
+		)
 	end
 	eyesBusy = true
 	TweenService:Create(
