@@ -457,6 +457,10 @@ local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 -- UN SON PAR LETTRE, de plus en plus haut : six fois le meme son a la meme hauteur sonne comme une machine, alors
 -- qu'une gamme qui monte se lit comme un mot qui s'ecrit. Le son est OPTIONNEL : sur l'ecran de chargement il peut
 -- ne pas encore exister (le serveur le pose au demarrage), et dans ce cas on laisse passer en silence.
+-- LE SON D'ARRIVEE DANS LE JEU, sur la PREMIERE lettre : il ouvre la scene, les petits pops des lettres passent
+-- par-dessus. Il etait declare dans SoundConfigs et n'avait jamais ete joue nulle part.
+local JOIN_SOUND = { "Sounds", "Game", "GlobalSounds", "JoinSound" }
+local JOIN_SOUND_VOLUME = 0.55
 local LETTER_SOUND = { "Sounds", "UI", "PopSound_1" }
 local LETTER_SOUND_VOLUME = 0.25
 local LETTER_SOUND_PITCH = 0.9 -- hauteur de la 1re lettre
@@ -895,6 +899,12 @@ for i = 1, #TITLE_TEXT do
 		local click = findSound(LETTER_SOUND)
 		if click then
 			playSound(click, LETTER_SOUND_VOLUME, LETTER_SOUND_PITCH + (i - 1) * LETTER_SOUND_STEP)
+		end
+		if i == 1 then
+			local welcome = findSound(JOIN_SOUND)
+			if welcome then
+				playSound(welcome, JOIN_SOUND_VOLUME)
+			end
 		end
 		-- ELLE ARRIVE ET ELLE RESTE : aucune ondulation ensuite. Le mot doit se lire pose, pas flotter.
 		TweenService:Create(letter, WORD_IN, { Position = home, TextTransparency = 0 }):Play()
