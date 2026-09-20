@@ -434,6 +434,18 @@ local function keyboardPan(dt: number)
 			groundRefY + CAM_HEIGHT_MAX
 		)
 		camPosTarget = Vector3.new(camPosTarget.X, newY, camPosTarget.Z)
+		-- MONTER ET DESCENDRE SUIVENT LA MEME COURBE QUE LE ZOOM : bas = vue couchee, haut = vue de dessus. Sans ca,
+		-- descendre au clavier gardait l'inclinaison du dessus et on finissait le nez dans l'herbe.
+		--
+		-- La courbe est donnee en DISTANCE au point vise, et on a une HAUTEUR : les deux sont liees par l'inclinaison
+		-- elle-meme (distance = hauteur / sin(inclinaison)). On tourne donc trois fois dans la boucle, ce qui suffit
+		-- largement a se poser sur la valeur.
+		local height = math.max(newY - groundRefY, 0.5)
+		local pitch = camPitchTarget
+		for _ = 1, 3 do
+			pitch = zoomPitch(math.clamp(height / math.max(math.sin(pitch), 0.05), CAM_ZOOM_DIST_MIN, CAM_ZOOM_DIST_MAX))
+		end
+		camPitchTarget = math.clamp(pitch, math.rad(CAM_PITCH_MIN), math.rad(CAM_PITCH_MAX))
 	end
 end
 

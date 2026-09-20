@@ -2204,6 +2204,15 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.933 — Mode build sur PC : monter et descendre au clavier inclinent la vue comme le zoom
+
+- `BuildController.keyboardPan` : E (descendre) et Q (monter) suivent maintenant la MEME courbe que le zoom -- bas =
+  vue presque a plat qui voit loin, haut = vue de dessus. Elles ne changeaient que la hauteur : on descendait au ras
+  du sol en gardant l'inclinaison du dessus, le nez dans l'herbe.
+- La courbe est donnee en DISTANCE au point vise et on a une HAUTEUR : les deux dependent de l'inclinaison
+  elle-meme, donc on itere trois fois pour se poser dessus.
+- La molette (PC) et le pincement (mobile) inclinaient deja, depuis 0.0.920.
+
 ## 0.0.932 — L'ombre d'ecran est retiree ; moins de warns pour des choses normales
 
 - L'ombre d'ecran (0.0.927, 0.0.929) est RETIREE partout : ecran de choix du plot, menu des saves, barre du camion.
