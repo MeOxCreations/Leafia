@@ -402,6 +402,7 @@ local EYE = {
 	-- entier, donc rien n'est rogne aux coins.
 	TILT = 7, -- degres. KNOB
 	TILT_IN = 0.35, -- temps pour pencher
+	TILT_HOLD = 1, -- temps ou la tete reste penchee APRES la reouverture de l'oeil. KNOB
 	TILT_OUT = 0.5, -- temps pour se redresser : plus lent, la tete "revient" au lieu de claquer
 }
 
@@ -832,6 +833,16 @@ local eyeLayers = {
 	wink = eyeLayer("EyeWink", EYE.WINK, false),
 }
 
+-- LES DEUX CALQUES CACHES SE TELECHARGENT D'AVANCE. Une image ne part se charger que lorsqu'on l'AFFICHE : celles
+-- du clignement et du clin d'oeil ne se montrent que deux dixiemes de seconde, donc elles n'avaient jamais le
+-- temps d'arriver -- l'oeil disparaissait au lieu de se fermer, et rien ne le signalait. En tache de fond : un
+-- PreloadAsync bloque son thread jusqu'a ce que tout soit la.
+task.spawn(function()
+	pcall(function()
+		ContentProvider:PreloadAsync({ eyeLayers.shut, eyeLayers.wink })
+	end)
+end)
+
 -- TANT QUE LA TETE EST CACHEE, ON NE JOUE RIEN. Les boucles demarrent au chargement, bien avant que la derniere
 -- lettre ne fasse sortir le visage : sans cette attente, le son du clin d'oeil partirait dans le vide.
 local function waitForFace()
@@ -889,12 +900,19 @@ local function winkOnce(reason: string)
 	task.wait(EYE.WINK_TIME)
 	eyeLayers.wink.Visible = false
 	eyeLayers.right.Visible = true
-	TweenService:Create(
-		faceGroup,
-		TweenInfo.new(EYE.TILT_OUT, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-		{ Rotation = 0 }
-	):Play()
 	eyesBusy = false
+	-- ELLE RESTE PENCHEE UN MOMENT : se redresser dans le meme geste que la reouverture ferait un aller-retour
+	-- mecanique. Elle tient la pose, puis revient.
+	task.delay(EYE.TILT_HOLD, function()
+		if not faceGroup.Parent then
+			return
+		end
+		TweenService:Create(
+			faceGroup,
+			TweenInfo.new(EYE.TILT_OUT, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+			{ Rotation = 0 }
+		):Play()
+	end)
 end
 
 -- QUAND LE CLIN D'OEIL SE JOUE. Un seul endroit decide, plutot que deux declencheurs qui se doublaient : la fin
