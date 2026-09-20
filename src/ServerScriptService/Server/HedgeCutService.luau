@@ -88,6 +88,12 @@ local function cutWith(
 	cutStep: number,
 	hurtStep: number
 ): (number, number, number)
+	-- VERROUILLEE PAR UNE SCENE EN COURS : on ne coupe rien. Cote SERVEUR et pas seulement cote client, sinon il
+	-- suffit d ignorer l interface pour tailler pendant la scene -- et une haie deja finie quand le personnage
+	-- arrive devant casse la suite du didacticiel.
+	if hedge:GetAttribute(HedgeConfigs.LOCKED_ATTRIBUTE) == true then
+		return 0, 0, 0
+	end
 	local total = HedgeCellService.getCount(hedge)
 	if total <= 0 then
 		return 0, 0, 0

@@ -948,6 +948,10 @@ local HedgeConfigs = {
 	-- a passer la lame sur une haie deja finie la re-paierait. HedgeCutService le lit / le pose. (Si un jour les haies
 	-- repoussent et doivent re-payer, c'est ici qu'on remettra l'attribut a nil au moment de la repousse.)
 	PAID_ATTRIBUTE = "LeafiaPaid",
+	-- HAIE VERROUILLEE : la lame la traverse sans rien couper. Pose par une SCENE qui n a pas fini de se jouer
+	-- (le didacticiel, le temps que le grand-pere arrive devant), et retire par elle. Le service de coupe ne sait
+	-- rien du didacticiel : il lit un etat sur la haie, c est tout.
+	LOCKED_ATTRIBUTE = "LeafiaCutLocked",
 
 	-- ===== HOLOGRAMME DE CHANTIER =====
 	-- Une etiquette accrochee au-dessus de chaque haie a faire. Elle disparait quand la haie est finie : ce qui

@@ -950,6 +950,10 @@ return {
 	-- une part tous les trois metres.
 	OLDMAN_HEDGE_VIA = "OldManWalkToHedgeBezierCurveMiddle",
 	OLDMAN_HEDGE_TARGET = "OldManWalkToHedgeFinal",
+	-- FILET DU VERROU DE HAIE. La haie est bloquee tant que le grand-pere n est pas arrive devant ; si sa marche
+	-- ne se termine jamais (modele absent, chemin coupe), elle resterait bloquee POUR TOUJOURS et le joueur ne
+	-- pourrait plus rien tailler. Large : il ne sert jamais quand tout va bien.
+	HEDGE_LOCK_TIMEOUT = 40,
 	-- IL Y VA PLUS VITE QU'AILLEURS, en multiple de sa marche normale : le joueur a la cisaille en main et attend
 	-- de s'en servir. Les JAMBES accelerent du meme facteur, sinon ses pieds patineraient sur le trottoir.
 	OLDMAN_HEDGE_SPEED_MUL = 1.6,

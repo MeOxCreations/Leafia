@@ -897,6 +897,10 @@ local function prepareHedgeWhenReady()
 		local target = findPartByName(TutorialConfigs.OLDMAN_HEDGE_TARGET)
 		local hedge = if target then nearestHedge((target :: BasePart).Position) else nil
 		if hedge and prepareHedge(hedge, (target :: BasePart).Position) then
+			-- VERROUILLEE JUSQU A L ARRIVEE DU GRAND-PERE. Sans ca, le joueur peut courir la tailler pendant que
+			-- le personnage marche encore vers elle : la scene arrive alors devant une haie deja finie, et la
+			-- suite se joue dans le vide.
+			hedge:SetAttribute(HedgeConfigs.LOCKED_ATTRIBUTE, true)
 			return
 		end
 		task.wait(TutorialConfigs.HEDGE_PREPARE_INTERVAL)
@@ -2092,7 +2096,22 @@ function TutorialService.init()
 		--
 		-- ET ARRIVE LA-BAS, IL VA S'ASSEOIR. Il a montre le travail et donne l'outil : il n'a plus rien a faire, et
 		-- un personnage qui VIT pendant qu'on travaille vaut mieux qu'une statue qui attend la fin du script.
+		-- LE DEVERROUILLAGE DE SECOURS EST ARME AVANT LA MARCHE, pas dedans : une marche qui n arrive jamais
+		-- n appelle jamais rien, et c est precisement le cas qu il faut couvrir.
+		task.delay(TutorialConfigs.HEDGE_LOCK_TIMEOUT, function()
+			local late = tutorialHedge
+			if late and late:GetAttribute(HedgeConfigs.LOCKED_ATTRIBUTE) == true then
+				late:SetAttribute(HedgeConfigs.LOCKED_ATTRIBUTE, nil)
+				warn("[Tutorial] Le grand-pere n est jamais arrive devant la haie : elle se debloque d office.")
+			end
+		end)
 		walkOldMan(TutorialConfigs.OLDMAN_HEDGE_TARGET, function()
+			-- IL EST ARRIVE : la haie se laisse tailler. Retire ICI et pas au depart de la marche -- c est son
+			-- ARRIVEE qui autorise le travail, pas son intention de partir.
+			local locked = tutorialHedge
+			if locked then
+				locked:SetAttribute(HedgeConfigs.LOCKED_ATTRIBUTE, nil)
+			end
 			-- IL LAISSE PASSER UN TEMPS avant de partir : filer a la seconde ou il arrive se lirait comme une
 			-- fuite, juste apres avoir dit de tailler.
 			task.delay(TutorialConfigs.OLDMAN_BENCH_DELAY, function()

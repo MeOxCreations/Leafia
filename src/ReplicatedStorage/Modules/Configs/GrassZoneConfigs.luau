@@ -239,7 +239,11 @@ local GrassZoneConfigs = {
 	--
 	-- Les TROIS couleurs d'herbe (repos, tondue, ecrasee) doivent rester coherentes entre elles. N'en changer
 	-- qu'une rend les autres bizarres PAR COMPARAISON, et on croit a un bug d'affichage.
-	BASE_COLOR = Color3.fromRGB(90, 107, 49),
+	-- DESATUREES DE 28 %, TOUTES ENSEMBLE (et remontees de 4 % en luminosite : desaturer assombrit l impression).
+	-- Un vert vif se lit comme du plastique ; une pelouse reelle tire vers le gris-olive. Les cinq couleurs de la
+	-- famille ont subi le MEME traitement : en corriger une seule aurait casse les ecarts entre elles, et ce sont
+	-- ces ecarts qui font voir le travail fait (tondu contre pas tondu, ecrase contre debout).
+	BASE_COLOR = Color3.fromRGB(99, 111, 68),
 	-- TACHES. Des zones un peu plus claires et un peu plus sombres, en bruit de Perlin.
 	-- Sans elles la pelouse est un aplat parfaitement uniforme, et ca se lit comme du carton peint. Le bruit de
 	-- Perlin donne de vraies ZONES ; un tirage au hasard par touffe donnerait du poivre et sel, ce qui est pire que
@@ -274,8 +278,8 @@ local GrassZoneConfigs = {
 	-- Attention en tournant : le nombre de bandes = la longueur de la zone DANS CETTE DIRECTION divisee par STRIPE_WIDTH.
 	-- Passer de 0 a 90 sur une zone de 44 x 18 fait tomber 5 bandes a 2 -- il faut alors baisser STRIPE_WIDTH avec.
 	STRIPE_HEADING = 90,
-	STRIPE_COLOR_A = Color3.fromRGB(143, 172, 97),
-	STRIPE_COLOR_B = Color3.fromRGB(106, 140, 54),
+	STRIPE_COLOR_A = Color3.fromRGB(157, 179, 123),
+	STRIPE_COLOR_B = Color3.fromRGB(120, 146, 81),
 	-- OU ecrire la couleur. VERIFIE A L'ECRAN : sur ce mesh, c'est le Color de la MESHPART qui donne la bonne teinte.
 	-- Ecrire sur le SurfaceAppearance rendait l'herbe BLEUE, quelles que soient les couleurs demandees -- le TintMask
 	-- ne se combine pas comme on l'imagine. Laisser a false. (true = ecrire sur le SurfaceAppearance.)
@@ -349,7 +353,9 @@ local GrassZoneConfigs = {
 	-- Couleur du HAUT de la vague. Lue via BrickColor pour ne pas recopier des valeurs a la main.
 	-- ATTENTION : un nom de BrickColor inconnu retombe SILENCIEUSEMENT sur "Medium stone grey". Si la crete vire au
 	-- gris, c'est le NOM qui est faux, pas le reglage.
-	GUST_COLOR = BrickColor.new("Shamrock").Color,
+	-- La rafale : prise dans la meme famille desaturee que le reste, sinon elle redevenait le seul vert vif de la
+	-- pelouse et attirait l oeil plus que la tonte.
+	GUST_COLOR = Color3.fromRGB(132, 168, 104),
 	-- Quelle PART de cette couleur au sommet de la vague. 0 = effet coupe, 1 = la crete prend la couleur pleine et
 	-- perd la nuance propre de chaque touffe. A REGLER A L'OEIL : c'est le genre d'effet qui passe vite de "vivant"
 	-- a "peinture".
@@ -394,7 +400,7 @@ local GrassZoneConfigs = {
 	-- Suit le meme ecrasement que l'aplatissement, donc la trace laissee garde sa couleur.
 	-- Desaturee en meme temps que BASE_COLOR : c'etait la plus criarde des trois, et laissee vive elle aurait
 	-- fait ressortir la trace du joueur comme un trait fluo sur une pelouse devenue calme.
-	CRUSHED_COLOR = Color3.fromRGB(184, 205, 147),
+	CRUSHED_COLOR = Color3.fromRGB(197, 213, 170),
 	-- Inclinaison au passage. A ZERO : l'herbe s'APLATIT, elle ne penche pas.
 	-- Elle valait l'ECART entre l'ecrasement rapide et le tassement lent. Defaut vu a l'ecran : en traversant vite, on
 	-- part avant que les deux se soient rejoints, donc l'ecart existe encore PENDANT la remontee -- une inclinaison
@@ -561,7 +567,7 @@ local GrassZoneConfigs = {
 	-- du vert) : a cote de l'herbe haute, olive elle aussi, la tonte ne se distinguait que par la clarte, et
 	-- ressemblait a de l'herbe seche. Celle-ci est plus VERTE (rouge a 68 % du vert) : l'ecart avec l'herbe haute
 	-- passe par la teinte ET la clarte -- un gazon frais a cote d'une herbe sombre.
-	MOWN_COLOR = Color3.fromRGB(106, 156, 64),
+	MOWN_COLOR = Color3.fromRGB(125, 162, 93),
 
 	-- Part du balancement que garde une touffe tondue. Un gazon ras ne doit pas onduler comme de l'herbe haute :
 	-- sans ca, la zone tondue continue de vaguer et l'avant/apres se lit beaucoup moins.
