@@ -2204,6 +2204,14 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.959 — Une vraie pelouse sous la tondeuse, au lieu d'une rangee de buissons
+
+Ecran de chargement. Les touffes sont deux fois plus fines et trois fois plus nombreuses : le bas de l'ecran
+se lit comme une pelouse. La coupe par degrade est ralentie et son bord adouci, pour qu'on la voie passer.
+
+La ligne de sol est maintenant le BAS des touffes et non leur centre : changer leur hauteur ne les fait plus
+monter ni s'enfoncer dans le sol.
+
 ## 0.0.958 — L'herbe repousse derriere la tondeuse, et le fond retrouve ses petits points
 
 Ecran de chargement. Chaque touffe coupee se redresse un peu plus loin derriere la machine, et sort de terre

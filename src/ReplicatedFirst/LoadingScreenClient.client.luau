@@ -487,12 +487,16 @@ local MOWER_SQUASH_X, MOWER_SQUASH_Y = 1.04, 0.94
 local MOWER_SQUASH_TIME = 0.32
 
 local GRASS_IMAGE = "rbxassetid://90924932701080"
-local GRASS_SIZE = Vector2.new(0.0987, 0.1525)
-local GRASS_Y = 0.9884 -- centre de la rangee (releve)
-local GRASS_START_X = 0.0384 -- centre de la premiere touffe (releve)
-local GRASS_STEP = 0.0813 -- ecart entre deux touffes (releve)
-local GRASS_CUT = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- vitesse de la coupe
-local GRASS_WIPE_EDGE = 0.18 -- douceur du bord de coupe (0 = coupure nette)
+-- PETITES ET NOMBREUSES : une pelouse, pas une rangee de buissons. La taille et le pas vont ENSEMBLE -- reduire
+-- l'un sans l'autre laisse des trous ou fait se chevaucher les touffes.
+local GRASS_SIZE = Vector2.new(0.052, 0.08)
+-- LA LIGNE DE SOL : c'est le BAS des touffes, pas leur centre. Posee ainsi, changer leur hauteur ne les fait plus
+-- monter ni s'enfoncer -- elles poussent depuis le meme sol quelle que soit leur taille.
+local GRASS_BASE_Y = 1.0647
+local GRASS_START_X = 0.013 -- centre de la premiere touffe
+local GRASS_STEP = 0.026 -- ecart entre deux touffes
+local GRASS_CUT = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- vitesse de la coupe
+local GRASS_WIPE_EDGE = 0.3 -- douceur du bord de coupe (0 = coupure nette)
 -- LE SENS DU BALAYAGE NE SE DEDUIT PAS, il se constate a l'ecran (journal de CLAUDE.md). Si la touffe s'efface du
 -- mauvais cote, inverser CE booleen -- il n'y a rien d'autre a changer.
 local GRASS_WIPE_FLIP = false
@@ -867,7 +871,7 @@ while x < 1 + GRASS_STEP do
 	-- ANCREE PAR LE BAS : une touffe qui repousse sort de TERRE. Ancree au centre, elle grandirait aussi vers le bas,
 	-- donc elle s'enfoncerait dans le sol en meme temps qu'elle pousse.
 	blade.AnchorPoint = Vector2.new(0.5, 1)
-	blade.Position = UDim2.fromScale(x, GRASS_Y + GRASS_SIZE.Y / 2)
+	blade.Position = UDim2.fromScale(x, GRASS_BASE_Y)
 	blade.Size = UDim2.fromScale(GRASS_SIZE.X, GRASS_SIZE.Y)
 	blade.ZIndex = 7
 	blade.Parent = grassRow
