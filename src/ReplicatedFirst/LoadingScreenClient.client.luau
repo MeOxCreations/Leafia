@@ -357,7 +357,19 @@ local MIN_DURATION = 15
 
 -- Couleurs (maquette). A REGLER a l'oeil.
 local WHITE = Color3.fromRGB(255, 255, 255)
-local WORDMARK_SHADOW = Color3.fromRGB(69, 171, 180) -- ombre teal sous le LEAFIA
+
+-- LA TETE DU GRAND-PERE, au-dessus du titre : elle dit de qui parle le jeu avant meme qu'on lise le nom. Blanche et
+-- tres claire, comme un filigrane -- opaque, elle volerait la vedette au mot.
+local FACE_IMAGE = "rbxassetid://111069478991867"
+local FACE_TRANSPARENCY = 0.55 -- KNOB : baisser = tete plus marquee, monter = plus discrete
+
+-- LES FEUILLAGES SONT NOIRS ET TRANSPARENTS : sur le vert, ca donne une ombre de feuille, pas un dessin colle.
+--
+-- ILS VIVENT DANS UN CanvasGroup, et c'est LUI qui porte la transparence. Sinon deux feuilles qui se recouvrent
+-- assombrissent leur intersection, et le chevauchement se voit comme une tache. Le groupe est d'abord aplati, PUIS
+-- rendu transparent d'un bloc : les recouvrements disparaissent, et on n'a plus a placer les feuilles au millimetre.
+local FOLIAGE_TINT = Color3.new(0, 0, 0)
+local FOLIAGE_ALPHA = 0.88 -- KNOB : baisser = feuilles plus sombres
 
 -- Polices : Luckiest Guy (titres, chunky) et Gotham (le reste). On passe par FontFace + les familles qui LIVRENT
 -- avec Roblox : pas de risque d'un Enum.Font absent qui casserait tout l'ecran au lancement.
@@ -439,14 +451,14 @@ local sky = frame("Sky", root)
 sky.Size = UDim2.fromScale(1, 1)
 sky.Position = UDim2.fromScale(0, 0)
 sky.ZIndex = 1
--- Degrade du ciel : 4 couleurs (cyan en haut -> bleu en bas). Rotation 90 = vertical (haut -> bas).
+-- Degrade du fond : vert citron en haut -> vert franc en bas. Rotation 90 = vertical (haut -> bas).
+-- C'ETAIT UN CIEL BLEU : le jeu parle de pelouse et de haies, le vert le dit des la premiere seconde.
 local skyGrad = Instance.new("UIGradient")
 skyGrad.Rotation = 90
 skyGrad.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(61, 223, 255)), -- #3ddfff
-	ColorSequenceKeypoint.new(0.379, Color3.fromRGB(37, 219, 255)), -- #25dbff
-	ColorSequenceKeypoint.new(0.748, Color3.fromRGB(120, 226, 246)), -- #78e2f6
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(1, 158, 255)), -- #019eff
+	ColorSequenceKeypoint.new(0, Color3.fromRGB(190, 240, 82)),
+	ColorSequenceKeypoint.new(0.45, Color3.fromRGB(150, 238, 84)),
+	ColorSequenceKeypoint.new(1, Color3.fromRGB(86, 226, 98)),
 })
 skyGrad.Parent = sky
 
@@ -537,134 +549,41 @@ logo.Position = UDim2.fromScale(0.5, 0.5)
 logo.Size = UDim2.fromScale(1, 1)
 logo.ZIndex = 5
 
--- Un calque du logo : image plein cadre, teinte optionnelle. ZIndex croissant = plus devant.
-local function layer(name: string, image: string, zindex: number, colour: Color3?): ImageLabel
-	local img = Instance.new("ImageLabel")
-	img.Name = name
-	img.BackgroundTransparency = 1
-	img.Image = image
-	img.ScaleType = Enum.ScaleType.Fit
-	img.AnchorPoint = Vector2.new(0.5, 0.5)
-	img.Position = UDim2.fromScale(0.5, 0.5)
-	img.Size = UDim2.fromScale(1, 1)
-	img.ZIndex = zindex
-	if colour then
-		img.ImageColor3 = colour
-	end
-	img.Parent = logo
-	return img
-end
+-- LA TETE. Une seule image, en Fit (elle garde ses proportions quel que soit l'ecran). Le logo a quatre calques,
+-- ses deux degrades animes et son entree slime ont ete retires : trop charges pour un ecran qu'on regarde dix
+-- secondes, et ils tiraient l'oeil loin du nom.
+local face = Instance.new("ImageLabel")
+face.Name = "Face"
+face.BackgroundTransparency = 1
+face.Image = FACE_IMAGE
+face.ImageColor3 = WHITE
+face.ImageTransparency = FACE_TRANSPARENCY
+face.ScaleType = Enum.ScaleType.Fit
+face.AnchorPoint = Vector2.new(0.5, 0.5)
+face.Position = UDim2.fromScale(0.5, 0.5)
+face.Size = UDim2.fromScale(1, 1)
+face.ZIndex = 5
+face.Parent = logo
 
--- Empilement du fond vers l'avant, comme dans l'editeur : Font2, Middle, OutlineFont, Font1.
-layer("Font2", "rbxassetid://112410882732688", 2, Color3.fromRGB(142, 224, 139))
-layer("Middle", "rbxassetid://78626050824347", 3, Color3.fromRGB(15, 58, 38))
-local outlineFont = layer("OutlineFont", "rbxassetid://98534207212802", 0, nil)
-local font1 = layer("Font1", "rbxassetid://80842701479373", 1, nil)
-
--- OUTLINE : un UIGradient BLANC UNI dont la TRANSPARENCE va de 0 (opaque) a 1 (invisible), qui TOURNE a l'infini :
--- un fondu qui balaie le contour en tournant. La rotation meurt avec le destroy du gui a la sortie.
-local outlineGrad = Instance.new("UIGradient")
-outlineGrad.Name = "UIGradientRotate"
-outlineGrad.Color = ColorSequence.new(Color3.fromRGB(255, 255, 255))
-outlineGrad.Transparency = NumberSequence.new(0, 1)
-outlineGrad.Parent = outlineFont
-TweenService
-	:Create(
-		outlineGrad,
-		TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.Out, -1, false),
-		{ Rotation = 360 }
-	)
-	:Play()
-
--- FONT1 : un UIGradient (fond vert fonce avec une bande claire au milieu) dont l'Offset GLISSE de (-1,0) a (1,0) : la
--- bande balaie l'image, un reflet. Rapide, frequent, mais pas continu (pause entre deux passages). Couleurs du joueur.
-local slideGrad = Instance.new("UIGradient")
-slideGrad.Name = "UIGradientSlide"
-slideGrad.Color = ColorSequence.new({
-	ColorSequenceKeypoint.new(0, Color3.fromRGB(15, 58, 38)),
-	ColorSequenceKeypoint.new(0.309, Color3.fromRGB(15, 58, 38)),
-	ColorSequenceKeypoint.new(0.522, Color3.fromRGB(144, 255, 237)),
-	ColorSequenceKeypoint.new(0.693, Color3.fromRGB(15, 58, 38)),
-	ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 58, 38)),
-})
-slideGrad.Offset = Vector2.new(-1, 0)
-slideGrad.Parent = font1
-local SLIDE_SWEEP = 0.6 -- duree d'un passage du reflet
-local SLIDE_PAUSE = 1.4 -- temps mort entre deux passages
-task.spawn(function()
-	while gui.Parent do
-		slideGrad.Offset = Vector2.new(-1, 0)
-		TweenService:Create(
-			slideGrad,
-			TweenInfo.new(SLIDE_SWEEP, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
-			{ Offset = Vector2.new(1, 0) }
-		):Play()
-		task.wait(SLIDE_SWEEP + SLIDE_PAUSE)
-	end
-end)
-
--- FLOTTEMENT du logo (le conteneur interne). Monte de 14 px et bascule de -1.5 a 1.5 degres, en boucle douce (Sine,
--- reverse). Config donnee par le joueur.
-logo.Rotation = -1.5
-TweenService:Create(logo, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {
-	Position = UDim2.fromScale(0.5, 0.5) - UDim2.fromOffset(0, 14),
-	Rotation = 1.5,
-}):Play()
-
--- ENTREE SLIME du logo : de (0,0) a sa taille pleine, deformation NON UNIFORME (ecrase large, rebond haut) puis un
--- tremblement Elastic PROLONGE. Anime la Size -> aucun conflit avec le flottement (Position/Rotation). Sur le logo et
--- non le BadgeHolder : ce dernier a une contrainte de ratio qui ecraserait le slime non uniforme.
-logo.Size = UDim2.fromScale(0, 0)
-task.spawn(function()
-	local splat = TweenService:Create(
-		logo,
-		TweenInfo.new(0.26, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-		{ Size = UDim2.fromScale(1.12, 0.86) }
-	)
-	splat:Play()
-	splat.Completed:Wait()
-	local stretch = TweenService:Create(
-		logo,
-		TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut),
-		{ Size = UDim2.fromScale(0.94, 1.06) }
-	)
-	stretch:Play()
-	stretch.Completed:Wait()
-	-- Elastic sur 2.4 s : le rebond traine longtemps (prolonge). L'Elastic a un nb d'oscillations FIXE, la duree les
-	-- ETALE (tremblement plus lent, pas plus de coups).
-	TweenService:Create(logo, TweenInfo.new(2.4, Enum.EasingStyle.Elastic, Enum.EasingDirection.Out), {
-		Size = UDim2.fromScale(1, 1),
-	}):Play()
-end)
-
--- MOT "LEAFIA" (ombre + texte).
+-- MOT "LEAFIA". SANS OMBRE : la maquette le veut plat, et une ombre teal sur un fond vert se lit comme une bavure.
 local wordmarkHolder = frame("Wordmark", column)
 wordmarkHolder.Size = UDim2.fromScale(0.95, 0.172)
 wordmarkHolder.BackgroundTransparency = 1
 wordmarkHolder.LayoutOrder = 2
 wordmarkHolder.ZIndex = 5
 
-local wordShadow = text("Shadow", wordmarkHolder, FONT_TITLE, WORDMARK_SHADOW)
-wordShadow.Text = TITLE_TEXT
-wordShadow.Size = UDim2.fromScale(1, 1)
-wordShadow.Position = UDim2.fromScale(0, 0.06)
--- LineHeight > 1 : c'est ce qui decale l'ombre vers le bas (le corps du texte descend dans sa boite). Semi-transparente.
-wordShadow.LineHeight = 2.15
-wordShadow.TextTransparency = 0.59
-wordShadow.TextWrapped = true
-wordShadow.ZIndex = 5
-
 local wordmark = text("Text", wordmarkHolder, FONT_TITLE, WHITE)
 wordmark.Text = TITLE_TEXT
 wordmark.Size = UDim2.fromScale(1, 1)
 wordmark.ZIndex = 6
 
--- TEXTE D'ETAT ("Planting flower beds..."). Pose BAS sur l'ecran (sur root, HORS de la colonne centrale) : le joueur
--- le veut plus bas. KNOB : le Y (0.72) le monte / descend.
+-- TEXTE D'ETAT ("Planting flower beds..."). JUSTE SOUS LE MOT, comme sur la maquette : pose bas sur l'ecran, il
+-- flottait tout seul au milieu du vide. Sur root et HORS de la colonne centrale, pour ne pas dependre de son layout.
+-- KNOB : le Y (0.66) le monte / descend.
 local statusText = text("Text", root, FONT_BOLD, WHITE)
 statusText.RichText = true
 statusText.AnchorPoint = Vector2.new(0.5, 0.5)
-statusText.Position = UDim2.fromScale(0.5, 0.72)
+statusText.Position = UDim2.fromScale(0.5, 0.66)
 statusText.Size = UDim2.fromScale(0.8, 0.04)
 statusText.ZIndex = 6
 
@@ -698,12 +617,18 @@ local FOLIAGE_STRETCH_X = 0.94
 local FOLIAGE_STRETCH_Y = 1.12
 local FOLIAGE_IN = TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirection.Out) -- Back = petit depassement (pos ET taille)
 
-local foliageHolder = frame("HolderFoliage", root)
+-- CanvasGroup et pas Frame : c'est le GROUPE qui porte la transparence, donc deux feuilles qui se recouvrent ne
+-- font pas une tache plus sombre a leur intersection (voir FOLIAGE_ALPHA).
+local foliageHolder = Instance.new("CanvasGroup")
+foliageHolder.Name = "HolderFoliage"
 foliageHolder.AnchorPoint = Vector2.new(0.5, 0.5)
 foliageHolder.Position = UDim2.fromScale(0.5, 0.5)
 foliageHolder.Size = UDim2.fromScale(0.55, 0.55)
 foliageHolder.BackgroundTransparency = 1
+foliageHolder.BorderSizePixel = 0
+foliageHolder.GroupTransparency = FOLIAGE_ALPHA
 foliageHolder.ZIndex = 8 -- par-dessus le fond : ils encadrent l'ecran (le contenu central est ailleurs)
+foliageHolder.Parent = root
 
 local foliageIdle: { Tween } = {}
 for i, d in FOLIAGE_DATA do
@@ -711,6 +636,7 @@ for i, d in FOLIAGE_DATA do
 	leaf.Name = "Foliage" .. i
 	leaf.BackgroundTransparency = 1
 	leaf.Image = d.image
+	leaf.ImageColor3 = FOLIAGE_TINT
 	leaf.AnchorPoint = Vector2.new(0.5, 1)
 	leaf.Rotation = d.rot
 	leaf.ZIndex = 8

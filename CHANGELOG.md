@@ -2204,6 +2204,21 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.940 — Nouvel ecran de chargement de depart : la tete du grand-pere, LEAFIA, et des feuilles en ombre
+
+- Refait d'apres la maquette du joueur. L'ancien etait trop charge : quatre calques de logo empiles, deux degrades
+  animes (contour qui tourne, reflet qui balaie) et une entree slime, sur un ecran qu'on regarde dix secondes.
+- LE FOND passe du bleu ciel au VERT (citron en haut, vert franc en bas) : le jeu parle de pelouse, autant le dire
+  des la premiere seconde.
+- LA TETE DU GRAND-PERE (`rbxassetid://111069478991867`) remplace le logo : une seule image, blanche et tres claire
+  comme un filigrane. Opaque, elle volerait la vedette au nom. `FACE_TRANSPARENCY` pour la doser.
+- "LEAFIA" perd son ombre teal : la maquette le veut plat, et cette ombre sur du vert se lit comme une bavure.
+- Le texte de chargement remonte JUSTE SOUS le mot (0.66) : pose bas, il flottait seul au milieu du vide.
+- LES FEUILLAGES passent en NOIR transparent (ombre de feuille, pas dessin colle) et vivent dans un CanvasGroup qui
+  porte la transparence : sans lui, deux feuilles qui se recouvrent assombrissent leur intersection et le
+  chevauchement se voit comme une tache. Avec, plus besoin de les placer au millimetre. `FOLIAGE_ALPHA` pour doser.
+- L'entree en eventail des feuillages et leur flottement sont conserves.
+
 ## 0.0.939 — L'ecran de chargement de depart prend le motif de points de l'ecran de choix du plot
 
 - `LoadingScreenClient` : meme image de tuile que `TileField` (`rbxassetid://111706805079464`) et meme mesure de
