@@ -671,6 +671,19 @@ tileConn = RunService.Heartbeat:Connect(function(dt: number)
 	tile.Position = UDim2.new(0.5, tileOffX, 0.5, tileOffY)
 end)
 
+-- L'ATTENTE DU PREMIER VRAI DESSIN. `RenderStepped` ne tire que quand une image est DESSINEE : c'est donc le seul
+-- juge de "l'ecran s'affiche-t-il vraiment". PARTAGEE par le mot ET par la tondeuse : tout ce qui s'anime doit
+-- partir du meme instant, sinon une animation tourne dans le vide pendant le chargement et le joueur tombe au
+-- milieu d'un cycle deja commence -- l'herbe repoussait alors a partir de la sixieme touffe, sans raison visible.
+local function waitForFirstFrames()
+	local smooth = 0
+	local deadline = os.clock() + WARMUP_TIMEOUT
+	while smooth < WARMUP_FRAMES and os.clock() < deadline do
+		local dt = RunService.RenderStepped:Wait()
+		smooth = if dt <= WARMUP_MAX_DT then smooth + 1 else 0
+	end
+end
+
 -- ===== LE CENTRE : tete, onomatopee, mot, texte de chargement =====
 -- POSES DIRECTEMENT SUR LE FOND, aux valeurs relevees sur l'ecran monte a la main.
 local function place(gui: GuiObject, pos: Vector2, size: Vector2)
@@ -819,15 +832,9 @@ for i = 1, #TITLE_TEXT do
 	end
 end
 
--- L'ATTENTE, puis le depart des lettres. `RenderStepped` ne tire que quand une image est DESSINEE : c'est donc le
--- seul juge de "l'ecran s'affiche-t-il vraiment".
+-- L'ATTENTE, puis le depart des lettres.
 task.spawn(function()
-	local smooth = 0
-	local deadline = os.clock() + WARMUP_TIMEOUT
-	while smooth < WARMUP_FRAMES and os.clock() < deadline do
-		local dt = RunService.RenderStepped:Wait()
-		smooth = if dt <= WARMUP_MAX_DT then smooth + 1 else 0
-	end
+	waitForFirstFrames()
 	task.wait(WORD_DELAY)
 	for i, start in ipairs(starts) do
 		task.delay((i - 1) * WORD_STAGGER, start)
@@ -949,6 +956,10 @@ TweenService:Create(
 -- la main image par image plutot qu'en tween, justement pour pouvoir comparer -- un tween ne dit pas ou il en est.
 local mowConn: RBXScriptConnection? = nil
 task.spawn(function()
+	-- ELLE PART AVEC LE "L" : meme attente, meme delai. Lancee des le boot, elle tondait pendant que le client
+	-- chargeait encore, et l'ecran s'ouvrait sur une pelouse a moitie fauchee.
+	waitForFirstFrames()
+	task.wait(WORD_DELAY)
 	-- LE RETARD DE REPOUSSE EN SECONDES : la distance voulue, divisee par la vitesse de la tondeuse.
 	local speed = (MOWER_END_X - MOWER_START_X) / MOWER_TIME
 	local regrowDelay = GRASS_REGROW.LAG / speed

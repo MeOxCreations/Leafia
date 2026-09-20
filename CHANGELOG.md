@@ -2204,6 +2204,18 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.962 — La tondeuse part avec la premiere lettre, et l'herbe repousse dans l'ordre
+
+Ecran de chargement. La tondeuse attendait le meme signal que le mot : elle tondait pendant que le client
+chargeait encore, donc l'ecran s'ouvrait sur une pelouse a moitie fauchee et la repousse semblait commencer au
+milieu de la rangee. Elle part maintenant en meme temps que le L.
+
+L'attente du premier vrai dessin est devenue une fonction partagee : tout ce qui s'anime part du meme instant.
+
+Avant, la coupe se declenchait quand le CENTRE de la machine atteignait la touffe (elle roulait donc sur de
+l'herbe debout) ; elle part desormais de son NEZ, demi-largeur calculee, avec `GRASS_CUT_LEAD` comme seule
+avance reglable. Les lettres s'ecrivent aussi plus vite (0.1 s d'ecart au lieu de 0.22).
+
 ## 0.0.961 — Les touffes d'herbe ne se recouvrent plus
 
 L'ecart entre deux touffes se deduit maintenant de leur LARGEUR, au lieu d'etre ecrit a part : a 0.026 pour des
