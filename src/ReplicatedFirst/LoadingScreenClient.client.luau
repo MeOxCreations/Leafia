@@ -88,9 +88,9 @@ local function playSound(source: Sound, volume: number?, speed: number?): Sound
 end
 
 -- ===== Assets EN DUR + destruction de l'ancien ecran s'il traine =====
--- LE FOND TUILE, REPRIS DU RIDEAU DE CHANGEMENT DE MAP (`CurtainVisual`) : meme image, meme maille, meme vitesse,
--- meme fondu en diagonale. Les deux ecrans de chargement se ressemblent alors, au lieu d'avoir chacun son motif.
-local TILE_IMAGE = "rbxassetid://80842701479373"
+-- LE FOND TUILE. L'IMAGE est celle du joueur ; la MAILLE, la vitesse et le fondu en diagonale sont repris du rideau
+-- de changement de map (`CurtainVisual`), pour que les deux ecrans de chargement se ressemblent.
+local TILE_IMAGE = "rbxassetid://78626050824347"
 local TILE_TRANSPARENCY = 0.6 -- KNOB : baisser = points plus visibles ; monter = plus discrets
 -- TileSize en SCALE (fraction de l'ImageLabel tuile, qui fait deux fois l'ecran).
 local TILE_SCALE_X = 0.005
