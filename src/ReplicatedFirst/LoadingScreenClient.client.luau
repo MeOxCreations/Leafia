@@ -498,7 +498,11 @@ local GRASS_SIZE = Vector2.new(0.052, 0.08)
 -- depasser qu'un centieme d'ecran, le reste passait sous le bord. Un repere herite d'une taille qui a change.
 local GRASS_BASE_Y = MOWER_GROUND_Y
 local GRASS_START_X = 0.013 -- centre de la premiere touffe
-local GRASS_STEP = 0.026 -- ecart entre deux touffes
+-- L'ECART SE DEDUIT DE LA LARGEUR, il ne s'ecrit pas a part : pose a la main, il finit toujours par ne plus
+-- correspondre a la taille (a 0.026 pour des touffes de 0.052, chacune couvrait la moitie de sa voisine et la
+-- rangee devenait une masse noire continue, sans touffes lisibles). Un seul nombre a regler : le RECOUVREMENT.
+local GRASS_OVERLAP = 0.12 -- 0 = touffes bord a bord ; 0.12 = elles se touchent juste. KNOB
+local GRASS_STEP = GRASS_SIZE.X * (1 - GRASS_OVERLAP)
 local GRASS_CUT = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- vitesse de la coupe
 local GRASS_WIPE_EDGE = 0.3 -- douceur du bord de coupe (0 = coupure nette)
 -- LE SENS DU BALAYAGE NE SE DEDUIT PAS, il se constate a l'ecran (journal de CLAUDE.md). Si la touffe s'efface du
