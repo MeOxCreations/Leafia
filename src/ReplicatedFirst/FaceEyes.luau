@@ -121,7 +121,9 @@ function FaceEyes.attach(head: ImageLabel, options: Options?): Handle
 		l.Name = name
 		l.BackgroundTransparency = 1
 		l.Image = image
-		l.ImageColor3 = opts.tint or Color3.new(0, 0, 0)
+		-- PAR DEFAUT, LA TEINTE DE LA TETE. Les yeux appartiennent au meme dessin : un noir en dur les laissait
+		-- noirs sur le rideau, dont le visage est clair.
+		l.ImageColor3 = opts.tint or head.ImageColor3
 		l.ImageTransparency = opts.transparency or 0
 		l.ScaleType = head.ScaleType -- meme mode que la tete, sinon les deux ne se superposent plus
 		l.AnchorPoint = Vector2.new(0.5, 0.5)
