@@ -2204,6 +2204,16 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.941 — Les feuilles et les points reapparaissent sur l'ecran de chargement
+
+- UN `CanvasGroup` DECOUPE CE QUI DEPASSE DE SON CADRE : il dessine ses enfants dans une image de SA taille. Les
+  feuillages sont places bien au-dela (ils debordent de l'ecran expres), donc dans un groupe de la taille d'origine
+  ils disparaissaient TOUS -- exactement ce que le joueur a vu. Le groupe couvre maintenant 2.6 fois l'ecran, et les
+  valeurs de `FOLIAGE_DATA`, ecrites pour l'ancien cadre, sont converties a l'echelle du grand (`toHolder`). A
+  l'ecran, rien ne bouge : c'est le meme placement qu'avant.
+- `TILE_TRANSPARENCY` passe de 0.95 a 0.85 : le motif de `TileField` est bien plus fin que l'ancienne tuile, et a
+  0.95 on ne voyait plus rien du tout.
+
 ## 0.0.940 — Nouvel ecran de chargement de depart : la tete du grand-pere, LEAFIA, et des feuilles en ombre
 
 - Refait d'apres la maquette du joueur. L'ancien etait trop charge : quatre calques de logo empiles, deux degrades

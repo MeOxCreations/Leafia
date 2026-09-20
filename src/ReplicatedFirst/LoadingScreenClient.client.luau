@@ -91,7 +91,9 @@ end
 -- LA VALEUR EST RECOPIEE ICI, pas requise : ReplicatedFirst se replique en premier, et attendre un module de
 -- ReplicatedStorage reviendrait a bloquer sur ce qu'on masque. Si l'une des deux change, changer l'autre.
 local TILE_IMAGE = "rbxassetid://111706805079464"
-local TILE_TRANSPARENCY = 0.95 -- KNOB : baisser = tuile plus visible ; monter = plus discrete
+-- KNOB : baisser = tuile plus visible ; monter = plus discrete. Le motif de TileField est bien plus fin que
+-- l'ancienne tuile : a 0.95 on ne voyait plus rien du tout.
+local TILE_TRANSPARENCY = 0.85
 -- COTE D'UNE TUILE, en fraction de la HAUTEUR de l'ecran : la meme mesure que TileField (son `tileFrac`, 0.1 par
 -- defaut). Des tuiles CARREES en pixels, donc le meme motif sur tous les formats. C'etait avant une fraction de
 -- l'ImageLabel, qui fait deux fois l'ecran : les tuiles s'etiraient differemment selon le format.
@@ -368,8 +370,15 @@ local FACE_TRANSPARENCY = 0.55 -- KNOB : baisser = tete plus marquee, monter = p
 -- ILS VIVENT DANS UN CanvasGroup, et c'est LUI qui porte la transparence. Sinon deux feuilles qui se recouvrent
 -- assombrissent leur intersection, et le chevauchement se voit comme une tache. Le groupe est d'abord aplati, PUIS
 -- rendu transparent d'un bloc : les recouvrements disparaissent, et on n'a plus a placer les feuilles au millimetre.
+--
+-- MAIS UN CanvasGroup DECOUPE CE QUI DEPASSE DE SON CADRE : il dessine ses enfants dans une image de SA taille. Les
+-- feuillages sont places bien au-dela (ils debordent de l'ecran expres, ils l'encadrent), donc dans un groupe de la
+-- taille d'origine ils disparaissaient TOUS. Le groupe couvre donc plusieurs fois l'ecran, et les positions de
+-- FOLIAGE_DATA -- ecrites pour le petit cadre -- sont converties a l'echelle du grand (voir `toHolder`).
 local FOLIAGE_TINT = Color3.new(0, 0, 0)
 local FOLIAGE_ALPHA = 0.88 -- KNOB : baisser = feuilles plus sombres
+local FOLIAGE_BOX = 0.55 -- taille du cadre pour lequel FOLIAGE_DATA a ete ecrit (fraction d'ecran)
+local FOLIAGE_GROUP = 2.6 -- taille du groupe qui les contient sans rien couper (fraction d'ecran)
 
 -- Polices : Luckiest Guy (titres, chunky) et Gotham (le reste). On passe par FontFace + les familles qui LIVRENT
 -- avec Roblox : pas de risque d'un Enum.Font absent qui casserait tout l'ecran au lancement.
@@ -619,11 +628,18 @@ local FOLIAGE_IN = TweenInfo.new(0.42, Enum.EasingStyle.Back, Enum.EasingDirecti
 
 -- CanvasGroup et pas Frame : c'est le GROUPE qui porte la transparence, donc deux feuilles qui se recouvrent ne
 -- font pas une tache plus sombre a leur intersection (voir FOLIAGE_ALPHA).
+-- Conversion des valeurs de FOLIAGE_DATA (ecrites pour un cadre de FOLIAGE_BOX) vers le grand groupe : les ecarts au
+-- centre et les tailles se divisent par le rapport des deux cadres. A l'ecran, rien ne bouge.
+local FOLIAGE_FACTOR = FOLIAGE_BOX / FOLIAGE_GROUP
+local function toHolder(v: number): number
+	return 0.5 + (v - 0.5) * FOLIAGE_FACTOR
+end
+
 local foliageHolder = Instance.new("CanvasGroup")
 foliageHolder.Name = "HolderFoliage"
 foliageHolder.AnchorPoint = Vector2.new(0.5, 0.5)
 foliageHolder.Position = UDim2.fromScale(0.5, 0.5)
-foliageHolder.Size = UDim2.fromScale(0.55, 0.55)
+foliageHolder.Size = UDim2.fromScale(FOLIAGE_GROUP, FOLIAGE_GROUP)
 foliageHolder.BackgroundTransparency = 1
 foliageHolder.BorderSizePixel = 0
 foliageHolder.GroupTransparency = FOLIAGE_ALPHA
@@ -642,12 +658,15 @@ for i, d in FOLIAGE_DATA do
 	leaf.ZIndex = 8
 	leaf.Parent = foliageHolder
 
-	local openPos = UDim2.fromScale(d.x, d.y)
-	local openSize = UDim2.fromScale(d.w, d.h)
+	local openPos = UDim2.fromScale(toHolder(d.x), toHolder(d.y))
+	local openSize = UDim2.fromScale(d.w * FOLIAGE_FACTOR, d.h * FOLIAGE_FACTOR)
 	-- depart : projete vers l'exterieur du centre du holder (0.5, 0.5), donc chacun sort de son bon cote ; et ETIRE
 	-- (plus long, plus fin) -> il se pose a sa taille normale EN MEME TEMPS que le move, pour la dynamique.
-	leaf.Position = UDim2.fromScale(0.5 + (d.x - 0.5) * FOLIAGE_SPREAD, 0.5 + (d.y - 0.5) * FOLIAGE_SPREAD)
-	leaf.Size = UDim2.fromScale(d.w * FOLIAGE_STRETCH_X, d.h * FOLIAGE_STRETCH_Y)
+	leaf.Position = UDim2.fromScale(
+		toHolder(0.5 + (d.x - 0.5) * FOLIAGE_SPREAD),
+		toHolder(0.5 + (d.y - 0.5) * FOLIAGE_SPREAD)
+	)
+	leaf.Size = UDim2.fromScale(d.w * FOLIAGE_STRETCH_X * FOLIAGE_FACTOR, d.h * FOLIAGE_STRETCH_Y * FOLIAGE_FACTOR)
 	local dur = 1.9 + ((i * 0.37) % 1) * 1.1 -- flottement varie mais STABLE par feuillage (pas de random par frame)
 	task.delay((i - 1) * FOLIAGE_STAGGER, function()
 		if not leaf.Parent then
@@ -660,7 +679,7 @@ for i, d in FOLIAGE_DATA do
 				return
 			end
 			-- flottement : monte de AMPLITUDE puis redescend, en boucle qui s'inverse (Sine)
-			local up = UDim2.fromScale(d.x, d.y - FOLIAGE_AMPLITUDE)
+			local up = UDim2.fromScale(toHolder(d.x), toHolder(d.y - FOLIAGE_AMPLITUDE))
 			local t = TweenService:Create(
 				leaf,
 				TweenInfo.new(dur, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
