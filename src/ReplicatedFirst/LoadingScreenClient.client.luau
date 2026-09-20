@@ -382,18 +382,16 @@ local EYE = {
 	SOUND_VOLUME = 0.6,
 	-- LE CLIN D'OEIL EST UN MOMENT ECRIT, PAS UN HASARD : il tombe a la FIN du son d'arrivee.
 	--
-	-- MAIS IL NE PEUT PAS DEPENDRE DE CE SON SEUL. `Ended` ne tire pas si le son n'a pas pu se telecharger, et
-	-- si le son se termine AVANT que la tete ne sorte, le geste partait colle a son apparition -- le clin d'oeil
-	-- tombait alors dans le meme instant que la derniere lettre, et on ne lisait plus rien.
+	-- LE MOMENT SE COMPTE DEPUIS LA TETE, pas depuis un son. Accroche a la fin du son d'arrivee (5,7 s), le geste
+	-- tombait tout a la fin du chargement ou pas du tout. La tete sort avec la derniere lettre : deux secondes
+	-- plus tard, le regard du joueur est dessus et le clin d'oeil se lit.
+	AFTER_FACE = 2, -- KNOB
+	-- A REMETTRE A `true` pour revoir le statut de chargement des images en console.
 	--
-	-- LE GESTE ATTEND DONC DEUX CHOSES : que le son d'arrivee soit fini, ET une respiration apres la tete. La
-	-- limite borne l'attente du son, pour qu'un son qui ne finit jamais n'emporte pas le geste avec lui.
-	AFTER_FACE = 0.5, -- respiration entre l'arrivee de la tete et le clin d'oeil. KNOB
-	-- COURTE : ce n'est PAS le temps du son, c'est le temps qu'on accepte de l'attendre. A 4 s, un son d'arrivee
-	-- de quelques secondes repoussait le clin d'oeil au-dela de la fin du chargement : le geste n'arrivait jamais
-	-- alors que tout le code etait bon. Un ecran de chargement rapide ne laisse que quelques secondes en tout.
-	WINK_DEADLINE = 1.2,
-	DEBUG = true, -- une ligne en console qui dit CE QUI a declenche le clin d'oeil. A repasser a false ensuite.
+	-- ATTENTION A `ImageLabel.IsLoaded` : elle reste FAUSSE tant que l'image n'a jamais ete DESSINEE, meme quand
+	-- l'asset est parfaitement disponible. Elle a failli faire accuser un asset qui allait tres bien. La mesure
+	-- qui dit vrai est le statut rendu par `PreloadAsync` (Success / Failure / TimedOut).
+	DEBUG = false,
 	-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
 	BLINK_EVERY = 3.2,
 	BLINK_JITTER = 2.4,
@@ -409,7 +407,7 @@ local EYE = {
 	-- entier, donc rien n'est rogne aux coins.
 	TILT = 7, -- degres. KNOB
 	TILT_IN = 0.35, -- temps pour pencher
-	TILT_HOLD = 1, -- temps ou la tete reste penchee APRES la reouverture de l'oeil. KNOB
+	TILT_HOLD = 0, -- temps ou la tete reste penchee APRES la reouverture de l'oeil. KNOB
 	TILT_OUT = 0.5, -- temps pour se redresser : plus lent, la tete "revient" au lieu de claquer
 }
 
@@ -882,7 +880,7 @@ end
 local joinSoundPlaying: Sound? = nil
 local eyesBusy = false
 local winkDone = false
-local function winkOnce(reason: string)
+local function winkOnce()
 	-- UNE SEULE FOIS, quel que soit le nombre de declencheurs : la fin du son et la limite de temps peuvent tres
 	-- bien tomber toutes les deux.
 	if winkDone or eyesBusy or not eyes.Parent then
@@ -895,19 +893,7 @@ local function winkOnce(reason: string)
 		return
 	end
 	winkDone = true
-	if EYE.DEBUG then
-		local w = eyeLayers.wink
-		print(
-			`[Loading] clin d'oeil ({reason}) : image={w.Image} chargee={w.IsLoaded} `
-				.. `taille={w.AbsoluteSize} transparence={w.ImageTransparency} groupe={faceGroup.GroupTransparency}`
-		)
-	end
 	eyesBusy = true
-	TweenService:Create(
-		faceGroup,
-		TweenInfo.new(EYE.TILT_IN, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-		{ Rotation = EYE.TILT }
-	):Play()
 	-- LE SON D'ABORD, L'OEIL ENSUITE : il se ferme sur le "cling" final, pas a l'attaque.
 	local cling = findSound(EYE.SOUND)
 	if cling then
@@ -923,8 +909,15 @@ local function winkOnce(reason: string)
 			return
 		end
 	end
+	-- TOUT TOMBE SUR LA MEME IMAGE : l'oeil se ferme et la tete penche ensemble. Penchee des l'attaque du son,
+	-- elle bougeait une demi-seconde avant le geste, et les deux ne se lisaient plus comme un seul mouvement.
 	eyeLayers.right.Visible = false
 	eyeLayers.wink.Visible = true
+	TweenService:Create(
+		faceGroup,
+		TweenInfo.new(EYE.TILT_IN, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+		{ Rotation = EYE.TILT }
+	):Play()
 	task.wait(EYE.WINK_TIME)
 	eyeLayers.wink.Visible = false
 	eyeLayers.right.Visible = true
@@ -951,12 +944,7 @@ task.spawn(function()
 		return
 	end
 	task.wait(EYE.AFTER_FACE)
-	-- On laisse le son d'arrivee se terminer, sans l'attendre indefiniment.
-	local limit = os.clock() + EYE.WINK_DEADLINE
-	while joinSoundPlaying and joinSoundPlaying.IsPlaying and os.clock() < limit do
-		task.wait(0.1)
-	end
-	winkOnce(if joinSoundPlaying then "apres le son d'arrivee" else "pas de son d'arrivee")
+	winkOnce()
 end)
 
 -- LES CLIGNEMENTS ORDINAIRES, qui ne font que vivre le visage.

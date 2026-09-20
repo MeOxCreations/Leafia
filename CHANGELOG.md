@@ -2204,6 +2204,22 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.968 — Le clin d'oeil du grand-pere tombe au bon moment
+
+Il se compte maintenant depuis l'arrivee de la TETE (deux secondes apres), et non depuis la fin du son
+d'arrivee : ce son dure 5,7 s, donc le geste tombait tout a la fin du chargement, ou jamais.
+
+La tete penche sur la MEME image que la fermeture de l'oeil, et se redresse a sa reouverture. Penchee des
+l'attaque du son, elle bougeait une demi-seconde avant le geste et les deux ne se lisaient plus ensemble.
+
+Les images du clignement et du clin d'oeil sont prechargees : une image ne part se charger qu'a son premier
+AFFICHAGE, et deux dixiemes de seconde ne suffisent pas.
+
+### Piege note
+
+`ImageLabel.IsLoaded` reste FAUSSE tant que l'image n'a jamais ete dessinee, meme quand l'asset est
+parfaitement disponible. La mesure qui dit vrai est le statut rendu par `PreloadAsync`.
+
 ## 0.0.967 — L'ecran de chargement remarche : il avait depasse la limite de 200 locales de Luau
 
 Les calques d'yeux ont fait passer `LoadingScreenClient` au-dessus des 200 variables locales de premier niveau
