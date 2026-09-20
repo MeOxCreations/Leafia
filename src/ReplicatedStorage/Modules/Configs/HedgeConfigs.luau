@@ -656,7 +656,7 @@ local HedgeConfigs = {
 	LEAF_TRIM_SPIN = 0.2,
 	-- Basculement HORS du plan, en degres. A garder petit : trop, et les feuilles decollent de la surface,
 	-- laissant voir les carreaux entre elles.
-	LEAF_TILT = 0.1,
+	LEAF_TILT = 6,
 	-- Meme chose, mais RESERVE a la face du dessus. Une feuille couchee a plat sur le dessus se lit comme un
 	-- tapis : vue de biais, on ne voit que des plans horizontaux alignes. La redresser lui rend du volume et
 	-- casse la surface plate. Distinct de LEAF_TILT parce que les cotes, eux, doivent RESTER plaques : une
@@ -666,7 +666,20 @@ local HedgeConfigs = {
 	-- Decalage dans le plan, en part du carreau. C'est CE reglage qui casse vraiment la grille : deux feuilles
 	-- peuvent etre tournees differemment et rester alignees comme du carrelage.
 	-- Au-dela de 0.5 elles sortent de leur carreau et des trous apparaissent.
-	LEAF_JITTER = 0.2,
+	LEAF_JITTER = 0.32,
+
+	-- RELIEF. Sans lui, toutes les feuilles sont a la MEME distance du plan de la face : la surface est un plan
+	-- parfait, et aucune rotation ne rattrape ca -- une haie reelle n'a pas de surface, elle a une epaisseur.
+	-- Chacune ressort d'un peu plus ou d'un peu moins, en STUDS. Vers l'exterieur seulement : vers l'interieur,
+	-- elle disparaitrait dans la haie.
+	LEAF_DEPTH = 0.16,
+
+	-- VARIATION DE COULEUR, en part de la couleur de la feuille (0.12 = plus ou moins 12 % de luminosite). C'est
+	-- ce qui separe un feuillage d'un aplat vert : aucune plante n'a deux feuilles de la meme teinte.
+	--
+	-- SANS EFFET SI LE MESH PORTE UNE TEXTURE : la texture gagne sur la couleur de la part. Ca se voit en une
+	-- relance -- si les feuilles restent uniformes, c'est ca, et il faut alors varier la texture elle-meme.
+	LEAF_TINT_RANGE = 0.12,
 
 	-- Balancement, calcule CHEZ CHAQUE CLIENT.
 	--

@@ -2204,6 +2204,26 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.973 — La haie prend du relief, et la pelouse perd sa couleur criarde
+
+Trois choses rendaient la haie plate. Toutes ses feuilles avaient EXACTEMENT la meme couleur (un aplat vert,
+quelle que soit la geometrie posee dessus), elles etaient toutes a la MEME distance du plan de la face (une
+surface parfaite, alors qu une haie a une epaisseur), et leur decalage ne faisait que 20 % de leur case.
+
+Chaque feuille ressort maintenant d une profondeur tiree au hasard (`LEAF_DEPTH`), porte sa propre luminosite
+(`LEAF_TINT_RANGE`), se decale de 32 % de sa case et s incline un peu hors du plan.
+
+Les cinq couleurs de la pelouse sont desaturees de 28 % ensemble : un vert vif se lit comme du plastique. Les
+cinq du meme geste, parce que ce sont les ECARTS entre elles qui font voir le travail fait.
+
+### La haie du didacticiel se verrouille
+
+Tant que le grand-pere marche vers elle, la lame la traverse sans rien couper. Le joueur pouvait courir la
+finir pendant la scene, qui arrivait alors devant une haie deja faite. Le verrou est un attribut sur la HAIE
+(`LeafiaCutLocked`) teste cote serveur : le service de coupe ne sait rien du didacticiel, et ignorer
+l interface ne permet pas de passer outre. Un deverrouillage de secours part avant la marche, pour le cas ou
+elle n arriverait jamais.
+
 ## 0.0.972 — Le rideau de changement de map ne garde que l essentiel
 
 Plus de couronne de points, plus de motif de fond, plus de halo : un fond blanc, la tete du grand-pere (bien

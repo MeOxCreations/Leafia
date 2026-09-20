@@ -269,14 +269,30 @@ local function buildFace(
 				local shift = CFrame.new(
 					cellW * jitter * rng:NextNumber(-1, 1),
 					cellH * jitter * rng:NextNumber(-1, 1),
-					-- Avancer sur Z pose la feuille sur la face visible, pas dans l'epaisseur du carreau.
-					thickness * 0.5
+					-- Avancer sur Z pose la feuille sur la face visible, pas dans l'epaisseur du carreau. Le
+					-- supplement tire au hasard donne son RELIEF a la surface : sans lui, toutes les feuilles
+					-- sont sur un meme plan et la haie se lit comme un mur peint.
+					--
+					-- VERS L'EXTERIEUR SEULEMENT (jamais negatif) : une feuille reculee s'enfoncerait dans la
+					-- haie et on perdrait a la fois son volume et sa surface.
+					thickness * 0.5 + rng:NextNumber(0, HedgeConfigs.LEAF_DEPTH)
 				)
 				local turn = CFrame.Angles(tilt * rng:NextNumber(-1, 1), tilt * rng:NextNumber(-1, 1), spin)
 				-- Decalage AVANT rotation : la feuille tourne alors sur elle-meme a l'endroit ou on l'a posee.
 				-- Dans l'autre sens, la rotation deplacerait aussi le decalage et les feuilles partiraient en
 				-- eventail autour du centre du carreau.
 				leaf.CFrame = cell.CFrame * shift * turn
+
+				-- CHACUNE SA TEINTE. Un feuillage dont toutes les feuilles ont la meme couleur exacte se lit
+				-- comme un aplat, quelle que soit la geometrie posee dessus. On ne touche qu'a la LUMINOSITE :
+				-- deriver la teinte ferait apparaitre des feuilles jaunes ou bleues au milieu du vert.
+				local tint = HedgeConfigs.LEAF_TINT_RANGE
+				if tint > 0 then
+					local k = 1 + rng:NextNumber(-tint, tint)
+					local c = leaf.Color
+					leaf.Color =
+						Color3.new(math.clamp(c.R * k, 0, 1), math.clamp(c.G * k, 0, 1), math.clamp(c.B * k, 0, 1))
+				end
 
 				-- Enfant du carreau : quand un carreau disparaitra a la taille, sa feuille partira avec lui. Un
 				-- nettoyage a un seul endroit ne peut pas en oublier la moitie.
