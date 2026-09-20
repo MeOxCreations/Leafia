@@ -404,12 +404,20 @@ local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait 
 -- Pour AGRANDIR le mot, on agrandit donc la CASE : `WORD_SCALE`. TextScaled remplit ce qu'on lui donne.
 local WORD_SCALE = 0.9 -- multiplie la taille de case relevee. 1 = exactement le montage du joueur
 local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la hauteur de la lettre
--- LE CONTOUR N'EST PAS UNI : un UIGradient POSE DANS LE UIStroke le fait s'effacer vers le bas, ce qui donne une
--- lumiere sur le haut des lettres. (Un UIGradient peut vivre dans un UIStroke : c'est la facon de faire briller un
--- contour, et c'est ce que le joueur avait monte a la main.)
-local STROKE_FADE_ROTATION = 90 -- 90 = de haut en bas
-local STROKE_FADE_TOP = 0 -- contour plein en haut
-local STROKE_FADE_BOTTOM = 0.55 -- et a moitie efface en bas. KNOB
+-- LE REFLET SUR LE CONTOUR. Un UIGradient peut vivre DANS un UIStroke : c'est la facon de faire briller un contour,
+-- et c'est le montage que le joueur avait fait a la main. La bande claire reste HORS CHAMP au repos (le contour est
+-- donc plein) et traverse la lettre quand le reflet passe. Regroupe en table : le fichier est a 170 locales de
+-- premier niveau, et Luau en refuse plus de 200 -- au-dela, le module entier meurt au chargement.
+local STROKE_SHINE = {
+	ROTATION = 25, -- diagonale, comme une lumiere qui glisse sur la lettre
+	WIDTH = 0.18, -- largeur de la bande, en fraction de la lettre
+	PEAK = 0.85, -- le contour s'efface presque au coeur de la bande
+	BASE = 0, -- ailleurs il reste plein
+	TIME = 0.55, -- temps de traversee d'UNE lettre
+	-- LE SENS D'UN OFFSET NE SE DEDUIT PAS, il s'observe (le journal l'a paye sur le wipe de l'herbe) : si le reflet
+	-- part du mauvais cote, passer a true.
+	FLIP = false,
+}
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
 local WORD_X = { 0.3777, 0.4225, 0.4808, 0.5371, 0.5762, 0.6215 } -- L E A F I A
@@ -488,7 +496,9 @@ local FOLIAGE_GROUP = 3
 -- Polices : Luckiest Guy (titres, chunky) et Gotham (le reste). On passe par FontFace + les familles qui LIVRENT
 -- avec Roblox : pas de risque d'un Enum.Font absent qui casserait tout l'ecran au lancement.
 local FONT_TITLE = Font.new("rbxasset://fonts/families/LuckiestGuy.json")
-local FONT_BOLD = Font.new("rbxasset://fonts/families/GothamSSm.json", Enum.FontWeight.Bold)
+-- LE TEXTE DE CHARGEMENT EN MONTSERRAT BLACK. Dans Roblox, "Black" s'appelle `Heavy` (900) -- `ExtraBold` (800)
+-- serait un cran en dessous, et rendrait le mot plus maigre que voulu.
+local FONT_STATUS = Font.new("rbxasset://fonts/families/Montserrat.json", Enum.FontWeight.Heavy)
 
 local TITLE_TEXT = "LEAFIA"
 
@@ -677,6 +687,7 @@ shout.Parent = root
 
 -- MOT "LEAFIA", LETTRE PAR LETTRE, chacune a sa place relevee.
 local letters: { TextLabel } = {}
+local shines: { UIGradient } = {}
 -- Le depart de chaque lettre, garde de cote : il ne part qu'une fois l'ecran vraiment affiche (voir plus bas).
 local starts: { () -> () } = {}
 for i = 1, #TITLE_TEXT do
@@ -695,13 +706,23 @@ for i = 1, #TITLE_TEXT do
 	stroke.Color = INK
 	stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
 	stroke.Parent = letter
-	do
-		local shine = Instance.new("UIGradient")
-		shine.Rotation = STROKE_FADE_ROTATION
-		shine.Color = ColorSequence.new(WHITE) -- blanc uni : seule la transparence travaille
-		shine.Transparency = NumberSequence.new(STROKE_FADE_TOP, STROKE_FADE_BOTTOM)
-		shine.Parent = stroke
-	end
+	local shine = Instance.new("UIGradient")
+	shine.Rotation = STROKE_SHINE.ROTATION
+	shine.Color = ColorSequence.new(WHITE) -- blanc uni : seule la TRANSPARENCE travaille ici
+	shine.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, STROKE_SHINE.BASE),
+		NumberSequenceKeypoint.new(math.max(0.5 - STROKE_SHINE.WIDTH, 0.001), STROKE_SHINE.BASE),
+		NumberSequenceKeypoint.new(0.5, STROKE_SHINE.PEAK),
+		NumberSequenceKeypoint.new(math.min(0.5 + STROKE_SHINE.WIDTH, 0.999), STROKE_SHINE.BASE),
+		NumberSequenceKeypoint.new(1, STROKE_SHINE.BASE),
+	})
+	-- AU REPOS, LA BANDE EST DEHORS. Sans ca, chaque lettre garderait un trou clair en plein milieu de son contour,
+	-- en permanence -- et on croirait le contour mal dessine.
+	local sweep = 1 + STROKE_SHINE.WIDTH * 2
+	local shineFrom = if STROKE_SHINE.FLIP then sweep else -sweep
+	shine.Offset = Vector2.new(shineFrom, 0)
+	shine.Parent = stroke
+	shines[i] = shine
 	-- Le contour suit la HAUTEUR REELLE de la lettre, relue a chaque changement d'ecran (rotation, resize) : en
 	-- pixels fixes il serait gras sur telephone et fin sur grand ecran.
 	local function fitStroke()
@@ -764,6 +785,18 @@ task.spawn(function()
 				if not letter.Parent then
 					return
 				end
+				-- LE CONTOUR ET LE REMPLISSAGE BRILLENT ENSEMBLE : un seul reflet, pas deux effets qui se croisent.
+				local grad = shines[i]
+				if grad then
+					local sweep = 1 + STROKE_SHINE.WIDTH * 2
+					local to = if STROKE_SHINE.FLIP then -sweep else sweep
+					grad.Offset = Vector2.new(-to, 0)
+					TweenService:Create(
+						grad,
+						TweenInfo.new(STROKE_SHINE.TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+						{ Offset = Vector2.new(to, 0) }
+					):Play()
+				end
 				local half = TweenInfo.new(WORD_SHINE_TIME / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 				local dim = TweenService:Create(letter, half, { TextTransparency = WORD_SHINE_PEAK })
 				dim.Completed:Once(function()
@@ -779,7 +812,7 @@ task.spawn(function()
 end)
 
 -- TEXTE D'ETAT ("Planting flower beds..."), juste sous le mot.
-local statusText = text("Status", root, FONT_BOLD, INK)
+local statusText = text("Status", root, FONT_STATUS, INK)
 statusText.RichText = true
 statusText.ZIndex = 6
 place(statusText, STATUS_POS, STATUS_SIZE)
