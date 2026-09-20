@@ -396,7 +396,7 @@ local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait 
 -- (J'ai d'abord affirme l'inverse -- que TextScaled plafonnait -- c'etait faux, et ca a coute quatre essais.)
 --
 -- Pour AGRANDIR le mot, on agrandit donc la CASE : `WORD_SCALE`. TextScaled remplit ce qu'on lui donne.
-local WORD_SCALE = 1.35 -- multiplie la taille de case relevee. 1 = exactement le montage du joueur
+local WORD_SCALE = 0.9 -- multiplie la taille de case relevee. 1 = exactement le montage du joueur
 local WORD_STROKE_RATIO = 0.03 -- epaisseur du contour, en fraction de la hauteur de la lettre
 local WORD_SIZE = Vector2.new(0.0659, 0.1789) -- taille d'une lettre (identique pour toutes, relevee)
 local WORD_Y = 0.6444
