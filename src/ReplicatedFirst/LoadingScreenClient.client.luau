@@ -619,10 +619,11 @@ local GRASS_WIPE_FLIP = false
 -- La demi-largeur se CALCULE (elle suit la taille de la tondeuse) ; le seul reglage est l'avance en plus.
 -- GRISE, PAS NOIRE : en noir plein la rangee pese autant que la tondeuse et le mot, et le bas de l'ecran tire
 -- l'oeil vers le decor au lieu du titre.
--- Deux fois moins marquee : c'est le CONTRASTE avec le fond blanc qu'on divise, pas la valeur brute. A 158 sur
--- un fond a 255, l'ecart vaut 97 ; a 207 il vaut 48. Eclaircir plutot que rendre transparent laisse le degrade
--- de coupe travailler seul sur la transparence.
-local GRASS_COLOR = Color3.fromRGB(222, 222, 222)
+-- NOIRE ET TRES TRANSPARENTE, comme les feuillages de cet ecran : le gris obtenu est alors le MEME que le leur,
+-- quel que soit le fond. La transparence de base se compose avec le degrade de coupe, qui continue de travailler
+-- par-dessus.
+local GRASS_COLOR = Color3.fromRGB(0, 0, 0)
+local GRASS_ALPHA = 0.89
 local GRASS_CUT_LEAD = 0.02 -- de combien la touffe se couche AVANT le nez, en fraction d'ecran. KNOB
 
 -- L'HERBE REPOUSSE DERRIERE LA TONDEUSE, et la tondeuse repasse : le bas de l'ecran tourne en boucle tant que ca
@@ -1264,6 +1265,7 @@ while x < 1 + GRASS_STEP do
 	blade.BackgroundTransparency = 1
 	blade.Image = GRASS_IMAGE
 	blade.ImageColor3 = GRASS_COLOR
+	blade.ImageTransparency = GRASS_ALPHA
 	-- ANCREE PAR LE BAS : une touffe qui repousse sort de TERRE. Ancree au centre, elle grandirait aussi vers le bas,
 	-- donc elle s'enfoncerait dans le sol en meme temps qu'elle pousse.
 	blade.AnchorPoint = Vector2.new(0.5, 1)
