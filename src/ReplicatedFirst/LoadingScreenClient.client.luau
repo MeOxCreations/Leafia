@@ -397,6 +397,12 @@ local EYE = {
 	-- retombe sur une valeur de secours si elle ne vient pas -- sinon le geste partirait instantanement.
 	CLING_FALLBACK = 0.5,
 	CLING_OFFSET = -0.05, -- avance (negatif) ou retard sur la derniere note. KNOB, a caler a l'oreille
+	-- LA TETE PENCHE PENDANT LE CLIN D'OEIL. L'inclinaison part AVEC le son et se redresse apres : la tete
+	-- accompagne le geste au lieu de le subir. Sur le GROUPE et non sur l'image : le CanvasGroup tourne son rendu
+	-- entier, donc rien n'est rogne aux coins.
+	TILT = 7, -- degres. KNOB
+	TILT_IN = 0.35, -- temps pour pencher
+	TILT_OUT = 0.5, -- temps pour se redresser : plus lent, la tete "revient" au lieu de claquer
 }
 
 -- LE REGARD. Le cadre des yeux glisse de quelques pour cent seulement : au-dela, les pupilles sortiraient des
@@ -858,6 +864,11 @@ local function winkOnce(reason: string)
 		print(`[Loading] clin d'oeil : {reason}`)
 	end
 	eyesBusy = true
+	TweenService:Create(
+		faceGroup,
+		TweenInfo.new(EYE.TILT_IN, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+		{ Rotation = EYE.TILT }
+	):Play()
 	-- LE SON D'ABORD, L'OEIL ENSUITE : il se ferme sur le "cling" final, pas a l'attaque.
 	local cling = findSound(EYE.SOUND)
 	if cling then
@@ -878,6 +889,11 @@ local function winkOnce(reason: string)
 	task.wait(EYE.WINK_TIME)
 	eyeLayers.wink.Visible = false
 	eyeLayers.right.Visible = true
+	TweenService:Create(
+		faceGroup,
+		TweenInfo.new(EYE.TILT_OUT, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+		{ Rotation = 0 }
+	):Play()
 	eyesBusy = false
 end
 
