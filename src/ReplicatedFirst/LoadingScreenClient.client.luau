@@ -358,25 +358,45 @@ local WHITE = Color3.fromRGB(255, 255, 255)
 -- `scripts/studio/ExporterEcranChargement.lua`. Placer a la souris coute dix secondes ; deviner les memes chiffres
 -- coute une heure. Positions et tailles en FRACTION D'ECRAN, au CENTRE de l'element.
 --
--- LA TETE DU GRAND-PERE, au-dessus du titre : elle dit de qui parle le jeu avant meme qu'on lise le nom.
+-- L'ECRAN EST EN NOIR ET BLANC : fond blanc, tout le dessin en noir. Une seule encre, donc.
+local INK = Color3.fromRGB(0, 0, 0)
+
+-- LA TETE DU GRAND-PERE et l'ONOMATOPEE a cote d'elle. Toutes deux fondues vers le bas par un degrade (voir
+-- `fadeGradient`) : c'est ce qui leur donne leur gris, sans qu'aucune couleur n'entre dans l'ecran.
 local FACE_IMAGE = "rbxassetid://111069478991867"
-local FACE_TRANSPARENCY = 0
-local FACE_POS = Vector2.new(0.4989, 0.4188)
-local FACE_SIZE = Vector2.new(0.1835, 0.1975)
--- LE MOT et le texte de chargement, poses eux aussi a la main.
-local WORD_POS = Vector2.new(0.4995, 0.6205)
-local WORD_SIZE = Vector2.new(0.3196, 0.1659)
-local STATUS_POS = Vector2.new(0.4995, 0.6827)
+-- CLIGNEMENT : les memes images que le rideau de changement de map (yeux ouverts / a moitie / fermes). Le passage
+-- par l'etape "a moitie" compte : d'ouvert a ferme en une seule image, ca claque au lieu de cligner.
+-- VIDE = pas de clignement. Tant que les variantes du nouveau visage n'existent pas, il regarde droit devant.
+local FACE_HALF_IMAGE = ""
+local FACE_SHUT_IMAGE = ""
+-- Ecart entre deux clignements, plus du hasard : toutes les N secondes pile, ca se lit comme un metronome.
+local FACE_BLINK_EVERY = 3.2
+local FACE_BLINK_JITTER = 2.4
+local FACE_BLINK_HALF_TIME = 0.05
+local FACE_BLINK_SHUT_TIME = 0.09
+local FACE_POS = Vector2.new(0.5, 0.398)
+local FACE_SIZE = Vector2.new(0.1835, 0.2837)
+local SHOUT_IMAGE = "rbxassetid://84029477406959"
+local SHOUT_POS = Vector2.new(0.6433, 0.5022)
+local SHOUT_SIZE = Vector2.new(0.092, 0.2508)
+local SHOUT_ROT = 20
+local SHOUT_POP = 0.6 -- taille de depart de son apparition (fraction de sa taille) : elle grossit d'un coup
+local SHOUT_IN = TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+local SHOUT_OUT = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+local ART_FADE_ROTATION = 210.2216 -- sens du fondu, releve sur la maquette
+
+-- LE MOT et le texte de chargement.
+local WORD_POS = Vector2.new(0.4984, 0.6446)
+local WORD_SIZE = Vector2.new(0.3446, 0.1789)
+local WORD_COLOR = Color3.fromRGB(102, 102, 102) -- gris : le contour noir fait le reste
+local WORD_STROKE_RATIO = 0.05 -- epaisseur du contour, en fraction de la taille du texte
+local STATUS_POS = Vector2.new(0.4995, 0.7299)
 local STATUS_SIZE = Vector2.new(0.553, 0.0277)
 
--- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule. Largeur d'une lettre = hauteur du mot x ce facteur : TextScaled
--- remplit sa case, il ne la dimensionne pas -- sans largeur imposee, toutes les lettres se tasseraient.
--- HAUTEUR DES LETTRES, en fraction de la hauteur du mot. Chaque lettre prend ensuite SA largeur (AutomaticSize) :
--- une largeur imposee, identique pour toutes, ecartait le "I" du reste comme s'il y avait un espace.
-local WORD_TEXT_RATIO = 0.95
--- RESSERREMENT entre deux lettres, en fraction de leur hauteur. Negatif : les lettres se rapprochent jusqu'a se
--- toucher, comme dans un mot ecrit d'un bloc. 0 = l'espacement naturel de la police.
-local WORD_KERNING = -0.08
+-- LE MOT ARRIVE LETTRE PAR LETTRE, puis ondule. Chaque lettre prend SA largeur (AutomaticSize) : une largeur
+-- imposee, identique pour toutes, ecartait le "I" du reste comme s'il y avait un espace.
+local WORD_TEXT_RATIO = 0.95 -- hauteur des lettres, en fraction de la hauteur du mot
+local WORD_KERNING = -0.08 -- resserrement entre deux lettres (negatif = elles se touchent)
 local WORD_STAGGER = 0.07 -- decalage entre deux lettres, a l'arrivee ET dans la vague : c'est lui qui fait la vague
 local WORD_DROP = 0.35 -- d'ou la lettre monte (fraction de sa case)
 local WORD_IN = TweenInfo.new(0.34, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
@@ -384,24 +404,37 @@ local WORD_WAVE = 0.08 -- hauteur de l'ondulation (fraction de la case). KNOB
 local WORD_WAVE_TIME = 1.1 -- duree d'un aller de l'ondulation. KNOB
 
 -- LE REFLET, comme sur le titre de chapitre du didacticiel (`Modules/UI/Core/ChapterTitle`) : chaque lettre
--- s'estompe et revient, decalee sur sa voisine. ON NE PEUT PAS ECLAIRCIR DU BLANC -- il n'y a rien au-dessus du
--- blanc -- donc la lumiere se fait par la TRANSPARENCE : la lettre recule, puis revient. L'oeil lit un passage.
+-- s'estompe et revient, decalee sur sa voisine.
 local WORD_SHINE_DELAY = 0.4 -- apres la pose de la derniere lettre
 local WORD_SHINE_STAGGER = 0.04 -- retard entre deux lettres : c'est lui qui fait glisser le reflet
 local WORD_SHINE_TIME = 0.3 -- aller-retour d'UNE lettre
 local WORD_SHINE_PEAK = 0.7 -- transparence au sommet de la vague
 local WORD_SHINE_PERIOD = 2.6 -- temps entre deux passages
 
--- LES FEUILLAGES SONT NOIRS ET TRANSPARENTS : sur le vert, ca donne une ombre de feuille, pas un dessin colle.
---
--- ILS VIVENT DANS UN CanvasGroup, et c'est LUI qui porte la transparence. Sinon deux feuilles qui se recouvrent
--- assombrissent leur intersection, et le chevauchement se voit comme une tache. Le groupe est d'abord aplati, PUIS
--- rendu transparent d'un bloc : les recouvrements disparaissent, et on n'a plus a placer les feuilles au millimetre.
---
--- MAIS UN CanvasGroup DECOUPE CE QUI DEPASSE DE SON CADRE : il dessine ses enfants dans une image de SA taille. Les
--- feuillages sont places bien au-dela (ils debordent de l'ecran expres, ils l'encadrent), donc dans un groupe de la
--- taille d'origine ils disparaissaient TOUS. Le groupe couvre donc plusieurs fois l'ecran, et les positions de
--- FOLIAGE_DATA -- ecrites pour le petit cadre -- sont converties a l'echelle du grand (voir `toHolder`).
+-- ===== LA TONDEUSE QUI TOND LA RANGEE D'HERBE, EN BAS =====
+local MOWER_IMAGE = "rbxassetid://90792094723212"
+local MOWER_SIZE = Vector2.new(0.1262, 0.237)
+-- Le BAS de la tondeuse (ancre 0.5, 1). Releve : centre 0.9016 + moitie de 0.237.
+local MOWER_GROUND_Y = 1.0201
+local MOWER_START_X = -0.12 -- hors ecran a gauche
+local MOWER_END_X = 1.12 -- hors ecran a droite
+local MOWER_TIME = 7 -- duree d'une traversee, en secondes. KNOB
+local MOWER_PAUSE = 1.6 -- temps mort avant le passage suivant (l'herbe repousse hors champ)
+-- Ecrasement : elle s'aplatit un peu et s'elargit d'autant, sans quitter le sol.
+local MOWER_SQUASH_X, MOWER_SQUASH_Y = 1.04, 0.94
+local MOWER_SQUASH_TIME = 0.32
+
+local GRASS_IMAGE = "rbxassetid://90924932701080"
+local GRASS_SIZE = Vector2.new(0.0987, 0.1525)
+local GRASS_Y = 0.9884 -- centre de la rangee (releve)
+local GRASS_START_X = 0.0384 -- centre de la premiere touffe (releve)
+local GRASS_STEP = 0.0813 -- ecart entre deux touffes (releve)
+local GRASS_CUT = TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out) -- vitesse de la coupe
+local GRASS_WIPE_EDGE = 0.18 -- douceur du bord de coupe (0 = coupure nette)
+-- LE SENS DU BALAYAGE NE SE DEDUIT PAS, il se constate a l'ecran (journal de CLAUDE.md). Si la touffe s'efface du
+-- mauvais cote, inverser CE booleen -- il n'y a rien d'autre a changer.
+local GRASS_WIPE_FLIP = false
+
 local FOLIAGE_TINT = Color3.new(0, 0, 0)
 local FOLIAGE_ALPHA = 0.89 -- KNOB : baisser = feuilles plus sombres (valeur relevee sur la maquette)
 -- Taille du groupe, en fraction d'ecran. Assez grand pour contenir les feuillages QUI DEBORDENT (ils encadrent
@@ -483,22 +516,13 @@ root.BorderSizePixel = 0
 root.Active = true
 root.Parent = gui
 
--- ===== CIEL =====
+-- ===== LE FOND : blanc, et la tuile qui defile par-dessus =====
+-- PLUS DE CIEL COLORE : l'ecran est en NOIR ET BLANC. Le degrade vert a saute avec le reste de la maquette.
 local sky = frame("Sky", root)
 sky.Size = UDim2.fromScale(1, 1)
 sky.Position = UDim2.fromScale(0, 0)
 sky.ZIndex = 1
--- Degrade du fond : vert citron en haut -> vert franc en bas. Rotation 90 = vertical (haut -> bas).
--- C'ETAIT UN CIEL BLEU : le jeu parle de pelouse et de haies, le vert le dit des la premiere seconde.
-local skyGrad = Instance.new("UIGradient")
-skyGrad.Rotation = 90
-skyGrad.Color = ColorSequence.new(Color3.fromRGB(213, 255, 76), Color3.fromRGB(147, 255, 101))
-skyGrad.Parent = sky
 
--- FOND TUILE qui defile en DIAGONALE. ZIndex = ciel + 1 : juste AU-DESSUS du degrade (opaque, il le cacherait dessous)
--- et SOUS tout le reste (le contenu le cacherait dessus). Le decalage X ET Y a la meme vitesse donne la diagonale ;
--- on recycle chaque axe sur SA periode (la taille de tuile sur cet axe) pour boucler sans saut.
--- TileSize en SCALE (fraction de l'ImageLabel tuile) : ca s'adapte a l'ecran. A REGLER a l'oeil pour l'image.
 local tile = Instance.new("ImageLabel")
 tile.Name = "Tile"
 tile.BackgroundTransparency = 1
@@ -517,8 +541,6 @@ tile.Parent = root
 local tileOffX, tileOffY = 0, 0
 local tileConn: RBXScriptConnection? = nil
 tileConn = RunService.Heartbeat:Connect(function(dt: number)
-	-- Periode de recyclage = la taille PIXEL d'une tuile (scale x taille de l'ImageLabel). Relue chaque frame -> suit
-	-- l'ecran (rotation mobile, resize).
 	local periodX = TILE_SCALE_X * tile.AbsoluteSize.X
 	local periodY = TILE_SCALE_Y * tile.AbsoluteSize.Y
 	if periodX <= 0 or periodY <= 0 then
@@ -529,29 +551,71 @@ tileConn = RunService.Heartbeat:Connect(function(dt: number)
 	tile.Position = UDim2.new(0.5, tileOffX, 0.5, tileOffY)
 end)
 
--- ===== LE CENTRE : tete, mot, texte de chargement =====
--- POSES DIRECTEMENT SUR LE FOND, aux valeurs relevees. C'etait une colonne avec un UIListLayout et deux contraintes
--- de ratio : elle calculait des places qu'on connait deja, et il fallait passer par elle pour bouger quoi que ce
--- soit. Trois elements, trois positions -- ce que le joueur a sous les yeux dans Studio.
+-- ===== LE CENTRE : tete, onomatopee, mot, texte de chargement =====
+-- POSES DIRECTEMENT SUR LE FOND, aux valeurs relevees sur l'ecran monte a la main.
 local function place(gui: GuiObject, pos: Vector2, size: Vector2)
 	gui.AnchorPoint = Vector2.new(0.5, 0.5)
 	gui.Position = UDim2.fromScale(pos.X, pos.Y)
 	gui.Size = UDim2.fromScale(size.X, size.Y)
 end
 
+-- LE DEGRADE QUI EFFACE LE BAS DES IMAGES NOIRES : c'est lui qui donne le fondu gris de la tete et de l'onomatopee.
+-- Blanc uni, transparence de 0 a 1 : seule la transparence travaille, la couleur ne sert qu'a exister.
+local function fadeGradient(parent: Instance)
+	local grad = Instance.new("UIGradient")
+	grad.Rotation = ART_FADE_ROTATION
+	grad.Color = ColorSequence.new(WHITE)
+	grad.Transparency = NumberSequence.new(0, 1)
+	grad.Parent = parent
+end
+
 local face = Instance.new("ImageLabel")
 face.Name = "Face"
 face.BackgroundTransparency = 1
 face.Image = FACE_IMAGE
-face.ImageColor3 = WHITE
-face.ImageTransparency = FACE_TRANSPARENCY
+face.ImageColor3 = INK
 face.ScaleType = Enum.ScaleType.Fit -- garde ses proportions quel que soit l'ecran
 face.ZIndex = 5
 place(face, FACE_POS, FACE_SIZE)
+fadeGradient(face)
 face.Parent = root
 
--- MOT "LEAFIA", LETTRE PAR LETTRE. SANS OMBRE : la maquette le veut plat, et une ombre teal sur du vert se lit
--- comme une bavure.
+-- LE CLIGNEMENT, en changeant d'image. Rien a faire tant que les deux variantes ne sont pas fournies : mieux vaut un
+-- visage qui ne cligne pas qu'une image vide au milieu de l'ecran.
+if FACE_HALF_IMAGE ~= "" and FACE_SHUT_IMAGE ~= "" then
+	task.spawn(function()
+		while face.Parent do
+			task.wait(FACE_BLINK_EVERY + math.random() * FACE_BLINK_JITTER)
+			if not face.Parent then
+				return
+			end
+			face.Image = FACE_HALF_IMAGE
+			task.wait(FACE_BLINK_HALF_TIME)
+			face.Image = FACE_SHUT_IMAGE
+			task.wait(FACE_BLINK_SHUT_TIME)
+			face.Image = FACE_HALF_IMAGE
+			task.wait(FACE_BLINK_HALF_TIME)
+			face.Image = FACE_IMAGE
+		end
+	end)
+end
+
+-- L'ONOMATOPEE (les trois eclats a cote de la tete). Elle apparait au debut de chaque passage de tondeuse : posee
+-- une fois pour toutes, elle ferait partie du decor et on ne la verrait plus.
+local shout = Instance.new("ImageLabel")
+shout.Name = "Shout"
+shout.BackgroundTransparency = 1
+shout.Image = SHOUT_IMAGE
+shout.ImageColor3 = INK
+shout.ImageTransparency = 1
+shout.ScaleType = Enum.ScaleType.Fit
+shout.Rotation = SHOUT_ROT
+shout.ZIndex = 5
+place(shout, SHOUT_POS, SHOUT_SIZE)
+fadeGradient(shout)
+shout.Parent = root
+
+-- MOT "LEAFIA", LETTRE PAR LETTRE.
 --
 -- UNE LETTRE = DEUX OBJETS : une CASE que le UIListLayout range, et la lettre qui bouge LIBREMENT dedans. Animer
 -- directement ce qu'un layout positionne, c'est se battre contre lui a chaque image -- il repose la position, la
@@ -583,7 +647,7 @@ for i = 1, #TITLE_TEXT do
 	cell.LayoutOrder = i
 	cell.ZIndex = 6
 
-	local letter = text("Letter", cell, FONT_TITLE, WHITE)
+	local letter = text("Letter", cell, FONT_TITLE, WORD_COLOR)
 	letter.Text = TITLE_TEXT:sub(i, i)
 	letter.AnchorPoint = Vector2.new(0.5, 0.5)
 	letter.ZIndex = 6
@@ -595,8 +659,16 @@ for i = 1, #TITLE_TEXT do
 	cell.AutomaticSize = Enum.AutomaticSize.X
 	cell.Size = UDim2.fromScale(0, 1)
 
+	-- LE CONTOUR NOIR, en fraction de la taille du texte : en pixels fixes il serait gras sur telephone et fin sur
+	-- grand ecran.
+	local stroke = Instance.new("UIStroke")
+	stroke.Color = INK
+	stroke.Parent = letter
+
 	local function fitText()
-		letter.TextSize = math.max(wordHolder.AbsoluteSize.Y * WORD_TEXT_RATIO, 1)
+		local size = math.max(wordHolder.AbsoluteSize.Y * WORD_TEXT_RATIO, 1)
+		letter.TextSize = size
+		stroke.Thickness = size * WORD_STROKE_RATIO
 	end
 	fitText()
 	wordHolder:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitText)
@@ -605,12 +677,14 @@ for i = 1, #TITLE_TEXT do
 
 	-- ARRIVEE : la lettre monte de sous sa case en s'allumant, l'une apres l'autre.
 	letter.TextTransparency = 1
+	stroke.Transparency = 1
 	letter.Position = UDim2.fromScale(0.5, 0.5 + WORD_DROP)
 	task.delay((i - 1) * WORD_STAGGER, function()
 		if not letter.Parent then
 			return
 		end
 		TweenService:Create(letter, WORD_IN, { Position = UDim2.fromScale(0.5, 0.5), TextTransparency = 0 }):Play()
+		TweenService:Create(stroke, WORD_IN, { Transparency = 0 }):Play()
 		-- VAGUE : chaque lettre monte et redescend en boucle, decalee de la precedente -- c'est ce DECALAGE qui fait
 		-- la vague. Lancee apres l'arrivee, sinon les deux tweens se disputent la meme position.
 		task.delay(WORD_IN.Time, function()
@@ -650,11 +724,129 @@ task.spawn(function()
 	end
 end)
 
--- TEXTE D'ETAT ("Planting flower beds..."), juste sous le mot. Place comme les deux autres.
-local statusText = text("Status", root, FONT_BOLD, WHITE)
+-- TEXTE D'ETAT ("Planting flower beds..."), juste sous le mot.
+local statusText = text("Status", root, FONT_BOLD, INK)
 statusText.RichText = true
 statusText.ZIndex = 6
 place(statusText, STATUS_POS, STATUS_SIZE)
+
+-- ===== LA TONDEUSE ET L'HERBE DU BAS =====
+-- L'HERBE EST GENEREE, pas posee une par une : une rangee reguliere se decrit par un pas et une hauteur, et elle
+-- s'adapte alors a n'importe quelle largeur d'ecran. Les toucher a la main obligerait a les repositionner toutes a
+-- chaque changement.
+local grassRow = frame("GrassRow", root)
+grassRow.BackgroundTransparency = 1
+grassRow.AnchorPoint = Vector2.new(0.5, 0.5)
+grassRow.Position = UDim2.fromScale(0.5, 0.5)
+grassRow.Size = UDim2.fromScale(1, 1)
+grassRow.ZIndex = 7
+
+type Blade = { gui: ImageLabel, grad: UIGradient, x: number, cut: boolean }
+local blades: { Blade } = {}
+local x = GRASS_START_X
+while x < 1 + GRASS_STEP do
+	local blade = Instance.new("ImageLabel")
+	blade.Name = "Grass"
+	blade.BackgroundTransparency = 1
+	blade.Image = GRASS_IMAGE
+	blade.ImageColor3 = INK
+	blade.AnchorPoint = Vector2.new(0.5, 0.5)
+	blade.Position = UDim2.fromScale(x, GRASS_Y)
+	blade.Size = UDim2.fromScale(GRASS_SIZE.X, GRASS_SIZE.Y)
+	blade.ZIndex = 7
+	blade.Parent = grassRow
+
+	-- LA COUPE PASSE PAR UN DEGRADE, comme le joueur l'a demande : une bande transparente balaie la touffe de gauche
+	-- a droite, dans le sens de la tondeuse.
+	--
+	-- LE SENS D'UN `UIGradient.Offset` NE SE DEDUIT PAS, il se constate a l'ecran (deja paye, voir le journal de
+	-- CLAUDE.md). D'ou `GRASS_WIPE_FLIP` : si la touffe s'efface du mauvais cote, on inverse ce booleen, on ne
+	-- reecrit rien.
+	local grad = Instance.new("UIGradient")
+	grad.Rotation = 0
+	grad.Color = ColorSequence.new(WHITE)
+	grad.Transparency = NumberSequence.new({
+		NumberSequenceKeypoint.new(0, 1),
+		NumberSequenceKeypoint.new(0.5, 1),
+		NumberSequenceKeypoint.new(math.min(0.5 + GRASS_WIPE_EDGE, 0.999), 0),
+		NumberSequenceKeypoint.new(1, 0),
+	})
+	grad.Offset = Vector2.new(if GRASS_WIPE_FLIP then 1 else -1, 0)
+	grad.Parent = blade
+
+	table.insert(blades, { gui = blade, grad = grad, x = x, cut = false })
+	x += GRASS_STEP
+end
+
+local mower = Instance.new("ImageLabel")
+mower.Name = "Mower"
+mower.BackgroundTransparency = 1
+mower.Image = MOWER_IMAGE
+mower.ImageColor3 = INK
+-- ANCRE EN BAS AU MILIEU : l'ecrasement se fait alors vers le sol, comme une vraie masse posee dessus. Ancree au
+-- centre, la tondeuse s'enfoncerait ET se souleverait a chaque pas.
+mower.AnchorPoint = Vector2.new(0.5, 1)
+mower.Size = UDim2.fromScale(MOWER_SIZE.X, MOWER_SIZE.Y)
+mower.Position = UDim2.fromScale(MOWER_START_X, MOWER_GROUND_Y)
+mower.ZIndex = 9
+mower.Parent = root
+
+-- ECRASEMENT : elle s'aplatit et se retend sans arret, sans jamais quitter le sol. Sur la TAILLE et pas la position :
+-- un rebond la ferait sauter, or elle roule.
+TweenService:Create(
+	mower,
+	TweenInfo.new(MOWER_SQUASH_TIME, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+	{ Size = UDim2.fromScale(MOWER_SIZE.X * MOWER_SQUASH_X, MOWER_SIZE.Y * MOWER_SQUASH_Y) }
+):Play()
+
+-- LE PASSAGE : la tondeuse traverse, et chaque touffe se fait couper QUAND ELLE LA DEPASSE. On avance la position a
+-- la main image par image plutot qu'en tween, justement pour pouvoir comparer -- un tween ne dit pas ou il en est.
+local mowConn: RBXScriptConnection? = nil
+task.spawn(function()
+	while root.Parent do
+		local travelled = 0
+		for _, blade in blades do
+			blade.cut = false
+			blade.grad.Offset = Vector2.new(if GRASS_WIPE_FLIP then 1 else -1, 0)
+			blade.gui.ImageTransparency = 0
+		end
+		-- L'ONOMATOPEE SAUTE au depart du passage : c'est le moment ou il se passe quelque chose.
+		shout.ImageTransparency = 1
+		shout.Size = UDim2.fromScale(SHOUT_SIZE.X * SHOUT_POP, SHOUT_SIZE.Y * SHOUT_POP)
+		TweenService:Create(shout, SHOUT_IN, {
+			ImageTransparency = 0,
+			Size = UDim2.fromScale(SHOUT_SIZE.X, SHOUT_SIZE.Y),
+		}):Play()
+
+		local done = false
+		mowConn = RunService.Heartbeat:Connect(function(dt: number)
+			travelled += dt / MOWER_TIME
+			local pos = MOWER_START_X + (MOWER_END_X - MOWER_START_X) * math.min(travelled, 1)
+			mower.Position = UDim2.fromScale(pos, MOWER_GROUND_Y)
+			for _, blade in blades do
+				if not blade.cut and pos >= blade.x then
+					blade.cut = true
+					TweenService:Create(blade.grad, GRASS_CUT, {
+						Offset = Vector2.new(if GRASS_WIPE_FLIP then -1 else 1, 0),
+					}):Play()
+				end
+			end
+			if travelled >= 1 then
+				done = true
+			end
+		end)
+		repeat
+			task.wait(0.1)
+		until done or not root.Parent
+		if mowConn then
+			mowConn:Disconnect()
+			mowConn = nil
+		end
+		-- L'HERBE REPOUSSE HORS CHAMP : la tondeuse est sortie par la droite, personne ne voit le retour.
+		TweenService:Create(shout, SHOUT_OUT, { ImageTransparency = 1 }):Play()
+		task.wait(MOWER_PAUSE)
+	end
+end)
 
 -- ===== FEUILLAGES qui encadrent l'ecran (entree en eventail + flottement) =====
 -- INLINE, comme tout ce fichier (autonome : pas de require de ReplicatedStorage). Meme idee que le module reutilisable
@@ -665,21 +857,8 @@ place(statusText, STATUS_POS, STATUS_SIZE)
 -- sur l'ecran monte a la main : ils debordent volontairement (x et y hors de [0, 1]), ils encadrent l'ecran.
 type FoliageEntry = { image: string, x: number, y: number, w: number, h: number, rot: number }
 local FOLIAGE_DATA: { FoliageEntry } = {
-	{ image = "rbxassetid://133121907005690", x = 0.842, y = -0.0931, w = 0.2662, h = 0.4796, rot = -108 },
-	{ image = "rbxassetid://120457348978315", x = 1.0242, y = 0.315, w = 0.1141, h = 0.2769, rot = -140 },
-	{ image = "rbxassetid://120457348978315", x = 1.0239, y = -0.0442, w = 0.1936, h = 0.3834, rot = -140 },
-	{ image = "rbxassetid://78090496362298", x = 0.982, y = 0.5818, w = 0.1474, h = 0.3784, rot = -140 },
-	{ image = "rbxassetid://78090496362298", x = 0.6205, y = 0.0208, w = 0.2973, h = 0.553, rot = 106 },
-	{ image = "rbxassetid://120457348978315", x = 0.3912, y = -0.0939, w = 0.1875, h = 0.372, rot = 180 },
-	{ image = "rbxassetid://106884980828867", x = 0.1678, y = -0.1345, w = 0.3184, h = 0.5778, rot = 135 },
-	{ image = "rbxassetid://106884980828867", x = -0.0038, y = 0.1466, w = 0.2156, h = 0.407, rot = 103 },
 	{ image = "rbxassetid://120457348978315", x = -0.1309, y = -0.0111, w = 0.2156, h = 0.407, rot = 103 },
 	{ image = "rbxassetid://120457348978315", x = -0.1776, y = 0.3517, w = 0.2156, h = 0.407, rot = 103 },
-	{ image = "rbxassetid://133121907005690", x = 0, y = 0.5057, w = 0.2238, h = 0.3938, rot = 83 },
-	{ image = "rbxassetid://106884980828867", x = 0.084, y = 0.9218, w = 0.2773, h = 0.4523, rot = 48 },
-	{ image = "rbxassetid://78090496362298", x = 0.2728, y = 1.0939, w = 0.1474, h = 0.3784, rot = -62 },
-	{ image = "rbxassetid://78090496362298", x = 0.3588, y = 1.0466, w = 0.1474, h = 0.3784, rot = 0 },
-	{ image = "rbxassetid://133121907005690", x = 0.9031, y = 1.0545, w = 0.2817, h = 0.5445, rot = -28 },
 }
 local FOLIAGE_SPREAD = 1.55 -- d'ou ils partent (position projetee vers l'exterieur). KNOB
 local FOLIAGE_STAGGER = 0.03 -- decalage entre 2 feuillages a l'arrivee (l'eventail). KNOB

@@ -2204,6 +2204,27 @@ pas. Une forme d'herbe rase ressemble a de l'herbe rase, quelle que soit la boit
 
 Bonus : le facteur etant constant, la taille des touffes tondues n'est plus reecrite a chaque image.
 
+## 0.0.945 — Ecran de chargement en NOIR ET BLANC, avec la tondeuse qui tond la rangee d'herbe
+
+- Refait d'apres le nouveau montage du joueur (releve avec l'exportateur) : fond blanc, tout le dessin en noir, une
+  seule encre. La tete du grand-pere et l'onomatopee sont fondues vers le bas par un degrade -- c'est lui qui leur
+  donne leur gris, sans qu'aucune couleur n'entre dans l'ecran.
+- "LEAFIA" passe en gris avec un CONTOUR noir, dont l'epaisseur suit la taille du texte (en pixels fixes il serait
+  gras sur telephone et fin sur grand ecran). Il garde son arrivee lettre par lettre, sa vague et son reflet.
+- LA TONDEUSE traverse le bas de l'ecran, de hors champ a gauche a hors champ a droite, et COUPE chaque touffe
+  qu'elle depasse. Ancre en bas au milieu (0.5, 1) : son ecrasement se fait vers le sol, comme une masse posee
+  dessus -- ancree au centre, elle s'enfoncerait et se souleverait a chaque pas. Elle s'ecrase sur sa TAILLE et
+  jamais sur sa position : un rebond la ferait sauter, or elle roule.
+- L'HERBE EST GENEREE (un pas, une hauteur), pas posee touffe par touffe : la rangee s'adapte a n'importe quelle
+  largeur d'ecran. La coupe passe par un degrade de transparence qui balaie la touffe dans le sens de la tondeuse.
+- LE SENS D'UN `UIGradient.Offset` NE SE DEDUIT PAS (deja paye, voir le journal) : `GRASS_WIPE_FLIP` inverse le
+  balayage en un booleen si la touffe s'efface du mauvais cote.
+- L'ONOMATOPEE saute au depart de chaque passage, puis s'efface : posee une fois pour toutes, elle ferait partie du
+  decor et on ne la verrait plus.
+- La position de la tondeuse est avancee A LA MAIN image par image, pas par un tween : il faut pouvoir COMPARER sa
+  position a celle des touffes, et un tween ne dit pas ou il en est.
+- Clignement du grand-pere pret (memes etapes que le rideau : ouvert, a moitie, ferme), en attente des deux images.
+
 ## 0.0.944 — LEAFIA : lettres collees, et le reflet du titre de chapitre
 
 - Les lettres etaient trop ecartees : chaque case avait une largeur FIXE, la meme pour toutes, donc le "I" avait
